@@ -27,7 +27,23 @@ Transversal tools for flexible :ref:`visualization <Visualization>` of the circu
 with notebooks or local development environments
 
 Perceval has been developed as a complete toolkit for physicists and computer scientists, and for students, researchers,
-and practitioners of quantum computing
+and practitioners of quantum computing.
+
+If you are using OpenNMT for academic work, please cite the `following paper in publication <https://perceval.quandela.net/Perceval-Whitepaper.pdf>`_ with the following reference:
+
+.. code:: latex
+
+    @article{perceval_white_paper,
+      title = {Perceval: {A} {Software} {Platform} for {Discrete} {Variable} {Photonic} {Quantum} {Computing}},
+      url = {http://perceval.quandela.net/perceval_white_paper.pdf},
+      author = {Fyrillas, Andreas and {{d}e {G}liniasty}, Grégoire and Heurtel,
+      Nicolas and {{L}e {B}ihan}, Raphaël and Malherbe, Sébastien and Pailhas,
+      Marceau and Bourdoncle, Boris and Emeriau, Pierre-Emmanuel and Mezher,
+      Rawad and Music, Luka and Belabas, Nadia and Valiron, Benoît and Senellart,
+      Pascale and Mansfield, Shane and Senellart, Jean},
+      year = {2022},
+    }
+
 
 .. toctree::
    :caption: Documentation
