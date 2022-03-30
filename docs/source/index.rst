@@ -29,11 +29,7 @@ with notebooks or local development environments
 Perceval has been developed as a complete toolkit for physicists and computer scientists, and for students, researchers,
 and practitioners of quantum computing.
 
-<<<<<<< HEAD
 If you are using Perceval for academic work, please cite the `following paper in publication <https://perceval.quandela.net/Perceval-Whitepaper.pdf>`_ with the following reference:
-=======
-If you are using OpenNMT for academic work, please cite the `following paper in publication <https://perceval.quandela.net/Perceval-Whitepaper.pdf>`_ with the following reference:
->>>>>>> e21224b62cdf87147f720f7fa421b28a832e81e9
 
 .. code:: latex
 
