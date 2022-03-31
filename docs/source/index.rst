@@ -35,9 +35,8 @@ If you are using Perceval for academic work, please cite the `following paper in
 
     @article{perceval_white_paper,
       title = {Perceval: {A} {Software} {Platform} for {Discrete} {Variable} {Photonic} {Quantum} {Computing}},
-      url = {http://perceval.quandela.net/perceval_white_paper.pdf},
-      author = {Fyrillas, Andreas and {{d}e {G}liniasty}, Grégoire and Heurtel,
-      Nicolas and {{L}e {B}ihan}, Raphaël and Malherbe, Sébastien and Pailhas,
+      url = {https://perceval.quandela.net/Perceval-Whitepaper.pdf},
+      author = {Heurtel, Nicolas and Fyrillas, Andreas and {{d}e {G}liniasty}, Grégoire and {{L}e {B}ihan}, Raphaël and Malherbe, Sébastien and Pailhas,
       Marceau and Bourdoncle, Boris and Emeriau, Pierre-Emmanuel and Mezher,
       Rawad and Music, Luka and Belabas, Nadia and Valiron, Benoît and Senellart,
       Pascale and Mansfield, Shane and Senellart, Jean},
