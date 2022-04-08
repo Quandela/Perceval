@@ -111,7 +111,7 @@ or:
 Permutation
 ^^^^^^^^^^^
 
-A permutation exchanges two spatial modes, sending :math:`\ket{0,1}` to :math:`\ket{1,0}` and vice-versa. 
+A permutation exchanges two spatial modes, sending :math:`\ket{0,1}` to :math:`\ket{1,0}` and vice-versa.
 
 To create a permutation ``PERM`` object corresponding to the above example:
 
@@ -144,7 +144,7 @@ a 4-mode permutation. It matches the first input path (index 0) with the third o
 Waveplate
 ^^^^^^^^^^
 
-A waveplate acts on the polarisation modes of a single spatial mode. It is described by the following unitary: 
+A waveplate acts on the polarisation modes of a single spatial mode. It is described by the following unitary:
 
 .. math::
     \left[\begin{matrix}i \sin{\left(\delta \right)} \cos{\left(2 \xi \right)} + \cos{\left(\delta \right)} & i \sin{\left(\delta \right)} \sin{\left(2 \xi \right)}\\i \sin{\left(\delta \right)} \sin{\left(2 \xi \right)} & - i \sin{\left(\delta \right)} \cos{\left(2 \xi \right)} + \cos{\left(\delta \right)}\end{matrix}\right]
