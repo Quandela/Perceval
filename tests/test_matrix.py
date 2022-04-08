@@ -86,7 +86,7 @@ def test_check_unitary_numeric():
 
 
 def test_check_unitary_numeric_sym():
-    with open(TEST_DATA_DIR / 'u_hom_sym', "r") as f:
+    with open(TEST_DATA_DIR / 'u_hom_sym', "r", encoding="utf-8") as f:
         M = pcvl.Matrix(f)
         assert M.is_unitary()
 
