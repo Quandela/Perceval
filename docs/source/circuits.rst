@@ -59,7 +59,7 @@ collection of these (see :ref:`Components`).
 .. figure:: _static/library/phys/bs.png
    :scale: 50 %
    :align: center
-   
+
    A beam splitter as a circuit in Perceval.
 
 In particular, note that:
