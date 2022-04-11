@@ -1,14 +1,36 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from abc import ABC, abstractmethod
 import logging
 import random
 from typing import List, Tuple, Union, Iterator, Optional
 
-from perceval.utils import Matrix, StateVector, AnnotatedBasicState
+from perceval.utils import Matrix, StateVector, AnnotatedBasicState, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
 from ..components.circuit import ACircuit, _matrix_double_for_polarization
 
 import quandelibc as qc
-
+import numpy as np
 
 class Backend(ABC):
     _name = None
@@ -86,7 +108,7 @@ class Backend(ABC):
 
         self._compiled_input = None
 
-    def _changed_unitary(self) -> None:
+    def _changed_unitary(self, prev_u) -> None:
         """Notify change of unitary - might be used for backend with compiled states
         """
         return
@@ -99,6 +121,16 @@ class Backend(ABC):
     def m(self):
         return self._m
 
+    @property
+    def U(self):
+        return self._U
+
+    @U.setter
+    def U(self, u):
+        prev_u = self._U
+        self._U = u
+        self._changed_unitary(prev_u)
+
     @abstractmethod
     def prob_be(self, input_state, output_state, n=None):
         raise NotImplementedError
@@ -109,7 +141,8 @@ class Backend(ABC):
     def prob(self,
              input_state: AnnotatedBasicState,
              output_state: AnnotatedBasicState,
-             n: int = None) -> float:
+             n: int = None,
+             skip_compile: bool = False) -> float:
         r"""
         gives the probability of an output state given an input state
         :param input_state: the input state
@@ -120,26 +153,28 @@ class Backend(ABC):
         if input_state.n == 0:
             return output_state.n == 0
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
-            self.compile(input_state)
+            if not skip_compile:
+                self.compile(input_state)
             return self.prob_be(input_state, output_state, n)
         spatial_mode_input_state, prep_matrix_input = convert_polarized_state(input_state)
         _U_ref = self._U
         _realm_ref = self._realm
         if not self._requires_polarization:
-            self._U = _matrix_double_for_polarization(self._m, self._U)
+            _U_new = _matrix_double_for_polarization(self._m, self._U)
             self._realm = 2 * self._realm
-        self._U = self._U @ prep_matrix_input
+        else:
+            _U_new = self._U
+        _U_new = _U_new @ prep_matrix_input
         if isinstance(output_state, AnnotatedBasicState) and output_state.has_polarization:
             # if output state is polarized, we will directly calculating probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
-            self._U = un_prep_matrix_output @ self._U
-            self._changed_unitary()
+            self.U = un_prep_matrix_output @ _U_new
             self.compile(spatial_mode_input_state)
             prob = self.prob_be(spatial_mode_input_state, spatial_mode_output_state, n)
         else:
             # for each polarized mode with k photons, we have to calculate probabilities on the spatial mode, ies all
             # |m,l> for m+l = k
-            self._changed_unitary()
+            self.U = _U_new
             self.compile(spatial_mode_input_state)
             prob = 0
             for spatial_output in build_spatial_output_states(output_state):
@@ -147,6 +182,12 @@ class Backend(ABC):
         self._U = _U_ref
         self._realm = _realm_ref
         return prob
+
+    def all_prob(self, input_state: BasicState) -> np.ndarray:
+        allprobs = []
+        for(output, prob_output) in self.allstateprob_iterator(input_state):
+            allprobs.append(prob_output)
+        return np.asarray(allprobs)
 
     def probampli(self,
                   input_state: AnnotatedBasicState,
@@ -195,6 +236,7 @@ class Backend(ABC):
         :param input_state: a given input state
         :return: list of (output_state, probability)
         """
+        skip_compile = False
         for output_state in self.allstate_iterator(input_state):
             if isinstance(input_state, StateVector) and len(input_state) > 1:
                 # a superposed state cannot have distinguishable particles
@@ -204,16 +246,21 @@ class Backend(ABC):
                     probampli += self.probampli(inp_state, output_state)*sv[inp_state]
                 yield output_state, abs(probampli)**2
             else:
+                # TODO: should not have a special case here
                 if isinstance(input_state, StateVector):
                     input_state = input_state[0]
-                input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
-                all_prob = 0
-                for p_output_state in output_state.partition([input_state.n for input_state in input_states]):
-                    prob = 1
-                    for i_state, o_state in zip(input_states, p_output_state):
-                        prob *= self.prob(i_state, o_state)
-                    all_prob += prob
-                yield output_state, all_prob
+                if hasattr(input_state, "separate_state"):
+                    input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
+                    all_prob = 0
+                    for p_output_state in output_state.partition([input_state.n for input_state in input_states]):
+                        prob = 1
+                        for i_state, o_state in zip(input_states, p_output_state):
+                            prob *= self.prob(i_state, o_state)
+                        all_prob += prob
+                    yield output_state, all_prob
+                else:
+                    yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
+                    skip_compile = True
 
     def allstate_iterator(self, input_state: Union[AnnotatedBasicState, StateVector]) -> AnnotatedBasicState:
         """Iterator on all possible output states compatible with mask generating StateVector
