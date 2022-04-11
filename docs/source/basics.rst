@@ -107,8 +107,8 @@ state in the polarization basis. For example, with polarization basis
 Simulation and Sampling
 -----------------------
 
-Consider a quantum circuit *C* which, when measured, outputs bitstrings *x* with a probability *p_x*. A classical algorithm providing a strong simulation of *C* is an algorithm which can **approximate**, up to very good precision (or more precisely *relative error*),  *p_x*   for all *x*. On the other hand, a classical algorithm that weakly simulates a quantum circuit is only required to **sample** outputs *x* with probabilities close to *p_x* (or in more precise terms up to a small error in the *total variational distance* ). For generic quantum circuits *C*, both these tasks become quickly unfeasible as the size of these circuits increases. 
-The optimized classical algorithms for simulating linear optical quantum circuits which are at the heart of Perceval allow us to perform both weak and strong simulations of photonic quantum circuits, with sizes comparable to those of circuit currently being implemented on quantum hardware. Thus, Perceval is a powerful tool for both experimentalists and theorists wishing to explore the capabilities of current and near-term photonic quantum hardware. 
+Consider a quantum circuit *C* which, when measured, outputs bitstrings *x* with a probability *p_x*. A classical algorithm providing a strong simulation of *C* is an algorithm which can **approximate**, up to very good precision (or more precisely *relative error*),  *p_x*   for all *x*. On the other hand, a classical algorithm that weakly simulates a quantum circuit is only required to **sample** outputs *x* with probabilities close to *p_x* (or in more precise terms up to a small error in the *total variational distance* ). For generic quantum circuits *C*, both these tasks become quickly unfeasible as the size of these circuits increases.
+The optimized classical algorithms for simulating linear optical quantum circuits which are at the heart of Perceval allow us to perform both weak and strong simulations of photonic quantum circuits, with sizes comparable to those of circuit currently being implemented on quantum hardware. Thus, Perceval is a powerful tool for both experimentalists and theorists wishing to explore the capabilities of current and near-term photonic quantum hardware.
 Perceval allows for strong and weak simulation of tasks such as Boson Sampling, Quantum machine learning, variational quantum algorithms, as well as small instances of Shors algorithm and Grover's search !
 
 Numeric and Symbolic computation
@@ -119,15 +119,3 @@ Symbolic computation use the excellent `sympy <https://www.sympy.org/en/index.ht
 on smaller dimension problem, to get
 analytical solution of a problem. Selection of the feature is enabled with the ``use_symbolic`` boolean parameter
 available on numerous object methods.
-
-
-
-
-
-
-
-
-
-
-
-
