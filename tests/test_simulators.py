@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from collections import defaultdict
 import pytest
 import perceval as pcvl
@@ -31,7 +53,7 @@ def check_output(simulator, input_state, expected):
     for (output_state, prob) in simulator.allstateprob_iterator(input_state):
         prob_expected = expected.get(output_state)
         if prob_expected is None:
-            assert prob == 0, "cannot find: %s (prob=%f)" % (str(output_state), prob)
+            assert pytest.approx(0) == prob, "cannot find: %s (prob=%f)" % (str(output_state), prob)
         else:
             assert pytest.approx(prob_expected) == prob, "incorrect value for %s: %f/%f" % (str(output_state),
                                                                                             prob,
@@ -114,8 +136,8 @@ def test_symbolic_prob():
     simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
     c = phys.BS(theta=pcvl.Parameter("theta"))
     s = simulator_backend(c.U)
-    assert str(s.prob(pcvl.BasicState([0, 1]), pcvl.BasicState([0, 1]))) == "1.0*cos(theta)**2"
-    assert str(s.prob(pcvl.BasicState([1, 0]), pcvl.BasicState([0, 1]))) == "1.0*sin(theta)**2"
+    assert str(s.prob(pcvl.BasicState([0, 1]), pcvl.BasicState([0, 1]))) == "cos(theta)**2"
+    assert str(s.prob(pcvl.BasicState([1, 0]), pcvl.BasicState([0, 1]))) == "sin(theta)**2"
 
 
 def test_cnot_no_mask():
@@ -249,11 +271,11 @@ def test_polarization_circuit_0():
         check_output(simulator,
                      pcvl.AnnotatedBasicState("|{P:H}>"),
                      {pcvl.BasicState("|1>"): 1})
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:H}>")) == 0
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:V}>")) == 1
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"), pcvl.AnnotatedBasicState("|{P:H}>")) == 1
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:D}>"), pcvl.AnnotatedBasicState("|{P:D}>")) == 1
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:A}>"), pcvl.AnnotatedBasicState("|{P:A}>")) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:H}>"))) == 0
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:V}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"), pcvl.AnnotatedBasicState("|{P:H}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:D}>"), pcvl.AnnotatedBasicState("|{P:D}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:A}>"), pcvl.AnnotatedBasicState("|{P:A}>"))) == 1
 
 
 def test_polarization_circuit_1():
