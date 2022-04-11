@@ -25,6 +25,7 @@ import pytest
 import perceval as pcvl
 import perceval.lib.phys as phys
 import sympy as sp
+import numpy as np
 
 
 def cnot_circuit():
@@ -342,3 +343,9 @@ def test_bs_polarization():
 
     for output_state, prob in states:
         assert pytest.approx(sim.prob(input_state, output_state)) == prob
+
+
+def test_all_prob():
+    c = phys.BS()
+    sim = pcvl.BackendFactory().get_backend("Naive")(c)
+    assert pytest.approx(np.asarray([0.5, 0, 0.5])) == sim.all_prob(pcvl.BasicState("|1,1>"))
