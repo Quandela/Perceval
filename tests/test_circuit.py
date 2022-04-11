@@ -22,7 +22,7 @@
 
 import pytest
 
-from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, StateVector
+from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import sympy as sp
@@ -245,3 +245,22 @@ def test_evolve():
     for backend_name in ["SLOS", "Naive"]:
         simulator = BackendFactory().get_backend(backend_name)(c)
         assert str(simulator.evolve(BasicState("|1,0>"))) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
+
+
+def test_visualization_ucircuit(capfd):
+    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
+         // (0, phys.PS(sp.pi/2))
+         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    pdisplay(c, output_format="text")
+    out, err = capfd.readouterr()
+    assert out.strip() == """
+  ╭─────╮╭───────────╮╭─────╮
+1:┤U1   ├┤PS phi=pi/2├┤U2   ├:1 (depth 3)
+  │     │╰───────────╯│     │
+  │     │             │     │
+2:┤     ├─────────────┤     ├:2 (depth 2)
+  │     │             │     │
+  │     │             │     │
+3:┤     ├─────────────┤     ├:3 (depth 2)
+  ╰─────╯             ╰─────╯
+""".strip()

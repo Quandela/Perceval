@@ -296,6 +296,10 @@ class ACircuit(ABC):
             td = parent_td
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
+
+        if self._Udef is not None:
+            td.append_circuit([p + shift for p in range(self._m)], self, "")
+
         if self._components:
             for r, c in self._components:
                 shiftr = [p+shift for p in r]
@@ -309,9 +313,7 @@ class ACircuit(ABC):
                 else:
                     description = c.get_variables(map_param_kid)
                     td.append_circuit(shiftr, c, "\n".join(description))
-        else:
-            description = self.get_variables()
-            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
+
         td.extend_pos(0, self._m - 1)
         if parent_td is None:
             td.close()
@@ -348,6 +350,7 @@ class Circuit(ACircuit):
                 assert U.shape[0] == m, "incorrect size"
             else:
                 m = U.shape[0]
+            self.width = m
             # check if unitary matrix
             self._Udef = U
             self._udef_use_polarization = use_polarization
@@ -568,3 +571,9 @@ class Circuit(ACircuit):
         for ic in list_components:
             C.add(*ic, merge=merge)
         return C
+
+    def shape(self, _, canvas):
+        for i in range(self.m):
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
+        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
+        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)
