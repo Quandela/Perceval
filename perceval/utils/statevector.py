@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 
 import random
@@ -9,7 +31,7 @@ from typing import Dict, List, Union, Tuple, Optional
 
 from tabulate import tabulate
 
-from perceval.utils import simple_complex, simple_float, Matrix
+from perceval.utils import simple_complex, simple_float, Matrix, global_params
 from .polarization import Polarization
 import numpy as np
 import sympy as sp
@@ -455,14 +477,22 @@ class StateVector(defaultdict):
     def _normalize(self):
         r"""Normalize a non-normalized state"""
         if not self._normalized:
-            norm = sum([abs(amplitude)**2 for amplitude in self.values()])**0.5
+            norm = 0
             to_remove = []
             for key in self.keys():
-                if self[key] == 0:
+                if (isinstance(self[key], (complex, float,int))
+                        and abs(self[key]) < global_params["min_complex_component"]) or self[key] == 0:
                     to_remove.append(key)
-                self[key] /= norm
+                else:
+                    norm += abs(self[key])**2
             for key in to_remove:
                 del self[key]
+            norm = norm**0.5
+            for key in self.keys():
+                if len(self) == 1:
+                    self[key] = 1
+                else:
+                    self[key] /= norm
             self._normalized = True
 
     def __str__(self):
@@ -602,7 +632,7 @@ def convert_polarized_state(state: AnnotatedBasicState,
                 annot = state.get_photon_annotations(idx+1)
                 idx += 1
                 input_state[-2] += 1
-                eh, ev = annot.get("P", Polarization(0)).project_ev_eh()
+                eh, ev = annot.get("P", Polarization(0)).project_ev_eh(use_symbolic)
                 if prev_eh is not None:
                     if eh != prev_eh or ev != prev_ev:
                         raise AssertionError("cannot simulate (yet) modes with multiple polarized photons")
@@ -611,8 +641,12 @@ def convert_polarized_state(state: AnnotatedBasicState,
                 prev_ev = ev
                 if prep_matrix is None:
                     prep_matrix = Matrix.eye(2*state.m, use_symbolic)
-                prep_state_matrix = Matrix([[eh, -sp.conjugate(ev)],
-                                            [ev, sp.conjugate(eh)]], use_symbolic)
+                if use_symbolic:
+                    prep_state_matrix = Matrix([[eh, -sp.conjugate(ev)],
+                                                [ev, sp.conjugate(eh)]], True)
+                else:
+                    prep_state_matrix = Matrix([[eh, -np.conjugate(ev)],
+                                                [ev, np.conjugate(eh)]], False)
                 if inverse:
                     prep_state_matrix = prep_state_matrix.inv()
                 prep_matrix[2*k_m:2*k_m+2, 2*k_m:2*k_m+2] = prep_state_matrix

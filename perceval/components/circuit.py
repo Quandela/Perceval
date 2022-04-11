@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
@@ -276,7 +298,7 @@ class ACircuit(ABC):
             map_param_kid = self.map_parameters()
         if self._components:
             for r, c in self._components:
-                shiftr = [p+shift for p in r]                    
+                shiftr = [p+shift for p in r]
                 if c._components and recursive:
                     td.open_subblock(r, c._name)
                     c.pdisplay(td, shift=shiftr[0])
@@ -401,12 +423,11 @@ class Circuit(ACircuit):
         else:
             multiplier = 1
         for r, c in self._components:
-            cU = Matrix.zeros((multiplier*self._m, multiplier*self._m), use_symbolic)
-            for idx in range(multiplier*self._m):
-                if idx < multiplier*r[0] or idx >= multiplier*(r[-1]+1):
-                    cU[idx, idx] = 1
-            cU[multiplier*r[0]:multiplier*(r[-1]+1), multiplier*r[0]:multiplier*(r[-1]+1)] = \
-                c.compute_unitary(use_symbolic=use_symbolic, use_polarization=use_polarization)
+            cU = c.compute_unitary(use_symbolic=use_symbolic, use_polarization=use_polarization)
+            if len(r) != multiplier*self._m:
+                nU = Matrix.eye(multiplier*self._m, use_symbolic)
+                nU[multiplier*r[0]:multiplier*(r[-1]+1), multiplier*r[0]:multiplier*(r[-1]+1)] = cU
+                cU = nU
             if u is None:
                 u = cU
             else:

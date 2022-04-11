@@ -1,4 +1,27 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import sympy as sp
+import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
@@ -34,14 +57,24 @@ class BS(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
-        if "R" in self.params:
-            cos_theta = sp.sqrt(1-self._R.spv)
-            sin_theta = sp.sqrt(self._R.spv)
+        if use_symbolic:
+            if "R" in self.params:
+                cos_theta = sp.sqrt(1-self._R.spv)
+                sin_theta = sp.sqrt(self._R.spv)
+            else:
+                cos_theta = sp.cos(self._theta.spv)
+                sin_theta = sp.sin(self._theta.spv)
+            return Matrix([[cos_theta, sin_theta*sp.I*sp.exp(-self._phi.spv*sp.I)],
+                           [sin_theta*sp.exp(self._phi.spv*sp.I)*sp.I, cos_theta]], True)
         else:
-            cos_theta = sp.cos(self._theta.spv)
-            sin_theta = sp.sin(self._theta.spv)
-        return Matrix([[cos_theta, sin_theta*sp.I*sp.exp(-self._phi.spv*sp.I)],
-                       [sin_theta*sp.exp(self._phi.spv*sp.I)*sp.I, cos_theta]], use_symbolic)
+            if "R" in self.params:
+                cos_theta = np.sqrt(1-float(self._R))
+                sin_theta = np.sqrt(float(self._R))
+            else:
+                cos_theta = np.cos(float(self._theta))
+                sin_theta = np.sin(float(self._theta))
+            return Matrix([[cos_theta, sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi)))],
+                           [sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi))), cos_theta]], True)
 
     def get_variables(self, map_param_kid=None):
         parameters = []
@@ -120,8 +153,10 @@ class PS(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
-        U = Matrix([[sp.exp(self._phi.spv*sp.I)]], use_symbolic)
-        return U
+        if use_symbolic:
+            return Matrix([[sp.exp(self._phi.spv*sp.I)]], True)
+        else:
+            return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
         parameters = []

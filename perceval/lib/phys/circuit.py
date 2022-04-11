@@ -1,4 +1,27 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import sympy as sp
+import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
@@ -11,6 +34,7 @@ class Circuit(GCircuit):
     def __init__(self, m=None, U=None, name=None):
         super().__init__(m=m, U=U, name=name)
 
+    width = 1
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
     subcircuit_width = 2
     subcircuit_fill = 'lightpink'
@@ -36,15 +60,29 @@ class BS(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
-        if "R" in self.params:
-            cos_theta = sp.sqrt(1-self._R.spv)
-            sin_theta = sp.sqrt(self._R.spv)
+        if use_symbolic:
+            if "R" in self.params:
+                cos_theta = sp.sqrt(1-self._R.spv)
+                sin_theta = sp.sqrt(self._R.spv)
+            else:
+                cos_theta = sp.cos(self._theta.spv)
+                sin_theta = sp.sin(self._theta.spv)
+            phi_c = - self._phi_b.spv + self._phi_d.spv + self._phi_a.spv
+            return Matrix([[cos_theta*sp.exp(self._phi_a.spv*sp.I), sin_theta*sp.exp(self._phi_b.spv*sp.I)*sp.I],
+                           [sin_theta*sp.exp(phi_c*sp.I)*sp.I, cos_theta*sp.exp(self._phi_d.spv*sp.I)]], True)
         else:
-            cos_theta = sp.cos(self._theta.spv)
-            sin_theta = sp.sin(self._theta.spv)
-        phi_c = - self._phi_b.spv + self._phi_d.spv + self._phi_a.spv
-        return Matrix([[cos_theta*sp.exp(self._phi_a.spv*sp.I), sin_theta*sp.exp(self._phi_b.spv*sp.I)*sp.I],
-                       [sin_theta*sp.exp(phi_c*sp.I)*sp.I, cos_theta*sp.exp(self._phi_d.spv*sp.I)]], use_symbolic)
+            if "R" in self.params:
+                cos_theta = np.sqrt(1-float(self._R))
+                sin_theta = np.sqrt(float(self._R))
+            else:
+                cos_theta = np.cos(float(self._theta))
+                sin_theta = np.sin(float(self._theta))
+            phi_c = - float(self._phi_b) + float(self._phi_d) + float(self._phi_a)
+            return Matrix([[cos_theta*(np.cos(float(self._phi_a)) + 1j * np.sin(float(self._phi_a))),
+                            sin_theta*(1j * np.cos(float(self._phi_b)) - np.sin(float(self._phi_b)))],
+                           [sin_theta*(1j * np.cos(float(phi_c)) - np.sin(float(phi_c))),
+                            cos_theta*(np.cos(float(self._phi_d)) + 1j * np.sin(float(self._phi_d)))]], False)
+
 
     def get_variables(self, map_param_kid=None):
         parameters = []
@@ -119,7 +157,6 @@ class PBS(ACircuit):
         canvas.add_mline([25, 50, 75, 50], stroke="black", stroke_width=1)
         canvas.add_text((50, 86), text=content, size=7, ta="middle", only_svg=True)
 
-
 class PS(ACircuit):
     _name = "PS"
     _fcircuit = Circuit
@@ -130,7 +167,10 @@ class PS(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
-        return Matrix([[sp.exp(self._phi.spv*sp.I)]], use_symbolic)
+        if use_symbolic:
+            return Matrix([[sp.exp(self._phi.spv*sp.I)]], True)
+        else:
+            return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
         parameters = []
@@ -164,15 +204,27 @@ class WP(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
-        delta = self._delta.spv
-        xsi = self._xsi.spv
-        return Matrix([[
-                        sp.cos(delta)+sp.I*sp.sin(delta)*sp.cos(2*xsi),
-                        sp.I*sp.sin(delta)*sp.sin(2*xsi)
-                       ], [
-                        sp.I * sp.sin(delta) * sp.sin(2 * xsi),
-                        sp.cos(delta) - sp.I * sp.sin(delta) * sp.cos(2 * xsi)
-                       ]], use_symbolic)
+        if use_symbolic:
+            delta = self._delta.spv
+            xsi = self._xsi.spv
+            return Matrix([[
+                            sp.cos(delta)+sp.I*sp.sin(delta)*sp.cos(2*xsi),
+                            sp.I*sp.sin(delta)*sp.sin(2*xsi)
+                           ], [
+                            sp.I * sp.sin(delta) * sp.sin(2 * xsi),
+                            sp.cos(delta) - sp.I * sp.sin(delta) * sp.cos(2 * xsi)
+                           ]], True)
+        else:
+            delta = float(self._delta)
+            xsi = float(self._xsi)
+            return Matrix([[
+                            np.cos(delta)+1j*np.sin(delta)*np.cos(2*xsi),
+                            1j*np.sin(delta)*np.sin(2*xsi)
+                           ], [
+                            1j * np.sin(delta) * np.sin(2 * xsi),
+                            np.cos(delta) - 1j * np.sin(delta) * np.cos(2 * xsi)
+                           ]], False)
+
 
     def get_variables(self, map_param_kid=None):
         parameters = []
@@ -210,9 +262,15 @@ class PR(ACircuit):
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
-        delta = self._delta.spv
-        return Matrix([[sp.cos(delta), sp.sin(delta)],
-                       [-sp.sin(delta), sp.cos(delta)]], use_symbolic)
+        if use_symbolic:
+            delta = self._delta.spv
+            return Matrix([[sp.cos(delta), sp.sin(delta)],
+                           [-sp.sin(delta), sp.cos(delta)]], True)
+        else:
+            delta = float(self._delta)
+            return Matrix([[np.cos(delta), np.sin(delta)],
+                           [-np.sin(delta), np.cos(delta)]], False)
+
 
     def get_variables(self, map_param_kid=None):
         parameters = []
