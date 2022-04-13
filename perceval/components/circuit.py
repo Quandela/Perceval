@@ -24,13 +24,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Callable, Literal, Optional, Union, Tuple
+from typing import Callable, Literal, Optional, Union, Tuple, Type
 
 import numpy as np
 import scipy.optimize as so
 import sympy as sp
 
-from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas
+from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas, global_params
 
 
 def _matrix_double_for_polarization(m, u):
@@ -142,7 +142,8 @@ class ACircuit(ABC):
                        name: str,
                        p: Parameter,
                        min_v: float,
-                       max_v: float):
+                       max_v: float,
+                       periodic: bool=True):
         """
             Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
             min/max value or a parameter defined by a value that we create on the fly
@@ -150,6 +151,7 @@ class ACircuit(ABC):
         :param p:
         :param min_v:
         :param max_v:
+        :param periodic:
         :return:
         """
         if isinstance(p, Parameter):
@@ -164,7 +166,7 @@ class ACircuit(ABC):
                     raise RuntimeError("two parameters with the same name in the circuit")
             self._vars[p.name] = p
         else:
-            p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v)
+            p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v, periodic=periodic)
         self._params[name] = p
         return p
 
@@ -283,6 +285,47 @@ class ACircuit(ABC):
             if not p.defined:
                 map_param_kid[p._pid] = p.name
         return map_param_kid
+
+    def identify(self, unitary_matrix, phases):
+        r"""Identify an instance of the current circuit (should be parameterized) such as Q.C=U.P where Q and P
+        are single-mode phase shifts (resp. [q1, q2, ..., qn], and [p1, p2, ...,pn])
+
+        this is solved through n^2 equations:
+            C_ij(x,y, ...) * q_i = UP_ij * pj
+
+        Parameters
+        ----------
+        unitary_matrix :
+        phases :
+
+        Returns
+        -------
+
+        """
+        params = [x.spv for x in self.get_parameters()]
+        Q = Matrix.eye(self._m, use_symbolic=True)
+        P = Matrix.eye(self._m)
+        for i in range(self._m):
+            params.append(sp.S("q%d"%i))
+            Q[i, i] = sp.exp(1j*params[-1])
+            P[i, i] = phases[i]
+        cU = Q @ self.compute_unitary(use_symbolic=True)
+        UP = unitary_matrix @ P
+        equations = []
+        for i in range(self._m):
+            for j in range(self._m):
+                equations.append(sp.re(abs(cU[i, j]-UP[i, j])))
+        f = sp.lambdify([params], equations, "numpy")
+        counter = 0
+        while counter < 100:
+            x0 = [random.random() * 2 * np.pi - np.pi] * len(params)
+            res, _, ier, _ = so.fsolve(f, [x0], full_output=True)
+            if ier == 1:
+                break
+            counter += 1
+        if ier != 1:
+            return None
+        return res[:len(res)-self._m], res[-self._m:]
 
     def pdisplay(self,
                  parent_td: QPrinter = None,
@@ -505,14 +548,18 @@ class Circuit(ACircuit):
                       component: Circuit,
                       phase_shifter_fn: Callable[[float], Circuit] = None,
                       shape: Literal["triangle", "rectangle"] = "triangle",
-                      merge: bool = True):
+                      permutation: Type[Circuit] = None,
+                      merge: bool = True,
+                      precision: float = None):
         r"""Decompose a given unitary matrix U into a circuit with specified component type
 
         :param component: a circuit, must have 2 independent parameters
         :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
             ignored
         :param shape: `rectangle` (Clements-like interferometer) or `triangle` (Reck-like)
+        :param permutation: if provided, type of a permutation operator to avoid unnecessary operators
         :param merge: don't use sub-circuits
+        :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :return: a circuit
         """
         M = copy.deepcopy(U)
@@ -521,18 +568,122 @@ class Circuit(ACircuit):
         params = component.get_parameters()
         params_symbols = [x.spv for x in params]
         assert len(params) == 2, "Component should have 2 independent parameters"
+
+        if precision is None:
+            precision = global_params["min_complex_component"]
+
         U = component.U
         UI = U.inv()
-        list_components = []
+
+        if shape == "triangle":
+            assert len(set.union(UI[0, 0].free_symbols, UI[0, 0].free_symbols)) == 2, "Component parameters cannot" \
+                    "perform triangle decomposition"
 
         if shape == "rectangle":
-            assert NotImplementedError("rectangular decomposition not yet implemented")
+            list_components_right = []
+            list_components_left = []
+
+            for m in range(N-1):
+                for k in range(m+1):
+                    if m % 2 == 0:
+                        # on even iterations right null with UI, goal is to null M[N-1-k,m-k]
+                        if abs(M[N-1-k, m-k]) > precision:
+                            equation = M[N-1-k, m-k] * UI[0, 0] + M[N-1-k, m-k+1] * UI[1, 0]
+                            f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
+                            counter = 0
+                            while counter < 100:
+                                x0 = [random.random() * 2 * np.pi - np.pi, random.random() * 2 * np.pi - np.pi]
+                                res, _, ier, _ = so.fsolve(f, x0, full_output=True)
+                                if ier == 1:
+                                    break
+                                counter += 1
+                            if ier != 1:
+                                return None
+
+                            RI = Matrix.eye(N, use_symbolic=False)
+                            RI[m-k, m-k] = complex(
+                                UI[0, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+                            RI[m-k, m-k+1] = complex(
+                                UI[0, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+                            RI[m-k+1, m-k] = complex(
+                                UI[1, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+                            RI[m-k+1, m-k+1] = complex(
+                                UI[1, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+
+                            M = M @ RI
+                            instantiated_component = copy.deepcopy(component)
+                            instantiated_component.get_parameters()[0].fix_value(res[0])
+                            instantiated_component.get_parameters()[0].fix_value(res[1])
+                            list_components_right = list_components_right+[((m-k, m-k+1), instantiated_component)]
+                    else:
+                        # on odd iterations left null with U, goal is to null M[N-1-m+k,k]
+                        if abs(M[N-1-m+k, k]) > precision:
+                            equation = U[1, 0] * M[N-2-m+k, k] + U[1, 1] * M[N-1-m+k, k]
+                            f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
+                            counter = 0
+                            while counter < 100:
+                                x0 = [random.random() * 2 * np.pi - np.pi, random.random() * 2 * np.pi - np.pi]
+                                res, _, ier, _ = so.fsolve(f, x0, full_output=True)
+                                if ier == 1:
+                                    break
+                                counter += 1
+                            if ier != 1:
+                                return None
+
+                            RI = Matrix.eye(N, use_symbolic=False)
+                            RI[N-2-m+k, N-2-m+k] = complex(
+                                U[0, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+                            RI[N-2-m+k, N-1-m+k] = complex(
+                                U[0, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+                            RI[N-1-m+k, N-2-m+k] = complex(
+                                U[1, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+                            RI[N-1-m+k, N-1-m+k] = complex(
+                                U[1, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
+
+                            M = RI @ M
+                            instantiated_component = copy.deepcopy(component)
+                            instantiated_component.get_parameters()[0].fix_value(res[0])
+                            instantiated_component.get_parameters()[0].fix_value(res[1])
+                            Uinv = instantiated_component.U.inv()
+                            list_components_left = [((N-2-m+k, N-1-m+k), Uinv)]+list_components_left
+            list_components = list_components_right
+            D = list(np.diag(M))
+            for r, Uinv in list_components_left:
+                res = component.identify(Uinv, D[r[0]:r[1]+1])
+                if res is None:
+                    raise ValueError("Cannot solve component.identify", Uinv, D[r[0]:r[1]+1])
+                cparameters, nD = res
+                instantiated_component = copy.deepcopy(component)
+                instantiated_component.get_parameters()[0].fix_value(cparameters[0])
+                instantiated_component.get_parameters()[0].fix_value(cparameters[1])
+                list_components = [(r, instantiated_component)] + list_components
+                D[r[0]] = np.exp(1j*nD[0])
+                D[r[1]] = np.exp(1j*nD[1])
         else:
+            list_components = []
             for m in range(N-1, 0, -1):
                 for n in range(m):
                     # goal is to null M[n,m]
-                    if M[n, m] != 0:
-                        equation = UI[0, 0]*M[n, m]+UI[0, 1]*M[n+1, m]
+                    solve_cell = False
+                    if abs(M[n, m]) <= precision:
+                        solve_cell = True
+                    else:
+                        if permutation is not None:
+                            p = [0]
+                            for k in range(n+1, m+1):
+                                p.append(k-n)
+                                if abs(M[k, m]) <= precision:
+                                    p[0] = k-n
+                                    p[-1] = 0
+                                    list_components = [(list(range(n, k+1)), permutation(p))] + list_components
+                                    RI = Matrix.eye(N, use_symbolic=False)
+                                    RI[n, n] = RI[k, k] = 0
+                                    RI[k, n] = RI[n, k] = 1
+                                    M = RI @ M
+                                    solve_cell = True
+                                    break
+                    if not solve_cell:
+                        equation = UI[0, 0]*M[n, m] + UI[0, 1]*M[n+1, m]
                         f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
                         counter = 0
                         while counter < 100:
@@ -555,18 +706,21 @@ class Circuit(ACircuit):
                         instantiated_component.get_parameters()[0].fix_value(res[0])
                         instantiated_component.get_parameters()[0].fix_value(res[1])
                         list_components = [((n, n+1), instantiated_component)]+list_components
-            if phase_shifter_fn:
-                for idx in range(N):
-                    a = M[idx, idx].real
-                    b = M[idx, idx].imag
-                    if b != 0:
-                        if a == 0:
-                            phi = np.pi/2
-                        else:
-                            phi = np.arctan(b/a)
-                            if a < 0:
-                                phi = phi + np.pi
-                        list_components = [(idx, phase_shifter_fn(phi))] + list_components
+
+            D = np.diag(M)
+
+        if phase_shifter_fn:
+            for idx in range(N):
+                a = D[idx].real
+                b = D[idx].imag
+                if b != 0:
+                    if a == 0:
+                        phi = np.pi/2
+                    else:
+                        phi = np.arctan(b/a)
+                        if a < 0:
+                            phi = phi + np.pi
+                    list_components = [(idx, phase_shifter_fn(phi))] + list_components
 
         for ic in list_components:
             C.add(*ic, merge=merge)

@@ -49,7 +49,7 @@ class BS(ACircuit):
         assert R is None or theta is None, "cannot set both R and theta"
         self._phi = self._set_parameter("phi", phi, 0, 2*sp.pi)
         if R is not None:
-            self._R = self._set_parameter("R", R, 0, 1)
+            self._R = self._set_parameter("R", R, 0, 1, False)
         else:
             if theta is None:
                 theta = sp.pi/4
@@ -74,7 +74,7 @@ class BS(ACircuit):
                 cos_theta = np.cos(float(self._theta))
                 sin_theta = np.sin(float(self._theta))
             return Matrix([[cos_theta, sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi)))],
-                           [sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi))), cos_theta]], True)
+                           [sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi))), cos_theta]], False)
 
     def get_variables(self, map_param_kid=None):
         parameters = []
@@ -90,10 +90,6 @@ class BS(ACircuit):
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
         return "symb.BS(%s)" % ", ".join(parameters)
-
-    @property
-    def svg_width(self):
-        return 2
 
     width = 2
 
@@ -111,7 +107,7 @@ class DT(ACircuit):
 
     def __init__(self, t):
         super().__init__(1)
-        self._dt = self._set_parameter("t", t, 0, sp.oo)
+        self._dt = self._set_parameter("t", t, 0, sp.oo, False)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
@@ -192,17 +188,16 @@ class PERM(GCircuit):
         for i, v in enumerate(perm):
             u[i, v] = sp.S(1)
         super().__init__(n, U=u)
+        self.width = 1
 
     def get_variables(self, _=None):
         return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
 
     def describe(self, _=None):
-        return "symb.Permutation(%s)" % str(self._perm)
+        return "symb.PERM(%s)" % str(self._perm)
 
     def definition(self):
         return self.U
-
-    width = 1
 
     def shape(self, content, canvas):
         lines = []

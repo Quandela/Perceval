@@ -52,7 +52,7 @@ class BS(ACircuit):
         self._phi_b = self._set_parameter("phi_b", phi_b, 0, 2*sp.pi)
         self._phi_d = self._set_parameter("phi_d", phi_d, 0, 2*sp.pi)
         if R is not None:
-            self._R = self._set_parameter("R", R, 0, 1)
+            self._R = self._set_parameter("R", R, 0, 1, False)
         else:
             if theta is None:
                 theta = sp.pi/4
@@ -329,7 +329,7 @@ class DT(ACircuit):
 
     def __init__(self, t):
         super().__init__(1)
-        self._dt = self._set_parameter("t", t, 0, sp.oo)
+        self._dt = self._set_parameter("t", t, 0, sp.oo, False)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
@@ -376,17 +376,16 @@ class PERM(GCircuit):
         for i, v in enumerate(perm):
             u[i, v] = sp.S(1)
         super().__init__(n, U=u)
+        self.width = 1
 
     def get_variables(self, _=None):
         return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
 
     def describe(self, _=None):
-        return "phys.Permutation(%s)" % str(self._perm)
+        return "phys.PERM(%s)" % str(self._perm)
 
     def definition(self):
         return self.U
-
-    width = 1
 
     def shape(self, content, canvas):
         lines = []
