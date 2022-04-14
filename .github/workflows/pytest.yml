@@ -11,6 +11,7 @@ on:
 
 jobs:
   build:
+    name: Run PyTest on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -40,9 +41,27 @@ jobs:
       run: |
         pytest
         
-    - name: Install building docs dependencies
+  build-docs:
+    name: Build docs on Ubuntu
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
       run: |
-        python -m pip install quandelibc sphinx sphinx-rtd-theme sphinxcontrib-bibtex sphinx-autodoc-typehints nbsphinx jinja2==3.0.0 ipython        
+        python -m pip install --upgrade pip
+        pip install wheel quandelibc sphinx sphinx-rtd-theme sphinxcontrib-bibtex sphinx-autodoc-typehints nbsphinx jinja2==3.0.0 ipython
+        pip install .
     - name: Install Pandoc
       run: |
         sudo apt update
@@ -51,4 +70,3 @@ jobs:
       run: |
         cd docs
         make html
-
