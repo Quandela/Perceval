@@ -44,6 +44,7 @@ class Circuit(GCircuit):
 class BS(ACircuit):
     _name = "BS"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=-sp.pi/2, phi_d=-sp.pi):
         super().__init__(2)
@@ -113,8 +114,8 @@ class BS(ACircuit):
         canvas.add_mline([0, 75, 28, 75, 47, 56], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_mline([53, 56, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_rect((25, 43), 50, 14, fill="black")
-        canvas.add_text((50, 86), size=7, ta="middle", text=bottom_content, only_svg=True)
-        canvas.add_text((50, 26), size=7, ta="middle", text=head_content, only_svg=True)
+        canvas.add_text((50, 86), size=7, ta="middle", text=bottom_content)
+        canvas.add_text((50, 26), size=7, ta="middle", text=head_content)
         if self._phi_b.defined:
             m = round(abs(float(self._phi_b.spv/sp.pi)))
             if (m + 1) % 2:
@@ -127,6 +128,7 @@ class PBS(ACircuit):
     _name = "PBS"
     _fcircuit = Circuit
     _supports_polarization = True
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self):
         super().__init__(2)
@@ -155,11 +157,13 @@ class PBS(ACircuit):
         canvas.add_mline([62.5, 62.5, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_polygon([25, 50, 50, 24, 75, 50, 50, 76, 25, 50], stroke="black", stroke_width=1, fill="gray")
         canvas.add_mline([25, 50, 75, 50], stroke="black", stroke_width=1)
-        canvas.add_text((50, 86), text=content, size=7, ta="middle", only_svg=True)
+        canvas.add_text((50, 86), text=content, size=7, ta="middle")
+
 
 class PS(ACircuit):
     _name = "PS"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, phi):
         super().__init__(1)
@@ -189,13 +193,14 @@ class PS(ACircuit):
         canvas.add_mline([0, 25, 50, 25], stroke_width=3, stroke="darkred")
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
                            stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
-        canvas.add_text((22, 38), text=content.replace("phi=", "φ="), size=7, ta="left", only_svg=True)
+        canvas.add_text((22, 38), text=content.replace("phi=", "φ="), size=7, ta="left")
 
 
 class WP(ACircuit):
     _name = "WP"
     _fcircuit = Circuit
     _supports_polarization = True
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, delta, xsi):
         super().__init__(1)
@@ -246,8 +251,8 @@ class WP(ACircuit):
         canvas.add_rect((13, 7), width=14, height=36, fill="gray",
                         stroke_width=1, stroke="black", stroke_linejoin="miter")
         canvas.add_mline([20, 7, 20, 43], stroke="black", stroke_width=1)
-        canvas.add_text((28.5, 36), text=params[0], size=7, ta="left", only_svg=True)
-        canvas.add_text((28.5, 45), text=params[1], size=7, ta="left", only_svg=True)
+        canvas.add_text((28.5, 36), text=params[0], size=7, ta="left")
+        canvas.add_text((28.5, 45), text=params[1], size=7, ta="left")
 
 
 class PR(ACircuit):
@@ -255,6 +260,7 @@ class PR(ACircuit):
     _name = "PR"
     _fcircuit = Circuit
     _supports_polarization = True
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, delta):
         super().__init__(1)
@@ -305,7 +311,7 @@ class PR(ACircuit):
                           "H", 16, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
                           "z"
                           ], fill="black")
-        canvas.add_text((25, 45), text=content.replace("delta=", "δ="), size=7, ta="middle", only_svg=True)
+        canvas.add_text((25, 45), text=content.replace("delta=", "δ="), size=7, ta="middle")
 
 
 class HWP(WP):
@@ -326,6 +332,7 @@ class DT(ACircuit):
     _name = "DT"
     _fcircuit = Circuit
     delay_circuit = True
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, t):
         super().__init__(1)
@@ -358,12 +365,13 @@ class DT(ACircuit):
         canvas.add_mline([0, 25, 19, 25], stroke="darkred", stroke_width=3)
         canvas.add_mline([34, 25, 50, 25], stroke="white", stroke_width=5)
         canvas.add_mline([32, 25, 50, 25], stroke="darkred", stroke_width=3)
-        canvas.add_text((25, 38), content, 7, "middle", only_svg=True)
+        canvas.add_text((25, 38), content, 7, "middle")
 
 
 class PERM(GCircuit):
     _name = "PERM"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, perm):
         assert isinstance(perm, list), "permutation Operator needs list parameter"

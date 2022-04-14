@@ -43,6 +43,7 @@ class Circuit(GCircuit):
 class BS(ACircuit):
     _name = "BS"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "black", "stroke_width": 2}
 
     def __init__(self, R=None, theta=None, phi=0):
         super().__init__(2)
@@ -94,16 +95,18 @@ class BS(ACircuit):
     width = 2
 
     def shape(self, content, canvas):
-        canvas.add_mpath(["M", 0, 25, "C", 17, 25, 20, 30, 26, 36, "S", 33, 48, 50, 48,
-                          "S", 67, 48, 74, 36, "C", 80, 30, 83, 25, 100, 25], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 0, 75, "C", 17, 75, 20, 70, 26, 64, "S", 33, 52, 50, 52,
-                          "S", 67, 52, 74, 64, "C", 80, 70, 83, 75, 100, 75], stroke="black", stroke_width=2)
+
+        canvas.add_mpath(["M", 0, 25, "C", 17, 25, 20, 31, 26, 36, "C", 32, 42, 32, 48.5, 50, 48.5,
+                          "C", 68, 48.5, 68, 42, 74, 36, "C", 80, 31, 83, 25, 100, 25], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 0, 75, "C", 17, 75, 20, 69, 26, 64, "C", 32, 58, 32, 51.5, 50, 51.5,
+                          "C", 68, 51.5, 68, 58, 74, 64, "C", 80, 69, 83, 75, 100, 75], stroke="black", stroke_width=2)
 
 
 class DT(ACircuit):
     _name = "DT"
     _fcircuit = Circuit
     delay_circuit = True
+    stroke_style = {"stroke": "black", "stroke_width": 2}
 
     def __init__(self, t):
         super().__init__(1)
@@ -136,12 +139,13 @@ class DT(ACircuit):
         canvas.add_mline([0, 25, 19, 25], stroke="black", stroke_width=2)
         canvas.add_mline([34, 25, 50, 25], stroke="white", stroke_width=3)
         canvas.add_mline([32, 25, 50, 25], stroke="black", stroke_width=2)
-        canvas.add_text((25, 38), text=content.replace("t=", ""), size=9, ta="middle", only_svg=True)
+        canvas.add_text((25, 38), text=content.replace("t=", ""), size=9, ta="middle")
 
 
 class PS(ACircuit):
     _name = "PS"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "black", "stroke_width": 2}
 
     def __init__(self, phi):
         super().__init__(1)
@@ -170,12 +174,13 @@ class PS(ACircuit):
     def shape(self, content, canvas):
         canvas.add_mline([0, 25, 50, 25], stroke="black", stroke_width=2)
         canvas.add_rect((5, 17), width=40, height=16, stroke="black", stroke_width=2, fill="white")
-        canvas.add_text((25, 28), text=content.replace("phi=", ""), size=10, ta="middle", only_svg=True)
+        canvas.add_text((25, 28), text=content.replace("phi=", ""), size=10, ta="middle")
 
 
 class PERM(GCircuit):
     _name = "PERM"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "black", "stroke_width": 2}
 
     def __init__(self, perm):
         assert isinstance(perm, list), "permutation Operator needs list parameter"

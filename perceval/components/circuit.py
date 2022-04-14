@@ -63,6 +63,7 @@ class ACircuit(ABC):
         self._components = []
         self._params = {}
         self._vars = {}
+        self.defined_circuit = True
 
     @abstractmethod
     def _compute_unitary(self,
@@ -195,6 +196,9 @@ class ACircuit(ABC):
             self.__class__ = self._fcircuit
             self._Udef = None
             self._params = {v.name: v for k, v in self._params.items() if not v.fixed}
+        if not self.defined_circuit:
+            self.defined_circuit = True
+            self.stroke_style = component.stroke_style
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
                 "range must a consecutive valid set of ports"
@@ -332,16 +336,24 @@ class ACircuit(ABC):
                  map_param_kid: dict = None,
                  shift: int = 0,
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
-                 recursive: bool = False):
+                 recursive: bool = False,
+                 dry_run: bool = False,
+                 **opts):
         if parent_td is None:
-            td = QPrinter(self._m, output_format=output_format)
+            if not dry_run:
+                total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, **opts)
+                td = QPrinter(self._m, output_format=output_format, stroke_style=self.stroke_style,
+                              total_width=total_width, total_height=self._m, **opts)
+            else:
+                td = QPrinter(self._m, output_format="html", stroke_style=self.stroke_style, **opts)
         else:
             td = parent_td
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
-        if self._Udef is not None:
-            td.append_circuit([p + shift for p in range(self._m)], self, "")
+        if hasattr(self, "width"):
+            description = self.get_variables(map_param_kid)
+            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
 
         if self._components:
             for r, c in self._components:
@@ -358,9 +370,13 @@ class ACircuit(ABC):
                     td.append_circuit(shiftr, c, "\n".join(description))
 
         td.extend_pos(0, self._m - 1)
+
         if parent_td is None:
             td.close()
-            return str(td)
+            if dry_run:
+                return td.max_pos(0, self._m-1, True)
+            else:
+                return td.draw()
 
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
     subcircuit_width = 2
@@ -406,6 +422,8 @@ class Circuit(ACircuit):
         if name is not None:
             self._name = name
         super().__init__(m)
+        if U is None:
+            self.defined_circuit = False
 
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
@@ -496,7 +514,10 @@ class Circuit(ACircuit):
             use_polarization = self.requires_polarization
         elif not use_polarization:
             assert self.requires_polarization is False, "polarized circuit cannot generates non-polarized unitary"
-        return self._compute_circuit_unitary(use_symbolic, use_polarization)
+        u = self._compute_circuit_unitary(use_symbolic, use_polarization)
+        if u is None:
+            u = Matrix.eye(self._m, use_symbolic=use_symbolic)
+        return u
 
     def subcircuit_shape(self, content, canvas):
         for idx in range(self._m):

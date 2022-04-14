@@ -26,6 +26,7 @@ from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pd
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import sympy as sp
+import numpy as np
 
 
 def strip_line_12(s: str) -> str:
@@ -71,6 +72,27 @@ def test_helloword():
             | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
             +-------+-------+-------+-------+-------+-------+
         """)
+
+
+def test_empty_circuit():
+    c = Circuit(4)
+    M = c.compute_unitary(False)
+    assert M.shape == (4, 4)
+    assert np.allclose(M, Matrix.eye(4))
+    assert c.pdisplay().replace(" ", "") == """
+
+0:────:0 (depth 0)
+
+
+1:────:1 (depth 0)
+
+
+2:────:2 (depth 0)
+
+
+3:────:3 (depth 0)
+
+""".replace(" ", "")
 
 
 def test_sbs_definition():
@@ -254,13 +276,13 @@ def test_visualization_ucircuit(capfd):
     pdisplay(c, output_format="text")
     out, err = capfd.readouterr()
     assert out.strip() == """
-  ╭─────╮╭───────────╮╭─────╮
-1:┤U1   ├┤PS phi=pi/2├┤U2   ├:1 (depth 3)
-  │     │╰───────────╯│     │
-  │     │             │     │
-2:┤     ├─────────────┤     ├:2 (depth 2)
-  │     │             │     │
-  │     │             │     │
-3:┤     ├─────────────┤     ├:3 (depth 2)
-  ╰─────╯             ╰─────╯
+    ╭─────╮╭───────────╮╭─────╮
+0:──┤U1   ├┤PS phi=pi/2├┤U2   ├──:0 (depth 3)
+    │     │╰───────────╯│     │
+    │     │             │     │
+1:──┤     ├─────────────┤     ├──:1 (depth 2)
+    │     │             │     │
+    │     │             │     │
+2:──┤     ├─────────────┤     ├──:2 (depth 2)
+    ╰─────╯             ╰─────╯
 """.strip()

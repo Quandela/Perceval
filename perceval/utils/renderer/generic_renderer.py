@@ -1,10 +1,32 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Union, Literal, Tuple
 
 
 class Canvas(ABC):
-    def __init__(self):
+    def __init__(self, **opts):
         self._position = []
         self._minx = None
         self._miny = None
@@ -13,6 +35,10 @@ class Canvas(ABC):
         self._drawn = False
         self._offset_x = 0
         self._offset_y = 0
+        if opts is None:
+            self._opts = {}
+        else:
+            self._opts = opts
 
     def set_offset(self, v: Tuple[float, float], width: float, height: float):
         self._offset_x = v[0]
@@ -46,8 +72,7 @@ class Canvas(ABC):
                   stroke: str = "black",
                   stroke_width: float = 1,
                   stroke_linejoin: str = "miter",
-                  stroke_dasharray=None,
-                  only_svg=False):
+                  stroke_dasharray=None):
         """Draw a multi-line
 
         :param points:
@@ -68,8 +93,7 @@ class Canvas(ABC):
                     stroke_width: float = 1,
                     fill: str = None,
                     stroke_linejoin: str = "miter",
-                    stroke_dasharray=None,
-                    only_svg=False):
+                    stroke_dasharray=None):
         """Draw a polygon
 
         :param fill:
@@ -100,8 +124,7 @@ class Canvas(ABC):
                   stroke_width: float = 1,
                   fill: str = None,
                   stroke_linejoin: str = "miter",
-                  stroke_dasharray=None,
-                  only_svg=False):
+                  stroke_dasharray=None):
         """Draw a path
 
         :param fill:
@@ -192,16 +215,14 @@ class Canvas(ABC):
                    stroke: str = "black",
                    stroke_width: float = 1,
                    fill: str = None,
-                   stroke_dasharray = None,
-                   only_svg=False):
+                   stroke_dasharray = None):
         self.position = (points[0] + r, points[1] + r)
         self.position = (points[0] - r, points[1] - r)
         self.position = points
         return self.position
 
     def add_text(self, points: Tuple[float, float],
-                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left",
-                 only_svg=False):
+                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left"):
         self.position = points
         f_points = self.position
         if ta == "left":
@@ -220,7 +241,5 @@ class Canvas(ABC):
 
 class Renderer(ABC):
     @abstractmethod
-    def new_canvas(self) -> Canvas:
+    def new_canvas(self, **opts) -> Canvas:
         pass
-
-
