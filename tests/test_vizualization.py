@@ -126,6 +126,16 @@ def test_svg_dump_symb_bs(tmp_path, save_figs):
     _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
+def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
+    nc = (pcvl.Circuit(4)
+          .add([0, 1], phys.PERM([1, 0]))
+          .add([1, 2], phys.PERM([1, 0]))
+          .add([2, 3], phys.PERM([1, 0]))
+          .add([1, 2], phys.PERM([1, 0]))
+          .add([0, 1], phys.PERM([1, 0])))
+    _save_or_check(nc, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+
 def test_svg_dump_qrng(tmp_path, save_figs):
     chip_QRNG = pcvl.Circuit(4, name='QRNG')
     # Parameters
@@ -144,4 +154,20 @@ def test_svg_dump_qrng(tmp_path, save_figs):
              .add((0, 1), symb.BS())
              .add((2, 3), symb.BS())
     )
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+
+def test_svg_dump_phys_universal1(tmp_path, save_figs):
+    ub1 = phys.Circuit(2) // phys.BS() // (0, phys.PS(pcvl.P("2θ"))) // phys.BS() // (0, phys.PS(pcvl.P("φ")))
+    _save_or_check(ub1, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+
+def test_svg_dump_unitary(tmp_path, save_figs):
+    cA = phys.Circuit(6, name="W_1", U=pcvl.Matrix.random_unitary(6))
+    cB = phys.Circuit(6, name="W_2", U=pcvl.Matrix.random_unitary(6))
+    p_x = pcvl.P("x")
+    c = (phys.Circuit(6)
+         .add(0, cA, merge=False)
+         .add(0, phys.PS(p_x))
+         .add(0, cB, merge=False))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)

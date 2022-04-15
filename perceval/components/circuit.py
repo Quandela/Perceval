@@ -351,7 +351,7 @@ class ACircuit(ABC):
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
-        if hasattr(self, "width"):
+        if not isinstance(self, Circuit) or self._Udef is not None:
             description = self.get_variables(map_param_kid)
             td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
 
@@ -365,7 +365,7 @@ class ACircuit(ABC):
                 elif c._components:
                     description = c.get_variables(map_param_kid)
                     td.append_subcircuit(shiftr, c, "\n".join(description))
-                else:
+                elif isinstance(c, ACircuit) or c._Udef is not None:
                     description = c.get_variables(map_param_kid)
                     td.append_circuit(shiftr, c, "\n".join(description))
 
