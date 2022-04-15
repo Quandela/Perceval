@@ -36,11 +36,19 @@ TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 def save_figs(pytestconfig):
     return pytestconfig.getoption("save_figs")
 
+
+def _norm(svg):
+    svg = svg.replace(" \n", "\n")
+    svg = re.sub(r'url\(#.*?\)', "url()", svg)
+    svg = re.sub(r'<dc:date>(.*)</dc:date>', '<dc:date></dc:date>', svg)
+    return svg
+
+
 def _check_image(test_path, ref_path):
     with open(test_path) as f_test:
-        test = "".join(f_test.readlines()).replace(" \n", "\n")
+        test = _norm("".join(f_test.readlines()))
     with open(ref_path) as f_ref:
-        ref = "".join(f_ref.readlines()).replace(" \n", "\n")
+        ref = _norm("".join(f_ref.readlines()))
     m_test = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', test)
     m_ref = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', ref)
     if not m_test:
@@ -59,6 +67,11 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs):
         c.pdisplay(output_format="mplot",
                    mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
                    mplot_noshow=True)
+        with open(TEST_IMG_DIR / Path(circuit_name + ".svg")) as f_saved:
+            saved = "".join(f_saved.readlines())
+        saved = _norm(saved)
+        with open(TEST_IMG_DIR / Path(circuit_name + ".svg"), "w") as fw_saved:
+            fw_saved.write(saved)
     else:
         c.pdisplay(output_format="mplot",
                    mplot_savefig=tmp_path / Path(circuit_name + ".svg"),
@@ -106,6 +119,10 @@ def test_svg_dump_phys_perm4_swap(tmp_path, save_figs):
 
 def test_svg_dump_no_circuit_4(tmp_path, save_figs):
     _save_or_check(pcvl.Circuit(4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+
+def test_svg_dump_symb_bs(tmp_path, save_figs):
+    _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
 def test_svg_dump_qrng(tmp_path, save_figs):
