@@ -32,19 +32,19 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.743802 144
 L 76.964876 144
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 76.964876 144
 L 117.18595 144
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 170.81405 144
 L 211.035124 144
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 114.504545 114.504545
 L 173.495455 114.504545
 L 173.495455 173.495455
 L 114.504545 173.495455
 z
-" clip-path="url()" style="fill: #d3d3d3; stroke: #000000"/>
+" clip-path="url(#staticClipPath)" style="fill: #d3d3d3; stroke: #000000"/>
     <path d="M 125.230165 149.36281
 C 125.517076 149.714074 125.980959 149.714074 126.267869 149.36281
 L 132.448507 141.798567
@@ -63,10 +63,10 @@ C 123.956498 140.798939 123.54088 141.16361 123.087723 141.16361
 L 119.867355 141.16361
 C 119.414198 141.16361 119.280128 141.447839 119.567038 141.799103
 L 125.230165 149.36281
-" clip-path="url()" style="stroke: #000000"/>
+" clip-path="url(#staticClipPath)" style="stroke: #000000"/>
     <path d="M 211.035124 144
 L 251.256198 144
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
    </g>
    <g id="text_1">
     <!-- 0 -->
@@ -226,7 +226,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p6e42196945">
+  <clipPath id="staticClipPath">
    <rect x="26.018182" y="10.8" width="235.963636" height="266.4"/>
   </clipPath>
  </defs>

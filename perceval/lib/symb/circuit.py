@@ -95,11 +95,11 @@ class BS(ACircuit):
     width = 2
 
     def shape(self, content, canvas):
-
-        canvas.add_mpath(["M", 0, 25, "C", 17, 25, 20, 31, 26, 36, "C", 32, 42, 32, 48.5, 50, 48.5,
-                          "C", 68, 48.5, 68, 42, 74, 36, "C", 80, 31, 83, 25, 100, 25], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 0, 75, "C", 17, 75, 20, 69, 26, 64, "C", 32, 58, 32, 51.5, 50, 51.5,
-                          "C", 68, 51.5, 68, 58, 74, 64, "C", 80, 69, 83, 75, 100, 75], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 0, 25, "C", 17, 25, 20, 31, 26, 36, "C", 31, 43, 32, 48.5, 50, 48.5,
+                          "C", 68, 48.5, 69, 43, 75, 36, "C", 80, 31, 83, 25, 100, 25], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 0, 75, "C", 17, 75, 20, 69, 26, 64, "C", 31, 57, 32, 51.5, 50, 51.5,
+                          "C", 68, 51.5, 69, 57, 75, 64, "C", 80, 69, 83, 75, 100, 75], stroke="black", stroke_width=2)
+        canvas.add_text((50, 38), content, 7, "middle")
 
 
 class DT(ACircuit):

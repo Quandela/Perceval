@@ -32,60 +32,60 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.743802 158.894628
 L 76.964876 158.894628
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 36.743802 292.964876
 L 76.964876 292.964876
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 36.743802 427.035124
 L 76.964876 427.035124
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 36.743802 561.105372
 L 76.964876 561.105372
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 85.009091 158.894628
 L 202.990909 561.105372
-" clip-path="url()" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
     <path d="M 76.964876 158.894628
 L 85.009091 158.894628
 L 202.990909 561.105372
 L 211.035124 561.105372
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 85.009091 292.964876
 L 202.990909 427.035124
-" clip-path="url()" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
     <path d="M 76.964876 292.964876
 L 85.009091 292.964876
 L 202.990909 427.035124
 L 211.035124 427.035124
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 85.009091 427.035124
 L 202.990909 292.964876
-" clip-path="url()" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
     <path d="M 76.964876 427.035124
 L 85.009091 427.035124
 L 202.990909 292.964876
 L 211.035124 292.964876
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 85.009091 561.105372
 L 202.990909 158.894628
-" clip-path="url()" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
     <path d="M 76.964876 561.105372
 L 85.009091 561.105372
 L 202.990909 158.894628
 L 211.035124 158.894628
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 211.035124 158.894628
 L 251.256198 158.894628
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 211.035124 292.964876
 L 251.256198 292.964876
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 211.035124 427.035124
 L 251.256198 427.035124
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 211.035124 561.105372
 L 251.256198 561.105372
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
    </g>
    <g id="text_1">
     <!-- 0 -->
@@ -237,7 +237,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p4f7b012ad2">
+  <clipPath id="staticClipPath">
    <rect x="26.018182" y="10.8" width="235.963636" height="698.4"/>
   </clipPath>
  </defs>

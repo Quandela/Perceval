@@ -39,7 +39,8 @@ def save_figs(pytestconfig):
 
 def _norm(svg):
     svg = svg.replace(" \n", "\n")
-    svg = re.sub(r'url\(#.*?\)', "url()", svg)
+    svg = re.sub(r'url\(#.*?\)', 'url(#staticClipPath)', svg)
+    svg = re.sub(r'<clipPath id=".*?">', '<clipPath id="staticClipPath">', svg)
     svg = re.sub(r'<dc:date>(.*)</dc:date>', '<dc:date></dc:date>', svg)
     return svg
 

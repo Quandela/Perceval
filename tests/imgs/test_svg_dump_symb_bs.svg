@@ -32,28 +32,28 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.904005 147.116925
 L 78.23385 147.116925
-" clip-path="url()" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
     <path d="M 36.904005 284.883075
 L 78.23385 284.883075
-" clip-path="url()" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
     <path d="M 78.23385 147.116925
 C 125.074341 147.116925 133.34031 163.648863 149.872248 177.425478
 C 163.648863 196.712739 166.404186 211.867016 216 211.867016
 C 265.595814 211.867016 268.351137 196.712739 284.883075 177.425478
 C 298.65969 163.648863 306.925659 147.116925 353.76615 147.116925
-" clip-path="url()" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
     <path d="M 78.23385 284.883075
 C 125.074341 284.883075 133.34031 268.351137 149.872248 254.574522
 C 163.648863 235.287261 166.404186 220.132984 216 220.132984
 C 265.595814 220.132984 268.351137 235.287261 284.883075 254.574522
 C 298.65969 268.351137 306.925659 284.883075 353.76615 284.883075
-" clip-path="url()" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
     <path d="M 353.76615 147.116925
 L 395.095995 147.116925
-" clip-path="url()" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
     <path d="M 353.76615 284.883075
 L 395.095995 284.883075
-" clip-path="url()" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
    </g>
    <g id="text_1">
     <!-- 0 -->
@@ -213,7 +213,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p39f21f0286">
+  <clipPath id="staticClipPath">
    <rect x="18.994406" y="10.8" width="394.011189" height="410.4"/>
   </clipPath>
  </defs>

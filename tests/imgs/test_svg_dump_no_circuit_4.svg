@@ -32,28 +32,28 @@ z
    <g id="PatchCollection_1">
     <path d="M 42.495868 212.479339
 L 72 212.479339
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 42.495868 310.826446
 L 72 310.826446
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 42.495868 409.173554
 L 72 409.173554
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 42.495868 507.520661
 L 72 507.520661
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 72 212.479339
 L 101.504132 212.479339
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 72 310.826446
 L 101.504132 310.826446
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 72 409.173554
 L 101.504132 409.173554
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 72 507.520661
 L 101.504132 507.520661
-" clip-path="url()" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
    </g>
    <g id="text_1">
     <!-- 0 -->
@@ -205,7 +205,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p07cea953f2">
+  <clipPath id="staticClipPath">
    <rect x="39.545455" y="10.8" width="64.909091" height="698.4"/>
   </clipPath>
  </defs>
