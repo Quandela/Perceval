@@ -63,11 +63,12 @@ def _check_image(test_path, ref_path):
     return True, "ok"
 
 
-def _save_or_check(c, tmp_path, circuit_name, save_figs):
+def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False):
     if save_figs:
         c.pdisplay(output_format="mplot",
                    mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
-                   mplot_noshow=True)
+                   mplot_noshow=True,
+                   recursive=recursive)
         with open(TEST_IMG_DIR / Path(circuit_name + ".svg")) as f_saved:
             saved = "".join(f_saved.readlines())
         saved = _norm(saved)
@@ -76,7 +77,8 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs):
     else:
         c.pdisplay(output_format="mplot",
                    mplot_savefig=tmp_path / Path(circuit_name + ".svg"),
-                   mplot_noshow=True)
+                   mplot_noshow=True,
+                   recursive=recursive)
         ok, msg = _check_image(tmp_path / Path(circuit_name + ".svg"),
                                TEST_IMG_DIR / Path(circuit_name + ".svg"))
         assert ok, msg
@@ -171,3 +173,47 @@ def test_svg_dump_unitary(tmp_path, save_figs):
          .add(0, phys.PS(p_x))
          .add(0, cB, merge=False))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+
+def test_svg_dump_grover(tmp_path, save_figs):
+    def oracle(mark):
+        """Values 0, 1, 2 and 3 for parameter 'mark' respectively mark the elements "00", "01", "10" and "11" of the list."""
+        oracle_circuit = pcvl.Circuit(m=2, name='Oracle')
+        # The following dictionnary translates n into the corresponding component settings
+        oracle_dict = {0: (1, 0), 1: (0, 1), 2: (1, 1), 3: (0, 0)}
+        PC_state, LC_state = oracle_dict[mark]
+        # Mode b
+        if PC_state == 1:
+            oracle_circuit.add(0, HWP(0))
+        oracle_circuit.add(0, phys.PR(sp.pi / 2))
+        if LC_state == 1:
+            oracle_circuit.add(0, HWP(0))
+        # Mode a
+        if LC_state == 1:
+            oracle_circuit.add(1, HWP(0))
+        if PC_state == 1:
+            oracle_circuit.add(1, HWP(0))
+        return oracle_circuit
+    def HWP(xsi):
+        hwp = pcvl.Circuit(m=1)
+        hwp.add(0, phys.HWP(xsi)).add(0, phys.PS(-sp.pi / 2))
+        return hwp
+
+    BS = phys.BS(theta=sp.pi / 4, phi_a=0, phi_b=sp.pi / 2, phi_d=0)
+    init_circuit = pcvl.Circuit(m=2, name="Initialization")
+    init_circuit.add(0, HWP(sp.pi/8))
+    init_circuit.add((0, 1), BS)
+    init_circuit.add(0, phys.PS(-sp.pi))
+    inversion_circuit = pcvl.Circuit(m=2, name='Inversion')
+    inversion_circuit.add((0, 1), BS)
+    inversion_circuit.add(0, HWP(sp.pi / 4))
+    inversion_circuit.add((0, 1), BS)
+    detection_circuit = pcvl.Circuit(m=4, name='Detection')
+    detection_circuit.add((0, 1), phys.PBS())
+    detection_circuit.add((2, 3), phys.PBS())
+
+    grover_circuit = pcvl.Circuit(m=2, name='Grover')
+    grover_circuit.add((0, 1), init_circuit).add((0, 1), oracle(0)).add((0, 1), inversion_circuit)
+
+    _save_or_check(grover_circuit, tmp_path, sys._getframe().f_code.co_name+"-rec", save_figs, recursive=True)
+    _save_or_check(grover_circuit, tmp_path, sys._getframe().f_code.co_name+"-norec", save_figs, recursive=False)

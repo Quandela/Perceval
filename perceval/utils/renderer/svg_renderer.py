@@ -75,7 +75,11 @@ class SVGCanvas(Canvas):
             stroke
         ))
 
-    def add_text(self, points, text, size, ta="left"):
+    def add_text(self, points, text, size, ta="start"):
+        if ta == "right":
+            ta = "end"
+        elif ta == "left":
+            ta = "start"
         points = super().add_text(points, text, size, ta)
         self._canvas.append('<text x="%f" y="%f" font-size="%f" text-anchor="%s">%s</text>' % (
             points[0], points[1], size, ta, text
