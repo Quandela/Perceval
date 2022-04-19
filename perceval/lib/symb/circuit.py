@@ -149,7 +149,7 @@ class PS(ACircuit):
 
     def __init__(self, phi):
         super().__init__(1)
-        self._phi = self._set_parameter("phi", phi, 0, sp.pi)
+        self._phi = self._set_parameter("phi", phi, 0, 2*sp.pi)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)

@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import copy
-import random
 
 import numpy as np
 import sympy as sp
@@ -47,11 +46,13 @@ def _solve(f, x0, constraint, bounds, precision):
         if c is not None:
             c = float(c)
             fi = lambda x: f([*x[:i], c, *x[i:]])
-            res = _solve(fi, x0[:i]+x0[i+1:], constraint[:i]+constraint[i+1:], precision)
+            res = _solve(fi, x0[:i]+x0[i+1:], constraint[:i]+constraint[i+1:], bounds[:i]+bounds[i+1:], precision)
             if res is None:
                 return None
             return [*res[:i], c, *res[i:]]
-    res = so.minimize(f, x0, method="L-BFGS-B", bounds=bounds)
+    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[(float(b[0]), float(b[1])) for b in bounds])
+    if f(res.x)[0] > precision:
+        return None
     return res.x
 
 

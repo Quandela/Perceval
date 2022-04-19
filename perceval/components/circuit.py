@@ -27,7 +27,6 @@ import random
 from typing import Callable, Literal, Optional, Union, Tuple, Type
 import perceval.algorithm as algorithm
 
-import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
@@ -291,7 +290,7 @@ class ACircuit(ABC):
                 map_param_kid[p._pid] = p.name
         return map_param_kid
 
-    def identify(self, unitary_matrix, phases):
+    def identify(self, unitary_matrix, phases, max_try=10):
         r"""Identify an instance of the current circuit (should be parameterized) such as Q.C=U.P where Q and P
         are single-mode phase shifts (resp. [q1, q2, ..., qn], and [p1, p2, ...,pn])
 
@@ -302,6 +301,7 @@ class ACircuit(ABC):
         ----------
         unitary_matrix :
         phases :
+        max_try : maximal number of try
 
         Returns
         -------
@@ -325,9 +325,9 @@ class ACircuit(ABC):
                 equations.append(sp.re(abs(cU[i, j]-UP[i, j])))
         f = sp.lambdify([params], equations, "numpy")
         counter = 0
-        while counter < 100:
-            x0 = [random.random() * 2 * np.pi - np.pi] * len(params)
-            res, _, ier, _ = so.fsolve(f, [x0], full_output=True)
+        while counter < max_try:
+            x0 = [random.random()] * len(params)
+            res, _, ier, _ = so.fsolve(f, x0, full_output=True)
             if ier == 1:
                 break
             counter += 1
@@ -576,8 +576,8 @@ class Circuit(ACircuit):
                       permutation: Type[Circuit] = None,
                       constraints=None,
                       merge: bool = True,
-                      precision: float = None,
-                      max_try: int = 100):
+                      precision: float = 1e-6,
+                      max_try: int = 10):
         r"""Decompose a given unitary matrix U into a circuit with specified component type
 
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
