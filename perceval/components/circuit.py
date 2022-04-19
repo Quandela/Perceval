@@ -25,12 +25,13 @@ from abc import ABC, abstractmethod
 import copy
 import random
 from typing import Callable, Literal, Optional, Union, Tuple, Type
+import perceval.algorithm as algorithm
 
 import numpy as np
-import scipy.optimize as so
 import sympy as sp
+import scipy.optimize as so
 
-from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas, global_params
+from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas
 
 
 def _matrix_double_for_polarization(m, u):
@@ -131,11 +132,11 @@ class ACircuit(ABC):
     def params(self):
         return self._params.keys()
 
-    def get_parameters(self, all_params: bool = False) -> list[str]:
+    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
-        :return: the name of the parameters
+        :return: the list of parameters
         """
         return [v for v in self._params.values() if all_params or not v.fixed]
 
@@ -307,6 +308,9 @@ class ACircuit(ABC):
 
         """
         params = [x.spv for x in self.get_parameters()]
+        # add dummy variables
+        for i in range(self._m**2-self._m-len(params)):
+            params.append(sp.S("dummy%d" % i))
         Q = Matrix.eye(self._m, use_symbolic=True)
         P = Matrix.eye(self._m)
         for i in range(self._m):
@@ -329,7 +333,7 @@ class ACircuit(ABC):
             counter += 1
         if ier != 1:
             return None
-        return res[:len(res)-self._m], res[-self._m:]
+        return res[:len(self.get_parameters())], res[-self._m:]
 
     def pdisplay(self,
                  parent_td: QPrinter = None,
@@ -570,11 +574,15 @@ class Circuit(ACircuit):
                       phase_shifter_fn: Callable[[float], Circuit] = None,
                       shape: Literal["triangle", "rectangle"] = "triangle",
                       permutation: Type[Circuit] = None,
+                      constraints=None,
                       merge: bool = True,
-                      precision: float = None):
+                      precision: float = None,
+                      max_try: int = 100):
         r"""Decompose a given unitary matrix U into a circuit with specified component type
 
-        :param component: a circuit, must have 2 independent parameters
+        :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
+        :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
+        Each constraint should have the numbers of free parameters of the system.
         :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
             ignored
         :param shape: `rectangle` (Clements-like interferometer) or `triangle` (Reck-like)
@@ -583,169 +591,27 @@ class Circuit(ACircuit):
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :return: a circuit
         """
-        M = copy.deepcopy(U)
-        N = M.shape[0]
-        C = Circuit(N)
-        params = component.get_parameters()
-        params_symbols = [x.spv for x in params]
-        assert len(params) == 2, "Component should have 2 independent parameters"
+        N = U.shape[0]
+        count = 0
+        if constraints is None:
+            constraints = [[None]*len(component.get_parameters())]
+        assert isinstance(constraints, list), "constraints should be a list of constraint"
+        for c in constraints:
+            assert isinstance(c, (list, tuple)) and len(c) == len(component.get_parameters()),\
+                "there should as many component in each constraint than free parameters in the component"
+        while count < max_try:
+            if shape == "triangle":
+                lc = algorithm.decompose_triangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+            else:
+                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+            if lc is not None:
+                C = Circuit(N)
+                for ic in lc:
+                    C.add(*ic, merge=merge)
+                return C
+            count += 1
 
-        if precision is None:
-            precision = global_params["min_complex_component"]
-
-        U = component.U
-        UI = U.inv()
-
-        if shape == "triangle":
-            assert len(set.union(UI[0, 0].free_symbols, UI[0, 0].free_symbols)) == 2, "Component parameters cannot" \
-                    "perform triangle decomposition"
-
-        if shape == "rectangle":
-            list_components_right = []
-            list_components_left = []
-
-            for m in range(N-1):
-                for k in range(m+1):
-                    if m % 2 == 0:
-                        # on even iterations right null with UI, goal is to null M[N-1-k,m-k]
-                        if abs(M[N-1-k, m-k]) > precision:
-                            equation = M[N-1-k, m-k] * UI[0, 0] + M[N-1-k, m-k+1] * UI[1, 0]
-                            f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
-                            counter = 0
-                            while counter < 100:
-                                x0 = [random.random() * 2 * np.pi - np.pi, random.random() * 2 * np.pi - np.pi]
-                                res, _, ier, _ = so.fsolve(f, x0, full_output=True)
-                                if ier == 1:
-                                    break
-                                counter += 1
-                            if ier != 1:
-                                return None
-
-                            RI = Matrix.eye(N, use_symbolic=False)
-                            RI[m-k, m-k] = complex(
-                                UI[0, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                            RI[m-k, m-k+1] = complex(
-                                UI[0, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                            RI[m-k+1, m-k] = complex(
-                                UI[1, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                            RI[m-k+1, m-k+1] = complex(
-                                UI[1, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-
-                            M = M @ RI
-                            instantiated_component = copy.deepcopy(component)
-                            instantiated_component.get_parameters()[0].fix_value(res[0])
-                            instantiated_component.get_parameters()[0].fix_value(res[1])
-                            list_components_right = list_components_right+[((m-k, m-k+1), instantiated_component)]
-                    else:
-                        # on odd iterations left null with U, goal is to null M[N-1-m+k,k]
-                        if abs(M[N-1-m+k, k]) > precision:
-                            equation = U[1, 0] * M[N-2-m+k, k] + U[1, 1] * M[N-1-m+k, k]
-                            f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
-                            counter = 0
-                            while counter < 100:
-                                x0 = [random.random() * 2 * np.pi - np.pi, random.random() * 2 * np.pi - np.pi]
-                                res, _, ier, _ = so.fsolve(f, x0, full_output=True)
-                                if ier == 1:
-                                    break
-                                counter += 1
-                            if ier != 1:
-                                return None
-
-                            RI = Matrix.eye(N, use_symbolic=False)
-                            RI[N-2-m+k, N-2-m+k] = complex(
-                                U[0, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                            RI[N-2-m+k, N-1-m+k] = complex(
-                                U[0, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                            RI[N-1-m+k, N-2-m+k] = complex(
-                                U[1, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                            RI[N-1-m+k, N-1-m+k] = complex(
-                                U[1, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-
-                            M = RI @ M
-                            instantiated_component = copy.deepcopy(component)
-                            instantiated_component.get_parameters()[0].fix_value(res[0])
-                            instantiated_component.get_parameters()[0].fix_value(res[1])
-                            Uinv = instantiated_component.U.inv()
-                            list_components_left = [((N-2-m+k, N-1-m+k), Uinv)]+list_components_left
-            list_components = list_components_right
-            D = list(np.diag(M))
-            for r, Uinv in list_components_left:
-                res = component.identify(Uinv, D[r[0]:r[1]+1])
-                if res is None:
-                    raise ValueError("Cannot solve component.identify", Uinv, D[r[0]:r[1]+1])
-                cparameters, nD = res
-                instantiated_component = copy.deepcopy(component)
-                instantiated_component.get_parameters()[0].fix_value(cparameters[0])
-                instantiated_component.get_parameters()[0].fix_value(cparameters[1])
-                list_components = [(r, instantiated_component)] + list_components
-                D[r[0]] = np.exp(1j*nD[0])
-                D[r[1]] = np.exp(1j*nD[1])
-        else:
-            list_components = []
-            for m in range(N-1, 0, -1):
-                for n in range(m):
-                    # goal is to null M[n,m]
-                    solve_cell = False
-                    if abs(M[n, m]) <= precision:
-                        solve_cell = True
-                    else:
-                        if permutation is not None:
-                            p = [0]
-                            for k in range(n+1, m+1):
-                                p.append(k-n)
-                                if abs(M[k, m]) <= precision:
-                                    p[0] = k-n
-                                    p[-1] = 0
-                                    list_components = [(list(range(n, k+1)), permutation(p))] + list_components
-                                    RI = Matrix.eye(N, use_symbolic=False)
-                                    RI[n, n] = RI[k, k] = 0
-                                    RI[k, n] = RI[n, k] = 1
-                                    M = RI @ M
-                                    solve_cell = True
-                                    break
-                    if not solve_cell:
-                        equation = UI[0, 0]*M[n, m] + UI[0, 1]*M[n+1, m]
-                        f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
-                        counter = 0
-                        while counter < 100:
-                            x0 = [random.random()*2*np.pi-np.pi, random.random()*2*np.pi-np.pi]
-                            res, _, ier, _ = so.fsolve(f, x0, full_output=True)
-                            if ier == 1:
-                                break
-                            counter += 1
-                        if ier != 1:
-                            return None
-
-                        RI = Matrix.eye(N, use_symbolic=False)
-                        RI[n, n] = complex(UI[0, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                        RI[n, n+1] = complex(UI[0, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                        RI[n+1, n] = complex(UI[1, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                        RI[n+1, n+1] = complex(UI[1, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-
-                        M = RI @ M
-                        instantiated_component = copy.deepcopy(component)
-                        instantiated_component.get_parameters()[0].fix_value(res[0])
-                        instantiated_component.get_parameters()[0].fix_value(res[1])
-                        list_components = [((n, n+1), instantiated_component)]+list_components
-
-            D = np.diag(M)
-
-        if phase_shifter_fn:
-            for idx in range(N):
-                a = D[idx].real
-                b = D[idx].imag
-                if b != 0:
-                    if a == 0:
-                        phi = np.pi/2
-                    else:
-                        phi = np.arctan(b/a)
-                        if a < 0:
-                            phi = phi + np.pi
-                    list_components = [(idx, phase_shifter_fn(phi))] + list_components
-
-        for ic in list_components:
-            C.add(*ic, merge=merge)
-        return C
+        return None
 
     def shape(self, _, canvas):
         for i in range(self.m):

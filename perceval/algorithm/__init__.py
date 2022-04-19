@@ -1,4 +1,3 @@
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -21,10 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from pkg_resources import get_distribution
-
-__version__ = get_distribution("perceval-quandela").version
-
-from .components import *
-from .backends import *
-from .utils import *
+from .decomposition import decompose_triangle, decompose_rectangle

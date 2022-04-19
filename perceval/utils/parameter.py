@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import random
 import sympy as sp
 from .format import simple_float
 
@@ -67,6 +68,13 @@ class Parameter:
         """
         return float(self._value)
 
+    def random(self):
+        if self._symbol is None:
+            return float(self._value)
+        if self._min is not None and self._max is not None:
+            return float(random.random() * (self._max-self._min) + self._min)
+        return random.random()
+
     def set_value(self, v: float):
         r"""Define the value of a non-fixed parameter
 
@@ -88,9 +96,12 @@ class Parameter:
         """
         self._symbol = None
         if self._periodic and self._min is not None and self._max is not None:
-            p = int((v-self._min)/(self._max-self._min))
-            if p:
-                v = v - p * (self._max-self._min)
+            if v > self._max:
+                p = int((v-self._max)/(self._max-self._min))
+                v = v - (p+1) * (self._max-self._min)
+            elif v < self._min:
+                p = int((self._min-v)/(self._max-self._min))
+                v = v + (p+1) * (self._max-self._min)
         self._value = v
 
     @property

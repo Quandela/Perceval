@@ -247,7 +247,7 @@ def test_clifford_bs():
 
 def test_clifford_10():
     n, m = 10, 60
-    state = pcvl.FockState([1] * n + [0] * (m - n))
+    state = pcvl.BasicState([1] * n + [0] * (m - n))
     bs_backend = pcvl.BackendFactory().get_backend("CliffordClifford2017")
     u = pcvl.Matrix.random_unitary(m)
     experiment = bs_backend(pcvl.Circuit(U=u))
@@ -257,7 +257,7 @@ def test_clifford_10():
 @pytest.mark.long_test
 def test_clifford_27():
     n, m = 27, 60
-    state = pcvl.FockState([1] * n + [0] * (m - n))
+    state = pcvl.BasicState([1] * n + [0] * (m - n))
     bs_backend = pcvl.BackendFactory().get_backend("CliffordClifford2017")
     u = pcvl.Matrix.random_unitary(m)
     experiment = bs_backend(pcvl.Circuit(U=u))

@@ -25,7 +25,7 @@ import perceval as pcvl
 import perceval.lib.symb as symb
 
 
-def test_perm():
+def test_perm_0():
     c = pcvl.Circuit(4).add(0, symb.PERM([3, 1, 2, 0]))
     ub = (pcvl.Circuit(2)
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
@@ -43,7 +43,7 @@ def test_perm():
 
 
 def test_basic_perm_triangle():
-    c = pcvl.Circuit(2).add(0, symb.PERM([1,0]))
+    c = pcvl.Circuit(2).add(0, symb.PERM([1, 0]))
     ub = (pcvl.Circuit(2)
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS()
@@ -51,14 +51,26 @@ def test_basic_perm_triangle():
           // symb.BS())
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
     M1 = C1.compute_unitary(use_symbolic=False)
-    assert approx(1) == abs(M1[0][0])+1
-    assert approx(1) == abs(M1[0][1])
-    assert approx(1) == abs(M1[1][0])
-    assert approx(1) == abs(M1[1][1])+1
+    assert approx(1, rel=1e-3) == abs(M1[0][0])+1
+    assert approx(2, rel=1e-3) == abs(M1[0][1])+1
+    assert approx(2, rel=1e-3) == abs(M1[1][0])+1
+    assert approx(1, rel=1e-3) == abs(M1[1][1])+1
+
+
+def test_basic_perm_triangle_bs():
+    c = pcvl.Circuit(2).add(0, symb.PERM([1, 0]))
+    ub = (pcvl.Circuit(2)
+          // symb.BS(theta=pcvl.Parameter("theta")))
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
+    M1 = C1.compute_unitary(use_symbolic=False)
+    assert approx(1, rel=1e-3) == abs(M1[0][0])+1
+    assert approx(2, rel=1e-3) == abs(M1[0][1])+1
+    assert approx(2, rel=1e-3) == abs(M1[1][0])+1
+    assert approx(1, rel=1e-3) == abs(M1[1][1])+1
 
 
 def test_basic_perm_rectangle():
-    c = pcvl.Circuit(2).add(0, symb.PERM([1,0]))
+    c = pcvl.Circuit(2).add(0, symb.PERM([1, 0]))
     ub = (pcvl.Circuit(2)
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS()
@@ -66,7 +78,60 @@ def test_basic_perm_rectangle():
           // symb.BS())
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
     M1 = C1.compute_unitary(use_symbolic=False)
-    assert approx(1) == abs(M1[0][0])+1
-    assert approx(1) == abs(M1[0][1])
-    assert approx(1) == abs(M1[1][0])
-    assert approx(1) == abs(M1[1][1])+1
+    assert approx(1, rel=1e-3) == abs(M1[0][0])+1
+    assert approx(1, rel=1e-3) == abs(M1[0][1])
+    assert approx(1, rel=1e-3) == abs(M1[1][0])
+    assert approx(1, rel=1e-3) == abs(M1[1][1])+1
+
+
+def test_perm_triangle():
+    c = pcvl.Circuit(4).add(0, symb.PERM([3, 1, 2, 0]))
+    ub = (pcvl.Circuit(2)
+          // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
+          // symb.BS()
+          // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
+          // symb.BS())
+    M = c.compute_unitary(False)
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
+    M1 = C1.compute_unitary(False)
+    for m in range(4):
+        for n in range(4):
+            assert approx(float(abs(M[m, n]))+1, rel=1e-3) == float(abs(M1[m, n]))+1
+
+
+def test_perm_rectangle_bs_0():
+    c = pcvl.Circuit(3).add(0, symb.PERM([1, 0, 2]))
+    ub = (pcvl.Circuit(2)
+          // symb.BS(theta=pcvl.P("theta")))
+    M = c.compute_unitary(False)
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    M1 = C1.compute_unitary(False)
+    pcvl.pdisplay(abs(M))
+    pcvl.pdisplay(abs(M1))
+    for m in range(3):
+        for n in range(3):
+            assert approx(float(abs(M[m, n]))+1, rel=1e-3) == float(abs(M1[m, n]))+1
+
+def test_perm_rectangle_bs_1():
+    c = pcvl.Circuit(3).add(0, symb.PERM([2, 1, 0]))
+    ub = (pcvl.Circuit(2)
+          // symb.BS(theta=pcvl.P("theta")))
+    M = c.compute_unitary(False)
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    M1 = C1.compute_unitary(False)
+    pcvl.pdisplay(abs(M))
+    pcvl.pdisplay(abs(M1))
+    for m in range(3):
+        for n in range(3):
+            assert approx(float(abs(M[m, n]))+1, rel=1e-3) == float(abs(M1[m, n]))+1
+
+def test_id_decomposition():
+    # identity matrix decompose as ... identity
+    c = pcvl.Circuit(4)
+    ub = (pcvl.Circuit(2)
+          // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
+          // symb.BS()
+          // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
+          // symb.BS())
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    assert not (C1.compute_unitary(use_symbolic=False)-pcvl.Matrix.eye(4, use_symbolic=False)).any()
