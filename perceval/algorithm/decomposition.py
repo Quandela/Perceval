@@ -56,6 +56,27 @@ def _solve(f, x0, constraint, bounds, precision):
     return res.x
 
 
+def add_phases(phase_shifter_fn, D):
+    phases = []
+    for idx in range(len(D)):
+        a = D[idx].real
+        b = D[idx].imag
+        if b != 0 or a < 0:
+            if b == 0:
+                phi = np.pi
+            elif a == 0:
+                if b > 0:
+                    phi = np.pi / 2
+                else:
+                    phi = 3 * np.pi / 2
+            else:
+                phi = np.arctan(b / a)
+                if a < 0:
+                    phi = phi + np.pi
+            phases = [(idx, phase_shifter_fn(phi))] + phases
+    return phases
+
+
 def decompose_triangle(u,
                        component,
                        phase_shifter_fn,
@@ -126,17 +147,7 @@ def decompose_triangle(u,
     D = np.diag(u)
 
     if phase_shifter_fn:
-        for idx in range(m):
-            a = D[idx].real
-            b = D[idx].imag
-            if b != 0:
-                if a == 0:
-                    phi = np.pi / 2
-                else:
-                    phi = np.arctan(b / a)
-                    if a < 0:
-                        phi = phi + np.pi
-                list_components = [(idx, phase_shifter_fn(phi))] + list_components
+        list_components = add_phases(phase_shifter_fn, D) + list_components
 
     return list_components
 
@@ -222,7 +233,7 @@ def decompose_rectangle(u,
     for r, Uinv in list_components_left:
         res = component.identify(Uinv, D[r[0]:r[1] + 1])
         if res is None:
-            raise ValueError("Cannot solve component.identify", Uinv, D[r[0]:r[1] + 1])
+            return None
         cparameters, nD = res
         instantiated_component = copy.deepcopy(component)
         for i, res in enumerate(cparameters):
@@ -232,19 +243,7 @@ def decompose_rectangle(u,
         D[r[1]] = np.exp(1j * nD[1])
     list_components = list_components + list_components_right
 
-    D = np.diag(u)
-
     if phase_shifter_fn:
-        for idx in range(m):
-            a = D[idx].real
-            b = D[idx].imag
-            if b != 0:
-                if a == 0:
-                    phi = np.pi / 2
-                else:
-                    phi = np.arctan(b / a)
-                    if a < 0:
-                        phi = phi + np.pi
-                list_components = [(idx, phase_shifter_fn(phi))] + list_components
+        list_components = add_phases(phase_shifter_fn, D) + list_components
 
     return list_components

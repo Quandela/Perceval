@@ -99,9 +99,7 @@ def test_perm_triangle():
     M = c.compute_unitary(False)
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
     M1 = C1.compute_unitary(False)
-    for m in range(4):
-        for n in range(4):
-            assert approx(float(abs(M[m, n]))+1, rel=1e-3) == float(abs(M1[m, n]))+1
+    np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
 
 
 def test_perm_rectangle_bs_0():
@@ -112,21 +110,18 @@ def test_perm_rectangle_bs_0():
     M = c.compute_unitary(False)
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
     M1 = C1.compute_unitary(False)
-    for m in range(3):
-        for n in range(3):
-            assert approx(float(abs(M[m, n]))+1, rel=1e-3) == float(abs(M1[m, n]))+1
+    np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
 
 
 def test_perm_rectangle_bs_1():
     c = pcvl.Circuit(3).add(0, symb.PERM([2, 1, 0]))
     ub = (pcvl.Circuit(2)
+          // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS(theta=pcvl.P("theta")))
     M = c.compute_unitary(False)
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
     M1 = C1.compute_unitary(False)
-    for m in range(3):
-        for n in range(3):
-            assert approx(float(abs(M[m, n]))+1, rel=1e-3) == float(abs(M1[m, n]))+1
+    np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
 
 
 def test_id_decomposition_rectangle():
@@ -138,8 +133,7 @@ def test_id_decomposition_rectangle():
           // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
           // symb.BS())
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    assert not (C1.compute_unitary(use_symbolic=False)-pcvl.Matrix.eye(4, use_symbolic=False)).any()
-
+    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), C1.compute_unitary(False), decimal=6)
 
 def test_id_decomposition_triangle():
     # identity matrix decompose as ... identity
@@ -150,7 +144,7 @@ def test_id_decomposition_triangle():
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
-    assert not (C1.compute_unitary(use_symbolic=False)-pcvl.Matrix.eye(4, use_symbolic=False)).any()
+    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), C1.compute_unitary(False), decimal=6)
 
 
 def test_any_unitary_triangle():
@@ -187,5 +181,17 @@ def test_any_unitary_rectangle():
               // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
               // symb.BS())
         C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="rectangle", max_try=5)
+        assert C1 is not None
+        np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
+
+
+def test_simple_phase():
+    for M in [pcvl.Matrix([[0, 1j], [1, 0]]), pcvl.Matrix([[0, 1j], [-1, 0]]), pcvl.Matrix([[1j, 0], [0, -1]])]:
+        ub = (pcvl.Circuit(2)
+              // symb.BS()
+              // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
+              // symb.BS()
+              // (0, symb.PS(phi=pcvl.Parameter("φ_a"))))
+        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=5)
         assert C1 is not None
         np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
