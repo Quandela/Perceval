@@ -23,13 +23,14 @@
 from pathlib import Path
 import random
 
-from pytest import approx
+import pytest
 import perceval as pcvl
 import perceval.lib.symb as symb
 
 import numpy as np
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
+
 
 def test_perm_0():
     c = pcvl.Circuit(4).add(0, symb.PERM([3, 1, 2, 0]))
@@ -57,10 +58,10 @@ def test_basic_perm_triangle():
           // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
     M1 = C1.compute_unitary(use_symbolic=False)
-    assert approx(1, rel=1e-3) == abs(M1[0][0])+1
-    assert approx(2, rel=1e-3) == abs(M1[0][1])+1
-    assert approx(2, rel=1e-3) == abs(M1[1][0])+1
-    assert approx(1, rel=1e-3) == abs(M1[1][1])+1
+    assert pytest.approx(1, rel=1e-3) == abs(M1[0][0])+1
+    assert pytest.approx(2, rel=1e-3) == abs(M1[0][1])+1
+    assert pytest.approx(2, rel=1e-3) == abs(M1[1][0])+1
+    assert pytest.approx(1, rel=1e-3) == abs(M1[1][1])+1
 
 
 def test_basic_perm_triangle_bs():
@@ -69,12 +70,13 @@ def test_basic_perm_triangle_bs():
           // symb.BS(theta=pcvl.Parameter("theta")))
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
     M1 = C1.compute_unitary(use_symbolic=False)
-    assert approx(1, rel=1e-3) == abs(M1[0][0])+1
-    assert approx(2, rel=1e-3) == abs(M1[0][1])+1
-    assert approx(2, rel=1e-3) == abs(M1[1][0])+1
-    assert approx(1, rel=1e-3) == abs(M1[1][1])+1
+    assert pytest.approx(1, rel=1e-3) == abs(M1[0][0])+1
+    assert pytest.approx(2, rel=1e-3) == abs(M1[0][1])+1
+    assert pytest.approx(2, rel=1e-3) == abs(M1[1][0])+1
+    assert pytest.approx(1, rel=1e-3) == abs(M1[1][1])+1
 
 
+@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_basic_perm_rectangle():
     c = pcvl.Circuit(2).add(0, symb.PERM([1, 0]))
     ub = (pcvl.Circuit(2)
@@ -84,10 +86,10 @@ def test_basic_perm_rectangle():
           // symb.BS())
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
     M1 = C1.compute_unitary(use_symbolic=False)
-    assert approx(1, rel=1e-3) == abs(M1[0][0])+1
-    assert approx(1, rel=1e-3) == abs(M1[0][1])
-    assert approx(1, rel=1e-3) == abs(M1[1][0])
-    assert approx(1, rel=1e-3) == abs(M1[1][1])+1
+    assert pytest.approx(1, rel=1e-3) == abs(M1[0][0])+1
+    assert pytest.approx(1, rel=1e-3) == abs(M1[0][1])
+    assert pytest.approx(1, rel=1e-3) == abs(M1[1][0])
+    assert pytest.approx(1, rel=1e-3) == abs(M1[1][1])+1
 
 
 def test_perm_triangle():
@@ -103,6 +105,7 @@ def test_perm_triangle():
     np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
 
 
+@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_perm_rectangle_bs_0():
     c = pcvl.Circuit(3).add(0, symb.PERM([1, 0, 2]))
     ub = (pcvl.Circuit(2)
@@ -114,6 +117,7 @@ def test_perm_rectangle_bs_0():
     np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
 
 
+@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_perm_rectangle_bs_1():
     c = pcvl.Circuit(3).add(0, symb.PERM([2, 1, 0]))
     ub = (pcvl.Circuit(2)
@@ -126,6 +130,8 @@ def test_perm_rectangle_bs_1():
     C2 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(None, 0)])
     assert C2 is None
 
+
+@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_id_decomposition_rectangle():
     # identity matrix decompose as ... identity
     c = pcvl.Circuit(4)
@@ -136,6 +142,7 @@ def test_id_decomposition_rectangle():
           // symb.BS())
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
     np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), C1.compute_unitary(False), decimal=6)
+
 
 def test_id_decomposition_triangle():
     # identity matrix decompose as ... identity
@@ -173,7 +180,7 @@ def test_any_unitary_triangle_bad_ud():
         C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
         assert C1 is None
 
-
+@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_any_unitary_rectangle():
     with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
         M = pcvl.Matrix(f)
