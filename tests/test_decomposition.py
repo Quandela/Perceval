@@ -120,10 +120,11 @@ def test_perm_rectangle_bs_1():
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS(theta=pcvl.P("theta")))
     M = c.compute_unitary(False)
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(0, None)])
     M1 = C1.compute_unitary(False)
     np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
-
+    C2 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(None, 0)])
+    assert C2 is None
 
 def test_id_decomposition_rectangle():
     # identity matrix decompose as ... identity

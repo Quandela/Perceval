@@ -155,7 +155,6 @@ def decompose_triangle(u,
 def decompose_rectangle(u,
                         component,
                         phase_shifter_fn,
-                        permutation,
                         precision,
                         constraints):
     m = u.shape[0]

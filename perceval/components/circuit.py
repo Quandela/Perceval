@@ -603,7 +603,9 @@ class Circuit(ACircuit):
             if shape == "triangle":
                 lc = algorithm.decompose_triangle(U, component, phase_shifter_fn, permutation, precision, constraints)
             else:
-                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+                if permutation:
+                    raise NotImplementedError("permutation check is not implemented on rectangular decomposition")
+                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, precision, constraints)
             if lc is not None:
                 C = Circuit(N)
                 for ic in lc:
