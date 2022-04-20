@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import io
 import re
-from typing import Literal, Iterator, Optional
+from typing import Literal, Iterator, Optional, Union
 
 import numpy as np
 import sympy as sp
