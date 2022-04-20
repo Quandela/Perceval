@@ -295,7 +295,7 @@ class ACircuit(ABC):
         are single-mode phase shifts (resp. [q1, q2, ..., qn], and [p1, p2, ...,pn])
 
         this is solved through n^2 equations:
-            C_ij(x,y, ...) * q_i = UP_ij * pj
+            q_i * C_ij(x,y, ...) = UP_ij * p_j
 
         Parameters
         ----------
@@ -312,9 +312,9 @@ class ACircuit(ABC):
         for i in range(self._m**2-self._m-len(params)):
             params.append(sp.S("dummy%d" % i))
         Q = Matrix.eye(self._m, use_symbolic=True)
-        P = Matrix.eye(self._m)
+        P = Matrix.eye(self._m, use_symbolic=False)
         for i in range(self._m):
-            params.append(sp.S("q%d"%i))
+            params.append(sp.S("q%d" % i))
             Q[i, i] = sp.exp(1j*params[-1])
             P[i, i] = phases[i]
         cU = Q @ self.compute_unitary(use_symbolic=True)

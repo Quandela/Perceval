@@ -226,10 +226,11 @@ def decompose_rectangle(u,
                     LI[m - 1 - j + k, m - 2 - j + k] = complex(cU[1, 0].subs(substitution))
                     LI[m - 1 - j + k, m - 1 - j + k] = complex(cU[1, 1].subs(substitution))
                     u = LI @ u
-                    L_Uinv = L_instantiated_component.U.inv()
-                    list_components_left =  list_components_left + [((m - 2 - j + k, m - 1 - j + k), L_Uinv)]
-    list_components = []
+                    L_Uinv = L_instantiated_component.compute_unitary(False).inv()
+                    list_components_left = [((m - 2 - j + k, m - 1 - j + k), L_Uinv)] + list_components_left
+
     D = list(np.diag(u))
+    list_components = []
     for r, Uinv in list_components_left:
         res = component.identify(Uinv, D[r[0]:r[1] + 1])
         if res is None:
@@ -240,10 +241,11 @@ def decompose_rectangle(u,
             instantiated_component.get_parameters()[0].fix_value(res)
         list_components = list_components + [(r, instantiated_component)]
         D[r[0]] = np.exp(1j * nD[0])
-        D[r[1]] = np.exp(1j * nD[1])
-    list_components = list_components + list_components_right
+        D[r[0]+1] = np.exp(1j * nD[1])
+
+    list_components = list_components_right + list_components
 
     if phase_shifter_fn:
-        list_components = add_phases(phase_shifter_fn, D) + list_components
+        list_components += add_phases(phase_shifter_fn, D)
 
     return list_components
