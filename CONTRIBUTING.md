@@ -6,14 +6,14 @@ There are many ways you can help in the Perceval project. This document will gui
 
 ## Reporting issues
 
-We use GitHub issues for bugs in the code that are **reproducible**. A good bug report should contain every information 
+We use GitHub issues for bugs in the code that are **reproducible**. A good bug report should contain every information
 needed to reproduce it. Before opening a new issue, make sure to:
 
 * **use the GitHub issue search** for existing and fixed bugs;
 * **check if the issue has been fixed** in a more recent version;
 * **isolate the problem** to give as much context as possible.
 
-If you have questions on how to use the project or have trouble getting started with it, 
+If you have questions on how to use the project or have trouble getting started with it,
 consider using [our forum](https://perceval.quandela.net/forum/) instead.
 
 ## Requesting features
@@ -24,7 +24,7 @@ Do you think a feature is missing or would be a great addition to the project? P
 
 We would like the documentation to be as complete as possible, providing details about the framework, but
 also about the field - and serve as a fully consistent training material. From our experience, documentation is never
-an achieved task - and feel free to contribute - all the documentation is part of the project in 
+an achieved task - and feel free to contribute - all the documentation is part of the project in
 https://github.com/Quandela/Perceval/source.
 
 ## Developing code

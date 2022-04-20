@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Quandela/Perceval",
-    project_urls={        
+    project_urls={
         "Documentation" : "https://perceval.quandela.net/docs/",
         "Source": "https://github.com/Quandela/Perceval",
         "Tracker": "https://github.com/Quandela/Perceval/issues"

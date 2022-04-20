@@ -26,6 +26,7 @@ from .format import simple_float
 
 from typing import Tuple
 
+
 class Parameter:
     r"""A Parameter is a used as a variable in a circuit definition
 
