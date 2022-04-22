@@ -164,7 +164,7 @@ def test_any_unitary_triangle():
               // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=5)
+        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
         assert C1 is not None
         np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
 
