@@ -179,7 +179,8 @@ class ACircuit(ABC):
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
-    def add(self, port_range: Union[int, Tuple[int]], component: ACircuit, merge: bool = None) -> ACircuit:
+    def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
+            component: ACircuit, merge: bool = None) -> ACircuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive porst, or the initial port where to add the component
@@ -503,8 +504,8 @@ class Circuit(ACircuit):
         return u
 
     def compute_unitary(self,
-                        assign: dict = None,
                         use_symbolic: bool = False,
+                        assign: dict = None,
                         use_polarization: Optional[bool] = None) -> Matrix:
         r"""Compute the unitary matrix corresponding to the circuit
 
@@ -570,10 +571,10 @@ class Circuit(ACircuit):
 
     @staticmethod
     def decomposition(U: Matrix,
-                      component: Circuit,
-                      phase_shifter_fn: Callable[[float], Circuit] = None,
+                      component: ACircuit,
+                      phase_shifter_fn: Callable[[float], ACircuit] = None,
                       shape: Literal["triangle", "rectangle"] = "triangle",
-                      permutation: Type[Circuit] = None,
+                      permutation: Type[ACircuit] = None,
                       constraints=None,
                       merge: bool = True,
                       precision: float = 1e-6,
@@ -589,6 +590,7 @@ class Circuit(ACircuit):
         :param permutation: if provided, type of a permutation operator to avoid unnecessary operators
         :param merge: don't use sub-circuits
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
+        :param max_try: number of tries for the decomposition
         :return: a circuit
         """
         N = U.shape[0]

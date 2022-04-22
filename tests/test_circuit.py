@@ -76,9 +76,9 @@ def test_helloword():
 
 def test_empty_circuit():
     c = Circuit(4)
-    M = c.compute_unitary(False)
-    assert M.shape == (4, 4)
-    assert np.allclose(M, Matrix.eye(4))
+    m = c.compute_unitary(False)
+    assert m.shape == (4, 4)
+    assert np.allclose(m, Matrix.eye(4))
     assert c.pdisplay().replace(" ", "") == """
 
 0:────:0 (depth 0)
