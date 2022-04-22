@@ -32,6 +32,7 @@ from ..components.circuit import ACircuit, _matrix_double_for_polarization
 import quandelibc as qc
 import numpy as np
 
+
 class Backend(ABC):
     _name = None
     supports_symbolic = None

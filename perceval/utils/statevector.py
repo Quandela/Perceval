@@ -69,9 +69,9 @@ class Annotations(dict):
 
     @staticmethod
     def parse_annotation(s):
-        l = s.split(",")
+        l_s = s.split(",")
         annots = {}
-        for lk in l:
+        for lk in l_s:
             split_lk = lk.split(":")
             if len(split_lk) != 2:
                 raise ValueError("invalid annotation format: %s" % s)
@@ -101,7 +101,8 @@ class Annotations(dict):
         for k, v in self.items():
             if k == "P":
                 if isinstance(v, str):
-                    self[k] == float(v)
+                    self[k] = float(v)
+
     def __str__(self):
         """compact string representation"""
         represented = []
@@ -150,8 +151,8 @@ class AnnotatedBasicState(BasicState):
                     counter = 1
                 if v and v[0] == "{":
                     if counter == 0:
-                       raise ValueError("annotations can not be on 0 photons: %s" % bs)
-                    m = re.match(r"\{(.*?)\}(.*)", v)
+                        raise ValueError("annotations can not be on 0 photons: %s" % bs)
+                    m = re.match(r"{(.*?)}(.*)", v)
                     if m is None:
                         raise ValueError("non-closed annotation: %s" % bs)
                     annotation = Annotations.parse_annotation(m.group(1))
@@ -253,13 +254,13 @@ class AnnotatedBasicState(BasicState):
 
         def _annot_compatible(annot_ref, annot_add):
             new_annot = copy(annot_ref)
-            for k, v in annot_add.items():
-                if k == "P":
+            for a_k, a_v in annot_add.items():
+                if a_k == "P":
                     continue
-                if k not in annot_ref:
-                    new_annot[k] = v
+                if a_k not in annot_ref:
+                    new_annot[a_k] = a_v
                 else:
-                    if annot_ref[k] != v:
+                    if annot_ref[a_k] != a_v:
                         return False
             return new_annot
 
@@ -296,13 +297,13 @@ class AnnotatedBasicState(BasicState):
         :param distribution_photons:
         :return:
         """
-        def _partition(a_list: list, distribution: list, current: list, all_res: list):
+        def _partition(one_list: list, distribution: list, current: list, all_res: list):
             if len(distribution) == 0:
                 all_res.append(copy(current))
                 return
-            for a_subset in itertools.combinations(a_list, distribution[0]):
-                current.append(a_subset)
-                _partition(list(set(a_list)-set(a_subset)), distribution[1:], current, all_res)
+            for one_subset in itertools.combinations(one_list, distribution[0]):
+                current.append(one_subset)
+                _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
                 current.pop()
 
         all_photons = list(range(self.n))
@@ -480,7 +481,7 @@ class StateVector(defaultdict):
             norm = 0
             to_remove = []
             for key in self.keys():
-                if (isinstance(self[key], (complex, float,int))
+                if (isinstance(self[key], (complex, float, int))
                         and abs(self[key]) < global_params["min_complex_component"]) or self[key] == 0:
                     to_remove.append(key)
                 else:
@@ -553,7 +554,7 @@ class SVDistribution(defaultdict):
 
         return new_svd
 
-    def sample(self, k: int = 1, non_null: bool=True) -> List[StateVector]:
+    def sample(self, k: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
@@ -576,13 +577,13 @@ class SVDistribution(defaultdict):
                 prob -= v
         return sample
 
-    def pdisplay(self, output_format="text", n_simplify=True, precision=1e-6, max=None, sort=True):
-        if sorted:
+    def pdisplay(self, output_format="text", n_simplify=True, precision=1e-6, max_v=None, sort=True):
+        if sort:
             the_keys = sorted(self.keys(), key=lambda a: -self[a])
         else:
             the_keys = list(self.keys())
-        if max is not None:
-            the_keys = the_keys[:max]
+        if max_v is not None:
+            the_keys = the_keys[:max_v]
         d = []
         for k in the_keys:
             if isinstance(self[k], sp.Expr):
@@ -610,6 +611,14 @@ def build_spatial_output_states(state: BasicState):
     yield from _rec_build_spatial_output_states(list(state), [])
 
 
+def _is_orthogonal(v1, v2, use_symbolic):
+    if use_symbolic:
+        orth = sp.conjugate(v1[0]) * v2[0] + sp.conjugate(v1[1]) * v2[1]
+        return orth == 0
+    orth = np.conjugate(v1[0]) * v2[0] + np.conjugate(v1[1]) * v2[1]
+    return abs(orth) < 1e-6
+
+
 def convert_polarized_state(state: AnnotatedBasicState,
                             use_symbolic: bool = False,
                             inverse: bool = False) -> Tuple[BasicState, Matrix]:
@@ -626,27 +635,41 @@ def convert_polarized_state(state: AnnotatedBasicState,
     for k_m in range(state.m):
         input_state += [0, 0]
         if state[k_m]:
-            prev_eh = None
-            prev_ev = None
+            vectors = []
             for k_n in range(state[k_m]):
-                annot = state.get_photon_annotations(idx+1)
+                # for each state we can handle up to two orthogonal vectors
+                annot = state.get_photon_annotations(idx + 1)
                 idx += 1
-                input_state[-2] += 1
-                eh, ev = annot.get("P", Polarization(0)).project_ev_eh(use_symbolic)
-                if prev_eh is not None:
-                    if eh != prev_eh or ev != prev_ev:
-                        raise AssertionError("cannot simulate (yet) modes with multiple polarized photons")
-                    continue
-                prev_eh = eh
-                prev_ev = ev
+                v_hv = annot.get("P", Polarization(0)).project_eh_ev(use_symbolic)
+                v_idx = None
+                for i, v in enumerate(vectors):
+                    if v == v_hv:
+                        v_idx = i
+                        break
+                if v_idx is None:
+                    if len(vectors) == 2:
+                        raise ValueError("use statevectors to handle more than 2 orthogonal vectors")
+                    if len(vectors) == 0 or _is_orthogonal(vectors[0], v_hv, use_symbolic):
+                        v_idx = len(vectors)
+                        vectors.append(v_hv)
+                    else:
+                        raise ValueError("use statevectors to handle non orthogonal vectors")
+                input_state[-2+v_idx] += 1
+            if vectors:
+                eh1, ev1 = vectors[0]
+                if len(vectors) == 1:
+                    if use_symbolic:
+                        eh2 = -sp.conjugate(ev1)
+                        ev2 = sp.conjugate(eh1)
+                    else:
+                        eh2 = -np.conjugate(ev1)
+                        ev2 = np.conjugate(eh1)
+                else:
+                    eh2, ev2 = vectors[1]
                 if prep_matrix is None:
                     prep_matrix = Matrix.eye(2*state.m, use_symbolic)
-                if use_symbolic:
-                    prep_state_matrix = Matrix([[eh, -sp.conjugate(ev)],
-                                                [ev, sp.conjugate(eh)]], True)
-                else:
-                    prep_state_matrix = Matrix([[eh, -np.conjugate(ev)],
-                                                [ev, np.conjugate(eh)]], False)
+                prep_state_matrix = Matrix([[eh1, eh2],
+                                            [ev1, ev2]], use_symbolic)
                 if inverse:
                     prep_state_matrix = prep_state_matrix.inv()
                 prep_matrix[2*k_m:2*k_m+2, 2*k_m:2*k_m+2] = prep_state_matrix

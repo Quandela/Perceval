@@ -116,7 +116,7 @@ class Polarization:
                     raise ValueError("incorrect format - angle value should not contain variable in %s" % s)
         return Polarization((v, 0))
 
-    def project_ev_eh(self, use_symbolic=False) -> Tuple[Any, Any]:
+    def project_eh_ev(self, use_symbolic=False) -> Tuple[Any, Any]:
         r"""Build Jones vector corresponding to the current instance
 
         :return: a pair of numeric or symbolic expressions
