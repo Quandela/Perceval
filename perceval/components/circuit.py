@@ -179,7 +179,7 @@ class ACircuit(ABC):
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
-    def add(self, port_range: Union[int, Tuple[int]], component: Circuit, merge: bool = None) -> Circuit:
+    def add(self, port_range: Union[int, Tuple[int]], component: ACircuit, merge: bool = None) -> ACircuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive porst, or the initial port where to add the component
@@ -227,7 +227,7 @@ class ACircuit(ABC):
     def __setitem__(self, key, value):
         self._params[key] = value
 
-    def __ifloordiv__(self, component: Union[Circuit, Tuple[int, Circuit]]) -> Circuit:
+    def __ifloordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> ACircuit:
         r"""Shortcut for ``.add``
 
         >>> c //= b       # equivalent to: `c.add((0:b.n),b)`
@@ -245,7 +245,7 @@ class ACircuit(ABC):
         self.add(tuple(range(pos, component._m+pos)), component)
         return self
 
-    def __floordiv__(self, component: Union[Circuit, Tuple[int, Circuit]]) -> Circuit:
+    def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> ACircuit:
         r"""Build a new circuit by adding `component` to the current circuit
 
         >>> c = a // b   # equivalent to: `Circuit(n) // self // component`

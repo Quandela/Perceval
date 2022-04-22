@@ -44,7 +44,7 @@ def test_processor_generator_1():
 def test_processor_generator_2():
     source = pcvl.Source(brightness=0.2,
                          purity=0.9, purity_model="indistinguishable",
-                        indistinguishability=0.9, indistinguishability_model="linear")
+                         indistinguishability=0.9, indistinguishability_model="linear")
     p = pcvl.Processor({1: source, 2: source}, pcvl.Circuit(4))
     expected = {
         "|0,0,0,0>": 16/25,
