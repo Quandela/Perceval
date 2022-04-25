@@ -217,3 +217,27 @@ def test_svg_dump_grover(tmp_path, save_figs):
 
     _save_or_check(grover_circuit, tmp_path, sys._getframe().f_code.co_name+"-rec", save_figs, recursive=True)
     _save_or_check(grover_circuit, tmp_path, sys._getframe().f_code.co_name+"-norec", save_figs, recursive=False)
+
+
+def test_svg_bs_based_generic_no_phase_rectangle(tmp_path, save_figs):
+    c = pcvl.Circuit.generic_interferometer(5,
+                                            fun_gen=lambda idx: phys.BS() // phys.PS(pcvl.P("φ_%d" % idx)),
+                                            shape="rectangle")
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
+    c = pcvl.Circuit.generic_interferometer(5,
+                                            fun_gen=lambda idx: phys.BS() // phys.PS(pcvl.P("φ_%d" % idx)),
+                                            shape="rectangle",
+                                            depth=10,
+                                            phase_shifter_fun_gen=lambda idx: phys.PS(pcvl.P("Φ_%d" % idx)))
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
+    c = pcvl.Circuit.generic_interferometer(5,
+                                            fun_gen=lambda idx: phys.BS() // phys.PS(pcvl.P("φ_%d" % idx)),
+                                            shape="triangle",
+                                            phase_shifter_fun_gen=lambda idx: phys.PS(pcvl.P("Φ_%d" % idx)))
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
