@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+
 from perceval import Parameter
 
 import sympy as sp
@@ -69,3 +71,20 @@ def test_fixed_1():
 def test_basic_conv():
     p = Parameter("R", 1/3)
     assert p._value == sp.S(1)/3
+
+
+def test_invalid_values():
+    with pytest.raises(ValueError):
+        Parameter("R", -1, 0, 1, False)
+    with pytest.raises(ValueError):
+        p = Parameter("R", None, 0, 1, False)
+        p.set_value(-1)
+    p = Parameter("R", None, 0, 1)
+    p.set_value(0)
+
+
+def test_periodic_values():
+    p = Parameter("theta", 0, 0, 2*sp.pi)
+    assert float(p)==0
+    p = Parameter("theta", 5*sp.pi/2, 0, 2 * sp.pi)
+    assert float(p) == float(sp.pi/2)

@@ -248,18 +248,18 @@ def test_iterator():
     c = Circuit(3)
     comps = [(0, 1), (1, 2), (0, 1)]
     for k in range(len(comps)):
-        c.add(comps[k], phys.BS(R=k+1))
+        c.add(comps[k], phys.BS(R=1/(k+1)))
 
     d = Circuit(4)
     d.add((0, 1, 2), c, merge=False)
-    d.add((2, 3), phys.BS(R=4))
+    d.add((2, 3), phys.BS(R=1/4))
     comps.append((2, 3))
 
     l_comp = list(d.__iter__())
 
     assert len(l_comp) == 4
     for i in range(4):
-        assert float(l_comp[i][1]["R"]) == i+1 and l_comp[i][0] == comps[i]
+        assert float(l_comp[i][1]["R"]) == 1/(i+1) and l_comp[i][0] == comps[i]
 
 
 def test_evolve():
