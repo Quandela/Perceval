@@ -593,6 +593,8 @@ class Circuit(ACircuit):
         :param max_try: number of tries for the decomposition
         :return: a circuit
         """
+        if not Matrix(U).is_unitary():
+            raise(ValueError("decomposed matrix should be unitary"))
         N = U.shape[0]
         count = 0
         if constraints is None:

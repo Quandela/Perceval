@@ -67,9 +67,9 @@ def test_eye_n():
 
 def test_eye_s():
     M = pcvl.Matrix.eye(3, use_symbolic=True)
+    assert M.pdisplay() == "⎡1  0  0⎤\n⎢0  1  0⎥\n⎣0  0  1⎦"
     assert isinstance(M, sp.Matrix)
     assert M.shape == (3, 3)
-    assert M.pdisplay() == "⎡1  0  0⎤\n⎢0  1  0⎥\n⎣0  0  1⎦"
 
 
 def test_zero_n():
@@ -81,9 +81,9 @@ def test_zero_n():
 
 def test_zero_s():
     M = pcvl.Matrix.zeros((3, 3), use_symbolic=True)
+    assert M.pdisplay() == "⎡0  0  0⎤\n⎢0  0  0⎥\n⎣0  0  0⎦"
     assert isinstance(M, sp.Matrix)
     assert M.shape == (3, 3)
-    assert M.pdisplay() == "⎡0  0  0⎤\n⎢0  0  0⎥\n⎣0  0  0⎦"
     assert M.is_symbolic()
 
 

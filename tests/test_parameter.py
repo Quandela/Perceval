@@ -66,6 +66,6 @@ def test_fixed_1():
     assert p.defined
 
 
-def test_basicconv():
+def test_basic_conv():
     p = Parameter("R", 1/3)
     assert p._value == sp.S(1)/3

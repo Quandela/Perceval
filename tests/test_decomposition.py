@@ -164,7 +164,7 @@ def test_any_unitary_triangle():
               // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=5)
+        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
         assert C1 is not None
         np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
 
@@ -201,17 +201,17 @@ def test_simple_phase():
               // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_a"))))
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
+        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=5)
         assert C1 is not None
         np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
 
 
 def test_decompose_non_unitary():
-    M = np.array([[random.random() for i in range(5)] for j in range(5)])
+    M = np.array([[(i and j) and (i+j*1j)/np.sqrt(i*i+j*j) or 0 for i in range(5)] for j in range(5)])
     ub = (pcvl.Circuit(2)
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_a"))))
-    C1 = pcvl.Circuit.decomposition(M, ub, shape="triangle", max_try=10)
-    assert C1 is None, "should not be able to decompose a non unitary matrix"
+    with pytest.raises(ValueError):
+        pcvl.Circuit.decomposition(M, ub, shape="triangle", max_try=5)

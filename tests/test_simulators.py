@@ -116,8 +116,7 @@ def test_sim_indistinct_sym11():
 
 
 def test_check_precompute():
-    """
-        check if the SLOS backend is keeping internal structure
+    """ Check if the SLOS backend is keeping internal structure
     """
     simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
     u = [[1, 0], [0, 1]]
@@ -272,11 +271,16 @@ def test_polarization_circuit_0():
         check_output(simulator,
                      pcvl.AnnotatedBasicState("|{P:H}>"),
                      {pcvl.BasicState("|1>"): 1})
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:H}>"))) == 0
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:V}>"))) == 1
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"), pcvl.AnnotatedBasicState("|{P:H}>"))) == 1
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:D}>"), pcvl.AnnotatedBasicState("|{P:D}>"))) == 1
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:A}>"), pcvl.AnnotatedBasicState("|{P:A}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"),
+                                            pcvl.AnnotatedBasicState("|{P:H}>"))) == 0
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"),
+                                            pcvl.AnnotatedBasicState("|{P:V}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"),
+                                            pcvl.AnnotatedBasicState("|{P:H}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:D}>"),
+                                            pcvl.AnnotatedBasicState("|{P:D}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:A}>"),
+                                            pcvl.AnnotatedBasicState("|{P:A}>"))) == 1
 
 
 def test_polarization_circuit_1():
@@ -338,8 +342,7 @@ def test_bs_polarization():
               (pcvl.AnnotatedBasicState("|{P:V},0>"), 1/2),
               (pcvl.AnnotatedBasicState("|0,{P:V}>"), 1/2),
               (pcvl.AnnotatedBasicState("|{P:H},0>"), 0),
-              (pcvl.AnnotatedBasicState("|{P:V},0>"), 1/2)
-    ]
+              (pcvl.AnnotatedBasicState("|{P:V},0>"), 1/2)]
 
     for output_state, prob in states:
         assert pytest.approx(sim.prob(input_state, output_state)) == prob
