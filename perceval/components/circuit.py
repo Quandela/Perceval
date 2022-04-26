@@ -581,7 +581,7 @@ class Circuit(ACircuit):
     def decomposition(U: Matrix,
                       component: ACircuit,
                       phase_shifter_fn: Callable[[float], ACircuit] = None,
-                      shape: Literal["triangle", "rectangle"] = "triangle",
+                      shape: Literal["triangle"] = "triangle",
                       permutation: Type[ACircuit] = None,
                       constraints=None,
                       merge: bool = True,
@@ -591,10 +591,10 @@ class Circuit(ACircuit):
 
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
         :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
-        Each constraint should have the numbers of free parameters of the system.
+                            Each constraint should have the numbers of free parameters of the system.
         :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
-            ignored
-        :param shape: `rectangle` (Clements-like interferometer) or `triangle` (Reck-like)
+                            ignored
+        :param shape: `triangle`
         :param permutation: if provided, type of a permutation operator to avoid unnecessary operators
         :param merge: don't use sub-circuits
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
