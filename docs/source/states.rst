@@ -16,8 +16,8 @@ Example code:
 
 >>> bs = pcvl.BasicState("|0,1>")      # Creates a two-mode Fock state with 0 photons in first mode, and 1 photon in second mode.
 >>> print(bs)                          # Prints out the created Fock state
-|0,1>                                   
->>> bs.n                               # Displays the number of photons of the created Fock state  
+|0,1>
+>>> bs.n                               # Displays the number of photons of the created Fock state
 1
 >>> bs.m                               # Displays the number of modes of the created Fock state
 2
@@ -55,12 +55,12 @@ Note that a photon can have a set of annotation keys, representing different deg
 .. NOTE::
 
   Two photons are indistinguishable if they share the same values on all their common annotation keys, or if they have no common annotation keys. For instance, for the following
-  three photons, 
+  three photons,
 
   * :math:`p_1=` ``{a1:1}``
   * :math:`p_2=` ``{a2:1}``
   * :math:`p_3=` ``{a1:2,a2:2}``
-  
+
   :math:`p_1` and :math:`p_3` are distinguishable because their a1 annotation keys have different values (1 for p_1 as opposed to 2 for p_3). :math:`p_2` and :math:`p_3` are also distinguishable because the values of their annotation key a2 do not agree. However, :math:`p_1` and :math:`p_2` are
   indistinguishable, because they share no common annotation keys.
 
@@ -109,8 +109,8 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 >>> st3= st1 + st2
 >> print(len(st3))
 2
->>> print(st3) 
-1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1> 
+>>> print(st3)
+1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1>
 >>> st3[0]    # outputs the first state in the superposition state st3
 |1,0>
 >>> st3[1]     # outputs the second state in the superposition st3
@@ -123,7 +123,7 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 State Vector Distribution
 -------------------------
 
-``SVDistribution`` is a recipe for constructing a mixed state using BasicState and/or 
+``SVDistribution`` is a recipe for constructing a mixed state using BasicState and/or
 ``StateVector`` commands (which themselves produce pure states).
 
 For example, The following ``SVDistribution``
@@ -144,4 +144,3 @@ TimeSVDistribution
 ------------------
 
 ``TimedSVDistribution`` is representing a time sequence distribution of ``StateVector``.
-

@@ -1,9 +1,31 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 from typing import Union, Tuple, Any
 
 import re
 import sympy as sp
-
+import numpy as np
 
 class Polarization:
     r"""Polarization class
@@ -94,12 +116,17 @@ class Polarization:
                     raise ValueError("incorrect format - angle value should not contain variable in %s" % s)
         return Polarization((v, 0))
 
-    def project_ev_eh(self) -> Tuple[Any, Any]:
+    def project_eh_ev(self, use_symbolic=False) -> Tuple[Any, Any]:
         r"""Build Jones vector corresponding to the current instance
 
         :return: a pair of numeric or symbolic expressions
         """
-        return sp.cos(self.theta_phi[0]/2), sp.exp(sp.I*self.theta_phi[1])*sp.sin(self.theta_phi[0]/2)
+        if use_symbolic:
+            return sp.cos(self.theta_phi[0]/2), sp.exp(sp.I*self.theta_phi[1])*sp.sin(self.theta_phi[0]/2)
+        else:
+            return (np.cos(float(self.theta_phi[0])/2),
+                    (np.cos(float(self.theta_phi[1])) + 1j * np.sin(float(self.theta_phi[1])))\
+                    * np.sin(float(self.theta_phi[0])/2))
 
     def __str__(self):
         if self.theta_phi[0] == sp.S(0) and self.theta_phi[1] == sp.S(0):

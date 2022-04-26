@@ -59,7 +59,7 @@ collection of these (see :ref:`Components`).
 .. figure:: _static/library/phys/bs.png
    :scale: 50 %
    :align: center
-   
+
    A beam splitter as a circuit in Perceval.
 
 In particular, note that:
@@ -228,7 +228,7 @@ The following then defines a circuit corresponding to this matrix:
 You might also want to decompose the unitary matrix into a physical circuit using decomposition elements.
 Let us define for instance:
 
->>> mzi = Circuit(2, name="mzi") // symb.BS() // (0, symb.PS(phi=pcvl.Parameter("φ_a"))) // symb.BS() // (1, symb.PS(phi=pcvl.Parameter("φ_b")))
+>>> ub = Circuit(2, name="ub") // symb.BS() // (0, symb.PS(phi=pcvl.Parameter("φ_a"))) // symb.BS() // (1, symb.PS(phi=pcvl.Parameter("φ_b")))
 
 Then you can build a circuit using the method :meth:`perceval.components.circuit.Circuit.decomposition`:
 
@@ -238,6 +238,49 @@ Circuit(3).add((0, 1), phys.BS()).add(0, phys.PS(phi=pi)).add((0, 1), phys.BS())
 >>> pcvl.pdisplay(c2)
 
 .. image:: _static/img/decompose-matrix.png
+
+Some additional parameters can simplifiy the decomposition:
+
+* `permutation`: if set to a permutation component, permutations will be used when possible instead of a unitary block
+
+>>> import perceval as pcvl
+>>> import perceval.lib.symb as symb
+>>> C1 = pcvl.Circuit.decomposition(symb.PERM([3, 2, 1, 0]).compute_unitary(False),
+>>>                                 symb.BS(theta=pcvl.Parameter("theta")),
+>>>                                 permutation=symb.PERM,
+>>>                                 shape="triangle")
+>>>pcvl.pdisplay(C1)
+
+.. image:: _static/img/permutations-perm.png
+   :width: 8cm
+
+* `constraints`: you can provide a list of constraints on the different parameters of the unitary blocks to try to find
+  circuits with constrained parameters. Each constraint is a t-uple of `None` or numerical value. When decomposing the
+  circuit, the parameters will be searched iteratively in the constrained spaces. For instance: `[(0, None), (np.pi/2, None), (None, None)]`
+  will allow to look for parameters pairs where the first parameter is 0 or :math:`pi/2`, or any value if
+  no solution is found with the first constraints.
+
+>>> U=1/3*np.array([[np.sqrt(3),-np.sqrt(6)*1j,0,0,0,0],
+>>>                 [-np.sqrt(6)*1j,np.sqrt(3),0,0,0,0],
+>>>                 [0,0,np.sqrt(3),-np.sqrt(3)*1j,-np.sqrt(3)*1j,0],
+>>>                 [0,0,-np.sqrt(3)*1j,np.sqrt(3),0,np.sqrt(3)],
+>>>                 [0,0,-np.sqrt(3)*1j,0,np.sqrt(3),-np.sqrt(3)],
+>>>                 [0,0,0,np.sqrt(3),-np.sqrt(3),-np.sqrt(3)]])
+>>> ub = symb.BS(theta=pcvl.P("theta"))//symb.PS(phi=pcvl.P("phi"))
+>>> C1 = pcvl.Circuit.decomposition(U,
+>>>                                 ub,
+>>>                                 shape="triangle", constraints=[(None,0),(None,np.pi/2),
+>>>                                                                (None,3*np.pi/2),(None,None)])
+
+.. image:: _static/img/cnot-decomposed.png
+   :width: 8cm
+
+* `phase_shifter_fn`: if you provide a phase-shifter to this parameter, the decomposition will add a layer of phases
+  making the decomposed circuit strictly equivalent to the initial unitary matrix. In most cases, you can however omit
+  this layer.
+
+* finally, you can also pass simpler unitary blocks - for instance a simple beamsplitter without phase, however in these
+  cases, you might not obtain any solution in the decomposition
 
 Complex Circuits
 ^^^^^^^^^^^^^^^^

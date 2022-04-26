@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import perceval as pcvl
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
 import pytest
@@ -94,9 +116,18 @@ def test_prep_state():
     assert (m2-m).all() == 0
 
 
-@pytest.mark.xfail(reason="photons with multiple polarization on single mode not yet available")
 def test_prep_multi_state():
     convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
+
+
+def test_convert_multistate():
+    input_state, prep_matrix = convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:V}>"))
+    assert str(input_state) == "|2,3>"
+
+
+def test_convert_multistate_nonorthogonal():
+    with pytest.raises(ValueError):
+        convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:D}>"))
 
 
 def test_build_spatial_output():
@@ -108,6 +139,7 @@ def test_build_spatial_output():
          '|2,0,0,0,0,1>',
          '|2,0,0,0,1,0>'
     ]
+
 
 def test_subcircuit_polarization():
     a = pcvl.Circuit(2) // phys.PBS() // phys.PBS()
