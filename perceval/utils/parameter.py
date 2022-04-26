@@ -20,10 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import random
 import sympy as sp
 from .format import simple_float
 
 from typing import Tuple
+
 
 class Parameter:
     r"""A Parameter is a used as a variable in a circuit definition
@@ -38,17 +40,18 @@ class Parameter:
     """
     _id = 0
 
-    def __init__(self, name: str, value: float = None, min_v: float = None, max_v: float = None):
-        if value:
-            value, _ = simple_float(value)
-        self._value = value
+    def __init__(self, name: str, value: float = None, min_v: float = None, max_v: float = None, periodic=True):
         if value is None:
             self._symbol = sp.symbols(name, real=True)
+            self._value = None
         else:
+            value, _ = simple_float(value)
+            self._value = self._check_value(value, min_v, max_v, periodic)
             self._symbol = None
         self.name = name
         self._min = min_v
         self._max = max_v
+        self._periodic = periodic
         self._pid = Parameter._id
         Parameter._id += 1
 
@@ -66,6 +69,26 @@ class Parameter:
         """
         return float(self._value)
 
+    def random(self):
+        if self._symbol is None:
+            return float(self._value)
+        if self._min is not None and self._max is not None:
+            return float(random.random() * (self._max-self._min) + self._min)
+        return random.random()
+
+    @staticmethod
+    def _check_value(v: float, min_v: float, max_v: float, periodic: bool):
+        if periodic and min_v is not None and max_v is not None:
+            if v > max_v:
+                p = int((v-max_v)/(max_v-min_v))
+                v = v - (p+1) * (max_v-min_v)
+            elif v < min_v:
+                p = int((min_v-v)/(max_v-min_v))
+                v = v + (p+1) * (max_v-min_v)
+        if (min_v is not None and v < min_v) or (max_v is not None and v > max_v):
+            raise ValueError("value %f out of bound [%f,%f]", v, min_v, max_v)
+        return v
+
     def set_value(self, v: float):
         r"""Define the value of a non-fixed parameter
 
@@ -74,7 +97,7 @@ class Parameter:
         """
         if self.fixed:
             raise RuntimeError("cannot set fixed parameter")
-        self._value = v
+        self._value = self._check_value(v, self._min, self._max, self._periodic)
 
     def fix_value(self, v):
         r"""Fix the value of a non-fixed parameter
@@ -82,7 +105,7 @@ class Parameter:
         :param v: the value
         """
         self._symbol = None
-        self._value = v
+        self._value = self._check_value(v, self._min, self._max, self._periodic)
 
     @property
     def defined(self) -> bool:

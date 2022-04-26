@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import io
 import re
-from typing import Literal, Iterator
+from typing import Literal, Iterator, Optional, Union
 
 import numpy as np
 import sympy as sp
@@ -66,7 +66,10 @@ class Matrix(ABC):
         elif isinstance(source, sp.Matrix) or isinstance(source, np.ndarray):
             pass
         elif isinstance(source, list):
-            source = sp.Matrix(source)
+            if use_symbolic:
+                source = sp.Matrix(source)
+            else:
+                source = np.asarray(source)
         elif isinstance(source, int):
             source = np.ndarray((source, source))
         else:
@@ -127,13 +130,22 @@ class Matrix(ABC):
         pass
 
     @staticmethod
-    def random_unitary(n: int) -> MatrixN:
-        """static method generating a random unitary matrix
+    def random_unitary(n: int, parameters: Optional[Union[np.ndarray,list]] = None) -> MatrixN:
+        r"""static method generating a random unitary matrix
 
-            :param n: size of the Matrix
-            :return: a numeric Matrix
+        :param n: size of the Matrix
+        :param parameters: :math:`2n^2` random parameters to use a generator
+        :return: a numeric Matrix
         """
-        u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
+        if parameters is not None:
+            assert len(parameters) == 2*n**2, "parameters has not the right size: should be %d, and is %d" % (
+                2*n**2, len(parameters)
+            )
+            a = np.reshape(parameters[:n**2], (n, n))
+            b = np.reshape(parameters[n**2:], (n, n))
+            u = a + 1j * b
+        else:
+            u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
         (q, r) = np.linalg.qr(u)
         r_diag = np.sign(np.diagonal(np.real(r)))
         n_u = np.zeros((n, n))

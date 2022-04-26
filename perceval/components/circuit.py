@@ -24,11 +24,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Callable, Literal, Optional, Union, Tuple
+from typing import Callable, Literal, Optional, Union, Tuple, Type
+import perceval.algorithm as algorithm
 
-import numpy as np
-import scipy.optimize as so
 import sympy as sp
+import scipy.optimize as so
 
 from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas
 
@@ -63,6 +63,7 @@ class ACircuit(ABC):
         self._components = []
         self._params = {}
         self._vars = {}
+        self.defined_circuit = True
 
     @abstractmethod
     def _compute_unitary(self,
@@ -130,11 +131,11 @@ class ACircuit(ABC):
     def params(self):
         return self._params.keys()
 
-    def get_parameters(self, all_params: bool = False) -> list[str]:
+    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
-        :return: the name of the parameters
+        :return: the list of parameters
         """
         return [v for v in self._params.values() if all_params or not v.fixed]
 
@@ -142,7 +143,8 @@ class ACircuit(ABC):
                        name: str,
                        p: Parameter,
                        min_v: float,
-                       max_v: float):
+                       max_v: float,
+                       periodic: bool=True):
         """
             Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
             min/max value or a parameter defined by a value that we create on the fly
@@ -150,6 +152,7 @@ class ACircuit(ABC):
         :param p:
         :param min_v:
         :param max_v:
+        :param periodic:
         :return:
         """
         if isinstance(p, Parameter):
@@ -164,7 +167,7 @@ class ACircuit(ABC):
                     raise RuntimeError("two parameters with the same name in the circuit")
             self._vars[p.name] = p
         else:
-            p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v)
+            p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v, periodic=periodic)
         self._params[name] = p
         return p
 
@@ -176,7 +179,8 @@ class ACircuit(ABC):
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
-    def add(self, port_range: Union[int, Tuple[int]], component: Circuit, merge: bool = None) -> Circuit:
+    def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
+            component: ACircuit, merge: bool = None) -> ACircuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive porst, or the initial port where to add the component
@@ -193,6 +197,9 @@ class ACircuit(ABC):
             self.__class__ = self._fcircuit
             self._Udef = None
             self._params = {v.name: v for k, v in self._params.items() if not v.fixed}
+        if not self.defined_circuit:
+            self.defined_circuit = True
+            self.stroke_style = component.stroke_style
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
                 "range must a consecutive valid set of ports"
@@ -221,7 +228,7 @@ class ACircuit(ABC):
     def __setitem__(self, key, value):
         self._params[key] = value
 
-    def __ifloordiv__(self, component: Union[Circuit, Tuple[int, Circuit]]) -> Circuit:
+    def __ifloordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> ACircuit:
         r"""Shortcut for ``.add``
 
         >>> c //= b       # equivalent to: `c.add((0:b.n),b)`
@@ -239,7 +246,7 @@ class ACircuit(ABC):
         self.add(tuple(range(pos, component._m+pos)), component)
         return self
 
-    def __floordiv__(self, component: Union[Circuit, Tuple[int, Circuit]]) -> Circuit:
+    def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> ACircuit:
         r"""Build a new circuit by adding `component` to the current circuit
 
         >>> c = a // b   # equivalent to: `Circuit(n) // self // component`
@@ -284,18 +291,75 @@ class ACircuit(ABC):
                 map_param_kid[p._pid] = p.name
         return map_param_kid
 
+    def identify(self, unitary_matrix, phases, max_try=10):
+        r"""Identify an instance of the current circuit (should be parameterized) such as Q.C=U.P where Q and P
+        are single-mode phase shifts (resp. [q1, q2, ..., qn], and [p1, p2, ...,pn])
+
+        this is solved through n^2 equations:
+            q_i * C_ij(x,y, ...) = UP_ij * p_j
+
+        Parameters
+        ----------
+        unitary_matrix :
+        phases :
+        max_try : maximal number of try
+
+        Returns
+        -------
+
+        """
+        params = [x.spv for x in self.get_parameters()]
+        # add dummy variables
+        for i in range(self._m**2-self._m-len(params)):
+            params.append(sp.S("dummy%d" % i))
+        Q = Matrix.eye(self._m, use_symbolic=True)
+        P = Matrix.eye(self._m, use_symbolic=False)
+        for i in range(self._m):
+            params.append(sp.S("q%d" % i))
+            Q[i, i] = sp.exp(1j*params[-1])
+            P[i, i] = phases[i]
+        cU = Q @ self.compute_unitary(use_symbolic=True)
+        UP = unitary_matrix @ P
+        equations = []
+        for i in range(self._m):
+            for j in range(self._m):
+                equations.append(sp.re(abs(cU[i, j]-UP[i, j])))
+        f = sp.lambdify([params], equations, "numpy")
+        counter = 0
+        while counter < max_try:
+            x0 = [random.random()] * len(params)
+            res, _, ier, _ = so.fsolve(f, x0, full_output=True)
+            if ier == 1:
+                break
+            counter += 1
+        if ier != 1:
+            return None
+        return res[:len(self.get_parameters())], res[-self._m:]
+
     def pdisplay(self,
                  parent_td: QPrinter = None,
                  map_param_kid: dict = None,
                  shift: int = 0,
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
-                 recursive: bool = False):
+                 recursive: bool = False,
+                 dry_run: bool = False,
+                 **opts):
         if parent_td is None:
-            td = QPrinter(self._m, output_format=output_format)
+            if not dry_run:
+                total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, **opts)
+                td = QPrinter(self._m, output_format=output_format, stroke_style=self.stroke_style,
+                              total_width=total_width, total_height=self._m, **opts)
+            else:
+                td = QPrinter(self._m, output_format="html", stroke_style=self.stroke_style, **opts)
         else:
             td = parent_td
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
+
+        if not isinstance(self, Circuit) or self._Udef is not None:
+            description = self.get_variables(map_param_kid)
+            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
+
         if self._components:
             for r, c in self._components:
                 shiftr = [p+shift for p in r]
@@ -306,16 +370,18 @@ class ACircuit(ABC):
                 elif c._components:
                     description = c.get_variables(map_param_kid)
                     td.append_subcircuit(shiftr, c, "\n".join(description))
-                else:
+                elif isinstance(c, ACircuit) or c._Udef is not None:
                     description = c.get_variables(map_param_kid)
                     td.append_circuit(shiftr, c, "\n".join(description))
-        else:
-            description = self.get_variables()
-            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
+
         td.extend_pos(0, self._m - 1)
+
         if parent_td is None:
             td.close()
-            return str(td)
+            if dry_run:
+                return td.max_pos(0, self._m-1, True)
+            else:
+                return td.draw()
 
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
     subcircuit_width = 2
@@ -348,6 +414,7 @@ class Circuit(ACircuit):
                 assert U.shape[0] == m, "incorrect size"
             else:
                 m = U.shape[0]
+            self.width = m
             # check if unitary matrix
             self._Udef = U
             self._udef_use_polarization = use_polarization
@@ -360,6 +427,8 @@ class Circuit(ACircuit):
         if name is not None:
             self._name = name
         super().__init__(m)
+        if U is None:
+            self.defined_circuit = False
 
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
@@ -423,12 +492,11 @@ class Circuit(ACircuit):
         else:
             multiplier = 1
         for r, c in self._components:
-            cU = Matrix.zeros((multiplier*self._m, multiplier*self._m), use_symbolic)
-            for idx in range(multiplier*self._m):
-                if idx < multiplier*r[0] or idx >= multiplier*(r[-1]+1):
-                    cU[idx, idx] = 1
-            cU[multiplier*r[0]:multiplier*(r[-1]+1), multiplier*r[0]:multiplier*(r[-1]+1)] = \
-                c.compute_unitary(use_symbolic=use_symbolic, use_polarization=use_polarization)
+            cU = c.compute_unitary(use_symbolic=use_symbolic, use_polarization=use_polarization)
+            if len(r) != multiplier*self._m:
+                nU = Matrix.eye(multiplier*self._m, use_symbolic)
+                nU[multiplier*r[0]:multiplier*(r[-1]+1), multiplier*r[0]:multiplier*(r[-1]+1)] = cU
+                cU = nU
             if u is None:
                 u = cU
             else:
@@ -436,8 +504,8 @@ class Circuit(ACircuit):
         return u
 
     def compute_unitary(self,
-                        assign: dict = None,
                         use_symbolic: bool = False,
+                        assign: dict = None,
                         use_polarization: Optional[bool] = None) -> Matrix:
         r"""Compute the unitary matrix corresponding to the circuit
 
@@ -451,7 +519,10 @@ class Circuit(ACircuit):
             use_polarization = self.requires_polarization
         elif not use_polarization:
             assert self.requires_polarization is False, "polarized circuit cannot generates non-polarized unitary"
-        return self._compute_circuit_unitary(use_symbolic, use_polarization)
+        u = self._compute_circuit_unitary(use_symbolic, use_polarization)
+        if u is None:
+            u = Matrix.eye(self._m, use_symbolic=use_symbolic)
+        return u
 
     def subcircuit_shape(self, content, canvas):
         for idx in range(self._m):
@@ -462,23 +533,31 @@ class Circuit(ACircuit):
 
     @staticmethod
     def generic_interferometer(m: int,
-                               fun_gen: Callable[[int], Circuit],
+                               fun_gen: Callable[[int], ACircuit],
                                shape: Literal["triangle", "rectangle"] = "rectangle",
-                               depth: int = None) -> Circuit:
-        r"""Generate a generic interferometer with up to :math:`\frac{n(n+1)}{2}` elements
+                               depth: int = None,
+                               phase_shifter_fun_gen: Callable[[float], ACircuit] = None) -> ACircuit:
+        r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
 
         :param m: number of modes
         :param fun_gen: generator function for the building components
-        :param shape: `rectangle` (Clements-like interferometer) or `triangle` (Reck-like)
-        :param depth: if not None, maximal generation depth
+        :param shape: `rectangle` or `triangle`
+        :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
+                      Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
+
         :return: a circuit
 
+        See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
         """
         generated = Circuit(m)
+        if phase_shifter_fun_gen:
+            for i in range(0, m):
+                generated.add(i, phase_shifter_fun_gen(i))
         idx = 0
         depths = [0] * m
+        max_depth = depth is None and m or depth
         if shape == "rectangle":
-            for i in range(0, m):
+            for i in range(0, max_depth):
                 for j in range(0+i % 2, m-1, 2):
                     if depth is not None and (depths[j] == depth or depths[j+1] == depth):
                         continue
@@ -500,72 +579,54 @@ class Circuit(ACircuit):
 
     @staticmethod
     def decomposition(U: Matrix,
-                      component: Circuit,
-                      phase_shifter_fn: Callable[[float], Circuit] = None,
+                      component: ACircuit,
+                      phase_shifter_fn: Callable[[float], ACircuit] = None,
                       shape: Literal["triangle", "rectangle"] = "triangle",
-                      merge: bool = True):
+                      permutation: Type[ACircuit] = None,
+                      constraints=None,
+                      merge: bool = True,
+                      precision: float = 1e-6,
+                      max_try: int = 10):
         r"""Decompose a given unitary matrix U into a circuit with specified component type
 
-        :param component: a circuit, must have 2 independent parameters
+        :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
+        :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
+        Each constraint should have the numbers of free parameters of the system.
         :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
             ignored
         :param shape: `rectangle` (Clements-like interferometer) or `triangle` (Reck-like)
+        :param permutation: if provided, type of a permutation operator to avoid unnecessary operators
         :param merge: don't use sub-circuits
+        :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
+        :param max_try: number of tries for the decomposition
         :return: a circuit
         """
-        M = copy.deepcopy(U)
-        N = M.shape[0]
-        C = Circuit(N)
-        params = component.get_parameters()
-        params_symbols = [x.spv for x in params]
-        assert len(params) == 2, "Component should have 2 independent parameters"
-        U = component.U
-        UI = U.inv()
-        list_components = []
+        if not Matrix(U).is_unitary():
+            raise(ValueError("decomposed matrix should be unitary"))
+        N = U.shape[0]
+        count = 0
+        if constraints is None:
+            constraints = [[None]*len(component.get_parameters())]
+        assert isinstance(constraints, list), "constraints should be a list of constraint"
+        for c in constraints:
+            assert isinstance(c, (list, tuple)) and len(c) == len(component.get_parameters()),\
+                "there should as many component in each constraint than free parameters in the component"
+        while count < max_try:
+            if shape == "triangle":
+                lc = algorithm.decompose_triangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+            else:
+                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+            if lc is not None:
+                C = Circuit(N)
+                for ic in lc:
+                    C.add(*ic, merge=merge)
+                return C
+            count += 1
 
-        if shape == "rectangle":
-            assert NotImplementedError("rectangular decomposition not yet implemented")
-        else:
-            for m in range(N-1, 0, -1):
-                for n in range(m):
-                    # goal is to null M[n,m]
-                    if M[n, m] != 0:
-                        equation = UI[0, 0]*M[n, m]+UI[0, 1]*M[n+1, m]
-                        f = sp.lambdify([params_symbols], [sp.re(equation), sp.im(equation)])
-                        counter = 0
-                        while counter < 100:
-                            x0 = [random.random()*2*np.pi-np.pi, random.random()*2*np.pi-np.pi]
-                            res, _, ier, _ = so.fsolve(f, x0, full_output=True)
-                            if ier == 1:
-                                break
-                            counter += 1
-                        if ier != 1:
-                            return None
+        return None
 
-                        RI = Matrix.eye(N, use_symbolic=False)
-                        RI[n, n] = complex(UI[0, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                        RI[n, n+1] = complex(UI[0, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                        RI[n+1, n] = complex(UI[1, 0].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-                        RI[n+1, n+1] = complex(UI[1, 1].subs({params_symbols[0]: res[0], params_symbols[1]: res[1]}))
-
-                        M = RI @ M
-                        instantiated_component = copy.deepcopy(component)
-                        instantiated_component.get_parameters()[0].fix_value(res[0])
-                        instantiated_component.get_parameters()[0].fix_value(res[1])
-                        list_components = [((n, n+1), instantiated_component)]+list_components
-            if phase_shifter_fn:
-                for idx in range(N):
-                    a = M[idx, idx].real
-                    b = M[idx, idx].imag
-                    if b != 0:
-                        if a == 0:
-                            phi = np.pi/2
-                        else:
-                            phi = np.arctan(b/a)
-                            if a < 0:
-                                phi = phi + np.pi
-                        list_components = [(idx, phase_shifter_fn(phi))] + list_components
-
-        for ic in list_components:
-            C.add(*ic, merge=merge)
-        return C
+    def shape(self, _, canvas):
+        for i in range(self.m):
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
+        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
+        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)

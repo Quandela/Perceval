@@ -23,7 +23,6 @@
 import numpy as np
 import perceval as pcvl
 import perceval.lib.phys as phys
-import perceval.lib.symb as symb
 
 import pytest
 
@@ -59,28 +58,6 @@ def test_c3():
                                                               pcvl.BasicState("|0,2,0>"): 0.25,
                                                               pcvl.BasicState("|0,0,2>"): 0.25,
                                                               })
-
-@pytest.mark.skip(reason="need to fix delay implementation")
-def test_timedelay():
-    dt = pcvl.Parameter("Δt")
-
-    c = pcvl.Circuit(2)
-    c //= symb.BS()
-    c //= ((1), symb.DT(dt))
-    c //= symb.BS()
-
-    st0 = pcvl.AnnotatedBasicState([1, 0], pcvl.TimeDescription(length=0.2))
-    stv = pcvl.StateVector(period=2)
-    stv[st0] = 1
-    backend = pcvl.BackendFactory().get_backend("Stepper")
-
-    sim = backend(c)
-
-    dt.set_value(0)
-    assert sim.prob(stv, pcvl.BasicState([2, 0]))+sim.prob(stv, pcvl.BasicState([0, 2])) == 0
-
-    dt.set_value(2e-9)
-    assert pytest.approx(sim.prob(stv, pcvl.BasicState([2, 0]))+sim.prob(stv, pcvl.BasicState([0, 2]))) == 0.5
 
 
 def test_basic_interference():

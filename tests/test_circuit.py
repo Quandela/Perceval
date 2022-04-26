@@ -22,10 +22,11 @@
 
 import pytest
 
-from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, StateVector
+from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import sympy as sp
+import numpy as np
 
 
 def strip_line_12(s: str) -> str:
@@ -71,6 +72,27 @@ def test_helloword():
             | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
             +-------+-------+-------+-------+-------+-------+
         """)
+
+
+def test_empty_circuit():
+    c = Circuit(4)
+    m = c.compute_unitary(False)
+    assert m.shape == (4, 4)
+    assert np.allclose(m, Matrix.eye(4))
+    assert c.pdisplay().replace(" ", "") == """
+
+0:────:0 (depth 0)
+
+
+1:────:1 (depth 0)
+
+
+2:────:2 (depth 0)
+
+
+3:────:3 (depth 0)
+
+""".replace(" ", "")
 
 
 def test_sbs_definition():
@@ -136,7 +158,7 @@ def test_parameter():
     bs = symb.BS(R=r)
     try:
         bs.compute_unitary(use_symbolic=False)
-    except ValueError:
+    except TypeError:
         pass
     else:
         raise Exception("Exception should have been generated")
@@ -226,18 +248,18 @@ def test_iterator():
     c = Circuit(3)
     comps = [(0, 1), (1, 2), (0, 1)]
     for k in range(len(comps)):
-        c.add(comps[k], phys.BS(R=k+1))
+        c.add(comps[k], phys.BS(R=1/(k+1)))
 
     d = Circuit(4)
     d.add((0, 1, 2), c, merge=False)
-    d.add((2, 3), phys.BS(R=4))
+    d.add((2, 3), phys.BS(R=1/4))
     comps.append((2, 3))
 
     l_comp = list(d.__iter__())
 
     assert len(l_comp) == 4
     for i in range(4):
-        assert float(l_comp[i][1]["R"]) == i+1 and l_comp[i][0] == comps[i]
+        assert float(l_comp[i][1]["R"]) == 1/(i+1) and l_comp[i][0] == comps[i]
 
 
 def test_evolve():
@@ -245,3 +267,22 @@ def test_evolve():
     for backend_name in ["SLOS", "Naive"]:
         simulator = BackendFactory().get_backend(backend_name)(c)
         assert str(simulator.evolve(BasicState("|1,0>"))) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
+
+
+def test_visualization_ucircuit(capfd):
+    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
+         // (0, phys.PS(sp.pi/2))
+         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    pdisplay(c, output_format="text")
+    out, err = capfd.readouterr()
+    assert out.strip() == """
+    ╭─────╮╭───────────╮╭─────╮
+0:──┤U1   ├┤PS phi=pi/2├┤U2   ├──:0 (depth 3)
+    │     │╰───────────╯│     │
+    │     │             │     │
+1:──┤     ├─────────────┤     ├──:1 (depth 2)
+    │     │             │     │
+    │     │             │     │
+2:──┤     ├─────────────┤     ├──:2 (depth 2)
+    ╰─────╯             ╰─────╯
+""".strip()

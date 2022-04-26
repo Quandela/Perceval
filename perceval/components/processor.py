@@ -23,7 +23,7 @@
 from collections import defaultdict
 import copy
 from .source import Source
-from .circuit import Circuit
+from .circuit import ACircuit
 from perceval.utils import SVDistribution, StateVector
 from perceval.backends import Backend
 import quandelibc as qc
@@ -34,7 +34,7 @@ class Processor:
     """
         Generic definition of processor as sources + circuit
     """
-    def __init__(self, sources: Dict[int, Source], circuit: Circuit, post_select_fn: Callable = None):
+    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 
         :param sources: a list of Source used by the processor

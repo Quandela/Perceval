@@ -36,24 +36,23 @@ except ModuleNotFoundError:
 
 
 class MplotCanvas(Canvas):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **opts):
+        super().__init__(**opts)
         self._fig, self._ax = plt.subplots()
+        if "total_width" in opts:
+            self._fig.set_figwidth((opts["total_width"]+1)*2)
+            self._fig.set_figheight((opts["total_height"]+1)*2)
         self._patches = []
 
     def add_mline(self, points, stroke="black", stroke_width=1, stroke_linejoin="miter",
-                  stroke_dasharray=None, only_svg=False):
-        if only_svg:
-            return
+                  stroke_dasharray=None):
         mpath = ["M", points[0], points[1]]
         for n in range(2, len(points), 2):
             mpath += ["L", points[n], points[n+1]]
         self.add_mpath(mpath, stroke=stroke, stroke_width=stroke_width, stroke_linejoin=stroke_linejoin)
 
     def add_polygon(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
-                    stroke_dasharray=None, only_svg=False):
-        if only_svg:
-            return
+                    stroke_dasharray=None):
         points = super().add_polygon(points, stroke, stroke_width, fill)
         self._patches.append(
             mpatches.Polygon([(points[n], -points[n+1]) for n in range(0, len(points), 2)],
@@ -61,9 +60,7 @@ class MplotCanvas(Canvas):
                              ec=stroke, linewidth=stroke_width, joinstyle=stroke_linejoin))
 
     def add_mpath(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
-                  stroke_dasharray=None, only_svg=False):
-        if only_svg:
-            return
+                  stroke_dasharray=None):
         points = super().add_mpath(points, stroke, stroke_width, fill)
         path_data = []
         while points:
@@ -90,17 +87,13 @@ class MplotCanvas(Canvas):
                                                 joinstyle=stroke_linejoin))
 
     def add_circle(self, points, r, stroke="black", stroke_width=1, fill=None,
-                   stroke_dasharray=None, only_svg=False):
-        if only_svg:
-            return
+                   stroke_dasharray=None):
         points = super().add_circle(points, r, stroke, stroke_width, fill)
         self._patches.append(mpatches.Circle((points[0], -points[1]), r,
                                              fill=fill is not None, color=fill,
                                              ec=stroke, linewidth=stroke_width))
 
-    def add_text(self, points, text, size, ta="left", only_svg=False):
-        if only_svg:
-            return
+    def add_text(self, points, text, size, ta="left"):
         points = super().add_text(points, text, size, ta)
         if ta == "middle":
             ta = "center"
@@ -114,11 +107,16 @@ class MplotCanvas(Canvas):
         plt.axis('equal')
         plt.axis('off')
         plt.tight_layout()
-        plt.show()
-        return str(self)
+        if "mplot_savefig" in self._opts:
+            plt.savefig(self._opts["mplot_savefig"])
+            print("figure saved in %s" % self._opts["mplot_savefig"])
+        if "mplot_noshow" not in self._opts or not self._opts["mplot_noshow"]:
+            plt.show()
+        plt.close(self._fig)
+        return self
 
 
 class MplotRenderer(Renderer):
-    def new_canvas(self) -> Canvas:
+    def new_canvas(self, **opts) -> Canvas:
         assert plt is not None, "matplotlib is not installed"
-        return MplotCanvas()
+        return MplotCanvas(**opts)
