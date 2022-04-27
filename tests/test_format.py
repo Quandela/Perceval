@@ -46,3 +46,18 @@ def test_format_complex():
     assert pcvl.simple_complex(complex(1/sp.sqrt(2)-5j*sp.sqrt(5)/3))[1] == "sqrt(2)/2-5*sqrt(5)*I/3"
     assert pcvl.simple_complex(0.001+1e-15j)[1] == "0.001"
     assert pcvl.simple_complex(0.0001+1e-15j)[1] == "1e-4"
+
+
+def test_format_pdisplay(capfd):
+    pcvl.pdisplay(0.50000000001)
+    out, err = capfd.readouterr()
+    assert out.strip() == "1/2"
+    pcvl.pdisplay(0.5001)
+    out, err = capfd.readouterr()
+    assert out.strip() == "0.5001"
+    pcvl.pdisplay(0.5001, precision=1e-3)
+    out, err = capfd.readouterr()
+    assert out.strip() == "1/2"
+    pcvl.pdisplay(1j)
+    out, err = capfd.readouterr()
+    assert out.strip() == "I"

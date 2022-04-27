@@ -39,14 +39,14 @@ class TextPrinter:
         self._hc = hc
         self._h = ['']*(hc*nsize+2)
         for k in range(nsize):
-            self._h[hc*k+2] = str(k+1)+":"
+            self._h[hc*k+2] = str(k)+":──"
         self.extend_pos(0, self._nsize-1)
         self._depth = [0]*nsize
 
     def close(self):
         self.extend_pos(0, self._nsize-1)
         for k in range(self._nsize):
-            self._h[self._hc*k+2] += ":"+str(k+1)+" (depth %d)" % self._depth[k]
+            self._h[self._hc*k+2] += "──:"+str(k)+" (depth %d)" % self._depth[k]
 
     def max_pos(self, start, end, header):
         maxpos = 0
@@ -157,16 +157,25 @@ class TextPrinter:
                 self._h[k] += "│"
         self._h[end*self._hc+3] += "╯"
 
-    def __str__(self):
+    def draw(self):
         return "\n".join(self._h)
 
 
 class GraphicPrinter:
-    def __init__(self, nsize, canvas: Canvas):
+    affix_port_size = 15
+    affix_all_size = 25
+    def __init__(self, nsize, canvas: Canvas, stroke_style):
+        self._stroke_style = stroke_style
         self._nsize = nsize
         # first position available for row n
         self._chart = [0] * (nsize+1)
         self._canvas = canvas
+        self._canvas.set_offset((0, 0),
+                                GraphicPrinter.affix_all_size, 50 * (nsize + 1))
+        for k in range(nsize):
+            self._canvas.add_mpath(["M", GraphicPrinter.affix_all_size-GraphicPrinter.affix_port_size, 25 + 50 * k,
+                                    "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
+            self._canvas.add_text((0, 25 + 50 * k), str(k), 6, ta="left")
         self._current_block_open_offset = None
         self._current_block_name = ""
 
@@ -182,35 +191,33 @@ class GraphicPrinter:
         end = lines[-1]
         begpos = self._current_block_open_offset
         curpos = self.extend_pos(start, end)
-        self._canvas.set_offset((50 * begpos, 50 * start),
+        self._canvas.set_offset((GraphicPrinter.affix_all_size+50 * begpos, 50 * start),
                                 50 * (curpos-begpos), 50 * (end - start + 1))
         self._canvas.add_rect((2, 2), 50 * (curpos-begpos)-4, 50 * (end - start + 1)-4,
-                              stroke_dasharray="1,2", only_svg=True)
-        self._canvas.add_text((4, 50 * (end - start + 1)+5), self._current_block_name.upper(), 8, only_svg=True)
+                              stroke_dasharray="1,2")
+        self._canvas.add_text((4, 50 * (end - start + 1)+5), self._current_block_name.upper(), 8)
         pass
+
+    def max_pos(self, start, end, _):
+        return max(self._chart[start:end+1])
 
     def extend_pos(self, start, end):
         maxpos = max(self._chart[start:end+1])
         for p in range(start, end+1):
             if self._chart[p] != maxpos:
-                self._canvas.set_offset((self._chart[p]*50, p*50), (maxpos-self._chart[p])*50, 50)
+                self._canvas.set_offset((GraphicPrinter.affix_all_size+self._chart[p]*50, p*50),
+                                        (maxpos-self._chart[p])*50, 50)
                 self._canvas.add_mline([0, 25, (maxpos-self._chart[p])*50, 25], **self._stroke_style)
             self._chart[p] = maxpos
         return maxpos
 
     def append_circuit(self, lines, circuit, content):
-        if hasattr(circuit, "_fcircuit") and circuit._fcircuit.stroke_style:
-            self._stroke_style = circuit._fcircuit.stroke_style
-        elif hasattr(circuit, "stroke_style"):
-            self._stroke_style = circuit.stroke_style
-        else:
-            self._stroke_style = ""
         # opening the box
         start = lines[0]
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
         w = circuit.width
-        self._canvas.set_offset((50*max_pos, 50*start), 50*w, 50*(end-start+1))
+        self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
         circuit.shape(content, self._canvas)
         for i in range(start, end+1):
             self._chart[i] += w
@@ -223,26 +230,32 @@ class GraphicPrinter:
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
         w = circuit.subcircuit_width
-        self._canvas.set_offset((50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        circuit.shape(content, self._canvas)
+        self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
+        #circuit.shape(content, self._canvas)
         circuit.subcircuit_shape(circuit._name, self._canvas)
         for i in range(start, end+1):
             self._chart[i] += w
 
     def close(self):
-        pass
+        max_pos = self.extend_pos(0, self._nsize-1)
+        self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 0),
+                                GraphicPrinter.affix_all_size, 50*(self._nsize+1))
+        for k in range(self._nsize):
+            self._canvas.add_mpath(["M", 0, 25 + 50 * k,
+                                    "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
+            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), 6, ta="right")
 
-    def __str__(self):
+    def draw(self):
         return self._canvas.draw()
 
 
-def QPrinter(n, output_format="text"):
+def QPrinter(n, output_format="text", stroke_style="", **opts):
     if output_format == "text":
         return TextPrinter(n)
     elif output_format == "latex":
         raise NotImplementedError("latex format not yet supported")
     if output_format == "html":
-        canvas = SVGRenderer().new_canvas()
+        canvas = SVGRenderer().new_canvas(**opts)
     else:
-        canvas = MplotRenderer().new_canvas()
-    return GraphicPrinter(n, canvas)
+        canvas = MplotRenderer().new_canvas(**opts)
+    return GraphicPrinter(n, canvas, stroke_style)

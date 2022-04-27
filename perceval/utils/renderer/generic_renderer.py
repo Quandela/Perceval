@@ -26,7 +26,7 @@ from typing import List, Union, Literal, Tuple
 
 
 class Canvas(ABC):
-    def __init__(self):
+    def __init__(self, **opts):
         self._position = []
         self._minx = None
         self._miny = None
@@ -35,6 +35,10 @@ class Canvas(ABC):
         self._drawn = False
         self._offset_x = 0
         self._offset_y = 0
+        if opts is None:
+            self._opts = {}
+        else:
+            self._opts = opts
 
     def set_offset(self, v: Tuple[float, float], width: float, height: float):
         self._offset_x = v[0]
@@ -68,8 +72,7 @@ class Canvas(ABC):
                   stroke: str = "black",
                   stroke_width: float = 1,
                   stroke_linejoin: str = "miter",
-                  stroke_dasharray=None,
-                  only_svg=False):
+                  stroke_dasharray=None):
         """Draw a multi-line
 
         :param points:
@@ -90,8 +93,7 @@ class Canvas(ABC):
                     stroke_width: float = 1,
                     fill: str = None,
                     stroke_linejoin: str = "miter",
-                    stroke_dasharray=None,
-                    only_svg=False):
+                    stroke_dasharray=None):
         """Draw a polygon
 
         :param fill:
@@ -122,8 +124,7 @@ class Canvas(ABC):
                   stroke_width: float = 1,
                   fill: str = None,
                   stroke_linejoin: str = "miter",
-                  stroke_dasharray=None,
-                  only_svg=False):
+                  stroke_dasharray=None):
         """Draw a path
 
         :param fill:
@@ -214,16 +215,14 @@ class Canvas(ABC):
                    stroke: str = "black",
                    stroke_width: float = 1,
                    fill: str = None,
-                   stroke_dasharray = None,
-                   only_svg=False):
+                   stroke_dasharray = None):
         self.position = (points[0] + r, points[1] + r)
         self.position = (points[0] - r, points[1] - r)
         self.position = points
         return self.position
 
     def add_text(self, points: Tuple[float, float],
-                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left",
-                 only_svg=False):
+                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left"):
         self.position = points
         f_points = self.position
         if ta == "left":
@@ -242,5 +241,5 @@ class Canvas(ABC):
 
 class Renderer(ABC):
     @abstractmethod
-    def new_canvas(self) -> Canvas:
+    def new_canvas(self, **opts) -> Canvas:
         pass

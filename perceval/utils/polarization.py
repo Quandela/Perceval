@@ -25,7 +25,7 @@ from typing import Union, Tuple, Any
 
 import re
 import sympy as sp
-
+import numpy as np
 
 class Polarization:
     r"""Polarization class
@@ -116,12 +116,17 @@ class Polarization:
                     raise ValueError("incorrect format - angle value should not contain variable in %s" % s)
         return Polarization((v, 0))
 
-    def project_ev_eh(self) -> Tuple[Any, Any]:
+    def project_eh_ev(self, use_symbolic=False) -> Tuple[Any, Any]:
         r"""Build Jones vector corresponding to the current instance
 
         :return: a pair of numeric or symbolic expressions
         """
-        return sp.cos(self.theta_phi[0]/2), sp.exp(sp.I*self.theta_phi[1])*sp.sin(self.theta_phi[0]/2)
+        if use_symbolic:
+            return sp.cos(self.theta_phi[0]/2), sp.exp(sp.I*self.theta_phi[1])*sp.sin(self.theta_phi[0]/2)
+        else:
+            return (np.cos(float(self.theta_phi[0])/2),
+                    (np.cos(float(self.theta_phi[1])) + 1j * np.sin(float(self.theta_phi[1])))\
+                    * np.sin(float(self.theta_phi[0])/2))
 
     def __str__(self):
         if self.theta_phi[0] == sp.S(0) and self.theta_phi[1] == sp.S(0):

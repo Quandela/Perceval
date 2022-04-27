@@ -83,12 +83,15 @@ class ComputePath:
     def compute(self, u, parent_coefs: Matrix = None, mk: int = None):
         r"""Given the precompiled compute path, update all the coefficients"""
         if parent_coefs is not None:
-            self.coefs.fill(0)
-            for parent_idx, coef_parent in enumerate(parent_coefs):
-                for j in range(self._backend._realm):
-                    idx = self._backend.fsms[self._n].get(parent_idx, j)
-                    if idx != qc.npos:
-                        self.coefs[idx] += coef_parent * u[j, mk]
+            if self._backend._use_symbolic:
+                self.coefs.fill(0)
+                for parent_idx, coef_parent in enumerate(parent_coefs):
+                    for j in range(self._backend._realm):
+                        idx = self._backend.fsms[self._n].get(parent_idx, j)
+                        if idx != qc.npos:
+                            self.coefs[idx] += coef_parent * u[j, mk]
+            else:
+                self._backend.fsms[self._n].compute_slos_layer(u, self._backend._realm, mk, self.coefs, parent_coefs)
 
         for mk, child in self._children.items():
             child.compute(u, self.coefs, mk)
@@ -102,14 +105,18 @@ class SLOSBackend(Backend):
 
     def __init__(self, u, use_symbolic=None, n=None, mask=None):
         super().__init__(u, use_symbolic=use_symbolic, n=n, mask=mask)
-        self._changed_unitary()
-
-    def _changed_unitary(self):
-        self.mk_l = [1]
-        self.fsms = [[]]
-        self.fsas = {}
         self._compute_path = None
-        self.state_mapping = {}
+        self._changed_unitary(None)
+
+    def _changed_unitary(self, prev_u):
+        if self._compute_path is not None and prev_u is not None and prev_u.shape == self._U.shape:
+            self._calculation()
+        else:
+            self.mk_l = [1]
+            self.fsms = [[]]
+            self.fsas = {}
+            self._compute_path = None
+            self.state_mapping = {}
 
     def _compilation(self, input_states):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
@@ -162,18 +169,28 @@ class SLOSBackend(Backend):
         self._calculation()
         return True
 
-    def probampli_be(self, input_state, output_state, n=None, output_idx=None):
+    def probampli_be(self, input_state, output_state, n=None, output_idx=None, norm=True):
         if input_state.n != output_state.n:
             return 0
         if output_idx is None:
             output_idx = self.fsas[output_state.n].find(output_state)
             assert output_idx != qc.npos
+        if not norm:
+            return self.state_mapping[input_state].coefs[output_idx, 0]
         if self._use_symbolic:
             return self.state_mapping[input_state].coefs[output_idx, 0]\
                    * sp.sqrt(output_state.prodnfact()/input_state.prodnfact())
         else:
             return self.state_mapping[input_state].coefs[output_idx, 0]\
-                * np.sqrt(output_state.prodnfact()/input_state.prodnfact())
+                   * np.sqrt(output_state.prodnfact()/input_state.prodnfact())
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, n, output_idx))**2
+        return abs(self.probampli_be(input_state, output_state, n, output_idx, False))**2\
+               * output_state.prodnfact()/input_state.prodnfact()
+
+    def all_prob(self, input_state):
+        self.compile(input_state)
+        c = np.copy(self.state_mapping[input_state].coefs).reshape(self.fsas[input_state.n].count())
+        self.fsas[input_state.n].norm_coefs(c)
+        c /= input_state.prodnfact()
+        return abs(c)**2
