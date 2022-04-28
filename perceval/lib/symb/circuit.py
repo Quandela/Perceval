@@ -139,7 +139,7 @@ class DT(ACircuit):
         canvas.add_mline([0, 25, 19, 25], stroke="black", stroke_width=2)
         canvas.add_mline([34, 25, 50, 25], stroke="white", stroke_width=3)
         canvas.add_mline([32, 25, 50, 25], stroke="black", stroke_width=2)
-        canvas.add_text((25, 38), text=content.replace("t=", ""), size=9, ta="middle")
+        canvas.add_text((25, 38), text=content.replace("t=", ""), size=7, ta="middle")
 
 
 class PS(ACircuit):
@@ -174,7 +174,7 @@ class PS(ACircuit):
     def shape(self, content, canvas):
         canvas.add_mline([0, 25, 50, 25], stroke="black", stroke_width=2)
         canvas.add_rect((5, 17), width=40, height=16, stroke="black", stroke_width=2, fill="white")
-        canvas.add_text((25, 28), text=content.replace("phi=", ""), size=10, ta="middle")
+        canvas.add_text((25, 28), text=content.replace("phi=", ""), size=7, ta="middle")
 
 
 class PERM(GCircuit):
