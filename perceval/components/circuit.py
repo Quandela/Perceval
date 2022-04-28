@@ -536,7 +536,7 @@ class Circuit(ACircuit):
                                fun_gen: Callable[[int], ACircuit],
                                shape: Literal["triangle", "rectangle"] = "rectangle",
                                depth: int = None,
-                               phase_shifter_fn: Optional[Callable[[int], ACircuit]] = None) -> ACircuit:
+                               phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> ACircuit:
         r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
 
         :param m: number of modes
@@ -546,15 +546,15 @@ class Circuit(ACircuit):
         :param shape: `rectangle` or `triangle`
         :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                       Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
-        :param phase_shifter_fn: a function generating a phase_shifter circuit.
+        :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
         :return: a circuit
 
         See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
         """
         generated = Circuit(m)
-        if phase_shifter_fn:
+        if phase_shifter_fun_gen:
             for i in range(0, m):
-                generated.add(i, phase_shifter_fn(i))
+                generated.add(i, phase_shifter_fun_gen(i))
         idx = 0
         depths = [0] * m
         max_depth = depth is None and m or depth
