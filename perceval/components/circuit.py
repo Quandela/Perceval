@@ -158,10 +158,10 @@ class ACircuit(ABC):
         if isinstance(p, Parameter):
             if min_v is not None:
                 if p.min is None or min_v > p.min:
-                    p.min = min_v
+                    p.min = float(min_v)
             if max_v is not None:
                 if p.max is None or max_v < p.max:
-                    p._max = max_v
+                    p._max = float(max_v)
             if p.name in self._vars:
                 if p.pid != self._vars[p.name].pid:
                     raise RuntimeError("two parameters with the same name in the circuit")
