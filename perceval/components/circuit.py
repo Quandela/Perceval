@@ -291,21 +291,16 @@ class ACircuit(ABC):
                 map_param_kid[p._pid] = p.name
         return map_param_kid
 
-    def identify(self, unitary_matrix, phases, max_try=10):
-        r"""Identify an instance of the current circuit (should be parameterized) such as Q.C=U.P where Q and P
-        are single-mode phase shifts (resp. [q1, q2, ..., qn], and [p1, p2, ...,pn])
+    def identify(self, unitary_matrix, phases, max_try=10) -> None:
+        r"""Identify an instance of the current circuit (should be parameterized) such as :math:`Q.C=U.P`
+        where :math:`Q` and :math:`P` are single-mode phase shifts (resp. :math:`[q1, q2, ..., qn]`, and
+        :math:`[p1, p2, ...,pn]`). This is solved through :math:`n^2` equations:
+        :math:`q_i * C_{i,j}(x,y, ...) = UP_{i,j} * p_j`
 
-        this is solved through n^2 equations:
-            q_i * C_ij(x,y, ...) = UP_ij * p_j
-
-        Parameters
-        ----------
-        unitary_matrix :
-        phases :
-        max_try : maximal number of try
-
-        Returns
-        -------
+        :param unitary_matrix: the matrix to identify
+        :param phases: phase shift parameters
+        :param max_try: the resolution is using parameter search starting on a random points, it might fail, this
+                        parameter sets the maximal number of times to try
 
         """
         params = [x.spv for x in self.get_parameters()]
@@ -542,7 +537,7 @@ class Circuit(ACircuit):
         :param m: number of modes
         :param fun_gen: generator function for the building components, index is an integer allowing to generate
                         named parameters - for instance:
-                        `fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx))`
+                        :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx))`
         :param shape: `rectangle` or `triangle`
         :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                       Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
@@ -600,7 +595,7 @@ class Circuit(ACircuit):
         :param permutation: if provided, type of a permutation operator to avoid unnecessary operators
         :param merge: don't use sub-circuits
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
-        :param max_try: number of tries for the decomposition
+        :param max_try: number of times to try the decomposition
         :return: a circuit
         """
         if not Matrix(U).is_unitary():
