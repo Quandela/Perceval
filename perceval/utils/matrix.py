@@ -95,7 +95,7 @@ class Matrix(ABC):
         """
         if use_symbolic:
             return MatrixS(sp.eye(n))
-        return MatrixN(np.eye(n))
+        return MatrixN(np.eye(n, dtype=complex))
 
     @staticmethod
     def zeros(shape: tuple[int, int], use_symbolic: bool = False) -> Matrix:
