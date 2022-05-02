@@ -215,3 +215,16 @@ def test_decompose_non_unitary():
           // (0, symb.PS(phi=pcvl.Parameter("φ_a"))))
     with pytest.raises(ValueError):
         pcvl.Circuit.decomposition(M, ub, shape="triangle", max_try=5)
+
+
+def test_decomposition_large():
+    with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
+        M = pcvl.Matrix(f)
+        ub = (pcvl.Circuit(2)
+              // symb.BS()
+              // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
+              // symb.BS()
+              // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
+        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=1)
+        assert C1 is not None
+        np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)

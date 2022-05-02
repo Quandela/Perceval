@@ -114,6 +114,12 @@ class Parameter:
         return self._value is not None
 
     @property
+    def is_periodic(self) -> bool:
+        r"""Return True if the parameter is defined as a period parameter
+        """
+        return self._periodic
+
+    @property
     def fixed(self) -> bool:
         r"""Return True if the parameter is fixed
         """
