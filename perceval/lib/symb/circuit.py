@@ -50,7 +50,7 @@ class BS(ACircuit):
         assert R is None or theta is None, "cannot set both R and theta"
         self._phi = self._set_parameter("phi", phi, 0, 2*sp.pi)
         if R is not None:
-            self._R = self._set_parameter("R", R, 0, 1, False)
+            self._R = self._set_parameter("R", R, 0, 1, periodic=False)
         else:
             if theta is None:
                 theta = sp.pi/4

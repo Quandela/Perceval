@@ -119,6 +119,10 @@ class Parameter:
         """
         return self._periodic
 
+    def set_periodic(self, periodic):
+        r"""set periodic flag"""
+        self._periodic = periodic
+
     @property
     def fixed(self) -> bool:
         r"""Return True if the parameter is fixed
