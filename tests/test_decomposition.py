@@ -228,3 +228,9 @@ def test_decomposition_large():
         C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=1)
         assert C1 is not None
         np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
+
+
+def test_decomposition_perm():
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")),
+                                    phase_shifter_fn=symb.PS)
+    assert C1 is not None
