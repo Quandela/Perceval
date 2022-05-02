@@ -50,7 +50,8 @@ def _solve(f, x0, constraint, bounds, precision):
             if res is None:
                 return None
             return [*res[:i], c, *res[i:]]
-    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[(float(b[0]), float(b[1])) for b in bounds])
+    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
+                                                        for b in bounds])
     if f(res.x)[0] > precision:
         return None
     return res.x
@@ -86,7 +87,7 @@ def decompose_triangle(u,
     m = u.shape[0]
     params = component.get_parameters()
     params_symbols = [x.spv for x in params]
-    bounds = [x.bounds for x in params]
+    bounds = [not x.is_periodic and x.bounds or None for x in params]
 
     if precision is None:
         precision = global_params["min_complex_component"]

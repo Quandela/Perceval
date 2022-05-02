@@ -53,7 +53,7 @@ class BS(ACircuit):
         self._phi_b = self._set_parameter("phi_b", phi_b, 0, 2*sp.pi)
         self._phi_d = self._set_parameter("phi_d", phi_d, 0, 2*sp.pi)
         if R is not None:
-            self._R = self._set_parameter("R", R, 0, 1, False)
+            self._R = self._set_parameter("R", R, 0, 1, periodic=False)
         else:
             if theta is None:
                 theta = sp.pi/4
