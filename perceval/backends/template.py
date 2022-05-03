@@ -154,6 +154,18 @@ class Backend(ABC):
         if input_state.n == 0:
             return output_state.n == 0
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
+            if hasattr(input_state, "separate_state"):
+                input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
+                all_prob = 0
+                for p_output_state in AnnotatedBasicState(output_state).partition(
+                        [input_state.n for input_state in input_states]):
+                    prob = 1
+                    for i_state, o_state in zip(input_states, p_output_state):
+                        if not skip_compile:
+                            self.compile(i_state)
+                        prob *= self.prob_be(i_state, o_state, n)
+                    all_prob += prob
+                return all_prob
             if not skip_compile:
                 self.compile(input_state)
             return self.prob_be(input_state, output_state, n)
@@ -250,18 +262,8 @@ class Backend(ABC):
                 # TODO: should not have a special case here
                 if isinstance(input_state, StateVector):
                     input_state = input_state[0]
-                if hasattr(input_state, "separate_state"):
-                    input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
-                    all_prob = 0
-                    for p_output_state in output_state.partition([input_state.n for input_state in input_states]):
-                        prob = 1
-                        for i_state, o_state in zip(input_states, p_output_state):
-                            prob *= self.prob(i_state, o_state)
-                        all_prob += prob
-                    yield output_state, all_prob
-                else:
-                    yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
-                    skip_compile = True
+                yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
+                skip_compile = True
 
     def allstate_iterator(self, input_state: Union[AnnotatedBasicState, StateVector]) -> AnnotatedBasicState:
         """Iterator on all possible output states compatible with mask generating StateVector

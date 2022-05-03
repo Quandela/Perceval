@@ -49,8 +49,14 @@ class Parameter:
             self._value = self._check_value(value, min_v, max_v, periodic)
             self._symbol = None
         self.name = name
-        self._min = min_v
-        self._max = max_v
+        if min_v is not None:
+            self._min = float(min_v)
+        else:
+            self._min = None
+        if max_v is not None:
+            self._max = float(max_v)
+        else:
+            self._max = None
         self._periodic = periodic
         self._pid = Parameter._id
         Parameter._id += 1
@@ -112,6 +118,16 @@ class Parameter:
         r"""Return True if the parameter has a value (fixed or non fixed)
         """
         return self._value is not None
+
+    @property
+    def is_periodic(self) -> bool:
+        r"""Return True if the parameter is defined as a period parameter
+        """
+        return self._periodic
+
+    def set_periodic(self, periodic):
+        r"""set periodic flag"""
+        self._periodic = periodic
 
     @property
     def fixed(self) -> bool:
