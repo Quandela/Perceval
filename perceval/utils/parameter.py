@@ -41,14 +41,6 @@ class Parameter:
     _id = 0
 
     def __init__(self, name: str, value: float = None, min_v: float = None, max_v: float = None, periodic=True):
-        if value is None:
-            self._symbol = sp.symbols(name, real=True)
-            self._value = None
-        else:
-            value, _ = simple_float(value)
-            self._value = self._check_value(value, min_v, max_v, periodic)
-            self._symbol = None
-        self.name = name
         if min_v is not None:
             self._min = float(min_v)
         else:
@@ -57,6 +49,16 @@ class Parameter:
             self._max = float(max_v)
         else:
             self._max = None
+        if value is None:
+            self._symbol = sp.symbols(name, real=True)
+            self._value = None
+        else:
+            value, _ = simple_float(value)
+            self._value = value
+            if not isinstance(value, sp.Expr):
+                self._value = self._check_value(value, self._min, self._max, periodic)
+            self._symbol = None
+        self.name = name
         self._periodic = periodic
         self._pid = Parameter._id
         Parameter._id += 1
