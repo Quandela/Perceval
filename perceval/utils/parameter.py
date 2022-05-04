@@ -53,10 +53,10 @@ class Parameter:
             self._symbol = sp.symbols(name, real=True)
             self._value = None
         else:
-            value, _ = simple_float(value)
-            self._value = value
             if not isinstance(value, sp.Expr):
                 self._value = self._check_value(value, self._min, self._max, periodic)
+            else:
+                self._value = value
             self._symbol = None
         self.name = name
         self._periodic = periodic
