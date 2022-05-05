@@ -189,7 +189,7 @@ class PERM(GCircuit):
             "%s is not a permutation" % perm
         self._perm = perm
         n = len(perm)
-        u = Matrix.zeros((n, n), use_symbolic=True)
+        u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
             u[i, v] = sp.S(1)
         super().__init__(n, U=u)
