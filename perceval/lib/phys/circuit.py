@@ -46,7 +46,7 @@ class BS(ACircuit):
     _fcircuit = Circuit
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
-    def __init__(self, R=None, theta=None, phi_a=0, phi_b=-sp.pi/2, phi_d=-sp.pi):
+    def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
         super().__init__(2)
         assert R is None or theta is None, "cannot set both R and theta"
         self._phi_a = self._set_parameter("phi_a", phi_a, 0, 2*sp.pi)
@@ -94,8 +94,8 @@ class BS(ACircuit):
         else:
             self.variable_def(parameters, "R", "R", 0.5, map_param_kid)
         self.variable_def(parameters, "phi_a", "phi_a", 0, map_param_kid)
-        self.variable_def(parameters, "phi_b", "phi_b", -sp.pi/2, map_param_kid)
-        self.variable_def(parameters, "phi_d", "phi_d", -sp.pi, map_param_kid)
+        self.variable_def(parameters, "phi_b", "phi_b", 3*sp.pi/2, map_param_kid)
+        self.variable_def(parameters, "phi_d", "phi_d", sp.pi, map_param_kid)
         return parameters
 
     def describe(self, map_param_kid=None):
@@ -380,7 +380,7 @@ class PERM(GCircuit):
             "%s is not a permutation" % perm
         self._perm = perm
         n = len(perm)
-        u = Matrix.zeros((n, n), use_symbolic=True)
+        u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
             u[i, v] = sp.S(1)
         super().__init__(n, U=u)
