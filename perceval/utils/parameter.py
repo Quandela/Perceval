@@ -77,6 +77,9 @@ class Parameter:
         """
         return float(self._value)
 
+    def is_symbolic(self):
+        return self._value is None or isinstance(self._value, sp.Expr)
+
     def random(self):
         if self._symbol is None:
             return float(self._value)

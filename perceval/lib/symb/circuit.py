@@ -101,6 +101,18 @@ class BS(ACircuit):
                           "C", 68, 51.5, 69, 57, 75, 64, "C", 80, 69, 83, 75, 100, 75], stroke="black", stroke_width=2)
         canvas.add_text((50, 38), content, 7, "middle")
 
+    def inverse(self, v=False, h=False):
+        if self._phi.is_symbolic():
+            if v:
+                self._phi = -self._phi.spv
+            if h:
+                self._phi = self._phi.spv+sp.pi
+        else:
+            if v:
+                self._phi = -float(self._phi)
+            if h:
+                self._phi = float(self._phi)+np.pi
+
 
 class DT(ACircuit):
     _name = "DT"
@@ -175,6 +187,13 @@ class PS(ACircuit):
         canvas.add_mline([0, 25, 50, 25], stroke="black", stroke_width=2)
         canvas.add_rect((5, 17), width=40, height=16, stroke="black", stroke_width=2, fill="white")
         canvas.add_text((25, 28), text=content.replace("phi=", ""), size=7, ta="middle")
+
+    def inverse(self, v=False, h=False):
+        if h:
+            if self._phi.is_symbolic():
+                self._phi = -self._phi.spv
+            else:
+                self._phi = -float(self._phi)
 
 
 class PERM(GCircuit):

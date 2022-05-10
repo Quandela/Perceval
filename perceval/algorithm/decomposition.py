@@ -60,8 +60,9 @@ def _solve(f, x0, constraint, bounds, precision):
 def add_phases(phase_shifter_fn, D):
     phases = []
     for idx in range(len(D)):
-        a = D[idx].real
-        b = D[idx].imag
+        iD = D[idx]
+        a = iD.real
+        b = iD.imag
         if b != 0 or a < 0:
             if b == 0:
                 phi = np.pi
