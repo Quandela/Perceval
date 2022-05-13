@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import pytest
+from pathlib import Path
 
 from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
 import perceval.lib.phys as phys
@@ -286,3 +287,25 @@ def test_visualization_ucircuit(capfd):
 2:──┤     ├─────────────┤     ├──:2 (depth 2)
     ╰─────╯             ╰─────╯
 """.strip()
+
+
+TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
+
+def test_depths_ncomponents():
+    assert phys.PS(0).depths() == [1]
+    assert phys.PS(0).ncomponents() == 1
+    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
+         // (0, phys.PS(sp.pi / 2))
+         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    assert c.depths() == [3, 2, 2]
+    assert c.ncomponents() == 3
+    with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
+        M = Matrix(f)
+        ub = (Circuit(2)
+              // symb.BS()
+              // (0, symb.PS(phi=P("φ_a")))
+              // symb.BS()
+              // (0, symb.PS(phi=P("φ_b"))))
+        C1 = Circuit.decomposition(M, ub, shape="triangle")
+        assert C1 is not None and C1.depths() == [28, 38, 32, 26, 20, 14, 8, 2]
+        assert C1.ncomponents() == 112

@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Callable, Literal, Optional, Union, Tuple, Type
+from typing import Callable, Literal, Optional, Union, Tuple, Type, List
 import perceval.algorithm as algorithm
 
 import sympy as sp
@@ -380,6 +380,24 @@ class ACircuit(ABC):
             else:
                 return td.draw()
 
+    def transfer_from(self, c: ACircuit, force: bool=False):
+        r"""transfer parameters from a Circuit to another - should be the same circuit"""
+        assert type(self) == type(c), "component has not the same shape"
+        for p in c.params:
+            assert p in self._params, "missing parameter %s when transfering component" % p.name
+            param = c[p]
+            if param.defined:
+                try:
+                    self._params[p].set_value(float(param), force=force)
+                except:
+                    pass
+
+    def depths(self):
+        return [1]*self.m
+
+    def ncomponents(self):
+        return 1
+
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
     subcircuit_width = 2
     subcircuit_fill = 'lightpink'
@@ -521,13 +539,6 @@ class Circuit(ACircuit):
             u = Matrix.eye(self._m, use_symbolic=use_symbolic)
         return u
 
-    def subcircuit_shape(self, content, canvas):
-        for idx in range(self._m):
-            canvas.add_mline([0, 50*idx+25, self.subcircuit_width*50, 50*idx+25], **self.stroke_style)
-        canvas.add_rect((2.5, 2.5), self.subcircuit_width * 50 - 5, 50 * self._m - 5,
-                        fill=self.subcircuit_fill, **self.subcircuit_stroke_style)
-        canvas.add_text((16, 16), content.upper(), 8)
-
     @staticmethod
     def generic_interferometer(m: int,
                                fun_gen: Callable[[int], ACircuit],
@@ -623,6 +634,61 @@ class Circuit(ACircuit):
             count += 1
 
         return None
+
+    def depths(self):
+        r"""Return depth of the circuit for each mode"""
+        max_depth = 0
+        if self._Udef is not None:
+            max_depth = 1
+        the_depths = [max_depth] * self.m
+        for r, c in self._components:
+            c_depths = c.depths()
+            for c_i, i in enumerate(r):
+                the_depths[i] += c_depths[c_i]
+        return the_depths
+
+    def ncomponents(self):
+        r"""Return number of actual components in the circuit"""
+        n = 0
+        if self._Udef is not None:
+            n = 1
+        for r, c in self._components:
+            n += c.ncomponents()
+        return n
+
+    def transfer_from(self, source: ACircuit, force: bool = False):
+        r"""Transfer parameters of a circuit to the current one
+
+        :param component: the circuit to transfer the parameters from. The shape of the circuit to transfer from
+                          should be a subset of the current circuit.
+        :param force: force changing fixed parameter if necessary
+        """
+        assert source.m == self.m, "circuit shape does not match"
+        if source._Udef is not None:
+            assert self._Udef is not None, "circuit structure does not match - missing predefined unitary"
+            self._Udef = source._Udef
+
+        checked_components = [False] * len(self._components)
+        for r, c in source._components:
+            # find the component c in the current circuit, we can only take a component at the border
+            # of the explored components
+            for idx, (r_self, c_self) in enumerate(self._components):
+                if checked_components[idx]:
+                    continue
+                if r_self == r:
+                    c_self.transfer_from(c, force)
+                    checked_components[idx] = True
+                    break
+                else:
+                    assert r_self[-1] < r[0] or r_self[0] > r[-1], \
+                           "circuit structure does not match - missing %s at %s" % (str(c), str(r))
+
+    def subcircuit_shape(self, content, canvas):
+        for idx in range(self._m):
+            canvas.add_mline([0, 50*idx+25, self.subcircuit_width*50, 50*idx+25], **self.stroke_style)
+        canvas.add_rect((2.5, 2.5), self.subcircuit_width * 50 - 5, 50 * self._m - 5,
+                        fill=self.subcircuit_fill, **self.subcircuit_stroke_style)
+        canvas.add_text((16, 16), content.upper(), 8)
 
     def shape(self, _, canvas):
         for i in range(self.m):
