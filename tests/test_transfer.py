@@ -121,3 +121,11 @@ def test_transfer_complex_5():
         C1 = Circuit.decomposition(M, ub(0), shape="triangle")
     C2 = Circuit.generic_interferometer(8, ub, shape="triangle")
     C2.transfer_from(C1)
+    def ub_varbs(idx):
+        return (Circuit(2)
+                // symb.BS(theta=P("theta%d" % (2*idx)))
+                // (0, symb.PS(phi=0))
+                // symb.BS(theta=P("theta%d" % (2*idx+1)))
+                // (0, symb.PS(phi=0)))
+    C3 = Circuit.generic_interferometer(8, ub_varbs, shape="triangle")
+    C3.transfer_from(C1, force=True)
