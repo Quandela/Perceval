@@ -23,6 +23,7 @@
 import pytest
 
 from perceval import Parameter
+import perceval.lib.phys as phys
 
 import sympy as sp
 import numpy as np
@@ -91,3 +92,10 @@ def test_periodic_values():
     assert float(p)==0
     p = Parameter("theta", 5*np.pi/2, 0, 2 * sp.pi)
     assert float(p) == float(np.pi/2)
+
+
+def test_multiple_parameter_use():
+    phi = Parameter("phi")
+    c = phys.BS(phi_a=phi) // phys.BS(phi_b=phi)
+    assert str(c.U.simp()) == 'Matrix([[(I*exp(I*phi) + 1)*exp(I*phi)/2, -I*exp(I*phi)/2 + 1/2],' + \
+                              ' [-exp(I*phi)/2 - I/2, 1/2 - I*exp(-I*phi)/2]])'
