@@ -194,7 +194,7 @@ class Canvas(ABC):
                 norm_points += ["L", self.position[0], self.position[1]]
                 points = points[2:]
             elif points[0] == "h":
-                self.position = (points[1]+self.relative_position[0], self.position[1])
+                self.position = (points[1]+self.relative_position[0], self.relative_position[1])
                 norm_points += ["L", self.position[0], self.position[1]]
                 points = points[2:]
             elif points[0] == "V":
@@ -202,7 +202,7 @@ class Canvas(ABC):
                 norm_points += ["L", self.position[0], self.position[1]]
                 points = points[2:]
             elif points[0] == "v":
-                self.position = (self.position[0], points[1]+self.relative_position[1])
+                self.position = (self.relative_position[0], points[1]+self.relative_position[1])
                 norm_points += ["L", self.position[0], self.position[1]]
                 points = points[2:]
             else:
