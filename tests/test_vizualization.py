@@ -103,6 +103,12 @@ def test_svg_dump_phys_dt(tmp_path, save_figs):
 def test_svg_dump_phys_wp(tmp_path, save_figs):
     _save_or_check(phys.WP(sp.pi/4, sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
+def test_svg_dump_phys_hwp(tmp_path, save_figs):
+    _save_or_check(phys.HWP(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_phys_qwp(tmp_path, save_figs):
+    _save_or_check(phys.QWP(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
 
 def test_svg_dump_phys_pr(tmp_path, save_figs):
     _save_or_check(phys.PR(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
@@ -127,6 +133,23 @@ def test_svg_dump_no_circuit_4(tmp_path, save_figs):
 def test_svg_dump_symb_bs(tmp_path, save_figs):
     _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
+def test_svg_dump_symb_ps(tmp_path, save_figs):
+    _save_or_check(symb.PS(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_pbs(tmp_path, save_figs):
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_pr(tmp_path, save_figs):
+    _save_or_check(symb.PR(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_wp(tmp_path, save_figs):
+    _save_or_check(symb.WP(sp.pi/4, sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_hwp(tmp_path, save_figs):
+    _save_or_check(symb.HWP(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_qwp(tmp_path, save_figs):
+    _save_or_check(symb.QWP(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
     nc = (pcvl.Circuit(4)
