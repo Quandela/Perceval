@@ -95,12 +95,13 @@ class BS(ACircuit):
     width = 2
 
     def shape(self, content, canvas):
-        canvas.add_mpath(["M", 0, 25, "C", 17, 25, 20, 31, 26, 36, "C", 31, 43, 32, 48.5, 50, 48.5,
-                          "C", 68, 48.5, 69, 43, 75, 36, "C", 80, 31, 83, 25, 100, 25], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 0, 75, "C", 17, 75, 20, 69, 26, 64, "C", 31, 57, 32, 51.5, 50, 51.5,
-                          "C", 68, 51.5, 69, 57, 75, 64, "C", 80, 69, 83, 75, 100, 75], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
+                          "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
+                          "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
+                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019, 49.9998, "h", -13.0019,
+                          "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056], stroke="black", stroke_width=2)
         canvas.add_text((50, 38), content, 7, "middle")
-
+        
     def inverse(self, v=False, h=False):
         if self._phi.is_symbolic():
             if v:
@@ -112,6 +113,40 @@ class BS(ACircuit):
                 self._phi = -float(self._phi)
             if h:
                 self._phi = float(self._phi)+np.pi
+                
+class PBS(ACircuit):
+    _name = "PBS"
+    _fcircuit = Circuit
+    _supports_polarization = True
+    stroke_style = {"stroke": "black", "stroke_width": 2}
+
+    def __init__(self):
+        super().__init__(2)
+
+    def _compute_unitary(self, assign=None, use_symbolic=False):
+        self.assign(assign)
+        return Matrix([[0, 0, 1, 0],
+                       [0, 1, 0, 0],
+                       [1, 0, 0, 0],
+                       [0, 0, 0, 1]], use_symbolic)
+
+    def get_variables(self, map_param_kid=None):
+        return []
+
+    # TODO: make method static
+    def describe(self, _=None):
+        return "phys.PBS()"
+
+    width = 2
+
+    def shape(self, content, canvas):
+        canvas.add_mpath(["M",0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
+                          "m", -22.6566, 50, "h", 22.6566, "m", -22.6566, 0, "c", -20.0892, 0, -35.1561, -50, -55.4683,
+                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50], stroke_width=2, stroke="#000")
+        canvas.add_mpath(["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
+                          -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=3, fill="#fff")
+
+        canvas.add_text((50, 86), text=content, size=7, ta="middle")
 
 
 class DT(ACircuit):
@@ -184,9 +219,9 @@ class PS(ACircuit):
     width = 1
 
     def shape(self, content, canvas):
-        canvas.add_mline([0, 25, 50, 25], stroke="black", stroke_width=2)
-        canvas.add_rect((5, 17), width=40, height=16, stroke="black", stroke_width=2, fill="white")
-        canvas.add_text((25, 28), text=content.replace("phi=", ""), size=7, ta="middle")
+        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 15, 50, "h", 21, "v", -50, "h", -21, "z"], stroke="black", stroke_width=2,fill="lightgray")
+        canvas.add_text((27, 60), text=content.replace("phi=", "$\phi$="), size=7, ta="middle")
 
     def inverse(self, v=False, h=False):
         if h:
@@ -194,7 +229,6 @@ class PS(ACircuit):
                 self._phi = -self._phi.spv
             else:
                 self._phi = -float(self._phi)
-
 
 class PERM(GCircuit):
     _name = "PERM"
@@ -226,9 +260,149 @@ class PERM(GCircuit):
     def shape(self, content, canvas):
         lines = []
         for an_input, an_output in enumerate(self._perm):
-            canvas.add_mpath(["M", 0, 25+an_input*50,
-                              "C", 20, 25+an_input*50, 30, 25+an_output*50, 50, 25+an_output*50],
+            canvas.add_mpath(["M", 0, 24.8 + an_input * 50,
+                              "C", 20, 25 + an_input * 50, 30, 25 + an_output * 50, 50, 25 + an_output * 50],
                              stroke="white", stroke_width=4)
-            canvas.add_mpath(["M", 0, 25+an_input*50,
-                              "C", 20, 25+an_input*50, 30, 25+an_output*50, 50, 25+an_output*50],
+            canvas.add_mpath(["M", 0, 25 + an_input * 50,
+                              "C", 20, 25 + an_input * 50, 30, 25 + an_output * 50, 50, 25 + an_output * 50],
                              stroke="black", stroke_width=2)
+
+
+class WP(ACircuit):
+    _name = "WP"
+    _fcircuit = Circuit
+    _supports_polarization = True
+    stroke_style = {"stroke": "black", "stroke_width": 2}
+
+    def __init__(self, delta, xsi):
+        super().__init__(1)
+        self._delta = self._set_parameter("delta", delta, -sp.pi, sp.pi)
+        self._xsi = self._set_parameter("xsi", xsi, -sp.pi, sp.pi)
+
+    def _compute_unitary(self, assign=None, use_symbolic=False):
+        self.assign(assign)
+        if use_symbolic:
+            delta = self._delta.spv
+            xsi = self._xsi.spv
+            return Matrix([[
+                            sp.cos(delta)+sp.I*sp.sin(delta)*sp.cos(2*xsi),
+                            sp.I*sp.sin(delta)*sp.sin(2*xsi)
+                           ], [
+                            sp.I * sp.sin(delta) * sp.sin(2 * xsi),
+                            sp.cos(delta) - sp.I * sp.sin(delta) * sp.cos(2 * xsi)
+                           ]], True)
+        else:
+            delta = float(self._delta)
+            xsi = float(self._xsi)
+            return Matrix([[
+                            np.cos(delta)+1j*np.sin(delta)*np.cos(2*xsi),
+                            1j*np.sin(delta)*np.sin(2*xsi)
+                           ], [
+                            1j * np.sin(delta) * np.sin(2 * xsi),
+                            np.cos(delta) - 1j * np.sin(delta) * np.cos(2 * xsi)
+                           ]], False)
+
+
+    def get_variables(self, map_param_kid=None):
+        parameters = []
+        if map_param_kid is None:
+            map_param_kid = self.map_parameters()
+        self.variable_def(parameters, "xsi", "xsi", None, map_param_kid)
+        self.variable_def(parameters, "delta", "delta", None, map_param_kid)
+        return parameters
+
+    def describe(self, map_param_kid=None):
+        parameters = self.get_variables(map_param_kid)
+        return "phys.WP(%s)" % ", ".join(parameters)
+
+    width = 1
+
+    def shape(self, content, canvas):
+        params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
+        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 15, 45, "h", 21, "v", -40, "h", -21, "z"], stroke="black", stroke_width=2)
+        canvas.add_text((25, 55), text=params[0], size=7, ta="middle")
+        canvas.add_text((25, 65), text=params[1], size=7, ta="middle")
+
+class HWP(WP):
+    _name = "HWP"
+
+    def __init__(self, xsi):
+        super().__init__(sp.pi/2, xsi)
+
+    def shape(self, content, canvas):
+        params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
+        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50],stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 20, 0, "v", 50], stroke="black", stroke_width=4)
+        canvas.add_mpath(["M", 30, 0, "v", 50], stroke="black", stroke_width=4)
+        canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
+
+
+class QWP(WP):
+    _name = "QWP"
+
+    def __init__(self, xsi):
+        super().__init__(sp.pi/4, xsi)
+
+    def shape(self, content, canvas):
+        params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
+        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 25, 0, "v", 50], stroke="black", stroke_width=4)
+        canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
+
+
+class PR(ACircuit):
+    """Polarization rotator"""
+    _name = "PR"
+    _fcircuit = Circuit
+    _supports_polarization = True
+    stroke_style = {"stroke": "black", "stroke_width": 2}
+
+    def __init__(self, delta):
+        super().__init__(1)
+        self._delta = self._set_parameter("delta", delta, -sp.pi, sp.pi)
+
+    def _compute_unitary(self, assign=None, use_symbolic=False):
+        self.assign(assign)
+        if use_symbolic:
+            delta = self._delta.spv
+            return Matrix([[sp.cos(delta), sp.sin(delta)],
+                           [-sp.sin(delta), sp.cos(delta)]], True)
+        else:
+            delta = float(self._delta)
+            return Matrix([[np.cos(delta), np.sin(delta)],
+                           [-np.sin(delta), np.cos(delta)]], False)
+
+
+    def get_variables(self, map_param_kid=None):
+        parameters = []
+        if map_param_kid is None:
+            map_param_kid = self.map_parameters()
+        self.variable_def(parameters, "delta", "delta", None, map_param_kid)
+        return parameters
+
+    def describe(self, map_param_kid=None):
+        parameters = self.get_variables(map_param_kid)
+        return "phys.PR(%s)" % ", ".join(parameters)
+
+    width = 1
+
+    def shape(self, content, canvas):
+        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 15, 36, "h", 22, "v", -22, "h", -22, "z"], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 19, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
+                          "l", 2.305, -2.821, "c", 0.107, -0.131, 0.057, -0.237, -0.112, -0.237,
+                          "h", -1.22, "c", -0.169, 0, -0.284, -0.135, -0.247, -0.300,
+                          "c", 0.629, -2.866, 3.187, -5.018, 6.240, -5.018,
+                          "c", 3.524, 0, 6.39, 2.867, 6.390, 6.3902,
+                          "c", 0, 3.523, -2.866, 6.39, -6.390, 6.390,
+                          "c", -0.422, 0, -0.765, 0.342, -0.765, 0.765,
+                          "s", 0.342, 0.765, 0.765, 0.765,
+                          "c", 4.367, 0, 7.92, -3.552, 7.920, -7.920,
+                          "c", 0, -4.367, -3.552, -7.920, -7.920, -7.920,
+                          "c", -3.898, 0, -7.146, 2.832, -7.799, 6.546,
+                          "c", -0.029, 0.166, -0.184, 0.302, -0.353, 0.302,
+                          "H", 17, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
+                          "z"
+                          ], fill="black",stroke_width=0.1)
+        canvas.add_text((27, 50), text=content.replace("delta=", "δ="), size=7, ta="middle")

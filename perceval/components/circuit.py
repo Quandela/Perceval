@@ -145,7 +145,7 @@ class ACircuit(ABC):
                        p: Parameter,
                        min_v: float,
                        max_v: float,
-                       periodic: bool=True):
+                       periodic: bool=True) -> Parameter:
         """
             Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
             min/max value or a parameter defined by a value that we create on the fly
