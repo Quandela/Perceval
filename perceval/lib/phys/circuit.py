@@ -123,6 +123,16 @@ class BS(ACircuit):
             else:
                 canvas.add_rect((25, 53), 50, 4, fill="lightgray")
 
+    def inverse(self, v=False, h=False):
+        if v:
+            phi_a = self._phi_a
+            self._phi_a = self._phi_d
+            self._phi_d = phi_a
+            self._phi_b._value = self._phi_a.spv+self._phi_d.spv-self._phi_b.spv
+        if h:
+            self._phi_a._value = -self._phi_a.spv
+            self._phi_d._value = -self._phi_d.spv
+            self._phi_b._value = sp.pi-(-self._phi_a.spv-self._phi_d.spv-self._phi_b.spv)
 
 class PBS(ACircuit):
     _name = "PBS"
@@ -195,6 +205,12 @@ class PS(ACircuit):
                            stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
         canvas.add_text((22, 38), text=content.replace("phi=", "φ="), size=7, ta="left")
 
+    def inverse(self, v=False, h=False):
+        if h:
+            if self._phi.is_symbolic():
+                self._phi = -self._phi.spv
+            else:
+                self._phi = -float(self._phi)
 
 class WP(ACircuit):
     _name = "WP"
@@ -380,7 +396,7 @@ class PERM(GCircuit):
             "%s is not a permutation" % perm
         self._perm = perm
         n = len(perm)
-        u = Matrix.zeros((n, n), use_symbolic=True)
+        u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
             u[i, v] = sp.S(1)
         super().__init__(n, U=u)

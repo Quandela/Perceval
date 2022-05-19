@@ -23,8 +23,10 @@
 import pytest
 
 from perceval import Parameter
+import perceval.lib.phys as phys
 
 import sympy as sp
+import numpy as np
 
 
 def test_definition():
@@ -69,8 +71,10 @@ def test_fixed_1():
 
 
 def test_basic_conv():
+    # initially we were trying to convert numeric values into remarkable sympy expression, we are stopping that
+    # due to overhead in sympy
     p = Parameter("R", 1/3)
-    assert p._value == sp.S(1)/3
+    assert p._value == 1/3
 
 
 def test_invalid_values():
@@ -86,5 +90,12 @@ def test_invalid_values():
 def test_periodic_values():
     p = Parameter("theta", 0, 0, 2*sp.pi)
     assert float(p)==0
-    p = Parameter("theta", 5*sp.pi/2, 0, 2 * sp.pi)
-    assert float(p) == float(sp.pi/2)
+    p = Parameter("theta", 5*np.pi/2, 0, 2 * sp.pi)
+    assert float(p) == float(np.pi/2)
+
+
+def test_multiple_parameter_use():
+    phi = Parameter("phi")
+    c = phys.BS(phi_a=phi) // phys.BS(phi_b=phi)
+    assert str(c.U.simp()) == 'Matrix([[(I*exp(I*phi) + 1)*exp(I*phi)/2, -I*exp(I*phi)/2 + 1/2],' + \
+                              ' [-exp(I*phi)/2 - I/2, 1/2 - I*exp(-I*phi)/2]])'

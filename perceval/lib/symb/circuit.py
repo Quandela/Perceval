@@ -101,7 +101,19 @@ class BS(ACircuit):
                           13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019, 49.9998, "h", -13.0019,
                           "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056], stroke="black", stroke_width=2)
         canvas.add_text((50, 38), content, 7, "middle")
-
+        
+    def inverse(self, v=False, h=False):
+        if self._phi.is_symbolic():
+            if v:
+                self._phi = -self._phi.spv
+            if h:
+                self._phi = self._phi.spv+sp.pi
+        else:
+            if v:
+                self._phi = -float(self._phi)
+            if h:
+                self._phi = float(self._phi)+np.pi
+                
 class PBS(ACircuit):
     _name = "PBS"
     _fcircuit = Circuit
@@ -211,6 +223,13 @@ class PS(ACircuit):
         canvas.add_mpath(["M", 15, 50, "h", 21, "v", -50, "h", -21, "z"], stroke="black", stroke_width=2,fill="lightgray")
         canvas.add_text((27, 60), text=content.replace("phi=", "$\phi$="), size=7, ta="middle")
 
+    def inverse(self, v=False, h=False):
+        if h:
+            if self._phi.is_symbolic():
+                self._phi = -self._phi.spv
+            else:
+                self._phi = -float(self._phi)
+
 class PERM(GCircuit):
     _name = "PERM"
     _fcircuit = Circuit
@@ -223,7 +242,7 @@ class PERM(GCircuit):
             "%s is not a permutation" % perm
         self._perm = perm
         n = len(perm)
-        u = Matrix.zeros((n, n), use_symbolic=True)
+        u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
             u[i, v] = sp.S(1)
         super().__init__(n, U=u)
