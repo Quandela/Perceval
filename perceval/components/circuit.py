@@ -27,6 +27,7 @@ import random
 from typing import Callable, Literal, Optional, Union, Tuple, Type
 import perceval.algorithm as algorithm
 
+import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
@@ -385,11 +386,13 @@ class ACircuit(ABC):
     subcircuit_fill = 'lightpink'
     subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
 
-
     def shape(self, content, canvas: Canvas):
         return """
             <rect x=0 y=5 width=100 height=%d fill="lightgray"/>
         """ % (self._m * 50 - 10)
+
+    def inverse(self, v, h):
+        raise NotImplementedError("component has no inverse operator")
 
 
 class Circuit(ACircuit):
@@ -500,6 +503,28 @@ class Circuit(ACircuit):
                 u = cU @ u
         return u
 
+    def inverse(self, v=False, h=False):
+        if self._Udef is not None:
+            if v:
+                self._Udef = np.flipud(self._Udef)
+        _new_components = []
+        _components = self._components
+        if h:
+            _components.reverse()
+        for rc in _components:
+            range, component = rc
+            if v:
+                if isinstance(range, int):
+                    range = [range]
+                else:
+                    range = list(range)
+                range.reverse()
+                range = [self._m - 1 - p for p in range]
+            if v or h:
+                component.inverse(v=v, h=h)
+            _new_components.append((range, component))
+        self._components = _new_components
+
     def compute_unitary(self,
                         use_symbolic: bool = False,
                         assign: dict = None,
@@ -582,6 +607,8 @@ class Circuit(ACircuit):
                       phase_shifter_fn: Callable[[int], ACircuit] = None,
                       shape: Literal["triangle"] = "triangle",
                       permutation: Type[ACircuit] = None,
+                      inverse_v: bool = False,
+                      inverse_h: bool = False,
                       constraints=None,
                       merge: bool = True,
                       precision: float = 1e-6,
@@ -591,6 +618,8 @@ class Circuit(ACircuit):
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
         :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
                             Each constraint should have the numbers of free parameters of the system.
+        :param inverse_v: inverse the decomposition vertically
+        :param inverse_h: inverse the decomposition horizontally
         :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
                             ignored
         :param shape: `triangle`
@@ -599,9 +628,14 @@ class Circuit(ACircuit):
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :param max_try: number of times to try the decomposition
         :return: a circuit
+
         """
-        if not Matrix(U).is_unitary():
-            raise(ValueError("decomposed matrix should be unitary"))
+        if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
+            raise(ValueError("decomposed matrix should be non symbolic unitary"))
+        if inverse_h:
+            U = U.inv()
+        if inverse_v:
+            U = np.flipud(np.fliplr(U))
         N = U.shape[0]
         count = 0
         if constraints is None:
@@ -617,8 +651,10 @@ class Circuit(ACircuit):
                 lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision, constraints)
             if lc is not None:
                 C = Circuit(N)
-                for ic in lc:
-                    C.add(*ic, merge=merge)
+                for range, component in lc:
+                    C.add(range, component, merge=merge)
+                if inverse_v or inverse_h:
+                    C.inverse(v=inverse_v, h=inverse_h)
                 return C
             count += 1
 

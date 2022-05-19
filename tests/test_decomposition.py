@@ -26,6 +26,7 @@ import random
 import pytest
 import perceval as pcvl
 import perceval.lib.symb as symb
+import perceval.lib.phys as phys
 
 import numpy as np
 
@@ -234,3 +235,31 @@ def test_decomposition_perm():
     C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")),
                                     phase_shifter_fn=symb.PS)
     assert C1 is not None
+
+
+def test_decomposition_inverse_symb():
+    ub = (symb.Circuit(2)
+          // (0, symb.BS(theta=pcvl.Parameter("theta")))
+          // (1, symb.PS(phi=pcvl.Parameter("phi"))))
+
+    u = pcvl.Matrix.random_unitary(6)
+    c = pcvl.Circuit.decomposition(u,
+                                   ub,
+                                   inverse_v=True,
+                                   inverse_h=True,
+                                   phase_shifter_fn=symb.PS)
+    np.testing.assert_array_almost_equal(u, c.compute_unitary(False), decimal=6)
+
+
+def test_decomposition_inverse_phys():
+    ub = (phys.Circuit(2)
+          // (0, phys.BS(theta=pcvl.Parameter("theta")))
+          // (1, phys.PS(phi=pcvl.Parameter("phi"))))
+
+    u = pcvl.Matrix.random_unitary(6)
+    c = pcvl.Circuit.decomposition(u,
+                                   ub,
+                                   inverse_v=True,
+                                   inverse_h=True,
+                                   phase_shifter_fn=phys.PS)
+    np.testing.assert_array_almost_equal(u, c.compute_unitary(False), decimal=6)
