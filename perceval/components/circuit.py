@@ -31,7 +31,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas
+from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas, global_params
 
 
 def _matrix_double_for_polarization(m, u):
@@ -212,7 +212,7 @@ class ACircuit(ABC):
         for _, p in component._params.items():
             if not p.fixed:
                 if p.name in self._params and p._pid != self._params[p.name]._pid:
-                    raise RuntimeError("two parameters with the same name in the circuit")
+                    raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                 self._params[p.name] = p
         if merge is None:
             merge = len(port_range) != self._m
@@ -294,7 +294,7 @@ class ACircuit(ABC):
                 map_param_kid[p._pid] = p.name
         return map_param_kid
 
-    def identify(self, unitary_matrix, phases, max_try=10) -> None:
+    def identify(self, unitary_matrix, phases, precision=None, max_try=10, allow_error=False) -> None:
         r"""Identify an instance of the current circuit (should be parameterized) such as :math:`Q.C=U.P`
         where :math:`Q` and :math:`P` are single-mode phase shifts (resp. :math:`[q1, q2, ..., qn]`, and
         :math:`[p1, p2, ...,pn]`). This is solved through :math:`n^2` equations:
@@ -306,10 +306,9 @@ class ACircuit(ABC):
                         parameter sets the maximal number of times to try
 
         """
+        if precision is None:
+            precision = global_params["min_complex_component"]
         params = [x.spv for x in self.get_parameters()]
-        # add dummy variables
-        for i in range(self._m**2-self._m-len(params)):
-            params.append(sp.S("dummy%d" % i))
         Q = Matrix.eye(self._m, use_symbolic=True)
         P = Matrix.eye(self._m, use_symbolic=False)
         for i in range(self._m):
@@ -318,21 +317,24 @@ class ACircuit(ABC):
             P[i, i] = phases[i]
         cU = Q @ self.compute_unitary(use_symbolic=True)
         UP = unitary_matrix @ P
-        equations = []
+        equation = None
         for i in range(self._m):
             for j in range(self._m):
-                equations.append(sp.re(abs(cU[i, j]-UP[i, j])))
-        f = sp.lambdify([params], equations, "numpy")
+                if equation is None:
+                    equation = abs(cU[i, j]-UP[i, j])
+                else:
+                    equation += abs(cU[i, j]-UP[i, j])
+        equation = abs(equation)
+
+        f = sp.lambdify([params], equation, "numpy")
         counter = 0
         while counter < max_try:
             x0 = [random.random()] * len(params)
-            res, _, ier, _ = so.fsolve(f, x0, full_output=True)
-            if ier == 1:
-                break
+            res = so.minimize(f, x0, method="L-BFGS-B")
+            if res.fun <= precision or allow_error:
+                return res.x[:len(self.get_parameters())], res.x[-self._m:]
             counter += 1
-        if ier != 1:
-            return None
-        return res[:len(self.get_parameters())], res[-self._m:]
+        return None
 
     def pdisplay(self,
                  parent_td: QPrinter = None,
@@ -623,9 +625,11 @@ class Circuit(ACircuit):
                       constraints=None,
                       merge: bool = True,
                       precision: float = 1e-6,
-                      max_try: int = 10):
+                      max_try: int = 10,
+                      allow_error: bool = False):
         r"""Decompose a given unitary matrix U into a circuit with specified component type
 
+        :param allow_error: allow decomposition error - when the actual solution is not locally reachable
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
         :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
                             Each constraint should have the numbers of free parameters of the system.
@@ -639,7 +643,6 @@ class Circuit(ACircuit):
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :param max_try: number of times to try the decomposition
         :return: a circuit
-
         """
         if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
             raise(ValueError("decomposed matrix should be non symbolic unitary"))
@@ -657,9 +660,11 @@ class Circuit(ACircuit):
                 "there should as many component in each constraint than free parameters in the component"
         while count < max_try:
             if shape == "triangle":
-                lc = algorithm.decompose_triangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+                lc = algorithm.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
+                                                  constraints, allow_error=allow_error)
             else:
-                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision, constraints)
+                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
+                                                   constraints, allow_error=allow_error)
             if lc is not None:
                 C = Circuit(N)
                 for range, component in lc:

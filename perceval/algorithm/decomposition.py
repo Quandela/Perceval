@@ -30,7 +30,7 @@ from perceval.utils import Matrix, global_params
 import scipy.optimize as so
 
 
-def _solve(f, x0, constraint, bounds, precision):
+def _solve(f, x0, constraint, bounds, precision, allow_error=False):
     r"""solve f starting with x0 and compliant with constraints
 
     :param f:
@@ -46,13 +46,14 @@ def _solve(f, x0, constraint, bounds, precision):
         if c is not None:
             c = float(c)
             fi = lambda x: f([*x[:i], c, *x[i:]])
-            res = _solve(fi, x0[:i]+x0[i+1:], constraint[:i]+constraint[i+1:], bounds[:i]+bounds[i+1:], precision)
+            res = _solve(fi, x0[:i]+x0[i+1:], constraint[:i]+constraint[i+1:], bounds[:i]+bounds[i+1:],
+                         precision, allow_error)
             if res is None:
                 return None
             return [*res[:i], c, *res[i:]]
     res = so.minimize(f, x0, method="L-BFGS-B", bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
                                                         for b in bounds])
-    if f(res.x)[0] > precision:
+    if res.fun > precision and not allow_error:
         return None
     return res.x
 
@@ -84,7 +85,8 @@ def decompose_triangle(u,
                        phase_shifter_fn,
                        permutation,
                        precision,
-                       constraints):
+                       constraints,
+                       allow_error):
     m = u.shape[0]
     params = component.get_parameters()
     params_symbols = [x.spv for x in params]
@@ -121,11 +123,12 @@ def decompose_triangle(u,
                             break
             if not solve_cell:
                 equation = cU_inv[0, 0] * u[n, j] + cU_inv[0, 1] * u[n + 1, j]
-                f = sp.lambdify([params_symbols], [sp.re(abs(equation))])
+                f = sp.lambdify([params_symbols], [equation])
+                g = lambda *p: np.real(np.abs(f(*p)))
                 x0 = [p.random() for p in params]
                 # look for a constraint solution first
                 for c in constraints:
-                    res = _solve(f, x0, list(c), bounds, precision)
+                    res = _solve(g, x0, list(c), bounds, precision, allow_error)
                     if res is not None:
                         break
                 if res is None:
@@ -145,6 +148,7 @@ def decompose_triangle(u,
 
                 u = RI @ u
                 list_components = [((n, n + 1), instantiated_component)] + list_components
+            u[n, j] = 0
 
     D = np.diag(u)
 
@@ -155,9 +159,10 @@ def decompose_triangle(u,
 
 
 def decompose_rectangle(u,
-                       component,
-                       phase_shifter_fn,
-                       permutation,
-                       precision,
-                       constraints):
+                        component,
+                        phase_shifter_fn,
+                        permutation,
+                        precision,
+                        constraints,
+                        allow_error):
     raise NotImplementedError("rectangular decomposition not implemented yet")
