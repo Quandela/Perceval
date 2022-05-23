@@ -133,7 +133,7 @@ def test_sbs():
 
 
 def test_sbs_0():
-    bs = symb.BS(R=0)
+    bs = symb.BS(R=1)
     assert bs.U.pdisplay() == "⎡1  0⎤\n⎣0  1⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -144,7 +144,7 @@ def test_sbs_0():
 
 
 def test_sbs_1():
-    bs = symb.BS(R=1)
+    bs = symb.BS(R=0)
     assert bs.U.pdisplay() == "⎡0  I⎤\n⎣I  0⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -164,8 +164,8 @@ def test_parameter():
     else:
         raise Exception("Exception should have been generated")
     assert bs.compute_unitary(use_symbolic=True).pdisplay() == strip_line_12("""
-            ⎡sqrt(1 - r)  I*sqrt(r)  ⎤
-            ⎣I*sqrt(r)    sqrt(1 - r)⎦""")
+            ⎡sqrt(r)        I*sqrt(1 - r)⎤
+            ⎣I*sqrt(1 - r)  sqrt(r)      ⎦""")
 
 
 def test_double_parameter_ok():
@@ -309,3 +309,8 @@ def test_depths_ncomponents():
         C1 = Circuit.decomposition(M, ub, shape="triangle")
         assert C1 is not None and C1.depths() == [28, 38, 32, 26, 20, 14, 8, 2]
         assert C1.ncomponents() == 112
+
+
+def test_reflexivity():
+    c = phys.BS(R=1/3)
+    assert pytest.approx(c.compute_unitary(use_symbolic=False)[0,0]) == np.sqrt(1/3)
