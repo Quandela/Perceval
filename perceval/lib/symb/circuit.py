@@ -92,14 +92,15 @@ class BS(ACircuit):
         parameters = self.get_variables(map_param_kid)
         return "symb.BS(%s)" % ", ".join(parameters)
 
-    width = 2
+    width = 1
 
     def shape(self, content, canvas):
         canvas.add_mpath(["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
                           "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
                           "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
-                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019, 49.9998, "h", -13.0019,
-                          "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056], stroke="black", stroke_width=2)
+                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
+                          49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056],
+                         stroke="black", stroke_width=1)
         canvas.add_text((50, 38), content, 7, "middle")
         
     def inverse(self, v=False, h=False):
@@ -137,12 +138,13 @@ class PBS(ACircuit):
     def describe(self, _=None):
         return "phys.PBS()"
 
-    width = 2
+    width = 1
 
     def shape(self, content, canvas):
         canvas.add_mpath(["M",0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
                           "m", -22.6566, 50, "h", 22.6566, "m", -22.6566, 0, "c", -20.0892, 0, -35.1561, -50, -55.4683,
-                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50], stroke_width=2, stroke="#000")
+                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50],
+                         stroke_width=2, stroke="#000")
         canvas.add_mpath(["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
                           -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=3, fill="#fff")
 
@@ -254,7 +256,8 @@ class PS(ACircuit):
 
     def shape(self, content, canvas):
         canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 15, 50, "h", 21, "v", -50, "h", -21, "z"], stroke="black", stroke_width=2,fill="lightgray")
+        canvas.add_mpath(["M", 15, 50, "h", 21, "v", -50, "h", -21, "z"],
+                         stroke="black", stroke_width=2,fill="lightgray")
         canvas.add_text((27, 60), text=content.replace("phi=", "$\phi$="), size=7, ta="middle")
 
     def inverse(self, v=False, h=False):
