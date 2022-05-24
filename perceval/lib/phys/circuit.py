@@ -397,8 +397,8 @@ class PERM(GCircuit):
         self._perm = perm
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
-        for i, v in enumerate(perm):
-            u[i, v] = sp.S(1)
+        for v, i in enumerate(perm):
+            u[i, v] = 1
         super().__init__(n, U=u)
         self.width = 1
 
