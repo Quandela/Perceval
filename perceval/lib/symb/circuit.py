@@ -148,6 +148,40 @@ class PBS(ACircuit):
 
         canvas.add_text((50, 86), text=content, size=7, ta="middle")
 
+class PBS(ACircuit):
+    _name = "PBS"
+    _fcircuit = Circuit
+    _supports_polarization = True
+    stroke_style = {"stroke": "black", "stroke_width": 2}
+
+    def __init__(self):
+        super().__init__(2)
+
+    def _compute_unitary(self, assign=None, use_symbolic=False):
+        self.assign(assign)
+        return Matrix([[0, 0, 1, 0],
+                       [0, 1, 0, 0],
+                       [1, 0, 0, 0],
+                       [0, 0, 0, 1]], use_symbolic)
+
+    def get_variables(self, map_param_kid=None):
+        return []
+
+    # TODO: make method static
+    def describe(self, _=None):
+        return "phys.PBS()"
+
+    width = 2
+
+    def shape(self, content, canvas):
+        canvas.add_mpath(["M",0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
+                          "m", -22.6566, 50, "h", 22.6566, "m", -22.6566, 0, "c", -20.0892, 0, -35.1561, -50, -55.4683,
+                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50], stroke_width=2, stroke="#000")
+        canvas.add_mpath(["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
+                          -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=3, fill="#fff")
+
+        canvas.add_text((50, 86), text=content, size=7, ta="middle")
+
 
 class DT(ACircuit):
     _name = "DT"
@@ -229,6 +263,7 @@ class PS(ACircuit):
                 self._phi = -self._phi.spv
             else:
                 self._phi = -float(self._phi)
+
 
 class PERM(GCircuit):
     _name = "PERM"
