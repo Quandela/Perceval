@@ -363,12 +363,14 @@ class ACircuit(ABC):
             td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
 
         if self._components:
-            for r, c in self._components:
+            if dry_run:
+                self._areas = [None] * len(self._components)
+            for idx, (r, c) in enumerate(self._components):
                 shiftr = [p+shift for p in r]
                 if c._components and recursive:
-                    td.open_subblock(r, c._name)
+                    td.open_subblock(r, c._name, self._areas[idx])
                     c.pdisplay(td, shift=shiftr[0])
-                    td.close_subblock(r)
+                    self._areas[idx] = td.close_subblock(r)
                 elif c._components:
                     description = c.get_variables(map_param_kid)
                     td.append_subcircuit(shiftr, c, "\n".join(description))

@@ -37,16 +37,22 @@ class SVGCanvas(Canvas):
                   stroke_dasharray=None):
         points = super().add_mline(points, stroke, stroke_width)
         self._draws.append(draw.Lines(*points, stroke=stroke, stroke_width=stroke_width,
-                                      fill="white", close=False))
+                                      fill="none", close=False))
 
     def add_polygon(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
                     stroke_dasharray=None):
         points = super().add_polygon(points, stroke, stroke_width, fill)
-        self._draws.append(draw.Lines(*points, stroke=stroke, fill=fill, close=True))
+        if fill is None:
+            fill = "none"
+        self._draws.append(draw.Lines(*points, stroke=stroke, fill=fill, close=True,
+                                      stroke_dasharray=stroke_dasharray,
+                                      stroke_linejoin=stroke_linejoin))
 
     def add_mpath(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
                   stroke_dasharray=None):
         points = super().add_mpath(points, stroke, stroke_width, fill)
+        if fill is None:
+            fill = "none"
         p = draw.Path(stroke_width=stroke_width, stroke=stroke, stroke_linejoin=stroke_linejoin,
                       fill=fill)
         idx = 0
@@ -69,6 +75,8 @@ class SVGCanvas(Canvas):
     def add_circle(self, points, r, stroke="black", stroke_width=1, fill=None,
                    stroke_dasharray=None):
         points = super().add_circle(points, r, stroke, stroke_width, fill)
+        if fill is None:
+            fill = "none"
         self._draws.append(draw.Circle(points[0], points[1], r,
                                        stroke_width=stroke_width, fill=fill, stroke=stroke))
 
