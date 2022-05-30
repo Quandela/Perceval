@@ -26,6 +26,7 @@ import copy
 import random
 from typing import Callable, Literal, Optional, Union, Tuple, Type, List
 import perceval.algorithm as algorithm
+from perceval.algorithm.decomposition import _solve
 
 import numpy as np
 import sympy as sp
@@ -53,6 +54,7 @@ class ACircuit(ABC):
 
     delay_circuit = False
     _supports_polarization = False
+    _name = None
 
     def __init__(self, m: int, params=None):
         if params is None:
@@ -382,6 +384,29 @@ class ACircuit(ABC):
                 return td.max_pos(0, self._m-1, True)
             else:
                 return td.draw()
+
+    @staticmethod
+    def match_unitary(u: Matrix, circuit: ACircuit):
+        # unitaries should match - check the variables
+        params = circuit.get_parameters()
+        params_symbols = [x.spv for x in params]
+        cU = circuit.compute_unitary(use_symbolic=True)
+        f = sp.lambdify([params_symbols], cU-u)
+        g = lambda *p: np.linalg.norm(np.array(f(*p)))
+        x0 = [p.random() for p in params]
+        res = _solve(g, x0, [], [None]*len(params), precision=1e-6)
+        if res is not None:
+            for idx, p in enumerate(params):
+                p.set_value(res[idx])
+            return True, circuit
+        else:
+            return False, None
+
+    def match(self, circuit: ACircuit, pos: int = None, cpos: int = None):
+        # the component shape should match
+        if circuit._name == "CPLX" or self._m != circuit._m or pos != None or cpos != None:
+            return False, []
+        return ACircuit.match_unitary(self.compute_unitary(use_symbolic=False), circuit)
 
     def transfer_from(self, c: ACircuit, force: bool=False):
         r"""transfer parameters from a Circuit to another - should be the same circuit"""
@@ -723,6 +748,28 @@ class Circuit(ACircuit):
                 else:
                     assert r_self[-1] < r[0] or r_self[0] > r[-1], \
                            "circuit structure does not match - missing %s at %s" % (str(c), str(r))
+
+    def match(self, circuit: ACircuit, pos: int=None, cpos: int=None):
+        r"""match a sub-circuit at a given position
+
+        :param pos:
+        :param circuit:
+        :param cpos:
+        :return:
+        """
+        # first to match - we need to have a match on the component itself - self[pos] == circuit[cpos]
+        if not isinstance(circuit, Circuit):
+            if pos is None and self._Udef is not None:
+                matched, param_match = ACircuit.match_unitary(self._Udef, circuit)
+                pos = 0
+            else:
+                matched, param_match = self._components[pos].match(circuit)
+                pos = pos + 1
+        else:
+            matched, param_match = self._components[cpos].match(circuit[cpos])
+        if not matched:
+            return False, param_match
+        return True, param_match
 
     def subcircuit_shape(self, content, canvas):
         for idx in range(self._m):
