@@ -55,7 +55,7 @@ class MplotCanvas(Canvas):
                     stroke_dasharray=None):
         points = super().add_polygon(points, stroke, stroke_width, fill)
         self._patches.append(
-            mpatches.Polygon(points,
+            mpatches.Polygon([(points[n], points[n+1]) for n in range(0, len(points), 2)],
                              fill=fill is not None, color=fill,
                              ec=stroke, linewidth=stroke_width, joinstyle=stroke_linejoin))
 
@@ -97,7 +97,7 @@ class MplotCanvas(Canvas):
         points = super().add_text(points, text, size, ta)
         if ta == "middle":
             ta = "center"
-        plt.text(points[0], -points[1], text, ha=ta, size=size*3)
+        plt.text(points[0], points[1], text, ha=ta, size=size*3)
 
     def draw(self):
         super().draw()
