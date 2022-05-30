@@ -254,7 +254,7 @@ def QPrinter(n, output_format="text", stroke_style="", **opts):
         return TextPrinter(n)
     elif output_format == "latex":
         raise NotImplementedError("latex format not yet supported")
-    if output_format == "html":
+    if output_format == "html" or output_format == "png":
         canvas = SVGRenderer().new_canvas(**opts)
     else:
         canvas = MplotRenderer().new_canvas(**opts)

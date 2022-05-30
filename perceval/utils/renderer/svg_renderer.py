@@ -24,56 +24,53 @@ from __future__ import annotations
 
 from .generic_renderer import Renderer, Canvas
 
+import drawSvg as draw
+
 
 class SVGCanvas(Canvas):
-    def __init__(self, **opts):
-        super().__init__(**opts)
-        self._canvas = []
+    def __init__(self, render_size=1, **opts):
+        super().__init__(**opts, inverse_Y=True)
+        self._draws = []
+        self._render_size = render_size
 
     def add_mline(self, points, stroke="black", stroke_width=1, stroke_linejoin="miter",
                   stroke_dasharray=None):
         points = super().add_mline(points, stroke, stroke_width)
-        self._canvas.append('<polyline points="%s" fill="transparent"'
-                            'stroke="%s" stroke-width="%f" stroke-linejoin="%s" %s/>' % (
-            " ".join([str(p) for p in points]),
-            stroke,
-            stroke_width,
-            stroke_linejoin,
-            stroke_dasharray is not None and "stroke-dasharray="+stroke_dasharray or ""
-        ))
+        self._draws.append(draw.Lines(*points, stroke=stroke, stroke_width=stroke_width,
+                                      fill="white", close=False))
 
     def add_polygon(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
                     stroke_dasharray=None):
         points = super().add_polygon(points, stroke, stroke_width, fill)
-        self._canvas.append('<polyline points="%s" fill="%s" stroke="%s" stroke-width="%f" stroke_linejoin="%s" %s/>' % (
-            " ".join([str(p) for p in points] + [str(points[0]), str(points[1])]),
-            fill is None and "none" or fill,
-            stroke,
-            stroke_width,
-            stroke_linejoin,
-            stroke_dasharray is not None and "stroke-dasharray='"+stroke_dasharray+"'" or ""
-        ))
+        self._draws.append(draw.Lines(*points, stroke=stroke, fill=fill, close=True))
 
     def add_mpath(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
                   stroke_dasharray=None):
         points = super().add_mpath(points, stroke, stroke_width, fill)
-        self._canvas.append('<path d="%s" fill="%s" stroke="%s" stroke-width="%f" stroke-linejoin="%s"/>' % (
-            " ".join([str(p) for p in points]),
-            fill is None and "none" or fill,
-            stroke,
-            stroke_width,
-            stroke_linejoin
-        ))
+        p = draw.Path(stroke_width=stroke_width, stroke=stroke, stroke_linejoin=stroke_linejoin,
+                      fill=fill)
+        idx = 0
+        while idx < len(points):
+            if points[idx] == 'M':
+                p.M(*points[idx+1:idx+3])
+                idx += 2
+            elif points[idx] == 'L':
+                p.L(*points[idx + 1:idx + 3])
+                idx += 2
+            elif points[idx] == 'S':
+                p.S(*points[idx + 1:idx + 5])
+                idx += 4
+            elif points[idx] == 'C':
+                p.C(*points[idx+1:idx+7])
+                idx += 6
+            idx += 1
+        self._draws.append(p)
 
     def add_circle(self, points, r, stroke="black", stroke_width=1, fill=None,
                    stroke_dasharray=None):
         points = super().add_circle(points, r, stroke, stroke_width, fill)
-        self._canvas.append('<circle cx="%f" cy="%f" r="%f" stroke-width="%f" fill="%s" stroke="%s"/>' % (
-            points[0], points[1], r,
-            stroke_width,
-            fill is None and "none" or fill,
-            stroke
-        ))
+        self._draws.append(draw.Circle(points[0], points[1], r,
+                                       stroke_width=stroke_width, fill=fill, stroke=stroke))
 
     def add_text(self, points, text, size, ta="start"):
         if ta == "right":
@@ -81,17 +78,15 @@ class SVGCanvas(Canvas):
         elif ta == "left":
             ta = "start"
         points = super().add_text(points, text, size, ta)
-        self._canvas.append('<text x="%f" y="%f" font-size="%f" text-anchor="%s">%s</text>' % (
-            points[0], points[1], size, ta, text
-        ))
+        self._draws.append(draw.Text(text, size, *points, text_anchor=ta))
 
     def draw(self):
         super().draw()
-        return "<svg width='%f' height='%f' viewBox='%f %f %f %f'>%s</svg>" % (
-            (self._maxx-self._minx), (self._maxy-self._miny),
-            self._minx, self._miny, self._maxx, self._maxy,
-            "\n".join(self._canvas)
-        )
+        d = draw.Drawing(self._maxx-self._miny, self._maxy-self._miny,
+                         origin=(self._minx, -self._maxy))
+        for dr in self._draws:
+            d.append(dr)
+        return d.setPixelScale(self._render_size)
 
 
 class SVGRenderer(Renderer):

@@ -37,7 +37,7 @@ except ModuleNotFoundError:
 
 class MplotCanvas(Canvas):
     def __init__(self, **opts):
-        super().__init__(**opts)
+        super().__init__(**opts, inverse_Y=True)
         self._fig, self._ax = plt.subplots()
         if "total_width" in opts:
             self._fig.set_figwidth((opts["total_width"]+1)*2)
@@ -55,7 +55,7 @@ class MplotCanvas(Canvas):
                     stroke_dasharray=None):
         points = super().add_polygon(points, stroke, stroke_width, fill)
         self._patches.append(
-            mpatches.Polygon([(points[n], -points[n+1]) for n in range(0, len(points), 2)],
+            mpatches.Polygon(points,
                              fill=fill is not None, color=fill,
                              ec=stroke, linewidth=stroke_width, joinstyle=stroke_linejoin))
 
@@ -65,19 +65,19 @@ class MplotCanvas(Canvas):
         path_data = []
         while points:
             if points[0] == "M":
-                path_data.append((mpath.Path.MOVETO, [points[1], -points[2]]))
+                path_data.append((mpath.Path.MOVETO, [points[1], points[2]]))
                 points = points[3:]
             elif points[0] == "L":
-                path_data.append((mpath.Path.LINETO, [points[1], -points[2]]))
+                path_data.append((mpath.Path.LINETO, [points[1], points[2]]))
                 points = points[3:]
             elif points[0] == "C":
-                path_data.append((mpath.Path.CURVE4, [points[1], -points[2]]))
-                path_data.append((mpath.Path.CURVE4, [points[3], -points[4]]))
-                path_data.append((mpath.Path.CURVE4, [points[5], -points[6]]))
+                path_data.append((mpath.Path.CURVE4, [points[1], points[2]]))
+                path_data.append((mpath.Path.CURVE4, [points[3], points[4]]))
+                path_data.append((mpath.Path.CURVE4, [points[5], points[6]]))
                 points = points[7:]
             elif points[0] == "S":
-                path_data.append((mpath.Path.CURVE3, [points[1], -points[2]]))
-                path_data.append((mpath.Path.CURVE3, [points[3], -points[4]]))
+                path_data.append((mpath.Path.CURVE3, [points[1], points[2]]))
+                path_data.append((mpath.Path.CURVE3, [points[3], points[4]]))
                 points = points[5:]
         codes, vertices = zip(*path_data)
         path = mpath.Path(vertices, codes)
@@ -89,7 +89,7 @@ class MplotCanvas(Canvas):
     def add_circle(self, points, r, stroke="black", stroke_width=1, fill=None,
                    stroke_dasharray=None):
         points = super().add_circle(points, r, stroke, stroke_width, fill)
-        self._patches.append(mpatches.Circle((points[0], -points[1]), r,
+        self._patches.append(mpatches.Circle((points[0], points[1]), r,
                                              fill=fill is not None, color=fill,
                                              ec=stroke, linewidth=stroke_width))
 
