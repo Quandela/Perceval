@@ -749,26 +749,76 @@ class Circuit(ACircuit):
                     assert r_self[-1] < r[0] or r_self[0] > r[-1], \
                            "circuit structure does not match - missing %s at %s" % (str(c), str(r))
 
-    def match(self, circuit: ACircuit, pos: int=None, cpos: int=None):
-        r"""match a sub-circuit at a given position
+    def find_subnodes(self, pos: int) -> List[int]:
+        r"""find the subnodes of a given component (Udef for pos==None)
 
-        :param pos:
-        :param circuit:
-        :param cpos:
+        :param pos: the position of the current node
         :return:
         """
-        # first to match - we need to have a match on the component itself - self[pos] == circuit[cpos]
-        if not isinstance(circuit, Circuit):
-            if pos is None and self._Udef is not None:
-                matched, param_match = ACircuit.match_unitary(self._Udef, circuit)
-                pos = 0
-            else:
-                matched, param_match = self._components[pos].match(circuit)
-                pos = pos + 1
+        if pos is None:
+            r = [0, self._m-1]
         else:
-            matched, param_match = self._components[cpos].match(circuit[cpos])
-        if not matched:
-            return False, param_match
+            r = [self._components[pos][0][0], self._components[pos][0][-1]]
+        subnodes = []
+        for i in range(r[0], r[1]+1):
+            found = False
+            for p in range(pos + 1, len(self._components)):
+                if i in self._components[p][0]:
+                    found = True
+                    break
+            subnodes.append(found and p or None)
+        return subnodes
+
+    def match(self, pattern: ACircuit, pos: int=None, cpos: int=0, browse: bool = False) -> Tuple[bool, list]:
+        r"""match a sub-circuit at a given position
+
+        :param browse: true if we want to search the pattern at any location in the current circuit, if true, pos should
+                       be None
+        :param pattern: the pattern to search for
+        :param pos: the start position in the current circuit
+        :param cpos: the start position in the pattern
+        :return:
+        """
+        if browse:
+            assert pos is None, "cannot browse when giving start position"
+            l = []
+            if self._Udef is not None:
+                l = [None]
+            l += list(range(len(self._components)))
+            for pos in l:
+                matched, match_params = self.match(pattern, pos, cpos)
+                if matched:
+                    return True, match_params
+            return False, []
+        # first to match - we need to have a match on the component itself - self[pos] == circuit[cpos]
+        if not isinstance(pattern, Circuit):
+            # the circuit we have to match against has a single component
+            if pos is None and self._Udef is not None:
+                matched, param_match = ACircuit.match_unitary(self._Udef, pattern)
+            else:
+                matched, param_match = self._components[pos][1].match(pattern)
+            return matched, param_match
+        else:
+            # the circuit we have to match against has multiple components
+            if self._Udef is not None and pos is None:
+                matched, param_match = ACircuit.match_unitary(self._Udef, pattern[cpos])
+            else:
+                if pos is None:
+                    pos = 0
+                matched, param_match = self._components[pos][1].match(pattern._components[cpos][1])
+            if not matched:
+                return False, param_match
+            # now iterate through all subnodes of circuit[pos] - they should match equivalent subnodes of self[pos]
+            circuit_sub_nodes = pattern.find_subnodes(cpos)
+            self_sub_nodes = self.find_subnodes(pos)
+            for c_self, c_circuit in zip(self_sub_nodes, circuit_sub_nodes):
+                if c_circuit is None:
+                    continue
+                if c_self is None:
+                    return False, None
+                matched, param_match = self.match(pattern, c_self, c_circuit)
+                if not matched:
+                    return False, None
         return True, param_match
 
     def subcircuit_shape(self, content, canvas):

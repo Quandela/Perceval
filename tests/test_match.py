@@ -27,6 +27,7 @@ import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import numpy as np
 
+
 def test_match_elementary():
     bs = symb.BS(R=0.42)
     matched, c = bs.match(symb.BS(theta=pcvl.P("theta")))
@@ -45,3 +46,33 @@ def test_match_perm():
                                   phi_b=pcvl.P("phi_b"), phi_d=pcvl.P("phi_d")))
     assert matched
     assert pytest.approx(np.pi/2) == float(c["theta"]) or pytest.approx(3*np.pi/2) == float(c["theta"])
+
+
+def test_match_double():
+    bs = phys.BS() // phys.PS(0.5)
+    pattern = phys.BS() // phys.PS(pcvl.P("phi"))
+    matched, c = bs.match(pattern)
+    assert matched
+    assert pattern.describe() == "symb.Circuit(2).add([0, 1], phys.BS()).add(0, phys.PS(phi=1/2))"
+    bs = phys.BS() // (1, phys.PS(0.5))
+    pattern = phys.BS() // phys.PS(pcvl.P("phi"))
+    matched, c = bs.match(pattern)
+    assert not matched
+
+
+def test_match_rec():
+    mzi = phys.BS() // phys.PS(0.5) // phys.BS() // (1, phys.PS(0.3))
+    pattern = phys.BS() // (1, phys.PS(pcvl.P("phi")))
+    matched, c = mzi.match(pattern)
+    assert not matched
+    pattern = phys.BS() // (1, phys.PS(pcvl.P("phi")))
+    matched, c = mzi.match(pattern, browse=True)
+    assert matched
+
+
+def test_subnodes_0():
+    bs = phys.Circuit(2).add(0, phys.BS())
+    assert bs.find_subnodes(0) == [None, None]
+    bs = phys.Circuit(3).add(0, phys.BS()).add(1, phys.PS(0.2)).add(1, phys.BS())
+    assert bs.find_subnodes(0) == [None, 1]
+    assert bs.find_subnodes(1) == [2]
