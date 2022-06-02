@@ -132,7 +132,7 @@ def test_sbs():
 
 
 def test_sbs_0():
-    bs = symb.BS(R=0)
+    bs = symb.BS(R=1)
     assert bs.U.pdisplay() == "⎡1  0⎤\n⎣0  1⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -143,7 +143,7 @@ def test_sbs_0():
 
 
 def test_sbs_1():
-    bs = symb.BS(R=1)
+    bs = symb.BS(R=0)
     assert bs.U.pdisplay() == "⎡0  I⎤\n⎣I  0⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -163,8 +163,8 @@ def test_parameter():
     else:
         raise Exception("Exception should have been generated")
     assert bs.compute_unitary(use_symbolic=True).pdisplay() == strip_line_12("""
-            ⎡sqrt(1 - r)  I*sqrt(r)  ⎤
-            ⎣I*sqrt(r)    sqrt(1 - r)⎦""")
+            ⎡sqrt(r)        I*sqrt(1 - r)⎤
+            ⎣I*sqrt(1 - r)  sqrt(r)      ⎦""")
 
 
 def test_double_parameter_ok():

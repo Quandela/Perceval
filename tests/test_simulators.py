@@ -30,10 +30,10 @@ import numpy as np
 
 def cnot_circuit():
     cnot = pcvl.Circuit(6)
-    cnot.add((0, 1), phys.BS(R=2 / 3, phi_b=sp.pi, phi_d=0))
+    cnot.add((0, 1), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
     cnot.add((3, 4), phys.BS(R=1 / 2))
-    cnot.add((2, 3), phys.BS(R=2 / 3, phi_b=sp.pi, phi_d=0))
-    cnot.add((4, 5), phys.BS(R=2 / 3))
+    cnot.add((2, 3), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
+    cnot.add((4, 5), phys.BS(R=1 / 3))
     cnot.add((3, 4), phys.BS(R=1 / 2))
     return cnot
 
