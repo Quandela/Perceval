@@ -55,6 +55,7 @@ class ACircuit(ABC):
     delay_circuit = False
     _supports_polarization = False
     _name = None
+    _color = None
 
     def __init__(self, m: int, params=None):
         if params is None:
@@ -278,7 +279,12 @@ class ACircuit(ABC):
             map_param_kid = {}
         if self._params[k].defined:
             if default_value is None or self._params[k]._value != default_value:
-                parameters.append("%s=%s" % (pname, simple_float(self._params[k]._value)[1]))
+                v = self._params[k]._value
+                if isinstance(v, sp.Expr):
+                    v = str(v)
+                else:
+                    v = simple_float(self._params[k]._value)[1]
+                parameters.append("%s=%s" % (pname, v))
         else:
             parameters.append("%s=%s" % (pname, map_param_kid[self._params[k]._pid]))
 
@@ -368,7 +374,7 @@ class ACircuit(ABC):
             for idx, (r, c) in enumerate(self._components):
                 shiftr = [p+shift for p in r]
                 if c._components and recursive:
-                    td.open_subblock(r, c._name, self._areas[idx])
+                    td.open_subblock(r, c._name, self._areas[idx], c._color)
                     c.pdisplay(td, shift=shiftr[0])
                     self._areas[idx] = td.close_subblock(r)
                 elif c._components:
@@ -765,11 +771,52 @@ class Circuit(ACircuit):
         for i in range(r[0], r[1]+1):
             found = False
             for p in range(pos + 1, len(self._components)):
-                if i in self._components[p][0]:
+                try:
+                    idx = self._components[p][0].index(i)
                     found = True
                     break
-            subnodes.append(found and p or None)
+                except ValueError:
+                    pass
+            subnodes.append(found and (p, idx) or None)
         return subnodes
+
+    def isolate(self, lc: List[int], name=None, color=None):
+        nlc = []
+        rset = set()
+        for idx in lc:
+            r, _ = self._components[idx]
+            for ir in r:
+                rset.add(ir)
+        sub_r = sorted(rset)
+        sub_circuit = Circuit(len(sub_r), name=name is None and "pattern" or name)
+        if color is not None:
+            sub_circuit._color = color
+        for idx in lc:
+            r, c = self._components[idx]
+            sub_circuit.add(r[0]-sub_r[0], c)
+        pidx = None
+        for idx, (r, c) in enumerate(self._components):
+            if idx in lc:
+                if idx == lc[-1]:
+                    pidx = len(nlc)
+                    nlc.append((sub_r, sub_circuit))
+            else:
+                nlc.append((r, c))
+        self._components = nlc
+        return pidx
+
+    def replace(self, p: int, pattern: ACircuit, merge: bool=False):
+        nlc = []
+        for idx, (r, c) in enumerate(self._components):
+            if idx == p:
+                if isinstance(pattern, Circuit) and merge:
+                    for r1, c1 in pattern._components:
+                        nlc.append(([pr1+r[0] for pr1 in r1], c1))
+                else:
+                    nlc.append(([idx+r[0] for idx in range(pattern._m)], pattern))
+            else:
+                nlc.append((r, c))
+        self._components = nlc
 
     def match(self, pattern: ACircuit, pos: int=None, cpos: int=0, browse: bool = False) -> Tuple[bool, list]:
         r"""match a sub-circuit at a given position
@@ -788,26 +835,31 @@ class Circuit(ACircuit):
                 l = [None]
             l += list(range(len(self._components)))
             for pos in l:
-                matched, match_params = self.match(pattern, pos, cpos)
+                matched, match_params = self.match(copy.deepcopy(pattern), pos, cpos)
                 if matched:
                     return True, match_params
             return False, []
         # first to match - we need to have a match on the component itself - self[pos] == circuit[cpos]
+        param_match = set()
         if not isinstance(pattern, Circuit):
             # the circuit we have to match against has a single component
             if pos is None and self._Udef is not None:
-                matched, param_match = ACircuit.match_unitary(self._Udef, pattern)
+                matched, _ = ACircuit.match_unitary(self._Udef, pattern)
+                param_match.add(None)
             else:
-                matched, param_match = self._components[pos][1].match(pattern)
-            return matched, param_match
+                matched, _ = self._components[pos][1].match(pattern)
+                param_match.add(pos)
+            return matched, list(param_match)
         else:
             # the circuit we have to match against has multiple components
             if self._Udef is not None and pos is None:
-                matched, param_match = ACircuit.match_unitary(self._Udef, pattern[cpos])
+                matched, _ = ACircuit.match_unitary(self._Udef, pattern[cpos])
+                param_match.add(None)
             else:
                 if pos is None:
                     pos = 0
-                matched, param_match = self._components[pos][1].match(pattern._components[cpos][1])
+                matched, _ = self._components[pos][1].match(pattern._components[cpos][1])
+                param_match.add(pos)
             if not matched:
                 return False, param_match
             # now iterate through all subnodes of circuit[pos] - they should match equivalent subnodes of self[pos]
@@ -818,10 +870,13 @@ class Circuit(ACircuit):
                     continue
                 if c_self is None:
                     return False, None
-                matched, param_match = self.match(pattern, c_self, c_circuit)
+                if c_self[1] != c_circuit[1]:
+                    return False, None
+                matched, _ = self.match(pattern, c_self[0], c_circuit[0])
+                param_match.add(c_self[0])
                 if not matched:
                     return False, None
-        return True, param_match
+        return True, sorted(param_match)
 
     def subcircuit_shape(self, content, canvas):
         for idx in range(self._m):

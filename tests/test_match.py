@@ -42,18 +42,21 @@ def test_match_nomatch():
 
 def test_match_perm():
     bs = phys.PERM([1, 0])
-    matched, c = bs.match(phys.BS(theta=pcvl.P("theta"), phi_a=pcvl.P("phi_a"),
-                                  phi_b=pcvl.P("phi_b"), phi_d=pcvl.P("phi_d")))
+    pattern = phys.BS(theta=pcvl.P("theta"), phi_a=pcvl.P("phi_a"),
+                                  phi_b=pcvl.P("phi_b"), phi_d=pcvl.P("phi_d"))
+    matched, lc = bs.match(pattern)
     assert matched
-    assert pytest.approx(np.pi/2) == float(c["theta"]) or pytest.approx(3*np.pi/2) == float(c["theta"])
+    assert lc == [None]
+    assert pytest.approx(np.pi/2) == float(pattern["theta"]) or pytest.approx(3*np.pi/2) == float(pattern["theta"])
 
 
 def test_match_double():
     bs = phys.BS() // phys.PS(0.5)
     pattern = phys.BS() // phys.PS(pcvl.P("phi"))
-    matched, c = bs.match(pattern)
+    matched, lc = bs.match(pattern)
     assert matched
     assert pattern.describe() == "symb.Circuit(2).add([0, 1], phys.BS()).add(0, phys.PS(phi=1/2))"
+    assert lc == [0, 1]
     bs = phys.BS() // (1, phys.PS(0.5))
     pattern = phys.BS() // phys.PS(pcvl.P("phi"))
     matched, c = bs.match(pattern)
@@ -63,16 +66,31 @@ def test_match_double():
 def test_match_rec():
     mzi = phys.BS() // phys.PS(0.5) // phys.BS() // (1, phys.PS(0.3))
     pattern = phys.BS() // (1, phys.PS(pcvl.P("phi")))
-    matched, c = mzi.match(pattern)
+    matched, lc = mzi.match(pattern)
     assert not matched
     pattern = phys.BS() // (1, phys.PS(pcvl.P("phi")))
-    matched, c = mzi.match(pattern, browse=True)
+    matched, lc = mzi.match(pattern, browse=True)
+    assert lc == [2, 3]
     assert matched
+
+
+def test_match_rec_inv():
+    c = pcvl.Circuit(3)//(1,phys.BS())//(0,phys.BS())//(1,phys.BS())
+    pattern=pcvl.Circuit(3)//(0,phys.BS())//(1,phys.BS())//(0,phys.BS())
+    matched, lc = c.match(pattern)
+    assert not matched
+
+
+def test_match_simple_seq():
+    p2 = phys.BS() // phys.BS()
+    c = phys.BS() // phys.BS()
+    matched, lc = c.match(p2)
+    assert lc == [0, 1]
 
 
 def test_subnodes_0():
     bs = phys.Circuit(2).add(0, phys.BS())
     assert bs.find_subnodes(0) == [None, None]
     bs = phys.Circuit(3).add(0, phys.BS()).add(1, phys.PS(0.2)).add(1, phys.BS())
-    assert bs.find_subnodes(0) == [None, 1]
-    assert bs.find_subnodes(1) == [2]
+    assert bs.find_subnodes(0) == [None, (1,0)]
+    assert bs.find_subnodes(1) == [(2,0)]

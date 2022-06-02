@@ -180,7 +180,7 @@ class GraphicPrinter:
         self._current_block_open_offset = None
         self._current_block_name = ""
 
-    def open_subblock(self, lines, name, area=None):
+    def open_subblock(self, lines, name, area=None, color=None):
         start = lines[0]
         end = lines[-1]
         self._current_block_open_offset = self.extend_pos(start, end)
@@ -188,7 +188,9 @@ class GraphicPrinter:
         if area is not None:
             self._canvas.set_offset((GraphicPrinter.affix_all_size + 50 * area[0], 50 * area[1]),
                                     50 * area[2], 50 * area[3])
-            self._canvas.add_rect((2,2), 50 * area[2]-4, 50 * area[3]-4, fill="lightblue", stroke="none")
+            if color is None:
+                color = "lightblue"
+            self._canvas.add_rect((2,2), 50 * area[2]-4, 50 * area[3]-4, fill=color, stroke="none")
 
     def close_subblock(self, lines):
         start = lines[0]

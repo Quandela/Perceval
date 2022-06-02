@@ -28,10 +28,12 @@ import drawSvg as draw
 
 
 class SVGCanvas(Canvas):
-    def __init__(self, render_size=1, **opts):
+    def __init__(self, render_size=None, **opts):
         super().__init__(**opts, inverse_Y=True)
         self._draws = []
         self._render_size = render_size
+        if 'group' in opts:
+            self._group = opts['group']
 
     def add_mline(self, points, stroke="black", stroke_width=1, stroke_linejoin="miter",
                   stroke_dasharray=None):
@@ -90,11 +92,17 @@ class SVGCanvas(Canvas):
 
     def draw(self):
         super().draw()
-        d = draw.Drawing(self._maxx-self._miny, self._maxy-self._miny,
-                         origin=(self._minx, -self._maxy))
+        if hasattr(self, "_group"):
+            d = draw.Group(x=self._group[0], y=self._group[1])
+        else:
+            d = draw.Drawing(self._maxx-self._miny, self._maxy-self._miny,
+                             origin=(self._minx, -self._maxy))
         for dr in self._draws:
             d.append(dr)
-        return d.setPixelScale(self._render_size)
+        if self._render_size is not None:
+            return d.setPixelScale(self._render_size)
+        else:
+            return d
 
 
 class SVGRenderer(Renderer):
