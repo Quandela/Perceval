@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import pytest
+import random
 
 import perceval as pcvl
 import perceval.lib.phys as phys
@@ -44,7 +45,7 @@ def test_match_nomatch():
 def test_match_perm():
     bs = phys.PERM([1, 0])
     pattern = phys.BS(theta=pcvl.P("theta"), phi_a=pcvl.P("phi_a"),
-                                  phi_b=pcvl.P("phi_b"), phi_d=pcvl.P("phi_d"))
+                      phi_b=pcvl.P("phi_b"), phi_d=pcvl.P("phi_d"))
     matched = bs.match(pattern)
     assert matched is not None
     theta = matched.v_map.get("theta", None)
@@ -58,7 +59,7 @@ def test_match_double():
     assert matched is not None
     print(matched)
     assert pytest.approx(1/2) == matched.v_map.get("phi", None)
-    assert matched.pos_map == {0:0, 1:1}
+    assert matched.pos_map == {0: 0, 1: 1}
     bs = phys.BS() // (1, phys.PS(0.5))
     pattern = phys.BS() // phys.PS(pcvl.P("phi"))
     matched = bs.match(pattern)
@@ -73,12 +74,12 @@ def test_match_rec():
     pattern = phys.BS() // (1, phys.PS(pcvl.P("phi")))
     matched = mzi.match(pattern, browse=True)
     assert matched is not None
-    assert matched.pos_map == {2:0, 3:1}
+    assert matched.pos_map == {2: 0, 3: 1}
 
 
 def test_match_rec_inv():
-    c = pcvl.Circuit(3)//(1,phys.BS())//(0,phys.BS())//(1,phys.BS())
-    pattern=pcvl.Circuit(3)//(0,phys.BS())//(1,phys.BS())//(0,phys.BS())
+    c = pcvl.Circuit(3)//(1, phys.BS())//(0, phys.BS())//(1, phys.BS())
+    pattern = pcvl.Circuit(3)//(0, phys.BS())//(1, phys.BS())//(0, phys.BS())
     matched = c.match(pattern)
     assert matched is None
 
@@ -88,12 +89,25 @@ def test_match_simple_seq():
     c = phys.BS() // phys.BS()
     matched = c.match(p2)
     assert matched
-    assert matched.pos_map == {0:0, 1:1}
+    assert matched.pos_map == {0: 0, 1: 1}
 
 
 def test_subnodes_0():
     bs = phys.Circuit(2).add(0, phys.BS())
     assert bs.find_subnodes(0) == [None, None]
     bs = phys.Circuit(3).add(0, phys.BS()).add(1, phys.PS(0.2)).add(1, phys.BS())
-    assert bs.find_subnodes(0) == [None, (1,0)]
-    assert bs.find_subnodes(1) == [(2,0)]
+    assert bs.find_subnodes(0) == [None, (1, 0)]
+    assert bs.find_subnodes(1) == [(2, 0)]
+
+
+def test_replace_R_by_theta_1():
+    p0a = symb.BS(R=pcvl.P("R"))
+    p0b = symb.BS(R=pcvl.P("R"), phi=np.pi)
+    r0 = phys.BS(theta=pcvl.P("theta"))
+    random_theta = (random.random()-0.5) * np.pi
+    a = symb.BS(theta=random_theta)
+    matched = a.match(p0a)
+    if matched is None:
+        matched = a.match(p0b)
+        assert matched
+    assert pytest.approx(np.cos(random_theta)**2) == matched.v_map.get("R", None)
