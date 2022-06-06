@@ -33,16 +33,16 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import QPrinter, Parameter, Matrix, simple_float, Canvas, global_params
+from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, simple_float, Canvas, global_params
 
 
 def _matrix_double_for_polarization(m, u):
     pu = Matrix(m * 2, u.is_symbolic())
     pu.fill(0)
-    for k in range(0, m):
-        for l in range(0, m):
-            pu[2 * k, 2 * l] = u[k, l]
-            pu[2 * k + 1, 2 * l + 1] = u[k, l]
+    for k1 in range(0, m):
+        for k2 in range(0, m):
+            pu[2 * k1, 2 * k2] = u[k1, k2]
+            pu[2 * k1 + 1, 2 * k2 + 1] = u[k1, k2]
     return pu
 
 
@@ -72,13 +72,14 @@ class ACircuit(ABC):
 
     @abstractmethod
     def _compute_unitary(self,
-                        assign: dict = None,
-                        use_symbolic: bool = False) -> Matrix:
+                         assign: dict = None,
+                         use_symbolic: bool = False) -> Matrix:
         """Compute the unitary matrix corresponding to the current circuit
 
         :param assign: assign values to some parameters
         :param use_symbolic: if the matrix should use symbolic calculation
-        :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN` if not.
+        :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
+                 if not.
         """
 
     def compute_unitary(self,
@@ -90,7 +91,8 @@ class ACircuit(ABC):
         :param use_polarization:
         :param assign: assign values to some parameters
         :param use_symbolic: if the matrix should use symbolic calculation
-        :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN` if not.
+        :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
+                 if not.
         """
         if self._supports_polarization:
             assert use_polarization is not False, "polarized circuit cannot generates non-polarized unitary"
@@ -146,10 +148,10 @@ class ACircuit(ABC):
 
     def _set_parameter(self,
                        name: str,
-                       p: Parameter,
+                       p: Union[Parameter, float],
                        min_v: float,
                        max_v: float,
-                       periodic: bool=True):
+                       periodic: bool = True):
         """
             Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
             min/max value or a parameter defined by a value that we create on the fly
@@ -187,10 +189,11 @@ class ACircuit(ABC):
         return type(self)(**params).U
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = None) -> ACircuit:
+            component: ACircuit, merge: bool = None) -> Circuit:
         r"""Add a component in a circuit
 
-        :param port_range: the port range as a tuple of consecutive porst, or the initial port where to add the component
+        :param port_range: the port range as a tuple of consecutive porst, or the initial port where to add the
+                           component
         :param component: the component to add, must be a circuit
         :param merge: if the component is a complex circuit,
         :return: the circuit itself, allowing to add multiple components in a same line
@@ -235,7 +238,7 @@ class ACircuit(ABC):
     def __setitem__(self, key, value):
         self._params[key] = value
 
-    def __ifloordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> ACircuit:
+    def __ifloordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Shortcut for ``.add``
 
         >>> c //= b       # equivalent to: `c.add((0:b.n),b)`
@@ -253,7 +256,7 @@ class ACircuit(ABC):
         self.add(tuple(range(pos, component._m+pos)), component)
         return self
 
-    def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> ACircuit:
+    def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Build a new circuit by adding `component` to the current circuit
 
         >>> c = a // b   # equivalent to: `Circuit(n) // self // component`
@@ -406,19 +409,27 @@ class ACircuit(ABC):
         :param actual_pattern_pos: the actual position of the component in the pattern
         :return: resulting parameter/value constraint if there is a match or None otherwise
         """
+
         if match is None:
             match = Match()
         if isinstance(circuit, ACircuit):
             u = circuit.compute_unitary(use_symbolic=False)
         else:
             u = circuit
+
         # unitaries should match - check the variables
         params_symbols = []
         params_values = []
         x0 = []
+        bounds = []
+
         for p in pattern.get_parameters():
             params_symbols.append(p.spv)
             params_values.append(match.v_map.get(p.name, None))
+            if not p.is_periodic:
+                bounds.append((p.min, p.max))
+            else:
+                bounds.append(None)
             x0.append(p.random())
         cu = pattern.compute_unitary(use_symbolic=True)
 
@@ -427,7 +438,7 @@ class ACircuit(ABC):
         def g(*params):
             return np.linalg.norm(np.array(f(*params)))
 
-        res = solve(g, x0, [], params_values, precision=global_params["min_complex_component"])
+        res = solve(g, x0, params_values, bounds, precision=global_params["min_complex_component"])
 
         if res is not None:
             n_match = copy.deepcopy(match)
@@ -455,7 +466,7 @@ class ACircuit(ABC):
             if param.defined:
                 try:
                     self._params[p].set_value(float(param), force=force)
-                except:
+                except Exception:
                     pass
 
     def depths(self):
@@ -595,17 +606,17 @@ class Circuit(ACircuit):
         if h:
             _components.reverse()
         for rc in _components:
-            range, component = rc
+            r, c = rc
             if v:
-                if isinstance(range, int):
-                    range = [range]
+                if isinstance(r, int):
+                    r = [r]
                 else:
-                    range = list(range)
-                range.reverse()
-                range = [self._m - 1 - p for p in range]
+                    r = list(r)
+                r.reverse()
+                r = [self._m - 1 - p for p in r]
             if v or h:
-                component.inverse(v=v, h=h)
-            _new_components.append((range, component))
+                c.inverse(v=v, h=h)
+            _new_components.append((r, c))
         self._components = _new_components
 
     def compute_unitary(self,
@@ -640,7 +651,7 @@ class Circuit(ACircuit):
         :param m: number of modes
         :param fun_gen: generator function for the building components, index is an integer allowing to generate
                         named parameters - for instance:
-                        :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx))`
+                        :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx)))`
         :param shape: `rectangle` or `triangle`
         :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                       Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
@@ -678,7 +689,7 @@ class Circuit(ACircuit):
         return generated
 
     @staticmethod
-    def decomposition(U: Matrix,
+    def decomposition(U: MatrixN,
                       component: ACircuit,
                       phase_shifter_fn: Callable[[int], ACircuit] = None,
                       shape: Literal["triangle"] = "triangle",
@@ -692,6 +703,7 @@ class Circuit(ACircuit):
                       allow_error: bool = False):
         r"""Decompose a given unitary matrix U into a circuit with specified component type
 
+        :param U: the matrix to decompose
         :param allow_error: allow decomposition error - when the actual solution is not locally reachable
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
         :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
@@ -701,7 +713,7 @@ class Circuit(ACircuit):
         :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
                             ignored
         :param shape: `triangle`
-        :param permutation: if provided, type of a permutation operator to avoid unnecessary operators
+        :param permutation: if provided, type of permutation operator to avoid unnecessary operators
         :param merge: don't use sub-circuits
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :param max_try: number of times to try the decomposition
@@ -718,8 +730,8 @@ class Circuit(ACircuit):
         if constraints is None:
             constraints = [[None]*len(component.get_parameters())]
         assert isinstance(constraints, list), "constraints should be a list of constraint"
-        for c in constraints:
-            assert isinstance(c, (list, tuple)) and len(c) == len(component.get_parameters()),\
+        for constraint in constraints:
+            assert isinstance(constraint, (list, tuple)) and len(constraint) == len(component.get_parameters()),\
                 "there should as many component in each constraint than free parameters in the component"
         while count < max_try:
             if shape == "triangle":
@@ -730,8 +742,8 @@ class Circuit(ACircuit):
                                                    constraints, allow_error=allow_error)
             if lc is not None:
                 C = Circuit(N)
-                for range, component in lc:
-                    C.add(range, component, merge=merge)
+                for r, c in lc:
+                    C.add(r, c, merge=merge)
                 if inverse_v or inverse_h:
                     C.inverse(v=inverse_v, h=inverse_h)
                 return C
@@ -835,7 +847,7 @@ class Circuit(ACircuit):
         self._components = nlc
         return pidx
 
-    def replace(self, p: int, pattern: ACircuit, merge: bool=False):
+    def replace(self, p: int, pattern: ACircuit, merge: bool = False):
         nlc = []
         for idx, (r, c) in enumerate(self._components):
             if idx == p:
@@ -876,7 +888,7 @@ class Circuit(ACircuit):
             match = Match()
         else:
             # if we have already matched the component, the matchee and the matcher should be the same !
-            if pos in match.pos_map and  match.pos_map[pos] != pattern_pos:
+            if pos in match.pos_map and match.pos_map[pos] != pattern_pos:
                     return None
         if not isinstance(pattern, Circuit):
             # the circuit we have to match against has a single component
