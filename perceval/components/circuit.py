@@ -26,7 +26,8 @@ import copy
 import random
 from typing import Callable, Literal, Optional, Union, Tuple, Type, List
 import perceval.algorithm as algorithm
-from perceval.algorithm.decomposition import _solve
+from perceval.algorithm.match import Match
+from perceval.algorithm.solve import solve
 
 import numpy as np
 import sympy as sp
@@ -394,29 +395,58 @@ class ACircuit(ABC):
                 return td.draw()
 
     @staticmethod
-    def match_unitary(u: Matrix, circuit: ACircuit):
-        # unitaries should match - check the variables
-        params = circuit.get_parameters()
-        params_symbols = [x.spv for x in params]
-        cU = circuit.compute_unitary(use_symbolic=True)
-        f = sp.lambdify([params_symbols], cU-u)
-        g = lambda *p: np.linalg.norm(np.array(f(*p)))
-        x0 = [p.random() for p in params]
-        res = _solve(g, x0, [], [None]*len(params), precision=1e-6)
-        if res is not None:
-            for idx, p in enumerate(params):
-                p.set_value(res[idx])
-            return True, circuit
+    def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,
+                       actual_pos: Optional[int] = 0, actual_pattern_pos: Optional[int] = 0) -> Optional[Match]:
+        r"""match an elementary component by finding if possible the corresponding parameters.
+
+        :param pattern: the circuit to match
+        :param pattern: the circuit to match against
+        :param match: current partial match
+        :param actual_pos: the actual position of the component in the circuit
+        :param actual_pattern_pos: the actual position of the component in the pattern
+        :return: resulting parameter/value constraint if there is a match or None otherwise
+        """
+        if match is None:
+            match = Match()
+        if isinstance(circuit, ACircuit):
+            u = circuit.compute_unitary(use_symbolic=False)
         else:
-            return False, None
+            u = circuit
+        # unitaries should match - check the variables
+        params_symbols = []
+        params_values = []
+        x0 = []
+        for p in pattern.get_parameters():
+            params_symbols.append(p.spv)
+            params_values.append(match.v_map.get(p.name, None))
+            x0.append(p.random())
+        cu = pattern.compute_unitary(use_symbolic=True)
 
-    def match(self, circuit: ACircuit, pos: int = None, cpos: int = None):
+        f = sp.lambdify([params_symbols], cu - u)
+
+        def g(*params):
+            return np.linalg.norm(np.array(f(*params)))
+
+        res = solve(g, x0, [], params_values, precision=global_params["min_complex_component"])
+
+        if res is not None:
+            n_match = copy.deepcopy(match)
+            for p, v in zip(pattern.get_parameters(), res):
+                n_match.v_map[p.name] = p.check_value(v)
+            n_match.pos_map[actual_pos] = actual_pattern_pos
+            return n_match
+
+        return None
+
+    def match(self, pattern: ACircuit, pos: int = None,
+              pattern_pos: int = None, match: Match = None, actual_pos = 0, actual_pattern_pos=0) -> Optional[Match]:
         # the component shape should match
-        if circuit._name == "CPLX" or self._m != circuit._m or pos != None or cpos != None:
-            return False, []
-        return ACircuit.match_unitary(self.compute_unitary(use_symbolic=False), circuit)
+        if pattern._name == "CPLX" or self._m != pattern._m or pos is not None or pattern_pos is not None:
+            return None
+        return ACircuit._match_unitary(self, pattern, match, actual_pos=actual_pos,
+                                       actual_pattern_pos=actual_pattern_pos)
 
-    def transfer_from(self, c: ACircuit, force: bool=False):
+    def transfer_from(self, c: ACircuit, force: bool = False):
         r"""transfer parameters from a Circuit to another - should be the same circuit"""
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
@@ -818,14 +848,16 @@ class Circuit(ACircuit):
                 nlc.append((r, c))
         self._components = nlc
 
-    def match(self, pattern: ACircuit, pos: int=None, cpos: int=0, browse: bool = False) -> Tuple[bool, list]:
+    def match(self, pattern: ACircuit, pos: int = None,
+              pattern_pos: int = 0, browse: bool = False, match: Match = None) -> Optional[Match]:
         r"""match a sub-circuit at a given position
 
+        :param match: the partial match
         :param browse: true if we want to search the pattern at any location in the current circuit, if true, pos should
                        be None
         :param pattern: the pattern to search for
         :param pos: the start position in the current circuit
-        :param cpos: the start position in the pattern
+        :param pattern_pos: the start position in the pattern
         :return:
         """
         if browse:
@@ -835,48 +867,53 @@ class Circuit(ACircuit):
                 l = [None]
             l += list(range(len(self._components)))
             for pos in l:
-                matched, match_params = self.match(copy.deepcopy(pattern), pos, cpos)
-                if matched:
-                    return True, match_params
-            return False, []
-        # first to match - we need to have a match on the component itself - self[pos] == circuit[cpos]
-        param_match = set()
+                match = self.match(pattern, pos, pattern_pos)
+                if match is not None:
+                    return match
+            return None
+        # first to match - we need to have a match on the component itself - self[pos] == circuit[pattern_pos]
+        if match is None:
+            match = Match()
+        else:
+            # if we have already matched the component, the matchee and the matcher should be the same !
+            if pos in match.pos_map and  match.pos_map[pos] != pattern_pos:
+                    return None
         if not isinstance(pattern, Circuit):
             # the circuit we have to match against has a single component
             if pos is None and self._Udef is not None:
-                matched, _ = ACircuit.match_unitary(self._Udef, pattern)
-                param_match.add(None)
+                matched = self._match_unitary(self._Udef, pattern, match, actual_pos=None)
             else:
-                matched, _ = self._components[pos][1].match(pattern)
-                param_match.add(pos)
-            return matched, list(param_match)
+                matched = self._components[pos][1].match(pattern, match,
+                                                         actual_pos=pos, actual_pattern_pos=pattern_pos)
+            if matched is None:
+                return None
+            return matched
         else:
             # the circuit we have to match against has multiple components
             if self._Udef is not None and pos is None:
-                matched, _ = ACircuit.match_unitary(self._Udef, pattern[cpos])
-                param_match.add(None)
+                match = self._match_unitary(self._Udef, pattern[pattern_pos],
+                                            actual_pos=pos, actual_pattern_pos=pattern_pos)
             else:
                 if pos is None:
                     pos = 0
-                matched, _ = self._components[pos][1].match(pattern._components[cpos][1])
-                param_match.add(pos)
-            if not matched:
-                return False, param_match
-            # now iterate through all subnodes of circuit[pos] - they should match equivalent subnodes of self[pos]
-            circuit_sub_nodes = pattern.find_subnodes(cpos)
+                match = self._components[pos][1].match(pattern._components[pattern_pos][1], match=match,
+                                                       actual_pos=pos, actual_pattern_pos=pattern_pos)
+            if match is None:
+                return None
+            # now iterate through all subnodes of circuit[pos] - they should match equivalent sub nodes of self[pos]
+            circuit_sub_nodes = pattern.find_subnodes(pattern_pos)
             self_sub_nodes = self.find_subnodes(pos)
             for c_self, c_circuit in zip(self_sub_nodes, circuit_sub_nodes):
                 if c_circuit is None:
                     continue
                 if c_self is None:
-                    return False, None
+                    return None
                 if c_self[1] != c_circuit[1]:
-                    return False, None
-                matched, _ = self.match(pattern, c_self[0], c_circuit[0])
-                param_match.add(c_self[0])
-                if not matched:
-                    return False, None
-        return True, sorted(param_match)
+                    return None
+                match = self.match(pattern, c_self[0], c_circuit[0], False, match)
+                if match is None:
+                    return None
+        return match
 
     def subcircuit_shape(self, content, canvas):
         for idx in range(self._m):

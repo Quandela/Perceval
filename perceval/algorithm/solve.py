@@ -20,5 +20,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .decomposition import decompose_triangle, decompose_rectangle
-from .match import Match
+import scipy.optimize as so
+
+
+def solve(f, x0, constraint, bounds, precision, allow_error=False):
+    r"""Solve f starting with x0 and compliant with constraints.
+
+    :param allow_error:
+    :param bounds:
+    :param f:
+    :param x0:
+    :param constraint:
+    :param precision:
+    :return:
+    """
+    if len(x0) == 0:
+        if abs(f([])) < precision:
+            return []
+    for i, c in enumerate(constraint):
+        if c is not None:
+            c = float(c)
+            res = solve(lambda x: f([*x[:i], c, *x[i:]]),
+                        x0[:i]+x0[i+1:],
+                        constraint[:i]+constraint[i+1:],
+                        bounds[:i]+bounds[i+1:],
+                        precision, allow_error)
+            if res is None:
+                return None
+            return [*res[:i], c, *res[i:]]
+
+    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
+                                                        for b in bounds])
+
+    if res.fun > precision and not allow_error:
+        return None
+
+    return res.x

@@ -100,6 +100,9 @@ class Parameter:
             raise ValueError("value %f out of bound [%f,%f]", v, min_v, max_v)
         return v
 
+    def check_value(self, v):
+        return self._check_value(v, self._min, self._max, self._periodic)
+
     def set_value(self, v: float, force: bool = False):
         r"""Define the value of a non-fixed parameter
 

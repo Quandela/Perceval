@@ -27,36 +27,7 @@ import sympy as sp
 
 from perceval.utils import Matrix, global_params
 
-import scipy.optimize as so
-
-
-def _solve(f, x0, constraint, bounds, precision, allow_error=False):
-    r"""solve f starting with x0 and compliant with constraints
-
-    :param f:
-    :param x0:
-    :param constraint:
-    :param precision:
-    :return:
-    """
-    if len(x0) == 0:
-        if abs(f([])) < precision:
-            return []
-    for i, c in enumerate(constraint):
-        if c is not None:
-            c = float(c)
-            fi = lambda x: f([*x[:i], c, *x[i:]])
-            res = _solve(fi, x0[:i]+x0[i+1:], constraint[:i]+constraint[i+1:], bounds[:i]+bounds[i+1:],
-                         precision, allow_error)
-            if res is None:
-                return None
-            return [*res[:i], c, *res[i:]]
-    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
-                                                        for b in bounds])
-    if res.fun > precision and not allow_error:
-        return None
-    return res.x
-
+from .solve import solve
 
 def add_phases(phase_shifter_fn, D):
     phases = []
@@ -128,7 +99,7 @@ def decompose_triangle(u,
                 x0 = [p.random() for p in params]
                 # look for a constraint solution first
                 for c in constraints:
-                    res = _solve(g, x0, list(c), bounds, precision, allow_error)
+                    res = solve(g, x0, list(c), bounds, precision, allow_error)
                     if res is not None:
                         break
                 if res is None:

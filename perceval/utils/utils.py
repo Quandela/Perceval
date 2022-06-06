@@ -29,7 +29,7 @@ in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.
 
 global_params = {
     "min_p": 1e-16,
-    "min_complex_component": 1e-8
+    "min_complex_component": 1e-6
 }
 
 try:
