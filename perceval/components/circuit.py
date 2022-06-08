@@ -25,15 +25,15 @@ from abc import ABC, abstractmethod
 import copy
 import random
 from typing import Callable, Literal, Optional, Union, Tuple, Type, List
-import perceval.algorithm as algorithm
-from perceval.algorithm.match import Match
-from perceval.algorithm.solve import solve
 
 import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
 from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, simple_float, Canvas, global_params
+from perceval.algorithm.decomposition import decompose_triangle, decompose_rectangle
+from perceval.algorithm.match import Match
+from perceval.algorithm.solve import solve
 
 
 def _matrix_double_for_polarization(m, u):
@@ -727,19 +727,18 @@ class Circuit(ACircuit):
             U = np.flipud(np.fliplr(U))
         N = U.shape[0]
         count = 0
-        if constraints is None:
-            constraints = [[None]*len(component.get_parameters())]
-        assert isinstance(constraints, list), "constraints should be a list of constraint"
-        for constraint in constraints:
-            assert isinstance(constraint, (list, tuple)) and len(constraint) == len(component.get_parameters()),\
-                "there should as many component in each constraint than free parameters in the component"
+        if constraints is not None:
+            assert isinstance(constraints, list), "constraints should be a list of constraint"
+            for constraint in constraints:
+                assert isinstance(constraint, (list, tuple)) and len(constraint) == len(component.get_parameters()),\
+                    "there should as many component in each constraint than free parameters in the component"
         while count < max_try:
             if shape == "triangle":
-                lc = algorithm.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
-                                                  constraints, allow_error=allow_error)
+                lc = decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
+                                        constraints, allow_error=allow_error)
             else:
-                lc = algorithm.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
-                                                   constraints, allow_error=allow_error)
+                lc = decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
+                                         constraints, allow_error=allow_error)
             if lc is not None:
                 C = Circuit(N)
                 for r, c in lc:

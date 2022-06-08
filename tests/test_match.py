@@ -57,7 +57,6 @@ def test_match_double():
     pattern = phys.BS() // phys.PS(pcvl.P("phi"))
     matched = bs.match(pattern)
     assert matched is not None
-    print(matched)
     assert pytest.approx(1/2) == matched.v_map.get("phi", None)
     assert matched.pos_map == {0: 0, 1: 1}
     bs = phys.BS() // (1, phys.PS(0.5))

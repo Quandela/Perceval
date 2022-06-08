@@ -20,23 +20,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from datetime import datetime
+
+import pytest
+
 import perceval as pcvl
+from perceval.algorithm.optimize import optimize
+from perceval.algorithm import fidelity
 import perceval.lib.phys as phys
 
 
-def test_permutation_3():
-    circuit =  phys.PERM([2, 0, 1])
-    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
-    s_circuit = simulator_backend(circuit)
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|1,0,0>")],
-                             output_states = "*")
-    assert ca.output_states_list[2] == pcvl.BasicState("|0, 0, 1>")
-    assert not((ca.distribution[0]-[0, 0, 1]).any())
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,1,0>")],
-                             output_states = "*")
-    assert ca.output_states_list[0] == pcvl.BasicState("|1, 0, 0>")
-    assert not((ca.distribution[0]-[1, 0, 0]).any())
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,0,1>")],
-                             output_states = "*")
-    assert ca.output_states_list[1] == pcvl.BasicState("|0, 1, 0>")
-    assert not((ca.distribution[0]-[0, 1, 0]).any())
+
+def test_optimize_1():
+    c = (pcvl.Circuit(3, name="rewrite")
+         // (0, phys.PS(pcvl.P("beta2")))
+         // (1, phys.PS(pcvl.P("beta1")))
+         // (1, phys.BS(theta=pcvl.P("alpha1")))
+         // (0, phys.BS(theta=pcvl.P("alpha2")))
+         // (1, phys.PS(pcvl.P("beta3")))
+         // (1, phys.BS(theta=pcvl.P("alpha3")))
+         // (0, phys.PS(pcvl.P("beta4")))
+         // (1, phys.PS(pcvl.P("beta5")))
+         // (2, phys.PS(pcvl.P("beta6"))))
+    v = pcvl.Matrix.random_unitary(3)
+    res = optimize(c, v, fidelity)
+    assert pytest.approx(1) == res.fun

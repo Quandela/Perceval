@@ -20,23 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import perceval.lib.phys as phys
+import numpy as np
+
+from perceval.utils.matrix import Matrix
 
 
-def test_permutation_3():
-    circuit =  phys.PERM([2, 0, 1])
-    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
-    s_circuit = simulator_backend(circuit)
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|1,0,0>")],
-                             output_states = "*")
-    assert ca.output_states_list[2] == pcvl.BasicState("|0, 0, 1>")
-    assert not((ca.distribution[0]-[0, 0, 1]).any())
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,1,0>")],
-                             output_states = "*")
-    assert ca.output_states_list[0] == pcvl.BasicState("|1, 0, 0>")
-    assert not((ca.distribution[0]-[1, 0, 0]).any())
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,0,1>")],
-                             output_states = "*")
-    assert ca.output_states_list[1] == pcvl.BasicState("|0, 1, 0>")
-    assert not((ca.distribution[0]-[0, 1, 0]).any())
+def fidelity(u: Matrix, v: Matrix) -> float:
+    u_dag = np.transpose(np.conjugate(u))
+    return abs(np.trace(u_dag @ v)) ** 2 / (u.shape[0] * np.trace(u_dag @ u))

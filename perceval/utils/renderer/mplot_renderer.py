@@ -109,7 +109,6 @@ class MplotCanvas(Canvas):
         plt.tight_layout()
         if "mplot_savefig" in self._opts:
             plt.savefig(self._opts["mplot_savefig"])
-            print("figure saved in %s" % self._opts["mplot_savefig"])
         if "mplot_noshow" not in self._opts or not self._opts["mplot_noshow"]:
             plt.show()
         plt.close(self._fig)

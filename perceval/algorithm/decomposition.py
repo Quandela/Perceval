@@ -29,6 +29,7 @@ from perceval.utils import Matrix, global_params
 
 from .solve import solve
 
+
 def add_phases(phase_shifter_fn, D):
     phases = []
     for idx in range(len(D)):
@@ -62,6 +63,9 @@ def decompose_triangle(u,
     params = component.get_parameters()
     params_symbols = [x.spv for x in params]
     bounds = [not x.is_periodic and x.bounds or None for x in params]
+
+    if constraints is None:
+        constraints = [[None] * len(params)]
 
     if precision is None:
         precision = global_params["min_complex_component"]
@@ -98,6 +102,7 @@ def decompose_triangle(u,
                 g = lambda *p: np.real(np.abs(f(*p)))
                 x0 = [p.random() for p in params]
                 # look for a constraint solution first
+                res = None
                 for c in constraints:
                     res = solve(g, x0, list(c), bounds, precision, allow_error)
                     if res is not None:

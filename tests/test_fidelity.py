@@ -20,23 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.algorithm as algorithm
 
 
-def test_permutation_3():
-    circuit =  phys.PERM([2, 0, 1])
-    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
-    s_circuit = simulator_backend(circuit)
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|1,0,0>")],
-                             output_states = "*")
-    assert ca.output_states_list[2] == pcvl.BasicState("|0, 0, 1>")
-    assert not((ca.distribution[0]-[0, 0, 1]).any())
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,1,0>")],
-                             output_states = "*")
-    assert ca.output_states_list[0] == pcvl.BasicState("|1, 0, 0>")
-    assert not((ca.distribution[0]-[1, 0, 0]).any())
-    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,0,1>")],
-                             output_states = "*")
-    assert ca.output_states_list[1] == pcvl.BasicState("|0, 1, 0>")
-    assert not((ca.distribution[0]-[0, 1, 0]).any())
+def test_fidelity():
+    for _ in range(5):
+        u = pcvl.MatrixN.random_unitary(5)
+        assert pytest.approx(1) == algorithm.fidelity(u, u)

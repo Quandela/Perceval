@@ -49,8 +49,8 @@ def solve(f, x0, constraint, bounds, precision, allow_error=False):
                 return None
             return [*res[:i], c, *res[i:]]
 
-    res = so.minimize(f, x0, method="L-BFGS-B" , bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
-                                                         for b in bounds])
+    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
+                                                        for b in bounds])
 
     if res.fun > precision and not allow_error:
         return None
