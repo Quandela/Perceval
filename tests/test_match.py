@@ -20,13 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
 import random
+
+import numpy as np
+import pytest
 
 import perceval as pcvl
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
-import numpy as np
+from perceval.algorithm.optimize import optimize
+from perceval.algorithm import frobenius
 
 
 def test_match_elementary():
@@ -110,3 +113,16 @@ def test_replace_R_by_theta_1():
         matched = a.match(p0b)
         assert matched
     assert pytest.approx(np.cos(random_theta)**2) == matched.v_map.get("R", None)
+
+
+def test_match_rewrite_phase():
+    a = phys.Circuit(1)//phys.PS(0.4)//phys.PS(1.4)
+    pattern2 = pcvl.Circuit(1, name="pattern") // phys.PS(pcvl.P("phi1")) // phys.PS(pcvl.P("phi2"))
+    rewrite2 = pcvl.Circuit(1, name="rewrite") // phys.PS(pcvl.P("phi"))
+    matched = a.match(pattern2)
+    for k, v in matched.v_map.items():
+        pattern2[k].set_value(v)
+    v = pattern2.compute_unitary(False)
+    res = optimize(rewrite2, v, frobenius, sign=-1)
+    assert pytest.approx(0+1) == res.fun+1
+    assert pytest.approx(v[0, 0]) == rewrite2.compute_unitary(False)[0, 0]

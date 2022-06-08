@@ -27,17 +27,20 @@ from perceval.utils import Matrix, P
 from scipy import optimize as scpy_optimize
 
 
-def _min_fnc(c: ACircuit, params: List[P], x: List[int], v: Optional[Matrix], f: Callable[[Matrix, Matrix], float]):
+def _min_fnc(c: ACircuit, params: List[P], x: List[int], v: Optional[Matrix],
+             f: Callable[[Matrix, Matrix], float], sign: float):
     for idx, p in enumerate(x):
         params[idx].set_value(p)
-    return -f(c.compute_unitary(use_symbolic=False), v)
+    value = f(c.compute_unitary(use_symbolic=False), v)
+    return -sign * value
 
 
 def optimize(c: ACircuit,
              v: Optional[Matrix],
              f: Callable[[Matrix, Matrix], float],
-             niter: float=10,
-             stepsize: float=0.1) -> scpy_optimize.OptimizeResult:
+             niter: int=10,
+             stepsize: float=0.1,
+             sign=1) -> scpy_optimize.OptimizeResult:
     r"""Optimize parameters of a circuit according to Callable function
 
     :param c: circuit with parameters to optimize
@@ -49,7 +52,7 @@ def optimize(c: ACircuit,
     """
     params = c.get_parameters()
     init_params = [p.random() for p in params]
-    res = scpy_optimize.basinhopping(lambda x: _min_fnc(c, params, x, v, f), init_params,
+    res = scpy_optimize.basinhopping(lambda x: _min_fnc(c, params, x, v, f, sign), init_params,
                                      niter=niter, stepsize=stepsize)
     res.fun = -res.fun
     return res

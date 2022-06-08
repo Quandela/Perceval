@@ -21,4 +21,4 @@
 # SOFTWARE.
 
 from .match import Match
-from .fidelity import fidelity
+from .fidelity import fidelity, frobenius

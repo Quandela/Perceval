@@ -146,6 +146,10 @@ class ACircuit(ABC):
         """
         return [v for v in self._params.values() if all_params or not v.fixed]
 
+    def reset_parameters(self):
+        for v in self._params.values():
+            v.reset()
+
     def _set_parameter(self,
                        name: str,
                        p: Union[Parameter, float],
@@ -294,6 +298,18 @@ class ACircuit(ABC):
 
     def get_variables(self, _=None):
         return []
+
+    def copy(self):
+        nc = copy.deepcopy(self)
+        if not isinstance(self, Circuit):
+            for k, p in nc._params.items():
+                nc._params[k] = Parameter(p.name, float(p), p.min, p.max, p.is_periodic)
+        else:
+            nc._params = {}
+            nc._components = []
+            for r, c in self._components:
+                nc._components.append((r, c.copy()))
+        return nc
 
     @property
     def vars(self):
@@ -832,7 +848,7 @@ class Circuit(ACircuit):
         sub_circuit = Circuit(len(sub_r), name=name is None and "pattern" or name)
         if color is not None:
             sub_circuit._color = color
-        for idx in lc:
+        for idx in sorted(lc):
             r, c = self._components[idx]
             sub_circuit.add(r[0]-sub_r[0], c)
         pidx = None

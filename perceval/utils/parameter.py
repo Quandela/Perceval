@@ -22,7 +22,6 @@
 
 import random
 import sympy as sp
-from .format import simple_float
 
 from typing import Tuple
 
@@ -123,6 +122,11 @@ class Parameter:
         self._symbol = None
         self._value = self._check_value(v, self._min, self._max, self._periodic)
 
+    def reset(self):
+        r"""Reset the value of a non-fixed parameter"""
+        if self._symbol:
+            self._value = None
+
     @property
     def defined(self) -> bool:
         r"""Return True if the parameter has a value (fixed or non fixed)
@@ -154,7 +158,7 @@ class Parameter:
     def bounds(self) -> Tuple[float, float]:
         r"""Minimal and maximal values for the parameter
         """
-        return (self._min, self._max)
+        return self._min, self._max
 
     @property
     def min(self):

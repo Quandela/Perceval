@@ -27,4 +27,12 @@ from perceval.utils.matrix import Matrix
 
 def fidelity(u: Matrix, v: Matrix) -> float:
     u_dag = np.transpose(np.conjugate(u))
-    return abs(np.trace(u_dag @ v)) ** 2 / (u.shape[0] * np.trace(u_dag @ u))
+    f = abs(np.trace(u_dag @ v)) ** 2 / (u.shape[0] * np.trace(u_dag @ u))
+    if isinstance(f, complex):
+        return f.real
+    else:
+        return f
+
+
+def frobenius(u: Matrix, v: Matrix) -> float:
+    return np.linalg.norm(u - v)
