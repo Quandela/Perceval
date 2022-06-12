@@ -26,7 +26,7 @@ import pytest
 
 import perceval as pcvl
 from perceval.algorithm.optimize import optimize
-from perceval.algorithm import fidelity, frobenius
+from perceval.algorithm.norm import fidelity, frobenius
 import perceval.lib.phys as phys
 
 

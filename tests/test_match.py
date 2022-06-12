@@ -29,7 +29,7 @@ import perceval as pcvl
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 from perceval.algorithm.optimize import optimize
-from perceval.algorithm import frobenius
+from perceval.algorithm import norm
 
 
 def test_match_elementary():
@@ -123,7 +123,7 @@ def test_match_rewrite_phase():
     for k, v in matched.v_map.items():
         pattern2[k].set_value(v)
     v = pattern2.compute_unitary(False)
-    res = optimize(rewrite2, v, frobenius, sign=-1)
+    res = optimize(rewrite2, v, norm.frobenius, sign=-1)
     assert pytest.approx(0+1) == res.fun+1
     assert pytest.approx(v[0, 0]) == rewrite2.compute_unitary(False)[0, 0]
 

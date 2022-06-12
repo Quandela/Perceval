@@ -23,10 +23,10 @@
 import pytest
 
 import perceval as pcvl
-import perceval.algorithm as algorithm
+import perceval.algorithm.norm as norm
 
 
 def test_fidelity():
     for _ in range(5):
         u = pcvl.MatrixN.random_unitary(5)
-        assert pytest.approx(1) == algorithm.fidelity(u, u)
+        assert pytest.approx(1) == norm.fidelity(u, u)

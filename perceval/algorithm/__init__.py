@@ -21,4 +21,4 @@
 # SOFTWARE.
 
 from .match import Match
-from .fidelity import fidelity, frobenius
+import perceval.algorithm.norm as norm
