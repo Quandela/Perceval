@@ -22,7 +22,7 @@
 
 from typing import Optional, Callable, List
 from perceval.components.circuit import ACircuit
-from perceval.utils import Matrix, P
+from perceval.utils import Matrix, P, global_params
 
 from scipy import optimize as scpy_optimize
 
@@ -35,24 +35,37 @@ def _min_fnc(c: ACircuit, params: List[P], x: List[int], v: Optional[Matrix],
     return -sign * value
 
 
+def _stop_criterion(f, f0, precision, accept):
+    if accept:
+        if abs(f-f0) < precision:
+            return True
+    return False
+
+
 def optimize(c: ACircuit,
              v: Optional[Matrix],
              f: Callable[[Matrix, Matrix], float],
-             niter: int=10,
-             stepsize: float=0.1,
+             niter: int = 20,
+             target_opt: float = 0,
+             precision: float = None,
              sign=1) -> scpy_optimize.OptimizeResult:
     r"""Optimize parameters of a circuit according to Callable function
 
     :param c: circuit with parameters to optimize
     :param v: the reference unitary, can be None, in such case the fidelity function should ignore the second parameter
     :param f: fidelity function - first parameter is the unitary of the circuit, second parameter is the reference one
-    :param n_iter: from `scipy.optimize.basinhopping`
-    :param stepsize: from `scipy.optimize.basinhopping`
+    :param niter: from `scipy.optimize.basinhopping`
+    :param sign: -1 to find maximal values
+    :param target_opt: optimal value for the function - used with `precision` for early stopping
+    :param precision: used with `target_opt` for early stopping
     :return: OptimizeResult from scipy library
     """
+    if precision is None:
+        precision = global_params["min_complex_component"]
     params = c.get_parameters()
     init_params = [p.random() for p in params]
     res = scpy_optimize.basinhopping(lambda x: _min_fnc(c, params, x, v, f, sign), init_params,
-                                     niter=niter, stepsize=stepsize)
-    res.fun = -res.fun
+                                     niter=niter,
+                                     callback=lambda _, f, accept: _stop_criterion(f, target_opt, precision, accept))
+    res.fun = res.fun*-sign
     return res

@@ -60,4 +60,5 @@ def test_optimize_frobenius():
          // (2, phys.PS(pcvl.P("beta6"))))
     v = pcvl.Matrix.random_unitary(3)
     res = optimize(c, v, frobenius, sign=-1)
+    # test that the frobenius norm is almost 0 (pytest.approx will not work with almost 0)
     assert pytest.approx(0.5) == res.fun+0.5

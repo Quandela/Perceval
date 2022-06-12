@@ -80,8 +80,8 @@ def test_match_rec():
 
 
 def test_match_rec_inv():
-    c = pcvl.Circuit(3)//(1, phys.BS())//(0, phys.BS())//(1, phys.BS())
-    pattern = pcvl.Circuit(3)//(0, phys.BS())//(1, phys.BS())//(0, phys.BS())
+    c = pcvl.Circuit(3) // (1, phys.BS()) // (0, phys.BS()) // (1, phys.BS())
+    pattern = pcvl.Circuit(3) // (0, phys.BS()) // (1, phys.BS()) // (0, phys.BS())
     matched = c.match(pattern)
     assert matched is None
 
@@ -116,7 +116,7 @@ def test_replace_R_by_theta_1():
 
 
 def test_match_rewrite_phase():
-    a = phys.Circuit(1)//phys.PS(0.4)//phys.PS(1.4)
+    a = phys.Circuit(1) // phys.PS(0.4) // phys.PS(1.4)
     pattern2 = pcvl.Circuit(1, name="pattern") // phys.PS(pcvl.P("phi1")) // phys.PS(pcvl.P("phi2"))
     rewrite2 = pcvl.Circuit(1, name="rewrite") // phys.PS(pcvl.P("phi"))
     matched = a.match(pattern2)
@@ -126,3 +126,28 @@ def test_match_rewrite_phase():
     res = optimize(rewrite2, v, frobenius, sign=-1)
     assert pytest.approx(0+1) == res.fun+1
     assert pytest.approx(v[0, 0]) == rewrite2.compute_unitary(False)[0, 0]
+
+
+def test_match_switch_phases():
+    a = phys.Circuit(2) // phys.PS(0.4) // phys.BS(R=0.45)
+    pattern3 = (pcvl.Circuit(2, name="pattern3") //
+                (0, phys.PS(pcvl.P("phi1"))) //
+                (1, phys.PS(pcvl.P("phip"))) //
+                (0, phys.BS(R=0.45)))
+    matched = a.match(pattern3, browse=True)
+    assert matched is None
+    a = phys.Circuit(2) // (0, phys.PS(0.4)) // (1, phys.PS(0.3)) // phys.BS(R=0.45)
+    matched = a.match(pattern3, browse=True)
+    assert matched is not None
+    assert pytest.approx(0.4) == matched.v_map["phi1"]
+    assert pytest.approx(0.3) == matched.v_map["phip"]
+    pattern3_check = (pcvl.Circuit(2, name="pattern3") //
+                      (1, phys.PS(pcvl.P("phip"))) //
+                      (0, phys.BS(R=0.45)))
+    a = phys.Circuit(2) // (1, phys.PS(0.3)) // (0, phys.PS(0.4)) // phys.BS(R=0.45)
+    matched = a.match(pattern3_check)
+    assert matched is not None and matched.pos_map == {0: 0, 2: 1}
+    matched = a.match(pattern3, browse=True)
+    assert matched is not None
+    assert pytest.approx(0.4) == matched.v_map["phi1"]
+    assert pytest.approx(0.3) == matched.v_map["phip"]

@@ -875,8 +875,19 @@ class Circuit(ACircuit):
                 nlc.append((r, c))
         self._components = nlc
 
+    def _check_brother_node(self, p0, p1):
+        r"""check that component at p0 is a brother node than component at p1 - p0 < p1
+        """
+        for p in range(p0, p1):
+            for qr in self._components[p][0]:
+                if qr in self._components[p1][0]:
+                    return False
+        return True
+
     def match(self, pattern: ACircuit, pos: int = None,
-              pattern_pos: int = 0, browse: bool = False, match: Match = None) -> Optional[Match]:
+              pattern_pos: int = 0, browse: bool = False,
+              match: Match = None,
+              actual_pos: int = None, actual_pattern_pos: int = None) -> Optional[Match]:
         r"""match a sub-circuit at a given position
 
         :param match: the partial match
@@ -885,14 +896,18 @@ class Circuit(ACircuit):
         :param pattern: the pattern to search for
         :param pos: the start position in the current circuit
         :param pattern_pos: the start position in the pattern
+        :param actual_pos: unused, parameter only used by parent class
+        :param actual_pattern_pos: unused, parameter only used by parent class
         :return:
         """
+        assert actual_pos is None and actual_pattern_pos is None, "invalid use of actual_*_pos parameters for Circuit"
         if browse:
-            assert pos is None, "cannot browse when giving start position"
+            if pos is None:
+                pos = 0
             l = []
             if self._Udef is not None:
                 l = [None]
-            l += list(range(len(self._components)))
+            l += list(range(pos, len(self._components)))
             for pos in l:
                 match = self.match(pattern, pos, pattern_pos)
                 if match is not None:
@@ -927,6 +942,48 @@ class Circuit(ACircuit):
                                                        actual_pos=pos, actual_pattern_pos=pattern_pos)
             if match is None:
                 return None
+            # if actual_pattern_pos is 0, we also have to match potential brother nodes
+            if pattern_pos == 0:
+                map_modes = set()
+                pattern_brother_nodes = {}
+                for qr in pattern._components[pattern_pos][0]: map_modes.add(qr)
+                for qc in range(1, len(pattern._components)):
+                    # either they are a sub-nodes
+                    r, _ = pattern._components[qc]
+                    overlap = False
+                    for qr in r:
+                        if qr in map_modes:
+                            overlap = True
+                            break
+                    if not overlap:
+                        pattern_brother_nodes[r[0] - pattern._components[pattern_pos][0][0]] = qc
+                    for qr in r:
+                        map_modes.add(qr)
+                    if len(map_modes) == pattern._m:
+                        break
+                for r_bn, p_bn in pattern_brother_nodes.items():
+                    # looking for a similar component starting on relative mode r_bn
+                    found_bn = False
+                    c_bn = pattern._components[p_bn][1]
+                    for qc in range(pos-1, -1, -1):
+                        r, c = self._components[qc]
+                        r0 = r[0] - self._components[pos][0][0]
+                        if r0 == r_bn and c.m == c_bn.m:
+                            found_bn = self._check_brother_node(qc, pos)
+                            break
+                    if not found_bn:
+                        for qc in range(pos+1, len(self._components)):
+                            r, c = self._components[qc]
+                            r0 = r[0] - self._components[pos][0][0]
+                            if r0 == r_bn and c.m == c_bn.m:
+                                found_bn = self._check_brother_node(pos, qc)
+                                break
+                    if not found_bn:
+                        return None
+                    match = self.match(pattern, qc, p_bn, False, match)
+                    if match is None:
+                        return None
+
             # now iterate through all subnodes of circuit[pos] - they should match equivalent sub nodes of self[pos]
             circuit_sub_nodes = pattern.find_subnodes(pattern_pos)
             self_sub_nodes = self.find_subnodes(pos)
