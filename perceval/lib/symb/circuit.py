@@ -43,7 +43,7 @@ class Circuit(GCircuit):
 class BS(ACircuit):
     _name = "BS"
     _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 2}
+    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, R=None, theta=None, phi=0):
         super().__init__(2)
@@ -92,17 +92,34 @@ class BS(ACircuit):
         parameters = self.get_variables(map_param_kid)
         return "symb.BS(%s)" % ", ".join(parameters)
 
+
+    #compact version
     width = 1
 
     def shape(self, content, canvas):
-        canvas.add_mpath(["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
-                          "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
-                          "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
-                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
-                          49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056],
-                         stroke="black", stroke_width=1)
+        canvas.add_mpath(
+            ["M", 6.4721, 25.0002, "c", 6.8548, 0, 6.8241, 24.9998, 13.6789, 24.9998, "m", 0.0009, 0, "c",
+             -6.8558, 0, -6.825, 24.9998, -13.6799, 24.9998, "m", 13.6799, -24.9998, "h", 10.9423, "m", 0,
+             0, "c", 6.8558, 0, 6.825, -24.9998, 13.6799, -24.9998, "m", -13.6799, 24.9998, "c", 6.8558, 0,
+             6.825, 24.9998, 13.6799, 24.9998, "m", -44.7741, -49.9998, "h", 6.5, "m", 0.0009, 49.9998, "h",
+             -6.5009, "m", 43.8227, 0, "h", 6.1773, "m", -6.4028, -50, "h", 6.4028],
+            stroke="black", stroke_width=1)
         canvas.add_text((50, 38), content, 7, "middle")
-        
+
+    """
+    #noncompact version
+    width = 2
+
+    def shape(self, content, canvas):
+        canvas.add_mpath(
+            ["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
+             "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
+             "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
+             13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
+             49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056],
+            stroke="black", stroke_width=2)
+        canvas.add_text((50, 38), content, 7, "middle")"""
+
     def inverse(self, v=False, h=False):
         if self._phi.is_symbolic():
             if v:
@@ -119,7 +136,7 @@ class PBS(ACircuit):
     _name = "PBS"
     _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 2}
+    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self):
         super().__init__(2)
@@ -138,51 +155,33 @@ class PBS(ACircuit):
     def describe(self, _=None):
         return "phys.PBS()"
 
-    width = 1
+    #compact version
+    width=1
+    def shape(self, content, canvas):
+        canvas.add_mpath(["M", 0, 25.1, "h", 11.049, "m", -11.049, 50, "h", 10.9375, "m", 27.9029, -50, "h", 11.1596,
+                          "m", -11.3283, 50, "h", 11.3283, "m", -11.3283, 0, "c", -10.0446, 0, -17.5781, -50, -27.7341,
+                          -50, "m", 27.9029, 0, "c", -10.7156, 0, -17.7467, 50, -27.7914, 50],
+                         stroke_width=1, stroke="#000")
+        canvas.add_mpath(["M", 30, 50, "l", -4.7404, -5.2543, "l", -4.7404, 5.2543, "l", 4.7404, 5.2543, "l",
+                          4.7404, -5.2543, "z", "m", 0.175, 0, "h", -9.6, "z"],
+                         stroke_width=1, fill="#fff")
 
+        canvas.add_text((50, 86), text=content, size=7, ta="middle")
+
+    """
+    #noncompactversion
+    width=2
     def shape(self, content, canvas):
         canvas.add_mpath(["M",0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
                           "m", -22.6566, 50, "h", 22.6566, "m", -22.6566, 0, "c", -20.0892, 0, -35.1561, -50, -55.4683,
                           -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50],
-                         stroke_width=2, stroke="#000")
+                         stroke_width=1, stroke="#000")
         canvas.add_mpath(["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
-                          -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=3, fill="#fff")
+                          -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=2, fill="#fff")
 
-        canvas.add_text((50, 86), text=content, size=7, ta="middle")
+        canvas.add_text((50, 86), text=content, size=7, ta="middle")"""
 
-class PBS(ACircuit):
-    _name = "PBS"
-    _fcircuit = Circuit
-    _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 2}
 
-    def __init__(self):
-        super().__init__(2)
-
-    def _compute_unitary(self, assign=None, use_symbolic=False):
-        self.assign(assign)
-        return Matrix([[0, 0, 1, 0],
-                       [0, 1, 0, 0],
-                       [1, 0, 0, 0],
-                       [0, 0, 0, 1]], use_symbolic)
-
-    def get_variables(self, map_param_kid=None):
-        return []
-
-    # TODO: make method static
-    def describe(self, _=None):
-        return "phys.PBS()"
-
-    width = 2
-
-    def shape(self, content, canvas):
-        canvas.add_mpath(["M",0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
-                          "m", -22.6566, 50, "h", 22.6566, "m", -22.6566, 0, "c", -20.0892, 0, -35.1561, -50, -55.4683,
-                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50], stroke_width=2, stroke="#000")
-        canvas.add_mpath(["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
-                          -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=3, fill="#fff")
-
-        canvas.add_text((50, 86), text=content, size=7, ta="middle")
 
 
 class DT(ACircuit):
@@ -228,7 +227,7 @@ class DT(ACircuit):
 class PS(ACircuit):
     _name = "PS"
     _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 2}
+    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, phi):
         super().__init__(1)
@@ -255,10 +254,11 @@ class PS(ACircuit):
     width = 1
 
     def shape(self, content, canvas):
-        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 15, 50, "h", 21, "v", -50, "h", -21, "z"],
-                         stroke="black", stroke_width=2,fill="lightgray")
-        canvas.add_text((27, 60), text=content.replace("phi=", "$\phi$="), size=7, ta="middle")
+        canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], stroke="black", stroke_width=1)
+        canvas.add_mpath(["M", 20, 40, "h", 10, "v", -30, "h", -10, "z"],
+                         stroke="black", stroke_width=1,fill="lightgray")
+        canvas.add_text((25, 50), text=content.replace("phi=", "$\phi$="), size=7, ta="middle")
+
 
     def inverse(self, v=False, h=False):
         if h:
@@ -271,7 +271,7 @@ class PS(ACircuit):
 class PERM(GCircuit):
     _name = "PERM"
     _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 2}
+    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, perm):
         assert isinstance(perm, list), "permutation Operator needs list parameter"
@@ -300,17 +300,17 @@ class PERM(GCircuit):
         for an_input, an_output in enumerate(self._perm):
             canvas.add_mpath(["M", 0, 24.8 + an_input * 50,
                               "C", 20, 25 + an_input * 50, 30, 25 + an_output * 50, 50, 25 + an_output * 50],
-                             stroke="white", stroke_width=4)
+                             stroke="white", stroke_width=2)
             canvas.add_mpath(["M", 0, 25 + an_input * 50,
                               "C", 20, 25 + an_input * 50, 30, 25 + an_output * 50, 50, 25 + an_output * 50],
-                             stroke="black", stroke_width=2)
+                             stroke="black", stroke_width=1)
 
 
 class WP(ACircuit):
     _name = "WP"
     _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 2}
+    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, delta, xsi):
         super().__init__(1)
@@ -357,8 +357,8 @@ class WP(ACircuit):
 
     def shape(self, content, canvas):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 15, 45, "h", 21, "v", -40, "h", -21, "z"], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=1)
+        canvas.add_mpath(["M", 15, 45, "h", 21, "v", -40, "h", -21, "z"], stroke="black", stroke_width=1)
         canvas.add_text((25, 55), text=params[0], size=7, ta="middle")
         canvas.add_text((25, 65), text=params[1], size=7, ta="middle")
 
@@ -370,9 +370,9 @@ class HWP(WP):
 
     def shape(self, content, canvas):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50],stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 20, 0, "v", 50], stroke="black", stroke_width=4)
-        canvas.add_mpath(["M", 30, 0, "v", 50], stroke="black", stroke_width=4)
+        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50],stroke="black", stroke_width=1)
+        canvas.add_mpath(["M", 20, 0, "v", 50], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 30, 0, "v", 50], stroke="black", stroke_width=2)
         canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
 
 
@@ -384,8 +384,8 @@ class QWP(WP):
 
     def shape(self, content, canvas):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 25, 0, "v", 50], stroke="black", stroke_width=4)
+        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], stroke="black", stroke_width=1)
+        canvas.add_mpath(["M", 25, 0, "v", 50], stroke="black", stroke_width=2)
         canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
 
 
@@ -394,7 +394,7 @@ class PR(ACircuit):
     _name = "PR"
     _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 2}
+    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, delta):
         super().__init__(1)
@@ -426,8 +426,8 @@ class PR(ACircuit):
     width = 1
 
     def shape(self, content, canvas):
-        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], stroke="black", stroke_width=2)
-        canvas.add_mpath(["M", 15, 36, "h", 22, "v", -22, "h", -22, "z"], stroke="black", stroke_width=2)
+        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], stroke="black", stroke_width=1)
+        canvas.add_mpath(["M", 15, 36, "h", 22, "v", -22, "h", -22, "z"], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 19, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
                           "l", 2.305, -2.821, "c", 0.107, -0.131, 0.057, -0.237, -0.112, -0.237,
                           "h", -1.22, "c", -0.169, 0, -0.284, -0.135, -0.247, -0.300,
