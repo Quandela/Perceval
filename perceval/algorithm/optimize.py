@@ -48,6 +48,7 @@ def optimize(c: ACircuit,
              niter: int = 20,
              target_opt: float = 0,
              precision: float = None,
+             n_try: int = 10,
              sign=1) -> scpy_optimize.OptimizeResult:
     r"""Optimize parameters of a circuit according to Callable function
 
@@ -63,9 +64,22 @@ def optimize(c: ACircuit,
     if precision is None:
         precision = global_params["min_complex_component"]
     params = c.get_parameters()
-    init_params = [p.random() for p in params]
-    res = scpy_optimize.basinhopping(lambda x: _min_fnc(c, params, x, v, f, sign), init_params,
-                                     niter=niter,
-                                     callback=lambda _, f, accept: _stop_criterion(f, target_opt, precision, accept))
-    res.fun = res.fun*-sign
+    best = None
+    best_x = None
+    while n_try > 0:
+        init_params = [p.random() for p in params]
+        temperature = 1.0
+        res = scpy_optimize.basinhopping(lambda x: _min_fnc(c, params, x, v, f, sign), init_params,
+                                         niter=niter,
+                                         T= temperature,
+                                         callback=lambda _, f, accept: _stop_criterion(f, target_opt, precision, accept))
+        if best is None or res.fun < best:
+            best = res.fun
+            best_x = res.x
+        if _stop_criterion(res.fun, target_opt, precision, True):
+            break
+        n_try -= 1
+        temperature *= 1.1
+    res.fun = best * -sign
+    res.x = best_x
     return res
