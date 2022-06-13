@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import math
+import numpy as np
 
 from perceval.utils import SVDistribution, StateVector
 from typing import Dict, Literal
@@ -28,58 +29,80 @@ from typing import Dict, Literal
 
 class Source:
     def __init__(self, brightness: float = 1,
-                 purity: float = 1,
-                 purity_model: Literal["random", "indistinguishable"] = "random",
+                 multiphoton_component: float = 0,
+                 multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
                  indistinguishability: float = 1,
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
                  context: Dict = None) -> None:
         r"""Definition of a source
 
-        :param brightness: the brightness of the source defined as the percentage of unique photon generation
-        :param purity: the ratio of time when photon is emitted alone
-        :param purity_model: `random` if additional photons are distinguishable, `indistinguishable` otherwise
+        :param brightness: the brightness of the source defined the probability per laser pulse to collect >1 photon at
+            the input of the circuit
+        :param multiphoton_component: second order intensity autocorrelation at zero time delay g^{(2)}(0)
+        :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
         :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
         :param indistinguishability_model: `homv` defines indistinguishability as HOM visibility, `linear` defines
             indistinguishability as ratio of indistinguishable photons
         :param context: gives a local context for source specific features, like `discernability_tag`
         """
         self.brightness = brightness
-        self.purity = purity
-        self._purity_model = purity_model
+        self.multiphoton_component = multiphoton_component
+        self._multiphoton_model = multiphoton_model
+        assert self._multiphoton_model in ["distinguishable", "indistinguishable"], "invalid value for purity_model"
         self.indistinguishability = indistinguishability
         self._indistinguishability_model = indistinguishability_model
         assert self._indistinguishability_model in ["homv", "linear"], "invalid value for indistinguishability_model"
         self._context = context or {}
+        # discernability_tag starts at 2. Label 0 is the single-photon. Label 1 is the distinguishable noise photon.
         if "discernability_tag" not in self._context:
-            self._context["discernability_tag"] = 1
+            self._context["discernability_tag"] = 2
 
     def probability_distribution(self):
         r"""returns SVDistribution on 1 mode associated to the source
         """
+        # g2 = 2p2/(p1+2p2)**2
+        # p1 + p2 = beta
+        # Approximation mean photon number = 1
+        # mu = p1 + 2p2 ~ 1
+        g2 = self.multiphoton_component
+        beta = self.brightness
+
+        p2 = min(np.poly1d([g2, -2 * (1 - g2*beta), g2*beta**2]).r)
+        p1 = self.brightness-p2
+
         svd = SVDistribution()
         if self.brightness != 1:
             svd[StateVector([0])] = 1-self.brightness
+
         if self._indistinguishability_model == "homv":
             distinguishability = 1-math.sqrt(self.indistinguishability)
         else:
             distinguishability = 1 - self.indistinguishability
+
         # Approximation distinguishable photons are pure
-        if self.purity != 1:
-            if distinguishability:
-                if self._purity_model == "random":
-                    random_feat = self._context["discernability_tag"]
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = self.brightness * (1 - self.purity)
-                    self._context["discernability_tag"] += 1
+        random_feat = self._context["discernability_tag"]
+        self._context["discernability_tag"] += 1
+        if p2 != 0:
+            if distinguishability != 0:
+                if self._multiphoton_model == "distinguishable":
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = (1-distinguishability)*2*p2
+                    svd[StateVector([2], {1: {"_": 1}, 2: {"_": random_feat}})] = distinguishability*2*p2
                 else:
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = self.brightness * (1 - self.purity)
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = (1-distinguishability)*2*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = distinguishability*2*p2
             else:
-                svd[StateVector([2])] = self.brightness*(1-self.purity)
-        if distinguishability:
-            random_feat = self._context["discernability_tag"]
-            self._context["discernability_tag"] += 1
-            svd[StateVector([1], {1: {"_": random_feat}})] = distinguishability*self.brightness*self.purity
-            svd[StateVector([1], {1: {"_": 0}})] = (1-distinguishability)*self.brightness*self.purity
+                if self._multiphoton_model == "distinguishable":
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = 2*p2
+                else:
+                    svd[StateVector([2])] = 2*p2
+
+        if distinguishability != 0:
+            svd[StateVector([1], {1: {"_": random_feat}})] = distinguishability*p1
+            svd[StateVector([1], {1: {"_": 0}})] = (1-distinguishability)*p1
         else:
-            svd[StateVector([1])] = (1-distinguishability)*self.brightness*self.purity
+            if p2 != 0:
+                svd[StateVector([1], {1: {"_": 0}})] = p1
+            else:
+                svd[StateVector([1])] = p1
 
         return svd

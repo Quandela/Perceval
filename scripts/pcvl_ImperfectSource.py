@@ -20,32 +20,38 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+r"""
+
+@Author: Mathias Pont (mathias.pont@c2n.upsaclay.fr)
+@Affiliation:
+Centre for Nanosciences and Nanotechnology, CNRS, Universite Paris-Saclay, UMR 9001,
+10 Boulevard Thomas Gobert,
+91120 Palaiseau, France
+
+Computes the output state probabilities of a Mach-Zehnder interferometer and compare to a theoretical model [1]
+
+[1] https://doi.org/10.1103/PhysRevLett.126.063602
 
 """
-@Author: Mathias Pont
-
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 import perceval as pcvl
 import perceval.lib.symb as symb
+import pytest
 
 
-def outputstate_to_outcome(state_ket):
+def outputstate_to_2outcome(output):
     """
-    :param state_ket: an output of the chip
+    :param output: an output of the chip
     :return: a measurable outcome
     """
-    state_list = []
-    for m in state_ket:
+    state = []
+    for m in output:
         if m.isdigit():
-            state_list.append(m)
-
-    state = tuple(state_list)
+            state.append(m)
 
     if int(state[0]) == 0 and int(state[1]) == 0:
-        return None
+        return '|0,0>'
     if int(state[0]) == 0 and int(state[1]) > 0:
         return '|0,1>'
     if int(state[0]) > 0 and int(state[1]) == 0:
@@ -54,194 +60,117 @@ def outputstate_to_outcome(state_ket):
         return '|1,1>'
 
 
-def mzi_AnnotatedBasicState_pcvl(input_state):
-    """
-    :param input_state: a ket in string. For example '|1,1>'
-    :return: plot
-    """
-    # Set up Perceval
-    simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+class QPU:
 
-    # Create a MZI interferometer
-    mzi_chip = pcvl.Circuit(m=2, name="mzi")
+    def __init__(self):
+        # Set up Perceval
+        self.simulator_backend = pcvl.BackendFactory().get_backend('Naive')
 
-    phases = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
+        # Create a MZI interferometer
+        self.mzi_chip = pcvl.Circuit(m=2, name="MZI")
 
-    (mzi_chip
-     .add(0, symb.PS(phases[0]))
-     .add((0, 1), symb.BS())
-     .add(0, symb.PS(phases[1]))
-     .add((0, 1), symb.BS())
+        self.phase_shifters = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
 
-     )
-    pcvl.pdisplay(mzi_chip)
+        (self.mzi_chip
+         .add(0, symb.PS(self.phase_shifters[0]))
+         .add((0, 1), symb.BS())
+         .add(0, symb.PS(self.phase_shifters[1]))
+         .add((0, 1), symb.BS())
+         )
 
-    # Initial phase set to zero
-    phases[0].set_value(0)
-
-    # The phase of the MZI
-    phases[1].set_value(np.pi)
-
-    # We run the simulator once with any phase (here pi) to get all the possible outputs.
-    sim = simulator_backend(mzi_chip.U)
-
-    ca = pcvl.CircuitAnalyser(sim,
-                              [pcvl.AnnotatedBasicState(input_state)],
-                              "*")
-    ca.compute()
-    nb_of_outputs = len(ca.output_states_list)
-
-    scan_range = np.arange(0, np.pi, 0.1)
-
-    # We initialise a list to store each output probability as a function of the phase phi2
-    output = [[] for i in range(nb_of_outputs)]
-
-    for theta in scan_range:
-
-        # Set the phase of the MZI
-        phases[1].set_value(theta)
-
-        # Run the analyser
-        sim = simulator_backend(mzi_chip.U)
-        ca = pcvl.CircuitAnalyser(sim,
-                                  [pcvl.AnnotatedBasicState(input_state)],
-                                  "*")
-
-        ca.compute()
-
-        # Append the result to the ouput to plot
-        for i in range(len(output)):
-            output[i].append(ca._distribution[0][i])
-
-    plt.figure()
-    for i, out in enumerate(output):
-        plt.plot(scan_range, out, '-o', label=ca.output_states_list[i])
-    plt.xlabel('Phase [rad]', fontsize=20)
-    plt.ylabel('Probability', fontsize=20)
-    plt.grid()
-    plt.legend()
-    plt.show()
+        # Initial phase set to zero
+        self.phase_shifters[0].set_value(0)
+        # Internal phase set to pi/2
+        self.phase_shifters[1].set_value(np.pi / 2)
 
 
-def mzi_ImperfectSource_pcvl(beta, g2, V):
-    """
-    Here we suppose that we only have access to click detectors. All the outputs of the chip will be either a single
-    click on one of the detector or a double click. We compute the probability of each of these outcomes.
-    output -> what come out of the chip (|2,2>, |2,1>, |3,1>, ...)
-    outcome -> what we can measure with our SNSPD detectors
-
-    :param beta: source brightness
-    :param g2: 1-single-photon purity
-    :param V: Indistinguishability
-    :return: plot and visibility of the HOM
-    """
-
-    # Set up Perceval
-    simulator_backend = pcvl.BackendFactory().get_backend('Naive')
-
-    # Create a MZI interferometer
-    mzi_chip = pcvl.Circuit(m=2, name="mzi")
-
-    phases = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
-
-    (mzi_chip
-     .add(0, symb.PS(phases[0]))
-     .add((0, 1), symb.BS())
-     .add(0, symb.PS(phases[1]))
-     .add((0, 1), symb.BS())
-
-     )
-
-    # Initial phase set to zero
-    phases[0].set_value(0)
-
+def compute(qpu, beta, g2, M):
     # Find out all the unput states that must be considered depending on the characteristics of the source
-    source = pcvl.Source(brightness=beta,
-                         purity=1 - g2,
-                         indistinguishability=V)
+    sps = pcvl.Source(brightness=beta,
+                      multiphoton_component=g2,
+                      multiphoton_model="distinguishable",
+                      indistinguishability=M,
+                      indistinguishability_model="homv")  # "homv", or "linear"
 
-    p = pcvl.Processor({0: source,
-                        1: source
-                        },
-                       mzi_chip)
-
-    input_states_dict = {str(k): v for k, v in p.source_distribution.items()}
-
-    # Scan phi2 over the range scan_range to show the HOM dip.
-    scan_range = np.arange(0, np.pi, 0.1)
-    to_plot = [[], [], []]
-    label = ['|1,0>', '|1,1>', '|0,1>']
-
-    for theta in scan_range:
-
-        # All outcome are initialize to 0 probability
-        outcome = {'|1,0>': 0,
-                   '|1,1>': 0,
-                   '|0,1>': 0
-                   }
-
-        for input_n in input_states_dict:
-
-            phases[1].set_value(theta)
-            sim = simulator_backend(mzi_chip.U)
-            ca = pcvl.CircuitAnalyser(sim,
-                                      [pcvl.AnnotatedBasicState(input_n)],
-                                      "*")
-
-            ca.compute()
-
-            for idx1, output_state in enumerate(ca.output_states_list):
-                # Each output is mapped to an outcome
-                result = outputstate_to_outcome(str(output_state))
-                # The probability of an outcome is added, weighted by the probability of this input
-                if result:
-                    outcome[result] += input_states_dict[input_n] * ca._distribution[0][idx1]
-
-        to_plot[0].append(outcome['|1,0>'])
-        to_plot[1].append(outcome['|1,1>'])
-        to_plot[2].append(outcome['|0,1>'])
-
-    plt.figure()
-    for idx2, out in enumerate(to_plot):
-        plt.plot(scan_range, out, '-o', label=label[idx2])
-    plt.xlabel('Phase [rad]', fontsize=20)
-    plt.ylabel('Probability', fontsize=20)
-    plt.grid()
-    plt.legend()
-
-    # Compute the outcome distribution specifically for ph2=pi/2
-
-    outcome = {'|1,0>': 0,
+    outcome = {'|0,0>': 0,
+               '|1,0>': 0,
                '|1,1>': 0,
                '|0,1>': 0
                }
 
-    for input_n in input_states_dict:
-        print(input_n, input_states_dict[input_n])
-        phases[1].set_value(np.pi / 2)
-        sim = simulator_backend(mzi_chip.U)
-        ca = pcvl.CircuitAnalyser(sim,
-                                  [pcvl.AnnotatedBasicState(input_n)],
-                                  "*")
+    p = pcvl.Processor({0: sps, 1: sps, }, qpu.mzi_chip)
 
-        ca.compute()
-        pcvl.pdisplay(ca)
+    input_states_dict = {str(k): v for k, v in p.source_distribution.items()}
 
-        for idx1, output_state in enumerate(ca.output_states_list):
-            result = outputstate_to_outcome(str(output_state))
-            if result:
-                outcome[result] += input_states_dict[input_n] * ca.distribution[0][idx1]
+    p2 = min(np.poly1d([g2 + 4 * g2 * (1 - beta), -2 * (1 - g2 * beta), g2 * beta ** 2]).r)
+    p1 = beta - p2
+    print((p1 + 2*p2)**2)
+    print(sum(p.source_distribution.values()))
 
-    to_plot[0].append(outcome['|1,0>'])
-    to_plot[1].append(outcome['|1,1>'])
-    to_plot[2].append(outcome['|0,1>'])
+    all_p, sv_out = p.run(qpu.simulator_backend)
 
-    v = 1 - 2 * outcome['|1,1>'] / (outcome['|1,0>'] + outcome['|0,1>'])
+    for output_state in sv_out:
+        # Each output is mapped to an outcome
+        result = outputstate_to_2outcome(str(output_state))
+        # The probability of an outcome is added, weighted by the probability of this input
+        outcome[result] += sv_out[output_state]
 
-    print(f'Visibility = {round(v, 4)}')
-    plt.show()
+    visibility = 1-2*(outcome['|1,1>'])
+
+    assert(pytest.approx(outcome['|0,0>']+outcome['|1,0>']+outcome['|1,1>']+outcome['|0,1>']) == 1)
+
+    return visibility
 
 
 if __name__ == '__main__':
-    mzi_ImperfectSource_pcvl(1, 0, 0.9)
-    pass
+
+    qpunit = QPU()
+
+    beta = 1
+    Nb = 10
+    X = np.array(np.linspace(0.0, 0.1, Nb))
+    Y = np.array(np.linspace(0.8, 1, Nb))
+    beta_axis = np.array(np.linspace(0.5, 1, Nb))
+
+    # V_HOM vs g2
+    z1 = [compute(qpunit, beta, g2, 1) for g2 in X]
+    # V_HOM vs M
+    z2 = [compute(qpunit, beta, 0, m) for m in Y]
+    # V_HOM vs beta
+    z3 = [compute(qpunit, beta, 0.05, 1) for beta in beta_axis]
+    # V_HOM vs g2 & M
+    Z = np.array([[compute(qpunit, beta, g2, M) for g2 in X] for M in Y])
+
+    Z_th = np.array([[M - (1 + M) * g2 for g2 in X] for M in Y])
+
+    # Plot the result
+    plt.figure()
+    plt.plot(X, z1, 's', label='simulation')
+    plt.plot(X, (1 - X) - X, label='model')
+    plt.grid()
+    plt.legend(fontsize=20)
+    plt.xlabel(r'$g^{(2)}(0)$', fontsize=20)
+    plt.ylabel(r'$V_{HOM}$', fontsize=20)
+
+    plt.figure()
+    plt.plot(Y, z2, 's', label='simulation')
+    plt.plot(Y, Y, label='model')
+    plt.grid()
+    plt.legend(fontsize=20)
+    plt.xlabel('M', fontsize=20)
+    plt.ylabel(r'$V_{HOM}$', fontsize=20)
+
+    plt.figure()
+    plt.plot(beta_axis, z3, 's', label='simulation')
+    plt.grid()
+    plt.legend(fontsize=20)
+    plt.xlabel(r'$\beta$', fontsize=20)
+    plt.ylabel(r'$V_{HOM}$', fontsize=20)
+
+    fig, ax = plt.subplots()
+    cf = ax.pcolormesh(X, Y, (Z - Z_th) * 100, shading='auto', cmap='GnBu')
+    ax.set_title('Simulation - Model', fontsize=24)
+    ax.set_xlabel(r'$g^{(2)}(0)$', fontsize=24)
+    ax.set_ylabel('Indistinguishability', fontsize=24)
+    fig.colorbar(cf, label=r'$V_{simu}-V_{model}$ [%]')
+    ax.tick_params(direction='in', bottom=True, top=True, left=True, right=True, labelsize=16)
