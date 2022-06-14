@@ -92,33 +92,26 @@ class BS(ACircuit):
         parameters = self.get_variables(map_param_kid)
         return "symb.BS(%s)" % ", ".join(parameters)
 
-
-    #compact version
-    width = 1
-
-    def shape(self, content, canvas):
-        canvas.add_mpath(
-            ["M", 6.4721, 25.0002, "c", 6.8548, 0, 6.8241, 24.9998, 13.6789, 24.9998, "m", 0.0009, 0, "c",
-             -6.8558, 0, -6.825, 24.9998, -13.6799, 24.9998, "m", 13.6799, -24.9998, "h", 10.9423, "m", 0,
-             0, "c", 6.8558, 0, 6.825, -24.9998, 13.6799, -24.9998, "m", -13.6799, 24.9998, "c", 6.8558, 0,
-             6.825, 24.9998, 13.6799, 24.9998, "m", -44.7741, -49.9998, "h", 6.5, "m", 0.0009, 49.9998, "h",
-             -6.5009, "m", 43.8227, 0, "h", 6.1773, "m", -6.4028, -50, "h", 6.4028],
-            stroke="black", stroke_width=1)
-        canvas.add_text((50, 38), content, 7, "middle")
-
-    """
-    #noncompact version
     width = 2
 
-    def shape(self, content, canvas):
-        canvas.add_mpath(
-            ["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
-             "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
-             "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
-             13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
-             49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056],
-            stroke="black", stroke_width=2)
-        canvas.add_text((50, 38), content, 7, "middle")"""
+    def get_width(self, compact: bool = False):
+        return self.width/2 if compact else self.width
+
+    def shape(self, content, canvas, compact: bool = False):
+        if compact:
+            path_data = ["M", 6.4721, 25.0002, "c", 6.8548, 0, 6.8241, 24.9998, 13.6789, 24.9998, "m", 0.0009, 0, "c",
+                         -6.8558, 0, -6.825, 24.9998, -13.6799, 24.9998, "m", 13.6799, -24.9998, "h", 10.9423, "m", 0,
+                         0, "c", 6.8558, 0, 6.825, -24.9998, 13.6799, -24.9998, "m", -13.6799, 24.9998, "c", 6.8558, 0,
+                         6.825, 24.9998, 13.6799, 24.9998, "m", -44.7741, -49.9998, "h", 6.5, "m", 0.0009, 49.9998, "h",
+                         -6.5009, "m", 43.8227, 0, "h", 6.1773, "m", -6.4028, -50, "h", 6.4028]
+        else:
+            path_data = ["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
+                         "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
+                         "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
+                         13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
+                         49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056]
+        canvas.add_mpath(path_data, stroke="black", stroke_width=1 if compact else 2)
+        canvas.add_text((25*self.get_width(compact), 38), content, 7, "middle")
 
     def inverse(self, v=False, h=False):
         if self._phi.is_symbolic():
@@ -155,33 +148,27 @@ class PBS(ACircuit):
     def describe(self, _=None):
         return "phys.PBS()"
 
-    #compact version
-    width=1
-    def shape(self, content, canvas):
-        canvas.add_mpath(["M", 0, 25.1, "h", 11.049, "m", -11.049, 50, "h", 10.9375, "m", 27.9029, -50, "h", 11.1596,
+    width = 2
+
+    def get_width(self, compact: bool = False) -> int:
+        return self.width/2 if compact else self.width
+
+    def shape(self, content, canvas, compact: bool = False):
+        if compact:
+            path_data1 = ["M", 0, 25.1, "h", 11.049, "m", -11.049, 50, "h", 10.9375, "m", 27.9029, -50, "h", 11.1596,
                           "m", -11.3283, 50, "h", 11.3283, "m", -11.3283, 0, "c", -10.0446, 0, -17.5781, -50, -27.7341,
-                          -50, "m", 27.9029, 0, "c", -10.7156, 0, -17.7467, 50, -27.7914, 50],
-                         stroke_width=1, stroke="#000")
-        canvas.add_mpath(["M", 30, 50, "l", -4.7404, -5.2543, "l", -4.7404, 5.2543, "l", 4.7404, 5.2543, "l",
-                          4.7404, -5.2543, "z", "m", 0.175, 0, "h", -9.6, "z"],
-                         stroke_width=1, fill="#fff")
-
-        canvas.add_text((50, 86), text=content, size=7, ta="middle")
-
-    """
-    #noncompactversion
-    width=2
-    def shape(self, content, canvas):
-        canvas.add_mpath(["M",0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
+                          -50, "m", 27.9029, 0, "c", -10.7156, 0, -17.7467, 50, -27.7914, 50]
+            path_data2 = ["M", 30, 50, "l", -4.7404, -5.2543, "l", -4.7404, 5.2543, "l", 4.7404, 5.2543, "l",
+                          4.7404, -5.2543, "z", "m", 0.175, 0, "h", -9.6, "z"]
+        else:
+            path_data1 = ["M", 0, 25.1, "h", 22.0981, "m", -22.0981, 50, "h", 21.8751, "m", 55.8057, -50, "h", 22.3192,
                           "m", -22.6566, 50, "h", 22.6566, "m", -22.6566, 0, "c", -20.0892, 0, -35.1561, -50, -55.4683,
-                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50],
-                         stroke_width=1, stroke="#000")
-        canvas.add_mpath(["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
-                          -10.5087, "z", "m", 0.35, 0, "h",-19.2, "z"],stroke_width=2, fill="#fff")
-
-        canvas.add_text((50, 86), text=content, size=7, ta="middle")"""
-
-
+                          -50, "m", 55.8057, 0, "c", -21.4311, 0, -35.4935, 50, -55.5827, 50]
+            path_data2 = ["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
+                          -10.5087, "z", "m", 0.35, 0, "h", -19.2, "z"]
+        canvas.add_mpath(path_data1, stroke_width=1, stroke="#000")
+        canvas.add_mpath(path_data2, stroke_width=1 if compact else 2, fill="#fff")
+        canvas.add_text((25*self.get_width(compact), 86), text=content, size=7, ta="middle")
 
 
 class DT(ACircuit):
@@ -210,7 +197,7 @@ class DT(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         canvas.add_circle((34, 14), 11, stroke="white", stroke_width=3)
         canvas.add_circle((34, 14), 11, stroke="black", stroke_width=2)
         canvas.add_circle((25, 14), 11, stroke="white", stroke_width=3)
@@ -253,7 +240,7 @@ class PS(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 20, 40, "h", 10, "v", -30, "h", -10, "z"],
                          stroke="black", stroke_width=1,fill="lightgray")
@@ -295,7 +282,7 @@ class PERM(GCircuit):
     def definition(self):
         return self.U
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         lines = []
         for an_input, an_output in enumerate(self._perm):
             canvas.add_mpath(["M", 0, 24.8 + an_input * 50,
@@ -355,7 +342,7 @@ class WP(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
         canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 15, 45, "h", 21, "v", -40, "h", -21, "z"], stroke="black", stroke_width=1)
@@ -368,7 +355,7 @@ class HWP(WP):
     def __init__(self, xsi):
         super().__init__(sp.pi/2, xsi)
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
         canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50],stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 20, 0, "v", 50], stroke="black", stroke_width=2)
@@ -382,7 +369,7 @@ class QWP(WP):
     def __init__(self, xsi):
         super().__init__(sp.pi/4, xsi)
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
         canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 25, 0, "v", 50], stroke="black", stroke_width=2)
@@ -425,7 +412,7 @@ class PR(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 15, 36, "h", 22, "v", -22, "h", -22, "z"], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 19, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
