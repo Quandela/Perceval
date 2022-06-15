@@ -31,7 +31,7 @@ import sympy as sp
 import scipy.optimize as so
 
 from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, simple_float, Canvas, global_params
-from perceval.algorithm.decomposition import decompose_triangle, decompose_rectangle
+import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
 
@@ -750,11 +750,11 @@ class Circuit(ACircuit):
                     "there should as many component in each constraint than free parameters in the component"
         while count < max_try:
             if shape == "triangle":
-                lc = decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
-                                        constraints, allow_error=allow_error)
+                lc = decomposition.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
+                                                      constraints, allow_error=allow_error)
             else:
-                lc = decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
-                                         constraints, allow_error=allow_error)
+                lc = decomposition.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
+                                                       constraints, allow_error=allow_error)
             if lc is not None:
                 C = Circuit(N)
                 for r, c in lc:
