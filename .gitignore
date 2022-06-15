@@ -1,0 +1,4 @@
+.pytest_cache
+__pycache__
+perceval_quandela.egg-info
+build

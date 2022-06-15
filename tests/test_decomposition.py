@@ -40,9 +40,9 @@ def test_perm_0():
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, phase_shifter_fn=symb.PS, shape="triangle",
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, phase_shifter_fn=symb.PS, shape="triangle",
                                     permutation=symb.PERM)
-    assert C1.describe().replace("\n", "").replace(" ", "") == """
+    assert c1.describe().replace("\n", "").replace(" ", "") == """
         Circuit(4).add([0, 1], symb.PERM([1, 0]))
                   .add([1, 2], symb.PERM([1, 0]))
                   .add([2, 3], symb.PERM([1, 0]))
@@ -57,24 +57,24 @@ def test_basic_perm_triangle():
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
-    M1 = C1.compute_unitary(use_symbolic=False)
-    assert pytest.approx(1, rel=1e-3) == abs(M1[0][0])+1
-    assert pytest.approx(2, rel=1e-3) == abs(M1[0][1])+1
-    assert pytest.approx(2, rel=1e-3) == abs(M1[1][0])+1
-    assert pytest.approx(1, rel=1e-3) == abs(M1[1][1])+1
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
+    m1 = c1.compute_unitary(use_symbolic=False)
+    assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
+    assert pytest.approx(2, rel=1e-3) == abs(m1[0][1])+1
+    assert pytest.approx(2, rel=1e-3) == abs(m1[1][0])+1
+    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
 
 
 def test_basic_perm_triangle_bs():
     c = pcvl.Circuit(2).add(0, symb.PERM([1, 0]))
     ub = (pcvl.Circuit(2)
           // symb.BS(theta=pcvl.Parameter("theta")))
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
-    M1 = C1.compute_unitary(use_symbolic=False)
-    assert pytest.approx(1, rel=1e-3) == abs(M1[0][0])+1
-    assert pytest.approx(2, rel=1e-3) == abs(M1[0][1])+1
-    assert pytest.approx(2, rel=1e-3) == abs(M1[1][0])+1
-    assert pytest.approx(1, rel=1e-3) == abs(M1[1][1])+1
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
+    m1 = c1.compute_unitary(use_symbolic=False)
+    assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
+    assert pytest.approx(2, rel=1e-3) == abs(m1[0][1])+1
+    assert pytest.approx(2, rel=1e-3) == abs(m1[1][0])+1
+    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
 
 
 @pytest.mark.skip(reason="rectangular decomposition not implemented")
@@ -85,12 +85,12 @@ def test_basic_perm_rectangle():
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
           // symb.BS())
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    M1 = C1.compute_unitary(use_symbolic=False)
-    assert pytest.approx(1, rel=1e-3) == abs(M1[0][0])+1
-    assert pytest.approx(1, rel=1e-3) == abs(M1[0][1])
-    assert pytest.approx(1, rel=1e-3) == abs(M1[1][0])
-    assert pytest.approx(1, rel=1e-3) == abs(M1[1][1])+1
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    m1 = c1.compute_unitary(use_symbolic=False)
+    assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
+    assert pytest.approx(1, rel=1e-3) == abs(m1[0][1])
+    assert pytest.approx(1, rel=1e-3) == abs(m1[1][0])
+    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
 
 
 def test_perm_triangle():
@@ -100,10 +100,10 @@ def test_perm_triangle():
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-    M = c.compute_unitary(False)
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
-    M1 = C1.compute_unitary(False)
-    np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
+    m = c.compute_unitary(False)
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
+    m1 = c1.compute_unitary(False)
+    np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
 
 
 @pytest.mark.skip(reason="rectangular decomposition not implemented")
@@ -112,10 +112,10 @@ def test_perm_rectangle_bs_0():
     ub = (pcvl.Circuit(2)
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS(theta=pcvl.P("theta")))
-    M = c.compute_unitary(False)
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    M1 = C1.compute_unitary(False)
-    np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
+    m = c.compute_unitary(False)
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    m1 = c1.compute_unitary(False)
+    np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
 
 
 @pytest.mark.skip(reason="rectangular decomposition not implemented")
@@ -124,12 +124,12 @@ def test_perm_rectangle_bs_1():
     ub = (pcvl.Circuit(2)
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS(theta=pcvl.P("theta")))
-    M = c.compute_unitary(False)
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(0, None)])
-    M1 = C1.compute_unitary(False)
-    np.testing.assert_array_almost_equal(abs(M), abs(M1), decimal=6)
-    C2 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(None, 0)])
-    assert C2 is None
+    m = c.compute_unitary(False)
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(0, None)])
+    m1 = c1.compute_unitary(False)
+    np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
+    c2 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle", constraints=[(None, 0)])
+    assert c2 is None
 
 
 @pytest.mark.skip(reason="rectangular decomposition not implemented")
@@ -141,8 +141,8 @@ def test_id_decomposition_rectangle():
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
           // symb.BS())
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), C1.compute_unitary(False), decimal=6)
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
+    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), c1.compute_unitary(False), decimal=6)
 
 
 def test_id_decomposition_triangle():
@@ -153,88 +153,89 @@ def test_id_decomposition_triangle():
           // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
-    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), C1.compute_unitary(False), decimal=6)
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
+    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), c1.compute_unitary(False), decimal=6)
 
 
 def test_any_unitary_triangle():
     with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
-        M = pcvl.Matrix(f)
+        m = pcvl.Matrix(f)
         ub = (pcvl.Circuit(2)
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
-        assert C1 is not None
-        np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
+        c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
+        assert c1 is not None
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
 
 
 def test_any_unitary_triangle_bad_ud():
     with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
-        M = pcvl.Matrix(f)
+        m = pcvl.Matrix(f)
         ub = (pcvl.Circuit(2)
               // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
               // symb.BS())
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
-        assert C1 is None
+        c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=10)
+        assert c1 is None
+
 
 @pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_any_unitary_rectangle():
     with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
-        M = pcvl.Matrix(f)
+        m = pcvl.Matrix(f)
         ub = (pcvl.Circuit(2)
               // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
               // symb.BS())
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="rectangle", max_try=10)
-        assert C1 is not None
-        np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
+        c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=symb.PS, shape="rectangle", max_try=10)
+        assert c1 is not None
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
 
 
 def test_simple_phase():
-    for M in [pcvl.Matrix([[0, 1j], [1, 0]]), pcvl.Matrix([[0, 1j], [-1, 0]]), pcvl.Matrix([[1j, 0], [0, -1]])]:
+    for m in [pcvl.Matrix([[0, 1j], [1, 0]]), pcvl.Matrix([[0, 1j], [-1, 0]]), pcvl.Matrix([[1j, 0], [0, -1]])]:
         ub = (pcvl.Circuit(2)
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_a"))))
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=5)
-        assert C1 is not None
-        np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
+        c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=5)
+        assert c1 is not None
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
 
 
 def test_decompose_non_unitary():
-    M = np.array([[(i and j) and (i+j*1j)/np.sqrt(i*i+j*j) or 0 for i in range(5)] for j in range(5)])
+    m = np.array([[(i and j) and (i+j*1j)/np.sqrt(i*i+j*j) or 0 for i in range(5)] for j in range(5)])
     ub = (pcvl.Circuit(2)
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_b")))
           // symb.BS()
           // (0, symb.PS(phi=pcvl.Parameter("φ_a"))))
     with pytest.raises(ValueError):
-        pcvl.Circuit.decomposition(M, ub, shape="triangle", max_try=5)
+        pcvl.Circuit.decomposition(m, ub, shape="triangle", max_try=5)
 
 
 def test_decomposition_large():
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
-        M = pcvl.Matrix(f)
+        m = pcvl.Matrix(f)
         ub = (pcvl.Circuit(2)
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_a")))
               // symb.BS()
               // (0, symb.PS(phi=pcvl.Parameter("φ_b"))))
-        C1 = pcvl.Circuit.decomposition(M, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=1)
-        assert C1 is not None
-        np.testing.assert_array_almost_equal(M, C1.compute_unitary(False), decimal=6)
+        c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=symb.PS, shape="triangle", max_try=1)
+        assert c1 is not None
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
 
 
 def test_decomposition_perm():
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")),
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")),
                                     phase_shifter_fn=symb.PS)
-    assert C1 is not None
+    assert c1 is not None
 
 
 def test_decomposition_inverse_symb():
