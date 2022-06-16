@@ -34,8 +34,8 @@ class Circuit(GCircuit):
     def __init__(self, m=None, U=None, name=None):
         super().__init__(m=m, U=U, name=name)
 
-    stroke_style = {"stroke": "black", "stroke_width": 2}
-    subcircuit_width = 2
+    stroke_style = {"stroke": "black", "stroke_width": 1}
+    subcircuit_width = 1
     subcircuit_fill = 'white'
     subcircuit_stroke_style = {"stroke": "black", "stroke_width": 1}
 
@@ -110,7 +110,7 @@ class BS(ACircuit):
                          "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
                          49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056]
-        canvas.add_mpath(path_data, stroke="black", stroke_width=1 if compact else 2)
+        canvas.add_mpath(path_data, stroke="black", stroke_width=1)
         canvas.add_text((25*self.get_width(compact), 38), content, 7, "middle")
 
     def inverse(self, v=False, h=False):
@@ -167,7 +167,7 @@ class PBS(ACircuit):
             path_data2 = ["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l", 9.4807,
                           -10.5087, "z", "m", 0.35, 0, "h", -19.2, "z"]
         canvas.add_mpath(path_data1, stroke_width=1, stroke="#000")
-        canvas.add_mpath(path_data2, stroke_width=1 if compact else 2, fill="#fff")
+        canvas.add_mpath(path_data2, stroke_width=1, fill="#fff")
         canvas.add_text((25*self.get_width(compact), 86), text=content, size=7, ta="middle")
 
     def inverse(self, v=False, h=False):

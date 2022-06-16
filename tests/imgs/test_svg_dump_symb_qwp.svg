@@ -10,7 +10,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.5.2, https://matplotlib.org/</dc:title>
+      <dc:title></dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -32,18 +32,18 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.743802 144
 L 76.964876 144
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 76.964876 144
 L 76.964876 144
 L 76.964876 144
 L 211.035124 144
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 144 76.964876
 L 144 211.035124
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 4"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
     <path d="M 211.035124 144
 L 251.256198 144
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
    </g>
    <g id="text_1">
     <!-- 0 -->

@@ -10,7 +10,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.5.2, https://matplotlib.org/</dc:title>
+      <dc:title></dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -32,21 +32,21 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.743802 144
 L 76.964876 144
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 76.964876 144
-L 117.18595 144
-M 173.495455 144
-L 213.716529 144
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
-    <path d="M 117.18595 211.035124
-L 173.495455 211.035124
-L 173.495455 76.964876
-L 117.18595 76.964876
-L 117.18595 211.035124
-" clip-path="url(#staticClipPath)" style="fill: #d3d3d3; stroke: #000000; stroke-width: 2"/>
+L 130.592975 144
+M 157.407025 144
+L 211.035124 144
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
+    <path d="M 130.592975 184.221074
+L 157.407025 184.221074
+L 157.407025 103.778926
+L 130.592975 103.778926
+L 130.592975 184.221074
+" clip-path="url(#staticClipPath)" style="fill: #d3d3d3; stroke: #000000"/>
     <path d="M 211.035124 144
 L 251.256198 144
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
    </g>
    <g id="text_1">
     <!-- 0 -->
@@ -79,7 +79,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\phi$=pi/2 -->
-    <g transform="translate(114.18781 237.849174)scale(0.21 -0.21)">
+    <g transform="translate(108.825 211.035124)scale(0.21 -0.21)">
      <defs>
       <path id="DejaVuSans-Oblique-3d5" d="M 2991 4863
 L 2738 3572
