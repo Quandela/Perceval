@@ -22,7 +22,6 @@
 
 import random
 import sympy as sp
-from .format import simple_float
 
 from typing import Tuple
 
@@ -100,15 +99,20 @@ class Parameter:
             raise ValueError("value %f out of bound [%f,%f]", v, min_v, max_v)
         return v
 
-    def set_value(self, v: float):
+    def check_value(self, v):
+        return self._check_value(v, self._min, self._max, self._periodic)
+
+    def set_value(self, v: float, force: bool = False):
         r"""Define the value of a non-fixed parameter
 
         :param v: the value
+        :param force: enable to set a fixed parameter
         :raise: `RuntimeError` if the parameter is fixed
         """
-        if self.fixed:
-            raise RuntimeError("cannot set fixed parameter")
-        self._value = self._check_value(v, self._min, self._max, self._periodic)
+        v = self._check_value(v, self._min, self._max, self._periodic)
+        if self.fixed and not force:
+            raise RuntimeError("cannot set fixed parameter", v, self._value)
+        self._value = v
 
     def fix_value(self, v):
         r"""Fix the value of a non-fixed parameter
@@ -117,6 +121,11 @@ class Parameter:
         """
         self._symbol = None
         self._value = self._check_value(v, self._min, self._max, self._periodic)
+
+    def reset(self):
+        r"""Reset the value of a non-fixed parameter"""
+        if self._symbol:
+            self._value = None
 
     @property
     def defined(self) -> bool:
@@ -149,7 +158,7 @@ class Parameter:
     def bounds(self) -> Tuple[float, float]:
         r"""Minimal and maximal values for the parameter
         """
-        return (self._min, self._max)
+        return self._min, self._max
 
     @property
     def min(self):

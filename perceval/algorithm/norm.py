@@ -20,12 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import QPrinter
-from .parameter import Parameter, P
-from .utils import pdisplay, global_params
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+import numpy as np
+
+from perceval.utils.matrix import Matrix
+
+
+def fidelity(u: Matrix, v: Matrix) -> float:
+    u_dag = np.transpose(np.conjugate(u))
+    f = abs(np.trace(u_dag @ v)) ** 2 / (u.shape[0] * np.trace(u_dag @ u))
+    if isinstance(f, complex):
+        return f.real
+    else:
+        return f
+
+
+def frobenius(u: Matrix, v: Matrix) -> float:
+    return np.linalg.norm(u - v)
