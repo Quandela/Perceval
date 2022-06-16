@@ -84,13 +84,14 @@ class QPU:
         self.phase_shifters[1].set_value(np.pi / 2)
 
 
-def compute(qpu, beta, g2, M):
+def compute(qpu, beta, g2, M, multiphoton_model="distinguishable"):
     # Find out all the unput states that must be considered depending on the characteristics of the source
     sps = pcvl.Source(brightness=beta,
                       multiphoton_component=g2,
-                      multiphoton_model="distinguishable",
+                      multiphoton_model=multiphoton_model,
                       indistinguishability=M,
-                      indistinguishability_model="homv")  # "homv", or "linear"
+                      indistinguishability_model="homv",
+                      transmission=1)  # "homv", or "linear"
 
     outcome = {'|0,0>': 0,
                '|1,0>': 0,
@@ -102,75 +103,94 @@ def compute(qpu, beta, g2, M):
 
     input_states_dict = {str(k): v for k, v in p.source_distribution.items()}
 
-    p2 = min(np.poly1d([g2 + 4 * g2 * (1 - beta), -2 * (1 - g2 * beta), g2 * beta ** 2]).r)
-    p1 = beta - p2
-    print((p1 + 2*p2)**2)
-    print(sum(p.source_distribution.values()))
+    # print(input_states_dict)
+    # print(sum(p.source_distribution.values()))
+    # assert(pytest.approx(sum(p.source_distribution.values())) == 1)
 
     all_p, sv_out = p.run(qpu.simulator_backend)
 
     for output_state in sv_out:
+        # print(str(output_state), str(sv_out[output_state]))
         # Each output is mapped to an outcome
         result = outputstate_to_2outcome(str(output_state))
         # The probability of an outcome is added, weighted by the probability of this input
         outcome[result] += sv_out[output_state]
 
-    visibility = 1-2*(outcome['|1,1>'])
-
-    assert(pytest.approx(outcome['|0,0>']+outcome['|1,0>']+outcome['|1,1>']+outcome['|0,1>']) == 1)
+    visibility = 1 - 2 * outcome['|1,1>'] / (outcome['|0,0>'] + outcome['|1,0>'] + outcome['|1,1>'] + outcome['|0,1>'])
+    assert (pytest.approx(outcome['|0,0>'] + outcome['|1,0>'] + outcome['|1,1>'] + outcome['|0,1>']) == 1)
 
     return visibility
 
 
 if __name__ == '__main__':
-
     qpunit = QPU()
 
-    beta = 1
-    Nb = 10
-    X = np.array(np.linspace(0.0, 0.1, Nb))
-    Y = np.array(np.linspace(0.8, 1, Nb))
+    mu = 1
+    Nb = 100
+    X = np.array(np.linspace(0.0, 0.3, Nb))
+    Y = np.array(np.linspace(0.5, 1, Nb))
     beta_axis = np.array(np.linspace(0.5, 1, Nb))
 
     # V_HOM vs g2
-    z1 = [compute(qpunit, beta, g2, 1) for g2 in X]
-    # V_HOM vs M
-    z2 = [compute(qpunit, beta, 0, m) for m in Y]
-    # V_HOM vs beta
-    z3 = [compute(qpunit, beta, 0.05, 1) for beta in beta_axis]
-    # V_HOM vs g2 & M
-    Z = np.array([[compute(qpunit, beta, g2, M) for g2 in X] for M in Y])
-
-    Z_th = np.array([[M - (1 + M) * g2 for g2 in X] for M in Y])
+    z11 = [compute(qpunit, mu, g2, 1, multiphoton_model="indistinguishable") for g2 in X]
+    z12 = [compute(qpunit, mu, g2, 1, multiphoton_model="distinguishable") for g2 in X]
+    z1_th1 = [1 - g2 for g2 in X]
+    z1_th2 = [1 - 2 * g2 for g2 in X]
 
     # Plot the result
     plt.figure()
-    plt.plot(X, z1, 's', label='simulation')
-    plt.plot(X, (1 - X) - X, label='model')
+
+    plt.plot(X, z11, 's', label='simulation indistinguishable', color='firebrick')
+    plt.plot(X, z1_th1, label='model indistinguishable', color='firebrick')
+
+    plt.plot(X, z12, 's', label='simulation distinguishable', color='seagreen')
+    plt.plot(X, z1_th2, label='model distinguishable', color='seagreen')
+
     plt.grid()
     plt.legend(fontsize=20)
-    plt.xlabel(r'$g^{(2)}(0)$', fontsize=20)
-    plt.ylabel(r'$V_{HOM}$', fontsize=20)
+    plt.xlabel(r'$g^{(2)}(0)$', fontsize=30)
+    plt.ylabel(r'$V_{HOM}$', fontsize=30)
+    plt.tick_params(direction='in', bottom=True, top=True, left=True, right=True, labelsize=28)
 
-    plt.figure()
-    plt.plot(Y, z2, 's', label='simulation')
-    plt.plot(Y, Y, label='model')
-    plt.grid()
-    plt.legend(fontsize=20)
-    plt.xlabel('M', fontsize=20)
-    plt.ylabel(r'$V_{HOM}$', fontsize=20)
+    plot_all = False
+    if plot_all:
+        # V_HOM vs M
+        z2 = [compute(qpunit, mu, 0, m) for m in Y]
+        z2_th = Y
+        # V_HOM vs beta
+        z3 = [compute(qpunit, beta, 0.016, 1) for beta in beta_axis]
+        # V_HOM vs g2 & M
+        Z = np.array([[compute(qpunit, mu, g2, M) for g2 in X] for M in Y])
+        Z2 = np.array([[compute(qpunit, mu, g2, 1) for g2 in X] for mu in Y])
 
-    plt.figure()
-    plt.plot(beta_axis, z3, 's', label='simulation')
-    plt.grid()
-    plt.legend(fontsize=20)
-    plt.xlabel(r'$\beta$', fontsize=20)
-    plt.ylabel(r'$V_{HOM}$', fontsize=20)
+        Z_th = np.array([[M - (1 + M) * g2 for g2 in X] for M in Y])
+        plt.figure()
+        plt.plot(Y, z2, 's', label='simulation')
+        plt.plot(Y, z2_th, label='model')
+        plt.grid()
+        plt.legend(fontsize=20)
+        plt.xlabel('M', fontsize=20)
+        plt.ylabel(r'$V_{HOM}$', fontsize=20)
 
-    fig, ax = plt.subplots()
-    cf = ax.pcolormesh(X, Y, (Z - Z_th) * 100, shading='auto', cmap='GnBu')
-    ax.set_title('Simulation - Model', fontsize=24)
-    ax.set_xlabel(r'$g^{(2)}(0)$', fontsize=24)
-    ax.set_ylabel('Indistinguishability', fontsize=24)
-    fig.colorbar(cf, label=r'$V_{simu}-V_{model}$ [%]')
-    ax.tick_params(direction='in', bottom=True, top=True, left=True, right=True, labelsize=16)
+        plt.figure()
+        plt.plot(beta_axis, z3, 's', label='simulation')
+        plt.grid()
+        plt.legend(fontsize=20)
+        plt.xlabel(r'$\beta$', fontsize=20)
+        plt.ylabel(r'$V_{HOM}$', fontsize=20)
+
+        fig, ax = plt.subplots()
+        cf = ax.pcolormesh(X, Y, (Z - Z_th) * 100, shading='auto', cmap='GnBu')
+        ax.set_title('Simulation - Model', fontsize=24)
+        ax.set_xlabel(r'$g^{(2)}(0)$', fontsize=24)
+        ax.set_ylabel('Indistinguishability', fontsize=24)
+        fig.colorbar(cf, label=r'$V_{simu}-V_{model}$ [%]')
+        ax.tick_params(direction='in', bottom=True, top=True, left=True, right=True, labelsize=16)
+
+        fig, ax = plt.subplots()
+        cf = ax.pcolormesh(X, Y, Z2, shading='auto', cmap='GnBu')
+        ax.set_title('Simulation', fontsize=24)
+        ax.set_xlabel(r'$g^{(2)}(0)$', fontsize=24)
+        ax.set_ylabel('Losses', fontsize=24)
+        fig.colorbar(cf, label=r'$V_{simu}$ [%]')
+        ax.tick_params(direction='in', bottom=True, top=True, left=True, right=True, labelsize=16)

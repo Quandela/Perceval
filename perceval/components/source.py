@@ -33,6 +33,7 @@ class Source:
                  multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
                  indistinguishability: float = 1,
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
+                 overall_transmission: float = 1,
                  context: Dict = None) -> None:
         r"""Definition of a source
 
@@ -46,6 +47,7 @@ class Source:
         :param context: gives a local context for source specific features, like `discernability_tag`
         """
         self.brightness = brightness
+        self.overall_transmission = overall_transmission
         self.multiphoton_component = multiphoton_component
         self._multiphoton_model = multiphoton_model
         assert self._multiphoton_model in ["distinguishable", "indistinguishable"], "invalid value for purity_model"
@@ -62,20 +64,23 @@ class Source:
         """
         # g2 = 2p2/(p1+2p2)**2
         # p1 + p2 = beta
-        # Approximation mean photon number = 1
-        # mu = p1 + 2p2 ~ 1
-        g2 = self.multiphoton_component
-        beta = self.brightness
+        # p1 + 2*p2 = mu
 
-        p2 = min(np.poly1d([g2, -2 * (1 - g2*beta), g2*beta**2]).r)
-        p1 = self.brightness-p2
+        g2 = self.multiphoton_component
+        mu = self.brightness
+        eta = self.overall_transmission
+
+        beta = mu - g2 * mu ** 2 / 2
+        # p2 = g2 * mu ** 2 / 2
+        p2 = min(np.poly1d([g2, -2 * (1 - g2 * beta), g2 * beta ** 2]).r)
+        p1 = beta - p2
 
         svd = SVDistribution()
-        if self.brightness != 1:
-            svd[StateVector([0])] = 1-self.brightness
+        # if beta != 1:
+        # svd[StateVector([0])] = 1-beta
 
         if self._indistinguishability_model == "homv":
-            distinguishability = 1-math.sqrt(self.indistinguishability)
+            distinguishability = 1 - math.sqrt(self.indistinguishability)
         else:
             distinguishability = 1 - self.indistinguishability
 
@@ -85,24 +90,24 @@ class Source:
         if p2 != 0:
             if distinguishability != 0:
                 if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = (1-distinguishability)*2*p2
-                    svd[StateVector([2], {1: {"_": 1}, 2: {"_": random_feat}})] = distinguishability*2*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = eta ** 2 * (1 - distinguishability) * 2 * p2
+                    svd[StateVector([2], {1: {"_": 1}, 2: {"_": random_feat}})] = eta ** 2 * distinguishability * 2 * p2
                 else:
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = (1-distinguishability)*2*p2
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = distinguishability*2*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta ** 2 * (1 - distinguishability) * 2 * p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = eta ** 2 * distinguishability * 2 * p2
             else:
                 if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = 2*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = eta ** 2 * 2 * p2
                 else:
-                    svd[StateVector([2])] = 2*p2
+                    svd[StateVector([2])] = eta ** 2 * 2 * p2
 
         if distinguishability != 0:
-            svd[StateVector([1], {1: {"_": random_feat}})] = distinguishability*p1
-            svd[StateVector([1], {1: {"_": 0}})] = (1-distinguishability)*p1
+            svd[StateVector([1], {1: {"_": random_feat}})] = eta * distinguishability * p1
+            svd[StateVector([1], {1: {"_": 0}})] = eta * (1 - distinguishability) * p1
         else:
             if p2 != 0:
-                svd[StateVector([1], {1: {"_": 0}})] = p1
+                svd[StateVector([1], {1: {"_": 0}})] = eta * p1
             else:
-                svd[StateVector([1])] = p1
+                svd[StateVector([1])] = eta * p1
 
         return svd
