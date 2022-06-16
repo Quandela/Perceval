@@ -155,7 +155,7 @@ class ACircuit(ABC):
                        p: Union[Parameter, float],
                        min_v: float,
                        max_v: float,
-                       periodic: bool = True):
+                       periodic: bool = True) -> Parameter:
         """
             Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
             min/max value or a parameter defined by a value that we create on the fly
@@ -622,17 +622,17 @@ class Circuit(ACircuit):
         if h:
             _components.reverse()
         for rc in _components:
-            r, c = rc
+            range, component = rc
             if v:
-                if isinstance(r, int):
-                    r = [r]
+                if isinstance(range, int):
+                    range = [range]
                 else:
-                    r = list(r)
-                r.reverse()
-                r = [self._m - 1 - p for p in r]
+                    range = list(range)
+                range.reverse()
+                range = [self._m - 1 - p for p in range]
             if v or h:
-                c.inverse(v=v, h=h)
-            _new_components.append((r, c))
+                component.inverse(v=v, h=h)
+            _new_components.append((range, component))
         self._components = _new_components
 
     def compute_unitary(self,
@@ -734,6 +734,7 @@ class Circuit(ACircuit):
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :param max_try: number of times to try the decomposition
         :return: a circuit
+
         """
         if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
             raise(ValueError("decomposed matrix should be non symbolic unitary"))
@@ -757,8 +758,8 @@ class Circuit(ACircuit):
                                                        constraints, allow_error=allow_error)
             if lc is not None:
                 C = Circuit(N)
-                for r, c in lc:
-                    C.add(r, c, merge=merge)
+                for range, component in lc:
+                    C.add(range, component, merge=merge)
                 if inverse_v or inverse_h:
                     C.inverse(v=inverse_v, h=inverse_h)
                 return C
