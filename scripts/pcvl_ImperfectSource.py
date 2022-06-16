@@ -91,7 +91,7 @@ def compute(qpu, beta, g2, M, multiphoton_model="distinguishable"):
                       multiphoton_model=multiphoton_model,
                       indistinguishability=M,
                       indistinguishability_model="homv",
-                      transmission=1)  # "homv", or "linear"
+                      overall_transmission=1)  # "homv", or "linear"
 
     outcome = {'|0,0>': 0,
                '|1,0>': 0,
@@ -101,11 +101,10 @@ def compute(qpu, beta, g2, M, multiphoton_model="distinguishable"):
 
     p = pcvl.Processor({0: sps, 1: sps, }, qpu.mzi_chip)
 
-    input_states_dict = {str(k): v for k, v in p.source_distribution.items()}
-
-    # print(input_states_dict)
-    # print(sum(p.source_distribution.values()))
-    # assert(pytest.approx(sum(p.source_distribution.values())) == 1)
+    #input_states_dict = {str(k): v for k, v in p.source_distribution.items()}
+    #print(input_states_dict)
+    #print(sum(p.source_distribution.values()))
+    #assert(pytest.approx(sum(p.source_distribution.values())) == 1)
 
     all_p, sv_out = p.run(qpu.simulator_backend)
 

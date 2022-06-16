@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import math
-import numpy as np
 
 from perceval.utils import SVDistribution, StateVector
 from typing import Dict, Literal
@@ -71,13 +70,10 @@ class Source:
         eta = self.overall_transmission
 
         beta = mu - g2 * mu ** 2 / 2
-        # p2 = g2 * mu ** 2 / 2
-        p2 = min(np.poly1d([g2, -2 * (1 - g2 * beta), g2 * beta ** 2]).r)
+        p2 = g2 * mu ** 2 / 2
         p1 = beta - p2
 
         svd = SVDistribution()
-        # if beta != 1:
-        # svd[StateVector([0])] = 1-beta
 
         if self._indistinguishability_model == "homv":
             distinguishability = 1 - math.sqrt(self.indistinguishability)
