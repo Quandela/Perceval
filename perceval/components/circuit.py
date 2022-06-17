@@ -371,10 +371,12 @@ class ACircuit(ABC):
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
                  recursive: bool = False,
                  dry_run: bool = False,
+                 compact: bool = False,
                  **opts):
         if parent_td is None:
             if not dry_run:
-                total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, **opts)
+                total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, compact,
+                                            **opts)
                 td = QPrinter(self._m, output_format=output_format, stroke_style=self.stroke_style,
                               total_width=total_width, total_height=self._m, **opts)
             else:
@@ -386,7 +388,7 @@ class ACircuit(ABC):
 
         if not isinstance(self, Circuit) or self._Udef is not None:
             description = self.get_variables(map_param_kid)
-            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
+            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description), compact)
 
         if self._components:
             if dry_run:
@@ -402,7 +404,7 @@ class ACircuit(ABC):
                     td.append_subcircuit(shiftr, c, "\n".join(description))
                 elif isinstance(c, ACircuit) or c._Udef is not None:
                     description = c.get_variables(map_param_kid)
-                    td.append_circuit(shiftr, c, "\n".join(description))
+                    td.append_circuit(shiftr, c, "\n".join(description), compact)
 
         td.extend_pos(0, self._m - 1)
 
@@ -496,10 +498,13 @@ class ACircuit(ABC):
     subcircuit_fill = 'lightpink'
     subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
 
-    def shape(self, content, canvas: Canvas):
+    def shape(self, content, canvas: Canvas, compact: bool = False):
         return """
             <rect x=0 y=5 width=100 height=%d fill="lightgray"/>
         """ % (self._m * 50 - 10)
+
+    def get_width(self, compact: bool = False):
+        return self.width
 
     def inverse(self, v, h):
         raise NotImplementedError("component has no inverse operator")
@@ -1007,7 +1012,7 @@ class Circuit(ACircuit):
                         fill=self.subcircuit_fill, **self.subcircuit_stroke_style)
         canvas.add_text((16, 16), content.upper(), 8)
 
-    def shape(self, _, canvas):
+    def shape(self, _, canvas, compact: bool = False):
         for i in range(self.m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
         canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")

@@ -10,7 +10,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.5.2, https://matplotlib.org/</dc:title>
+      <dc:title></dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -32,10 +32,10 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.904005 146.979159
 L 78.23385 146.979159
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 36.904005 284.745309
 L 78.23385 284.745309
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 78.23385 147.254691
 L 139.121253 147.254691
 M 78.23385 285.020841
@@ -48,7 +48,7 @@ M 291.339899 285.020841
 C 235.987664 285.020841 194.473488 147.254691 138.506816 147.254691
 M 292.269545 147.254691
 C 233.219942 147.254691 194.473488 285.020841 139.121253 285.020841
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 240.797907 215.862234
 L 214.675516 186.907371
 L 188.553125 215.862234
@@ -58,13 +58,13 @@ L 240.797907 215.862234
 M 241.76227 215.862234
 L 188.860068 215.862234
 L 240.797907 215.862234
-" clip-path="url(#staticClipPath)" style="fill: #ffffff; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#staticClipPath)" style="fill: #ffffff; stroke: #000000"/>
     <path d="M 353.76615 146.979159
 L 395.095995 146.979159
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 353.76615 284.745309
 L 395.095995 284.745309
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
    </g>
    <g id="text_1">
     <!-- 0 -->

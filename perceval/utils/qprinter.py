@@ -217,14 +217,14 @@ class GraphicPrinter:
             self._chart[p] = maxpos
         return maxpos
 
-    def append_circuit(self, lines, circuit, content):
+    def append_circuit(self, lines, circuit, content, compact=False):
         # opening the box
         start = lines[0]
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
-        w = circuit.width
+        w = circuit.get_width(compact)
         self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        circuit.shape(content, self._canvas)
+        circuit.shape(content, self._canvas, compact)
         for i in range(start, end+1):
             self._chart[i] += w
 

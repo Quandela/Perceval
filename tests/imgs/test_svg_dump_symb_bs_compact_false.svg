@@ -10,7 +10,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.5.2, https://matplotlib.org/</dc:title>
+      <dc:title></dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -32,10 +32,10 @@ z
    <g id="PatchCollection_1">
     <path d="M 36.904005 147.117201
 L 78.23385 147.117201
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 36.904005 284.88335
 L 78.23385 284.88335
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 113.899302 147.117752
 C 151.673678 147.117752 151.504226 216.000276 189.278602 216.000276
 M 189.283837 216.000276
@@ -54,13 +54,13 @@ M 319.724961 284.882799
 L 353.76615 284.882799
 M 318.482586 147.11665
 L 353.76615 147.11665
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 353.76615 147.117201
 L 395.095995 147.117201
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
     <path d="M 353.76615 284.88335
 L 395.095995 284.88335
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #000000"/>
    </g>
    <g id="text_1">
     <!-- 0 -->
