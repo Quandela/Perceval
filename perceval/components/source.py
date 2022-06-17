@@ -41,8 +41,9 @@ class Source:
         :param multiphoton_component: second order intensity autocorrelation at zero time delay g^{(2)}(0)
         :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
         :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
-        :param indistinguishability_model: `homv` defines indistinguishability as HOM visibility, `linear` defines
-            indistinguishability as ratio of indistinguishable photons
+        :param indistinguishability_model: `homv` defines indistinguishability as 2-photon wavepacket overlap,
+            `linear` defines indistinguishability as ratio of indistinguishable photons
+        :param overall_transmission: transmission of the optical system.
         :param context: gives a local context for source specific features, like `discernability_tag`
         """
         self.brightness = brightness
@@ -61,9 +62,9 @@ class Source:
     def probability_distribution(self):
         r"""returns SVDistribution on 1 mode associated to the source
         """
-        # g2 = 2p2/(p1+2p2)**2
-        # p1 + p2 = beta
-        # p1 + 2*p2 = mu
+            # g2 = 2p2/(p1+2p2)**2
+            # p1 + p2 = beta
+            # p1 + 2*p2 = mu
 
         g2 = self.multiphoton_component
         mu = self.brightness
