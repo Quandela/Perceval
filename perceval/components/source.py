@@ -28,8 +28,9 @@ from typing import Dict, Literal
 
 class Source:
     def __init__(self, brightness: float = 1,
-                 multiphoton_component: float = 0,
+                 multiphoton_component: float = None,
                  multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
+                 purity: float = None,
                  indistinguishability: float = 1,
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
                  overall_transmission: float = 1,
@@ -38,14 +39,23 @@ class Source:
 
         :param brightness: the brightness of the source defined the probability per laser pulse to collect >1 photon at
             the input of the circuit
-        :param multiphoton_component: second order intensity autocorrelation at zero time delay g^{(2)}(0)
-        :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
+        :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
+        :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable`
+          otherwise
+        :param purity: preserved for back-compatibility if multiphoton_model is not set. :math:`purity = 1-g^{(2)}(0)`
         :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
         :param indistinguishability_model: `homv` defines indistinguishability as 2-photon wavepacket overlap,
             `linear` defines indistinguishability as ratio of indistinguishable photons
         :param overall_transmission: transmission of the optical system.
         :param context: gives a local context for source specific features, like `discernability_tag`
         """
+        if multiphoton_component is None:
+            if purity is None:
+                multiphoton_component = 0
+            else:
+                multiphoton_component = 1 - purity
+        else:
+            assert purity is None, "cannot set both purity and multiphoton_component"
         self.brightness = brightness
         self.overall_transmission = overall_transmission
         self.multiphoton_component = multiphoton_component
