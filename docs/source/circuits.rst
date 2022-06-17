@@ -377,3 +377,33 @@ circuit is using :ref:`Parameters` or not, the unitary matrix will be symbolic o
 :math:`\left[\begin{matrix}\frac{\sqrt{2} \left(- e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} i \left(- e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{2}} + 1\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{2}} + 1\right)}{4}\\\frac{\sqrt{2} i \left(e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} \left(1 - e^{i \phi_{2}}\right)}{4} & \frac{\sqrt{2} i \left(1 - e^{i \phi_{2}}\right)}{4}\\\frac{\sqrt{2} i \left(- e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} \left(- e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{4}} + 1\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{4}} + 1\right)}{4}\\- \frac{\sqrt{2} \left(e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} i \left(1 - e^{i \phi_{4}}\right)}{4} & \frac{\sqrt{2} \left(1 - e^{i \phi_{4}}\right)}{4}\end{matrix}\right]`
 
 See :meth:`perceval.components.circuit.Circuit.compute_unitary` for more information.
+
+Circuit Rewriting
+-----------------
+
+To enable circuit rewriting operations introduced in :cite:p:`clement2022lov`, the following methods are available for
+matching a specific pattern in a circuit, and to replace the corresponding sub-circuit by an equivalent circuit.
+
+The complete sequence is the following:
+
+>>> while True:
+...    # identify one instance of the parameterized "pattern" within a circuit
+...    matched = circuit.match(pattern, browse=True)
+...    # check if an occurence was found
+...    if matched is None:
+...       break
+...    # transform the list of matched components into a sub-circuit
+...    idx = a.isolate(list(matched.pos_map.keys()))
+...    # check if an equivalent "rewrite" circuit can be found
+...    res = optimize(rewrite, v, frobenius, sign=-1)
+...    # check if we can rewrite this pattern closely enough to original circuit, here with frobenius distance
+...    if res.fun > 1e-6:
+...        break
+...    # replace the subcircuit by a copy of the pattern
+...    a.replace(idx, rewrite.copy(), merge=True)
+...    # reset all parameters of pattern and rewrite circuit that have been instantiated by
+...    # the matching/optimize process
+...    pattern.reset_parameters()
+...    rewrite.reset_parameters()
+
+See *Reference to Notebook* for a complete functional example.
