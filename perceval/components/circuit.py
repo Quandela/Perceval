@@ -378,9 +378,9 @@ class ACircuit(ABC):
                 total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, compact,
                                             **opts)
                 td = QPrinter(self._m, output_format=output_format, stroke_style=self.stroke_style,
-                              total_width=total_width, total_height=self._m, **opts)
+                              total_width=total_width, total_height=self._m, compact=compact, **opts)
             else:
-                td = QPrinter(self._m, output_format="html", stroke_style=self.stroke_style, **opts)
+                td = QPrinter(self._m, output_format="html", stroke_style=self.stroke_style, compact=compact, **opts)
         else:
             td = parent_td
         if map_param_kid is None:
@@ -388,7 +388,7 @@ class ACircuit(ABC):
 
         if not isinstance(self, Circuit) or self._Udef is not None:
             description = self.get_variables(map_param_kid)
-            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description), compact)
+            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
 
         if self._components:
             if dry_run:
@@ -404,7 +404,7 @@ class ACircuit(ABC):
                     td.append_subcircuit(shiftr, c, "\n".join(description))
                 elif isinstance(c, ACircuit) or c._Udef is not None:
                     description = c.get_variables(map_param_kid)
-                    td.append_circuit(shiftr, c, "\n".join(description), compact)
+                    td.append_circuit(shiftr, c, "\n".join(description))
 
         td.extend_pos(0, self._m - 1)
 

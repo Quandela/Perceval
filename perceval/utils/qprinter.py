@@ -165,7 +165,8 @@ class TextPrinter:
 class GraphicPrinter:
     affix_port_size = 15
     affix_all_size = 25
-    def __init__(self, nsize, canvas: Canvas, stroke_style):
+
+    def __init__(self, nsize, canvas: Canvas, stroke_style, compact_rendering=False):
         self._stroke_style = stroke_style
         self._nsize = nsize
         # first position available for row n
@@ -179,6 +180,7 @@ class GraphicPrinter:
             self._canvas.add_text((0, 25 + 50 * k), str(k), 6, ta="left")
         self._current_block_open_offset = None
         self._current_block_name = ""
+        self._compact = compact_rendering
 
     def open_subblock(self, lines, name, area=None, color=None):
         start = lines[0]
@@ -217,14 +219,14 @@ class GraphicPrinter:
             self._chart[p] = maxpos
         return maxpos
 
-    def append_circuit(self, lines, circuit, content, compact=False):
+    def append_circuit(self, lines, circuit, content):
         # opening the box
         start = lines[0]
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
-        w = circuit.get_width(compact)
+        w = circuit.get_width(self._compact)
         self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        circuit.shape(content, self._canvas, compact)
+        circuit.shape(content, self._canvas, self._compact)
         for i in range(start, end+1):
             self._chart[i] += w
 
@@ -255,7 +257,7 @@ class GraphicPrinter:
         return self._canvas.draw()
 
 
-def QPrinter(n, output_format="text", stroke_style="", **opts):
+def QPrinter(n, output_format="text", stroke_style="", compact=False, **opts):
     if output_format == "text":
         return TextPrinter(n)
     elif output_format == "latex":
@@ -264,4 +266,4 @@ def QPrinter(n, output_format="text", stroke_style="", **opts):
         canvas = SVGRenderer().new_canvas(**opts)
     else:
         canvas = MplotRenderer().new_canvas(**opts)
-    return GraphicPrinter(n, canvas, stroke_style)
+    return GraphicPrinter(n, canvas, stroke_style, compact)
