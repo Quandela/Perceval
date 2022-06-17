@@ -20,4 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .decomposition import decompose_triangle, decompose_rectangle
+from .match import Match
+import perceval.algorithm.norm as norm

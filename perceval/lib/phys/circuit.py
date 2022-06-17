@@ -63,8 +63,8 @@ class BS(ACircuit):
         self.assign(assign)
         if use_symbolic:
             if "R" in self.params:
-                cos_theta = sp.sqrt(1-self._R.spv)
-                sin_theta = sp.sqrt(self._R.spv)
+                cos_theta = sp.sqrt(self._R.spv)
+                sin_theta = sp.sqrt(1-self._R.spv)
             else:
                 cos_theta = sp.cos(self._theta.spv)
                 sin_theta = sp.sin(self._theta.spv)
@@ -73,8 +73,8 @@ class BS(ACircuit):
                            [sin_theta*sp.exp(phi_c*sp.I)*sp.I, cos_theta*sp.exp(self._phi_d.spv*sp.I)]], True)
         else:
             if "R" in self.params:
-                cos_theta = np.sqrt(1-float(self._R))
-                sin_theta = np.sqrt(float(self._R))
+                cos_theta = np.sqrt(float(self._R))
+                sin_theta = np.sqrt(1-float(self._R))
             else:
                 cos_theta = np.cos(float(self._theta))
                 sin_theta = np.sin(float(self._theta))
@@ -397,8 +397,8 @@ class PERM(GCircuit):
         self._perm = perm
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
-        for i, v in enumerate(perm):
-            u[i, v] = sp.S(1)
+        for v, i in enumerate(perm):
+            u[i, v] = 1
         super().__init__(n, U=u)
         self.width = 1
 

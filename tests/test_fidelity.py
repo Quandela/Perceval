@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import QPrinter
-from .parameter import Parameter, P
-from .utils import pdisplay, global_params
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+import pytest
+
+import perceval as pcvl
+import perceval.algorithm.norm as norm
+
+
+def test_fidelity():
+    for _ in range(5):
+        u = pcvl.MatrixN.random_unitary(5)
+        assert pytest.approx(1) == norm.fidelity(u, u)

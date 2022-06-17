@@ -267,6 +267,5 @@ def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
 
 
 def test_svg_decomposition_symb(tmp_path, save_figs):
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")),
-                                    phase_shifter_fn=symb.PS)
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")))
     _save_or_check(C1, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
