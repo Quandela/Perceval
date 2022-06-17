@@ -2,3 +2,4 @@ numpy
 quandelibc
 tabulate
 pytest
+drawSvg

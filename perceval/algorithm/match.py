@@ -20,12 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import QPrinter
-from .parameter import Parameter, P
-from .utils import pdisplay, global_params
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+class Match:
+    def __init__(self):
+        self._v_map = {}
+        self._pos_map = {}
+
+    @property
+    def matched(self):
+        return len(self._pos_map) != 0
+
+    @property
+    def v_map(self):
+        return self._v_map
+
+    @property
+    def pos_map(self):
+        return self._pos_map
+
+    @pos_map.setter
+    def pos_map(self, v):
+        self._pos_map = v
+
+    def __str__(self):
+        return "pos_map: %s, params: %s" % (self._pos_map, self._v_map)

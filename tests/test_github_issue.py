@@ -20,12 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import QPrinter
-from .parameter import Parameter, P
-from .utils import pdisplay, global_params
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+import pytest
+
+import numpy as np
+
+import perceval as pcvl
+import perceval.lib.phys as phys
+
+
+def test_34():
+    bs = phys.BS(theta=0, phi_a=0, phi_b=np.pi/2, phi_d=np.pi)
+    C = phys.Circuit(4, name='phase')
+    C.add((2,3), bs)
+    pcvl.pdisplay(C)  # looks good
+    simulator_backend = pcvl.BackendFactory().get_backend("Naive")
+    simu = simulator_backend(C.compute_unitary())
+    state = pcvl.BasicState([1,1,1,1])
+    pa = simu.probampli(state, pcvl.BasicState([1,1,1,1]))
+    assert pytest.approx(-1) == pa.real
+    assert pytest.approx(1) == abs(pa)

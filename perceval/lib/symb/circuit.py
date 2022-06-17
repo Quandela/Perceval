@@ -60,8 +60,8 @@ class BS(ACircuit):
         self.assign(assign)
         if use_symbolic:
             if "R" in self.params:
-                cos_theta = sp.sqrt(1-self._R.spv)
-                sin_theta = sp.sqrt(self._R.spv)
+                cos_theta = sp.sqrt(self._R.spv)
+                sin_theta = sp.sqrt(1-self._R.spv)
             else:
                 cos_theta = sp.cos(self._theta.spv)
                 sin_theta = sp.sin(self._theta.spv)
@@ -69,8 +69,8 @@ class BS(ACircuit):
                            [sin_theta*sp.exp(self._phi.spv*sp.I)*sp.I, cos_theta]], True)
         else:
             if "R" in self.params:
-                cos_theta = np.sqrt(1-float(self._R))
-                sin_theta = np.sqrt(float(self._R))
+                cos_theta = np.sqrt(float(self._R))
+                sin_theta = np.sqrt(1-float(self._R))
             else:
                 cos_theta = np.cos(float(self._theta))
                 sin_theta = np.sin(float(self._theta))
@@ -170,6 +170,18 @@ class PBS(ACircuit):
         canvas.add_mpath(path_data2, stroke_width=1, fill="#fff")
         canvas.add_text((25*self.get_width(compact), 86), text=content, size=7, ta="middle")
 
+    def inverse(self, v=False, h=False):
+        if self._phi.is_symbolic():
+            if v:
+                self._phi = -self._phi.spv
+            if h:
+                self._phi = self._phi.spv+sp.pi
+        else:
+            if v:
+                self._phi = -float(self._phi)
+            if h:
+                self._phi = float(self._phi)+np.pi
+
 
 class DT(ACircuit):
     _name = "DT"
@@ -254,7 +266,6 @@ class PS(ACircuit):
             else:
                 self._phi = -float(self._phi)
 
-
 class PERM(GCircuit):
     _name = "PERM"
     _fcircuit = Circuit
@@ -269,7 +280,7 @@ class PERM(GCircuit):
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
-            u[i, v] = sp.S(1)
+            u[v, i] = 1
         super().__init__(n, U=u)
         self.width = 1
 

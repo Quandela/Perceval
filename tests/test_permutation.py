@@ -20,12 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import QPrinter
-from .parameter import Parameter, P
-from .utils import pdisplay, global_params
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+import perceval as pcvl
+import perceval.lib.phys as phys
+
+
+def test_permutation_3():
+    circuit =  phys.PERM([2, 0, 1])
+    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
+    s_circuit = simulator_backend(circuit)
+    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|1,0,0>")],
+                             output_states = "*")
+    assert ca.output_states_list[2] == pcvl.BasicState("|0, 0, 1>")
+    assert not((ca.distribution[0]-[0, 0, 1]).any())
+    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,1,0>")],
+                             output_states = "*")
+    assert ca.output_states_list[0] == pcvl.BasicState("|1, 0, 0>")
+    assert not((ca.distribution[0]-[1, 0, 0]).any())
+    ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,0,1>")],
+                             output_states = "*")
+    assert ca.output_states_list[1] == pcvl.BasicState("|0, 1, 0>")
+    assert not((ca.distribution[0]-[0, 1, 0]).any())

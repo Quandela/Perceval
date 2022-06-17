@@ -63,7 +63,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    polarization
    backends
    components
-..   tools
+   tools
 
 .. toctree::
    :caption: Examples
