@@ -39,9 +39,9 @@ You can use it several times and define other parameters dynamically:
 You can retrieve the parameters used in a circuit as following:
 
 >>> params = c.get_parameters()
-  [Parameter(name='alpha_1', value=None, min=0.0, max=6.283185307179586),
-   Parameter(name='phi', value=None, min=0.0, max=6.283185307179586),
-   Parameter(name='alpha2', value=None, min=0.0, max=6.283185307179586)]
+[Parameter(name='alpha_1', value=None, min=0.0, max=6.283185307179586),
+ Parameter(name='phi', value=None, min=0.0, max=6.283185307179586),
+ Parameter(name='alpha2', value=None, min=0.0, max=6.283185307179586)]
 
 Setting Values
 ^^^^^^^^^^^^^^
@@ -53,10 +53,10 @@ To give a value to a parameter, use ``set_value``:
 The parameter is then *defined* and its value will be used when calculating circuit unitary:
 
 >>> alpha.defined
-  True
->>> c.compute_unitary()
-  MatrixN([[ 1.+0.0000000e+00j,  0.+0.0000000e+00j],
-           [ 0.+0.0000000e+00j, -1.+1.2246468e-16j]])
+True
+>>> pcvl.pdisplay(c.compute_unitary(use_symbolic=False))
+⎡sqrt(2)/2  sqrt(2)/2 ⎤
+⎣sqrt(2)/2  -sqrt(2)/2⎦
 
 To "forget" the value and turn back the parameter into a variable, use ```reset`` - or ``reset_parameters`` for a
 circuit
