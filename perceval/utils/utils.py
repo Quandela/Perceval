@@ -80,3 +80,11 @@ def pdisplay(o, output_format=None, to_file=None, **opts):
         display(HTML(r))
     else:
         print(r)
+
+
+def random_seed(seed: int = None):
+    r""" Initialize the seed used for random number generation
+
+    :param seed: if None, use a time-based seed
+    :return: the actual seed used
+    """
