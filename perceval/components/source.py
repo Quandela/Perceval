@@ -62,16 +62,16 @@ class Source:
     def probability_distribution(self):
         r"""returns SVDistribution on 1 mode associated to the source
         """
-            # g2 = 2p2/(p1+2p2)**2
-            # p1 + p2 = beta
-            # p1 + 2*p2 = mu
+        # g2 = 2p2/(p1+2p2)**2
+        # p1 + p2 = beta
+        # p1 + 2*p2 = mu
 
         g2 = self.multiphoton_component
         mu = self.brightness
         eta = self.overall_transmission
 
-        beta = mu - g2 * mu ** 2 / 2
-        p2 = g2 * mu ** 2 / 2
+        beta = mu - (g2 * mu ** 2) / 2
+        p2 = (g2 * mu ** 2) / 2
         p1 = beta - p2
 
         svd = SVDistribution()
@@ -87,24 +87,25 @@ class Source:
         if p2 != 0:
             if distinguishability != 0:
                 if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = eta ** 2 * (1 - distinguishability) * 2 * p2
-                    svd[StateVector([2], {1: {"_": 1}, 2: {"_": random_feat}})] = eta ** 2 * distinguishability * 2 * p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = eta * (1 - distinguishability) * 2 * p2
+                    svd[StateVector([2], {1: {"_": 1}, 2: {"_": random_feat}})] = eta * distinguishability * 2 * p2
                 else:
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta ** 2 * (1 - distinguishability) * 2 * p2
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = eta ** 2 * distinguishability * 2 * p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta * (1 - distinguishability) * 2 * p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = eta * distinguishability * 2 * p2
             else:
                 if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = eta ** 2 * 2 * p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 1}})] = eta * 2 * p2
                 else:
-                    svd[StateVector([2])] = eta ** 2 * 2 * p2
+                    svd[StateVector([2])] = eta * 2 * p2
 
         if distinguishability != 0:
-            svd[StateVector([1], {1: {"_": random_feat}})] = eta * distinguishability * p1
-            svd[StateVector([1], {1: {"_": 0}})] = eta * (1 - distinguishability) * p1
+            svd[StateVector([1], {1: {"_": random_feat}})] = eta*(1+2*p2*(1-eta)) * distinguishability * p1
+            svd[StateVector([1], {1: {"_": 0}})] = eta*(1+2*p2*(1-eta)/2) * (1 - distinguishability) * p1
+            svd[StateVector([1], {1: {"_": 1}})] = eta * 2 * p2 * (1 - eta) / 2 * (1 - distinguishability) * p1
         else:
             if p2 != 0:
-                svd[StateVector([1], {1: {"_": 0}})] = eta * p1
+                svd[StateVector([1], {1: {"_": 0}})] = eta*(1+2*p2*(1-eta)/2) * p1
             else:
-                svd[StateVector([1])] = eta * p1
+                svd[StateVector([1])] = eta*(1+2*p2*(1-eta)/2) * p1
 
         return svd
