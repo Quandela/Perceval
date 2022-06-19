@@ -74,11 +74,10 @@ class Source:
         beta = mu - (g2 * mu ** 2) / 2
         p2 = (g2 * mu ** 2) / 2
         p1 = beta - p2
-        p0 = 1 - beta
 
         svd = SVDistribution()
         if beta != 0:
-            svd[StateVector([0])] = eta*p0
+            svd[StateVector([0])] = (1-eta*(p1+p2))
 
         if self._indistinguishability_model == "homv":
             distinguishability = 1-math.sqrt(self.indistinguishability)
