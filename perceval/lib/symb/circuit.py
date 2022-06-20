@@ -111,7 +111,9 @@ class BS(ACircuit):
                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
                          49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056]
         canvas.add_mpath(path_data, stroke="black", stroke_width=1)
-        canvas.add_text((25*self.get_width(compact), 38), content, 7, "middle")
+        canvas.add_text((25*self.get_width(compact), 38),
+                        content.replace('phi=', 'Φ=').replace('theta=', 'Θ='),
+                        7, "middle")
 
     def inverse(self, v=False, h=False):
         if self._phi.is_symbolic():
@@ -255,9 +257,8 @@ class PS(ACircuit):
     def shape(self, content, canvas, compact: bool = False):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 20, 40, "h", 10, "v", -30, "h", -10, "z"],
-                         stroke="black", stroke_width=1,fill="lightgray")
-        canvas.add_text((25, 50), text=content.replace("phi=", "$\phi$="), size=7, ta="middle")
-
+                         stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_text((25, 50), text=content.replace("phi=", "Φ="), size=7, ta="middle")
 
     def inverse(self, v=False, h=False):
         if h:
@@ -265,6 +266,7 @@ class PS(ACircuit):
                 self._phi = -self._phi.spv
             else:
                 self._phi = -float(self._phi)
+
 
 class PERM(GCircuit):
     _name = "PERM"
