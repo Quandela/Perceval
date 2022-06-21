@@ -30,6 +30,7 @@ Perceval is conceived as an object-oriented modular Python framework orgainised 
    - :ref:`Fock states, state vectors and state vector distributions <States>`,
    - :ref:`unitary matrices <Matrices>`,
    - :ref:`parameters <Parameters>`.
+
 It also includes transversal tools for flexible :ref:`visualization <Visualization>` of the circuits and results which are compatible
 with notebooks or local development environments.
 
@@ -75,7 +76,9 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Shor Implementation
    notebooks/Boson Sampling
    notebooks/Variational Quantum Eigensolver
-   notebooks/2-mode Grover algorithm.ipynb
+   notebooks/2-mode Grover algorithm
+   notebooks/BS-based implementation notebook
+   notebooks/Rewriting rules in Perceval
 
 .. toctree::
    :caption: Code Reference

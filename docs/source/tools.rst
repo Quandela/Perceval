@@ -63,15 +63,13 @@ circuit
 
 >>> c.reset_parameters()
 
-Matrices
---------
-
 Visualization
 -------------
 In Perceval, to display anything, we use ``pcvl.pdisplay()``.
 
 Display a circuit
-....
+^^^^^^^^^^^^^^^^^
+
 Any circuit coded in perceval can be displayed.
 You just need to make the code associated with the desired circuit, let's call it circ, and add pcvl.pdisplay(circ) afterwards in the python cell.
 
@@ -116,7 +114,7 @@ which allows to compact the circuit if it is too wide for example. Thus, its dis
 
 
 Matrices
-....
+^^^^^^^^
 
 With Perceval, you can also display the matrix associated to your circuit.
 
@@ -127,10 +125,9 @@ With Perceval, you can also display the matrix associated to your circuit.
   :width: 40%
 
 
-##Circuit
-
 CircuitAnalyser
-....
+^^^^^^^^^^^^^^^
+
 With Perceval, we can use ``CircuitAnalyser`` to analyse the circuit and compute the associated output probabilities.
 
 For example, we call the Naive backend that we store in simulator_backend:

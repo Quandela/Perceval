@@ -23,7 +23,7 @@ laboratory with beams, mirrors and physical component but also photonic chips li
 
          The equivalent circuit in Perceval
 
-   * - .. figure:: _static/img/quandela-4-mode-chip.png
+   * - .. figure:: _static/img/quandela-4-mode-chip-circuit.png
          :align: center
 
          A 4-mode photonic chip (*Copyright Quandela 2022*)
