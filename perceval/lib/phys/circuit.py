@@ -203,7 +203,7 @@ class PS(ACircuit):
         canvas.add_mline([0, 25, 50, 25], stroke_width=3, stroke="darkred")
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
                            stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
-        canvas.add_text((22, 38), text=content.replace("phi=", "φ="), size=7, ta="left")
+        canvas.add_text((22, 38), text=content.replace("phi=", "Φ="), size=7, ta="left")
 
     def inverse(self, v=False, h=False):
         if h:
