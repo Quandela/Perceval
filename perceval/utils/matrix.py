@@ -320,3 +320,7 @@ class MatrixN(np.ndarray, Matrix):
         :return:
         """
         return np.linalg.inv(self)
+
+
+def is_square(mat: Matrix):
+    return len(mat.shape) == 2 and mat.shape[0] == mat.shape[1]

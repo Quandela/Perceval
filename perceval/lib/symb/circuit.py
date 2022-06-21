@@ -25,14 +25,14 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils import Matrix
+from perceval.utils.matrix import Matrix, MatrixS, is_square
 
 
 class Circuit(GCircuit):
     _fname = "symb.Circuit"
 
-    def __init__(self, m=None, U=None, name=None):
-        super().__init__(m=m, U=U, name=name)
+    def __init__(self, m=None, name=None):
+        super().__init__(m=m, name=name)
 
     stroke_style = {"stroke": "black", "stroke_width": 1}
     subcircuit_width = 1
@@ -268,7 +268,38 @@ class PS(ACircuit):
                 self._phi = -float(self._phi)
 
 
-class PERM(GCircuit):
+class Unitary(ACircuit):
+    _name = "Unitary"
+
+    def __init__(self, U: MatrixS, name: str = None, use_polarization: bool = False):
+        assert U is not None, "A unitary matrix is required"
+        assert is_square(U), "U must be a square matrix"
+        self._u = U
+        if name is not None:
+            self._name = name
+        m = U.shape[0]
+        self.width = m
+        if use_polarization:
+            assert m % 2 == 0, "Polarization matrix should have an even number of rows/col"
+            m /= 2
+        super().__init__(m)
+
+    def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
+        # TODO: implement assign and use_symbolic
+        return self._u
+
+    def inverse(self, v=True, h=False):
+        if v:
+            self._u = np.flipud(self._u)
+
+    def shape(self, content, canvas, compact: bool = False):
+        for i in range(self.m):
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
+        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
+        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)
+
+
+class PERM(Unitary):
     _name = "PERM"
     _fcircuit = Circuit
     stroke_style = {"stroke": "black", "stroke_width": 1}
@@ -283,7 +314,7 @@ class PERM(GCircuit):
         u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
             u[v, i] = 1
-        super().__init__(n, U=u)
+        super().__init__(U=u)
         self.width = 1
 
     def get_variables(self, _=None):

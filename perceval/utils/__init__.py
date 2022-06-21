@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
+from .matrix import Matrix, MatrixN, MatrixS, is_square
 from .format import simple_float, simple_complex
 from .qprinter import QPrinter
 from .parameter import Parameter, P
