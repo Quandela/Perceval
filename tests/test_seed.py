@@ -1,4 +1,3 @@
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -20,24 +19,30 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from pkg_resources import get_distribution
-import importlib
-
-__version__ = get_distribution("perceval-quandela").version
-
-from .components import *
-from .backends import *
-from .utils import *
+import perceval as pcvl
+import random
+import numpy as np
 
 
-def register_plugin(name):
-    try:
-        plugin = importlib.import_module(name)
-        assert plugin.register() is True
-    except Exception as e:
-        raise RuntimeError("cannot import %s: %s" % (name, str(e)))
-    return True
+def test_seed_1():
+    pcvl.random_seed(25)
+    x = random.random()
+    pcvl.random_seed(25)
+    y = random.random()
+    assert x == y, "Problem with random_seed function"
 
 
-random_seed(12)
+def test_seed2():
+    pcvl.random_seed(4)
+    x1 = random.random()
+    y1 = random.random()
+    pcvl.random_seed(4)
+    x2 = random.random()
+    y2 = random.random()
+    assert x1 == x2 and y1 == y2, "Problem with random_seed function"
+
+
+def test_seed3():
+    x = random.random()
+    y = random.random()
+    assert x != y, "Problem with random_seed function"
