@@ -21,9 +21,11 @@
 # SOFTWARE.
 
 import os
-import drawSvg
+import sys
+import warnings
 import random
 import numpy as np
+
 
 from .format import simple_float, simple_complex
 in_notebook = False
@@ -69,15 +71,21 @@ def pdisplay(o, output_format=None, to_file=None, **opts):
         r = o.pdisplay(output_format=output_format, **opts)
 
     if to_file:
-        if isinstance(r, drawSvg.Drawing):
-            if output_format == "png":
-                r.savePng(to_file)
-            else:
-                r.saveSvg(to_file)
-            return
+        if 'drawSvg' in sys.modules:  # If drawSvg was imported beforehand
+            import drawSvg
+            if isinstance(r, drawSvg.Drawing):
+                if output_format == "png":
+                    r.savePng(to_file)
+                else:
+                    r.saveSvg(to_file)
+                return
+        else:
+            warnings.warn("to_file parameter requires drawSvg to be installed on your system and manually imported.")
 
-    if isinstance(r, drawSvg.Drawing):
-        return r
+    if 'drawSvg' in sys.modules:  # If drawSvg was imported beforehand
+        import drawSvg
+        if isinstance(r, drawSvg.Drawing):
+            return r
     elif in_notebook and output_format != "text":
         display(HTML(r))
     else:
