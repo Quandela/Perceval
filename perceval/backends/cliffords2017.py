@@ -28,7 +28,7 @@ from perceval.utils import BasicState
 
 
 def _square(x):
-    return abs((x*x).real)
+    return abs(x**2).real
 
 def _get_scale(w):
     return max([max(abs(x.real), abs(x.imag)) for x in w])

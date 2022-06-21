@@ -23,6 +23,9 @@
 import os
 import sys
 import warnings
+import random
+import numpy as np
+
 
 from .format import simple_float, simple_complex
 in_notebook = False
@@ -89,9 +92,18 @@ def pdisplay(o, output_format=None, to_file=None, **opts):
         print(r)
 
 
-def random_seed(seed: int = None):
-    r""" Initialize the seed used for random number generation
+def random_seed(param):
+    """
+    seed: int = None
+    Initialize the seed used for random number generation
 
     :param seed: if None, use a time-based seed
     :return: the actual seed used
     """
+    if param is not None:
+        random.seed(param)
+        np.random.seed(param)
+
+    else:
+        random.seed()
+        np.random.seed()
