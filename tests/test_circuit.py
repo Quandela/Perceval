@@ -270,10 +270,13 @@ def test_evolve():
         assert str(simulator.evolve(BasicState("|1,0>"))) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
 
 
+def _generate_simple_circuit():
+    return (phys.Unitary(U=Matrix.random_unitary(3), name="U1")
+            // (0, phys.PS(sp.pi / 2))
+            // phys.Unitary(U=Matrix.random_unitary(3), name="U2"))
+
 def test_visualization_ucircuit(capfd):
-    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
-         // (0, phys.PS(sp.pi/2))
-         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    c = _generate_simple_circuit()
     pdisplay(c, output_format="text")
     out, err = capfd.readouterr()
     assert out.strip() == """
@@ -291,12 +294,11 @@ def test_visualization_ucircuit(capfd):
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
+
 def test_depths_ncomponents():
     assert phys.PS(0).depths() == [1]
     assert phys.PS(0).ncomponents() == 1
-    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
-         // (0, phys.PS(sp.pi / 2))
-         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    c = _generate_simple_circuit()
     assert c.depths() == [3, 2, 2]
     assert c.ncomponents() == 3
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
