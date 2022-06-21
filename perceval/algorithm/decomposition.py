@@ -126,9 +126,8 @@ def decompose_triangle(u,
                 list_components = [((n, n + 1), instantiated_component)] + list_components
             u[n, j] = 0
 
-    D = np.diag(u)
-
     if phase_shifter_fn:
+        D = np.diag(u)
         list_components = add_phases(phase_shifter_fn, D) + list_components
 
     return list_components
