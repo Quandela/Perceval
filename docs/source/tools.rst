@@ -68,3 +68,96 @@ Matrices
 
 Visualization
 -------------
+In Perceval, to display anything, we use ``pcvl.pdisplay()``.
+
+Display a circuit
+....
+Any circuit coded in perceval can be displayed.
+You just need to make the code associated with the desired circuit, let's call it circ, and add pcvl.pdisplay(circ) afterwards in the python cell.
+
+Let's do an example to understand : you want to display the Mach-Zendher Interferometer with the ``phys`` library.
+
+Start by doing the code associated to the circuit.
+
+>>> import perceval.lib.phys as phys
+>>> mzi = (pcvl.Circuit(m=2, name="mzi")
+...        .add((0, 1), phys.BS())
+...        .add(0, phys.PS(pcvl.Parameter("phi1")))
+...        .add((0, 1), phys.BS())
+...        .add(0, phys.PS(pcvl.Parameter("phi2"))))
+
+Then, add ``pcvl.pdisplay()`` of your circuit.
+
+>>> pcvl.pdisplay(mzi)
+
+.. figure:: _static/img/mzi.png
+  :align: center
+  :width: 75%
+
+Also, a parameter can change the display of the circuit. Indeed, pdisplay can call a boolean compact option
+which allows to compact the circuit if it is too wide for example. Thus, its display is clearer.
+
+>>> import perceval as pcvl
+>>> import perceval.lib.symb as symb
+... C = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U),
+... symb.BS(R=pcvl.P("R")),phase_shifter_fn=symb.PS)
+
+>>> pcvl.pdisplay(C, compact=True)
+
+.. figure:: _static/img/decomposition_symb_compact.png
+  :align: center
+  :width: 25%
+
+>>> pcvl.pdisplay(C, compact=False)
+
+.. figure:: _static/img/decomposition_symb_compact_false.png
+  :align: center
+  :width: 25%
+
+
+Matrices
+....
+
+With Perceval, you can also display the matrix associated to your circuit.
+
+>>> pcvl.pdisplay(mzi.U)
+
+.. figure:: _static/img/mzi_matrix.png
+  :align: center
+  :width: 40%
+
+
+##Circuit
+
+CircuitAnalyser
+....
+With Perceval, we can use ``CircuitAnalyser`` to analyse the circuit and compute the associated output probabilities.
+
+For example, we call the Naive backend that we store in simulator_backend:
+
+>>> simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+
+We can create an input state that will enter our optical scheme later on. We store it in `input_state` and use `BasicState`
+from the Perceval library.
+
+>>> input_state = pcvl.BasicState("|1,1>")
+
+let's simulate the distribution obtained when we input two photons in a beam-splitter. We will use the Naive backend already stored in simulator_backend.
+
+We will simulate the behaviour of the circuit using the class `Circuit Analyser` which has three arguments:
+
+- The first one is an instance of the simulator applied to the transfer matrix of the circuit.
+- The second one is the input state (we will use `input_state`).
+- The third one is the desired output states. To compute all possible output states, one just input `"*"`.
+>>> sim = simulator_backend(phys.BS().U)        # create an instance of the simulator applied to the transfer matrix of the circuit
+... ca = pcvl.CircuitAnalyser(sim,
+                          [input_state],
+                          "*")
+
+Then, we display the result of `Circuit Analyser` via `pdisplay`.
+
+>>> pcvl.pdisplay(ca)
+
+.. figure:: _static/img/CircuitAnalyserHOM.png
+  :align: center
+  :width: 40%
