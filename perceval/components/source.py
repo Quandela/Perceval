@@ -85,37 +85,37 @@ class Source:
         # Approximation distinguishable photons are pure
         distinguishable_photon = self._context["discernability_tag"]
         self._context["discernability_tag"] += 1
-        noise_photon = self._context["discernability_tag"]
-        self._context["discernability_tag"] += 1
+        noise_photon = 1
+        #self._context["discernability_tag"] += 1
 
         if p2 != 0:
             if distinguishability != 0:
                 if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": noise_photon}})] = eta**2*(1-distinguishability)*p2
-                    svd[StateVector([2], {1: {"_": distinguishable_photon}, 2: {"_": noise_photon}})] = eta**2*distinguishability*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": noise_photon}})] = eta**2*(1-distinguishability)*(2-eta)*p2
+                    svd[StateVector([2], {1: {"_": distinguishable_photon}, 2: {"_": noise_photon}})] = eta**2*distinguishability*(2-eta)*p2
                 else:
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta**2*(1-distinguishability)*p2
-                    svd[StateVector([2], {1: {"_": distinguishable_photon}, 2: {"_": 0}})] = eta**2*distinguishability*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta**2*(1-distinguishability)*(2-eta)*p2
+                    svd[StateVector([2], {1: {"_": distinguishable_photon}, 2: {"_": 0}})] = eta**2*distinguishability*(2-eta)*p2
             else:
                 if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": noise_photon}})] = eta**2*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": noise_photon}})] = eta**2*(2-eta)*p2
                 else:
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta**2*p2
+                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = eta**2*(2-eta)*p2
 
         if distinguishability != 0:
             if self._multiphoton_model == "distinguishable":
-                svd[StateVector([1], {1: {"_": distinguishable_photon}})] = eta*(distinguishability*p1 + (1-eta**2)/2*distinguishability*p2)
-                svd[StateVector([1], {1: {"_": 0}})] = eta * ((1-distinguishability)*p1+(1-eta**2)/2*(1-distinguishability)*p2)
-                svd[StateVector([1], {1: {"_": noise_photon}})] = eta*((1-eta**2)/2*(distinguishability*p2+(1-distinguishability)*p2))
+                svd[StateVector([1], {1: {"_": distinguishable_photon}})] = eta*(distinguishability*p1 + (1-eta**2)/2*distinguishability*(2-eta)*p2)
+                svd[StateVector([1], {1: {"_": 0}})] = eta * ((1-distinguishability)*p1+(1-eta**2)/2*(1-distinguishability)*(2-eta)*p2)
+                svd[StateVector([1], {1: {"_": noise_photon}})] = eta*((1-eta**2)/2*(distinguishability*(2-eta)*p2+(1-distinguishability)*(2-eta)*p2))
             else:
-                svd[StateVector([1], {1: {"_": distinguishable_photon}})] = eta*(distinguishability*p1 + (1-eta**2)/2*distinguishability*p2)
-                svd[StateVector([1], {1: {"_": 0}})] = eta*((1-distinguishability)*p1 + (1-eta**2)*(distinguishability*p2+(1-distinguishability)*p2))
+                svd[StateVector([1], {1: {"_": distinguishable_photon}})] = eta*(distinguishability*p1 + (1-eta**2)/2*distinguishability*(2-eta)*p2)
+                svd[StateVector([1], {1: {"_": 0}})] = eta*((1-distinguishability)*p1 + (1-eta**2)*(distinguishability*(2-eta)*p2+(1-distinguishability)*(2-eta)*p2))
 
         else:
             if self._multiphoton_model == "distinguishable":
-                svd[StateVector([1], {1: {"_": 0}})] = eta*(p1+(1-eta**2)/2*p2)
-                svd[StateVector([1], {1: {"_": noise_photon}})] = eta*((1-eta**2)/2*p2)
+                svd[StateVector([1], {1: {"_": 0}})] = eta*(p1+(1-eta**2)/2*(2-eta)*p2)
+                svd[StateVector([1], {1: {"_": noise_photon}})] = eta*((1-eta**2)/2*(2-eta)*p2)
             else:
-                svd[StateVector([1], {1: {"_": 0}})] = eta*(p1+(1-eta**2)*p2)
+                svd[StateVector([1], {1: {"_": 0}})] = eta*(p1+(1-eta**2)*(2-eta)*p2)
 
         return svd
