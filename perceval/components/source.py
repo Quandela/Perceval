@@ -95,8 +95,8 @@ class Source:
         # Approximation distinguishable photons are pure
         distinguishable_photon = self._context["discernability_tag"]
         self._context["discernability_tag"] += 1
-        noise_photon = 1
-        #self._context["discernability_tag"] += 1
+        noise_photon = self._context["discernability_tag"]
+        self._context["discernability_tag"] += 1
 
         if p2 != 0:
             if distinguishability != 0:
