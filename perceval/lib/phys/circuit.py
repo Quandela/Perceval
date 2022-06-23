@@ -388,6 +388,7 @@ class DT(ACircuit):
 class Unitary(ACircuit):
     _name = "Unitary"
     _fcircuit = Circuit
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, U: MatrixN, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
