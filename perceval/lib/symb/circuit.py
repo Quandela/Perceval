@@ -20,30 +20,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from abc import ABC
 import sympy as sp
 import numpy as np
 
-from perceval.components import Circuit as GCircuit
-from perceval.components import ACircuit
+from perceval.components import ACircuit, Circuit
 from perceval.utils.matrix import Matrix, MatrixS
 
 
-class Circuit(GCircuit):
+class SymbCircuit(ACircuit, ABC):
     _fname = "symb.Circuit"
 
-    def __init__(self, m=None, name=None):
-        super().__init__(m=m, name=name)
+    def __init__(self, m: int):
+        super().__init__(m=m)
+
+    def _compute_unitary(self,
+                         assign: dict = None,
+                         use_symbolic: bool = False) -> Matrix:
+        pass
 
     stroke_style = {"stroke": "black", "stroke_width": 1}
-    subcircuit_width = 1
-    subcircuit_fill = 'white'
-    subcircuit_stroke_style = {"stroke": "black", "stroke_width": 1}
+    style_subcircuit = {"width": 1,
+                        "fill": "white",
+                        "stroke_style": {"stroke": "black", "stroke_width": 1}}
 
 
-class BS(ACircuit):
+class BS(SymbCircuit):
     _name = "BS"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, R=None, theta=None, phi=0):
         super().__init__(2)
@@ -126,12 +129,11 @@ class BS(ACircuit):
                 self._phi = -float(self._phi)
             if h:
                 self._phi = float(self._phi)+np.pi
-                
-class PBS(ACircuit):
+
+
+class PBS(SymbCircuit):
     _name = "PBS"
-    _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self):
         super().__init__(2)
@@ -185,9 +187,8 @@ class PBS(ACircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class DT(ACircuit):
+class DT(SymbCircuit):
     _name = "DT"
-    _fcircuit = Circuit
     delay_circuit = True
     stroke_style = {"stroke": "black", "stroke_width": 2}
 
@@ -225,10 +226,8 @@ class DT(ACircuit):
         canvas.add_text((25, 38), text=content.replace("t=", ""), size=7, ta="middle")
 
 
-class PS(ACircuit):
+class PS(SymbCircuit):
     _name = "PS"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, phi):
         super().__init__(1)
@@ -268,10 +267,8 @@ class PS(ACircuit):
                 self._phi = -float(self._phi)
 
 
-class Unitary(ACircuit):
+class Unitary(SymbCircuit):
     _name = "Unitary"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, U: MatrixS, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
@@ -312,8 +309,6 @@ class Unitary(ACircuit):
 
 class PERM(Unitary):
     _name = "PERM"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, perm):
         assert isinstance(perm, list), "permutation Operator needs list parameter"
@@ -348,11 +343,9 @@ class PERM(Unitary):
                              stroke="black", stroke_width=1)
 
 
-class WP(ACircuit):
+class WP(SymbCircuit):
     _name = "WP"
-    _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, delta, xsi):
         super().__init__(1)
@@ -404,6 +397,7 @@ class WP(ACircuit):
         canvas.add_text((25, 55), text=params[0], size=7, ta="middle")
         canvas.add_text((25, 65), text=params[1], size=7, ta="middle")
 
+
 class HWP(WP):
     _name = "HWP"
 
@@ -431,12 +425,10 @@ class QWP(WP):
         canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
 
 
-class PR(ACircuit):
+class PR(SymbCircuit):
     """Polarization rotator"""
     _name = "PR"
-    _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "black", "stroke_width": 1}
 
     def __init__(self, delta):
         super().__init__(1)
@@ -452,7 +444,6 @@ class PR(ACircuit):
             delta = float(self._delta)
             return Matrix([[np.cos(delta), np.sin(delta)],
                            [-np.sin(delta), np.cos(delta)]], False)
-
 
     def get_variables(self, map_param_kid=None):
         parameters = []

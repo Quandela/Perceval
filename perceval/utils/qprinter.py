@@ -237,9 +237,8 @@ class GraphicPrinter:
         start = lines[0]
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
-        w = circuit.subcircuit_width
+        w = circuit.style_subcircuit['width']
         self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        #circuit.shape(content, self._canvas)
         circuit.subcircuit_shape(circuit._name, self._canvas)
         for i in range(start, end+1):
             self._chart[i] += w

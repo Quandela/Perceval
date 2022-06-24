@@ -20,32 +20,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from abc import ABC
 import sympy as sp
 import numpy as np
 
-from perceval.components import Circuit as GCircuit
-from perceval.components import ACircuit
+from perceval.components import ACircuit, Circuit
 from perceval.utils.matrix import Matrix, MatrixN
 from perceval.utils import Canvas
 
 
-class Circuit(GCircuit):
+class PhysCircuit(ACircuit, ABC):
     _fname = "symb.Circuit"
 
-    def __init__(self, m=None, name=None):
-        super().__init__(m=m, name=name)
+    def __init__(self, m: int):
+        super().__init__(m=m)
+
+    def _compute_unitary(self,
+                         assign: dict = None,
+                         use_symbolic: bool = False) -> Matrix:
+        pass
 
     width = 1
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
-    subcircuit_width = 2
-    subcircuit_fill = 'lightpink'
-    subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
+    style_subcircuit = {"width": 2,
+                        "fill": "lightpink",
+                        "stroke_style": {"stroke": "darkred", "stroke_width": 1}}
 
 
-class BS(ACircuit):
+class BS(PhysCircuit):
     _name = "BS"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
         super().__init__(2)
@@ -135,11 +138,10 @@ class BS(ACircuit):
             self._phi_d._value = -self._phi_d.spv
             self._phi_b._value = sp.pi-(-self._phi_a.spv-self._phi_d.spv-self._phi_b.spv)
 
-class PBS(ACircuit):
+
+class PBS(PhysCircuit):
     _name = "PBS"
-    _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self):
         super().__init__(2)
@@ -171,10 +173,8 @@ class PBS(ACircuit):
         canvas.add_text((50, 86), text=content, size=7, ta="middle")
 
 
-class PS(ACircuit):
+class PS(PhysCircuit):
     _name = "PS"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, phi):
         super().__init__(1)
@@ -213,11 +213,10 @@ class PS(ACircuit):
             else:
                 self._phi = -float(self._phi)
 
-class WP(ACircuit):
+
+class WP(PhysCircuit):
     _name = "WP"
-    _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, delta, xsi):
         super().__init__(1)
@@ -272,12 +271,10 @@ class WP(ACircuit):
         canvas.add_text((28.5, 45), text=params[1], size=7, ta="left")
 
 
-class PR(ACircuit):
+class PR(PhysCircuit):
     """Polarization rotator"""
     _name = "PR"
-    _fcircuit = Circuit
     _supports_polarization = True
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, delta):
         super().__init__(1)
@@ -345,11 +342,9 @@ class QWP(WP):
         super().__init__(sp.pi/4, xsi)
 
 
-class DT(ACircuit):
+class DT(PhysCircuit):
     _name = "DT"
-    _fcircuit = Circuit
     delay_circuit = True
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, t):
         super().__init__(1)
@@ -385,10 +380,8 @@ class DT(ACircuit):
         canvas.add_text((25, 38), content, 7, "middle")
 
 
-class Unitary(ACircuit):
+class Unitary(PhysCircuit):
     _name = "Unitary"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, U: MatrixN, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
@@ -429,8 +422,6 @@ class Unitary(ACircuit):
 
 class PERM(Unitary):
     _name = "PERM"
-    _fcircuit = Circuit
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
     def __init__(self, perm):
         assert isinstance(perm, list), "permutation Operator needs list parameter"
