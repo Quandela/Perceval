@@ -68,7 +68,6 @@ class ACircuit(ABC):
         self._components = []
         self._params = {}
         self._vars = {}
-        self.defined_circuit = True
 
     @abstractmethod
     def _compute_unitary(self,
@@ -210,9 +209,7 @@ class ACircuit(ABC):
             self._components = [(list(range(self._m)), copy.copy(self))]
             self.__class__ = self._fcircuit
             self._params = {v.name: v for k, v in self._params.items() if not v.fixed}
-        if not self.defined_circuit:
-            self.defined_circuit = True
-            self.stroke_style = component.stroke_style
+        self.stroke_style = component.stroke_style
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
                 "range must a consecutive valid set of ports"
@@ -492,11 +489,6 @@ class ACircuit(ABC):
     def ncomponents(self):
         return 1
 
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
-    subcircuit_width = 2
-    subcircuit_fill = 'lightpink'
-    subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
-
     @abstractmethod
     def shape(self, content, canvas: Canvas, compact: bool = False):
         """
@@ -521,13 +513,16 @@ class Circuit(ACircuit):
     """
     _name = "CPLX"
     _fname = "Circuit"
+    subcircuit_width = 2
+    subcircuit_fill = 'lightpink'
+    subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
 
     def __init__(self, m: int = None, name: str = None):
         assert m > 0, "invalid size"
         if name is not None:
             self._name = name
         super().__init__(m)
-        self.defined_circuit = False  # TODO remove this member?
+        self.stroke_style = {"stroke": "darkred", "stroke_width": 3}  # Physical component stroke values by default
 
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
