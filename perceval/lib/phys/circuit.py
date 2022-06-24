@@ -25,7 +25,7 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils.matrix import Matrix, MatrixN, is_square
+from perceval.utils.matrix import Matrix, MatrixN
 from perceval.utils import Canvas
 
 
@@ -392,7 +392,7 @@ class Unitary(ACircuit):
 
     def __init__(self, U: MatrixN, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
-        assert is_square(U), "U parameter must be a square matrix"
+        assert U.is_square(), "U parameter must be a square matrix"
         self._u = U
         if name is not None:
             self._name = name

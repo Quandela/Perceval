@@ -109,10 +109,14 @@ class Matrix(ABC):
             return MatrixS(sp.zeros(rows=shape[0], cols=shape[1]))
         return MatrixN(np.zeros(shape))
 
+    def is_square(self) -> bool:
+        return len(self.shape) == 2 and self.shape[0] == self.shape[1]
+
     @abstractmethod
     def is_unitary(self) -> bool:
         """check if matrix is unitary"""
 
+    @abstractmethod
     def is_symbolic(self) -> bool:
         """check if matrix is symbolic or numeric"""
 
@@ -153,7 +157,7 @@ class Matrix(ABC):
         return Matrix(np.matmul(q, n_u))
 
     def simp(self):
-        """Simplify the matrix - only defined for symbolic matrix"""
+        """Simplify the matrix - only implemented for symbolic matrix"""
         return self
 
     def pdisplay(self, precision: float = None, output_format: Literal["text", "mplot", "html", "latex"] = "text") -> str:
@@ -269,7 +273,7 @@ class MatrixS(Matrix, sp.Matrix):
 
     def is_unitary(self):
         """check if a matrix is squary and unitary"""
-        if self.shape[0] != self.shape[1]:
+        if not self.is_square():
             return False
         if self.free_symbols:
             # use sympi only if we really have to...
@@ -310,7 +314,7 @@ class MatrixN(np.ndarray, Matrix):
 
     def is_unitary(self):
         """check if a matrix is square and unitary"""
-        if self.shape[0] != self.shape[1]:
+        if not self.is_square():
             return False
         return np.allclose(self.dot(self.T.conj()), np.eye(self.shape[0]))
 
@@ -320,7 +324,3 @@ class MatrixN(np.ndarray, Matrix):
         :return:
         """
         return np.linalg.inv(self)
-
-
-def is_square(mat: Matrix):
-    return len(mat.shape) == 2 and mat.shape[0] == mat.shape[1]
