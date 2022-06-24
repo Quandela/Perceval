@@ -536,7 +536,7 @@ class Circuit(ACircuit):
         :return: a string describing the circuit that be re-used to define the circuit
         """
         cparams = ["%d" % self._m]
-        if self._name != "CPLX":
+        if self._name != Circuit._name:
             cparams.append("name=%s" % self._name)
         s = "%s(%s)" % (self._fname, ", ".join(cparams))
         if map_param_kid is None:

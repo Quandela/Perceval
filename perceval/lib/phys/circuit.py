@@ -392,15 +392,16 @@ class Unitary(ACircuit):
 
     def __init__(self, U: MatrixN, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
-        assert is_square(U), "U must be a square matrix"
+        assert is_square(U), "U parameter must be a square matrix"
         self._u = U
         if name is not None:
             self._name = name
         m = U.shape[0]
         self.width = m
+        self._supports_polarization = use_polarization
         if use_polarization:
             assert m % 2 == 0, "Polarization matrix should have an even number of rows/col"
-            m /= 2
+            m //= 2
         super().__init__(m)
 
     def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
@@ -410,6 +411,14 @@ class Unitary(ACircuit):
     def inverse(self, v=True, h=False):
         if v:
             self._u = np.flipud(self._u)
+
+    def describe(self, _=None):
+        params = [f"Matrix('''{self._u}''')"]
+        if self._name != Unitary._name:
+            params.append(f"name='{self._name}'")
+        if self._supports_polarization:
+            params.append("use_polarization=True")
+        return f"phys.Unitary({', '.join(params)}))"
 
     def shape(self, content, canvas, compact: bool = False):
         for i in range(self.m):
