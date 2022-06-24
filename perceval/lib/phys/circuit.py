@@ -63,8 +63,8 @@ class BS(ACircuit):
         self.assign(assign)
         if use_symbolic:
             if "R" in self.params:
-                cos_theta = sp.sqrt(1-self._R.spv)
-                sin_theta = sp.sqrt(self._R.spv)
+                cos_theta = sp.sqrt(self._R.spv)
+                sin_theta = sp.sqrt(1-self._R.spv)
             else:
                 cos_theta = sp.cos(self._theta.spv)
                 sin_theta = sp.sin(self._theta.spv)
@@ -73,8 +73,8 @@ class BS(ACircuit):
                            [sin_theta*sp.exp(phi_c*sp.I)*sp.I, cos_theta*sp.exp(self._phi_d.spv*sp.I)]], True)
         else:
             if "R" in self.params:
-                cos_theta = np.sqrt(1-float(self._R))
-                sin_theta = np.sqrt(float(self._R))
+                cos_theta = np.sqrt(float(self._R))
+                sin_theta = np.sqrt(1-float(self._R))
             else:
                 cos_theta = np.cos(float(self._theta))
                 sin_theta = np.sin(float(self._theta))
@@ -104,7 +104,7 @@ class BS(ACircuit):
 
     width = 2
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         head_content = "\n".join([s for s in content.split("\n")
                                     if s.startswith("R=") or s.startswith("theta=")])
         bottom_content = "\n".join([s for s in content.split("\n")
@@ -123,6 +123,16 @@ class BS(ACircuit):
             else:
                 canvas.add_rect((25, 53), 50, 4, fill="lightgray")
 
+    def inverse(self, v=False, h=False):
+        if v:
+            phi_a = self._phi_a
+            self._phi_a = self._phi_d
+            self._phi_d = phi_a
+            self._phi_b._value = self._phi_a.spv+self._phi_d.spv-self._phi_b.spv
+        if h:
+            self._phi_a._value = -self._phi_a.spv
+            self._phi_d._value = -self._phi_d.spv
+            self._phi_b._value = sp.pi-(-self._phi_a.spv-self._phi_d.spv-self._phi_b.spv)
 
 class PBS(ACircuit):
     _name = "PBS"
@@ -149,7 +159,7 @@ class PBS(ACircuit):
 
     width = 2
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         canvas.add_mline([0, 25, 28, 25, 37.5, 37.5], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_mline([62.5, 37.5, 72, 25, 100, 25], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_mline([0, 75, 28, 75, 37.5, 62.5], stroke="darkred", stroke_width=3, stroke_linejoin="round")
@@ -189,12 +199,18 @@ class PS(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         canvas.add_mline([0, 25, 50, 25], stroke_width=3, stroke="darkred")
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
                            stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
-        canvas.add_text((22, 38), text=content.replace("phi=", "φ="), size=7, ta="left")
+        canvas.add_text((22, 38), text=content.replace("phi=", "Φ="), size=7, ta="left")
 
+    def inverse(self, v=False, h=False):
+        if h:
+            if self._phi.is_symbolic():
+                self._phi = -self._phi.spv
+            else:
+                self._phi = -float(self._phi)
 
 class WP(ACircuit):
     _name = "WP"
@@ -245,7 +261,7 @@ class WP(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
         canvas.add_mline([0, 25, 50, 25], stroke_width=3, stroke="darkred")
         canvas.add_rect((13, 7), width=14, height=36, fill="gray",
@@ -291,7 +307,7 @@ class PR(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         canvas.add_mline([0, 25, 15, 25], stroke="darkred", stroke_width=3)
         canvas.add_mline([35, 25, 50, 25], stroke="darkred", stroke_width=3)
         canvas.add_rect((14, 14), width=22, height=22, stroke="black", fill="lightgray",
@@ -354,7 +370,7 @@ class DT(ACircuit):
 
     width = 1
 
-    def shape(self, content, canvas: Canvas):
+    def shape(self, content, canvas: Canvas, compact: bool = False):
         canvas.add_circle((34, 14), 11, stroke_width=5, fill=None, stroke="white")
         canvas.add_circle((34, 14), 11, stroke_width=3, fill=None, stroke="darkred")
         canvas.add_circle((25, 14), 11, stroke_width=5, fill=None, stroke="white")
@@ -381,8 +397,8 @@ class PERM(GCircuit):
         self._perm = perm
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
-        for i, v in enumerate(perm):
-            u[i, v] = sp.S(1)
+        for v, i in enumerate(perm):
+            u[i, v] = 1
         super().__init__(n, U=u)
         self.width = 1
 
@@ -395,7 +411,7 @@ class PERM(GCircuit):
     def definition(self):
         return self.U
 
-    def shape(self, content, canvas):
+    def shape(self, content, canvas, compact: bool = False):
         lines = []
         for an_input, an_output in enumerate(self._perm):
             canvas.add_mline([3, 25+an_input*50, 47, 25+an_output*50],

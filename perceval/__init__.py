@@ -22,9 +22,22 @@
 # SOFTWARE.
 
 from pkg_resources import get_distribution
+import importlib
 
 __version__ = get_distribution("perceval-quandela").version
 
 from .components import *
 from .backends import *
 from .utils import *
+
+
+def register_plugin(name):
+    try:
+        plugin = importlib.import_module(name)
+        assert plugin.register() is True
+    except Exception as e:
+        raise RuntimeError("cannot import %s: %s" % (name, str(e)))
+    return True
+
+
+random_seed(12)
