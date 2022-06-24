@@ -24,6 +24,7 @@ import copy
 
 import numpy as np
 import sympy as sp
+import scipy as scp
 
 from perceval.utils import Matrix, global_params
 
@@ -98,7 +99,7 @@ def decompose_triangle(u,
                             break
             if not solve_cell:
                 equation = cU_inv[0, 0] * u[n, j] + cU_inv[0, 1] * u[n + 1, j]
-                f = sp.lambdify([params_symbols], [equation])
+                f = sp.lambdify([params_symbols], [equation], modules=[np, scp])
                 g = lambda *p: np.real(np.abs(f(*p)))
                 x0 = [p.random() for p in params]
                 # look for a constraint solution first
@@ -126,9 +127,8 @@ def decompose_triangle(u,
                 list_components = [((n, n + 1), instantiated_component)] + list_components
             u[n, j] = 0
 
-    D = np.diag(u)
-
     if phase_shifter_fn:
+        D = np.diag(u)
         list_components = add_phases(phase_shifter_fn, D) + list_components
 
     return list_components

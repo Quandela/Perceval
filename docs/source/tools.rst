@@ -148,8 +148,8 @@ We will simulate the behaviour of the circuit using the class `Circuit Analyser`
 - The third one is the desired output states. To compute all possible output states, one just input `"*"`.
 >>> sim = simulator_backend(phys.BS().U)        # create an instance of the simulator applied to the transfer matrix of the circuit
 ... ca = pcvl.CircuitAnalyser(sim,
-                          [input_state],
-                          "*")
+...                           [input_state],
+...                           "*")
 
 Then, we display the result of `Circuit Analyser` via ``pdisplay``.
 

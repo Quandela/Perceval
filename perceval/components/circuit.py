@@ -354,7 +354,7 @@ class ACircuit(ABC):
                     equation += abs(cU[i, j]-UP[i, j])
         equation = abs(equation)
 
-        f = sp.lambdify([params], equation, "numpy")
+        f = sp.lambdify([params], equation, modules=np)
         counter = 0
         while counter < max_try:
             x0 = [random.random()] * len(params)
@@ -451,7 +451,7 @@ class ACircuit(ABC):
             x0.append(p.random())
         cu = pattern.compute_unitary(use_symbolic=True)
 
-        f = sp.lambdify([params_symbols], cu - u)
+        f = sp.lambdify([params_symbols], cu - u, modules=np)
 
         def g(*params):
             return np.linalg.norm(np.array(f(*params)))
