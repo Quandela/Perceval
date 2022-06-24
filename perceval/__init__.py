@@ -40,4 +40,4 @@ def register_plugin(name):
     return True
 
 
-random_seed(12)
+#random_seed(1248593178)
