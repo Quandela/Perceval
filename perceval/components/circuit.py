@@ -190,6 +190,9 @@ class ACircuit(ABC):
 
     def definition(self):
         params = {name: Parameter(name) for name in self._params.keys()}
+        if "lambda" in params:
+            params["lmbda"] = params["lambda"]
+            del params["lambda"]
         return type(self)(**params).U
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
@@ -303,7 +306,10 @@ class ACircuit(ABC):
         nc = copy.deepcopy(self)
         if not isinstance(self, Circuit):
             for k, p in nc._params.items():
-                nc._params[k] = Parameter(p.name, float(p), p.min, p.max, p.is_periodic)
+                v = float(p)
+                if p.is_periodic and abs(v-p.max) < 1e-4:
+                    v = p.min
+                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
         else:
             nc._params = {}
             nc._components = []

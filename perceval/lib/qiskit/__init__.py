@@ -1,4 +1,3 @@
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -21,20 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from pkg_resources import get_distribution
-import importlib
-
-__version__ = get_distribution("perceval-quandela").version
-
-from .components import *
-from .backends import *
-from .utils import *
-
-
-def register_plugin(name, silent=False):
-    try:
-        plugin = importlib.import_module(name)
-        assert plugin.register(silent) is True
-    except Exception as e:
-        raise RuntimeError("cannot import %s: %s" % (name, str(e)))
-    return True
+from .circuit import *
