@@ -42,6 +42,7 @@ def _norm(svg):
     svg = re.sub(r'url\(#.*?\)', 'url(#staticClipPath)', svg)
     svg = re.sub(r'<clipPath id=".*?">', '<clipPath id="staticClipPath">', svg)
     svg = re.sub(r'<dc:date>(.*)</dc:date>', '<dc:date></dc:date>', svg)
+    svg = re.sub(r'<dc:title>(.*)</dc:title>', '<dc:title></dc:title>', svg)
     return svg
 
 
@@ -63,12 +64,13 @@ def _check_image(test_path, ref_path):
     return True, "ok"
 
 
-def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False):
+def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False):
     if save_figs:
         c.pdisplay(output_format="mplot",
                    mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
                    mplot_noshow=True,
-                   recursive=recursive)
+                   recursive=recursive,
+                   compact=compact)
         with open(TEST_IMG_DIR / Path(circuit_name + ".svg")) as f_saved:
             saved = "".join(f_saved.readlines())
         saved = _norm(saved)
@@ -78,7 +80,8 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False):
         c.pdisplay(output_format="mplot",
                    mplot_savefig=tmp_path / Path(circuit_name + ".svg"),
                    mplot_noshow=True,
-                   recursive=recursive)
+                   recursive=recursive,
+                   compact=compact)
         ok, msg = _check_image(tmp_path / Path(circuit_name + ".svg"),
                                TEST_IMG_DIR / Path(circuit_name + ".svg"))
         assert ok, msg
@@ -103,6 +106,12 @@ def test_svg_dump_phys_dt(tmp_path, save_figs):
 def test_svg_dump_phys_wp(tmp_path, save_figs):
     _save_or_check(phys.WP(sp.pi/4, sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
+def test_svg_dump_phys_hwp(tmp_path, save_figs):
+    _save_or_check(phys.HWP(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_phys_qwp(tmp_path, save_figs):
+    _save_or_check(phys.QWP(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
 
 def test_svg_dump_phys_pr(tmp_path, save_figs):
     _save_or_check(phys.PR(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
@@ -124,9 +133,32 @@ def test_svg_dump_no_circuit_4(tmp_path, save_figs):
     _save_or_check(pcvl.Circuit(4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-def test_svg_dump_symb_bs(tmp_path, save_figs):
-    _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs)
+def test_svg_dump_symb_bs_compact(tmp_path, save_figs):
+    _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True)
 
+def test_svg_dump_symb_bs_compact_false(tmp_path, save_figs):
+    _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False)
+
+def test_svg_dump_symb_ps(tmp_path, save_figs):
+    _save_or_check(symb.PS(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_pbs_compact(tmp_path, save_figs):
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs,compact=True)
+
+def test_svg_dump_symb_pbs_compact_false(tmp_path, save_figs):
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs,compact=False)
+
+def test_svg_dump_symb_pr(tmp_path, save_figs):
+    _save_or_check(symb.PR(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_wp(tmp_path, save_figs):
+    _save_or_check(symb.WP(sp.pi/4, sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_hwp(tmp_path, save_figs):
+    _save_or_check(symb.HWP(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+def test_svg_dump_symb_qwp(tmp_path, save_figs):
+    _save_or_check(symb.QWP(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
     nc = (pcvl.Circuit(4)
@@ -138,7 +170,7 @@ def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
     _save_or_check(nc, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-def test_svg_dump_qrng(tmp_path, save_figs):
+def test_svg_dump_qrng_compact(tmp_path, save_figs):
     chip_QRNG = pcvl.Circuit(4, name='QRNG')
     # Parameters
     phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
@@ -156,7 +188,7 @@ def test_svg_dump_qrng(tmp_path, save_figs):
              .add((0, 1), symb.BS())
              .add((2, 3), symb.BS())
     )
-    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True)
 
 
 def test_svg_dump_phys_universal1(tmp_path, save_figs):
@@ -243,7 +275,6 @@ def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-def test_svg_decomposition_symb(tmp_path, save_figs):
-    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")),
-                                    phase_shifter_fn=symb.PS)
-    _save_or_check(C1, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+def test_svg_decomposition_symb_compact(tmp_path, save_figs):
+    C1 = pcvl.Circuit.decomposition(pcvl.Matrix(symb.PERM([3, 1, 0, 2]).U), symb.BS(R=pcvl.P("R")))
+    _save_or_check(C1, tmp_path, sys._getframe().f_code.co_name, save_figs,recursive=True, compact=True)

@@ -63,7 +63,7 @@ class TextPrinter:
             else:
                 self._h[i] += ((i % self._hc) == 2 and "─" or char)*(maxpos-len(self._h[i]))
 
-    def open_subblock(self, lines, name, internal=False):
+    def open_subblock(self, lines, name, area=None, internal=False):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, header=True)
@@ -88,6 +88,7 @@ class TextPrinter:
             else:
                 self._h[k] += "║"
         self._h[end*self._hc+4] += "╝"
+        return None
 
     def append_subcircuit(self, lines, circuit, content, min_size=5):
         self.open_subblock(lines, circuit._name)
@@ -164,7 +165,8 @@ class TextPrinter:
 class GraphicPrinter:
     affix_port_size = 15
     affix_all_size = 25
-    def __init__(self, nsize, canvas: Canvas, stroke_style):
+
+    def __init__(self, nsize, canvas: Canvas, stroke_style, compact_rendering=False):
         self._stroke_style = stroke_style
         self._nsize = nsize
         # first position available for row n
@@ -178,13 +180,19 @@ class GraphicPrinter:
             self._canvas.add_text((0, 25 + 50 * k), str(k), 6, ta="left")
         self._current_block_open_offset = None
         self._current_block_name = ""
+        self._compact = compact_rendering
 
-    def open_subblock(self, lines, name):
+    def open_subblock(self, lines, name, area=None, color=None):
         start = lines[0]
         end = lines[-1]
         self._current_block_open_offset = self.extend_pos(start, end)
         self._current_block_name = name
-        pass
+        if area is not None:
+            self._canvas.set_offset((GraphicPrinter.affix_all_size + 50 * area[0], 50 * area[1]),
+                                    50 * area[2], 50 * area[3])
+            if color is None:
+                color = "lightblue"
+            self._canvas.add_rect((2,2), 50 * area[2]-4, 50 * area[3]-4, fill=color, stroke="none")
 
     def close_subblock(self, lines):
         start = lines[0]
@@ -196,7 +204,7 @@ class GraphicPrinter:
         self._canvas.add_rect((2, 2), 50 * (curpos-begpos)-4, 50 * (end - start + 1)-4,
                               stroke_dasharray="1,2")
         self._canvas.add_text((4, 50 * (end - start + 1)+5), self._current_block_name.upper(), 8)
-        pass
+        return (begpos, start, (curpos-begpos), (end-start+1))
 
     def max_pos(self, start, end, _):
         return max(self._chart[start:end+1])
@@ -216,9 +224,9 @@ class GraphicPrinter:
         start = lines[0]
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
-        w = circuit.width
+        w = circuit.get_width(self._compact)
         self._canvas.set_offset((GraphicPrinter.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        circuit.shape(content, self._canvas)
+        circuit.shape(content, self._canvas, self._compact)
         for i in range(start, end+1):
             self._chart[i] += w
 
@@ -249,13 +257,13 @@ class GraphicPrinter:
         return self._canvas.draw()
 
 
-def QPrinter(n, output_format="text", stroke_style="", **opts):
+def QPrinter(n, output_format="text", stroke_style="", compact=False, **opts):
     if output_format == "text":
         return TextPrinter(n)
     elif output_format == "latex":
         raise NotImplementedError("latex format not yet supported")
-    if output_format == "html":
+    if output_format == "html" or output_format == "png":
         canvas = SVGRenderer().new_canvas(**opts)
     else:
         canvas = MplotRenderer().new_canvas(**opts)
-    return GraphicPrinter(n, canvas, stroke_style)
+    return GraphicPrinter(n, canvas, stroke_style, compact)

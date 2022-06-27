@@ -24,44 +24,19 @@ import copy
 
 import numpy as np
 import sympy as sp
+import scipy as scp
 
 from perceval.utils import Matrix, global_params
 
-import scipy.optimize as so
-
-
-def _solve(f, x0, constraint, bounds, precision):
-    r"""solve f starting with x0 and compliant with constraints
-
-    :param f:
-    :param x0:
-    :param constraint:
-    :param precision:
-    :return:
-    """
-    if len(x0) == 0:
-        if abs(f([])) < precision:
-            return []
-    for i, c in enumerate(constraint):
-        if c is not None:
-            c = float(c)
-            fi = lambda x: f([*x[:i], c, *x[i:]])
-            res = _solve(fi, x0[:i]+x0[i+1:], constraint[:i]+constraint[i+1:], bounds[:i]+bounds[i+1:], precision)
-            if res is None:
-                return None
-            return [*res[:i], c, *res[i:]]
-    res = so.minimize(f, x0, method="L-BFGS-B", bounds=[b is not None and (float(b[0]), float(b[1])) or (None, None)
-                                                        for b in bounds])
-    if f(res.x)[0] > precision:
-        return None
-    return res.x
+from .solve import solve
 
 
 def add_phases(phase_shifter_fn, D):
     phases = []
     for idx in range(len(D)):
-        a = D[idx].real
-        b = D[idx].imag
+        iD = D[idx]
+        a = iD.real
+        b = iD.imag
         if b != 0 or a < 0:
             if b == 0:
                 phi = np.pi
@@ -83,11 +58,15 @@ def decompose_triangle(u,
                        phase_shifter_fn,
                        permutation,
                        precision,
-                       constraints):
+                       constraints,
+                       allow_error):
     m = u.shape[0]
     params = component.get_parameters()
     params_symbols = [x.spv for x in params]
     bounds = [not x.is_periodic and x.bounds or None for x in params]
+
+    if constraints is None:
+        constraints = [[None] * len(params)]
 
     if precision is None:
         precision = global_params["min_complex_component"]
@@ -120,11 +99,13 @@ def decompose_triangle(u,
                             break
             if not solve_cell:
                 equation = cU_inv[0, 0] * u[n, j] + cU_inv[0, 1] * u[n + 1, j]
-                f = sp.lambdify([params_symbols], [sp.re(abs(equation))])
+                f = sp.lambdify([params_symbols], [equation], modules=[np, scp])
+                g = lambda *p: np.real(np.abs(f(*p)))
                 x0 = [p.random() for p in params]
                 # look for a constraint solution first
+                res = None
                 for c in constraints:
-                    res = _solve(f, x0, list(c), bounds, precision)
+                    res = solve(g, x0, list(c), bounds, precision, allow_error)
                     if res is not None:
                         break
                 if res is None:
@@ -144,19 +125,20 @@ def decompose_triangle(u,
 
                 u = RI @ u
                 list_components = [((n, n + 1), instantiated_component)] + list_components
-
-    D = np.diag(u)
+            u[n, j] = 0
 
     if phase_shifter_fn:
+        D = np.diag(u)
         list_components = add_phases(phase_shifter_fn, D) + list_components
 
     return list_components
 
 
 def decompose_rectangle(u,
-                       component,
-                       phase_shifter_fn,
-                       permutation,
-                       precision,
-                       constraints):
+                        component,
+                        phase_shifter_fn,
+                        permutation,
+                        precision,
+                        constraints,
+                        allow_error):
     raise NotImplementedError("rectangular decomposition not implemented yet")
