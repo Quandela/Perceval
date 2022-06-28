@@ -25,7 +25,7 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils.matrix import Matrix, MatrixN
+from perceval.utils.matrix import Matrix
 from perceval.utils import Canvas
 
 
@@ -390,9 +390,10 @@ class Unitary(ACircuit):
     _fcircuit = Circuit
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
 
-    def __init__(self, U: MatrixN, name: str = None, use_polarization: bool = False):
+    def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
         assert U.is_square(), "U parameter must be a square matrix"
+        assert not U.is_symbolic(), "U parameter must not be symbolic"
         self._u = U
         if name is not None:
             self._name = name
@@ -405,7 +406,7 @@ class Unitary(ACircuit):
         super().__init__(m)
 
     def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
-        # TODO: implement assign and use_symbolic
+        # Ignore assign and use_symbolic parameters as __init__ checked the unitary matrix is numeric
         return self._u
 
     def inverse(self, v=True, h=False):
@@ -418,7 +419,7 @@ class Unitary(ACircuit):
             params.append(f"name='{self._name}'")
         if self._supports_polarization:
             params.append("use_polarization=True")
-        return f"phys.Unitary({', '.join(params)}))"
+        return f"phys.Unitary({', '.join(params)})"
 
     def shape(self, content, canvas, compact: bool = False):
         for i in range(self.m):
