@@ -174,10 +174,11 @@ class GraphicPrinter:
         self._canvas = canvas
         self._canvas.set_offset((0, 0),
                                 GraphicPrinter.affix_all_size, 50 * (nsize + 1))
+        self._n_font_size = min(12, max(6, self._nsize+1))
         for k in range(nsize):
             self._canvas.add_mpath(["M", GraphicPrinter.affix_all_size-GraphicPrinter.affix_port_size, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
-            self._canvas.add_text((0, 25 + 50 * k), str(k), 6, ta="left")
+            self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
         self._current_block_open_offset = None
         self._current_block_name = ""
         self._compact = compact_rendering
@@ -251,7 +252,7 @@ class GraphicPrinter:
         for k in range(self._nsize):
             self._canvas.add_mpath(["M", 0, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
-            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), 6, ta="right")
+            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), self._n_font_size, ta="right")
 
     def draw(self):
         return self._canvas.draw()
