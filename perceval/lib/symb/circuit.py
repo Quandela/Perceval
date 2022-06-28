@@ -256,9 +256,9 @@ class PS(ACircuit):
 
     def shape(self, content, canvas, compact: bool = False):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], stroke="black", stroke_width=1)
-        canvas.add_mpath(["M", 20, 40, "h", 10, "v", -30, "h", -10, "z"],
+        canvas.add_mpath(["M", 15, 35, "h", 20, "v", -20, "h", -20, "z"],
                          stroke="black", stroke_width=1, fill="lightgray")
-        canvas.add_text((25, 50), text=content.replace("phi=", "Φ="), size=7, ta="middle")
+        canvas.add_text((25, 44), text=content.replace("phi=", "Φ="), size=7, ta="middle")
 
     def inverse(self, v=False, h=False):
         if h:
