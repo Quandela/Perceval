@@ -424,7 +424,7 @@ class Unitary(ACircuit):
     def shape(self, content, canvas, compact: bool = False):
         for i in range(self.m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
-        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
+        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="gold")
         canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)
 
 
