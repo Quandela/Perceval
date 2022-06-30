@@ -275,7 +275,7 @@ class Unitary(ACircuit):
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
-        assert U.is_square(), "U parameter must be a square matrix"
+        assert U.is_unitary(), "U parameter must be a unitary matrix"
         # Even for a symb.Unitary component, a symbolic matrix is not a use case. On top of that, it slows down
         # computations quite a bit!
         assert not U.is_symbolic(), "U parameter must not be symbolic"
@@ -294,9 +294,11 @@ class Unitary(ACircuit):
         # Ignore assign and use_symbolic parameters as __init__ checked the unitary matrix is numeric
         return self._u
 
-    def inverse(self, v=True, h=False):
+    def inverse(self, v=False, h=False):
         if v:
             self._u = np.flipud(self._u)
+        if h:
+            self._u = self._u.inv()
 
     def describe(self, _=None):
         params = [f"Matrix('''{self._u}''')"]
@@ -328,7 +330,6 @@ class PERM(Unitary):
         assert (min(perm) == 0 and
                 max(perm)+1 == len(perm) == len(set(perm)) == len([n for n in perm if isinstance(n, int)])),\
             "%s is not a permutation" % perm
-        self._perm = perm
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
@@ -340,14 +341,18 @@ class PERM(Unitary):
         return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
 
     def describe(self, _=None):
-        return "symb.PERM(%s)" % str(self._perm)
+        return "symb.PERM(%s)" % str(self._compute_perm_vector())
 
     def definition(self):
         return self.U
 
+    def _compute_perm_vector(self):
+        nz = np.nonzero(self._u)
+        m_list = nz[1].tolist()
+        return [m_list.index(i) for i in nz[0]]
+
     def shape(self, content, canvas, compact: bool = False):
-        lines = []
-        for an_input, an_output in enumerate(self._perm):
+        for an_input, an_output in enumerate(self._compute_perm_vector()):
             canvas.add_mpath(["M", 0, 24.8 + an_input * 50,
                               "C", 20, 25 + an_input * 50, 30, 25 + an_output * 50, 50, 25 + an_output * 50],
                              stroke="white", stroke_width=2)
