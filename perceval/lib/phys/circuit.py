@@ -411,7 +411,7 @@ class Unitary(ACircuit):
 
     def inverse(self, v=False, h=False):
         if v:
-            self._u = np.flipud(self._u)
+            self._u = np.flip(self._u)
         if h:
             self._u = self._u.inv()
 
