@@ -51,4 +51,7 @@ def test_permutation_inverse():
     perm.inverse(h=True)  # Get back to the initial state
     assert perm._compute_perm_vector() == perm_vector
     perm.inverse(v=True)
-    assert perm._compute_perm_vector() == [max(perm_vector)-i for i in perm_vector]
+    # Vertical inversion acts as if mode indexes were reversed:
+    expected = [max(perm_vector)-i for i in perm_vector]
+    expected.reverse()
+    assert perm._compute_perm_vector() == expected
