@@ -143,10 +143,10 @@ def test_svg_dump_symb_ps(tmp_path, save_figs):
     _save_or_check(symb.PS(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 def test_svg_dump_symb_pbs_compact(tmp_path, save_figs):
-    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs,compact=True)
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True)
 
 def test_svg_dump_symb_pbs_compact_false(tmp_path, save_figs):
-    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs,compact=False)
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False)
 
 def test_svg_dump_symb_pr(tmp_path, save_figs):
     _save_or_check(symb.PR(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
@@ -197,13 +197,14 @@ def test_svg_dump_phys_universal1(tmp_path, save_figs):
 
 
 def test_svg_dump_unitary(tmp_path, save_figs):
-    cA = phys.Circuit(6, name="W_1", U=pcvl.Matrix.random_unitary(6))
-    cB = phys.Circuit(6, name="W_2", U=pcvl.Matrix.random_unitary(6))
+    m = 6
+    c_a = phys.Unitary(name="W_1", U=pcvl.Matrix.random_unitary(m))
+    c_b = phys.Unitary(name="W_2", U=pcvl.Matrix.random_unitary(m))
     p_x = pcvl.P("x")
-    c = (phys.Circuit(6)
-         .add(0, cA, merge=False)
+    c = (phys.Circuit(m)
+         .add(0, c_a, merge=False)
          .add(0, phys.PS(p_x))
-         .add(0, cB, merge=False))
+         .add(0, c_b, merge=False))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
