@@ -10,43 +10,43 @@ Overview
 
    * - Name
      - Object Name
-     - # modes
-     - Representation
+     - Representation ``phys`` library
+     - Representation ``symb`` library
      - Unitary Matrix
    * - :ref:`Beam Splitter`
      - ``BS``
-     - 2
      - .. image:: _static/library/phys/bs.png
+     - .. image:: _static/library/symb/bs.png
      - :math:`\left[\begin{matrix}e^{i \phi_{a}} \cos{\left(\theta \right)} & i e^{i \phi_{b}} \sin{\left(\theta \right)}\\i e^{i \left(\phi_{a} - \phi_{b} + \phi_{d}\right)} \sin{\left(\theta \right)} & e^{i \phi_{d}} \cos{\left(\theta \right)}\end{matrix}\right]`
    * - :ref:`Phase Shifter`
      - ``PS``
-     - 1
      - .. image:: _static/library/phys/ps.png
+     - .. image:: _static/library/symb/ps.png
      - :math:`\left[\begin{matrix}e^{i \phi}\end{matrix}\right]`
    * - :ref:`Permutation`
      - ``PERM``
-     - 2...m
      - .. image:: _static/library/phys/perm.png
+     - .. image:: _static/library/symb/perm.png
      - :math:`\left[\begin{matrix}0 & 1\\1 & 0\end{matrix}\right]`
    * - :ref:`Waveplate`
      - ``WP``
-     - :math:`\begin{matrix}\text{(spatial)} 1\hfill\\\text{(polarization)} 2\hfill\end{matrix}`
      - .. image:: _static/library/phys/wp.png
+     - .. image:: _static/library/symb/wp.png
      - :math:`\left[\begin{matrix}i \sin{\left(\delta \right)} \cos{\left(2 \xi \right)} + \cos{\left(\delta \right)} & i \sin{\left(\delta \right)} \sin{\left(2 \xi \right)}\\i \sin{\left(\delta \right)} \sin{\left(2 \xi \right)} & - i \sin{\left(\delta \right)} \cos{\left(2 \xi \right)} + \cos{\left(\delta \right)}\end{matrix}\right]`
    * - :ref:`Polarizing Beam Splitter`
      - ``PBS``
-     - :math:`\begin{matrix}\text{(spatial)} 2\hfill\\\text{(polarization)} 4\hfill\end{matrix}`
      - .. image:: _static/library/phys/pbs.png
+     - .. image:: _static/library/symb/pbs.png
      - :math:`\left[\begin{matrix}0 & 0 & 1 & 0\\0 & 1 & 0 & 0\\1 & 0 & 0 & 0\\0 & 0 & 0 & 1\end{matrix}\right]`
    * - :ref:`Polarization Rotator`
      - ``PR``
-     - :math:`\begin{matrix}\text{(spatial)} 1\hfill\\\text{(polarization)} 2\hfill\end{matrix}`
      - .. image:: _static/library/phys/pr.png
+     - .. image:: _static/library/symb/pr.png
      - :math:`\left[\begin{matrix}\cos{\left(\delta \right)} & \sin{\left(\delta \right)}\\- \sin{\left(\delta \right)} & \cos{\left(\delta \right)}\end{matrix}\right]`
    * - :ref:`Time Delay`
      - ``DT``
-     - :math:`\begin{matrix}1\end{matrix}`
      - .. image:: _static/library/phys/dt.png
+     - .. image:: _static/library/symb/dt.png
      - `N/A`
 
 Description
@@ -137,6 +137,19 @@ a 4-mode permutation. It matches the first input path (index 0) with the third o
 .. list-table::
 
    * - .. image:: _static/library/phys/perm-2310.png
+           :width: 180
+     - .. math::
+            \left[\begin{matrix}0 & 0 & 1 & 0\\0 & 0 & 0 & 1\\0 & 1 & 0 & 0\\1 & 0 & 0 & 0\end{matrix}\right]
+
+We can do exactly the same with the symb library.
+
+>>> c=symb.PERM([2,3,0,1])
+>>> pcvl.pdisplay(c)
+>>> pcvl.pdisplay(c.compute_unitary(), output_format="latex")
+
+.. list-table::
+
+   * - .. image:: _static/library/symb/perm-2310.png
            :width: 180
      - .. math::
             \left[\begin{matrix}0 & 0 & 1 & 0\\0 & 0 & 0 & 1\\0 & 1 & 0 & 0\\1 & 0 & 0 & 0\end{matrix}\right]

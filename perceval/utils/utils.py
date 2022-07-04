@@ -21,13 +21,19 @@
 # SOFTWARE.
 
 import os
+import sys
+import warnings
+import random
+import numpy as np
+
+
 from .format import simple_float, simple_complex
 in_notebook = False
 in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ
 
 global_params = {
     "min_p": 1e-16,
-    "min_complex_component": 1e-8
+    "min_complex_component": 1e-6
 }
 
 try:
@@ -41,7 +47,7 @@ except AttributeError:
     pass
 
 
-def pdisplay(o, output_format=None, **opts):
+def pdisplay(o, output_format=None, to_file=None, **opts):
     if output_format is None:
         if in_notebook:
             output_format = "html"
@@ -63,7 +69,41 @@ def pdisplay(o, output_format=None, **opts):
             raise RuntimeError("pdisplay not defined for type %s" % type(o))
     else:
         r = o.pdisplay(output_format=output_format, **opts)
-    if in_notebook and output_format != "text":
+
+    if to_file:
+        if 'drawSvg' in sys.modules:  # If drawSvg was imported beforehand
+            import drawSvg
+            if isinstance(r, drawSvg.Drawing):
+                if output_format == "png":
+                    r.savePng(to_file)
+                else:
+                    r.saveSvg(to_file)
+                return
+        else:
+            warnings.warn("to_file parameter requires drawSvg to be installed on your system and manually imported.")
+
+    if 'drawSvg' in sys.modules:  # If drawSvg was imported beforehand
+        import drawSvg
+        if isinstance(r, drawSvg.Drawing):
+            return r
+    elif in_notebook and output_format != "text":
         display(HTML(r))
     else:
         print(r)
+
+
+def random_seed(param):
+    """
+    seed: int = None
+    Initialize the seed used for random number generation
+
+    :param seed: if None, use a time-based seed
+    :return: the actual seed used
+    """
+    if param is not None:
+        random.seed(param)
+        np.random.seed(param)
+
+    else:
+        random.seed()
+        np.random.seed()
