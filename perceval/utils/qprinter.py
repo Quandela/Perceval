@@ -22,8 +22,7 @@
 
 import math
 from .renderer import SVGRenderer, MplotRenderer, Canvas
-import numpy as np
-
+from .utils import simple_float
 
 """
     Generic (abstract) class for drawing a LO schema - it covers different levels of representation:
@@ -268,3 +267,30 @@ def QPrinter(n, output_format="text", stroke_style="", compact=False, **opts):
     else:
         canvas = MplotRenderer().new_canvas(**opts)
     return GraphicPrinter(n, canvas, stroke_style, compact)
+
+
+SPECIAL_OUTPUTS = {
+    'PERM': '_╲ ╱\n_ ╳ \n_╱ ╲'
+}
+
+
+def prepare_for_display(params: dict, precision: float = 1e-6, nsimplify: bool = True, separator: str = '\n') -> str:
+    """
+    Prepares a string output from a dictionnary of paramaters.
+    params: dictionnary where keys are the parameter names and values are the corresponding parameter value. Values can
+            either be a string or a float.
+            If a key is found in SPECIAL_OUTPUTS, the value is replaced by the hardcoded value.
+    precision: Rounds a float value to the given precision
+    nsimplify: Try to simplify numerical display in case of float value
+    separator: String separator for the final join
+    """
+    output = []
+    for key, value in params.items():
+        if key in SPECIAL_OUTPUTS:
+            output.append(SPECIAL_OUTPUTS[key])
+            continue
+
+        if not isinstance(value, str):
+            _, value = simple_float(value, precision, nsimplify)
+        output.append(f'{key}={value}')
+    return separator.join(output)

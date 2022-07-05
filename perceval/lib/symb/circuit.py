@@ -25,7 +25,7 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils import Matrix
+from perceval.utils import Matrix, prepare_for_display
 
 
 class Circuit(GCircuit):
@@ -78,7 +78,7 @@ class BS(ACircuit):
                            [sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi))), cos_theta]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         if "theta" in self._params:
@@ -90,7 +90,8 @@ class BS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "symb.BS(%s)" % ", ".join(parameters)
+        params_str = prepare_for_display(parameters, separator=', ')
+        return "symb.BS(%s)" % params_str
 
     width = 2
 
@@ -144,7 +145,7 @@ class PBS(ACircuit):
                        [0, 0, 0, 1]], use_symbolic)
 
     def get_variables(self, map_param_kid=None):
-        return []
+        return {}
 
     # TODO: make method static
     def describe(self, _=None):
@@ -199,7 +200,7 @@ class DT(ACircuit):
         raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "t", "t", None, map_param_kid)
@@ -207,7 +208,8 @@ class DT(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.DT(%s)" % ", ".join(parameters)
+        params_str = prepare_for_display(parameters, separator=', ')
+        return "phys.DT(%s)" % params_str
 
     width = 1
 
@@ -242,7 +244,7 @@ class PS(ACircuit):
             return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "phi", "phi", None, map_param_kid)
@@ -250,7 +252,8 @@ class PS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "symb.PS(%s)" % ", ".join(parameters)
+        params_str = prepare_for_display(parameters, separator=', ')
+        return "symb.PS(%s)" % params_str
 
     width = 1
 
@@ -287,7 +290,7 @@ class PERM(GCircuit):
         self.width = 1
 
     def get_variables(self, _=None):
-        return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
+        return {'PERM': ''}
 
     def describe(self, _=None):
         return "symb.PERM(%s)" % str(self._perm)
@@ -342,7 +345,7 @@ class WP(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "xsi", "xsi", None, map_param_kid)
@@ -351,7 +354,8 @@ class WP(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.WP(%s)" % ", ".join(parameters)
+        params_str = prepare_for_display(parameters, separator=', ')
+        return "phys.WP(%s)" % params_str
 
     width = 1
 
@@ -413,7 +417,7 @@ class PR(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "delta", "delta", None, map_param_kid)
@@ -421,7 +425,8 @@ class PR(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.PR(%s)" % ", ".join(parameters)
+        params_str = prepare_for_display(parameters, separator=', ')
+        return "phys.PR(%s)" % params_str
 
     width = 1
 
