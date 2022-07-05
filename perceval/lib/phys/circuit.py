@@ -99,7 +99,7 @@ class BS(ACircuit):
         return parameters
 
     def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid, precision, nsimplify)
+        parameters = self.get_variables(map_param_kid)
         return "phys.BS(%s)" % ", ".join(parameters)
 
     width = 2
@@ -194,7 +194,7 @@ class PS(ACircuit):
         return parameters
 
     def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid, precision, nsimplify)
+        parameters = self.get_variables(map_param_kid)
         return "phys.PS(%s)" % ", ".join(parameters)
 
     width = 1
@@ -256,7 +256,7 @@ class WP(ACircuit):
         return parameters
 
     def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid, precision, nsimplify)
+        parameters = self.get_variables(map_param_kid)
         return "phys.WP(%s)" % ", ".join(parameters)
 
     width = 1
@@ -302,7 +302,7 @@ class PR(ACircuit):
         return parameters
 
     def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid, precision, nsimplify)
+        parameters = self.get_variables(map_param_kid)
         return "phys.PR(%s)" % ", ".join(parameters)
 
     width = 1
@@ -365,7 +365,7 @@ class DT(ACircuit):
         return parameters
 
     def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid, precision, nsimplify)
+        parameters = self.get_variables(map_param_kid)
         return "phys.DT(%s)" % ", ".join(parameters)
 
     width = 1

@@ -1020,9 +1020,5 @@ class Circuit(ACircuit):
     def shape(self, _, canvas, compact: bool = False):
         for i in range(self.m):
             canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * self.width, 0], **self.stroke_style)
-        a = 6.25 * self.width
-        canvas.add_mpath(["M", 0, a, "c", 0, 0, 0, -a, a, -a, "l", 6 * a, 0, "c", a, 0, a, a, a, a,
-                          "l", 0, 6 * a, "c", 0, 0, 0, a, -a, a, "l", -6 * a, 0, "c", -a, 0, -a, -a, -a,
-                          -a, "l", 0, -6 * a],
-                         **self.stroke_style, fill="yellow")
+        canvas.add_rect((5, 5), 50 * self.width - 10, 50 * self.m - 10, fill="lightgray")
         canvas.add_text((25 * self.width, 25 * self.m), size=10, ta="middle", text=self._name)
