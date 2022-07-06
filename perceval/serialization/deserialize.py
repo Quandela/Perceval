@@ -60,6 +60,8 @@ class CircuitBuilder:
                 component = self._deserialize_hwp(serial_comp.wave_plate, serial_comp.ns)
         elif serial_comp.HasField('d_t'):
             component = self._deserialize_dt(serial_comp.d_t, serial_comp.ns)
+        elif serial_comp.HasField('polarization_rotator'):
+            component = self._deserialize_pr(serial_comp.polarization_rotator, serial_comp.ns)
         elif serial_comp.component_type == 'PBS':
             component = phys.PBS() if serial_comp.ns == pb.Component.PHYS else symb.PBS()
 
@@ -117,6 +119,10 @@ class CircuitBuilder:
     def _deserialize_dt(self, serial_dt, ns):
         return_type = phys.DT if ns == pb.Component.PHYS else symb.DT
         return return_type(_expr.deserialize_expr(serial_dt.dt))
+
+    def _deserialize_pr(self, serial_pr, ns):
+        return_type = phys.PR if ns == pb.Component.PHYS else symb.PR
+        return return_type(_expr.deserialize_expr(serial_pr.delta))
 
 
 def deserialize_matrix(pb_mat: str | bytes | pb.Matrix) -> Matrix:

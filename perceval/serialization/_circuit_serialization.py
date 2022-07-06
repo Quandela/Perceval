@@ -110,6 +110,12 @@ class ComponentSerializer:
         pb_dt.dt.serialization = str(dt._dt._value)
         self._pb.d_t.CopyFrom(pb_dt)
 
+    @dispatch((phys.PR, symb.PR))
+    def _serialize(self, pr):
+        pb_pr = pb.PolarizationRotator()
+        pb_pr.delta.serialization = str(pr._delta._value)
+        self._pb.polarization_rotator.CopyFrom(pb_pr)
+
     @dispatch(Circuit)
     def _serialize(self, circuit: Circuit):
         pb_circ = serialize_circuit(circuit)

@@ -53,11 +53,11 @@ def test_symbolic_matrix_serialization():
 def _check_circuits_eq(c_a, c_b):
     assert c_a.ncomponents() == c_b.ncomponents()
     for nc in range(len(c_a._components)):
-        _, input_comp = c_a._components[nc]
-        _, output_comp = c_b._components[nc]
+        input_idx, input_comp = c_a._components[nc]
+        output_idx, output_comp = c_b._components[nc]
         assert isinstance(input_comp, type(output_comp))
+        assert list(input_idx) == list(output_idx)
         assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
-    assert c_a.U == c_b.U
 
 
 def test_phys_circuit_serialization():
@@ -65,6 +65,7 @@ def test_phys_circuit_serialization():
          // phys.Unitary(Matrix.random_unitary(3))
     c2 = Circuit(2) // phys.BS(R=1/4) // phys.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, phys.HWP(xsi=0.23)).add(1, phys.QWP(xsi=0.17)).add(2, phys.WP(0.4, 0.5))
+    c1.add(0, phys.PR(delta=0.89))
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
@@ -75,6 +76,7 @@ def test_symb_circuit_serialization():
          // symb.Unitary(Matrix.random_unitary(3))
     c2 = Circuit(2) // symb.BS(R=1/4) // symb.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, symb.HWP(xsi=0.23)).add(1, symb.QWP(xsi=0.17)).add(2, symb.WP(0.4, 0.5))
+    c1.add(0, symb.PR(delta=0.89))
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
