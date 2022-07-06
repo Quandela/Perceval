@@ -61,20 +61,20 @@ def _check_circuits_eq(c_a, c_b):
 
 
 def test_phys_circuit_serialization():
-    c1 = Circuit(3) // phys.BS(R=2/3) // phys.PS(phi=0.215) // phys.PERM([2, 0, 1]) // (1, phys.BS()) \
+    c1 = Circuit(3) // phys.BS(R=2/3) // phys.PS(phi=0.215) // phys.PERM([2, 0, 1]) // (1, phys.PBS()) \
          // phys.Unitary(Matrix.random_unitary(3))
     c2 = Circuit(2) // phys.BS(R=1/4) // phys.PERM([1, 0])
-    c1.add(1, c2, merge=False)
+    c1.add(1, c2, merge=False).add(0, phys.HWP(xsi=0.23)).add(1, phys.QWP(xsi=0.17)).add(2, phys.WP(0.4, 0.5))
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
 
 
 def test_symb_circuit_serialization():
-    c1 = Circuit(3) // symb.BS(R=2/3) // symb.PS(phi=0.215) // symb.PERM([2, 0, 1]) // (1, symb.BS()) \
+    c1 = Circuit(3) // symb.BS(R=2/3) // symb.PS(phi=0.215) // symb.PERM([2, 0, 1]) // (1, symb.PBS()) \
          // symb.Unitary(Matrix.random_unitary(3))
     c2 = Circuit(2) // symb.BS(R=1/4) // symb.PERM([1, 0])
-    c1.add(1, c2, merge=False)
+    c1.add(1, c2, merge=False).add(0, symb.HWP(xsi=0.23)).add(1, symb.QWP(xsi=0.17)).add(2, symb.WP(0.4, 0.5))
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)

@@ -38,12 +38,12 @@ class ComponentSerializer:
         self._pb.starting_mode = r
         self._pb.n_mode = c.m
         self._pb.component_type = type(c).__name__
+        self._pb.ns = pb.Component.PHYS if '.phys' in c.__module__ else pb.Component.SYMB
         self._serialize(c)
         return self._pb
 
     @dispatch(phys.BS)
     def _serialize(self, bs: phys.BS):
-        self._pb.ns = pb.Component.PHYS
         pb_bs = pb.BeamSplitterComplex()
         if 'theta' in bs.params:
             pb_bs.theta.serialization = str(bs._theta._value)
@@ -56,7 +56,6 @@ class ComponentSerializer:
 
     @dispatch(symb.BS)
     def _serialize(self, bs: symb.BS):
-        self._pb.ns = pb.Component.SYMB
         pb_bs = pb.BeamSplitter()
         if 'theta' in bs.params:
             pb_bs.theta.serialization = str(bs._theta._value)
@@ -67,21 +66,18 @@ class ComponentSerializer:
 
     @dispatch((phys.PS, symb.PS))
     def _serialize(self, ps):
-        self._pb.ns = pb.Component.PHYS if '.phys' in ps.__module__ else pb.Component.SYMB
         pb_ps = pb.PhaseShifter()
         pb_ps.phi.serialization = str(ps._phi._value)
         self._pb.phase_shifter.CopyFrom(pb_ps)
 
     @dispatch((phys.PERM, symb.PERM))
     def _serialize(self, p):
-        self._pb.ns = pb.Component.PHYS if '.phys' in p.__module__ else pb.Component.SYMB
         pb_perm = pb.Permutation()
         pb_perm.permutations.extend(p.perm_vector)
         self._pb.permutation.CopyFrom(pb_perm)
 
     @dispatch((phys.Unitary, symb.Unitary))
     def _serialize(self, unitary):
-        self._pb.ns = pb.Component.PHYS if '.phys' in unitary.__module__ else pb.Component.SYMB
         pb_umat = serialize_matrix(unitary.U)
         pb_unitary = pb.Unitary()
         pb_unitary.mat.CopyFrom(pb_umat)
@@ -89,6 +85,30 @@ class ComponentSerializer:
             pb_unitary.name = unitary._name
         pb_unitary.use_polarization = unitary.requires_polarization
         self._pb.unitary.CopyFrom(pb_unitary)
+
+    @dispatch((phys.PBS, symb.PBS))
+    def _serialize(self, pbs):
+        # No need to serialize anything specific for PBS
+        pass
+
+    @dispatch((phys.QWP, symb.QWP, phys.HWP, symb.HWP))
+    def _serialize(self, wp):
+        pb_wp = pb.WavePlate()
+        pb_wp.xsi.serialization = str(wp._xsi._value)
+        self._pb.wave_plate.CopyFrom(pb_wp)
+
+    @dispatch((phys.WP, symb.WP))
+    def _serialize(self, wp):
+        pb_wp = pb.WavePlate()
+        pb_wp.delta.serialization = str(wp._delta._value)
+        pb_wp.xsi.serialization = str(wp._xsi._value)
+        self._pb.wave_plate.CopyFrom(pb_wp)
+
+    @dispatch((phys.DT, symb.DT))
+    def _serialize(self, dt):
+        pb_dt = pb.DT()
+        pb_dt.dt.serialization = str(dt._dt._value)
+        self._pb.d_t.CopyFrom(pb_dt)
 
     @dispatch(Circuit)
     def _serialize(self, circuit: Circuit):
