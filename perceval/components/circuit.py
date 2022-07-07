@@ -30,7 +30,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, prepare_for_display, Canvas, global_params
+from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
 import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
@@ -388,7 +388,7 @@ class ACircuit(ABC):
 
         if not isinstance(self, Circuit) or self._Udef is not None:
             variables = self.get_variables(map_param_kid)
-            description = prepare_for_display(variables, precision, nsimplify)
+            description = format_parameters(variables, precision, nsimplify)
             td.append_circuit([p + shift for p in range(self._m)], self, description)
 
         if self._components:
@@ -402,11 +402,11 @@ class ACircuit(ABC):
                     self._areas[idx] = td.close_subblock(r)
                 elif c._components:
                     component_vars = c.get_variables(map_param_kid)
-                    description = prepare_for_display(component_vars, precision, nsimplify)
+                    description = format_parameters(component_vars, precision, nsimplify)
                     td.append_subcircuit(shiftr, c, description)
                 elif isinstance(c, ACircuit) or c._Udef is not None:
                     component_vars = c.get_variables(map_param_kid)
-                    description = prepare_for_display(component_vars, precision, nsimplify)
+                    description = format_parameters(component_vars, precision, nsimplify)
                     td.append_circuit(shiftr, c, description)
 
         td.extend_pos(0, self._m - 1)

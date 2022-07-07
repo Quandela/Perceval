@@ -274,7 +274,7 @@ SPECIAL_OUTPUTS = {
 }
 
 
-def prepare_for_display(params: dict, precision: float = 1e-6, nsimplify: bool = True, separator: str = '\n') -> str:
+def format_parameters(params: dict, precision: float = 1e-6, nsimplify: bool = True, separator: str = '\n') -> str:
     """
     Prepares a string output from a dictionnary of paramaters.
     params: dictionnary where keys are the parameter names and values are the corresponding parameter value. Values can

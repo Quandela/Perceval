@@ -25,7 +25,7 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils import Matrix, Canvas, prepare_for_display
+from perceval.utils import Matrix, Canvas, format_parameters
 
 
 class Circuit(GCircuit):
@@ -100,7 +100,7 @@ class BS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        params_str = prepare_for_display(parameters, separator=', ')
+        params_str = format_parameters(parameters, separator=', ')
         return "phys.BS(%s)" % params_str
 
     width = 2
@@ -193,7 +193,7 @@ class PS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        params_str = prepare_for_display(parameters, separator=', ')
+        params_str = format_parameters(parameters, separator=', ')
         return "phys.PS(%s)" % params_str
 
     width = 1
@@ -256,7 +256,7 @@ class WP(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        params_str = prepare_for_display(parameters, separator=', ')
+        params_str = format_parameters(parameters, separator=', ')
         return "phys.WP(%s)" % params_str
 
     width = 1
@@ -303,7 +303,7 @@ class PR(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        params_str = prepare_for_display(parameters, separator=', ')
+        params_str = format_parameters(parameters, separator=', ')
         return "phys.PR(%s)" % params_str
 
     width = 1
@@ -367,7 +367,7 @@ class DT(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        params_str = prepare_for_display(parameters, separator=', ')
+        params_str = format_parameters(parameters, separator=', ')
         return "phys.DT(%s)" % params_str
 
     width = 1
