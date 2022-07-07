@@ -89,7 +89,7 @@ Example code:
 |0,1>
 >>> a_bs = pcvl.AnnotatedBasicState("|{P:H}{P:V},0>")   # Creates an annotated state |2,0> , with two photons in the first mode, one having a horizontal polarization, and the other a vertical polarization.
 >>> print(a_bs)
-|{P:H}{P:V>,0>
+|{P:H}{P:V},0>
 >>> a_bs[0]                      # prints the photons in the first mode
 ({"P":"H"},{"P":"V"})
 >>> print(a_bs.clear())     #prints the non-annotated Basic state corresponding to a_bs
