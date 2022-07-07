@@ -294,7 +294,7 @@ class ACircuit(ABC):
         else:
             out_parameters[pname] = map_param_kid[self._params[k]._pid]
 
-    def get_variables(self, _=None, precision: float = 1e-6, nsimplify: bool = True):
+    def get_variables(self, _=None):
         return {}
 
     def copy(self):
