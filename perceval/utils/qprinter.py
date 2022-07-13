@@ -180,15 +180,22 @@ class TextPrinter:
         if 'content' in opts and opts['content']:
             content = opts['content']
         self._h[self._hc*m + 2] += f'[{content})'
+        if 'name' in opts and opts['name']:
+            self._h[self._hc*m + 3] += f"[{opts['name']}]"
 
     def add_shape_left(self, m, shape=None, **opts):
         content = ''
         if 'content' in opts and opts['content']:
             content = opts['content']
         shape_size = len(content) + 2
-        self._set_offset(shape_size)
+        name = ''
+        if 'name' in opts and opts['name']:
+            name = '[' + opts['name'] + ']'
+        name_size = len(name)
+        self._set_offset(max(shape_size, name_size))
         self._h[self._hc*m + 2] = f'({content}]' + '─'*(self._offset-shape_size) \
                                   + self._h[self._hc*m + 2][self._offset:]
+        self._h[self._hc*m + 3] = name + ' '*(self._offset-name_size) + self._h[self._hc*m + 3][self._offset:]
 
 
 class GraphicPrinter:
