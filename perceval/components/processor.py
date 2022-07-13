@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from .source import Source
-from .circuit import ACircuit
+from .circuit import ACircuit, Circuit
 from perceval.utils import SVDistribution, StateVector
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
@@ -94,15 +94,19 @@ class Processor:
                  precision: float = 1e-6,
                  nsimplify: bool = True,
                  **opts):
-        printer = self._circuit.pdisplay(map_param_kid=map_param_kid,
-                                         shift=shift,
-                                         output_format=output_format,
-                                         recursive=recursive,
-                                         compact=compact,
-                                         precision=precision,
-                                         nsimplify=nsimplify,
-                                         complete_drawing=False,
-                                         **opts)
+        if not recursive:
+            display_circ = Circuit(m=self._circuit.m).add(0, self._circuit, merge=False)
+        else:
+            display_circ = self._circuit
+        printer = display_circ.pdisplay(map_param_kid=map_param_kid,
+                                        shift=shift,
+                                        output_format=output_format,
+                                        recursive=recursive,
+                                        compact=compact,
+                                        precision=precision,
+                                        nsimplify=nsimplify,
+                                        complete_drawing=False,
+                                        **opts)
         for k in range(self._circuit.m):
             in_display_params = {}
             if k in self._in_port_names:
