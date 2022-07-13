@@ -32,8 +32,7 @@ class Source:
                  purity_model: Literal["random", "indistinguishable"] = "random",
                  indistinguishability: float = 1,
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
-                 context: Dict = None,
-                 name: str = None) -> None:
+                 context: Dict = None) -> None:
         r"""Definition of a source
 
         :param brightness: the brightness of the source defined as the percentage of unique photon generation
@@ -43,7 +42,6 @@ class Source:
         :param indistinguishability_model: `homv` defines indistinguishability as HOM visibility, `linear` defines
             indistinguishability as ratio of indistinguishable photons
         :param context: gives a local context for source specific features, like `discernability_tag`
-        :param name: optional name of the source
         """
         self.brightness = brightness
         self.purity = purity
@@ -54,7 +52,6 @@ class Source:
         self._context = context or {}
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 1
-        self._name = name
 
     def probability_distribution(self):
         r"""returns SVDistribution on 1 mode associated to the source

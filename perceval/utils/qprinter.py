@@ -22,6 +22,7 @@
 
 import math
 from .renderer import SVGRenderer, MplotRenderer, Canvas
+from .renderer.shapes import detector_shape, source_shape
 from .utils import simple_float
 
 """
@@ -175,7 +176,7 @@ class TextPrinter:
             self._h[self._hc*k + 2] = str(k) + ':' + self._h[self._hc*k + 2][2:]
             self._h[self._hc*k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
-    def add_shape_right(self, m, shape=None, **opts):
+    def add_out_port(self, m, **opts):
         content = ''
         if 'content' in opts and opts['content']:
             content = opts['content']
@@ -183,7 +184,7 @@ class TextPrinter:
         if 'name' in opts and opts['name']:
             self._h[self._hc*m + 3] += f"[{opts['name']}]"
 
-    def add_shape_left(self, m, shape=None, **opts):
+    def add_in_port(self, m, **opts):
         content = ''
         if 'content' in opts and opts['content']:
             content = opts['content']
@@ -226,16 +227,16 @@ class GraphicPrinter:
         for k in range(self._nsize):
             self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
 
-    def add_shape_right(self, n_mode, shape_func, **opts):
+    def add_out_port(self, n_mode, **opts):
         max_pos = self.extend_pos(0, self._nsize - 1)
         self._canvas.set_offset((GraphicPrinter.affix_all_size + 50*max_pos, 50*n_mode),
                                 GraphicPrinter.affix_all_size, 50*(n_mode + 1))
-        shape_func(self._canvas, **opts)
+        detector_shape(self._canvas, **opts)
 
-    def add_shape_left(self, n_mode, shape_func, **opts):
+    def add_in_port(self, n_mode, **opts):
         self._canvas.set_offset((0, 50*n_mode),
                                 GraphicPrinter.affix_all_size, 50*(n_mode + 1))
-        shape_func(self._canvas, **opts)
+        source_shape(self._canvas, **opts)
 
     def open_subblock(self, lines, name, area=None, color=None):
         start = lines[0]

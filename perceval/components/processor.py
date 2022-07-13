@@ -23,7 +23,6 @@
 from .source import Source
 from .circuit import ACircuit
 from perceval.utils import SVDistribution, StateVector
-from perceval.utils.renderer.shapes import detector_shape, source_shape
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
 
@@ -32,7 +31,8 @@ class Processor:
     """
         Generic definition of processor as sources + circuit
     """
-    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None):
+    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None,
+                 heralds: Dict[int, int] = {}):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 
         :param sources: a list of Source used by the processor
@@ -42,6 +42,7 @@ class Processor:
         self._sources = sources
         self._circuit = circuit
         self._post_select = post_select_fn
+        self._heralds = heralds
         self._inputs_map = None
         for k in range(circuit.m):
             if k in sources:
@@ -53,6 +54,12 @@ class Processor:
                 self._inputs_map = distribution
             else:
                 self._inputs_map *= distribution
+        self._in_port_names = {}
+        self._out_port_names = {}
+
+    def set_port_names(self, in_port_names: dict[int, str], out_port_names: dict[int, str] = {}):
+        self._in_port_names = in_port_names
+        self._out_port_names = out_port_names
 
     @property
     def source_distribution(self):
@@ -97,13 +104,18 @@ class Processor:
                                          complete_drawing=False,
                                          **opts)
         for k in range(self._circuit.m):
-            source_display_params = {}
-            if k in self._sources:
-                source_display_params['name'] = self._sources[k]._name
-                source_display_params['content'] = '1'
-            else:
-                source_display_params['content'] = '0'
+            in_display_params = {}
+            if k in self._in_port_names:
+                in_display_params['name'] = self._in_port_names[k]
+            # In port content is '1' if port is a source or a herald
+            in_display_params['content'] = '1' if (k in self._sources or k in self._heralds) else '0'
 
-            printer.add_shape_left(k, source_shape, **source_display_params)
-            printer.add_shape_right(k, detector_shape)
+            out_display_params = {}
+            if k in self._out_port_names:
+                out_display_params['name'] = self._out_port_names[k]
+            if k in self._heralds:
+                out_display_params['content'] = str(self._heralds[k])
+
+            printer.add_in_port(k, **in_display_params)
+            printer.add_out_port(k, **out_display_params)
         return printer.draw()
