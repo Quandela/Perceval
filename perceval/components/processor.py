@@ -104,6 +104,6 @@ class Processor:
             else:
                 source_display_params['content'] = '0'
 
-            printer.add_shape_left(source_shape, k, **source_display_params)
-            printer.add_shape_right(detector_shape, k)
+            printer.add_shape_left(k, source_shape, **source_display_params)
+            printer.add_shape_right(k, detector_shape)
         return printer.draw()

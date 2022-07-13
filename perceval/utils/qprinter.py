@@ -38,14 +38,15 @@ class TextPrinter:
         self._hc = hc
         self._h = ['']*(hc*nsize+2)
         for k in range(nsize):
-            self._h[hc*k+2] = str(k)+":──"
+            self._h[hc*k+2] = "──"
         self.extend_pos(0, self._nsize-1)
         self._depth = [0]*nsize
+        self._offset = 0
 
     def close(self):
         self.extend_pos(0, self._nsize-1)
         for k in range(self._nsize):
-            self._h[self._hc*k+2] += "──:"+str(k)+" (depth %d)" % self._depth[k]
+            self._h[self._hc*k+2] += "──"
 
     def max_pos(self, start, end, header):
         maxpos = 0
@@ -160,14 +161,34 @@ class TextPrinter:
     def draw(self):
         return "\n".join(self._h)
 
+    def _set_offset(self, offset):
+        offset_diff = offset - self._offset
+        if offset_diff <= 0:
+            return
+        self._offset = offset
+        for nl in range(len(self._h)):
+            self._h[nl] = ' '*offset_diff + self._h[nl]
+
     def add_mode_index(self):
-        pass
+        self._set_offset(2)
+        for k in range(self._nsize):
+            self._h[self._hc*k + 2] = str(k) + ':' + self._h[self._hc*k + 2][2:]
+            self._h[self._hc*k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
-    def add_shape_right(self, shape, k, **_):
-        pass
+    def add_shape_right(self, m, shape=None, **opts):
+        content = ''
+        if 'content' in opts and opts['content']:
+            content = opts['content']
+        self._h[self._hc*m + 2] += f'[{content})'
 
-    def add_shape_left(self, shape, k, **_):
-        pass
+    def add_shape_left(self, m, shape=None, **opts):
+        content = ''
+        if 'content' in opts and opts['content']:
+            content = opts['content']
+        shape_size = len(content) + 2
+        self._set_offset(shape_size)
+        self._h[self._hc*m + 2] = f'({content}]' + '─'*(self._offset-shape_size) \
+                                  + self._h[self._hc*m + 2][self._offset:]
 
 
 class GraphicPrinter:
@@ -198,13 +219,13 @@ class GraphicPrinter:
         for k in range(self._nsize):
             self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
 
-    def add_shape_right(self, shape_func, n_mode, **opts):
+    def add_shape_right(self, n_mode, shape_func, **opts):
         max_pos = self.extend_pos(0, self._nsize - 1)
         self._canvas.set_offset((GraphicPrinter.affix_all_size + 50*max_pos, 50*n_mode),
                                 GraphicPrinter.affix_all_size, 50*(n_mode + 1))
         shape_func(self._canvas, **opts)
 
-    def add_shape_left(self, shape_func, n_mode, **opts):
+    def add_shape_left(self, n_mode, shape_func, **opts):
         self._canvas.set_offset((0, 50*n_mode),
                                 GraphicPrinter.affix_all_size, 50*(n_mode + 1))
         shape_func(self._canvas, **opts)
