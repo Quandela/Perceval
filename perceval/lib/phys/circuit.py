@@ -25,14 +25,14 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils import Matrix, Canvas
+from perceval.utils import Matrix, Canvas, format_parameters
 
 
 class Circuit(GCircuit):
     _fname = "symb.Circuit"
 
-    def __init__(self, m=None, U=None, name=None):
-        super().__init__(m=m, U=U, name=name)
+    def __init__(self, m=None, name=None):
+        super().__init__(m=m, name=name)
 
     width = 1
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
@@ -86,7 +86,7 @@ class BS(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         if "theta" in self._params:
@@ -100,7 +100,8 @@ class BS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.BS(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.BS(%s)" % params_str
 
     width = 2
 
@@ -115,7 +116,7 @@ class BS(ACircuit):
         canvas.add_mline([53, 56, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_rect((25, 43), 50, 14, fill="black")
         canvas.add_text((50, 86), size=7, ta="middle", text=bottom_content)
-        canvas.add_text((50, 26), size=7, ta="middle", text=head_content)
+        canvas.add_text((50, 26), content.replace('theta=', 'Θ='), size=7, ta="middle")
         if self._phi_b.defined:
             m = round(abs(float(self._phi_b.spv/sp.pi)))
             if (m + 1) % 2:
@@ -149,9 +150,6 @@ class PBS(ACircuit):
                        [0, 1, 0, 0],
                        [1, 0, 0, 0],
                        [0, 0, 0, 1]], use_symbolic)
-
-    def get_variables(self, map_param_kid=None):
-        return []
 
     # TODO: make method static
     def describe(self, _=None):
@@ -187,7 +185,7 @@ class PS(ACircuit):
             return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "phi", "phi", None, map_param_kid)
@@ -195,7 +193,8 @@ class PS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.PS(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.PS(%s)" % params_str
 
     width = 1
 
@@ -248,7 +247,7 @@ class WP(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "xsi", "xsi", None, map_param_kid)
@@ -257,7 +256,8 @@ class WP(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.WP(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.WP(%s)" % params_str
 
     width = 1
 
@@ -295,7 +295,7 @@ class PR(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "delta", "delta", None, map_param_kid)
@@ -303,7 +303,8 @@ class PR(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.PR(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.PR(%s)" % params_str
 
     width = 1
 
@@ -324,7 +325,7 @@ class PR(ACircuit):
                           "c", 0, -4.367, -3.552, -7.920, -7.920, -7.920,
                           "c", -3.898, 0, -7.146, 2.832, -7.799, 6.546,
                           "c", -0.029, 0.166, -0.184, 0.302, -0.353, 0.302,
-                          "H", 16, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
+                          "h", -1.201, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
                           "z"
                           ], fill="black")
         canvas.add_text((25, 45), text=content.replace("delta=", "δ="), size=7, ta="middle")
@@ -358,7 +359,7 @@ class DT(ACircuit):
         raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "t", "t", None, map_param_kid)
@@ -366,7 +367,8 @@ class DT(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.DT(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.DT(%s)" % params_str
 
     width = 1
 
@@ -384,7 +386,52 @@ class DT(ACircuit):
         canvas.add_text((25, 38), content, 7, "middle")
 
 
-class PERM(GCircuit):
+class Unitary(ACircuit):
+    _name = "Unitary"
+    _fcircuit = Circuit
+    stroke_style = {"stroke": "darkred", "stroke_width": 3}
+
+    def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
+        assert U is not None, "A unitary matrix is required"
+        assert U.is_unitary(), "U parameter must be a unitary matrix"
+        assert not U.is_symbolic(), "U parameter must not be symbolic"
+        self._u = U
+        if name is not None:
+            self._name = name
+        m = U.shape[0]
+        self.width = m
+        self._supports_polarization = use_polarization
+        if use_polarization:
+            assert m % 2 == 0, "Polarization matrix should have an even number of rows/col"
+            m //= 2
+        super().__init__(m)
+
+    def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
+        # Ignore assign and use_symbolic parameters as __init__ checked the unitary matrix is numeric
+        return self._u
+
+    def inverse(self, v=False, h=False):
+        if v:
+            self._u = np.flip(self._u)
+        if h:
+            self._u = self._u.inv()
+
+    def describe(self, _=None):
+        params = [f"Matrix('''{self._u}''')"]
+        if self._name != Unitary._name:
+            params.append(f"name='{self._name}'")
+        if self._supports_polarization:
+            params.append("use_polarization=True")
+        return f"phys.Unitary({', '.join(params)})"
+
+    def shape(self, content, canvas, compact: bool = False):
+        for i in range(self.m):
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
+        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="gold")
+        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)
+
+
+class PERM(Unitary):
     _name = "PERM"
     _fcircuit = Circuit
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
@@ -394,28 +441,30 @@ class PERM(GCircuit):
         assert (min(perm) == 0 and
                 max(perm)+1 == len(perm) == len(set(perm)) == len([n for n in perm if isinstance(n, int)])),\
             "%s is not a permutation" % perm
-        self._perm = perm
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
         for v, i in enumerate(perm):
             u[i, v] = 1
-        super().__init__(n, U=u)
+        super().__init__(U=u)
         self.width = 1
 
     def get_variables(self, _=None):
-        return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
+        return {'PERM': ''}
 
     def describe(self, _=None):
-        return "phys.PERM(%s)" % str(self._perm)
+        return "phys.PERM(%s)" % str(self._compute_perm_vector())
 
     def definition(self):
         return self.U
 
+    def _compute_perm_vector(self):
+        nz = np.nonzero(self._u)
+        m_list = nz[1].tolist()
+        return [m_list.index(i) for i in nz[0]]
+
     def shape(self, content, canvas, compact: bool = False):
-        lines = []
-        for an_input, an_output in enumerate(self._perm):
+        for an_input, an_output in enumerate(self._compute_perm_vector()):
             canvas.add_mline([3, 25+an_input*50, 47, 25+an_output*50],
                              stroke="white", stroke_width=6)
-            canvas.add_mline([0, 25+an_input*50, 3, 25+an_input*50, 47, 25+an_output*50, 50,25+an_output*50],
+            canvas.add_mline([0, 25+an_input*50, 3, 25+an_input*50, 47, 25+an_output*50, 50, 25+an_output*50],
                              stroke="darkred", stroke_width=3)
-        return "\n".join(lines)
