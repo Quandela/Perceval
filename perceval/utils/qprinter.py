@@ -160,6 +160,15 @@ class TextPrinter:
     def draw(self):
         return "\n".join(self._h)
 
+    def add_mode_index(self):
+        pass
+
+    def add_shape_right(self, shape, k, **_):
+        pass
+
+    def add_shape_left(self, shape, k, **_):
+        pass
+
 
 class GraphicPrinter:
     affix_port_size = 15
@@ -177,10 +186,28 @@ class GraphicPrinter:
         for k in range(nsize):
             self._canvas.add_mpath(["M", GraphicPrinter.affix_all_size-GraphicPrinter.affix_port_size, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
-            self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
         self._current_block_open_offset = None
         self._current_block_name = ""
         self._compact = compact_rendering
+
+    def add_mode_index(self):
+        for k in range(self._nsize):
+            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), self._n_font_size, ta="right")
+
+        self._canvas.set_offset((0, 0), GraphicPrinter.affix_all_size, 50 * (self._nsize + 1))
+        for k in range(self._nsize):
+            self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
+
+    def add_shape_right(self, shape_func, n_mode, **opts):
+        max_pos = self.extend_pos(0, self._nsize - 1)
+        self._canvas.set_offset((GraphicPrinter.affix_all_size + 50*max_pos, 50*n_mode),
+                                GraphicPrinter.affix_all_size, 50*(n_mode + 1))
+        shape_func(self._canvas, **opts)
+
+    def add_shape_left(self, shape_func, n_mode, **opts):
+        self._canvas.set_offset((0, 50*n_mode),
+                                GraphicPrinter.affix_all_size, 50*(n_mode + 1))
+        shape_func(self._canvas, **opts)
 
     def open_subblock(self, lines, name, area=None, color=None):
         start = lines[0]
@@ -251,13 +278,12 @@ class GraphicPrinter:
         for k in range(self._nsize):
             self._canvas.add_mpath(["M", 0, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
-            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), self._n_font_size, ta="right")
 
     def draw(self):
         return self._canvas.draw()
 
 
-def QPrinter(n, output_format="text", stroke_style="", compact=False, **opts):
+def create_printer(n, output_format="text", stroke_style="", compact=False, **opts):
     if output_format == "text":
         return TextPrinter(n)
     elif output_format == "latex":

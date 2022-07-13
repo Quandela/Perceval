@@ -22,7 +22,7 @@
 
 from .matrix import Matrix, MatrixN, MatrixS
 from .format import simple_float, simple_complex
-from .qprinter import QPrinter, format_parameters
+from .qprinter import create_printer, format_parameters
 from .parameter import Parameter, P
 from .utils import pdisplay, global_params, random_seed
 from .mlstr import mlstr

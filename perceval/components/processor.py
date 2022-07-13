@@ -20,14 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections import defaultdict
-import copy
 from .source import Source
 from .circuit import ACircuit
 from perceval.utils import SVDistribution, StateVector
+from perceval.utils.renderer.shapes import detector_shape, source_shape
 from perceval.backends import Backend
-import quandelibc as qc
-from typing import Dict, Callable, Type
+from typing import Dict, Callable, Type, Literal
 
 
 class Processor:
@@ -79,3 +77,33 @@ class Processor:
         for k in outputs.keys():
             outputs[k] /= all_p
         return all_p, outputs
+
+    def pdisplay(self,
+                 map_param_kid: dict = None,
+                 shift: int = 0,
+                 output_format: Literal["text", "html", "mplot", "latex"] = "text",
+                 recursive: bool = False,
+                 compact: bool = False,
+                 precision: float = 1e-6,
+                 nsimplify: bool = True,
+                 **opts):
+        printer = self._circuit.pdisplay(map_param_kid=map_param_kid,
+                                         shift=shift,
+                                         output_format=output_format,
+                                         recursive=recursive,
+                                         compact=compact,
+                                         precision=precision,
+                                         nsimplify=nsimplify,
+                                         complete_drawing=False,
+                                         **opts)
+        for k in range(self._circuit.m):
+            source_display_params = {}
+            if k in self._sources:
+                source_display_params['name'] = self._sources[k]._name
+                source_display_params['content'] = '1'
+            else:
+                source_display_params['content'] = '0'
+
+            printer.add_shape_left(source_shape, k, **source_display_params)
+            printer.add_shape_right(detector_shape, k)
+        return printer.draw()
