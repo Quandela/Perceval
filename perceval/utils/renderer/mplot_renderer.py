@@ -93,11 +93,19 @@ class MplotCanvas(Canvas):
                                              fill=fill is not None, color=fill,
                                              ec=stroke, linewidth=stroke_width))
 
-    def add_text(self, points, text, size, ta="left"):
+    def add_text(self, points, text, size, ta="left", fontstyle="normal"):
         points = super().add_text(points, text, size, ta)
         if ta == "middle":
             ta = "center"
-        plt.text(points[0], points[1], text, ha=ta, size=size*3)
+        kwargs = {
+            'ha': ta,
+            'size': size*3
+        }
+        if fontstyle == "italic":
+            kwargs['fontstyle'] = fontstyle
+        elif fontstyle == "bold":
+            kwargs['fontweight'] = fontstyle
+        plt.text(points[0], points[1], text, **kwargs)
 
     def draw(self):
         super().draw()

@@ -27,7 +27,7 @@ def source_shape(canvas, **opts):
                       "c", -r, 0, -r, -r, -r, -r, "z"],
                      stroke="black", stroke_width=1, fill="lightgray")
     if 'name' in opts and opts['name']:
-        canvas.add_text((8, 44), text=opts['name'], size=7, ta="middle")
+        canvas.add_text((8, 44), text='['+opts['name']+']', size=6, ta="middle", fontstyle="italic")
     if 'content' in opts and opts['content']:
         canvas.add_text((10, 28), text=opts['content'], size=7, ta="middle")
 
@@ -39,6 +39,6 @@ def detector_shape(canvas, **opts):
                       "c", 0, r, -r, r, -r, r, "z"],
                      stroke="black", stroke_width=1, fill="lightgray")
     if 'name' in opts:
-        canvas.add_text((18, 44), text=opts['name'], size=7, ta="middle")
+        canvas.add_text((18, 44), text='['+opts['name']+']', size=6, ta="middle", fontstyle="italic")
     if 'content' in opts:
         canvas.add_text((20, 28), text=opts['content'], size=7, ta="middle")
