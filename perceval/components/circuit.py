@@ -31,6 +31,7 @@ import sympy as sp
 import scipy.optimize as so
 
 from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
+
 import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
@@ -299,19 +300,36 @@ class ACircuit(ABC):
     def get_variables(self, _=None):
         return {}
 
-    def copy(self):
+    def copy(self, subs: Union[dict,list] = None):
         nc = copy.deepcopy(self)
         if not isinstance(self, Circuit):
+            if subs is None:
+                for k, p in nc._params.items():
+                    nc._params[k] = Parameter(p.name, float(p), p.min, p.max, p.is_periodic)
+                    nc.__setattr__("_"+k, nc._params[k])
+            else:
+                if isinstance(subs, list):
+                    subs = {p.name: p.spv for p in subs}
+                for k, p in nc._params.items():
+                    name = p.name
+                    min_v = p.min
+                    max_v = p.max
+                    is_periodic = p.is_periodic
+                    if p._value is None:
+                        p = p._symbol.evalf(subs=subs)
+                    else:
+                        p = p.evalf(subs=subs)
+                    if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
+                        nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
+                    else:
+                        nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
             for k, p in nc._params.items():
-                v = float(p)
-                if p.is_periodic and abs(v-p.max) < 1e-4:
-                    v = p.min
-                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
+                nc.__setattr__("_" + k, nc._params[k])
         else:
             nc._params = {}
             nc._components = []
             for r, c in self._components:
-                nc._components.append((r, c.copy()))
+                nc.add(r, c.copy(subs=subs))
         return nc
 
     @property
