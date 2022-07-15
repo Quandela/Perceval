@@ -177,7 +177,12 @@ class DynamicSVGCanvas(Canvas):
         elif ta == "left":
             ta = "start"
         points = super().add_text(points, text, size, ta)
-        self._draws.append(draw.Text(text, size, *points, text_anchor=ta))
+        opts = {'text_anchor': ta}
+        if fontstyle == "italic":
+            opts['font_style'] = "italic"
+        elif fontstyle == "bold":
+            opts['font_weight'] = "bold"
+        self._draws.append(draw.Text(text, size, *points, **opts))
 
     def draw(self):
         import drawSvg as draw  # done at method level in order to avoid an ImportError on Windows OS
