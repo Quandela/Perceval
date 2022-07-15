@@ -31,16 +31,34 @@ except Exception as e:
 from perceval.converters import perceval_qiskit
 import perceval.lib.phys as phys
 
-def test_basiccircuit_h():
+
+def test_basic_circuit_h():
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     pc = perceval_qiskit.converter(qc, phys)
-    pcvl.pdisplay(pc, recursive=True)
+    c = pc.circuit
+    sources = pc._sources
+    assert len(sources) == 1
+    assert 0 in sources
+    assert 1 not in sources
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], phys.Circuit) and len(c._components[0][1]._components) == 1
+    c0 = c._components[0][1]._components[0][1]
+    assert isinstance(c0, phys.BS)
 
 
 def test_basic_circuit_s():
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
     pc = perceval_qiskit.converter(qc, phys)
-    descr_pc = pc.describe()
-    print(descr_pc)
+    c = pc.circuit
+    sources = pc._sources
+    assert len(sources) == 1
+    assert 0 in sources
+    assert 1 not in sources
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], phys.Circuit) and len(c._components[0][1]._components) == 1
+    r0 = c._components[0][1]._components[0][0]
+    c0 = c._components[0][1]._components[0][1]
+    assert r0 == (1, )
+    assert isinstance(c0, phys.PS)

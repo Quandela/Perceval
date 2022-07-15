@@ -60,6 +60,14 @@ class Processor:
     def source_distribution(self):
         return self._inputs_map
 
+    @property
+    def circuit(self):
+        return self._circuit
+
+    @property
+    def sources(self):
+        return self._sources
+
     def run(self, simulator_backend: Type[Backend]):
         """
             calculate the output probabilities - returns performance, and output_maps

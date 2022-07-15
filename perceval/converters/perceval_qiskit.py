@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import PredefinedCircuit, Circuit, Processor, P
+from perceval import PredefinedCircuit, Circuit, Processor, P, Source
 from perceval.algorithm.norm import *
 from perceval.algorithm.optimize import optimize
 
@@ -46,11 +46,15 @@ def converter(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Proce
 
     cnot_component = heralded and library.catalog["heralded_cnot"] or library.catalog["post_processed_cnot"]
     generic_2mode_component = library.catalog["generic_2mode"]
-    upper_phase_component = PredefinedCircuit(Circuit(2) // (0, library.PS(P("phi1"))))
-    lower_phase_component = PredefinedCircuit(Circuit(2) // (0, library.PS(P("phi2"))))
-    two_phase_component = PredefinedCircuit(Circuit(2) // (0, library.PS(P("phi1"))) // (1, library.PS(P("phi2"))))
+    lower_phase_component = PredefinedCircuit(library.Circuit(2) // (0, library.PS(P("phi2"))))
+    upper_phase_component = PredefinedCircuit(library.Circuit(2) // (1, library.PS(P("phi1"))))
+    two_phase_component = PredefinedCircuit(library.Circuit(2) // (0, library.PS(P("phi1"))) // (1, library.PS(P("phi2"))))
 
     herald_per_cnot = len(cnot_component.heralds)
+
+    # define the sources - let us suppose a single perfect source
+    s = Source()
+    sources = {i*2: s for i in range(qc.qregs[0].size)}
 
     nmode = qc.qregs[0].size * 2 + herald_per_cnot * n_cnot
     pc = Circuit(nmode)
@@ -62,14 +66,15 @@ def converter(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Proce
         assert isinstance(instruction[0], qiskit.circuit.gate.Gate), "cannot convert (%s)" % instruction[0]
         if instruction[0].num_qubits == 1:
             u = instruction[0].to_matrix()
-            if abs(u[1,0])+abs(u[1,0]) < 1e-4:
+            if abs(u[1,0])+abs(u[0,1]) < 1e-4:
+                # diagonal matrix - we can handle with phases, 1e-4 is arbitrary here
                 if abs(u[0,0]-1) < 1e-4:
                     if abs(u[1,1]-1) < 1e-4:
                         continue
-                    ins = lower_phase_component.circuit
+                    ins = upper_phase_component.circuit
                 else:
                     if abs(u[1,1]-1) < 1e-4:
-                        ins = upper_phase_component.circuit
+                        ins = lower_phase_component.circuit
                     else:
                         ins = two_phase_component.circuit
                 optimize(ins, u, frobenius, sign=-1)
@@ -148,4 +153,4 @@ def converter(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Proce
                     pc.add(c_idx, library.PERM(iperm))
                     idx_herald += 2
 
-    return pc
+    return Processor(sources, pc)
