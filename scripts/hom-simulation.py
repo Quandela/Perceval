@@ -30,7 +30,7 @@ dt = pcvl.Parameter("Δt")
 
 c = pcvl.Circuit(2)
 c //= symb.BS()
-c //= ((1), symb.DT(dt))
+c //= (1, symb.TD(dt))
 c //= symb.BS()
 
 pcvl.pdisplay(c)

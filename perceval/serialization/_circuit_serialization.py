@@ -104,11 +104,11 @@ class ComponentSerializer:
         pb_wp.xsi.serialization = str(wp._xsi._value)
         self._pb.wave_plate.CopyFrom(pb_wp)
 
-    @dispatch((phys.DT, symb.DT))
+    @dispatch((phys.TD, symb.TD))
     def _serialize(self, dt):
-        pb_dt = pb.DT()
-        pb_dt.dt.serialization = str(dt._dt._value)
-        self._pb.d_t.CopyFrom(pb_dt)
+        pb_td = pb.TimeDelay()
+        pb_td.dt.serialization = str(dt._dt._value)
+        self._pb.time_delay.CopyFrom(pb_td)
 
     @dispatch((phys.PR, symb.PR))
     def _serialize(self, pr):

@@ -345,8 +345,9 @@ class QWP(WP):
         super().__init__(sp.pi/4, xsi)
 
 
-class DT(ACircuit):
-    _name = "DT"
+class TD(ACircuit):
+    """Time delay"""
+    _name = "TD"
     _fcircuit = Circuit
     delay_circuit = True
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
@@ -367,7 +368,7 @@ class DT(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.DT(%s)" % ", ".join(parameters)
+        return "phys.TD(%s)" % ", ".join(parameters)
 
     width = 1
 

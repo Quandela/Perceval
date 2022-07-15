@@ -100,7 +100,7 @@ def test_svg_dump_phys_pbs(tmp_path, save_figs):
 
 
 def test_svg_dump_phys_dt(tmp_path, save_figs):
-    _save_or_check(phys.DT(0), tmp_path, sys._getframe().f_code.co_name, save_figs)
+    _save_or_check(phys.TD(0), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
 def test_svg_dump_phys_wp(tmp_path, save_figs):
