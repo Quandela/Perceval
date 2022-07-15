@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import Circuit, ACircuit
-from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
-from .processor import Processor
-from .source import Source
-from .detector import Detector
-from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
+from .heralded_cnot import heralded_cnot
+from .generic_2mode import generic_2mode
+
+catalog = {"heralded_cnot": heralded_cnot,
+           "generic_2mode": generic_2mode}

@@ -20,10 +20,37 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import Circuit, ACircuit
-from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
-from .processor import Processor
-from .source import Source
-from .detector import Detector
-from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
+from typing import Dict
+
+from perceval.components import Circuit
+
+
+class PredefinedCircuit:
+    def __init__(self,  c: Circuit, name: str = None, description: str = None, heralds: Dict[int, int] = None):
+        r"""Define a `PredefinedCircuit` which is a readonly circuit with more information about its usage
+
+        :param c:
+        :param name:
+        :param description:
+        :param heralds:
+        """
+        self._c = c
+        self._name = name
+        self._description = description
+        self._heralds = heralds
+
+    @property
+    def circuit(self):
+        return self._c.copy()
+
+    @property
+    def description(self):
+        return self._description
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def heralds(self):
+        return self._heralds

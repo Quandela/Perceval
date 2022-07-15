@@ -305,7 +305,11 @@ class ACircuit(ABC):
         if not isinstance(self, Circuit):
             if subs is None:
                 for k, p in nc._params.items():
-                    nc._params[k] = Parameter(p.name, float(p), p.min, p.max, p.is_periodic)
+                    if p.defined:
+                        v = float(p)
+                    else:
+                        v = None
+                    nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
                     nc.__setattr__("_"+k, nc._params[k])
             else:
                 if isinstance(subs, list):

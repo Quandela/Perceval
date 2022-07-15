@@ -20,10 +20,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import Circuit, ACircuit
-from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
-from .processor import Processor
-from .source import Source
-from .detector import Detector
-from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
+import perceval as pcvl
+import pytest
+
+try:
+    import qiskit
+except Exception as e:
+    pytest.skip("need `qiskit` module", allow_module_level=True)
+
+from perceval.converters import perceval_qiskit
+import perceval.lib.phys as phys
+
+def test_basiccircuit_h():
+    qc = qiskit.QuantumCircuit(1)
+    qc.h(0)
+    pc = perceval_qiskit.converter(qc, phys)
+    pcvl.pdisplay(pc, recursive=True)
+
+
+def test_basic_circuit_s():
+    qc = qiskit.QuantumCircuit(1)
+    qc.s(0)
+    pc = perceval_qiskit.converter(qc, phys)
+    descr_pc = pc.describe()
+    print(descr_pc)

@@ -20,10 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import Circuit, ACircuit
-from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
-from .processor import Processor
-from .source import Source
-from .detector import Detector
-from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
+from perceval import *
+import perceval.lib.phys as phys
+
+c = phys.Circuit(2) // phys.BS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
+
+generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")
