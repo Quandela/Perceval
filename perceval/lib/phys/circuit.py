@@ -25,8 +25,7 @@ import numpy as np
 
 from perceval.components import Circuit as GCircuit
 from perceval.components import ACircuit
-from perceval.utils.matrix import Matrix
-from perceval.utils import Canvas
+from perceval.utils import Matrix, Canvas, format_parameters
 
 
 class Circuit(GCircuit):
@@ -87,7 +86,7 @@ class BS(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         if "theta" in self._params:
@@ -101,7 +100,8 @@ class BS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.BS(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.BS(%s)" % params_str
 
     width = 2
 
@@ -116,7 +116,7 @@ class BS(ACircuit):
         canvas.add_mline([53, 56, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_rect((25, 43), 50, 14, fill="black")
         canvas.add_text((50, 86), size=7, ta="middle", text=bottom_content)
-        canvas.add_text((50, 26), size=7, ta="middle", text=head_content)
+        canvas.add_text((50, 26), content.replace('theta=', 'Θ='), size=7, ta="middle")
         if self._phi_b.defined:
             m = round(abs(float(self._phi_b.spv/sp.pi)))
             if (m + 1) % 2:
@@ -150,9 +150,6 @@ class PBS(ACircuit):
                        [0, 1, 0, 0],
                        [1, 0, 0, 0],
                        [0, 0, 0, 1]], use_symbolic)
-
-    def get_variables(self, map_param_kid=None):
-        return []
 
     # TODO: make method static
     def describe(self, _=None):
@@ -188,7 +185,7 @@ class PS(ACircuit):
             return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "phi", "phi", None, map_param_kid)
@@ -196,7 +193,8 @@ class PS(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.PS(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.PS(%s)" % params_str
 
     width = 1
 
@@ -249,7 +247,7 @@ class WP(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "xsi", "xsi", None, map_param_kid)
@@ -258,7 +256,8 @@ class WP(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.WP(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.WP(%s)" % params_str
 
     width = 1
 
@@ -296,7 +295,7 @@ class PR(ACircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "delta", "delta", None, map_param_kid)
@@ -304,7 +303,8 @@ class PR(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.PR(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.PR(%s)" % params_str
 
     width = 1
 
@@ -325,7 +325,7 @@ class PR(ACircuit):
                           "c", 0, -4.367, -3.552, -7.920, -7.920, -7.920,
                           "c", -3.898, 0, -7.146, 2.832, -7.799, 6.546,
                           "c", -0.029, 0.166, -0.184, 0.302, -0.353, 0.302,
-                          "H", 16, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
+                          "h", -1.201, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
                           "z"
                           ], fill="black")
         canvas.add_text((25, 45), text=content.replace("delta=", "δ="), size=7, ta="middle")
@@ -360,7 +360,7 @@ class TD(ACircuit):
         raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "t", "t", None, map_param_kid)
@@ -368,7 +368,8 @@ class TD(ACircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.TD(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.TD(%s)" % params_str
 
     width = 1
 
@@ -449,7 +450,7 @@ class PERM(Unitary):
         self.width = 1
 
     def get_variables(self, _=None):
-        return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
+        return {'PERM': ''}
 
     def describe(self, _=None):
         return "phys.PERM(%s)" % str(self.perm_vector)

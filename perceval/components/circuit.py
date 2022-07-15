@@ -30,7 +30,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, simple_float, Canvas, global_params
+from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
 import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
@@ -281,7 +281,7 @@ class ACircuit(ABC):
         else:
             yield tuple(pos for pos in range(self._m)), self
 
-    def variable_def(self, parameters, k, pname, default_value, map_param_kid=None):
+    def variable_def(self, out_parameters: dict, k, pname, default_value, map_param_kid=None):
         if map_param_kid is None:
             map_param_kid = {}
         if self._params[k].defined:
@@ -289,14 +289,12 @@ class ACircuit(ABC):
                 v = self._params[k]._value
                 if isinstance(v, sp.Expr):
                     v = str(v)
-                else:
-                    v = simple_float(self._params[k]._value)[1]
-                parameters.append("%s=%s" % (pname, v))
+                out_parameters[pname] = v
         else:
-            parameters.append("%s=%s" % (pname, map_param_kid[self._params[k]._pid]))
+            out_parameters[pname] = map_param_kid[self._params[k]._pid]
 
     def get_variables(self, _=None):
-        return []
+        return {}
 
     def copy(self):
         nc = copy.deepcopy(self)
@@ -371,11 +369,13 @@ class ACircuit(ABC):
                  recursive: bool = False,
                  dry_run: bool = False,
                  compact: bool = False,
+                 precision: float = 1e-6,
+                 nsimplify: bool = True,
                  **opts):
         if parent_td is None:
             if not dry_run:
                 total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, compact,
-                                            **opts)
+                                            precision, nsimplify, **opts)
                 td = QPrinter(self._m, output_format=output_format, stroke_style=self.stroke_style,
                               total_width=total_width, total_height=self._m, compact=compact, **opts)
             else:
@@ -386,8 +386,9 @@ class ACircuit(ABC):
             map_param_kid = self.map_parameters()
 
         if not isinstance(self, Circuit):
-            description = self.get_variables(map_param_kid)
-            td.append_circuit([p + shift for p in range(self._m)], self, "\n".join(description))
+            variables = self.get_variables(map_param_kid)
+            description = format_parameters(variables, precision, nsimplify)
+            td.append_circuit([p + shift for p in range(self._m)], self, description)
 
         if self._components:
             if dry_run:
@@ -399,11 +400,13 @@ class ACircuit(ABC):
                     c.pdisplay(td, shift=shiftr[0])
                     self._areas[idx] = td.close_subblock(r)
                 elif c._components:
-                    description = c.get_variables(map_param_kid)
-                    td.append_subcircuit(shiftr, c, "\n".join(description))
+                    component_vars = c.get_variables(map_param_kid)
+                    description = format_parameters(component_vars, precision, nsimplify)
+                    td.append_subcircuit(shiftr, c, description)
                 elif isinstance(c, ACircuit):
-                    description = c.get_variables(map_param_kid)
-                    td.append_circuit(shiftr, c, "\n".join(description))
+                    component_vars = c.get_variables(map_param_kid)
+                    description = format_parameters(component_vars, precision, nsimplify)
+                    td.append_circuit(shiftr, c, description)
 
         td.extend_pos(0, self._m - 1)
 
