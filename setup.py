@@ -23,7 +23,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=['perceval', 'perceval.components', 'perceval.backends', 'perceval.utils', 'perceval.utils.renderer',
-              'perceval.lib.phys', 'perceval.lib.symb', 'perceval.algorithm'],
+              'perceval.lib.phys', 'perceval.lib.symb', 'perceval.algorithm', 'perceval.serialization'],
     install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'quandelibc>=0.5.1', 'multipledispatch',
                       'protobuf==4.21.2'],
     setup_requires=["scmver"],
