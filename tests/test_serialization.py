@@ -20,8 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
-
+import random
+import sympy as sp
+import numpy
 from perceval import Matrix, P, Circuit
 from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit
 import perceval.lib.phys as phys
@@ -40,14 +41,20 @@ def test_numeric_matrix_serialization():
     assert (input_mat == deserialized_mat).all()
 
 
-# TODO: Find a way to test symbolic matrixes equality
-@pytest.mark.skip(reason="Symbolic matrix equality is failing")
 def test_symbolic_matrix_serialization():
-    bs = symb.BS(theta=P('theta'))
+    theta = P('theta')
+    bs = symb.BS(theta=theta)
     input_mat = bs.U
     serialized_mat = serialize(input_mat)
     deserialized_mat = deserialize_matrix(serialized_mat)
-    assert input_mat == deserialized_mat
+
+    # Now, assign any value to theta:
+    theta_value = random.random()
+    theta.set_value(theta_value)
+    input_mat_num = bs.compute_unitary()
+    convert_to_numpy = sp.lambdify((), deserialized_mat.subs({'theta': theta_value}), modules=numpy)
+    deserialized_mat_num = Matrix(convert_to_numpy())
+    assert numpy.allclose(input_mat_num, deserialized_mat_num)
 
 
 def _check_circuits_eq(c_a, c_b):
@@ -60,23 +67,24 @@ def _check_circuits_eq(c_a, c_b):
         assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
 
 
+def _build_test_circuit(ns):
+    c1 = Circuit(3) // ns.BS(R=2 / 3) // ns.PS(phi=0.215) // ns.PERM([2, 0, 1]) // (1, ns.PBS()) \
+         // ns.Unitary(Matrix.random_unitary(3))
+    c2 = Circuit(2) // ns.BS(R=1 / 4) // ns.PERM([1, 0])
+    c1.add(1, c2, merge=False).add(0, ns.HWP(xsi=0.23)).add(1, ns.QWP(xsi=0.17)).add(2, ns.WP(0.4, 0.5))
+    c1.add(0, ns.PR(delta=0.89))
+    return c1
+
+
 def test_phys_circuit_serialization():
-    c1 = Circuit(3) // phys.BS(R=2/3) // phys.PS(phi=0.215) // phys.PERM([2, 0, 1]) // (1, phys.PBS()) \
-         // phys.Unitary(Matrix.random_unitary(3))
-    c2 = Circuit(2) // phys.BS(R=1/4) // phys.PERM([1, 0])
-    c1.add(1, c2, merge=False).add(0, phys.HWP(xsi=0.23)).add(1, phys.QWP(xsi=0.17)).add(2, phys.WP(0.4, 0.5))
-    c1.add(0, phys.PR(delta=0.89))
+    c1 = _build_test_circuit(phys)
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
 
 
 def test_symb_circuit_serialization():
-    c1 = Circuit(3) // symb.BS(R=2/3) // symb.PS(phi=0.215) // symb.PERM([2, 0, 1]) // (1, symb.PBS()) \
-         // symb.Unitary(Matrix.random_unitary(3))
-    c2 = Circuit(2) // symb.BS(R=1/4) // symb.PERM([1, 0])
-    c1.add(1, c2, merge=False).add(0, symb.HWP(xsi=0.23)).add(1, symb.QWP(xsi=0.17)).add(2, symb.WP(0.4, 0.5))
-    c1.add(0, symb.PR(delta=0.89))
+    c1 = _build_test_circuit(symb)
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
