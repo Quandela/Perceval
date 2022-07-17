@@ -52,5 +52,5 @@ class PredefinedCircuit:
         return self._name
 
     @property
-    def heralds(self):
+    def heralds(self) -> dict:
         return self._heralds

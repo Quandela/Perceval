@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import PredefinedCircuit, Circuit, Processor, P, Source
+from perceval import PredefinedCircuit, Circuit, Processor, P, Source, Matrix
 from perceval.algorithm.norm import *
 from perceval.algorithm.optimize import optimize
 
@@ -28,7 +28,15 @@ import qiskit
 
 # TODO: add typing on library
 
-def converter(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Processor:
+min_precision_gate = 1e-4
+
+def _swap(perm, port_a, port_b):
+    if port_a != port_b:
+        c = perm[port_a]
+        perm[port_a] = perm[port_b]
+        perm[port_b] = c
+
+def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Processor:
     r"""convert a qiskit circuit into a predefined processor
 
     :param qc: quantum-based qiskit circuit
@@ -61,19 +69,24 @@ def converter(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Proce
     idx_herald = qc.qregs[0].size * 2
 
     for instruction in qc.data:
+        # barrier has no effect
         if isinstance(instruction[0], qiskit.circuit.barrier.Barrier):
             continue
+        # some limitation in the conversion, in particular measure
         assert isinstance(instruction[0], qiskit.circuit.gate.Gate), "cannot convert (%s)" % instruction[0]
+
         if instruction[0].num_qubits == 1:
+            # one mode gate
             u = instruction[0].to_matrix()
-            if abs(u[1,0])+abs(u[0,1]) < 1e-4:
-                # diagonal matrix - we can handle with phases, 1e-4 is arbitrary here
-                if abs(u[0,0]-1) < 1e-4:
-                    if abs(u[1,1]-1) < 1e-4:
+            if abs(u[1,0])+abs(u[0,1]) < 2 * min_precision_gate:
+                # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
+                # limited numeric precision
+                if abs(u[0,0]-1) < min_precision_gate:
+                    if abs(u[1,1]-1) < min_precision_gate:
                         continue
                     ins = upper_phase_component.circuit
                 else:
-                    if abs(u[1,1]-1) < 1e-4:
+                    if abs(u[1,1]-1) < min_precision_gate:
                         ins = lower_phase_component.circuit
                     else:
                         ins = two_phase_component.circuit
@@ -82,75 +95,71 @@ def converter(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Proce
                 ins = generic_2mode_component.circuit
                 optimize(ins, u, frobenius, sign=-1)
             ins._name = instruction[0].name
-            pc.add(instruction[1][0].index*2, ins, merge=False)
+            pc.add(instruction[1][0].index*2, ins.copy(), merge=False)
         else:
             c_idx = instruction[1][0].index * 2
             c_data = instruction[1][1].index * 2
+            c_first = min(c_idx, c_data)
             if instruction[0].name == "swap":
-                pc.add(c_idx, library.PERM([c_idx-c_data, c_idx+1-c_data, 0, 1]))
+                # c_idx and c_data are consecutive - not necessarily ordered
+                pc.add(c_first, library.PERM([2, 3, 0, 1]))
             else:
                 assert instruction[0].name == "cx", "gate not yet supported: %s" % instruction[0].name
-                if heralded:
-                    # we need to send:
-                    #   - idx_herald to c_idx
-                    #   - c_idx to c_idx+2
-                    #   - c_data to c_idx+4
-                    #   - idx_herald+2 to c_idx+6
-                    perm = [2, 3]
-                    iperm = [idx_herald-c_idx, idx_herald-c_idx+1]
-                    iperm += [0, 1, c_data-c_idx, c_data+1-c_idx]
-                    offset = 8
-                    ioffset = 2
-                    if c_data > c_idx + 2:
-                        for p in range(c_idx+2, c_data):
-                            perm += [offset]
-                            iperm += [ioffset]
-                            offset += 1
-                            ioffset += 1
-                    perm += [4, 5]
-                    iperm += [idx_herald+2-c_idx, idx_herald-c_idx+3]
-                    ioffset += 2
-                    for p in range(c_data+2, idx_herald):
-                        perm += [offset]
-                        iperm += [ioffset]
-                        offset += 1
-                        ioffset += 1
-                    perm += [0, 1]
-                    perm += [6, 7]
-                    pc.add(c_idx, library.PERM(perm))
-                    pc.add(c_idx, cnot_component, merge=False)
-                    pc.add(c_idx, library.PERM(iperm))
-                    idx_herald += 4
+                # convert cx to cnot - adding potential heralds
+                heralds = cnot_component.heralds
+                # need a global permutation from c_idx to c_data if no heralds, or c_idx to last herald otherwise
+                # the permutation will:
+                # - move the herald to new herald line we create
+                # - move c_idx to the first 2 ports of the cnot component
+                # - move c_idx to the second 2 ports of the cnot component
+                # - move intermediate lines and all lines on the way of the component below
+                min_port = c_first
+                if heralds:
+                    first_herald = idx_herald - min_port
+                    max_port = idx_herald + len(heralds)
                 else:
-                    # we need to send:
-                    #   - idx_herald to c_idx
-                    #   - c_idx to c_idx+1
-                    #   - c_data to c_idx+3
-                    #   - idx_herald+1 to c_idx+5
-                    perm = [1, 2]
-                    iperm = [idx_herald-c_idx]
-                    iperm += [0, 1, c_data-c_idx, c_data+1-c_idx]
-                    offset = 6
-                    ioffset = 2
-                    if c_data > c_idx + 2:
-                        for p in range(c_idx+2, c_data):
-                            perm += [offset]
-                            iperm += [ioffset]
-                            offset += 1
-                            ioffset += 1
-                    perm += [3, 4]
-                    iperm += [idx_herald+1-c_idx]
-                    ioffset += 2
-                    for p in range(c_data+2, idx_herald):
-                        perm += [offset]
-                        iperm += [ioffset]
-                        offset += 1
-                        ioffset += 1
-                    perm += [0]
-                    perm += [5]
-                    pc.add(c_idx, library.PERM(perm))
-                    pc.add(c_idx, cnot_component, merge=False)
-                    pc.add(c_idx, library.PERM(iperm))
-                    idx_herald += 2
+                    first_herald = None
+                    max_port = max(c_idx, c_data) + 1
+                cnot_component_instance = cnot_component.circuit
+                real_port = 0
+                # list all port permutations
+                inv_perm = []
+                perm = list(range(max_port-min_port))
+                # used ports
+                used_ports = list(range(max_port-len(heralds)-min_port))
+                # plug-in all necessary ports entering in the component
+                for p_idx in range(cnot_component_instance.m):
+                    if p_idx in heralds:
+                        inv_perm.append(idx_herald-c_first)
+                        perm[idx_herald-c_first] = p_idx
+                        if heralds[p_idx]:
+                            sources[idx_herald] = s
+                        idx_herald += 1
+                    else:
+                        if real_port < 2:
+                            # c_idx
+                            if c_idx < c_data:
+                                inv_perm.append(real_port)
+                            else:
+                                inv_perm.append(c_idx-c_data+real_port)
+                        else:
+                            # c_data
+                            if c_idx < c_data:
+                                inv_perm.append(c_data-c_idx+real_port-2)
+                            else:
+                                inv_perm.append(real_port-2)
+                        perm[inv_perm[-1]] = p_idx
+                        if inv_perm[-1] <= len(used_ports):
+                            used_ports[inv_perm[-1]] = None
+                        real_port += 1
+
+                for p_idx in used_ports:
+                    if p_idx is not None:
+                        inv_perm.append(p_idx)
+                        perm[p_idx] = len(inv_perm)-1
+
+                pc.add(c_first, library.PERM(perm))
+                pc.add(c_first, cnot_component_instance, merge=False)
+                pc.add(c_first, library.PERM(inv_perm))
 
     return Processor(sources, pc)
