@@ -20,10 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import heralded_cnot
-from .postprocessed_cnot import postprocessed_cnot
-from .generic_2mode import generic_2mode
+import numpy as np
 
-catalog = {"heralded_cnot": heralded_cnot,
-           "post_processed_cnot": postprocessed_cnot,
-           "generic_2mode": generic_2mode}
+from perceval.components import PredefinedCircuit
+import perceval.lib.phys as phys
+
+c_cnot = (phys.Circuit(6, name="PostProcessed CNOT")
+              .add((0, 1), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
+              .add((3, 4), phys.BS(R=1 / 2))
+              .add((2, 3), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
+              .add((4, 5), phys.BS(R=1 / 3))
+              .add((3, 4), phys.BS(R=1 / 2)))
+
+postprocessed_cnot = PredefinedCircuit(c_cnot,
+                                       "postprocessed cnot",
+                                       description="",
+                                       heralds={0: 0, 5:0})

@@ -30,19 +30,22 @@ import qiskit
 
 min_precision_gate = 1e-4
 
+
 def _swap(perm, port_a, port_b):
     if port_a != port_b:
         c = perm[port_a]
         perm[port_a] = perm[port_b]
         perm[port_b] = c
 
-def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Processor:
-    r"""convert a qiskit circuit into a predefined processor
+
+def to_perceval(qc: qiskit.QuantumCircuit, library, heralded: bool = None) -> Processor:
+    r"""Convert a qiskit circuit into a predefined processor.
 
     :param qc: quantum-based qiskit circuit
     :type qc:  qiskit.QuantumCircuit
     :param library: a component library to use for the conversion
-    :param heralded: do we use `heralded_cnot` or `post_processed_cnot`
+    :param heralded: do we use `heralded_cnot` or `post_processed_cnot`, if not set, all cnot but the
+        last are heralded
     :return: a processor
     """
 
@@ -52,20 +55,28 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
         if instruction[0].name == "cx":
             n_cnot += 1
 
-    cnot_component = heralded and library.catalog["heralded_cnot"] or library.catalog["post_processed_cnot"]
+    cnot_component_heralded = library.catalog["heralded_cnot"]
+    cnot_component_postprocessed = library.catalog["post_processed_cnot"]
     generic_2mode_component = library.catalog["generic_2mode"]
     lower_phase_component = PredefinedCircuit(library.Circuit(2) // (0, library.PS(P("phi2"))))
     upper_phase_component = PredefinedCircuit(library.Circuit(2) // (1, library.PS(P("phi1"))))
-    two_phase_component = PredefinedCircuit(library.Circuit(2) // (0, library.PS(P("phi1"))) // (1, library.PS(P("phi2"))))
-
-    herald_per_cnot = len(cnot_component.heralds)
+    two_phase_component = PredefinedCircuit(
+        library.Circuit(2) // (0, library.PS(P("phi1"))) // (1, library.PS(P("phi2"))))
 
     # define the sources - let us suppose a single perfect source
     s = Source()
-    sources = {i*2: s for i in range(qc.qregs[0].size)}
+    sources = {i * 2: s for i in range(qc.qregs[0].size)}
 
-    nmode = qc.qregs[0].size * 2 + herald_per_cnot * n_cnot
-    pc = Circuit(nmode)
+    n_modes = qc.qregs[0].size * 2
+    if n_cnot:
+        if heralded is True:
+            n_modes += len(cnot_component_heralded.heralds) * n_cnot
+        elif heralded is False:
+            n_modes += len(cnot_component_postprocessed.heralds) * n_cnot
+        else:
+            n_modes += len(cnot_component_heralded.heralds) * (n_cnot - 1) + len(cnot_component_postprocessed.heralds)
+    cnot_idx = 0
+    pc = Circuit(n_modes)
     idx_herald = qc.qregs[0].size * 2
 
     for instruction in qc.data:
@@ -78,15 +89,15 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
         if instruction[0].num_qubits == 1:
             # one mode gate
             u = instruction[0].to_matrix()
-            if abs(u[1,0])+abs(u[0,1]) < 2 * min_precision_gate:
+            if abs(u[1, 0]) + abs(u[0, 1]) < 2 * min_precision_gate:
                 # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
                 # limited numeric precision
-                if abs(u[0,0]-1) < min_precision_gate:
-                    if abs(u[1,1]-1) < min_precision_gate:
+                if abs(u[0, 0] - 1) < min_precision_gate:
+                    if abs(u[1, 1] - 1) < min_precision_gate:
                         continue
                     ins = upper_phase_component.circuit
                 else:
-                    if abs(u[1,1]-1) < min_precision_gate:
+                    if abs(u[1, 1] - 1) < min_precision_gate:
                         ins = lower_phase_component.circuit
                     else:
                         ins = two_phase_component.circuit
@@ -95,7 +106,7 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
                 ins = generic_2mode_component.circuit
                 optimize(ins, u, frobenius, sign=-1)
             ins._name = instruction[0].name
-            pc.add(instruction[1][0].index*2, ins.copy(), merge=False)
+            pc.add(instruction[1][0].index * 2, ins.copy(), merge=False)
         else:
             c_idx = instruction[1][0].index * 2
             c_data = instruction[1][1].index * 2
@@ -104,6 +115,11 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
                 # c_idx and c_data are consecutive - not necessarily ordered
                 pc.add(c_first, library.PERM([2, 3, 0, 1]))
             else:
+                cnot_idx += 1
+                if heralded is False or (heralded is None and cnot_idx == n_cnot):
+                    cnot_component = cnot_component_postprocessed
+                else:
+                    cnot_component = cnot_component_heralded
                 assert instruction[0].name == "cx", "gate not yet supported: %s" % instruction[0].name
                 # convert cx to cnot - adding potential heralds
                 heralds = cnot_component.heralds
@@ -115,23 +131,21 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
                 # - move intermediate lines and all lines on the way of the component below
                 min_port = c_first
                 if heralds:
-                    first_herald = idx_herald - min_port
                     max_port = idx_herald + len(heralds)
                 else:
-                    first_herald = None
                     max_port = max(c_idx, c_data) + 1
                 cnot_component_instance = cnot_component.circuit
                 real_port = 0
                 # list all port permutations
                 inv_perm = []
-                perm = list(range(max_port-min_port))
+                perm = list(range(max_port - min_port))
                 # used ports
-                used_ports = list(range(max_port-len(heralds)-min_port))
-                # plug-in all necessary ports entering in the component
+                used_ports = list(range(max_port - len(heralds) - min_port))
+                # plug-in all necessary ports entering the component
                 for p_idx in range(cnot_component_instance.m):
                     if p_idx in heralds:
-                        inv_perm.append(idx_herald-c_first)
-                        perm[idx_herald-c_first] = p_idx
+                        inv_perm.append(idx_herald - c_first)
+                        perm[idx_herald - c_first] = p_idx
                         if heralds[p_idx]:
                             sources[idx_herald] = s
                         idx_herald += 1
@@ -141,13 +155,13 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
                             if c_idx < c_data:
                                 inv_perm.append(real_port)
                             else:
-                                inv_perm.append(c_idx-c_data+real_port)
+                                inv_perm.append(c_idx - c_data + real_port)
                         else:
                             # c_data
                             if c_idx < c_data:
-                                inv_perm.append(c_data-c_idx+real_port-2)
+                                inv_perm.append(c_data - c_idx + real_port - 2)
                             else:
-                                inv_perm.append(real_port-2)
+                                inv_perm.append(real_port - 2)
                         perm[inv_perm[-1]] = p_idx
                         if inv_perm[-1] <= len(used_ports):
                             used_ports[inv_perm[-1]] = None
@@ -156,7 +170,7 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded : bool=True) -> Pro
                 for p_idx in used_ports:
                     if p_idx is not None:
                         inv_perm.append(p_idx)
-                        perm[p_idx] = len(inv_perm)-1
+                        perm[p_idx] = len(inv_perm) - 1
 
                 pc.add(c_first, library.PERM(perm))
                 pc.add(c_first, cnot_component_instance, merge=False)
