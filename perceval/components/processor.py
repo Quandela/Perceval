@@ -22,7 +22,7 @@
 
 from .source import Source
 from .circuit import ACircuit, Circuit
-from perceval.utils import SVDistribution, StateVector
+from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
 
@@ -57,7 +57,7 @@ class Processor:
         self._in_port_names = {}
         self._out_port_names = {}
 
-    def set_port_names(self, in_port_names: dict[int, str], out_port_names: dict[int, str] = {}):
+    def set_port_names(self, in_port_names: Dict[int, str], out_port_names: Dict[int, str] = {}):
         self._in_port_names = in_port_names
         self._out_port_names = out_port_names
 
@@ -83,7 +83,7 @@ class Processor:
         outputs = SVDistribution()
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in sim.allstateprob_iterator(input_state):
-                if p and (not self._post_select or self._post_select(output_state)):
+                if p and self._state_selected(output_state):
                     outputs[StateVector(output_state)] += p*input_prob
         all_p = sum(v for v in outputs.values())
         if all_p == 0:
@@ -151,3 +151,14 @@ class Processor:
             printer.add_in_port(k, **in_display_params)
             printer.add_out_port(k, **out_display_params)
         return printer.draw()
+
+    def _state_selected(self, state: AnnotatedBasicState) -> bool:
+        """
+        Computes if the state is selected given heralds and post selection function
+        """
+        for m, v in self._heralds.items():
+            if state[m] != v:
+                return False
+        if self._post_select is not None:
+            return self._post_select(state)
+        return True
