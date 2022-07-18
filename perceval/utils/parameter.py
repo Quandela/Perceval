@@ -52,7 +52,7 @@ class Parameter:
         else:
             self._max = None
         if value is None:
-            self._symbol = sp.S(name)
+            self._symbol = sp.symbols(name, real=True)
             self._value = None
         else:
             if not isinstance(value, sp.Expr):

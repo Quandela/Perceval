@@ -176,4 +176,4 @@ def to_perceval(qc: qiskit.QuantumCircuit, library, heralded: bool = None) -> Pr
                 pc.add(c_first, cnot_component_instance, merge=False)
                 pc.add(c_first, library.PERM(inv_perm))
 
-    return Processor(sources, pc)
+    return Processor(sources, pc, heralds=heralds)
