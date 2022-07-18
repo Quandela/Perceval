@@ -291,7 +291,7 @@ class ACircuit(ABC):
                 if isinstance(v, sp.Expr):
                     v = str(v)
                     out_parameters[pname] = v
-                elif abs(v-float(default_value)) > 1e-6:
+                elif default_value is None or abs(v-float(default_value)) > 1e-6:
                     out_parameters[pname] = v
         else:
             out_parameters[pname] = map_param_kid[self._params[k]._pid]
