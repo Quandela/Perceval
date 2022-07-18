@@ -289,23 +289,46 @@ class ACircuit(ABC):
                 v = self._params[k]._value
                 if isinstance(v, sp.Expr):
                     v = str(v)
-                out_parameters[pname] = v
+                    out_parameters[pname] = v
+                elif default_value is None or abs(v-float(default_value)) > 1e-6:
+                    out_parameters[pname] = v
         else:
             out_parameters[pname] = map_param_kid[self._params[k]._pid]
 
     def get_variables(self, _=None):
         return {}
 
-    def copy(self):
+    def copy(self, subs: Union[dict,list] = None):
         nc = copy.deepcopy(self)
-        if not isinstance(self, Circuit):
+
+        if subs is None:
             for k, p in nc._params.items():
-                nc._params[k] = Parameter(p.name, float(p), p.min, p.max, p.is_periodic)
+                if p.defined:
+                    v = float(p)
+                else:
+                    v = None
+                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
+                nc.__setattr__("_"+k, nc._params[k])
         else:
-            nc._params = {}
-            nc._components = []
-            for r, c in self._components:
-                nc._components.append((r, c.copy()))
+            if isinstance(subs, list):
+                subs = {p.name: p.spv for p in subs}
+            for k, p in nc._params.items():
+                name = p.name
+                min_v = p.min
+                max_v = p.max
+                is_periodic = p.is_periodic
+                if p._value is None:
+                    p = p._symbol.evalf(subs=subs)
+                else:
+                    p = p.evalf(subs=subs)
+                print("k", p)
+                if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
+                    nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
+                else:
+                    nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
+        for k, p in nc._params.items():
+            nc.__setattr__("_" + k, nc._params[k])
+
         return nc
 
     @property
@@ -681,6 +704,14 @@ class Circuit(ACircuit):
                     idx += 1
 
         return generated
+
+    def copy(self, subs: Union[dict,list] = None):
+        nc = copy.deepcopy(self)
+        nc._params = {}
+        nc._components = []
+        for r, c in self._components:
+            nc.add(r, c.copy(subs=subs))
+        return nc
 
     @staticmethod
     def decomposition(U: MatrixN,

@@ -20,12 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import create_printer, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .utils import pdisplay, global_params, random_seed
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+import numpy as np
+
+from perceval.components import PredefinedCircuit
+import perceval.lib.phys as phys
+
+c_cnot = (phys.Circuit(6, name="PostProcessed CNOT")
+              .add((0, 1), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
+              .add((3, 4), phys.BS(R=1 / 2))
+              .add((2, 3), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
+              .add((4, 5), phys.BS(R=1 / 3))
+              .add((3, 4), phys.BS(R=1 / 2)))
+
+postprocessed_cnot = PredefinedCircuit(c_cnot,
+                                       "postprocessed cnot",
+                                       description="",
+                                       heralds={0: 0, 5:0})
