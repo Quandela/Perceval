@@ -37,6 +37,6 @@ def _post_process(s):
 
 postprocessed_cnot = PredefinedCircuit(c_cnot,
                                        "postprocessed cnot",
-                                       description="",
+                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
                                        heralds={0: 0, 5: 0},
                                        post_select_fn=_post_process)
