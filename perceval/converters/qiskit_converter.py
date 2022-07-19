@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import PredefinedCircuit, Circuit, Processor, P, Source
+from perceval import PredefinedCircuit, Circuit, Processor, P, Source, BasicState
 from perceval.algorithm.norm import *
 from perceval.algorithm.optimize import optimize
 
@@ -202,9 +202,11 @@ class QiskitConverter:
                     if heralds:
                         for k, v in heralds.items():
                             global_heralds[perm.index(k)+c_first] = v
-                    else:
+                    if cnot_component.has_post_select:
                         post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
-                                                                    cnot_component.post_select(s[c_first:c_last-1])
+                                                                    cnot_component.post_select(
+                                                                        BasicState([s[perm.index(ii)+c_first]
+                                                                                    for ii in range(cnot_component_instance.m)]))
 
                     pc.add(c_first, self._lib.PERM(inv_perm))
 

@@ -60,6 +60,10 @@ class PredefinedCircuit:
     def heralds(self) -> dict:
         return self._heralds
 
+    @property
+    def has_post_select(self) -> bool:
+        return self._post_select_fn is not None
+
     def post_select(self, s) -> bool:
         if self._post_select_fn is None:
             return True

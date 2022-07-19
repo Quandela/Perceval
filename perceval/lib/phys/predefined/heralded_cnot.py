@@ -46,4 +46,4 @@ c_hcnot = (phys.Circuit(8, name="Heralded CNOT")
 heralded_cnot = PredefinedCircuit(c_hcnot,
                                   "heralded cnot",
                                   description="https://doi.org/10.1073/pnas.1018839108",
-                                  heralds={0: 0, 1: 1, 6: 0, 7:1})
+                                  heralds={0: 0, 1: 1, 6: 0, 7: 1})

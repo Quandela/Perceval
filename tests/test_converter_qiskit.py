@@ -218,7 +218,7 @@ def test_cnot_postprocess():
     pc = convertor.convert(qc)
     simulator_backend = BackendFactory().get_backend('Naive')
     all_p, sv_out = pc.run(simulator_backend)
-    assert len(sv_out) == 4
+    assert len(sv_out) == 2
 
 
 def test_cnot_herald():
