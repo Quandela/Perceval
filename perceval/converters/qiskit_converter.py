@@ -49,8 +49,7 @@ class QiskitConverter:
         r"""Initialize qiskit to perceval circuit converter.
 
         :param library: a component library to use for the conversion
-        :param heralded: do we use `heralded_cnot` or `post_processed_cnot`, if not set, all cnot but the
-            last are heralded
+        :param source: the source used as input. Default is a perfect source.
         """
         if source is None:
             source = Source()
@@ -62,6 +61,8 @@ class QiskitConverter:
 
         :param qc: quantum-based qiskit circuit
         :type qc:  qiskit.QuantumCircuit
+        :param heralded: do we use `heralded_cnot` or `post_processed_cnot`, if not set, all cnot but the
+            last are heralded
         :return: a processor
         """
 
