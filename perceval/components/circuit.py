@@ -28,6 +28,7 @@ from typing import Callable, Literal, Optional, Union, Tuple, Type, List
 
 import numpy as np
 import sympy as sp
+import scipy as scp
 import scipy.optimize as so
 
 from perceval.utils import create_printer, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
@@ -374,7 +375,7 @@ class ACircuit(ABC):
                     equation += abs(cU[i, j]-UP[i, j])
         equation = abs(equation)
 
-        f = sp.lambdify([params], equation, modules=np)
+        f = sp.lambdify([params], equation, modules=[np, scp])
         counter = 0
         while counter < max_try:
             x0 = [random.random()] * len(params)
@@ -480,7 +481,7 @@ class ACircuit(ABC):
             x0.append(p.random())
         cu = pattern.compute_unitary(use_symbolic=True)
 
-        f = sp.lambdify([params_symbols], cu - u, modules=np)
+        f = sp.lambdify([params_symbols], cu - u, modules=[np, scp])
 
         def g(*params):
             return np.linalg.norm(np.array(f(*params)))

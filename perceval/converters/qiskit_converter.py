@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import PredefinedCircuit, Circuit, Processor, P, Source
+from perceval import PredefinedCircuit, Circuit, Processor, P, Source, BasicState
 from perceval.algorithm.norm import *
 from perceval.algorithm.optimize import optimize
 
@@ -49,8 +49,7 @@ class QiskitConverter:
         r"""Initialize qiskit to perceval circuit converter.
 
         :param library: a component library to use for the conversion
-        :param heralded: do we use `heralded_cnot` or `post_processed_cnot`, if not set, all cnot but the
-            last are heralded
+        :param source: the source used as input. Default is a perfect source.
         """
         if source is None:
             source = Source()
@@ -62,6 +61,8 @@ class QiskitConverter:
 
         :param qc: quantum-based qiskit circuit
         :type qc:  qiskit.QuantumCircuit
+        :param heralded: do we use `heralded_cnot` or `post_processed_cnot`, if not set, all cnot but the
+            last are heralded
         :return: a processor
         """
 
@@ -88,6 +89,7 @@ class QiskitConverter:
             port_names[2*i+1] = "%s_%s:%d" % (qubit_names, i, 1)
 
         post_select_fn = lambda s: True
+        global_heralds = {}
 
         n_modes = qc.qregs[0].size * 2
         if n_cnot:
@@ -199,15 +201,16 @@ class QiskitConverter:
                     pc.add(c_first, self._lib.PERM(perm))
                     pc.add(c_first, cnot_component_instance, merge=False)
                     if heralds:
+                        for k, v in heralds.items():
+                            global_heralds[perm.index(k)+c_first] = v
+                    if cnot_component.has_post_select:
                         post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
-                                                                    cnot_component.post_select(s[c_first:c_last-1]) and \
-                                                                    _check_heralds(s, c_first, heralds)
-                    else:
-                        post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
-                                                                    cnot_component.post_select(s[c_first:c_last-1])
+                                                                    cnot_component.post_select(
+                                                                        BasicState([s[perm.index(ii)+c_first]
+                                                                                    for ii in range(cnot_component_instance.m)]))
 
                     pc.add(c_first, self._lib.PERM(inv_perm))
 
-        p = Processor(sources, pc, post_select_fn=post_select_fn)
+        p = Processor(sources, pc, post_select_fn=post_select_fn, heralds=global_heralds)
         p.set_port_names(port_names, port_names)
         return p

@@ -22,7 +22,7 @@
 
 from .source import Source
 from .circuit import ACircuit, Circuit
-from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState
+from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
 
@@ -83,7 +83,7 @@ class Processor:
         outputs = SVDistribution()
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in sim.allstateprob_iterator(input_state):
-                if p and self._state_selected(output_state):
+                if p > global_params['min_p'] and self._state_selected(output_state):
                     outputs[StateVector(output_state)] += p*input_prob
         all_p = sum(v for v in outputs.values())
         if all_p == 0:
@@ -115,7 +115,7 @@ class Processor:
                                         nsimplify=nsimplify,
                                         complete_drawing=False,
                                         **opts)
-        herald_num = 1
+        herald_num = 0
         incr_herald_num = False
         for k in range(self._circuit.m):
             in_display_params = {}
