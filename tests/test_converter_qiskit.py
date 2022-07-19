@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
-from perceval.converters import perceval_qiskit
+from perceval.converters import QiskitConverter
 import perceval.lib.phys as phys
 
 
@@ -38,9 +38,10 @@ def _check_perm(perm, c_perm):
 
 
 def test_basic_circuit_h():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
-    pc = perceval_qiskit.to_perceval(qc, phys)
+    pc = convertor.convert(qc)
     c = pc.circuit
     sources = pc._sources
     assert len(sources) == 1
@@ -52,11 +53,12 @@ def test_basic_circuit_h():
     assert isinstance(c0, phys.BS)
 
 
-def test_basic_circuit_doubleh():
+def test_basic_circuit_double_h():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     qc.h(0)
-    pc = perceval_qiskit.to_perceval(qc, phys)
+    pc = convertor.convert(qc)
     c = pc.circuit
     sources = pc._sources
     assert len(sources) == 1
@@ -66,9 +68,10 @@ def test_basic_circuit_doubleh():
 
 
 def test_basic_circuit_s():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
-    pc = perceval_qiskit.to_perceval(qc, phys)
+    pc = convertor.convert(qc)
     c = pc.circuit
     sources = pc._sources
     assert len(sources) == 1
@@ -83,9 +86,10 @@ def test_basic_circuit_s():
 
 
 def test_basic_circuit_swap_direct():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(2)
     qc.swap(0, 1)
-    pc = perceval_qiskit.to_perceval(qc, phys)
+    pc = convertor.convert(qc)
     c = pc.circuit
     sources = pc._sources
     assert len(sources) == 2
@@ -101,9 +105,10 @@ def test_basic_circuit_swap_direct():
 
 
 def test_basic_circuit_swap_indirect():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(2)
     qc.swap(1, 0)
-    pc = perceval_qiskit.to_perceval(qc, phys)
+    pc = convertor.convert(qc)
     c = pc.circuit
     sources = pc._sources
     assert len(sources) == 2
@@ -117,10 +122,11 @@ def test_basic_circuit_swap_indirect():
 
 
 def test_cnot_1_heralded():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
-    pc = perceval_qiskit.to_perceval(qc, phys, True)
+    pc = convertor.convert(qc, True)
     c = pc.circuit
     assert c.m == 8
     sources = pc._sources
@@ -138,10 +144,11 @@ def test_cnot_1_heralded():
 
 
 def test_cnot_1_inverse_heralded():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(1, 0)
-    pc = perceval_qiskit.to_perceval(qc, phys, True)
+    pc = convertor.convert(qc, True)
     c = pc.circuit
     assert c.m == 8
     sources = pc._sources
@@ -159,10 +166,11 @@ def test_cnot_1_inverse_heralded():
 
 
 def test_cnot_2_heralded():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(3)
     qc.h(0)
     qc.cx(0, 2)
-    pc = perceval_qiskit.to_perceval(qc, phys, True)
+    pc = convertor.convert(qc, True)
     c = pc.circuit
     assert c.m == 10
     sources = pc._sources
@@ -180,10 +188,11 @@ def test_cnot_2_heralded():
 
 
 def test_cnot_1_postprocessed():
+    convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
-    pc = perceval_qiskit.to_perceval(qc, phys, False)
+    pc = convertor.convert(qc, False)
     c = pc.circuit
     assert c.m == 6
     sources = pc._sources

@@ -40,18 +40,19 @@ def _swap(perm, port_a, port_b):
 
 class QiskitConverter:
 
-    def __init__(self, source: Source, library, heralded: bool = None):
+    def __init__(self, library, source: Source = None):
         r"""Initialize qiskit to perceval circuit converter.
 
         :param library: a component library to use for the conversion
         :param heralded: do we use `heralded_cnot` or `post_processed_cnot`, if not set, all cnot but the
             last are heralded
         """
+        if source is None:
+            source = Source()
         self._source = source
         self._lib = library
-        self._heralded = heralded
 
-    def convert(self, qc: qiskit.QuantumCircuit) -> Processor:
+    def convert(self, qc: qiskit.QuantumCircuit, heralded: bool = None) -> Processor:
         r"""Convert a qiskit circuit into a perceval.Processor.
 
         :param qc: quantum-based qiskit circuit
@@ -73,13 +74,19 @@ class QiskitConverter:
         two_phase_component = PredefinedCircuit(
             self._lib.Circuit(2) // (0, self._lib.PS(P("phi1"))) // (1, self._lib.PS(P("phi2"))))
 
-        sources = {i * 2: self._source for i in range(qc.qregs[0].size)}
+        qubit_names = qc.qregs[0].name
+        sources = {}
+        port_names = {}
+        for i in range(qc.qregs[0].size):
+            sources[2*i] = self._source
+            port_names[2*i] = "%s_%s:%d" % (qubit_names, i, 0)
+            port_names[2*i+1] = "%s_%s:%d" % (qubit_names, i, 1)
 
         n_modes = qc.qregs[0].size * 2
         if n_cnot:
-            if self._heralded is True:
+            if heralded is True:
                 n_modes += len(cnot_component_heralded.heralds) * n_cnot
-            elif self._heralded is False:
+            elif heralded is False:
                 n_modes += len(cnot_component_postprocessed.heralds) * n_cnot
             else:  # self._heralded is None
                 n_modes += len(cnot_component_heralded.heralds) * (n_cnot - 1) \
@@ -125,7 +132,7 @@ class QiskitConverter:
                     pc.add(c_first, self._lib.PERM([2, 3, 0, 1]))
                 else:
                     cnot_idx += 1
-                    if self._heralded is False or (self._heralded is None and cnot_idx == n_cnot):
+                    if heralded is False or (heralded is None and cnot_idx == n_cnot):
                         cnot_component = cnot_component_postprocessed
                     else:
                         cnot_component = cnot_component_heralded
@@ -186,5 +193,5 @@ class QiskitConverter:
                     pc.add(c_first, self._lib.PERM(inv_perm))
 
         p = Processor(sources, pc)
-        # p.set_port_names()
+        p.set_port_names(port_names, port_names)
         return p
