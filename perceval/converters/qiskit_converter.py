@@ -88,6 +88,7 @@ class QiskitConverter:
             port_names[2*i+1] = "%s_%s:%d" % (qubit_names, i, 1)
 
         post_select_fn = lambda s: True
+        global_heralds = {}
 
         n_modes = qc.qregs[0].size * 2
         if n_cnot:
@@ -199,15 +200,14 @@ class QiskitConverter:
                     pc.add(c_first, self._lib.PERM(perm))
                     pc.add(c_first, cnot_component_instance, merge=False)
                     if heralds:
-                        post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
-                                                                    cnot_component.post_select(s[c_first:c_last-1]) and \
-                                                                    _check_heralds(s, c_first, heralds)
+                        for k, v in heralds.items():
+                            global_heralds[perm.index(k)+c_first] = v
                     else:
                         post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
                                                                     cnot_component.post_select(s[c_first:c_last-1])
 
                     pc.add(c_first, self._lib.PERM(inv_perm))
 
-        p = Processor(sources, pc, post_select_fn=post_select_fn)
+        p = Processor(sources, pc, post_select_fn=post_select_fn, heralds=global_heralds)
         p.set_port_names(port_names, port_names)
         return p
