@@ -27,18 +27,18 @@ import perceval.lib.phys as phys
 
 
 c_hcnot = (phys.Circuit(8, name="Heralded CNOT")
-               .add((0, 1, 2), phys.PERM([2, 0, 1]))
+               .add((0, 1, 2), phys.PERM([1, 2, 0]))
                .add((4, 5), phys.BS())
                .add((5, 6, 7), phys.PERM([1, 2, 0]))
                .add((3, 4), phys.BS())
                .add((2, 3), phys.BS(R=0.23, phi_b=np.pi, phi_d=0))
                .add((4, 5), phys.BS(R=0.23))
                .add((3, 4), phys.BS())
-               .add((5, 6), phys.PERM([1, 0]))
+               .add((5, 6, 7), phys.PERM([2, 1, 0]))
                .add((1, 2), phys.PERM([1, 0]))
                .add((2, 3), phys.BS(R=0.76))
                .add((4, 5), phys.BS(R=0.76, phi_b=np.pi, phi_d=0))
-               .add((5, 6, 7), phys.PERM([2, 1, 0]))
+               .add((5, 6), phys.PERM([1, 0]))
                .add((4, 5), phys.BS())
                .add((0, 1, 2), phys.PERM([2, 1, 0])))
 
@@ -46,4 +46,4 @@ c_hcnot = (phys.Circuit(8, name="Heralded CNOT")
 heralded_cnot = PredefinedCircuit(c_hcnot,
                                   "heralded cnot",
                                   description="https://doi.org/10.1073/pnas.1018839108",
-                                  heralds={0: 0, 1: 1, 6: 1, 7:0})
+                                  heralds={0: 0, 1: 1, 6: 0, 7:1})

@@ -132,7 +132,7 @@ def test_cnot_1_heralded():
     assert c.m == 8
     sources = pc._sources
     assert len(sources) == 4
-    assert 0 in sources and 2 in sources and 5 in sources and 6 in sources
+    assert 0 in sources and 2 in sources and 5 in sources and 7 in sources
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
@@ -154,7 +154,7 @@ def test_cnot_1_inverse_heralded():
     assert c.m == 8
     sources = pc._sources
     assert len(sources) == 4
-    assert 0 in sources and 2 in sources and 5 in sources and 6 in sources
+    assert 0 in sources and 2 in sources and 5 in sources and 7 in sources
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
@@ -176,7 +176,7 @@ def test_cnot_2_heralded():
     assert c.m == 10
     sources = pc._sources
     assert len(sources) == 5
-    assert 0 in sources and 2 in sources and 4 in sources and 7 in sources and 8 in sources
+    assert 0 in sources and 2 in sources and 4 in sources and 7 in sources and 9 in sources
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
