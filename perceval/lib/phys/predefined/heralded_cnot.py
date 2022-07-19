@@ -25,19 +25,24 @@ import numpy as np
 from perceval.components import PredefinedCircuit
 import perceval.lib.phys as phys
 
+import perceval as pcvl
+
+R1=0.228
+R2=0.758
+
 
 c_hcnot = (phys.Circuit(8, name="Heralded CNOT")
                .add((0, 1, 2), phys.PERM([1, 2, 0]))
                .add((4, 5), phys.BS())
                .add((5, 6, 7), phys.PERM([1, 2, 0]))
                .add((3, 4), phys.BS())
-               .add((2, 3), phys.BS(R=0.23, phi_b=np.pi, phi_d=0))
-               .add((4, 5), phys.BS(R=0.23))
+               .add((2, 3), phys.BS(R=R1, phi_b=np.pi, phi_d=0))
+               .add((4, 5), phys.BS(R=R1))
                .add((3, 4), phys.BS())
                .add((5, 6, 7), phys.PERM([2, 1, 0]))
                .add((1, 2), phys.PERM([1, 0]))
-               .add((2, 3), phys.BS(R=0.76))
-               .add((4, 5), phys.BS(R=0.76, phi_b=np.pi, phi_d=0))
+               .add((2, 3), phys.BS(R=R2))
+               .add((4, 5), phys.BS(R=R2, phi_b=np.pi, phi_d=0))
                .add((5, 6), phys.PERM([1, 0]))
                .add((4, 5), phys.BS())
                .add((0, 1, 2), phys.PERM([2, 1, 0])))

@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
-from perceval import BackendFactory
+from perceval import BackendFactory, StateVector
 from perceval.converters import QiskitConverter
 import perceval.lib.phys as phys
 
@@ -229,4 +229,5 @@ def test_cnot_herald():
     pc = convertor.convert(qc, True)
     simulator_backend = BackendFactory().get_backend('Naive')
     all_p, sv_out = pc.run(simulator_backend)
+    assert sv_out[StateVector("|0,1,0,1,0,1,0,1>")]+sv_out[StateVector("|1,0,1,0,0,1,0,1>")] < 2e-5
     assert len(sv_out) == 4
