@@ -20,13 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict
+from typing import Dict, Callable
 
 from perceval.components import Circuit
 
 
 class PredefinedCircuit:
-    def __init__(self,  c: Circuit, name: str = None, description: str = None, heralds: Dict[int, int] = None):
+    def __init__(self,  c: Circuit,
+                 name: str = None,
+                 description: str = None,
+                 heralds: Dict[int, int] = None,
+                 post_select_fn: Callable = None):
         r"""Define a `PredefinedCircuit` which is a readonly circuit with more information about its usage
 
         :param c:
@@ -38,6 +42,7 @@ class PredefinedCircuit:
         self._name = name
         self._description = description
         self._heralds = heralds
+        self._post_select_fn = post_select_fn
 
     @property
     def circuit(self):
@@ -54,3 +59,8 @@ class PredefinedCircuit:
     @property
     def heralds(self) -> dict:
         return self._heralds
+
+    def post_select(self, s) -> bool:
+        if self._post_select_fn is None:
+            return True
+        return self._post_select_fn(s)

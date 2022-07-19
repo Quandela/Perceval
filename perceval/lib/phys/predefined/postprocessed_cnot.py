@@ -35,4 +35,5 @@ c_cnot = (phys.Circuit(6, name="PostProcessed CNOT")
 postprocessed_cnot = PredefinedCircuit(c_cnot,
                                        "postprocessed cnot",
                                        description="",
-                                       heralds={0: 0, 5:0})
+                                       heralds={0: 0, 5:0},
+                                       post_select_fn=lambda s: (s[1] or s[2]) and (s[3] or s[4]))

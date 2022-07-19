@@ -37,6 +37,11 @@ def _swap(perm, port_a, port_b):
         perm[port_a] = perm[port_b]
         perm[port_b] = c
 
+def _check_heralds(s, idx, heralds):
+    for k, v in heralds.items():
+        if s[k+idx] != v:
+            return False
+    return True
 
 class QiskitConverter:
 
@@ -81,6 +86,8 @@ class QiskitConverter:
             sources[2*i] = self._source
             port_names[2*i] = "%s_%s:%d" % (qubit_names, i, 0)
             port_names[2*i+1] = "%s_%s:%d" % (qubit_names, i, 1)
+
+        post_select_fn = lambda s: True
 
         n_modes = qc.qregs[0].size * 2
         if n_cnot:
@@ -151,6 +158,7 @@ class QiskitConverter:
                     else:
                         max_port = max(c_idx, c_data) + 1
                     cnot_component_instance = cnot_component.circuit
+                    c_last = c_first + cnot_component_instance.m
                     real_port = 0
                     # list all port permutations
                     inv_perm = []
@@ -190,8 +198,16 @@ class QiskitConverter:
 
                     pc.add(c_first, self._lib.PERM(perm))
                     pc.add(c_first, cnot_component_instance, merge=False)
+                    if heralds:
+                        post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
+                                                                    cnot_component.post_select(s[c_first:c_last-1]) and \
+                                                                    _check_heralds(s, c_first, heralds)
+                    else:
+                        post_select_fn = lambda s, curr_post_select=post_select_fn: curr_post_select(s) and\
+                                                                    cnot_component.post_select(s[c_first:c_last-1])
+
                     pc.add(c_first, self._lib.PERM(inv_perm))
 
-        p = Processor(sources, pc)
+        p = Processor(sources, pc, post_select_fn=post_select_fn)
         p.set_port_names(port_names, port_names)
         return p
