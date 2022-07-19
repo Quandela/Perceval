@@ -226,8 +226,9 @@ def test_cnot_herald():
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
-    pc = convertor.convert(qc, True)
+    pc = convertor.convert(qc)
     simulator_backend = BackendFactory().get_backend('Naive')
     all_p, sv_out = pc.run(simulator_backend)
-    assert sv_out[StateVector("|0,1,0,1,0,1,0,1>")]+sv_out[StateVector("|1,0,1,0,0,1,0,1>")] < 2e-5
+    assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
+    assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
     assert len(sv_out) == 4
