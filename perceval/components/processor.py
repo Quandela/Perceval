@@ -73,7 +73,16 @@ class Processor:
     def sources(self):
         return self._sources
 
-    def run(self, simulator_backend: Type[Backend]):
+    def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
+        if not self._heralds or keep_herald:
+            return StateVector(s)
+        new_state = []
+        for idx, k in enumerate(s):
+            if idx not in self._heralds:
+                new_state.append(k)
+        return StateVector(new_state)
+
+    def run(self, simulator_backend: Type[Backend], keep_herald: bool=False):
         """
             calculate the output probabilities - returns performance, and output_maps
         """
@@ -84,7 +93,7 @@ class Processor:
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in sim.allstateprob_iterator(input_state):
                 if p > global_params['min_p'] and self._state_selected(output_state):
-                    outputs[StateVector(output_state)] += p*input_prob
+                    outputs[self.filter_herald(output_state, keep_herald)] += p*input_prob
         all_p = sum(v for v in outputs.values())
         if all_p == 0:
             return 0, outputs
