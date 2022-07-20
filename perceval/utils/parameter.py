@@ -75,7 +75,7 @@ class Parameter:
         else:
             return self._symbol
 
-    def __float__(self, subs: dict = None):
+    def __float__(self):
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """
         return float(self._value)

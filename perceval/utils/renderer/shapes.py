@@ -37,7 +37,7 @@ def detector_shape(canvas, **opts):
     canvas.add_mpath(["M", 20, 35, "h", -8, "v", -2*r, "h", 8,
                       "c", 0, 0, r, 0, r, r,
                       "c", 0, r, -r, r, -r, r, "z"],
-                     stroke="black", stroke_width=1, fill="lightgray")
+                     stroke="black", stroke_width=1, fill="white")
     if 'name' in opts:
         canvas.add_text((18, 44), text='['+opts['name']+']', size=6, ta="middle", fontstyle="italic")
     if 'content' in opts:
