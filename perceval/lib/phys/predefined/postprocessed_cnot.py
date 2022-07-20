@@ -32,8 +32,10 @@ c_cnot = (phys.Circuit(6, name="PostProcessed CNOT")
               .add((4, 5), phys.BS(R=1 / 3))
               .add((3, 4), phys.BS(R=1 / 2)))
 
+
 def _post_process(s):
     return (s[1] or s[2]) and (s[3] or s[4])
+
 
 postprocessed_cnot = PredefinedCircuit(c_cnot,
                                        "postprocessed cnot",

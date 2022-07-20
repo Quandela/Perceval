@@ -30,6 +30,7 @@ except ModuleNotFoundError as e:
 from perceval import BackendFactory, StateVector
 from perceval.converters import QiskitConverter
 import perceval.lib.phys as phys
+import perceval.lib.symb as symb
 
 
 def _check_perm(perm, c_perm):
@@ -68,7 +69,7 @@ def test_basic_circuit_double_h():
     assert len(c._components) == 2
 
 
-def test_basic_circuit_s():
+def test_basic_circuit_s_phys():
     convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
@@ -84,6 +85,18 @@ def test_basic_circuit_s():
     c0 = c._components[0][1]._components[0][1]
     assert r0 == (1,)
     assert isinstance(c0, phys.PS)
+
+
+def test_basic_circuit_s_symb():
+    convertor = QiskitConverter(symb)
+    qc = qiskit.QuantumCircuit(1)
+    qc.s(0)
+    pc = convertor.convert(qc)
+    c = pc.circuit
+    sources = pc._sources
+    assert len(sources) == 1
+    assert 0 in sources
+    assert 1 not in sources
 
 
 def test_basic_circuit_swap_direct():
@@ -210,7 +223,7 @@ def test_cnot_1_postprocessed():
     _check_perm([4, 0, 1, 2, 3, 5], perm2)
 
 
-def test_cnot_postprocess():
+def test_cnot_postprocess_phys():
     convertor = QiskitConverter(phys)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
@@ -221,12 +234,36 @@ def test_cnot_postprocess():
     assert len(sv_out) == 2
 
 
-def test_cnot_herald():
-    convertor = QiskitConverter(phys)
+def test_cnot_postprocess_symb():
+    convertor = QiskitConverter(symb)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
+    simulator_backend = BackendFactory().get_backend('Naive')
+    all_p, sv_out = pc.run(simulator_backend)
+    assert len(sv_out) == 2
+
+
+def test_cnot_herald_phys():
+    convertor = QiskitConverter(phys)
+    qc = qiskit.QuantumCircuit(2)
+    qc.h(0)
+    qc.cx(0, 1)
+    pc = convertor.convert(qc, True)
+    simulator_backend = BackendFactory().get_backend('Naive')
+    all_p, sv_out = pc.run(simulator_backend)
+    assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
+    assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
+    assert len(sv_out) == 4
+
+
+def test_cnot_herald_symb():
+    convertor = QiskitConverter(symb)
+    qc = qiskit.QuantumCircuit(2)
+    qc.h(0)
+    qc.cx(0, 1)
+    pc = convertor.convert(qc, True)
     simulator_backend = BackendFactory().get_backend('Naive')
     all_p, sv_out = pc.run(simulator_backend)
     assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
