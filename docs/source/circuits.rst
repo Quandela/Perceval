@@ -37,7 +37,7 @@ laboratory with beams, mirrors and physical component but also photonic chips li
 
    * - .. figure:: _static/img/grover-circuit.png
          :align: center
-	 :width: 500
+         :width: 500
 
          Optimized Grover algorithm proposed in [Kwiat2000]_.
      - **TODO**: The equivalent PHYS circuit
@@ -222,7 +222,7 @@ corresponds to the unitary matrix: :math:`\left[\begin{matrix}0 & 0 &
 
 The following then defines a circuit corresponding to this matrix:
 
->>> c1 = pcvl.Circuit(U=M)
+>>> c1 = symb.Unitary(U=M)
 
 
 You might also want to decompose the unitary matrix into a physical circuit using decomposition elements.
