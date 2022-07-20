@@ -23,7 +23,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=['perceval', 'perceval.components', 'perceval.backends', 'perceval.utils', 'perceval.utils.renderer',
-              'perceval.lib.phys', 'perceval.lib.symb', 'perceval.algorithm'],
+              'perceval.lib.phys', 'perceval.lib.symb', 'perceval.algorithm', 'perceval.converters'],
     install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'quandelibc>=0.5.2'],
     setup_requires=["scmver"],
     extras_require={"test": ["pytest", "pytest-cov"]},

@@ -20,12 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import create_printer, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .utils import pdisplay, global_params, random_seed
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+from .heralded_cnot import heralded_cnot
+from .postprocessed_cnot import postprocessed_cnot
+from .generic_2mode import generic_2mode
+
+catalog = {"heralded_cnot": heralded_cnot,
+           "post_processed_cnot": postprocessed_cnot,
+           "generic_2mode": generic_2mode}

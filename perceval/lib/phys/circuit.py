@@ -106,17 +106,21 @@ class BS(ACircuit):
     width = 2
 
     def shape(self, content, canvas, compact: bool = False):
-        head_content = "\n".join([s for s in content.split("\n")
-                                    if s.startswith("R=") or s.startswith("theta=")])
-        bottom_content = "\n".join([s for s in content.split("\n")
-                                      if not s.startswith("R=") and not s.startswith("theta=")]).replace("\n", ", ")
+        split_content = content.split("\n")
+        head_content = "\n".join([s for s in split_content
+                                  if s.startswith("R=") or s.startswith("theta=")])
+        bottom_content_list = [s for s in split_content
+                               if not s.startswith("R=") and not s.startswith("theta=")]
+        bottom_nline = len(bottom_content_list)
+        bottom_size = 7 if bottom_nline < 3 else 6
         canvas.add_mline([0, 25, 28, 25, 47, 44], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_mline([53, 44, 72, 25, 100, 25], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_mline([0, 75, 28, 75, 47, 56], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_mline([53, 56, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
         canvas.add_rect((25, 43), 50, 14, fill="black")
-        canvas.add_text((50, 86), size=7, ta="middle", text=bottom_content)
-        canvas.add_text((50, 26), content.replace('theta=', 'Θ='), size=7, ta="middle")
+        canvas.add_text((50, 80+5*bottom_nline), '\n'.join(bottom_content_list).replace('phi_', 'Φ_'),
+                        size=bottom_size, ta="middle")
+        canvas.add_text((50, 26), head_content.replace('theta=', 'Θ='), size=7, ta="middle")
         if self._phi_b.defined:
             m = round(abs(float(self._phi_b.spv/sp.pi)))
             if (m + 1) % 2:
