@@ -321,7 +321,6 @@ class ACircuit(ABC):
                     p = p._symbol.evalf(subs=subs)
                 else:
                     p = p.evalf(subs=subs)
-                print("k", p)
                 if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
                     nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
                 else:
