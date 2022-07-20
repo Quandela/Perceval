@@ -157,6 +157,10 @@ class Processor:
                 incr_herald_num = False
                 herald_num += 1
 
+            if k in self._heralds:
+                in_display_params['color'] = 'white'
+                out_display_params['color'] = 'white'
+
             printer.add_in_port(k, **in_display_params)
             printer.add_out_port(k, **out_display_params)
         return printer.draw()

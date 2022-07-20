@@ -22,10 +22,13 @@
 
 def source_shape(canvas, **opts):
     r = 10
+    color = "lightgray"
+    if 'color' in opts:
+        color = opts['color']
     canvas.add_mpath(["M", 0, 25, "c", 0, 0, 0, -r, r, -r,
                       "h", 8, "v", 2*r, "h", -8,
                       "c", -r, 0, -r, -r, -r, -r, "z"],
-                     stroke="black", stroke_width=1, fill="lightgray")
+                     stroke="black", stroke_width=1, fill=color)
     if 'name' in opts and opts['name']:
         canvas.add_text((8, 44), text='['+opts['name']+']', size=6, ta="middle", fontstyle="italic")
     if 'content' in opts and opts['content']:
@@ -34,10 +37,13 @@ def source_shape(canvas, **opts):
 
 def detector_shape(canvas, **opts):
     r = 10  # Radius of the half-circle
+    color = "lightgray"
+    if 'color' in opts:
+        color = opts['color']
     canvas.add_mpath(["M", 20, 35, "h", -8, "v", -2*r, "h", 8,
                       "c", 0, 0, r, 0, r, r,
                       "c", 0, r, -r, r, -r, r, "z"],
-                     stroke="black", stroke_width=1, fill="white")
+                     stroke="black", stroke_width=1, fill=color)
     if 'name' in opts:
         canvas.add_text((18, 44), text='['+opts['name']+']', size=6, ta="middle", fontstyle="italic")
     if 'content' in opts:
