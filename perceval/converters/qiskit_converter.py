@@ -37,11 +37,6 @@ def _swap(perm, port_a, port_b):
         perm[port_a] = perm[port_b]
         perm[port_b] = c
 
-def _check_heralds(s, idx, heralds):
-    for k, v in heralds.items():
-        if s[k+idx] != v:
-            return False
-    return True
 
 class QiskitConverter:
 
