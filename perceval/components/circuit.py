@@ -196,7 +196,7 @@ class ACircuit(ABC):
             component: ACircuit, merge: bool = None) -> Circuit:
         r"""Add a component in a circuit
 
-        :param port_range: the port range as a tuple of consecutive porst, or the initial port where to add the
+        :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
         :param component: the component to add, must be a circuit
         :param merge: if the component is a complex circuit,
@@ -209,7 +209,6 @@ class ACircuit(ABC):
         if not isinstance(self, Circuit):
             self._components = [(list(range(self._m)), copy.copy(self))]
             self.__class__ = self._fcircuit
-            self._Udef = None
             self._params = {v.name: v for k, v in self._params.items() if not v.fixed}
         if not self.defined_circuit:
             self.defined_circuit = True
@@ -386,7 +385,7 @@ class ACircuit(ABC):
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
-        if not isinstance(self, Circuit) or self._Udef is not None:
+        if not isinstance(self, Circuit):
             variables = self.get_variables(map_param_kid)
             description = format_parameters(variables, precision, nsimplify)
             td.append_circuit([p + shift for p in range(self._m)], self, description)
@@ -404,7 +403,7 @@ class ACircuit(ABC):
                     component_vars = c.get_variables(map_param_kid)
                     description = format_parameters(component_vars, precision, nsimplify)
                     td.append_subcircuit(shiftr, c, description)
-                elif isinstance(c, ACircuit) or c._Udef is not None:
+                elif isinstance(c, ACircuit):
                     component_vars = c.get_variables(map_param_kid)
                     description = format_parameters(component_vars, precision, nsimplify)
                     td.append_circuit(shiftr, c, description)
@@ -501,10 +500,11 @@ class ACircuit(ABC):
     subcircuit_fill = 'lightpink'
     subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
 
+    @abstractmethod
     def shape(self, content, canvas: Canvas, compact: bool = False):
-        return """
-            <rect x=0 y=5 width=100 height=%d fill="lightgray"/>
-        """ % (self._m * 50 - 10)
+        """
+        Implement in subclasses to render the circuit on canvas
+        """
 
     def get_width(self, compact: bool = False):
         return self.width
@@ -525,28 +525,12 @@ class Circuit(ACircuit):
     _name = "CPLX"
     _fname = "Circuit"
 
-    def __init__(self, m: int = None, U: Matrix = None, name: str = None, use_polarization: bool = False):
-        if U is not None:
-            assert len(U.shape) == 2 and U.shape[0] == U.shape[1], "invalid unitary matrix"
-            if m:
-                assert U.shape[0] == m, "incorrect size"
-            else:
-                m = U.shape[0]
-            self.width = m
-            # check if unitary matrix
-            self._Udef = U
-            self._udef_use_polarization = use_polarization
-            if use_polarization:
-                assert m % 2 == 0, "polarization matrix should have even number of rows/col"
-                m /= 2
-        else:
-            assert m > 0, "invalid size"
-            self._Udef = None
+    def __init__(self, m: int = None, name: str = None):
+        assert m > 0, "invalid size"
         if name is not None:
             self._name = name
         super().__init__(m)
-        if U is None:
-            self.defined_circuit = False
+        self.defined_circuit = False  # TODO remove this member?
 
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
@@ -555,7 +539,7 @@ class Circuit(ACircuit):
         :return: a string describing the circuit that be re-used to define the circuit
         """
         cparams = ["%d" % self._m]
-        if self._name != "CPLX":
+        if self._name != Circuit._name:
             cparams.append("name=%s" % self._name)
         s = "%s(%s)" % (self._fname, ", ".join(cparams))
         if map_param_kid is None:
@@ -570,18 +554,11 @@ class Circuit(ACircuit):
 
     @property
     def requires_polarization(self) -> bool:
-        """Does the circuit requires polarization
+        """Does the circuit require polarization?
 
-        :return: is True if the circuit is defined with ``use_polarization=True`` or if the circuit has a polarization
-          component
+        :return: is True if the circuit has a polarization component
         """
-        if self._Udef is not None and self._udef_use_polarization:
-            return True
-        else:
-            for _, c in self._components:
-                if c.requires_polarization:
-                    return True
-        return False
+        return any(c.requires_polarization for _, c in self._components)
 
     def definition(self) -> Matrix:
         r"""Gives mathematical definition of the circuit
@@ -599,16 +576,8 @@ class Circuit(ACircuit):
                                  use_symbolic: bool,
                                  use_polarization: bool) -> Matrix:
         """compute the unitary matrix corresponding to the current circuit"""
-        if self._Udef is not None:
-            u = self._Udef
-            if use_polarization and not self._udef_use_polarization:
-                u = _matrix_double_for_polarization(self._m, u)
-        else:
-            u = None
-        if use_polarization:
-            multiplier = 2
-        else:
-            multiplier = 1
+        u = None
+        multiplier = 2 if use_polarization else 1
         for r, c in self._components:
             cU = c.compute_unitary(use_symbolic=use_symbolic, use_polarization=use_polarization)
             if len(r) != multiplier*self._m:
@@ -622,9 +591,6 @@ class Circuit(ACircuit):
         return u
 
     def inverse(self, v=False, h=False):
-        if self._Udef is not None:
-            if v:
-                self._Udef = np.flipud(self._Udef)
         _new_components = []
         _components = self._components
         if h:
@@ -777,10 +743,7 @@ class Circuit(ACircuit):
 
     def depths(self):
         r"""Return depth of the circuit for each mode"""
-        max_depth = 0
-        if self._Udef is not None:
-            max_depth = 1
-        the_depths = [max_depth] * self.m
+        the_depths = [0] * self.m
         for r, c in self._components:
             c_depths = c.depths()
             for c_i, i in enumerate(r):
@@ -790,24 +753,18 @@ class Circuit(ACircuit):
     def ncomponents(self):
         r"""Return number of actual components in the circuit"""
         n = 0
-        if self._Udef is not None:
-            n = 1
-        for r, c in self._components:
+        for _, c in self._components:
             n += c.ncomponents()
         return n
 
     def transfer_from(self, source: ACircuit, force: bool = False):
         r"""Transfer parameters of a circuit to the current one
 
-        :param component: the circuit to transfer the parameters from. The shape of the circuit to transfer from
+        :param source: the circuit to transfer the parameters from. The shape of the circuit to transfer from
                           should be a subset of the current circuit.
         :param force: force changing fixed parameter if necessary
         """
         assert source.m == self.m, "circuit shape does not match"
-        if source._Udef is not None:
-            assert self._Udef is not None, "circuit structure does not match - missing predefined unitary"
-            self._Udef = source._Udef
-
         checked_components = [False] * len(self._components)
         for r, c in source._components:
             # find the component c in the current circuit, we can only take a component at the border
@@ -913,10 +870,7 @@ class Circuit(ACircuit):
         if browse:
             if pos is None:
                 pos = 0
-            l = []
-            if self._Udef is not None:
-                l = [None]
-            l += list(range(pos, len(self._components)))
+            l = list(range(pos, len(self._components)))
             for pos in l:
                 match = self.match(pattern, pos, pattern_pos)
                 if match is not None:
@@ -928,84 +882,75 @@ class Circuit(ACircuit):
         else:
             # if we have already matched the component, the matchee and the matcher should be the same !
             if pos in match.pos_map and match.pos_map[pos] != pattern_pos:
-                    return None
+                return None
         if not isinstance(pattern, Circuit):
             # the circuit we have to match against has a single component
-            if pos is None and self._Udef is not None:
-                matched = self._match_unitary(self._Udef, pattern, match, actual_pos=None)
-            else:
-                matched = self._components[pos][1].match(pattern, match,
+            return self._components[pos][1].match(pattern, match,
                                                          actual_pos=pos, actual_pattern_pos=pattern_pos)
-            if matched is None:
-                return None
-            return matched
-        else:
-            # the circuit we have to match against has multiple components
-            if self._Udef is not None and pos is None:
-                match = self._match_unitary(self._Udef, pattern[pattern_pos],
-                                            actual_pos=pos, actual_pattern_pos=pattern_pos)
-            else:
-                if pos is None:
-                    pos = 0
-                match = self._components[pos][1].match(pattern._components[pattern_pos][1], match=match,
-                                                       actual_pos=pos, actual_pattern_pos=pattern_pos)
-            if match is None:
-                return None
-            # if actual_pattern_pos is 0, we also have to match potential brother nodes
-            if pattern_pos == 0:
-                map_modes = set()
-                pattern_brother_nodes = {}
-                for qr in pattern._components[pattern_pos][0]: map_modes.add(qr)
-                for qc in range(1, len(pattern._components)):
-                    # either they are a sub-nodes
-                    r, _ = pattern._components[qc]
-                    overlap = False
-                    for qr in r:
-                        if qr in map_modes:
-                            overlap = True
-                            break
-                    if not overlap:
-                        pattern_brother_nodes[r[0] - pattern._components[pattern_pos][0][0]] = qc
-                    for qr in r:
-                        map_modes.add(qr)
-                    if len(map_modes) == pattern._m:
+
+        # the circuit we have to match against has multiple components
+        if pos is None:
+            pos = 0
+        match = self._components[pos][1].match(pattern._components[pattern_pos][1], match=match,
+                                               actual_pos=pos, actual_pattern_pos=pattern_pos)
+        if match is None:
+            return None
+        # if actual_pattern_pos is 0, we also have to match potential brother nodes
+        if pattern_pos == 0:
+            map_modes = set()
+            pattern_brother_nodes = {}
+            for qr in pattern._components[pattern_pos][0]:
+                map_modes.add(qr)
+            for qc in range(1, len(pattern._components)):
+                # either they are a sub-nodes
+                r, _ = pattern._components[qc]
+                overlap = False
+                for qr in r:
+                    if qr in map_modes:
+                        overlap = True
                         break
-                for r_bn, p_bn in pattern_brother_nodes.items():
-                    # looking for a similar component starting on relative mode r_bn
-                    found_bn = False
-                    c_bn = pattern._components[p_bn][1]
-                    for qc in range(pos-1, -1, -1):
+                if not overlap:
+                    pattern_brother_nodes[r[0] - pattern._components[pattern_pos][0][0]] = qc
+                for qr in r:
+                    map_modes.add(qr)
+                if len(map_modes) == pattern._m:
+                    break
+            for r_bn, p_bn in pattern_brother_nodes.items():
+                # looking for a similar component starting on relative mode r_bn
+                found_bn = False
+                c_bn = pattern._components[p_bn][1]
+                for qc in range(pos-1, -1, -1):
+                    r, c = self._components[qc]
+                    r0 = r[0] - self._components[pos][0][0]
+                    if r0 == r_bn and c.m == c_bn.m:
+                        found_bn = self._check_brother_node(qc, pos)
+                        break
+                if not found_bn:
+                    for qc in range(pos+1, len(self._components)):
                         r, c = self._components[qc]
                         r0 = r[0] - self._components[pos][0][0]
                         if r0 == r_bn and c.m == c_bn.m:
-                            found_bn = self._check_brother_node(qc, pos)
+                            found_bn = self._check_brother_node(pos, qc)
                             break
-                    if not found_bn:
-                        for qc in range(pos+1, len(self._components)):
-                            r, c = self._components[qc]
-                            r0 = r[0] - self._components[pos][0][0]
-                            if r0 == r_bn and c.m == c_bn.m:
-                                found_bn = self._check_brother_node(pos, qc)
-                                break
-                    if not found_bn:
-                        return None
-                    match = self.match(pattern, qc, p_bn, False, match)
-                    if match is None:
-                        return None
-
-            # now iterate through all subnodes of circuit[pos] - they should match equivalent sub nodes of self[pos]
-            circuit_sub_nodes = pattern.find_subnodes(pattern_pos)
-            self_sub_nodes = self.find_subnodes(pos)
-            for c_self, c_circuit in zip(self_sub_nodes, circuit_sub_nodes):
-                if c_circuit is None:
-                    continue
-                if c_self is None:
+                if not found_bn:
                     return None
-                if c_self[1] != c_circuit[1]:
-                    return None
-                match = self.match(pattern, c_self[0], c_circuit[0], False, match)
+                match = self.match(pattern, qc, p_bn, False, match)
                 if match is None:
                     return None
+
+        # now iterate through all subnodes of circuit[pos] - they should match equivalent sub nodes of self[pos]
+        circuit_sub_nodes = pattern.find_subnodes(pattern_pos)
+        self_sub_nodes = self.find_subnodes(pos)
+        for c_self, c_circuit in zip(self_sub_nodes, circuit_sub_nodes):
+            if c_circuit is None:
+                continue
+            if c_self is None:
+                return None
+            if c_self[1] != c_circuit[1]:
+                return None
+            match = self.match(pattern, c_self[0], c_circuit[0], False, match)
+            if match is None:
+                return None
         return match
 
     def subcircuit_shape(self, content, canvas):
@@ -1017,6 +962,6 @@ class Circuit(ACircuit):
 
     def shape(self, _, canvas, compact: bool = False):
         for i in range(self.m):
-            canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * self.width, 0], **self.stroke_style)
-        canvas.add_rect((5, 5), 50 * self.width - 10, 50 * self.m - 10, fill="lightgray")
-        canvas.add_text((25 * self.width, 25 * self.m), size=10, ta="middle", text=self._name)
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
+        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
+        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)

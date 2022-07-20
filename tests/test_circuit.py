@@ -226,9 +226,49 @@ def test_invalid_ifloor():
         raise Exception('invalid ifloor should have fail')
 
 
-def test_unitary():
+def test_unitary_matrix():
     assert phys.BS().U.is_unitary()
     assert symb.BS().U.is_unitary()
+
+
+def test_unitary_component():
+    non_unitary_matrix = Matrix([[1, 2], [3, 4]])
+    with pytest.raises(AssertionError):
+        phys.Unitary(non_unitary_matrix)
+
+    odd_size_matrix = Matrix.random_unitary(5)
+    with pytest.raises(AssertionError):
+        # In case the unitary component is polarized, the unitary matrix size must be even
+        phys.Unitary(odd_size_matrix, use_polarization=True)
+
+    unitary = phys.Unitary(odd_size_matrix)
+    assert (unitary.U == odd_size_matrix).all()
+
+
+def test_unitary_inverse():
+    """
+    Testing vertical inversion can be performed by applying a m:-1:0 permutation on the right and on the left of the
+    inverted circuit. The resulting circuit has to be equivalent to the input circuit.
+    """
+    size = 4
+    perm_tester = symb.PERM(list(range(size-1, -1, -1)))
+    input_component = symb.Unitary(Matrix.random_unitary(size))
+    inverted_component = symb.Unitary(input_component.U)
+    inverted_component.inverse(v=True)
+    test_circuit = Circuit(size)\
+        .add(0, perm_tester)\
+        .add(0, inverted_component)\
+        .add(0, perm_tester)
+    assert np.array_equal(input_component.U, test_circuit.U)
+
+    # Test v and h inversion interaction (the order should have no impact on the result)
+    u1 = symb.Unitary(Matrix.random_unitary(size))
+    u2 = symb.Unitary(U=u1.U)
+    u1.inverse(h=True)
+    u1.inverse(v=True)
+    u2.inverse(v=True)
+    u2.inverse(h=True)
+    assert np.allclose(u1.U, u2.U, atol=1e-12)
 
 
 def _gen_phys_bs(i: int):
@@ -270,10 +310,14 @@ def test_evolve():
         assert str(simulator.evolve(BasicState("|1,0>"))) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
 
 
+def _generate_simple_circuit():
+    return (phys.Unitary(U=Matrix.random_unitary(3), name="U1")
+            // (0, phys.PS(sp.pi / 2))
+            // phys.Unitary(U=Matrix.random_unitary(3), name="U2"))
+
+
 def test_visualization_ucircuit(capfd):
-    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
-         // (0, phys.PS(sp.pi/2))
-         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    c = _generate_simple_circuit()
     pdisplay(c, output_format="text")
     out, err = capfd.readouterr()
     assert out.strip() == """
@@ -291,12 +335,11 @@ def test_visualization_ucircuit(capfd):
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
+
 def test_depths_ncomponents():
     assert phys.PS(0).depths() == [1]
     assert phys.PS(0).ncomponents() == 1
-    c = (phys.Circuit(3, U=Matrix.random_unitary(3), name="U1")
-         // (0, phys.PS(sp.pi / 2))
-         // phys.Circuit(3, U=Matrix.random_unitary(3), name="U2"))
+    c = _generate_simple_circuit()
     assert c.depths() == [3, 2, 2]
     assert c.ncomponents() == 3
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:

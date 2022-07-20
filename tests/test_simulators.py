@@ -244,23 +244,21 @@ def test_clifford_bs():
     assert 4750 < counts[pcvl.BasicState("|1,0>")] < 5250
 
 
-def test_clifford_10():
-    n, m = 10, 60
+def _run_clifford(n: int, m: int):
     state = pcvl.BasicState([1] * n + [0] * (m - n))
     bs_backend = pcvl.BackendFactory().get_backend("CliffordClifford2017")
     u = pcvl.Matrix.random_unitary(m)
-    experiment = bs_backend(pcvl.Circuit(U=u))
+    experiment = bs_backend(phys.Unitary(U=u))
     experiment.sample(state)
+
+
+def test_clifford_10():
+    _run_clifford(10, 60)
 
 
 @pytest.mark.long_test
 def test_clifford_27():
-    n, m = 27, 60
-    state = pcvl.BasicState([1] * n + [0] * (m - n))
-    bs_backend = pcvl.BackendFactory().get_backend("CliffordClifford2017")
-    u = pcvl.Matrix.random_unitary(m)
-    experiment = bs_backend(pcvl.Circuit(U=u))
-    experiment.sample(state)
+    _run_clifford(27, 60)
 
 
 def test_polarization_circuit_0():
