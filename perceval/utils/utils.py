@@ -26,8 +26,9 @@ import warnings
 import random
 import numpy as np
 
-
 from .format import simple_float, simple_complex
+import perceval as pcvl
+
 in_notebook = False
 in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ
 
@@ -47,15 +48,21 @@ except AttributeError:
     pass
 
 
+def _default_output_format(o):
+    """
+    Deduces the best output format given the nature of the data to be displayed and the execution context
+    """
+    if in_notebook:
+        return "html"
+    elif in_pycharm_or_spyder \
+            and (isinstance(o, pcvl.ACircuit) or isinstance(o, pcvl.Processor)):
+        return "mplot"
+    return "text"
+
+
 def pdisplay(o, output_format=None, to_file=None, **opts):
     if output_format is None:
-        if in_notebook:
-            output_format = "html"
-        elif hasattr(o, "delay_circuit") and in_pycharm_or_spyder:
-            # characterize ACCircuit objects
-            output_format = "mplot"
-        else:
-            output_format = "text"
+        output_format = _default_output_format(o)
 
     if not hasattr(o, "pdisplay"):
         opts_simple = {}
