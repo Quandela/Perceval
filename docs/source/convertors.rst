@@ -37,7 +37,10 @@ Then convert the Quantum Circuit with Perceval QiskitConvertor:
 >>> perceval_processor = qiskit_convertor.convert(qc)
 
 See also:
+
 `Qiskit tutorial <https://qiskit.org/documentation/tutorials/circuits/1_getting_started_with_qiskit.html>`_
+
+:ref:`Qiskit conversion and decomposition example<Decomposing Qiskit circuits>`
 
 Parameters
 ^^^^^^^^^^
@@ -64,5 +67,4 @@ With:
   * False => use only post-processed CNOT
   * None (not set) => use heralded CNOT for all gates except the last one (which is post-processed)
 
-* **Returns**: a ``Processor`` containing the ``qiskit.QuantumCircuit`` equivalent, heralds and post
-selection function.
+* **Returns**: a ``Processor`` containing the ``qiskit.QuantumCircuit`` equivalent, heralds and post selection function.
