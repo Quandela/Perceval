@@ -39,34 +39,34 @@ class CircuitBuilder:
 
     def add(self, serial_comp):
         component = None
-        if serial_comp.HasField('circuit'):
+        t = serial_comp.WhichOneof('type')
+        if t == 'circuit':
             component = deserialize_circuit(serial_comp.circuit)
-        elif serial_comp.HasField('beam_splitter'):
+        elif t == 'beam_splitter':
             component = self._deserialize_symb_bs(serial_comp.beam_splitter)
-        elif serial_comp.HasField('beam_splitter_complex'):
+        elif t == 'beam_splitter_complex':
             component = self._deserialize_phys_bs(serial_comp.beam_splitter_complex)
-        elif serial_comp.HasField('phase_shifter'):
+        elif t == 'phase_shifter':
             component = self._deserialize_ps(serial_comp.phase_shifter, serial_comp.ns)
-        elif serial_comp.HasField('permutation'):
+        elif t == 'permutation':
             component = self._deserialize_perm(serial_comp.permutation, serial_comp.ns)
-        elif serial_comp.HasField('unitary'):
+        elif t == 'unitary':
             component = self._deserialize_unitary(serial_comp.unitary, serial_comp.ns)
-        elif serial_comp.HasField('wave_plate'):
-            if serial_comp.component_type == 'WP':
-                component = self._deserialize_wp(serial_comp.wave_plate, serial_comp.ns)
-            elif serial_comp.component_type == 'QWP':
-                component = self._deserialize_qwp(serial_comp.wave_plate, serial_comp.ns)
-            elif serial_comp.component_type == 'HWP':
-                component = self._deserialize_hwp(serial_comp.wave_plate, serial_comp.ns)
-        elif serial_comp.HasField('time_delay'):
+        elif t == 'wave_plate':
+            component = self._deserialize_wp(serial_comp.wave_plate, serial_comp.ns)
+        elif t == 'quarter_wave_plate':
+            component = self._deserialize_qwp(serial_comp.quarter_wave_plate, serial_comp.ns)
+        elif t == 'half_wave_plate':
+            component = self._deserialize_hwp(serial_comp.half_wave_plate, serial_comp.ns)
+        elif t == 'time_delay':
             component = self._deserialize_dt(serial_comp.time_delay, serial_comp.ns)
-        elif serial_comp.HasField('polarization_rotator'):
+        elif t == 'polarization_rotator':
             component = self._deserialize_pr(serial_comp.polarization_rotator, serial_comp.ns)
-        elif serial_comp.component_type == 'PBS':
+        elif t == 'polarized_beam_splitter':
             component = phys.PBS() if serial_comp.ns == pb.Component.PHYS else symb.PBS()
 
         if component is None:
-            raise NotImplementedError('Component could not be deserialized')
+            raise NotImplementedError(f'Component could not be deserialized (type = {t}')
         self._circuit.add(serial_comp.starting_mode, component, merge=False)
 
     def _deserialize_ps(self, serial_ps: pb.PhaseShifter, ns: int):

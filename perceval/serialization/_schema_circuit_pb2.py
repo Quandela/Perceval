@@ -37,7 +37,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16perceval_circuit.proto\x12\x0fperceval.schema\"<\n\rComplexDouble\x12\x12\n\nreal_value\x18\x01 \x01(\x01\x12\x17\n\x0fimaginary_value\x18\x02 \x01(\x01\"#\n\nExpression\x12\x15\n\rserialization\x18\x01 \x01(\t\"<\n\x0cMatrixDouble\x12,\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1e.perceval.schema.ComplexDouble\";\n\x0eMatrixSymbolic\x12)\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1b.perceval.schema.Expression\"\x93\x01\n\x06Matrix\x12\x0c\n\x04rows\x18\x01 \x01(\x05\x12\x0c\n\x04\x63ols\x18\x02 \x01(\x05\x12\x30\n\x07numeric\x18\x03 \x01(\x0b\x32\x1d.perceval.schema.MatrixDoubleH\x00\x12\x33\n\x08symbolic\x18\x04 \x01(\x0b\x32\x1f.perceval.schema.MatrixSymbolicH\x00\x42\x06\n\x04\x64\x61ta\"\xc0\x05\n\tComponent\x12\x15\n\rstarting_mode\x18\x01 \x01(\x05\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x10\n\x08offset_x\x18\x03 \x01(\x01\x12\x12\n\nannotation\x18\x04 \x01(\t\x12\x16\n\x0e\x63omponent_type\x18\x05 \x01(\t\x12\x36\n\rphase_shifter\x18\n \x01(\x0b\x32\x1d.perceval.schema.PhaseShifterH\x00\x12\x36\n\rbeam_splitter\x18\x0b \x01(\x0b\x32\x1d.perceval.schema.BeamSplitterH\x00\x12\x45\n\x15\x62\x65\x61m_splitter_complex\x18\x0c \x01(\x0b\x32$.perceval.schema.BeamSplitterComplexH\x00\x12+\n\x07\x63ircuit\x18\x0e \x01(\x0b\x32\x18.perceval.schema.CircuitH\x00\x12\x33\n\x0bpermutation\x18\x10 \x01(\x0b\x32\x1c.perceval.schema.PermutationH\x00\x12+\n\x07unitary\x18\x11 \x01(\x0b\x32\x18.perceval.schema.UnitaryH\x00\x12\x30\n\nwave_plate\x18\x12 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x44\n\x14polarization_rotator\x18\x13 \x01(\x0b\x32$.perceval.schema.PolarizationRotatorH\x00\x12\x30\n\ntime_delay\x18\x14 \x01(\x0b\x32\x1a.perceval.schema.TimeDelayH\x00\x12\x30\n\x02ns\x18\x0f \x01(\x0e\x32$.perceval.schema.Component.namespace\"\x1f\n\tnamespace\x12\x08\n\x04PHYS\x10\x00\x12\x08\n\x04SYMB\x10\x01\x42\x0b\n\tspecifics\"8\n\x0cPhaseShifter\x12(\n\x03phi\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\"\x8c\x01\n\x0c\x42\x65\x61mSplitter\x12*\n\x05theta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12&\n\x01R\x18\x02 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12(\n\x03phi\x18\x03 \x01(\x0b\x32\x1b.perceval.schema.Expression\"\xed\x01\n\x13\x42\x65\x61mSplitterComplex\x12*\n\x05theta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12&\n\x01R\x18\x02 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12*\n\x05phi_a\x18\x03 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12*\n\x05phi_b\x18\x04 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12*\n\x05phi_d\x18\x05 \x01(\x0b\x32\x1b.perceval.schema.Expression\"W\n\x07Unitary\x12$\n\x03mat\x18\x01 \x01(\x0b\x32\x17.perceval.schema.Matrix\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x18\n\x10use_polarization\x18\x03 \x01(\x08\"#\n\x0bPermutation\x12\x14\n\x0cpermutations\x18\x01 \x03(\x05\"a\n\tWavePlate\x12*\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12(\n\x03xsi\x18\x02 \x01(\x0b\x32\x1b.perceval.schema.Expression\"A\n\x13PolarizationRotator\x12*\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\"4\n\tTimeDelay\x12\'\n\x02\x64t\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\"k\n\x07\x43ircuit\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06n_mode\x18\x04 \x01(\x05\x12\x12\n\nannotation\x18\x02 \x01(\t\x12.\n\ncomponents\x18\x03 \x03(\x0b\x32\x1a.perceval.schema.Componentb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16perceval_circuit.proto\x12\x0fperceval.schema\"<\n\rComplexDouble\x12\x12\n\nreal_value\x18\x01 \x01(\x01\x12\x17\n\x0fimaginary_value\x18\x02 \x01(\x01\"#\n\nExpression\x12\x15\n\rserialization\x18\x01 \x01(\t\"<\n\x0cMatrixDouble\x12,\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1e.perceval.schema.ComplexDouble\";\n\x0eMatrixSymbolic\x12)\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1b.perceval.schema.Expression\"\x93\x01\n\x06Matrix\x12\x0c\n\x04rows\x18\x01 \x01(\x05\x12\x0c\n\x04\x63ols\x18\x02 \x01(\x05\x12\x30\n\x07numeric\x18\x03 \x01(\x0b\x32\x1d.perceval.schema.MatrixDoubleH\x00\x12\x33\n\x08symbolic\x18\x04 \x01(\x0b\x32\x1f.perceval.schema.MatrixSymbolicH\x00\x42\x06\n\x04\x64\x61ta\"\xdf\x06\n\tComponent\x12\x15\n\rstarting_mode\x18\x01 \x01(\x05\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x10\n\x08offset_x\x18\x03 \x01(\x01\x12\x12\n\nannotation\x18\x04 \x01(\t\x12\x30\n\x02ns\x18\x05 \x01(\x0e\x32$.perceval.schema.Component.namespace\x12+\n\x07\x63ircuit\x18\n \x01(\x0b\x32\x18.perceval.schema.CircuitH\x00\x12\x36\n\rphase_shifter\x18\x0b \x01(\x0b\x32\x1d.perceval.schema.PhaseShifterH\x00\x12\x36\n\rbeam_splitter\x18\x0c \x01(\x0b\x32\x1d.perceval.schema.BeamSplitterH\x00\x12\x45\n\x15\x62\x65\x61m_splitter_complex\x18\r \x01(\x0b\x32$.perceval.schema.BeamSplitterComplexH\x00\x12\x33\n\x0bpermutation\x18\x0e \x01(\x0b\x32\x1c.perceval.schema.PermutationH\x00\x12+\n\x07unitary\x18\x0f \x01(\x0b\x32\x18.perceval.schema.UnitaryH\x00\x12\x30\n\nwave_plate\x18\x10 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x35\n\x0fhalf_wave_plate\x18\x11 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x38\n\x12quarter_wave_plate\x18\x12 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x44\n\x14polarization_rotator\x18\x13 \x01(\x0b\x32$.perceval.schema.PolarizationRotatorH\x00\x12\x30\n\ntime_delay\x18\x14 \x01(\x0b\x32\x1a.perceval.schema.TimeDelayH\x00\x12I\n\x17polarized_beam_splitter\x18\x15 \x01(\x0b\x32&.perceval.schema.PolarizedBeamSplitterH\x00\"\x1f\n\tnamespace\x12\x08\n\x04PHYS\x10\x00\x12\x08\n\x04SYMB\x10\x01\x42\x06\n\x04type\"8\n\x0cPhaseShifter\x12(\n\x03phi\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\"\x8c\x01\n\x0c\x42\x65\x61mSplitter\x12*\n\x05theta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12&\n\x01R\x18\x02 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12(\n\x03phi\x18\x03 \x01(\x0b\x32\x1b.perceval.schema.Expression\"\xed\x01\n\x13\x42\x65\x61mSplitterComplex\x12*\n\x05theta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12&\n\x01R\x18\x02 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12*\n\x05phi_a\x18\x03 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12*\n\x05phi_b\x18\x04 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12*\n\x05phi_d\x18\x05 \x01(\x0b\x32\x1b.perceval.schema.Expression\"\x17\n\x15PolarizedBeamSplitter\"W\n\x07Unitary\x12$\n\x03mat\x18\x01 \x01(\x0b\x32\x17.perceval.schema.Matrix\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x18\n\x10use_polarization\x18\x03 \x01(\x08\"#\n\x0bPermutation\x12\x14\n\x0cpermutations\x18\x01 \x03(\x05\"a\n\tWavePlate\x12*\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\x12(\n\x03xsi\x18\x02 \x01(\x0b\x32\x1b.perceval.schema.Expression\"A\n\x13PolarizationRotator\x12*\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\"4\n\tTimeDelay\x12\'\n\x02\x64t\x18\x01 \x01(\x0b\x32\x1b.perceval.schema.Expression\"k\n\x07\x43ircuit\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x12\n\nannotation\x18\x03 \x01(\t\x12.\n\ncomponents\x18\x04 \x03(\x0b\x32\x1a.perceval.schema.Componentb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'perceval_circuit_pb2', globals())
@@ -55,25 +55,27 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _MATRIX._serialized_start=266
   _MATRIX._serialized_end=413
   _COMPONENT._serialized_start=416
-  _COMPONENT._serialized_end=1120
-  _COMPONENT_NAMESPACE._serialized_start=1076
-  _COMPONENT_NAMESPACE._serialized_end=1107
-  _PHASESHIFTER._serialized_start=1122
-  _PHASESHIFTER._serialized_end=1178
-  _BEAMSPLITTER._serialized_start=1181
-  _BEAMSPLITTER._serialized_end=1321
-  _BEAMSPLITTERCOMPLEX._serialized_start=1324
-  _BEAMSPLITTERCOMPLEX._serialized_end=1561
-  _UNITARY._serialized_start=1563
-  _UNITARY._serialized_end=1650
-  _PERMUTATION._serialized_start=1652
-  _PERMUTATION._serialized_end=1687
-  _WAVEPLATE._serialized_start=1689
-  _WAVEPLATE._serialized_end=1786
-  _POLARIZATIONROTATOR._serialized_start=1788
-  _POLARIZATIONROTATOR._serialized_end=1853
-  _TIMEDELAY._serialized_start=1855
-  _TIMEDELAY._serialized_end=1907
-  _CIRCUIT._serialized_start=1909
-  _CIRCUIT._serialized_end=2016
+  _COMPONENT._serialized_end=1279
+  _COMPONENT_NAMESPACE._serialized_start=1240
+  _COMPONENT_NAMESPACE._serialized_end=1271
+  _PHASESHIFTER._serialized_start=1281
+  _PHASESHIFTER._serialized_end=1337
+  _BEAMSPLITTER._serialized_start=1340
+  _BEAMSPLITTER._serialized_end=1480
+  _BEAMSPLITTERCOMPLEX._serialized_start=1483
+  _BEAMSPLITTERCOMPLEX._serialized_end=1720
+  _POLARIZEDBEAMSPLITTER._serialized_start=1722
+  _POLARIZEDBEAMSPLITTER._serialized_end=1745
+  _UNITARY._serialized_start=1747
+  _UNITARY._serialized_end=1834
+  _PERMUTATION._serialized_start=1836
+  _PERMUTATION._serialized_end=1871
+  _WAVEPLATE._serialized_start=1873
+  _WAVEPLATE._serialized_end=1970
+  _POLARIZATIONROTATOR._serialized_start=1972
+  _POLARIZATIONROTATOR._serialized_end=2037
+  _TIMEDELAY._serialized_start=2039
+  _TIMEDELAY._serialized_end=2091
+  _CIRCUIT._serialized_start=2093
+  _CIRCUIT._serialized_end=2200
 # @@protoc_insertion_point(module_scope)

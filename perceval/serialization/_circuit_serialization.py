@@ -37,7 +37,6 @@ class ComponentSerializer:
         self._pb = pb.Component()
         self._pb.starting_mode = r
         self._pb.n_mode = c.m
-        self._pb.component_type = type(c).__name__
         self._pb.ns = pb.Component.PHYS if '.phys' in c.__module__ else pb.Component.SYMB
         self._serialize(c)
         return self._pb
@@ -88,14 +87,20 @@ class ComponentSerializer:
 
     @dispatch((phys.PBS, symb.PBS))
     def _serialize(self, pbs):
-        # No need to serialize anything specific for PBS
-        pass
+        pb_pbs = pb.PolarizedBeamSplitter()
+        self._pb.polarized_beam_splitter.CopyFrom(pb_pbs)
 
-    @dispatch((phys.QWP, symb.QWP, phys.HWP, symb.HWP))
+    @dispatch((phys.QWP, symb.QWP))
     def _serialize(self, wp):
         pb_wp = pb.WavePlate()
         pb_wp.xsi.serialization = str(wp._xsi._value)
-        self._pb.wave_plate.CopyFrom(pb_wp)
+        self._pb.quarter_wave_plate.CopyFrom(pb_wp)
+
+    @dispatch((phys.HWP, symb.HWP))
+    def _serialize(self, wp):
+        pb_wp = pb.WavePlate()
+        pb_wp.xsi.serialization = str(wp._xsi._value)
+        self._pb.half_wave_plate.CopyFrom(pb_wp)
 
     @dispatch((phys.WP, symb.WP))
     def _serialize(self, wp):
