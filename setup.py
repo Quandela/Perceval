@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Quandela/Perceval",
     project_urls={
-        "Documentation" : "https://perceval.quandela.net/docs/",
+        "Documentation": "https://perceval.quandela.net/docs/",
         "Source": "https://github.com/Quandela/Perceval",
         "Tracker": "https://github.com/Quandela/Perceval/issues"
     },
@@ -23,8 +23,10 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=['perceval', 'perceval.components', 'perceval.backends', 'perceval.utils', 'perceval.utils.renderer',
-              'perceval.lib.phys', 'perceval.lib.symb', 'perceval.algorithm', 'perceval.converters'],
-    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'quandelibc>=0.5.2'],
+              'perceval.lib.phys', 'perceval.lib.phys.predefined',
+              'perceval.lib.symb', 'perceval.lib.symb.predefined',
+              'perceval.algorithm', 'perceval.converters'],
+    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'quandelibc>=0.5.3'],
     setup_requires=["scmver"],
     extras_require={"test": ["pytest", "pytest-cov"]},
     python_requires=">=3.6",
