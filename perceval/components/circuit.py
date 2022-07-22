@@ -30,7 +30,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import QPrinter, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
+from perceval.utils import create_printer, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
 import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
@@ -289,23 +289,45 @@ class ACircuit(ABC):
                 v = self._params[k]._value
                 if isinstance(v, sp.Expr):
                     v = str(v)
-                out_parameters[pname] = v
+                    out_parameters[pname] = v
+                elif default_value is None or abs(v-float(default_value)) > 1e-6:
+                    out_parameters[pname] = v
         else:
             out_parameters[pname] = map_param_kid[self._params[k]._pid]
 
     def get_variables(self, _=None):
         return {}
 
-    def copy(self):
+    def copy(self, subs: Union[dict,list] = None):
         nc = copy.deepcopy(self)
-        if not isinstance(self, Circuit):
+
+        if subs is None:
             for k, p in nc._params.items():
-                nc._params[k] = Parameter(p.name, float(p), p.min, p.max, p.is_periodic)
+                if p.defined:
+                    v = float(p)
+                else:
+                    v = None
+                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
+                nc.__setattr__("_"+k, nc._params[k])
         else:
-            nc._params = {}
-            nc._components = []
-            for r, c in self._components:
-                nc._components.append((r, c.copy()))
+            if isinstance(subs, list):
+                subs = {p.name: p.spv for p in subs}
+            for k, p in nc._params.items():
+                name = p.name
+                min_v = p.min
+                max_v = p.max
+                is_periodic = p.is_periodic
+                if p._value is None:
+                    p = p._symbol.evalf(subs=subs)
+                else:
+                    p = p.evalf(subs=subs)
+                if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
+                    nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
+                else:
+                    nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
+        for k, p in nc._params.items():
+            nc.__setattr__("_" + k, nc._params[k])
+
         return nc
 
     @property
@@ -362,7 +384,7 @@ class ACircuit(ABC):
         return None
 
     def pdisplay(self,
-                 parent_td: QPrinter = None,
+                 parent_printer=None,
                  map_param_kid: dict = None,
                  shift: int = 0,
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
@@ -371,24 +393,25 @@ class ACircuit(ABC):
                  compact: bool = False,
                  precision: float = 1e-6,
                  nsimplify: bool = True,
+                 complete_drawing: bool = True,
                  **opts):
-        if parent_td is None:
+        if parent_printer is None:
             if not dry_run:
-                total_width = self.pdisplay(parent_td, map_param_kid, shift, output_format, recursive, True, compact,
+                total_width = self.pdisplay(parent_printer, map_param_kid, shift, output_format, recursive, True, compact,
                                             precision, nsimplify, **opts)
-                td = QPrinter(self._m, output_format=output_format, stroke_style=self.stroke_style,
-                              total_width=total_width, total_height=self._m, compact=compact, **opts)
+                printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
+                                         total_width=total_width, total_height=self._m, compact=compact, **opts)
             else:
-                td = QPrinter(self._m, output_format="html", stroke_style=self.stroke_style, compact=compact, **opts)
+                printer = create_printer(self._m, output_format="html", stroke_style=self.stroke_style, compact=compact, **opts)
         else:
-            td = parent_td
+            printer = parent_printer
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
         if not isinstance(self, Circuit):
             variables = self.get_variables(map_param_kid)
             description = format_parameters(variables, precision, nsimplify)
-            td.append_circuit([p + shift for p in range(self._m)], self, description)
+            printer.append_circuit([p + shift for p in range(self._m)], self, description)
 
         if self._components:
             if dry_run:
@@ -396,26 +419,29 @@ class ACircuit(ABC):
             for idx, (r, c) in enumerate(self._components):
                 shiftr = [p+shift for p in r]
                 if c._components and recursive:
-                    td.open_subblock(r, c._name, self._areas[idx], c._color)
-                    c.pdisplay(td, shift=shiftr[0])
-                    self._areas[idx] = td.close_subblock(r)
+                    printer.open_subblock(r, c._name, self._areas[idx], c._color)
+                    c.pdisplay(printer, shift=shiftr[0])
+                    self._areas[idx] = printer.close_subblock(r)
                 elif c._components:
                     component_vars = c.get_variables(map_param_kid)
                     description = format_parameters(component_vars, precision, nsimplify)
-                    td.append_subcircuit(shiftr, c, description)
+                    printer.append_subcircuit(shiftr, c, description)
                 elif isinstance(c, ACircuit):
                     component_vars = c.get_variables(map_param_kid)
                     description = format_parameters(component_vars, precision, nsimplify)
-                    td.append_circuit(shiftr, c, description)
+                    printer.append_circuit(shiftr, c, description)
 
-        td.extend_pos(0, self._m - 1)
+        printer.extend_pos(0, self._m - 1)
 
-        if parent_td is None:
-            td.close()
+        if parent_printer is None:
+            printer.close()
             if dry_run:
-                return td.max_pos(0, self._m-1, True)
+                return printer.max_pos(0, self._m-1, True)
+            elif not complete_drawing:
+                return printer
             else:
-                return td.draw()
+                printer.add_mode_index()  # No other class with mess with the printer, so we can add mode index now
+                return printer.draw()
 
     @staticmethod
     def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,
@@ -677,6 +703,14 @@ class Circuit(ACircuit):
                     idx += 1
 
         return generated
+
+    def copy(self, subs: Union[dict,list] = None):
+        nc = copy.deepcopy(self)
+        nc._params = {}
+        nc._components = []
+        for r, c in self._components:
+            nc.add(r, c.copy(subs=subs))
+        return nc
 
     @staticmethod
     def decomposition(U: MatrixN,

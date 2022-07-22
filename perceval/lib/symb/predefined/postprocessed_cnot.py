@@ -20,12 +20,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import create_printer, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .utils import pdisplay, global_params, random_seed
-from .mlstr import mlstr
-from .statevector import BasicState, AnnotatedBasicState, StateVector, SVDistribution
-from .polarization import Polarization
-from .renderer import *
+import numpy as np
+
+from perceval.components import PredefinedCircuit
+import perceval.lib.symb as symb
+
+c_cnot = (symb.Circuit(6, name="PostProcessed CNOT")
+              .add((0, 1), symb.BS(R=1 / 3, phi=np.pi))
+              .add((3, 4), symb.BS(R=1 / 2))
+              .add((2, 3), symb.BS(R=1 / 3, phi=np.pi))
+              .add((4, 5), symb.BS(R=1 / 3))
+              .add((3, 4), symb.BS(R=1 / 2)))
+
+
+def _post_process(s):
+    return (s[1] or s[2]) and (s[3] or s[4])
+
+
+postprocessed_cnot = PredefinedCircuit(c_cnot,
+                                       "postprocessed cnot",
+                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
+                                       heralds={0: 0, 5: 0},
+                                       post_select_fn=_post_process)

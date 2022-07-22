@@ -36,10 +36,13 @@ class Parameter:
     :param value: optional value, when the value is provided at initialization, the parameter is considered as `fixed`
     :param min_v: minimal value that the parameter can take, is used in circuit optimization
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
+    :param is_expression: for symbolic parameter, the value is an expression to evaluate with context values
     """
     _id = 0
 
-    def __init__(self, name: str, value: float = None, min_v: float = None, max_v: float = None, periodic=True):
+    def __init__(self, name: str, value: float = None,
+                 min_v: float = None, max_v: float = None, periodic=True,
+                 is_expression: bool = False):
         if min_v is not None:
             self._min = float(min_v)
         else:
@@ -60,6 +63,7 @@ class Parameter:
         self.name = name
         self._periodic = periodic
         self._pid = Parameter._id
+        self._is_expression = is_expression
         Parameter._id += 1
 
     @property
@@ -75,6 +79,13 @@ class Parameter:
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """
         return float(self._value)
+
+    def evalf(self, subs: dict = None):
+        r"""Convert the parameter to float, will fail if the parameter has no defined value
+        """
+        if subs is None or not isinstance(self._value, sp.Expr):
+            return float(self._value)
+        return self._value.evalf(subs=subs)
 
     def is_symbolic(self):
         return self._value is None or isinstance(self._value, sp.Expr)
@@ -147,7 +158,7 @@ class Parameter:
     def fixed(self) -> bool:
         r"""Return True if the parameter is fixed
         """
-        return self._symbol is None
+        return self._symbol is None and not self._is_expression
 
     def __repr__(self):
         return "Parameter(name='%s', value=%s%s%s)" % (str(self.name), str(self._value),
@@ -192,4 +203,14 @@ class Parameter:
         return self._pid
 
 
+class Expression(Parameter):
+    def __init__(self, expression: str):
+        try:
+            e = sp.S(expression)
+        except sp.SympifyError as err:
+            raise ValueError("%s is not an expression: %s", expression, str(err))
+        assert isinstance(e, sp.Expr), "%s is not an expression" % expression
+        super().__init__("_%d" % Parameter._id, e, is_expression=True)
+
 P = Parameter
+E = Expression

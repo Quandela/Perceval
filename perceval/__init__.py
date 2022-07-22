@@ -31,13 +31,10 @@ from .backends import *
 from .utils import *
 
 
-def register_plugin(name):
+def register_plugin(name, silent=False):
     try:
         plugin = importlib.import_module(name)
-        assert plugin.register() is True
+        assert plugin.register(silent) is True
     except Exception as e:
         raise RuntimeError("cannot import %s: %s" % (name, str(e)))
     return True
-
-
-#random_seed(1248593178)

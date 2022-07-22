@@ -226,7 +226,8 @@ class Canvas(ABC):
         return (self.position[0], self._inverse_Y * self.position[1])
 
     def add_text(self, points: Tuple[float, float],
-                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left"):
+                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left",
+                 fontstyle: Literal["normal", "bold", "italic"] = "normal"):
         self.position = points
         f_points = self.position
         if ta == "left":
