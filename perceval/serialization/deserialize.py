@@ -21,108 +21,12 @@
 # SOFTWARE.
 
 from os import path
+from inspect import signature
 
 from perceval import Circuit, Matrix
-import perceval.lib.phys as phys
-import perceval.lib.symb as symb
-from perceval.serialization import _matrix_serialization, _expr_serialization as _expr
+from perceval.serialization import _matrix_serialization
+import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
-
-
-class CircuitBuilder:
-
-    def __init__(self, m: int, name: str):
-        if not name:
-            name = None
-        self._circuit = Circuit(m=m, name=name)
-        self._pb_comp = []
-
-    def add(self, serial_comp):
-        component = None
-        t = serial_comp.WhichOneof('type')
-        if t == 'circuit':
-            component = deserialize_circuit(serial_comp.circuit)
-        elif t == 'beam_splitter':
-            component = self._deserialize_symb_bs(serial_comp.beam_splitter)
-        elif t == 'beam_splitter_complex':
-            component = self._deserialize_phys_bs(serial_comp.beam_splitter_complex)
-        elif t == 'phase_shifter':
-            component = self._deserialize_ps(serial_comp.phase_shifter, serial_comp.ns)
-        elif t == 'permutation':
-            component = self._deserialize_perm(serial_comp.permutation, serial_comp.ns)
-        elif t == 'unitary':
-            component = self._deserialize_unitary(serial_comp.unitary, serial_comp.ns)
-        elif t == 'wave_plate':
-            component = self._deserialize_wp(serial_comp.wave_plate, serial_comp.ns)
-        elif t == 'quarter_wave_plate':
-            component = self._deserialize_qwp(serial_comp.quarter_wave_plate, serial_comp.ns)
-        elif t == 'half_wave_plate':
-            component = self._deserialize_hwp(serial_comp.half_wave_plate, serial_comp.ns)
-        elif t == 'time_delay':
-            component = self._deserialize_dt(serial_comp.time_delay, serial_comp.ns)
-        elif t == 'polarization_rotator':
-            component = self._deserialize_pr(serial_comp.polarization_rotator, serial_comp.ns)
-        elif t == 'polarized_beam_splitter':
-            component = phys.PBS() if serial_comp.ns == pb.Component.PHYS else symb.PBS()
-
-        if component is None:
-            raise NotImplementedError(f'Component could not be deserialized (type = {t}')
-        self._circuit.add(serial_comp.starting_mode, component, merge=False)
-
-    def _deserialize_ps(self, serial_ps: pb.PhaseShifter, ns: int):
-        return_type = phys.PS if ns == pb.Component.PHYS else symb.PS
-        return return_type(_expr.deserialize_expr(serial_ps.phi))
-
-    def _deserialize_phys_bs(self, serial_bs: pb.BeamSplitterComplex) -> phys.BS:
-        args = {}
-        if serial_bs.HasField('R'):
-            args['R'] = _expr.deserialize_expr(serial_bs.R)
-        if serial_bs.HasField('theta'):
-            args['theta'] = _expr.deserialize_expr(serial_bs.theta)
-        args['phi_a'] = _expr.deserialize_expr(serial_bs.phi_a)
-        args['phi_b'] = _expr.deserialize_expr(serial_bs.phi_b)
-        args['phi_d'] = _expr.deserialize_expr(serial_bs.phi_d)
-        return phys.BS(**args)
-
-    def _deserialize_perm(self, serial_perm, ns: int):
-        return_type = phys.PERM if ns == pb.Component.PHYS else symb.PERM
-        return return_type([x for x in serial_perm.permutations])
-
-    def _deserialize_unitary(self, serial_unitary, ns: int):
-        return_type = phys.Unitary if ns == pb.Component.PHYS else symb.Unitary
-        m = deserialize_matrix(serial_unitary.mat)
-        return return_type(U=m)
-
-    def _deserialize_symb_bs(self, serial_bs: pb.BeamSplitter) -> symb.BS:
-        args = {}
-        if serial_bs.HasField('R'):
-            args['R'] = _expr.deserialize_expr(serial_bs.R)
-        if serial_bs.HasField('theta'):
-            args['theta'] = _expr.deserialize_expr(serial_bs.theta)
-        return symb.BS(**args)
-
-    def retrieve(self):
-        return self._circuit
-
-    def _deserialize_wp(self, serial_wp, ns):
-        return_type = phys.WP if ns == pb.Component.PHYS else symb.WP
-        return return_type(_expr.deserialize_expr(serial_wp.delta), _expr.deserialize_expr(serial_wp.xsi))
-
-    def _deserialize_qwp(self, serial_qwp, ns):
-        return_type = phys.QWP if ns == pb.Component.PHYS else symb.QWP
-        return return_type(_expr.deserialize_expr(serial_qwp.xsi))
-
-    def _deserialize_hwp(self, serial_hwp, ns):
-        return_type = phys.HWP if ns == pb.Component.PHYS else symb.HWP
-        return return_type(_expr.deserialize_expr(serial_hwp.xsi))
-
-    def _deserialize_dt(self, serial_dt, ns):
-        return_type = phys.TD if ns == pb.Component.PHYS else symb.TD
-        return return_type(_expr.deserialize_expr(serial_dt.dt))
-
-    def _deserialize_pr(self, serial_pr, ns):
-        return_type = phys.PR if ns == pb.Component.PHYS else symb.PR
-        return return_type(_expr.deserialize_expr(serial_pr.delta))
 
 
 def deserialize_matrix(pb_mat: str | bytes | pb.Matrix) -> Matrix:
@@ -156,3 +60,45 @@ def circuit_from_file(filepath: str) -> Circuit:
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
         return deserialize_circuit(f.read())
+
+
+class CircuitBuilder:
+
+    deserialize_fn = {
+        'circuit': deserialize_circuit,
+        'beam_splitter': _cd.deserialize_symb_bs,
+        'beam_splitter_complex': _cd.deserialize_phys_bs,
+        'phase_shifter': _cd.deserialize_ps,
+        'permutation': _cd.deserialize_perm,
+        'unitary': _cd.deserialize_unitary,
+        'wave_plate': _cd.deserialize_wp,
+        'quarter_wave_plate': _cd.deserialize_qwp,
+        'half_wave_plate': _cd.deserialize_hwp,
+        'time_delay': _cd.deserialize_dt,
+        'polarization_rotator': _cd.deserialize_pr,
+        'polarized_beam_splitter': _cd.deserialize_pbs
+    }
+
+    def __init__(self, m: int, name: str):
+        if not name:
+            name = None
+        self._circuit = Circuit(m=m, name=name)
+
+    def add(self, serial_comp):
+        component = None
+        t = serial_comp.WhichOneof('type')
+        serial_sub_comp = getattr(serial_comp, t)
+        # find the correct deserialization function and use it
+        if t in CircuitBuilder.deserialize_fn:
+            func = CircuitBuilder.deserialize_fn[t]
+            if len(signature(func).parameters) == 1:
+                component = func(serial_sub_comp)
+            else:
+                component = func(serial_sub_comp, serial_comp.ns)
+
+        if component is None:
+            raise NotImplementedError(f'Component could not be deserialized (type = {t})')
+        self._circuit.add(serial_comp.starting_mode, component, merge=False)
+
+    def retrieve(self):
+        return self._circuit

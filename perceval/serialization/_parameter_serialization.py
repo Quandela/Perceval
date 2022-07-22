@@ -19,19 +19,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Union
 
-import sympy as sp
-
+from perceval.utils import Parameter, Expression
 from perceval.serialization import _schema_circuit_pb2 as pb
 
 
-def deserialize_expr(param: pb.Expression):
-    s = param.serialization
-    try:
-        return float(s)
-    except ValueError:
-        pass
-    try:
-        return sp.sympify(s)
-    except sp.SympifyError:
-        raise ValueError(f'Could not parse {s}')
+def serialize_parameter(param: Union[Parameter, float]):
+    pb_param = pb.Parameter()
+    if isinstance(param, float):
+        pb_param.real_value = param
+    else:
+        if param.fixed:
+            pb_param.real_value = float(param)
+        elif param._is_expression:
+            pb_param.expression = str(param.spv)
+        else:
+            pb_param.symbol = str(param.spv)
+    return pb_param
+
+
+def deserialize_parameter(serial_param: pb.Parameter):
+    t = serial_param.WhichOneof('type')
+    if t == 'real_value':
+        return serial_param.real_value
+    elif t == 'symbol':
+        return Parameter(serial_param.symbol)
+    elif t == 'expression':
+        return Expression(serial_param.expression)

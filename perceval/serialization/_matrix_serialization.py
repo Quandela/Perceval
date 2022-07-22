@@ -24,7 +24,7 @@ from perceval.serialization import _schema_circuit_pb2 as pb
 import numpy as np
 
 from perceval import Matrix
-from perceval.serialization._expr_serialization import deserialize_expr
+from perceval.serialization._parameter_serialization import deserialize_parameter
 
 
 def serialize_matrix(m: Matrix) -> pb.Matrix:
@@ -35,9 +35,9 @@ def serialize_matrix(m: Matrix) -> pb.Matrix:
     if m.is_symbolic():
         pb_symbolic = pb.MatrixSymbolic()
         for x in m.vec():
-            pb_expr = pb.Expression()
-            pb_expr.serialization = str(x)
-            values.append(pb_expr)
+            pb_param = pb.Parameter()
+            pb_param.expression = str(x)
+            values.append(pb_param)
         pb_symbolic.data.extend(values)
         pb_mat.symbolic.CopyFrom(pb_symbolic)
     else:
@@ -71,8 +71,8 @@ def _deserialize_symbolic(pb_mat):
     ncols = pb_mat.cols
     array = []
     row = []
-    for expr in pb_mat.symbolic.data:
-        row.append(deserialize_expr(expr))
+    for param in pb_mat.symbolic.data:
+        row.append(deserialize_parameter(param).spv)
         if len(row) == ncols:
             array.append(row)
             row = []

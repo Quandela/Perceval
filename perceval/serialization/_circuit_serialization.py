@@ -27,6 +27,7 @@ from perceval import ACircuit, Circuit
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 from perceval.serialization._matrix_serialization import serialize_matrix
+from perceval.serialization._parameter_serialization import serialize_parameter
 
 
 class ComponentSerializer:
@@ -45,28 +46,28 @@ class ComponentSerializer:
     def _serialize(self, bs: phys.BS):
         pb_bs = pb.BeamSplitterComplex()
         if 'theta' in bs.params:
-            pb_bs.theta.serialization = str(bs._theta._value)
+            pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
         if 'R' in bs.params:
-            pb_bs.R.serialization = str(bs._R._value)
-        pb_bs.phi_a.serialization = str(bs._phi_a._value)
-        pb_bs.phi_b.serialization = str(bs._phi_b._value)
-        pb_bs.phi_d.serialization = str(bs._phi_d._value)
+            pb_bs.R.CopyFrom(serialize_parameter(bs._R))
+        pb_bs.phi_a.CopyFrom(serialize_parameter(bs._phi_a))
+        pb_bs.phi_b.CopyFrom(serialize_parameter(bs._phi_b))
+        pb_bs.phi_d.CopyFrom(serialize_parameter(bs._phi_d))
         self._pb.beam_splitter_complex.CopyFrom(pb_bs)
 
     @dispatch(symb.BS)
     def _serialize(self, bs: symb.BS):
         pb_bs = pb.BeamSplitter()
         if 'theta' in bs.params:
-            pb_bs.theta.serialization = str(bs._theta._value)
+            pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
         if 'R' in bs.params:
-            pb_bs.R.serialization = str(bs._R._value)
-        pb_bs.phi.serialization = str(bs._phi._value)
+            pb_bs.R.CopyFrom(serialize_parameter(bs._R))
+        pb_bs.phi.CopyFrom(serialize_parameter(bs._phi))
         self._pb.beam_splitter.CopyFrom(pb_bs)
 
     @dispatch((phys.PS, symb.PS))
     def _serialize(self, ps):
         pb_ps = pb.PhaseShifter()
-        pb_ps.phi.serialization = str(ps._phi._value)
+        pb_ps.phi.CopyFrom(serialize_parameter(ps._phi))
         self._pb.phase_shifter.CopyFrom(pb_ps)
 
     @dispatch((phys.PERM, symb.PERM))
@@ -93,32 +94,32 @@ class ComponentSerializer:
     @dispatch((phys.QWP, symb.QWP))
     def _serialize(self, wp):
         pb_wp = pb.WavePlate()
-        pb_wp.xsi.serialization = str(wp._xsi._value)
+        pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.quarter_wave_plate.CopyFrom(pb_wp)
 
     @dispatch((phys.HWP, symb.HWP))
     def _serialize(self, wp):
         pb_wp = pb.WavePlate()
-        pb_wp.xsi.serialization = str(wp._xsi._value)
+        pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.half_wave_plate.CopyFrom(pb_wp)
 
     @dispatch((phys.WP, symb.WP))
     def _serialize(self, wp):
         pb_wp = pb.WavePlate()
-        pb_wp.delta.serialization = str(wp._delta._value)
-        pb_wp.xsi.serialization = str(wp._xsi._value)
+        pb_wp.delta.CopyFrom(serialize_parameter(wp._delta))
+        pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.wave_plate.CopyFrom(pb_wp)
 
     @dispatch((phys.TD, symb.TD))
     def _serialize(self, dt):
         pb_td = pb.TimeDelay()
-        pb_td.dt.serialization = str(dt._dt._value)
+        pb_td.dt.CopyFrom(serialize_parameter(dt._dt))
         self._pb.time_delay.CopyFrom(pb_td)
 
     @dispatch((phys.PR, symb.PR))
     def _serialize(self, pr):
         pb_pr = pb.PolarizationRotator()
-        pb_pr.delta.serialization = str(pr._delta._value)
+        pb_pr.delta.CopyFrom(serialize_parameter(pr._delta))
         self._pb.polarization_rotator.CopyFrom(pb_pr)
 
     @dispatch(Circuit)
@@ -129,7 +130,7 @@ class ComponentSerializer:
 
 def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     if not isinstance(circuit, Circuit):
-        circuit = Circuit(circuit.m).add(circuit)
+        circuit = Circuit(circuit.m).add(0, circuit)
 
     pb_circuit = pb.Circuit()
     if circuit._name != Circuit._name:
