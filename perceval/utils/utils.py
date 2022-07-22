@@ -99,7 +99,7 @@ def pdisplay(o, output_format=None, to_file=None, **opts):
         print(r)
 
 
-def random_seed(param):
+def random_seed(seed=None):
     """
     seed: int = None
     Initialize the seed used for random number generation
@@ -107,10 +107,9 @@ def random_seed(param):
     :param seed: if None, use a time-based seed
     :return: the actual seed used
     """
-    if param is not None:
-        random.seed(param)
-        np.random.seed(param)
-
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
     else:
         random.seed()
         np.random.seed()
