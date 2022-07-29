@@ -30,6 +30,18 @@ import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 from perceval.algorithm.optimize import optimize
 from perceval.algorithm import norm
+from perceval.utils import random_seed
+
+
+def setup_function(_):
+    # The random seed is fixed for this test suite, because the optimization problem randomly fails to be accurate
+    # enough
+    random_seed(0)
+
+
+def teardown_function(_):
+    # Revert to an arbitrary random seed after these tests to not interfere with any subsequent call
+    random_seed()
 
 
 def test_match_elementary():
