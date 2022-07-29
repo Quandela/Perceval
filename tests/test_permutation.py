@@ -45,13 +45,13 @@ def test_permutation_3():
 def test_permutation_inverse():
     perm_vector = [4, 1, 3, 5, 2, 0]
     perm = phys.PERM(perm_vector)
-    assert perm._compute_perm_vector() == perm_vector
+    assert perm.perm_vector == perm_vector
     perm.inverse(h=True)
-    assert perm._compute_perm_vector() == [perm_vector.index(i) for i in range(len(perm_vector))]
+    assert perm.perm_vector == [perm_vector.index(i) for i in range(len(perm_vector))]
     perm.inverse(h=True)  # Get back to the initial state
-    assert perm._compute_perm_vector() == perm_vector
+    assert perm.perm_vector == perm_vector
     perm.inverse(v=True)
     # Vertical inversion acts as if mode indexes were reversed:
     expected = [max(perm_vector)-i for i in perm_vector]
     expected.reverse()
-    assert perm._compute_perm_vector() == expected
+    assert perm.perm_vector == expected

@@ -349,8 +349,9 @@ class QWP(WP):
         super().__init__(sp.pi/4, xsi)
 
 
-class DT(ACircuit):
-    _name = "DT"
+class TD(ACircuit):
+    """Time delay"""
+    _name = "TD"
     _fcircuit = Circuit
     delay_circuit = True
     stroke_style = {"stroke": "darkred", "stroke_width": 3}
@@ -372,7 +373,7 @@ class DT(ACircuit):
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
         params_str = format_parameters(parameters, separator=', ')
-        return "phys.DT(%s)" % params_str
+        return "phys.TD(%s)" % params_str
 
     width = 1
 
@@ -456,18 +457,19 @@ class PERM(Unitary):
         return {'PERM': ''}
 
     def describe(self, _=None):
-        return "phys.PERM(%s)" % str(self._compute_perm_vector())
+        return "phys.PERM(%s)" % str(self.perm_vector)
 
     def definition(self):
         return self.U
 
-    def _compute_perm_vector(self):
+    @property
+    def perm_vector(self):
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
 
     def shape(self, content, canvas, compact: bool = False):
-        for an_input, an_output in enumerate(self._compute_perm_vector()):
+        for an_input, an_output in enumerate(self.perm_vector):
             canvas.add_mline([3, 25+an_input*50, 47, 25+an_output*50],
                              stroke="white", stroke_width=6)
             canvas.add_mline([0, 25+an_input*50, 3, 25+an_input*50, 47, 25+an_output*50, 50, 25+an_output*50],
