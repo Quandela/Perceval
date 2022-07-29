@@ -107,9 +107,5 @@ def random_seed(seed=None):
     :param seed: if None, use a time-based seed
     :return: the actual seed used
     """
-    if seed is not None:
-        random.seed(seed)
-        np.random.seed(seed)
-    else:
-        random.seed()
-        np.random.seed()
+    random.seed(seed)
+    np.random.seed(seed)
