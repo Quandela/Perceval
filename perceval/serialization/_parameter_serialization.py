@@ -19,38 +19,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Union
 
-import perceval as pcvl
-import perceval.lib.symb as symb
-import quandelibc as qc
-import numpy as np
+from perceval.utils import Parameter, Expression
+from perceval.serialization import _schema_circuit_pb2 as pb
 
 
-dt = pcvl.Parameter("Δt")
+def serialize_parameter(param: Union[Parameter, float]):
+    pb_param = pb.Parameter()
+    if isinstance(param, float):
+        pb_param.real_value = param
+    else:
+        if param.fixed:
+            pb_param.real_value = float(param)
+        elif param._is_expression:
+            pb_param.expression = str(param.spv)
+        else:
+            pb_param.symbol = str(param.spv)
+    return pb_param
 
-c = pcvl.Circuit(2)
-c //= symb.BS()
-c //= (1, symb.TD(dt))
-c //= symb.BS()
 
-pcvl.pdisplay(c)
-
-def photon_length_fn(t):
-    length = 0.2e-9
-    h = 2/length
-    if t > length:
-        return (length, 1, 0)
-    return (length, 1-(length-t)*h*(length-t)/2/length, 0)
-
-st0 = pcvl.AnnotatedBasicState([1, 0], time=2e-9, time_gen_fn=photon_length_fn)
-backend = pcvl.BackendFactory().get_backend("Stepper")
-
-sim = backend(c)
-
-def f(x):
-    dt.set_value(x)
-    return sim.prob(st0, qc.FockState([2, 0]))+sim.prob(st0, qc.FockState([0, 2]))
-
-for i in range(100):
-    x = i * 2e-9/50
-    print("f(%g)=%g" % (x, f(x)))
+def deserialize_parameter(serial_param: pb.Parameter):
+    t = serial_param.WhichOneof('type')
+    if t == 'real_value':
+        return serial_param.real_value
+    elif t == 'symbol':
+        return Parameter(serial_param.symbol)
+    elif t == 'expression':
+        return Expression(serial_param.expression)
