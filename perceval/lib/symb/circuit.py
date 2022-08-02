@@ -25,7 +25,7 @@ import sympy as sp
 import numpy as np
 
 from perceval.components import ACircuit, Circuit
-from perceval.utils.matrix import Matrix
+from perceval.utils import Matrix, format_parameters
 
 
 class SymbCircuit(ACircuit, ABC):
@@ -77,11 +77,11 @@ class BS(SymbCircuit):
             else:
                 cos_theta = np.cos(float(self._theta))
                 sin_theta = np.sin(float(self._theta))
-            return Matrix([[cos_theta, sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi)))],
+            return Matrix([[cos_theta, sin_theta*(1j*np.cos(-float(self._phi)) - np.sin(-float(self._phi)))],
                            [sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi))), cos_theta]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         if "theta" in self._params:
@@ -93,7 +93,8 @@ class BS(SymbCircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "symb.BS(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "symb.BS(%s)" % params_str
 
     width = 2
 
@@ -146,7 +147,7 @@ class PBS(SymbCircuit):
                        [0, 0, 0, 1]], use_symbolic)
 
     def get_variables(self, map_param_kid=None):
-        return []
+        return {}
 
     # TODO: make method static
     def describe(self, _=None):
@@ -200,7 +201,7 @@ class DT(SymbCircuit):
         raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "t", "t", None, map_param_kid)
@@ -208,7 +209,8 @@ class DT(SymbCircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.DT(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.DT(%s)" % params_str
 
     width = 1
 
@@ -241,7 +243,7 @@ class PS(SymbCircuit):
             return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "phi", "phi", None, map_param_kid)
@@ -249,15 +251,16 @@ class PS(SymbCircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "symb.PS(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "symb.PS(%s)" % params_str
 
     width = 1
 
     def shape(self, content, canvas, compact: bool = False):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], stroke="black", stroke_width=1)
-        canvas.add_mpath(["M", 20, 40, "h", 10, "v", -30, "h", -10, "z"],
+        canvas.add_mpath(["M", 15, 35, "h", 20, "v", -20, "h", -20, "z"],
                          stroke="black", stroke_width=1, fill="lightgray")
-        canvas.add_text((25, 50), text=content.replace("phi=", "Φ="), size=7, ta="middle")
+        canvas.add_text((25, 44), text=content.replace("phi=", "Φ="), size=7, ta="middle")
 
     def inverse(self, v=False, h=False):
         if h:
@@ -272,7 +275,7 @@ class Unitary(SymbCircuit):
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
-        assert U.is_square(), "U parameter must be a square matrix"
+        assert U.is_unitary(), "U parameter must be a unitary matrix"
         # Even for a symb.Unitary component, a symbolic matrix is not a use case. On top of that, it slows down
         # computations quite a bit!
         assert not U.is_symbolic(), "U parameter must not be symbolic"
@@ -291,9 +294,11 @@ class Unitary(SymbCircuit):
         # Ignore assign and use_symbolic parameters as __init__ checked the unitary matrix is numeric
         return self._u
 
-    def inverse(self, v=True, h=False):
+    def inverse(self, v=False, h=False):
         if v:
-            self._u = np.flipud(self._u)
+            self._u = np.flip(self._u)
+        if h:
+            self._u = self._u.inv()
 
     def describe(self, _=None):
         params = [f"Matrix('''{self._u}''')"]
@@ -303,10 +308,15 @@ class Unitary(SymbCircuit):
             params.append("use_polarization=True")
         return f"symb.Unitary({', '.join(params)})"
 
-    def shape(self, content, canvas, compact: bool = False):
+    def shape(self, _, canvas, compact: bool = False):
         for i in range(self.m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
-        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
+        radius = 6.25 * self.width  # Radius of the rounded corners
+        canvas.add_mpath(
+            ["M", 0, radius, "c", 0, 0, 0, -radius, radius, -radius, "l", 6 * radius, 0, "c", radius, 0, radius, radius,
+             radius, radius, "l", 0, 6 * radius, "c", 0, 0, 0, radius, -radius, radius, "l", -6 * radius, 0, "c",
+             -radius, 0, -radius, -radius, -radius, -radius, "l", 0, -6 * radius],
+            **self.stroke_style, fill="lightyellow")
         canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)
 
 
@@ -318,7 +328,6 @@ class PERM(Unitary):
         assert (min(perm) == 0 and
                 max(perm)+1 == len(perm) == len(set(perm)) == len([n for n in perm if isinstance(n, int)])),\
             "%s is not a permutation" % perm
-        self._perm = perm
         n = len(perm)
         u = Matrix.zeros((n, n), use_symbolic=False)
         for i, v in enumerate(perm):
@@ -327,17 +336,21 @@ class PERM(Unitary):
         self.width = 1
 
     def get_variables(self, _=None):
-        return ["_╲ ╱", "_ ╳ ", "_╱ ╲"]
+        return {'PERM': ''}
 
     def describe(self, _=None):
-        return "symb.PERM(%s)" % str(self._perm)
+        return "symb.PERM(%s)" % str(self._compute_perm_vector())
 
     def definition(self):
         return self.U
 
+    def _compute_perm_vector(self):
+        nz = np.nonzero(self._u)
+        m_list = nz[1].tolist()
+        return [m_list.index(i) for i in nz[0]]
+
     def shape(self, content, canvas, compact: bool = False):
-        lines = []
-        for an_input, an_output in enumerate(self._perm):
+        for an_input, an_output in enumerate(self._compute_perm_vector()):
             canvas.add_mpath(["M", 0, 24.8 + an_input * 50,
                               "C", 20, 25 + an_input * 50, 30, 25 + an_output * 50, 50, 25 + an_output * 50],
                              stroke="white", stroke_width=2)
@@ -380,7 +393,7 @@ class WP(SymbCircuit):
 
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "xsi", "xsi", None, map_param_kid)
@@ -389,7 +402,8 @@ class WP(SymbCircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.WP(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.WP(%s)" % params_str
 
     width = 1
 
@@ -449,7 +463,7 @@ class PR(SymbCircuit):
                            [-np.sin(delta), np.cos(delta)]], False)
 
     def get_variables(self, map_param_kid=None):
-        parameters = []
+        parameters = {}
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         self.variable_def(parameters, "delta", "delta", None, map_param_kid)
@@ -457,7 +471,8 @@ class PR(SymbCircuit):
 
     def describe(self, map_param_kid=None):
         parameters = self.get_variables(map_param_kid)
-        return "phys.PR(%s)" % ", ".join(parameters)
+        params_str = format_parameters(parameters, separator=', ')
+        return "phys.PR(%s)" % params_str
 
     width = 1
 

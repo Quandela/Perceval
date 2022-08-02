@@ -170,6 +170,27 @@ def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
     _save_or_check(nc, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
+def test_svg_dump_qrng(tmp_path, save_figs):
+    chip_QRNG = pcvl.Circuit(4, name='QRNG')
+    # Parameters
+    phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
+            pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
+    c = (chip_QRNG
+             .add((0, 1), symb.BS())
+             .add((2, 3), symb.BS())
+             .add((1, 2), symb.PERM([1, 0]))
+             .add(0, symb.PS(phis[0]))
+             .add(2, symb.PS(phis[2]))
+             .add((0, 1), symb.BS())
+             .add((2, 3), symb.BS())
+             .add(0, symb.PS(phis[1]))
+             .add(2, symb.PS(phis[3]))
+             .add((0, 1), symb.BS())
+             .add((2, 3), symb.BS())
+    )
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False)
+
+
 def test_svg_dump_qrng_compact(tmp_path, save_figs):
     chip_QRNG = pcvl.Circuit(4, name='QRNG')
     # Parameters
