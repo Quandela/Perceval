@@ -74,7 +74,7 @@ class BS(ACircuit):
             else:
                 cos_theta = np.cos(float(self._theta))
                 sin_theta = np.sin(float(self._theta))
-            return Matrix([[cos_theta, sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi)))],
+            return Matrix([[cos_theta, sin_theta*(1j*np.cos(-float(self._phi)) - np.sin(-float(self._phi)))],
                            [sin_theta*(1j*np.cos(float(self._phi)) - np.sin(float(self._phi))), cos_theta]], False)
 
     def get_variables(self, map_param_kid=None):
