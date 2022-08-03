@@ -22,3 +22,4 @@
 
 from .serialize import serialize, serialize_to_file
 from .deserialize import deserialize_circuit, circuit_from_file, deserialize_matrix, matrix_from_file
+from ._fockstate_serialization import deserialize_state

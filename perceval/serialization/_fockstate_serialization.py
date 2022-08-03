@@ -20,20 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
-from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
-from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
+from perceval.utils.statevector import BasicState, AnnotatedBasicState
 
 
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
+def serialize_state(state: AnnotatedBasicState | BasicState):
+    return str(state)
 
 
-def get_platform(name_or_url: str | RemoteCredentials):
-    if name_or_url is None or name_or_url == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name_or_url)
+def deserialize_state(pb_fs):
+    try:
+        s = BasicState(pb_fs)
+    except:
+        s = AnnotatedBasicState(pb_fs)
+    return s

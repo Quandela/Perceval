@@ -33,8 +33,16 @@ import quandelibc as qc
 import numpy as np
 
 
-class Backend(ABC):
-    _name = None
+class AbstractBackend(ABC):
+    name = None
+
+    @abstractmethod
+    def sample(self, input_state):
+        pass
+
+
+
+class Backend(AbstractBackend):
     supports_symbolic = None
     supports_circuit_computing = None
 
@@ -53,7 +61,7 @@ class Backend(ABC):
         :param n: expected number of input photons, necessary for applying masks
         :param mask: a mask for output states that we are interested in
         """
-        self._logger = logging.getLogger(self._name)
+        self._logger = logging.getLogger(self.name)
         if not self.supports_circuit_computing:
             if isinstance(cu, ACircuit):
                 if cu.requires_polarization:

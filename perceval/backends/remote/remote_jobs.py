@@ -20,20 +20,45 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from abc import ABC
+from uuid import UUID, uuid4
+from .credentials import RemoteCredentials
+import requests
 
-from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
-from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
-
-
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
+JOB_STATUS_ENDPOINT = '/api/1.0/job'
+JOB_RESULT_ENDPOINT = '/api/1.0/job/result'
 
 
-def get_platform(name_or_url: str | RemoteCredentials):
-    if name_or_url is None or name_or_url == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name_or_url)
+class Job(ABC):
+    def __init__(self, uuid: UUID | str = None, credentials: RemoteCredentials = None):
+        if uuid is None:
+            self.id = uuid4()
+        elif isinstance(uuid, str):
+            self.id = UUID(uuid)
+        else:
+            self.id = uuid
+
+        self.__credentials = credentials
+
+    def set_credentials(self, credentials: RemoteCredentials):
+        if credentials is None:
+            raise TypeError
+
+        self.__credentials = credentials
+
+    def is_completed(self):
+        if self.__credentials is None:
+            raise TypeError
+
+        endpoint = self.__credentials.build_endpoint(JOB_STATUS_ENDPOINT)
+        res = requests.get(endpoint, headers=self.__credentials.http_headers())
+
+        json = res.json()
+        if hasattr(json, 'status') and json['status'] == 'completed':
+            return True
+
+        return False
+
+
+    def result(self):
+        return "ok"

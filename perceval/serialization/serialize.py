@@ -22,10 +22,11 @@
 
 from multipledispatch import dispatch
 
-from perceval.serialization._matrix_serialization import serialize_matrix
-from perceval.serialization._circuit_serialization import serialize_circuit
+from ._matrix_serialization import serialize_matrix
+from ._circuit_serialization import serialize_circuit
+from ._fockstate_serialization import serialize_state
 from perceval.components import ACircuit
-from perceval.utils import Matrix
+from perceval.utils import Matrix, AnnotatedBasicState, BasicState
 
 
 @dispatch(ACircuit)
@@ -36,6 +37,11 @@ def serialize(circuit: ACircuit) -> str:
 @dispatch(Matrix)
 def serialize(m: Matrix) -> str:
     return serialize_matrix(m).SerializeToString()
+
+
+@dispatch((AnnotatedBasicState, BasicState))
+def serialize(state) -> str:
+    return serialize_state(state)
 
 
 def serialize_to_file(obj, filepath: str) -> None:

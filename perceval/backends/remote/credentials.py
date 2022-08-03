@@ -20,20 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+class RemoteCredentials:
+    def __init__(self, url=None, token=None):
+        self.url = url
+        self.token = token
 
-from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
-from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
+    def http_headers(self):
+        return {'Authorization': f"Bearer {self.token}"}
 
-
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
-
-
-def get_platform(name_or_url: str | RemoteCredentials):
-    if name_or_url is None or name_or_url == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name_or_url)
+    def build_endpoint(self, endpoint):
+        return self.url + endpoint

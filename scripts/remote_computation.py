@@ -20,20 +20,45 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
-from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
-from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
-
-
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
+import perceval as pcvl
+import perceval.lib.phys as phys
+import sympy as sp
+import numpy as np
 
 
-def get_platform(name_or_url: str | RemoteCredentials):
-    if name_or_url is None or name_or_url == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name_or_url)
+cnot = phys.Circuit(6, name="Ralph CNOT")
+cnot.add((0, 1), phys.BS(R=1/3, phi_b=sp.pi, phi_d=0))
+cnot.add((3, 4), phys.BS(R=1/2))
+cnot.add((2, 3), phys.BS(R=1/3, phi_b=sp.pi, phi_d=0))
+cnot.add((4, 5), phys.BS(R=1/3))
+cnot.add((3, 4), phys.BS(R=1/2))
+#pcvl.pdisplay(cnot)
+
+
+credentials = pcvl.RemoteCredentials(url="localhost:5000")
+
+simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
+s_cnot = simulator_backend(cnot.U)
+
+
+states = {
+    pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
+    pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
+    pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
+    pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
+}
+
+
+job = s_cnot.sample(states, 1000000)
+
+while (job.get_status != 'complete'):
+    sleep(10)
+
+result = job.get_results()
+
+
+
+ca = pcvl.CircuitAnalyser(s_cnot, states)
+ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+pcvl.pdisplay(ca)
+print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))
