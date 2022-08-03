@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from .generic_renderer import Renderer, Canvas
+from .generic_renderer import Canvas
 
 try:
     import matplotlib.pyplot as plt
@@ -121,9 +121,3 @@ class MplotCanvas(Canvas):
             plt.show()
         plt.close(self._fig)
         return self
-
-
-class MplotRenderer(Renderer):
-    def new_canvas(self, **opts) -> Canvas:
-        assert plt is not None, "matplotlib is not installed"
-        return MplotCanvas(**opts)

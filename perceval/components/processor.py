@@ -106,7 +106,6 @@ class Processor:
 
     def pdisplay(self,
                  map_param_kid: dict = None,
-                 shift: int = 0,
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
                  recursive: bool = False,
                  compact: bool = False,
@@ -117,10 +116,10 @@ class Processor:
             display_circ = Circuit(m=self._circuit.m).add(0, self._circuit, merge=False)
         else:
             display_circ = self._circuit
-        from perceval.rendering.circuit.skin import SymbSkin
+        from perceval.rendering.circuit.symb_skin import SymbSkin
         skin = SymbSkin(compact_display=compact)
         w, h = skin.get_size(display_circ, recursive=recursive)
-        printer = create_printer(display_circ.m, output_format=output_format, stroke_style=display_circ.stroke_style,
+        printer = create_printer(display_circ.m, output_format=output_format, skin=skin, stroke_style=skin.stroke_style,
                                  total_width=w, total_height=h, compact=compact, **opts)
         display_circ.draw(printer, skin, map_param_kid=map_param_kid,
                           recursive=recursive,

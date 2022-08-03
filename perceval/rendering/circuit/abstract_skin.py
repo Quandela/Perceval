@@ -21,18 +21,13 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-
-from multipledispatch import dispatch
-
-from perceval import ACircuit, Circuit
-import perceval.lib.symb as symb
-import perceval.lib.phys as phys
-
+from perceval.components import ACircuit
 
 
 class ASkin(ABC):
-    def __init__(self, compact_display: bool = False):
+    def __init__(self, stroke_style, compact_display: bool = False):
         self._compact = compact_display
+        self.stroke_style = stroke_style
 
     def get_size(self, c: ACircuit, recursive: bool = False):
         """Gets the size of a circuit. If composite, it will take its components into account"""
@@ -62,42 +57,7 @@ class ASkin(ABC):
     @abstractmethod
     def get_width(self, c) -> int:
         """Returns the width of component c"""
-        pass
 
-
-class SymbSkin(ASkin):
-    def __init__(self, compact_display: bool = False):
-        super().__init__(compact_display)
-
-    @dispatch((Circuit, symb.Unitary, phys.Unitary))
-    def get_width(self, c) -> int:
-        return c.m
-
-    @dispatch((symb.BS, symb.PBS))
-    def get_width(self, c) -> int:
-        w = 1 if self._compact else 2
-        return w
-
-    @dispatch((phys.BS, phys.PBS))
-    def get_width(self, c) -> int:
-        return 2
-
-    @dispatch((symb.PS, phys.PS))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.TD, phys.TD))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.PERM, phys.PERM))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.WP, phys.WP))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.PR, phys.PR))
-    def get_width(self, c) -> int:
-        return 1
+    @abstractmethod
+    def get_shape(self, c):
+        """Returns the shape function of component c"""

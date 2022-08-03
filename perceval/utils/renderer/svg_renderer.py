@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import sys
-from .generic_renderer import Renderer, Canvas
+from .generic_renderer import Canvas
 
 
 class StandardSVGCanvas(Canvas):
@@ -198,11 +198,3 @@ class DynamicSVGCanvas(Canvas):
             return d.setPixelScale(self._render_size)
         else:
             return d
-
-
-class SVGRenderer(Renderer):
-    def new_canvas(self, **opts) -> Canvas:
-        # DynamicSVGCanvas is used only if drawSvg was imported beforehand
-        if 'drawSvg' in sys.modules:
-            return DynamicSVGCanvas(**opts)
-        return StandardSVGCanvas(**opts)

@@ -20,6 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .mplot_renderer import MplotRenderer
-from .svg_renderer import SVGRenderer
 from .generic_renderer import Canvas

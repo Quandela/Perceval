@@ -346,16 +346,15 @@ class ACircuit(ABC):
                  precision: float = 1e-6,
                  nsimplify: bool = True,
                  **opts):
-        from perceval.rendering.circuit.skin import SymbSkin
+        from perceval.rendering.circuit.symb_skin import SymbSkin
         skin = SymbSkin(compact_display=compact)
         w, h = skin.get_size(self, recursive=recursive)
-        printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
+        printer = create_printer(self._m, output_format=output_format, skin=skin, stroke_style=skin.stroke_style,
                                  total_width=w, total_height=h, compact=compact, **opts)
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
         self.draw(printer, skin, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
-        printer.close()
         printer.add_mode_index()
         return printer.draw()
 
@@ -390,6 +389,7 @@ class ACircuit(ABC):
                     printer.append_circuit(shiftr, c, description)
 
         printer.extend_pos(0, self._m - 1)
+        printer.close()
 
     @staticmethod
     def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,
@@ -469,15 +469,6 @@ class ACircuit(ABC):
     def ncomponents(self):
         return 1
 
-    @abstractmethod
-    def shape(self, content, canvas: Canvas, compact: bool = False):
-        """
-        Implement in subclasses to render the circuit on canvas
-        """
-
-    def get_width(self, compact: bool = False):
-        return self.width
-
     def inverse(self, v, h):
         raise NotImplementedError("component has no inverse operator")
 
@@ -498,7 +489,7 @@ class Circuit(ACircuit):
         super().__init__(m)
         self._components = []
         # Rendering-related members
-        self.stroke_style = {"stroke": "darkred", "stroke_width": 3}  # Physical component stroke values by default
+        # self.stroke_style = {"stroke": "darkred", "stroke_width": 3}  # Physical component stroke values by default
         self.style_subcircuit = {}
 
     def is_composite(self):
@@ -562,7 +553,7 @@ class Circuit(ACircuit):
             port_range = list([i for i in range(port_range, port_range+component.m)])
         assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
         if not self.style_subcircuit:
-            self.stroke_style = component.stroke_style
+            # self.stroke_style = component.stroke_style
             self.style_subcircuit = component.style_subcircuit
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
