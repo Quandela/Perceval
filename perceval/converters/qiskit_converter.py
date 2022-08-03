@@ -20,7 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import PredefinedCircuit, Circuit, Processor, P, Source, BasicState
+from perceval.components import PredefinedCircuit, Circuit, Processor, Source
+from perceval.utils import P, BasicState
 from perceval.algorithm.norm import *
 from perceval.algorithm.optimize import optimize
 

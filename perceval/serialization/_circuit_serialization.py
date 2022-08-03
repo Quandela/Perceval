@@ -23,7 +23,7 @@
 from multipledispatch import dispatch
 from perceval.serialization import _schema_circuit_pb2 as pb
 
-from perceval import ACircuit, Circuit
+from perceval.components import ACircuit, Circuit
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 from perceval.serialization._matrix_serialization import serialize_matrix

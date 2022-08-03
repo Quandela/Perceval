@@ -24,7 +24,8 @@ from multipledispatch import dispatch
 
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._circuit_serialization import serialize_circuit
-from perceval import ACircuit, Matrix
+from perceval.components import ACircuit
+from perceval.utils import Matrix
 
 
 @dispatch(ACircuit)
