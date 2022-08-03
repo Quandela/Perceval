@@ -23,7 +23,7 @@
 from perceval.serialization import _schema_circuit_pb2 as pb
 import numpy as np
 
-from perceval import Matrix
+from perceval.utils import Matrix
 from perceval.serialization._parameter_serialization import deserialize_parameter
 
 
