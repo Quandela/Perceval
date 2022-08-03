@@ -21,8 +21,8 @@
 # SOFTWARE.
 
 from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex
-from .qprinter import create_printer, format_parameters
+from .format import simple_float, simple_complex, format_parameters
+from .qprinter import create_printer
 from .parameter import Parameter, P, Expression, E
 from .utils import pdisplay, global_params, random_seed
 from .mlstr import mlstr
