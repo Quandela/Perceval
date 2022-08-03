@@ -339,28 +339,34 @@ class ACircuit(ABC):
         return None
 
     def pdisplay(self,
-                 parent_printer=None,
                  map_param_kid: dict = None,
-                 shift: int = 0,
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
                  recursive: bool = False,
                  compact: bool = False,
                  precision: float = 1e-6,
                  nsimplify: bool = True,
-                 complete_drawing: bool = True,
                  **opts):
-        if parent_printer is None:
-            from perceval.rendering.circuit.skin import SymbSkin
-            skin = SymbSkin(compact_display=compact)
-            w, h = skin.get_size(self, recursive=recursive)
-            printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
-                                     total_width=w, total_height=h, compact=compact, **opts)
-        else:
-            printer = parent_printer
-
+        from perceval.rendering.circuit.skin import SymbSkin
+        skin = SymbSkin(compact_display=compact)
+        w, h = skin.get_size(self, recursive=recursive)
+        printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
+                                 total_width=w, total_height=h, compact=compact, **opts)
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
+        self.draw(printer, skin, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
+        printer.close()
+        printer.add_mode_index()
+        return printer.draw()
+
+    def draw(self,
+             printer,
+             skin,  # TODO remove this parameter
+             map_param_kid: dict = None,
+             shift: int = 0,
+             recursive: bool = False,
+             precision: float = 1e-6,
+             nsimplify: bool = True):
         if not isinstance(self, Circuit):
             variables = self.get_variables(map_param_kid)
             description = format_parameters(variables, precision, nsimplify)
@@ -372,7 +378,7 @@ class ACircuit(ABC):
                 if c.is_composite() and c._components:
                     if recursive:
                         printer.open_subblock(r, c._name, skin.get_size(c, recursive=True), c._color)
-                        c.pdisplay(printer, shift=shiftr[0])
+                        c.draw(printer, skin, shift=shiftr[0], map_param_kid=map_param_kid)
                         printer.close_subblock(r)
                     else:
                         component_vars = c.get_variables(map_param_kid)
@@ -384,14 +390,6 @@ class ACircuit(ABC):
                     printer.append_circuit(shiftr, c, description)
 
         printer.extend_pos(0, self._m - 1)
-
-        if parent_printer is None:
-            printer.close()
-            if not complete_drawing:
-                return printer
-            else:
-                printer.add_mode_index()  # No other class with mess with the printer, so we can add mode index now
-                return printer.draw()
 
     @staticmethod
     def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,

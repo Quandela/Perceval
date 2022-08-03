@@ -26,6 +26,8 @@ from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, glo
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
 
+from perceval.utils.qprinter import create_printer
+
 
 class Processor:
     """
@@ -115,15 +117,15 @@ class Processor:
             display_circ = Circuit(m=self._circuit.m).add(0, self._circuit, merge=False)
         else:
             display_circ = self._circuit
-        printer = display_circ.pdisplay(map_param_kid=map_param_kid,
-                                        shift=shift,
-                                        output_format=output_format,
-                                        recursive=recursive,
-                                        compact=compact,
-                                        precision=precision,
-                                        nsimplify=nsimplify,
-                                        complete_drawing=False,
-                                        **opts)
+        from perceval.rendering.circuit.skin import SymbSkin
+        skin = SymbSkin(compact_display=compact)
+        w, h = skin.get_size(display_circ, recursive=recursive)
+        printer = create_printer(display_circ.m, output_format=output_format, stroke_style=display_circ.stroke_style,
+                                 total_width=w, total_height=h, compact=compact, **opts)
+        display_circ.draw(printer, skin, map_param_kid=map_param_kid,
+                          recursive=recursive,
+                          precision=precision,
+                          nsimplify=nsimplify)
         herald_num = 0
         incr_herald_num = False
         for k in range(self._circuit.m):
