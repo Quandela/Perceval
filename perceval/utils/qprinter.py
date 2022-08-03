@@ -216,7 +216,6 @@ class GraphicPrinter:
             self._canvas.add_mpath(["M", GraphicPrinter.affix_all_size-GraphicPrinter.affix_port_size, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
         self._current_block_open_offset = None
-        self._current_block_name = ""
         self._compact = compact_rendering
 
     def add_mode_index(self):
@@ -238,29 +237,23 @@ class GraphicPrinter:
                                 GraphicPrinter.affix_all_size, 50*(n_mode + 1))
         source_shape(self._canvas, **opts)
 
-    def open_subblock(self, lines, name, area=None, color=None):
+    def open_subblock(self, lines, name, size, color=None):
         start = lines[0]
         end = lines[-1]
         self._current_block_open_offset = self.extend_pos(start, end)
-        self._current_block_name = name
-        if area is not None:
-            self._canvas.set_offset((GraphicPrinter.affix_all_size + 50 * area[0], 50 * area[1]),
-                                    50 * area[2], 50 * area[3])
-            if color is None:
-                color = "lightblue"
-            self._canvas.add_rect((2,2), 50 * area[2]-4, 50 * area[3]-4, fill=color, stroke="none")
+
+        area = (self._current_block_open_offset, start, size[0], size[1])
+        self._canvas.set_offset((GraphicPrinter.affix_all_size + 50 * area[0], 50 * area[1]),
+                                50 * area[2], 50 * area[3])
+        if color is None:
+            color = "lightblue"
+        self._canvas.add_rect((2, 2), 50 * area[2]-4, 50 * area[3]-4, fill=color, stroke_dasharray="1,2")
+        self._canvas.add_text((4, 50 * (end - start + 1) + 5), name.upper(), 8)
 
     def close_subblock(self, lines):
         start = lines[0]
         end = lines[-1]
-        begpos = self._current_block_open_offset
-        curpos = self.extend_pos(start, end)
-        self._canvas.set_offset((GraphicPrinter.affix_all_size+50 * begpos, 50 * start),
-                                50 * (curpos-begpos), 50 * (end - start + 1))
-        self._canvas.add_rect((2, 2), 50 * (curpos-begpos)-4, 50 * (end - start + 1)-4,
-                              stroke_dasharray="1,2")
-        self._canvas.add_text((4, 50 * (end - start + 1)+5), self._current_block_name.upper(), 8)
-        return (begpos, start, (curpos-begpos), (end-start+1))
+        self.extend_pos(start, end)
 
     def max_pos(self, start, end, _):
         return max(self._chart[start:end+1])

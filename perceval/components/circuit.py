@@ -344,22 +344,20 @@ class ACircuit(ABC):
                  shift: int = 0,
                  output_format: Literal["text", "html", "mplot", "latex"] = "text",
                  recursive: bool = False,
-                 dry_run: bool = False,
                  compact: bool = False,
                  precision: float = 1e-6,
                  nsimplify: bool = True,
                  complete_drawing: bool = True,
                  **opts):
         if parent_printer is None:
-            if not dry_run:
-                total_width = self.pdisplay(parent_printer, map_param_kid, shift, output_format, recursive, True, compact,
-                                            precision, nsimplify, **opts)
-                printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
-                                         total_width=total_width, total_height=self._m, compact=compact, **opts)
-            else:
-                printer = create_printer(self._m, output_format="html", stroke_style=self.stroke_style, compact=compact, **opts)
+            from perceval.rendering.circuit.skin import SymbSkin
+            skin = SymbSkin(compact_display=compact)
+            w, h = skin.get_size(self, recursive=recursive)
+            printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
+                                     total_width=w, total_height=h, compact=compact, **opts)
         else:
             printer = parent_printer
+
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
 
@@ -369,16 +367,14 @@ class ACircuit(ABC):
             printer.append_circuit([p + shift for p in range(self._m)], self, description)
 
         if self.is_composite() and self.ncomponents() > 0:
-            if dry_run:
-                self._areas = [None] * len(self._components)
             for idx, (r, c) in enumerate(self._components):
                 shiftr = [p+shift for p in r]
                 if c.is_composite() and c._components:
                     if recursive:
-                        printer.open_subblock(r, c._name, self._areas[idx], c._color)
+                        printer.open_subblock(r, c._name, skin.get_size(c, recursive=True), c._color)
                         c.pdisplay(printer, shift=shiftr[0])
-                        self._areas[idx] = printer.close_subblock(r)
-                    elif c._components:
+                        printer.close_subblock(r)
+                    else:
                         component_vars = c.get_variables(map_param_kid)
                         description = format_parameters(component_vars, precision, nsimplify)
                         printer.append_subcircuit(shiftr, c, description)
@@ -391,9 +387,7 @@ class ACircuit(ABC):
 
         if parent_printer is None:
             printer.close()
-            if dry_run:
-                return printer.max_pos(0, self._m-1, True)
-            elif not complete_drawing:
+            if not complete_drawing:
                 return printer
             else:
                 printer.add_mode_index()  # No other class with mess with the printer, so we can add mode index now
@@ -493,16 +487,13 @@ class ACircuit(ABC):
 class Circuit(ACircuit):
     """Class to represent any circuit composed of one or multiple components
 
-    :param m: The number of port of the circuit, if omitted the parameter `U` should be defined
-    :param U: Unitary matrix defining the circuit
+    :param m: The number of port of the circuit
     :param name: Name of the circuit
-    :param use_polarization: defines if the circuit should be used with Polarized states. This value is automatically
-      induced when a component working on polarization is added to the circuit
     """
     _name = "CPLX"
     _fname = "Circuit"
 
-    def __init__(self, m: int = None, name: str = None):
+    def __init__(self, m: int, name: str = None):
         assert m > 0, "invalid size"
         if name is not None:
             self._name = name

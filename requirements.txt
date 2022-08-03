@@ -2,3 +2,9 @@ numpy
 quandelibc
 tabulate
 pytest
+setuptools
+sympy
+matplotlib
+scipy
+ipython
+multipledispatch
