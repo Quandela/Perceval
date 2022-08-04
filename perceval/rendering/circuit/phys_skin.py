@@ -205,7 +205,7 @@ class PhysSkin(ASkin):
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
         canvas.add_text((16, 16), content.upper(), 8)
 
-    def source_shape(self, canvas, **opts):
+    def source_shape(self, circuit, canvas, content, **opts):
         r = 10
         color = "lightgray"
         if 'color' in opts:
@@ -216,10 +216,10 @@ class PhysSkin(ASkin):
                          stroke="black", stroke_width=1, fill=color)
         if 'name' in opts and opts['name']:
             canvas.add_text((8, 44), text='[' + opts['name'] + ']', size=6, ta="middle", fontstyle="italic")
-        if 'content' in opts and opts['content']:
-            canvas.add_text((10, 28), text=opts['content'], size=7, ta="middle")
+        if content:
+            canvas.add_text((10, 28), text=content, size=7, ta="middle")
 
-    def detector_shape(self, canvas, **opts):
+    def detector_shape(self, circuit, canvas, content, **opts):
         r = 10  # Radius of the half-circle
         color = "lightgray"
         if 'color' in opts:
@@ -230,5 +230,5 @@ class PhysSkin(ASkin):
                          stroke="black", stroke_width=1, fill=color)
         if 'name' in opts:
             canvas.add_text((18, 44), text='[' + opts['name'] + ']', size=6, ta="middle", fontstyle="italic")
-        if 'content' in opts:
-            canvas.add_text((20, 28), text=opts['content'], size=7, ta="middle")
+        if content:
+            canvas.add_text((20, 28), text=content, size=7, ta="middle")

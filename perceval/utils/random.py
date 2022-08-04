@@ -1,4 +1,3 @@
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -21,21 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from pkg_resources import get_distribution
-import importlib
-
-__version__ = get_distribution("perceval-quandela").version
-
-from .components import *
-from .backends import *
-from .utils import *
-from .rendering import pdisplay
+import random
+import numpy as np
 
 
-def register_plugin(name, silent=False):
-    try:
-        plugin = importlib.import_module(name)
-        assert plugin.register(silent) is True
-    except Exception as e:
-        raise RuntimeError("cannot import %s: %s" % (name, str(e)))
-    return True
+def random_seed(seed=None):
+    """
+    seed: int = None
+    Initialize the seed used for random number generation
+
+    :param seed: if None, use a time-based seed
+    :return: the actual seed used
+    """
+    random.seed(seed)
+    np.random.seed(seed)

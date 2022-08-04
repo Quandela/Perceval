@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
+from typing import Callable, Tuple
+
 from perceval.components import ACircuit
 
 
@@ -29,7 +31,7 @@ class ASkin(ABC):
         self._compact = compact_display
         self.stroke_style = stroke_style
 
-    def get_size(self, c: ACircuit, recursive: bool = False):
+    def get_size(self, c: ACircuit, recursive: bool = False) -> Tuple[int, int]:
         """Gets the size of a circuit. If composite, it will take its components into account"""
         if not c.is_composite():
             return self.measure(c)
@@ -47,7 +49,7 @@ class ASkin(ABC):
 
         return max(w), c.m
 
-    def measure(self, c: ACircuit):
+    def measure(self, c: ACircuit) -> Tuple[int, int]:
         """Returns the measure (in arbitrary unit (AU) where the space between two modes = 1 AU)
         of a single component treated as a block (meaning that a composite circuit will not be
         measured recursively. Use get_size() instead)
@@ -59,5 +61,5 @@ class ASkin(ABC):
         """Returns the width of component c"""
 
     @abstractmethod
-    def get_shape(self, c):
+    def get_shape(self, c) -> Callable:
         """Returns the shape function of component c"""

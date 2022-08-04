@@ -20,4 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .generic_renderer import Canvas
+from .abstract_skin import ASkin
+from .phys_skin import PhysSkin
+from .symb_skin import SymbSkin
+from .renderer import create_renderer
+
+
+_selected_skin = PhysSkin  # Default skin is PhysSkin
+
+
+def select_skin(skin: ASkin):
+    global _selected_skin
+    _selected_skin = skin
+
+
+def get_selected_skin(**kwargs):
+    global _selected_skin
+    return _selected_skin(**kwargs)

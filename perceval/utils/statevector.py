@@ -31,7 +31,9 @@ from typing import Dict, List, Union, Tuple, Optional
 
 from tabulate import tabulate
 
-from perceval.utils import simple_complex, simple_float, Matrix, global_params
+from .matrix import Matrix
+from .format import simple_complex, simple_float
+from .globals import global_params
 from .polarization import Polarization
 import numpy as np
 import sympy as sp

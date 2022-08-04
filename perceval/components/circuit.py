@@ -30,7 +30,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import create_printer, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
+from perceval.utils import Parameter, Matrix, MatrixN, global_params
 import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
@@ -337,60 +337,6 @@ class ACircuit(ABC):
                 return res.x[:len(self.get_parameters())], res.x[-self._m:]
             counter += 1
         return None
-
-    def pdisplay(self,
-                 map_param_kid: dict = None,
-                 output_format: Literal["text", "html", "mplot", "latex"] = "text",
-                 recursive: bool = False,
-                 compact: bool = False,
-                 precision: float = 1e-6,
-                 nsimplify: bool = True,
-                 **opts):
-        from perceval.rendering.circuit.symb_skin import SymbSkin
-        from perceval.rendering.circuit.phys_skin import PhysSkin
-        skin = PhysSkin(compact_display=compact)
-        w, h = skin.get_size(self, recursive=recursive)
-        printer = create_printer(self._m, output_format=output_format, skin=skin,
-                                 total_width=w, total_height=h, compact=compact, **opts)
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-
-        self.draw(printer, skin, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
-        printer.add_mode_index()
-        return printer.draw()
-
-    def draw(self,
-             printer,
-             skin,  # TODO remove this parameter
-             map_param_kid: dict = None,
-             shift: int = 0,
-             recursive: bool = False,
-             precision: float = 1e-6,
-             nsimplify: bool = True):
-        if not isinstance(self, Circuit):
-            variables = self.get_variables(map_param_kid)
-            description = format_parameters(variables, precision, nsimplify)
-            printer.append_circuit([p + shift for p in range(self._m)], self, description)
-
-        if self.is_composite() and self.ncomponents() > 0:
-            for idx, (r, c) in enumerate(self._components):
-                shiftr = [p+shift for p in r]
-                if c.is_composite() and c._components:
-                    if recursive:
-                        printer.open_subblock(r, c._name, skin.get_size(c, recursive=True), c._color)
-                        c.draw(printer, skin, shift=shiftr[0], map_param_kid=map_param_kid)
-                        printer.close_subblock(r)
-                    else:
-                        component_vars = c.get_variables(map_param_kid)
-                        description = format_parameters(component_vars, precision, nsimplify)
-                        printer.append_subcircuit(shiftr, c, description)
-                else:
-                    component_vars = c.get_variables(map_param_kid)
-                    description = format_parameters(component_vars, precision, nsimplify)
-                    printer.append_circuit(shiftr, c, description)
-
-        printer.extend_pos(0, self._m - 1)
-        printer.close()
 
     @staticmethod
     def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,

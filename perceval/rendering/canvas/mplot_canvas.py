@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from .generic_renderer import Canvas
+from .canvas import Canvas
 
 try:
     import matplotlib.pyplot as plt

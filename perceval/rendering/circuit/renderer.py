@@ -21,13 +21,53 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from perceval.utils.renderer import Canvas
 import math
+import sys
+from perceval.rendering.canvas import Canvas, MplotCanvas, DynamicSVGCanvas, StandardSVGCanvas
+from perceval.components import ACircuit, Circuit
+from perceval.utils.format import format_parameters
 
 
 class ICircuitRenderer(ABC):
     def __init__(self, nsize):
         self._nsize = nsize  # number of modes
+
+    def render_circuit(self,
+                       circuit: ACircuit,
+                       map_param_kid: dict = None,
+                       shift: int = 0,
+                       recursive: bool = False,
+                       precision: float = 1e-6,
+                       nsimplify: bool = True):
+        if not isinstance(circuit, Circuit):
+            variables = circuit.get_variables(map_param_kid)
+            description = format_parameters(variables, precision, nsimplify)
+            self.append_circuit([p + shift for p in range(circuit.m)], circuit, description)
+
+        if circuit.is_composite() and circuit.ncomponents() > 0:
+            for idx, (r, c) in enumerate(circuit._components):
+                shiftr = [p+shift for p in r]
+                if c.is_composite() and c._components:
+                    if recursive:
+                        self.open_subblock(r, c._name, self.get_circuit_size(c, recursive=True), c._color)
+                        self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
+                                            precision=precision, nsimplify=nsimplify)
+                        self.close_subblock(r)
+                    else:
+                        component_vars = c.get_variables(map_param_kid)
+                        description = format_parameters(component_vars, precision, nsimplify)
+                        self.append_subcircuit(shiftr, c, description)
+                else:
+                    component_vars = c.get_variables(map_param_kid)
+                    description = format_parameters(component_vars, precision, nsimplify)
+                    self.append_circuit(shiftr, c, description)
+
+        self.extend_pos(0, circuit.m - 1)
+        self.close()
+
+    @abstractmethod
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
+        pass
 
     @abstractmethod
     def max_pos(self, start, end, header):
@@ -50,7 +90,7 @@ class ICircuitRenderer(ABC):
         pass
 
     @abstractmethod
-    def append_subcircuit(self, lines, circuit, content, min_size=5):
+    def append_subcircuit(self, lines, circuit, content):
         pass
 
     @abstractmethod
@@ -62,11 +102,11 @@ class ICircuitRenderer(ABC):
         pass
 
     @abstractmethod
-    def add_out_port(self, m, **opts):
+    def add_out_port(self, m, content, **opts):
         pass
 
     @abstractmethod
-    def add_in_port(self, m, **opts):
+    def add_in_port(self, m, content, **opts):
         pass
 
 
@@ -80,6 +120,9 @@ class TextRenderer(ICircuitRenderer):
         self.extend_pos(0, self._nsize-1)
         self._depth = [0]*nsize
         self._offset = 0
+
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
+        return None  # Don't need circuit size for text rendering
 
     def close(self):
         self.extend_pos(0, self._nsize-1)
@@ -128,7 +171,7 @@ class TextRenderer(ICircuitRenderer):
         self._h[end*self._hc+4] += "╝"
         return None
 
-    def append_subcircuit(self, lines, circuit, content, min_size=5):
+    def append_subcircuit(self, lines, circuit, content):
         self.open_subblock(lines, circuit._name)
         self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
         self.close_subblock(lines)
@@ -213,18 +256,12 @@ class TextRenderer(ICircuitRenderer):
             self._h[self._hc*k + 2] = str(k) + ':' + self._h[self._hc*k + 2][2:]
             self._h[self._hc*k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
-    def add_out_port(self, m, **opts):
-        content = ''
-        if 'content' in opts and opts['content']:
-            content = opts['content']
+    def add_out_port(self, m, content, **opts):
         self._h[self._hc*m + 2] += f'[{content})'
         if 'name' in opts and opts['name']:
             self._h[self._hc*m + 3] += f"[{opts['name']}]"
 
-    def add_in_port(self, m, **opts):
-        content = ''
-        if 'content' in opts and opts['content']:
-            content = opts['content']
+    def add_in_port(self, m, content, **opts):
         shape_size = len(content) + 2
         name = ''
         if 'name' in opts and opts['name']:
@@ -240,8 +277,8 @@ class CanvasRenderer(ICircuitRenderer):
     affix_port_size = 15
     affix_all_size = 25
 
-    def __init__(self, nsize, canvas: Canvas, skin, compact_rendering=False):
-        self._nsize = nsize
+    def __init__(self, nsize, canvas: Canvas, skin):
+        super().__init__(nsize)
         # first position available for row n
         self._chart = [0] * (nsize+1)
         self._canvas = canvas
@@ -252,7 +289,9 @@ class CanvasRenderer(ICircuitRenderer):
         for k in range(nsize):
             self._canvas.add_mpath(["M", CanvasRenderer.affix_all_size-CanvasRenderer.affix_port_size, 25 + 50 * k,
                                     "l", CanvasRenderer.affix_port_size, 0], **self._skin.stroke_style)
-        self._compact = compact_rendering
+
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
+        return self._skin.get_size(circuit, recursive)
 
     def add_mode_index(self):
         for k in range(self._nsize):
@@ -262,16 +301,16 @@ class CanvasRenderer(ICircuitRenderer):
         for k in range(self._nsize):
             self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
 
-    def add_out_port(self, n_mode, **opts):
+    def add_out_port(self, n_mode, content, **opts):
         max_pos = self.extend_pos(0, self._nsize - 1)
         self._canvas.set_offset((CanvasRenderer.affix_all_size + 50*max_pos, 50*n_mode),
                                 CanvasRenderer.affix_all_size, 50*(n_mode + 1))
-        self._canvas.add_shape(self._skin.detector_shape, **opts)
+        self._canvas.add_shape(self._skin.detector_shape, None, content, **opts)
 
-    def add_in_port(self, n_mode, **opts):
+    def add_in_port(self, n_mode, content, **opts):
         self._canvas.set_offset((0, 50*n_mode),
                                 CanvasRenderer.affix_all_size, 50*(n_mode + 1))
-        self._canvas.add_shape(self._skin.source_shape, **opts)
+        self._canvas.add_shape(self._skin.source_shape, None, content, **opts)
 
     def open_subblock(self, lines, name, size, color=None):
         start = lines[0]
@@ -335,3 +374,21 @@ class CanvasRenderer(ICircuitRenderer):
 
     def draw(self):
         return self._canvas.draw()
+
+
+def create_renderer(n, output_format="text", skin=None, **opts) -> ICircuitRenderer:
+    if output_format == "text":
+        return TextRenderer(n)
+    if output_format == "latex":
+        raise NotImplementedError("latex format not yet supported")
+
+    assert skin is not None, "A skin must be selected for graphical display"
+    if output_format == "html" or output_format == "png":
+        # DynamicSVGCanvas is used only if drawSvg was imported beforehand
+        if 'drawSvg' in sys.modules:
+            canvas = DynamicSVGCanvas(**opts)
+        else:
+            canvas = StandardSVGCanvas(**opts)
+    else:
+        canvas = MplotCanvas(**opts)
+    return CanvasRenderer(n, canvas, skin)

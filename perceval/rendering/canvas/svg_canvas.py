@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import sys
-from .generic_renderer import Canvas
+from .canvas import Canvas
 
 
 class StandardSVGCanvas(Canvas):
