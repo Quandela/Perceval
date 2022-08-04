@@ -22,10 +22,10 @@
 
 import numpy as np
 
-from perceval.components import PredefinedCircuit
+from perceval.components import Circuit, PredefinedCircuit
 import perceval.lib.symb as symb
 
-c_cnot = (symb.Circuit(6, name="PostProcessed CNOT")
+c_cnot = (Circuit(6, name="PostProcessed CNOT")
               .add((0, 1), symb.BS(R=1 / 3, phi=np.pi))
               .add((3, 4), symb.BS(R=1 / 2))
               .add((2, 3), symb.BS(R=1 / 3, phi=np.pi))

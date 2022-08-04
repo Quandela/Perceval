@@ -24,9 +24,9 @@ from abc import ABC
 import sympy as sp
 import numpy as np
 
-from perceval.components import ACircuit, Circuit
+from perceval.components import ACircuit
 from perceval.utils.matrix import Matrix
-from perceval.utils import Canvas, format_parameters
+from perceval.utils import format_parameters
 
 
 class PhysCircuit(ACircuit, ABC):
@@ -41,7 +41,7 @@ class PhysCircuit(ACircuit, ABC):
         pass
 
     width = 1
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
+    #stroke_style = {"stroke": "darkred", "stroke_width": 3}
     style_subcircuit = {"width": 2,
                         "fill": "lightpink",
                         "stroke_style": {"stroke": "darkred", "stroke_width": 1}}
@@ -107,31 +107,6 @@ class BS(PhysCircuit):
         params_str = format_parameters(parameters, separator=', ')
         return "phys.BS(%s)" % params_str
 
-    width = 2
-
-    def shape(self, content, canvas, compact: bool = False):
-        split_content = content.split("\n")
-        head_content = "\n".join([s for s in split_content
-                                  if s.startswith("R=") or s.startswith("theta=")])
-        bottom_content_list = [s for s in split_content
-                               if not s.startswith("R=") and not s.startswith("theta=")]
-        bottom_nline = len(bottom_content_list)
-        bottom_size = 7 if bottom_nline < 3 else 6
-        canvas.add_mline([0, 25, 28, 25, 47, 44], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([53, 44, 72, 25, 100, 25], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([0, 75, 28, 75, 47, 56], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([53, 56, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_rect((25, 43), 50, 14, fill="black")
-        canvas.add_text((50, 80+5*bottom_nline), '\n'.join(bottom_content_list).replace('phi_', 'Φ_'),
-                        size=bottom_size, ta="middle")
-        canvas.add_text((50, 26), head_content.replace('theta=', 'Θ='), size=7, ta="middle")
-        if self._phi_b.defined:
-            m = round(abs(float(self._phi_b.spv/sp.pi)))
-            if (m + 1) % 2:
-                canvas.add_rect((25, 43), 50, 4, fill="lightgray")
-            else:
-                canvas.add_rect((25, 53), 50, 4, fill="lightgray")
-
     def inverse(self, v=False, h=False):
         if v:
             phi_a = self._phi_a
@@ -162,18 +137,6 @@ class PBS(PhysCircuit):
     def describe(self, _=None):
         return "phys.PBS()"
 
-    width = 2
-
-    def shape(self, content, canvas, compact: bool = False):
-        canvas.add_mline([0, 25, 28, 25, 37.5, 37.5], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([62.5, 37.5, 72, 25, 100, 25], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([0, 75, 28, 75, 37.5, 62.5], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([62.5, 62.5, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_mline([62.5, 62.5, 72, 75, 100, 75], stroke="darkred", stroke_width=3, stroke_linejoin="round")
-        canvas.add_polygon([25, 50, 50, 24, 75, 50, 50, 76, 25, 50], stroke="black", stroke_width=1, fill="gray")
-        canvas.add_mline([25, 50, 75, 50], stroke="black", stroke_width=1)
-        canvas.add_text((50, 86), text=content, size=7, ta="middle")
-
 
 class PS(PhysCircuit):
     _name = "PS"
@@ -200,14 +163,6 @@ class PS(PhysCircuit):
         parameters = self.get_variables(map_param_kid)
         params_str = format_parameters(parameters, separator=', ')
         return "phys.PS(%s)" % params_str
-
-    width = 1
-
-    def shape(self, content, canvas, compact: bool = False):
-        canvas.add_mline([0, 25, 50, 25], stroke_width=3, stroke="darkred")
-        canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
-                           stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
-        canvas.add_text((22, 38), text=content.replace("phi=", "Φ="), size=7, ta="left")
 
     def inverse(self, v=False, h=False):
         if h:
@@ -263,17 +218,6 @@ class WP(PhysCircuit):
         params_str = format_parameters(parameters, separator=', ')
         return "phys.WP(%s)" % params_str
 
-    width = 1
-
-    def shape(self, content, canvas, compact: bool = False):
-        params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mline([0, 25, 50, 25], stroke_width=3, stroke="darkred")
-        canvas.add_rect((13, 7), width=14, height=36, fill="gray",
-                        stroke_width=1, stroke="black", stroke_linejoin="miter")
-        canvas.add_mline([20, 7, 20, 43], stroke="black", stroke_width=1)
-        canvas.add_text((28.5, 36), text=params[0], size=7, ta="left")
-        canvas.add_text((28.5, 45), text=params[1], size=7, ta="left")
-
 
 class PR(PhysCircuit):
     """Polarization rotator"""
@@ -307,30 +251,6 @@ class PR(PhysCircuit):
         parameters = self.get_variables(map_param_kid)
         params_str = format_parameters(parameters, separator=', ')
         return "phys.PR(%s)" % params_str
-
-    width = 1
-
-    def shape(self, content, canvas, compact: bool = False):
-        canvas.add_mline([0, 25, 15, 25], stroke="darkred", stroke_width=3)
-        canvas.add_mline([35, 25, 50, 25], stroke="darkred", stroke_width=3)
-        canvas.add_rect((14, 14), width=22, height=22, stroke="black", fill="lightgray",
-                        stroke_width=1, stroke_linejoin="miter")
-        canvas.add_mpath(["M", 18, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
-                          "l", 2.305, -2.821, "c", 0.107, -0.131, 0.057, -0.237, -0.112, -0.237,
-                          "h", -1.22, "c", -0.169, 0, -0.284, -0.135, -0.247, -0.300,
-                          "c", 0.629, -2.866, 3.187, -5.018, 6.240, -5.018,
-                          "c", 3.524, 0, 6.39, 2.867, 6.390, 6.3902,
-                          "c", 0, 3.523, -2.866, 6.39, -6.390, 6.390,
-                          "c", -0.422, 0, -0.765, 0.342, -0.765, 0.765,
-                          "s", 0.342, 0.765, 0.765, 0.765,
-                          "c", 4.367, 0, 7.92, -3.552, 7.920, -7.920,
-                          "c", 0, -4.367, -3.552, -7.920, -7.920, -7.920,
-                          "c", -3.898, 0, -7.146, 2.832, -7.799, 6.546,
-                          "c", -0.029, 0.166, -0.184, 0.302, -0.353, 0.302,
-                          "h", -1.201, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
-                          "z"
-                          ], fill="black")
-        canvas.add_text((25, 45), text=content.replace("delta=", "δ="), size=7, ta="middle")
 
 
 class HWP(WP):
@@ -371,21 +291,6 @@ class TD(PhysCircuit):
         params_str = format_parameters(parameters, separator=', ')
         return "phys.TD(%s)" % params_str
 
-    width = 1
-
-    def shape(self, content, canvas: Canvas, compact: bool = False):
-        canvas.add_circle((34, 14), 11, stroke_width=5, fill=None, stroke="white")
-        canvas.add_circle((34, 14), 11, stroke_width=3, fill=None, stroke="darkred")
-        canvas.add_circle((25, 14), 11, stroke_width=5, fill=None, stroke="white")
-        canvas.add_circle((25, 14), 11, stroke_width=3, fill=None, stroke="darkred")
-        canvas.add_circle((16, 14), 11, stroke_width=5, fill=None, stroke="white")
-        canvas.add_circle((16, 14), 11, stroke_width=3, fill=None, stroke="darkred")
-        canvas.add_mline([0, 25, 19, 25], stroke="white", stroke_width=5)
-        canvas.add_mline([0, 25, 19, 25], stroke="darkred", stroke_width=3)
-        canvas.add_mline([34, 25, 50, 25], stroke="white", stroke_width=5)
-        canvas.add_mline([32, 25, 50, 25], stroke="darkred", stroke_width=3)
-        canvas.add_text((25, 38), content, 7, "middle")
-
 
 class Unitary(PhysCircuit):
     _name = "Unitary"
@@ -398,7 +303,6 @@ class Unitary(PhysCircuit):
         if name is not None:
             self._name = name
         m = U.shape[0]
-        self.width = m
         self._supports_polarization = use_polarization
         if use_polarization:
             assert m % 2 == 0, "Polarization matrix should have an even number of rows/col"
@@ -423,12 +327,6 @@ class Unitary(PhysCircuit):
             params.append("use_polarization=True")
         return f"phys.Unitary({', '.join(params)})"
 
-    def shape(self, content, canvas, compact: bool = False):
-        for i in range(self.m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
-        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="gold")
-        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)
-
 
 class PERM(Unitary):
     _name = "PERM"
@@ -443,7 +341,6 @@ class PERM(Unitary):
         for v, i in enumerate(perm):
             u[i, v] = 1
         super().__init__(U=u)
-        self.width = 1
 
     def get_variables(self, _=None):
         return {'PERM': ''}
@@ -459,10 +356,3 @@ class PERM(Unitary):
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
-
-    def shape(self, content, canvas, compact: bool = False):
-        for an_input, an_output in enumerate(self.perm_vector):
-            canvas.add_mline([3, 25+an_input*50, 47, 25+an_output*50],
-                             stroke="white", stroke_width=6)
-            canvas.add_mline([0, 25+an_input*50, 3, 25+an_input*50, 47, 25+an_output*50, 50, 25+an_output*50],
-                             stroke="darkred", stroke_width=3)

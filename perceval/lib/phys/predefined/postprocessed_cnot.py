@@ -22,10 +22,11 @@
 
 import numpy as np
 
-from perceval.components import PredefinedCircuit
+from perceval.components import Circuit, PredefinedCircuit
 import perceval.lib.phys as phys
 
-c_cnot = (phys.Circuit(6, name="PostProcessed CNOT")
+
+c_cnot = (Circuit(6, name="PostProcessed CNOT")
               .add((0, 1), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
               .add((3, 4), phys.BS(R=1 / 2))
               .add((2, 3), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))

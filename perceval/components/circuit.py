@@ -347,7 +347,8 @@ class ACircuit(ABC):
                  nsimplify: bool = True,
                  **opts):
         from perceval.rendering.circuit.symb_skin import SymbSkin
-        skin = SymbSkin(compact_display=compact)
+        from perceval.rendering.circuit.phys_skin import PhysSkin
+        skin = PhysSkin(compact_display=compact)
         w, h = skin.get_size(self, recursive=recursive)
         printer = create_printer(self._m, output_format=output_format, skin=skin, stroke_style=skin.stroke_style,
                                  total_width=w, total_height=h, compact=compact, **opts)

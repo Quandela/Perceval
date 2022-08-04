@@ -24,7 +24,7 @@ from abc import ABC
 import sympy as sp
 import numpy as np
 
-from perceval.components import ACircuit, Circuit
+from perceval.components import ACircuit
 from perceval.utils import Matrix, format_parameters
 
 
@@ -39,7 +39,7 @@ class SymbCircuit(ACircuit, ABC):
                          use_symbolic: bool = False) -> Matrix:
         pass
 
-    stroke_style = {"stroke": "black", "stroke_width": 1}  # TODO remove
+    # stroke_style = {"stroke": "black", "stroke_width": 1}  # TODO remove
     style_subcircuit = {"width": 1,
                         "fill": "white",
                         "stroke_style": {"stroke": "black", "stroke_width": 1}}

@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import *
+from perceval.utils.parameter import P
+from perceval.components import Circuit, PredefinedCircuit
 import perceval.lib.phys as phys
 
-c = phys.Circuit(2) // phys.BS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
+c = Circuit(2) // phys.BS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
 
 generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")

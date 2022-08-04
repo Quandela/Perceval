@@ -22,16 +22,17 @@
 
 import numpy as np
 
-from perceval.components import PredefinedCircuit
+from perceval.components import Circuit, PredefinedCircuit
 import perceval.lib.phys as phys
+
 
 import perceval as pcvl
 
-R1=0.228
-R2=0.758
+R1 = 0.228
+R2 = 0.758
 
 
-c_hcnot = (phys.Circuit(8, name="Heralded CNOT")
+c_hcnot = (Circuit(8, name="Heralded CNOT")
                .add((0, 1, 2), phys.PERM([1, 2, 0]))
                .add((4, 5), phys.BS())
                .add((5, 6, 7), phys.PERM([1, 2, 0]))
