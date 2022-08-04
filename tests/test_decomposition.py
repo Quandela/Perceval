@@ -239,7 +239,7 @@ def test_decomposition_perm():
 
 
 def test_decomposition_inverse_symb():
-    ub = (symb.Circuit(2)
+    ub = (pcvl.Circuit(2)
           // (0, symb.BS(theta=pcvl.Parameter("theta")))
           // (1, symb.PS(phi=pcvl.Parameter("phi"))))
 
@@ -253,7 +253,7 @@ def test_decomposition_inverse_symb():
 
 
 def test_decomposition_inverse_phys():
-    ub = (phys.Circuit(2)
+    ub = (pcvl.Circuit(2)
           // (0, phys.BS(theta=pcvl.Parameter("theta")))
           // (1, phys.PS(phi=pcvl.Parameter("phi"))))
 

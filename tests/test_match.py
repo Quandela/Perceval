@@ -107,9 +107,9 @@ def test_match_simple_seq():
 
 
 def test_subnodes_0():
-    bs = phys.Circuit(2).add(0, phys.BS())
+    bs = pcvl.Circuit(2).add(0, phys.BS())
     assert bs.find_subnodes(0) == [None, None]
-    bs = phys.Circuit(3).add(0, phys.BS()).add(1, phys.PS(0.2)).add(1, phys.BS())
+    bs = pcvl.Circuit(3).add(0, phys.BS()).add(1, phys.PS(0.2)).add(1, phys.BS())
     assert bs.find_subnodes(0) == [None, (1, 0)]
     assert bs.find_subnodes(1) == [(2, 0)]
 
@@ -128,7 +128,7 @@ def test_replace_R_by_theta_1():
 
 
 def test_match_rewrite_phase():
-    a = phys.Circuit(1) // phys.PS(0.4) // phys.PS(1.4)
+    a = phys.PS(0.4) // phys.PS(1.4)
     pattern2 = pcvl.Circuit(1, name="pattern") // phys.PS(pcvl.P("phi1")) // phys.PS(pcvl.P("phi2"))
     rewrite2 = pcvl.Circuit(1, name="rewrite") // phys.PS(pcvl.P("phi"))
     matched = a.match(pattern2)
@@ -141,14 +141,15 @@ def test_match_rewrite_phase():
 
 
 def test_match_switch_phases():
-    a = phys.Circuit(2) // phys.PS(0.4) // phys.BS(R=0.45)
+    a = pcvl.Circuit(2) // phys.PS(0.4) // phys.BS(R=0.45)
     pattern3 = (pcvl.Circuit(2, name="pattern3") //
                 (0, phys.PS(pcvl.P("phi1"))) //
                 (1, phys.PS(pcvl.P("phip"))) //
                 (0, phys.BS(R=0.45)))
     matched = a.match(pattern3, browse=True)
     assert matched is None
-    a = phys.Circuit(2) // (0, phys.PS(0.4)) // (1, phys.PS(0.3)) // phys.BS(R=0.45)
+
+    a = pcvl.Circuit(2) // (0, phys.PS(0.4)) // (1, phys.PS(0.3)) // phys.BS(R=0.45)
     matched = a.match(pattern3, browse=True)
     assert matched is not None
     assert pytest.approx(0.4) == matched.v_map["phi1"]
@@ -156,7 +157,8 @@ def test_match_switch_phases():
     pattern3_check = (pcvl.Circuit(2, name="pattern3") //
                       (1, phys.PS(pcvl.P("phip"))) //
                       (0, phys.BS(R=0.45)))
-    a = phys.Circuit(2) // (1, phys.PS(0.3)) // (0, phys.PS(0.4)) // phys.BS(R=0.45)
+
+    a = pcvl.Circuit(2) // (1, phys.PS(0.3)) // (0, phys.PS(0.4)) // phys.BS(R=0.45)
     matched = a.match(pattern3_check)
     assert matched is not None and matched.pos_map == {0: 0, 2: 1}
     matched = a.match(pattern3, browse=True)

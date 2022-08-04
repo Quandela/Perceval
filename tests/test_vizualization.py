@@ -29,6 +29,8 @@ import perceval.lib.symb as symb
 from pathlib import Path
 import re
 import sympy as sp
+from perceval.rendering.circuit import select_skin, SymbSkin
+
 
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
@@ -65,23 +67,28 @@ def _check_image(test_path, ref_path):
 
 
 def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False):
+    from perceval.rendering.pdisplay import _display_circuit
     if save_figs:
-        c.pdisplay(output_format="mplot",
-                   mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
-                   mplot_noshow=True,
-                   recursive=recursive,
-                   compact=compact)
+        _display_circuit(
+            c,
+            output_format="mplot",
+            mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
+            mplot_noshow=True,
+            recursive=recursive,
+            compact=compact)
         with open(TEST_IMG_DIR / Path(circuit_name + ".svg")) as f_saved:
             saved = "".join(f_saved.readlines())
         saved = _norm(saved)
         with open(TEST_IMG_DIR / Path(circuit_name + ".svg"), "w") as fw_saved:
             fw_saved.write(saved)
     else:
-        c.pdisplay(output_format="mplot",
-                   mplot_savefig=tmp_path / Path(circuit_name + ".svg"),
-                   mplot_noshow=True,
-                   recursive=recursive,
-                   compact=compact)
+        _display_circuit(
+            c,
+            output_format="mplot",
+            mplot_savefig=tmp_path / Path(circuit_name + ".svg"),
+            mplot_noshow=True,
+            recursive=recursive,
+            compact=compact)
         ok, msg = _check_image(tmp_path / Path(circuit_name + ".svg"),
                                TEST_IMG_DIR / Path(circuit_name + ".svg"))
         assert ok, msg
@@ -134,6 +141,7 @@ def test_svg_dump_no_circuit_4(tmp_path, save_figs):
 
 
 def test_svg_dump_symb_bs_compact(tmp_path, save_figs):
+    select_skin(SymbSkin)
     _save_or_check(symb.BS(R=1/3), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True)
 
 def test_svg_dump_symb_bs_compact_false(tmp_path, save_figs):

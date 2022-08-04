@@ -24,6 +24,7 @@ import pytest
 from pathlib import Path
 
 from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
+from perceval.rendering.circuit.renderer import TextRenderer
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import sympy as sp
@@ -80,7 +81,10 @@ def test_empty_circuit():
     m = c.compute_unitary(False)
     assert m.shape == (4, 4)
     assert np.allclose(m, Matrix.eye(4))
-    assert c.pdisplay().replace(" ", "") == """
+    renderer = TextRenderer(c.m)
+    renderer.render_circuit(c)
+    renderer.add_mode_index()
+    assert renderer.draw().replace(" ", "") == """
 
 0:────:0 (depth 0)
 

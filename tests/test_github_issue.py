@@ -30,7 +30,7 @@ import perceval.lib.phys as phys
 
 def test_34():
     bs = phys.BS(theta=0, phi_a=0, phi_b=np.pi/2, phi_d=np.pi)
-    C = phys.Circuit(4, name='phase')
+    C = pcvl.Circuit(4, name='phase')
     C.add((2,3), bs)
     pcvl.pdisplay(C)  # looks good
     simulator_backend = pcvl.BackendFactory().get_backend("Naive")
