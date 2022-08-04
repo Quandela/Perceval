@@ -117,7 +117,7 @@ class ACircuit(ABC):
     @property
     def U(self):
         """
-        get the numeric unitary matrix, circuit has to be defined
+        get the symbolic unitary matrix
         """
         return self.compute_unitary(use_symbolic=True).simp()
 
@@ -130,7 +130,7 @@ class ACircuit(ABC):
     @property
     def defined(self):
         """
-            check if all parameters of the circuit are fully defined
+        check if all parameters of the circuit are fully defined
         """
         for _, p in self._params.items():
             if not p.defined:
@@ -253,7 +253,7 @@ class ACircuit(ABC):
     def get_variables(self, _=None):
         return {}
 
-    def copy(self, subs: Union[dict,list] = None):
+    def copy(self, subs: Union[dict, list] = None):
         nc = copy.deepcopy(self)
 
         if subs is None:
@@ -350,7 +350,7 @@ class ACircuit(ABC):
         from perceval.rendering.circuit.phys_skin import PhysSkin
         skin = PhysSkin(compact_display=compact)
         w, h = skin.get_size(self, recursive=recursive)
-        printer = create_printer(self._m, output_format=output_format, skin=skin, stroke_style=skin.stroke_style,
+        printer = create_printer(self._m, output_format=output_format, skin=skin,
                                  total_width=w, total_height=h, compact=compact, **opts)
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
@@ -489,9 +489,6 @@ class Circuit(ACircuit):
             self._name = name
         super().__init__(m)
         self._components = []
-        # Rendering-related members
-        # self.stroke_style = {"stroke": "darkred", "stroke_width": 3}  # Physical component stroke values by default
-        self.style_subcircuit = {}
 
     def is_composite(self):
         return True
@@ -553,9 +550,6 @@ class Circuit(ACircuit):
         if isinstance(port_range, int):
             port_range = list([i for i in range(port_range, port_range+component.m)])
         assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
-        if not self.style_subcircuit:
-            # self.stroke_style = component.stroke_style
-            self.style_subcircuit = component.style_subcircuit
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
                 "range must a consecutive valid set of ports"
@@ -971,14 +965,6 @@ class Circuit(ACircuit):
             if match is None:
                 return None
         return match
-
-    def subcircuit_shape(self, content, canvas):
-        w = self.style_subcircuit['width']
-        for idx in range(self._m):
-            canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.stroke_style)
-        canvas.add_rect((2.5, 2.5), w*50 - 5, 50*self._m - 5,
-                        fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
-        canvas.add_text((16, 16), content.upper(), 8)
 
     def shape(self, _, canvas, compact: bool = False):
         for i in range(self.m):

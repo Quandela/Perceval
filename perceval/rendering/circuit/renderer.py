@@ -240,8 +240,7 @@ class CanvasRenderer(ICircuitRenderer):
     affix_port_size = 15
     affix_all_size = 25
 
-    def __init__(self, nsize, canvas: Canvas, skin, stroke_style, compact_rendering=False):
-        self._stroke_style = stroke_style
+    def __init__(self, nsize, canvas: Canvas, skin, compact_rendering=False):
         self._nsize = nsize
         # first position available for row n
         self._chart = [0] * (nsize+1)
@@ -252,7 +251,7 @@ class CanvasRenderer(ICircuitRenderer):
         self._n_font_size = min(12, max(6, self._nsize+1))
         for k in range(nsize):
             self._canvas.add_mpath(["M", CanvasRenderer.affix_all_size-CanvasRenderer.affix_port_size, 25 + 50 * k,
-                                    "l", CanvasRenderer.affix_port_size, 0], **self._stroke_style)
+                                    "l", CanvasRenderer.affix_port_size, 0], **self._skin.stroke_style)
         self._compact = compact_rendering
 
     def add_mode_index(self):
@@ -300,7 +299,7 @@ class CanvasRenderer(ICircuitRenderer):
             if self._chart[p] != maxpos:
                 self._canvas.set_offset((CanvasRenderer.affix_all_size+self._chart[p]*50, p*50),
                                         (maxpos-self._chart[p])*50, 50)
-                self._canvas.add_mline([0, 25, (maxpos-self._chart[p])*50, 25], **self._stroke_style)
+                self._canvas.add_mline([0, 25, (maxpos-self._chart[p])*50, 25], **self._skin.stroke_style)
             self._chart[p] = maxpos
         return maxpos
 
@@ -316,15 +315,13 @@ class CanvasRenderer(ICircuitRenderer):
             self._chart[i] += w
 
     def append_subcircuit(self, lines, circuit, content):
-        if circuit.stroke_style:
-            self._stroke_style = circuit.stroke_style
         # opening the box
         start = lines[0]
         end = lines[-1]
         max_pos = self.extend_pos(start, end)
-        w = circuit.style_subcircuit['width']
+        w = self._skin.style_subcircuit['width']
         self._canvas.set_offset((CanvasRenderer.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        circuit.subcircuit_shape(circuit._name, self._canvas)
+        self._canvas.add_shape(self._skin.subcircuit_shape, circuit, circuit._name)
         for i in range(start, end+1):
             self._chart[i] += w
 
@@ -334,7 +331,7 @@ class CanvasRenderer(ICircuitRenderer):
                                 CanvasRenderer.affix_all_size, 50*(self._nsize+1))
         for k in range(self._nsize):
             self._canvas.add_mpath(["M", 0, 25 + 50 * k,
-                                    "l", CanvasRenderer.affix_port_size, 0], **self._stroke_style)
+                                    "l", CanvasRenderer.affix_port_size, 0], **self._skin.stroke_style)
 
     def draw(self):
         return self._canvas.draw()

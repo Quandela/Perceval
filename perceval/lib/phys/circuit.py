@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC
 import sympy as sp
 import numpy as np
 
@@ -29,25 +28,7 @@ from perceval.utils.matrix import Matrix
 from perceval.utils import format_parameters
 
 
-class PhysCircuit(ACircuit, ABC):
-    _fname = "symb.Circuit"
-
-    def __init__(self, m: int):
-        super().__init__(m=m)
-
-    def _compute_unitary(self,
-                         assign: dict = None,
-                         use_symbolic: bool = False) -> Matrix:
-        pass
-
-    width = 1
-    #stroke_style = {"stroke": "darkred", "stroke_width": 3}
-    style_subcircuit = {"width": 2,
-                        "fill": "lightpink",
-                        "stroke_style": {"stroke": "darkred", "stroke_width": 1}}
-
-
-class BS(PhysCircuit):
+class BS(ACircuit):
     _name = "BS"
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
@@ -119,7 +100,7 @@ class BS(PhysCircuit):
             self._phi_b._value = sp.pi-(-self._phi_a.spv-self._phi_d.spv-self._phi_b.spv)
 
 
-class PBS(PhysCircuit):
+class PBS(ACircuit):
     _name = "PBS"
     _supports_polarization = True
 
@@ -138,7 +119,7 @@ class PBS(PhysCircuit):
         return "phys.PBS()"
 
 
-class PS(PhysCircuit):
+class PS(ACircuit):
     _name = "PS"
 
     def __init__(self, phi):
@@ -172,7 +153,7 @@ class PS(PhysCircuit):
                 self._phi = -float(self._phi)
 
 
-class WP(PhysCircuit):
+class WP(ACircuit):
     _name = "WP"
     _supports_polarization = True
 
@@ -219,7 +200,7 @@ class WP(PhysCircuit):
         return "phys.WP(%s)" % params_str
 
 
-class PR(PhysCircuit):
+class PR(ACircuit):
     """Polarization rotator"""
     _name = "PR"
     _supports_polarization = True
@@ -267,7 +248,7 @@ class QWP(WP):
         super().__init__(sp.pi/4, xsi)
 
 
-class TD(PhysCircuit):
+class TD(ACircuit):
     """Time delay"""
     _name = "TD"
     delay_circuit = True
@@ -292,7 +273,7 @@ class TD(PhysCircuit):
         return "phys.TD(%s)" % params_str
 
 
-class Unitary(PhysCircuit):
+class Unitary(ACircuit):
     _name = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):

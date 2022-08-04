@@ -31,6 +31,9 @@ import perceval.lib.phys as phys
 class SymbSkin(ASkin):
     def __init__(self, compact_display: bool = False):
         super().__init__({"stroke": "black", "stroke_width": 1}, compact_display)
+        self.style_subcircuit = {"width": 1,
+                            "fill": "white",
+                            "stroke_style": {"stroke": "black", "stroke_width": 1}}
 
     @dispatch((Circuit, symb.Unitary, phys.Unitary))
     def get_width(self, c) -> int:
@@ -225,6 +228,14 @@ class SymbSkin(ASkin):
                           "z"
                           ], fill="black",stroke_width=0.1)
         canvas.add_text((27, 50), text=content.replace("delta=", "δ="), size=7, ta="middle")
+
+    def subcircuit_shape(self, circuit, canvas, content, **opts):
+        w = self.style_subcircuit['width']
+        for idx in range(circuit.m):
+            canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.stroke_style)
+        canvas.add_rect((2.5, 2.5), w*50 - 5, 50*circuit.m - 5,
+                        fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
+        canvas.add_text((16, 16), content.upper(), 8)
 
     def source_shape(self, canvas, **opts):
         r = 10

@@ -308,7 +308,7 @@ from perceval.rendering.circuit.renderer import ICircuitRenderer, TextRenderer, 
 #         return self._canvas.draw()
 
 
-def create_printer(n, output_format="text", skin=None, stroke_style="", compact=False, **opts) -> ICircuitRenderer:
+def create_printer(n, output_format="text", skin=None, compact=False, **opts) -> ICircuitRenderer:
     if output_format == "text":
         return TextRenderer(n)
     if output_format == "latex":
@@ -322,4 +322,4 @@ def create_printer(n, output_format="text", skin=None, stroke_style="", compact=
             canvas = StandardSVGCanvas(**opts)
     else:
         canvas = MplotCanvas(**opts)
-    return CanvasRenderer(n, canvas, skin, stroke_style, compact)
+    return CanvasRenderer(n, canvas, skin, compact)

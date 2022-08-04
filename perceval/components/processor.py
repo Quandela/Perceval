@@ -119,7 +119,7 @@ class Processor:
         from perceval.rendering.circuit.symb_skin import SymbSkin
         skin = SymbSkin(compact_display=compact)
         w, h = skin.get_size(display_circ, recursive=recursive)
-        printer = create_printer(display_circ.m, output_format=output_format, skin=skin, stroke_style=skin.stroke_style,
+        printer = create_printer(display_circ.m, output_format=output_format, skin=skin,
                                  total_width=w, total_height=h, compact=compact, **opts)
         display_circ.draw(printer, skin, map_param_kid=map_param_kid,
                           recursive=recursive,

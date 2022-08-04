@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC
 import sympy as sp
 import numpy as np
 
@@ -28,24 +27,7 @@ from perceval.components import ACircuit
 from perceval.utils import Matrix, format_parameters
 
 
-class SymbCircuit(ACircuit, ABC):
-    _fname = "symb.Circuit"
-
-    def __init__(self, m: int):
-        super().__init__(m=m)
-
-    def _compute_unitary(self,
-                         assign: dict = None,
-                         use_symbolic: bool = False) -> Matrix:
-        pass
-
-    # stroke_style = {"stroke": "black", "stroke_width": 1}  # TODO remove
-    style_subcircuit = {"width": 1,
-                        "fill": "white",
-                        "stroke_style": {"stroke": "black", "stroke_width": 1}}
-
-
-class BS(SymbCircuit):
+class BS(ACircuit):
     _name = "BS"
 
     def __init__(self, R=None, theta=None, phi=0):
@@ -109,7 +91,7 @@ class BS(SymbCircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class PBS(SymbCircuit):
+class PBS(ACircuit):
     _name = "PBS"
     _supports_polarization = True
 
@@ -143,7 +125,7 @@ class PBS(SymbCircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class TD(SymbCircuit):
+class TD(ACircuit):
     """Time delay"""
     _name = "TD"
     delay_circuit = True
@@ -169,7 +151,7 @@ class TD(SymbCircuit):
         return "phys.TD(%s)" % params_str
 
 
-class PS(SymbCircuit):
+class PS(ACircuit):
     _name = "PS"
 
     def __init__(self, phi):
@@ -203,7 +185,7 @@ class PS(SymbCircuit):
                 self._phi = -float(self._phi)
 
 
-class Unitary(SymbCircuit):
+class Unitary(ACircuit):
     _name = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
@@ -271,7 +253,7 @@ class PERM(Unitary):
         return [m_list.index(i) for i in nz[0]]
 
 
-class WP(SymbCircuit):
+class WP(ACircuit):
     _name = "WP"
     _supports_polarization = True
 
@@ -332,7 +314,7 @@ class QWP(WP):
         super().__init__(sp.pi/4, xsi)
 
 
-class PR(SymbCircuit):
+class PR(ACircuit):
     """Polarization rotator"""
     _name = "PR"
     _supports_polarization = True
