@@ -33,6 +33,7 @@ from perceval.rendering.circuit import get_selected_skin, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
+from perceval.utils.statevector import StateVector
 
 
 in_notebook = False
@@ -80,16 +81,17 @@ def pdisplay_processor(processor: Processor,
                        nsimplify: bool = True,
                        skin=None,
                        **opts):
+    n_modes = processor.circuit.m
     if not recursive:
-        display_circ = Circuit(m=processor._circuit.m).add(0, processor._circuit, merge=False)
+        display_circ = Circuit(m=n_modes).add(0, processor.circuit, merge=False)
     else:
-        display_circ = processor._circuit
+        display_circ = processor.circuit
     if skin is None:
         skin = get_selected_skin(compact_display=compact)
     # The display size of the processor is the same as the circuit it holds
     w, h = skin.get_size(display_circ, recursive=recursive)
     renderer = create_renderer(display_circ.m, output_format=output_format, skin=skin,
-                              total_width=w, total_height=h, compact=compact, **opts)
+                               total_width=w, total_height=h, compact=compact, **opts)
     renderer.render_circuit(display_circ,
                             map_param_kid=map_param_kid,
                             recursive=recursive,
@@ -97,7 +99,7 @@ def pdisplay_processor(processor: Processor,
                             nsimplify=nsimplify)
     herald_num = 0
     incr_herald_num = False
-    for k in range(processor._circuit.m):
+    for k in range(n_modes):
         in_display_params = {}
         in_content = ''
         # in port #k name
@@ -108,7 +110,7 @@ def pdisplay_processor(processor: Processor,
             incr_herald_num = True
 
         # in port #k content
-        if k in processor._sources:
+        if k in processor.sources:
             in_content = '1'
         elif k in processor._heralds:
             in_content = str(processor._heralds[k])
@@ -189,6 +191,25 @@ def pdisplay_analyser(analyser, output_format="text", nsimplify=True, precision=
                     tablefmt=output_format == "text" and "pretty" or output_format)
 
 
+def pdisplay_statevector(sv, output_format="text", n_simplify=True, precision=1e-6, max_v=None, sort=True):
+    if sort:
+        the_keys = sorted(sv.keys(), key=lambda a: -sv[a])
+    else:
+        the_keys = list(sv.keys())
+    if max_v is not None:
+        the_keys = the_keys[:max_v]
+    d = []
+    for k in the_keys:
+        if isinstance(sv[k], sp.Expr):
+            d.append([k, str(sv[k])])
+        else:
+            d.append([k, simple_float(sv[k], nsimplify=n_simplify, precision=precision)[1]])
+
+    s_states = tabulate(d, headers=["state ", "probability"],
+                        tablefmt=output_format == "text" and "pretty" or output_format)
+    return s_states
+
+
 @dispatch(object)
 def _pdisplay(circuit, **kwargs):
     return None
@@ -212,6 +233,11 @@ def _pdisplay(matrix, **kwargs):
 @dispatch(CircuitAnalyser)
 def _pdisplay(circuit_analyser, **kwargs):
     return pdisplay_analyser(circuit_analyser, **kwargs)
+
+
+@dispatch(StateVector)
+def _pdisplay(statevector, **kwargs):
+    return pdisplay_statevector(statevector, **kwargs)
 
 
 def _default_output_format(o):

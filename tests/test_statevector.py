@@ -23,6 +23,7 @@
 import pytest
 import perceval as pcvl
 import perceval.lib.symb as symb
+from perceval.rendering.pdisplay import pdisplay_statevector
 
 import sympy as sp
 
@@ -131,7 +132,7 @@ def test_svdistribution():
     svd = pcvl.SVDistribution()
     svd.add(st1, 0.5)
     svd[st2] = 0.5
-    assert strip_line_12(svd.pdisplay()) == strip_line_12("""
+    assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
             +--------+-------------+
             | state  | probability |
             +--------+-------------+
