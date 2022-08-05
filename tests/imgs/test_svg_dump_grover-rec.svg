@@ -110,6 +110,12 @@ z
     <path d="M 680.547945 282.575342
 L 813.69863 282.575342
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 813.69863 149.424658
+L 853.643836 149.424658
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 813.69863 282.575342
+L 853.643836 282.575342
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 819.024658 88.175342
 L 1207.824658 88.175342
 L 1207.824658 343.824658
@@ -195,6 +201,12 @@ z
 " clip-path="url(#staticClipPath)" style="fill: #808080; stroke: #000000"/>
     <path d="M 1080 282.575342
 L 1213.150685 282.575342
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 1213.150685 149.424658
+L 1253.09589 149.424658
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 1213.150685 282.575342
+L 1253.09589 282.575342
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 1218.476712 88.175342
 L 2006.728767 88.175342
@@ -284,6 +296,12 @@ L 1945.479452 208.010959
 L 1812.328767 208.010959
 z
 " clip-path="url(#staticClipPath)" style="fill: #d3d3d3; stroke: #000000"/>
+    <path d="M 2012.054795 149.424658
+L 2052 149.424658
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 2012.054795 282.575342
+L 2052 282.575342
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2012.054795 149.424658
 L 2052 149.424658
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
