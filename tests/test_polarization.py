@@ -22,6 +22,7 @@
 
 import perceval as pcvl
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
+from perceval.rendering.pdisplay import pdisplay_matrix
 import pytest
 
 import sympy as sp
@@ -101,7 +102,7 @@ def test_polar_circuit2():
 def test_prep_state():
     s, m = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H},{P:V},0,{P:A}>"))
     assert str(s) == "|1,0,1,0,0,0,1,0>"
-    assert m.pdisplay() == """
+    assert pdisplay_matrix(m) == """
             ⎡1  0  0  0   0  0  0           0        ⎤
             ⎢0  1  0  0   0  0  0           0        ⎥
             ⎢0  0  0  -1  0  0  0           0        ⎥

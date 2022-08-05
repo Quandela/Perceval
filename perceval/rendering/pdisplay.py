@@ -25,10 +25,13 @@ import sys
 import warnings
 from typing import Literal
 from multipledispatch import dispatch
+import sympy as sp
 
 from perceval.components import ACircuit, Circuit, Processor
 from perceval.rendering.circuit import get_selected_skin, create_renderer
 from perceval.utils.format import simple_float, simple_complex
+from perceval.utils.matrix import Matrix
+from perceval.utils.mlstr import mlstr
 
 
 in_notebook = False
@@ -45,7 +48,7 @@ except AttributeError:
     pass
 
 
-def _display_circuit(
+def pdisplay_circuit(
         circuit: ACircuit,
         map_param_kid: dict = None,
         output_format: Literal["text", "html", "mplot", "latex"] = "text",
@@ -67,7 +70,7 @@ def _display_circuit(
     return renderer.draw()
 
 
-def _display_processor(processor: Processor,
+def pdisplay_processor(processor: Processor,
                        map_param_kid: dict = None,
                        output_format: Literal["text", "html", "mplot", "latex"] = "text",
                        recursive: bool = False,
@@ -82,14 +85,15 @@ def _display_processor(processor: Processor,
         display_circ = processor._circuit
     if skin is None:
         skin = get_selected_skin(compact_display=compact)
+    # The display size of the processor is the same as the circuit it holds
     w, h = skin.get_size(display_circ, recursive=recursive)
     renderer = create_renderer(display_circ.m, output_format=output_format, skin=skin,
                               total_width=w, total_height=h, compact=compact, **opts)
     renderer.render_circuit(display_circ,
-                           map_param_kid=map_param_kid,
-                           recursive=recursive,
-                           precision=precision,
-                           nsimplify=nsimplify)
+                            map_param_kid=map_param_kid,
+                            recursive=recursive,
+                            precision=precision,
+                            nsimplify=nsimplify)
     herald_num = 0
     incr_herald_num = False
     for k in range(processor._circuit.m):
@@ -134,6 +138,45 @@ def _display_processor(processor: Processor,
     return renderer.draw()
 
 
+def pdisplay_matrix(matrix, precision: float = None, output_format: Literal["text", "mplot", "html", "latex"] = "text") -> str:
+    """Generates representation of the matrix
+
+    :param precision:
+    :param output_format:
+    :return:
+    """
+    def simp(value):
+        if isinstance(value, complex) or isinstance(value, int) or isinstance(value, float) or\
+           isinstance(value, sp.Number) or (isinstance(value, sp.Expr) and len(value.free_symbols) == 0):
+            return simple_complex(complex(value))[1]
+        else:
+            return value.__repr__()
+
+    if output_format != "text":
+        marker = output_format == "html" and "$" or ""
+        if isinstance(matrix, sp.Matrix):
+            return marker+sp.latex(matrix)+marker
+        rows = []
+        for j in range(matrix.shape[0]):
+            row = []
+            for v in matrix[j, :]:
+                row.append(sp.S(simp(v)))
+            rows.append(row)
+        return marker+sp.latex(Matrix(rows, use_symbolic=True))+marker
+    if matrix.shape[0] == 1:
+        return (mlstr("[")+mlstr("  ").join([simp(v) for v in matrix[0, :]])+"]")._s
+    else:
+        s = mlstr("")
+        for j in range(matrix.shape[1]):
+            if j:
+                s += "  "
+            s += "\n".join([simp(v) for v in matrix[:, j]])
+        h = s.height
+        left_bracket = "⎡\n"+"⎢\n"*(h-2)+"⎣"
+        right_bracket = "⎤\n"+"⎥\n"*(h-2)+"⎦"
+        return (mlstr(left_bracket)+s+right_bracket)._s
+
+
 @dispatch(object)
 def _pdisplay(circuit, **kwargs):
     return None
@@ -141,12 +184,17 @@ def _pdisplay(circuit, **kwargs):
 
 @dispatch(ACircuit)
 def _pdisplay(circuit, **kwargs):
-    return _display_circuit(circuit, **kwargs)
+    return pdisplay_circuit(circuit, **kwargs)
 
 
 @dispatch(Processor)
 def _pdisplay(processor, **kwargs):
-    return _display_processor(processor, **kwargs)
+    return pdisplay_processor(processor, **kwargs)
+
+
+@dispatch(Matrix)
+def _pdisplay(matrix, **kwargs):
+    return pdisplay_matrix(matrix, **kwargs)
 
 
 def _default_output_format(o):

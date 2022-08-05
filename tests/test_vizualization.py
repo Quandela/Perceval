@@ -67,9 +67,9 @@ def _check_image(test_path, ref_path):
 
 
 def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False):
-    from perceval.rendering.pdisplay import _display_circuit
+    from perceval.rendering.pdisplay import pdisplay_circuit
     if save_figs:
-        _display_circuit(
+        pdisplay_circuit(
             c,
             output_format="mplot",
             mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
@@ -82,7 +82,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         with open(TEST_IMG_DIR / Path(circuit_name + ".svg"), "w") as fw_saved:
             fw_saved.write(saved)
     else:
-        _display_circuit(
+        pdisplay_circuit(
             c,
             output_format="mplot",
             mplot_savefig=tmp_path / Path(circuit_name + ".svg"),

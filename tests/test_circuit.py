@@ -24,7 +24,7 @@ import pytest
 from pathlib import Path
 
 from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
-from perceval.rendering.circuit.renderer import TextRenderer
+from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import sympy as sp
@@ -39,7 +39,7 @@ def test_helloword():
     c = symb.BS()
     assert c.m == 2
     definition = c.definition()
-    assert strip_line_12(definition.pdisplay()) == strip_line_12("""
+    assert strip_line_12(pdisplay_matrix(definition)) == strip_line_12("""
             ⎡cos(theta)               I*exp(-I*phi)*sin(theta)⎤
             ⎣I*exp(I*phi)*sin(theta)  cos(theta)              ⎦
     """)
@@ -81,10 +81,7 @@ def test_empty_circuit():
     m = c.compute_unitary(False)
     assert m.shape == (4, 4)
     assert np.allclose(m, Matrix.eye(4))
-    renderer = TextRenderer(c.m)
-    renderer.render_circuit(c)
-    renderer.add_mode_index()
-    assert renderer.draw().replace(" ", "") == """
+    assert pdisplay_circuit(c).replace(" ", "") == """
 
 0:────:0 (depth 0)
 
@@ -104,14 +101,14 @@ def test_sbs_definition():
     phi = P("phi")
     theta = P("theta")
     bs = symb.BS(theta=theta, phi=phi)
-    assert strip_line_12(bs.compute_unitary(use_symbolic=True).pdisplay()) == strip_line_12("""
+    assert strip_line_12(pdisplay_matrix(bs.compute_unitary(use_symbolic=True))) == strip_line_12("""
             ⎡cos(theta)               I*exp(-I*phi)*sin(theta)⎤
             ⎣I*exp(I*phi)*sin(theta)  cos(theta)              ⎦""")
 
 
 def test_sbs():
     bs = symb.BS()
-    assert bs.U.pdisplay() == "⎡sqrt(2)/2    sqrt(2)*I/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2  ⎦"
+    assert pdisplay_matrix(bs.U) == "⎡sqrt(2)/2    sqrt(2)*I/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2  ⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
         sbs = simulator_backend(bs.U)
@@ -138,7 +135,7 @@ def test_sbs():
 
 def test_sbs_0():
     bs = symb.BS(R=1)
-    assert bs.U.pdisplay() == "⎡1  0⎤\n⎣0  1⎦"
+    assert pdisplay_matrix(bs.U) == "⎡1  0⎤\n⎣0  1⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
         sbs = simulator_backend(bs.U)
@@ -149,7 +146,7 @@ def test_sbs_0():
 
 def test_sbs_1():
     bs = symb.BS(R=0)
-    assert bs.U.pdisplay() == "⎡0  I⎤\n⎣I  0⎦"
+    assert pdisplay_matrix(bs.U) == "⎡0  I⎤\n⎣I  0⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
         sbs = simulator_backend(bs.U)
@@ -167,7 +164,7 @@ def test_parameter():
         pass
     else:
         raise Exception("Exception should have been generated")
-    assert bs.compute_unitary(use_symbolic=True).pdisplay() == strip_line_12("""
+    assert pdisplay_matrix(bs.compute_unitary(use_symbolic=True)) == strip_line_12("""
             ⎡sqrt(r)        I*sqrt(1 - r)⎤
             ⎣I*sqrt(1 - r)  sqrt(r)      ⎦""")
 
@@ -203,36 +200,27 @@ def test_build_composition():
     a = symb.BS()
     b = symb.BS()
     c = a // b
-    assert c.U.pdisplay() == "⎡0  I⎤\n⎣I  0⎦"
+    assert pdisplay_matrix(c.U) == "⎡0  I⎤\n⎣I  0⎦"
 
 
 def test_build_composition_2():
     c = symb.BS() // phys.PS(phi=sp.pi/2)
-    assert c.U.pdisplay() == "⎡sqrt(2)*I/2  -sqrt(2)/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2 ⎦"
+    assert pdisplay_matrix(c.U) == "⎡sqrt(2)*I/2  -sqrt(2)/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2 ⎦"
 
 
 def test_build_composition_3():
     c = symb.BS() // (0, phys.PS(phi=sp.pi/2))
-    assert c.U.pdisplay() == "⎡sqrt(2)*I/2  -sqrt(2)/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2 ⎦"
+    assert pdisplay_matrix(c.U) == "⎡sqrt(2)*I/2  -sqrt(2)/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2 ⎦"
 
 
 def test_build_composition_4():
     c = symb.BS() // (1, phys.PS(phi=sp.pi/2))
-    assert c.U.pdisplay() == "⎡sqrt(2)/2   sqrt(2)*I/2⎤\n⎣-sqrt(2)/2  sqrt(2)*I/2⎦"
+    assert pdisplay_matrix(c.U) == "⎡sqrt(2)/2   sqrt(2)*I/2⎤\n⎣-sqrt(2)/2  sqrt(2)*I/2⎦"
 
 
 def test_invalid_ifloor():
-    try:
-        phys.BS() // (1, phys.BS())
-    except AssertionError:
-        pass
-    else:
-        raise Exception('invalid ifloor should have fail')
-
-
-def test_unitary_matrix():
-    assert phys.BS().U.is_unitary()
-    assert symb.BS().U.is_unitary()
+    with pytest.raises(AssertionError):
+        phys.BS() // (1, phys.BS())  # invalid ifloor should fail
 
 
 def test_unitary_component():
@@ -360,4 +348,4 @@ def test_depths_ncomponents():
 
 def test_reflexivity():
     c = phys.BS(R=1/3)
-    assert pytest.approx(c.compute_unitary(use_symbolic=False)[0,0]) == np.sqrt(1/3)
+    assert pytest.approx(c.compute_unitary(use_symbolic=False)[0, 0]) == np.sqrt(1/3)
