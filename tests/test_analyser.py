@@ -22,12 +22,13 @@
 
 import perceval as pcvl
 import perceval.lib.symb as symb
+from perceval.rendering.pdisplay import pdisplay_analyser
 import sympy as sp
 
 from test_circuit import strip_line_12
 
 
-def test_analyser_full_issue_2():
+def test_analyser_on_qrng():
     simulator_backend = pcvl.BackendFactory().get_backend("Naive")
     chip_QRNG = pcvl.Circuit(4, name='QRNG')
     # Parameters
@@ -56,7 +57,7 @@ def test_analyser_full_issue_2():
     ca = pcvl.CircuitAnalyser(s1, [pcvl.BasicState("[1,0,1,0]"),
                                    pcvl.BasicState("[0,1,1,0]")], "*")
     ca.compute()
-    assert strip_line_12(ca.pdisplay()) == strip_line_12("""
+    assert strip_line_12(pdisplay_analyser(ca)) == strip_line_12("""
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
             |           | |2,0,0,0> | |1,1,0,0> | |1,0,1,0> | |1,0,0,1> | |0,2,0,0> | |0,1,1,0> | |0,1,0,1> | |0,0,2,0> | |0,0,1,1> | |0,0,0,2> |
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+

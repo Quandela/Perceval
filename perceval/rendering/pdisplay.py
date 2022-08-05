@@ -26,8 +26,9 @@ import warnings
 from typing import Literal
 from multipledispatch import dispatch
 import sympy as sp
+from tabulate import tabulate
 
-from perceval.components import ACircuit, Circuit, Processor
+from perceval.components import ACircuit, Circuit, Processor, CircuitAnalyser
 from perceval.rendering.circuit import get_selected_skin, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
@@ -177,6 +178,17 @@ def pdisplay_matrix(matrix, precision: float = None, output_format: Literal["tex
         return (mlstr(left_bracket)+s+right_bracket)._s
 
 
+def pdisplay_analyser(analyser, output_format="text", nsimplify=True, precision=1e-6):
+    distribution = analyser.distribution
+    d = []
+    for iidx, _ in enumerate(analyser.input_states_list):
+        d.append([simple_float(f, nsimplify=nsimplify, precision=precision)[1]
+                  for f in list(distribution[iidx])])
+    return tabulate(d, headers=[analyser._mapping.get(o, str(o)) for o in analyser.output_states_list],
+                    showindex=[analyser._mapping.get(i, str(i)) for i in analyser.input_states_list],
+                    tablefmt=output_format == "text" and "pretty" or output_format)
+
+
 @dispatch(object)
 def _pdisplay(circuit, **kwargs):
     return None
@@ -195,6 +207,11 @@ def _pdisplay(processor, **kwargs):
 @dispatch(Matrix)
 def _pdisplay(matrix, **kwargs):
     return pdisplay_matrix(matrix, **kwargs)
+
+
+@dispatch(CircuitAnalyser)
+def _pdisplay(circuit_analyser, **kwargs):
+    return pdisplay_analyser(circuit_analyser, **kwargs)
 
 
 def _default_output_format(o):

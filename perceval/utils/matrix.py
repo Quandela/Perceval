@@ -235,7 +235,7 @@ class MatrixS(Matrix, sp.Matrix):
         if not self.is_square():
             return False
         if self.free_symbols:
-            # use sympi only if we really have to...
+            # use sympy only if we really have to...
             p_trans = self * self.T.conj()-sp.eye(self.shape[0])
             if p_trans.free_symbols:
                 # cannot decide

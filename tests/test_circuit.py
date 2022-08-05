@@ -24,7 +24,7 @@ import pytest
 from pathlib import Path
 
 from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
-from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
+from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyser
 import perceval.lib.phys as phys
 import perceval.lib.symb as symb
 import sympy as sp
@@ -65,7 +65,7 @@ def test_helloword():
                              [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
                              "*"  # all possible output states that can be generated with 1 or 2 photons
                              )
-        assert strip_line_12(ca.pdisplay()) == strip_line_12("""
+        assert strip_line_12(pdisplay_analyser(ca)) == strip_line_12("""
             +-------+-------+-------+-------+-------+-------+
             |       | |1,0> | |0,1> | |2,0> | |1,1> | |0,2> |
             +-------+-------+-------+-------+-------+-------+
@@ -117,14 +117,14 @@ def test_sbs():
             assert str(out) == "|0,1>" or str(out) == "|1,0>"
         ca = CircuitAnalyser(sbs, [BasicState([0, 1]), BasicState([1, 0])])
         ca.compute()
-        assert ca.pdisplay(nsimplify=True) == strip_line_12("""
+        assert pdisplay_analyser(ca, nsimplify=True) == strip_line_12("""
             +-------+-------+-------+
             |       | |0,1> | |1,0> |
             +-------+-------+-------+
             | |0,1> |  1/2  |  1/2  |
             | |1,0> |  1/2  |  1/2  |
             +-------+-------+-------+""")
-        assert ca.pdisplay(nsimplify=False) == strip_line_12("""
+        assert pdisplay_analyser(ca, nsimplify=False) == strip_line_12("""
             +-------+-------+-------+
             |       | |0,1> | |1,0> |
             +-------+-------+-------+

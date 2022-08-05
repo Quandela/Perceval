@@ -21,10 +21,8 @@
 # SOFTWARE.
 
 import numpy as np
-from tabulate import tabulate
 import copy
 
-from perceval.utils.format import simple_float
 from perceval.utils.statevector import BasicState
 
 
@@ -120,16 +118,6 @@ class CircuitAnalyser:
         if expected is not None:
             self.error_rate /= len(self.input_states_list)
         return self
-
-    def pdisplay(self, output_format="text", nsimplify=True, precision=1e-6):
-        distribution = self.distribution
-        d = []
-        for iidx, _ in enumerate(self.input_states_list):
-            d.append([simple_float(f, nsimplify=nsimplify, precision=precision)[1]
-                      for f in list(distribution[iidx])])
-        return tabulate(d, headers=[self._mapping.get(o, str(o)) for o in self.output_states_list],
-                        showindex=[self._mapping.get(i, str(i)) for i in self.input_states_list],
-                        tablefmt=output_format == "text" and "pretty" or output_format)
 
     @property
     def distribution(self):
