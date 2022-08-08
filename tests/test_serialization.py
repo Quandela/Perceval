@@ -25,8 +25,7 @@ import sympy as sp
 import numpy
 from perceval import Matrix, P, Circuit
 from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit
-import perceval.lib.phys as phys
-import perceval.lib.symb as symb
+import perceval.components.base_components as comp
 
 
 def test_numeric_matrix_serialization():
@@ -43,7 +42,7 @@ def test_numeric_matrix_serialization():
 
 def test_symbolic_matrix_serialization():
     theta = P('theta')
-    bs = symb.BS(theta=theta)
+    bs = comp.SimpleBS(theta=theta)
     input_mat = bs.U
     serialized_mat = serialize(input_mat)
     deserialized_mat = deserialize_matrix(serialized_mat)
@@ -67,24 +66,17 @@ def _check_circuits_eq(c_a, c_b):
         assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
 
 
-def _build_test_circuit(ns):
-    c1 = Circuit(3) // ns.BS(R=2 / 3) // ns.PS(phi=0.215) // ns.PERM([2, 0, 1]) // (1, ns.PBS()) \
-         // ns.Unitary(Matrix.random_unitary(3))
-    c2 = Circuit(2) // ns.BS(R=1 / 4) // ns.PERM([1, 0])
-    c1.add(1, c2, merge=False).add(0, ns.HWP(xsi=0.23)).add(1, ns.QWP(xsi=0.17)).add(2, ns.WP(0.4, 0.5))
-    c1.add(0, ns.PR(delta=0.89))
+def _build_test_circuit():
+    c1 = Circuit(3) // comp.SimpleBS(R=2 / 3) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
+         // comp.Unitary(Matrix.random_unitary(3))
+    c2 = Circuit(2) // comp.GenericBS(R=1 / 4) // comp.PERM([1, 0])
+    c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
+    c1.add(0, comp.PR(delta=0.89))
     return c1
 
 
-def test_phys_circuit_serialization():
-    c1 = _build_test_circuit(phys)
-    serialized_c1 = serialize(c1)
-    deserialized_c1 = deserialize_circuit(serialized_c1)
-    _check_circuits_eq(c1, deserialized_c1)
-
-
-def test_symb_circuit_serialization():
-    c1 = _build_test_circuit(symb)
+def test_circuit_serialization():
+    c1 = _build_test_circuit()
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
