@@ -21,31 +21,40 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.base_components as comp
 from perceval.algorithm.optimize import optimize
 from perceval.algorithm.norm import fidelity, frobenius
 import time
 import random
 
-pattern1=pcvl.Circuit(2, name="pattern1")//(0,phys.PS(pcvl.P("phi1")))//(0,phys.BS(R=0.5))//(0,phys.PS(pcvl.P("phi2")))//(0,phys.BS(R=0.5))
-rewrite1=pcvl.Circuit(2, name="rewrite1")//(0,phys.PS(pcvl.P("phi1")))//(0,phys.BS(R=0.42))//(0,phys.PS(pcvl.P("phi2")))//(0,phys.BS(R=0.42))//(0,phys.PS(pcvl.P("phi3")))//(1,phys.PS(pcvl.P("phi4")))
+pattern1 = pcvl.Circuit(2, name="pattern1") // (0, comp.PS(pcvl.P("phi1"))) // (0, comp.GenericBS(R=0.5)) //\
+           (0, comp.PS(pcvl.P("phi2"))) // (0, comp.GenericBS(R=0.5))
+rewrite1 = pcvl.Circuit(2, name="rewrite1") // (0, comp.PS(pcvl.P("phi1"))) // (0, comp.GenericBS(R=0.42)) //\
+           (0, comp.PS(pcvl.P("phi2"))) // (0, comp.GenericBS(R=0.42)) // (0, comp.PS(pcvl.P("phi3"))) //\
+           (1, comp.PS(pcvl.P("phi4")))
 
-pattern2=pcvl.Circuit(1, name="pattern2")//phys.PS(pcvl.P("phi1"))//phys.PS(pcvl.P("phi2"))
-rewrite2=pcvl.Circuit(1, name="rewrite2")//phys.PS(pcvl.P("phi"))
+pattern2 = pcvl.Circuit(1, name="pattern2") // comp.PS(pcvl.P("phi1")) // comp.PS(pcvl.P("phi2"))
+rewrite2 = pcvl.Circuit(1, name="rewrite2") // comp.PS(pcvl.P("phi"))
 
-pattern3=pcvl.Circuit(2, name="pattern3")//(1,phys.PS(pcvl.P("phip")))//(0,phys.BS(R=0.42))
-rewrite3=pcvl.Circuit(2, name="rewrite3")//(0,phys.PS(pcvl.P("phi1")))//(0,phys.BS(R=0.42))//(0,phys.PS(pcvl.P("phi2")))//(1,phys.PS(pcvl.P("phi3")))
+pattern3 = pcvl.Circuit(2, name="pattern3") // (1, comp.PS(pcvl.P("phip"))) // (0, comp.GenericBS(R=0.42))
+rewrite3 = pcvl.Circuit(2, name="rewrite3") // (0, comp.PS(pcvl.P("phi1"))) // (0, comp.GenericBS(R=0.42)) //\
+           (0, comp.PS(pcvl.P("phi2"))) // (1, comp.PS(pcvl.P("phi3")))
 
 a = pcvl.Circuit.generic_interferometer(8,
-                                        lambda idx:pcvl.Circuit(2)//phys.PS(phi=random.random())//phys.BS(R=0.5)//phys.PS(phi=random.random())//phys.BS(R=0.5), shape="rectangle")
-u = a.compute_unitary(False)
+                                        lambda idx: pcvl.Circuit(2) // comp.PS(phi=random.random()) // comp.GenericBS(
+                                            R=0.5) // comp.PS(phi=random.random()) // comp.GenericBS(R=0.5),
+                                        shape="rectangle")
+u = a.compute_unitary(use_symbolic=False)
 
 current = time.time()
+
+
 def tick(description):
     global current
     dt = time.time()-current
     print("%f\t%s" % (dt, description))
     current = time.time()
+
 
 rules = [(pattern1, rewrite1, "lightgreen"), (pattern2, rewrite2, "pink"), (pattern3, rewrite3, "lightgray")]
 
