@@ -22,7 +22,7 @@
 
 import pytest
 import perceval as pcvl
-import perceval.lib.symb as symb
+import perceval.components.base_components as comp
 from perceval.rendering.pdisplay import pdisplay_statevector
 
 import sympy as sp
@@ -208,7 +208,7 @@ def test_sv_parse_tuple_annot():
 
 def test_sv_sample():
     source = pcvl.Source(brightness=1, purity=0.9, indistinguishability=0.9)
-    qpu = pcvl.Processor({0: source, 1: source}, symb.BS())
+    qpu = pcvl.Processor({0: source, 1: source}, comp.SimpleBS())
     sample = qpu.source_distribution.sample(1)
     assert isinstance(sample, pcvl.StateVector)
     sample = qpu.source_distribution.sample(2)

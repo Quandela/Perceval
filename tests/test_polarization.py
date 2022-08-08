@@ -26,7 +26,7 @@ from perceval.rendering.pdisplay import pdisplay_matrix
 import pytest
 
 import sympy as sp
-import perceval.lib.phys as phys
+import perceval.components.base_components as comp
 
 
 def test_polar_parse_error():
@@ -72,15 +72,15 @@ def test_polar_init():
 
 def test_polar_circuit1():
     c = pcvl.Circuit(2)
-    c.add(0, phys.PS(phi=sp.pi/2))
+    c.add(0, comp.PS(phi=sp.pi/2))
     assert not c.requires_polarization
     c = pcvl.Circuit(2)
-    c.add(0, phys.WP(sp.pi/3, sp.pi/2))
+    c.add(0, comp.WP(sp.pi/3, sp.pi/2))
     assert c.requires_polarization
 
 
 def test_polar_nmode():
-    c = phys.BS()
+    c = comp.GenericBS()
     u = c.compute_unitary()
     pu = c.compute_unitary(use_polarization=True)
     assert u.shape == (2, 2)
@@ -91,8 +91,8 @@ def test_polar_nmode():
 
 def test_polar_circuit2():
     c = pcvl.Circuit(2)
-    c //= phys.BS()
-    c //= (1, phys.WP(sp.pi/4, sp.pi/2))
+    c //= comp.GenericBS()
+    c //= (1, comp.WP(sp.pi/4, sp.pi/2))
     u = c.compute_unitary(use_symbolic=True, use_polarization=True)
     assert u.shape == (4, 4)
     assert u[0, 0] == sp.sqrt(2)/2
@@ -143,7 +143,7 @@ def test_build_spatial_output():
 
 
 def test_subcircuit_polarization():
-    a = pcvl.Circuit(2) // phys.PBS() // phys.PBS()
+    a = pcvl.Circuit(2) // comp.PBS() // comp.PBS()
     assert a.requires_polarization, "subcircuit does not propagate polarization state"
-    b = phys.BS() // a // a // phys.BS()
+    b = comp.GenericBS() // a // a // comp.GenericBS()
     assert b.requires_polarization, "subcircuit does not propagate polarization state"

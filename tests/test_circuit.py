@@ -25,8 +25,7 @@ from pathlib import Path
 
 from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyser
-import perceval.lib.phys as phys
-import perceval.lib.symb as symb
+import perceval.components.base_components as comp
 import sympy as sp
 import numpy as np
 
@@ -36,7 +35,7 @@ def strip_line_12(s: str) -> str:
 
 
 def test_helloword():
-    c = symb.BS()
+    c = comp.SimpleBS()
     assert c.m == 2
     definition = c.definition()
     assert strip_line_12(pdisplay_matrix(definition)) == strip_line_12("""
@@ -100,14 +99,14 @@ def test_empty_circuit():
 def test_sbs_definition():
     phi = P("phi")
     theta = P("theta")
-    bs = symb.BS(theta=theta, phi=phi)
+    bs = comp.SimpleBS(theta=theta, phi=phi)
     assert strip_line_12(pdisplay_matrix(bs.compute_unitary(use_symbolic=True))) == strip_line_12("""
             ⎡cos(theta)               I*exp(-I*phi)*sin(theta)⎤
             ⎣I*exp(I*phi)*sin(theta)  cos(theta)              ⎦""")
 
 
 def test_sbs():
-    bs = symb.BS()
+    bs = comp.SimpleBS()
     assert pdisplay_matrix(bs.U) == "⎡sqrt(2)/2    sqrt(2)*I/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2  ⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -134,7 +133,7 @@ def test_sbs():
 
 
 def test_sbs_0():
-    bs = symb.BS(R=1)
+    bs = comp.SimpleBS(R=1)
     assert pdisplay_matrix(bs.U) == "⎡1  0⎤\n⎣0  1⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -145,7 +144,7 @@ def test_sbs_0():
 
 
 def test_sbs_1():
-    bs = symb.BS(R=0)
+    bs = comp.SimpleBS(R=0)
     assert pdisplay_matrix(bs.U) == "⎡0  I⎤\n⎣I  0⎦"
     for backend in ["SLOS", "Naive"]:
         simulator_backend = BackendFactory().get_backend(backend)
@@ -157,7 +156,7 @@ def test_sbs_1():
 
 def test_parameter():
     r = P("r")
-    bs = symb.BS(R=r)
+    bs = comp.SimpleBS(R=r)
     try:
         bs.compute_unitary(use_symbolic=False)
     except TypeError:
@@ -171,14 +170,14 @@ def test_parameter():
 
 def test_double_parameter_ok():
     phi1 = P("phi")
-    phys.BS(phi_a=phi1, phi_b=phi1)
+    comp.GenericBS(phi_a=phi1, phi_b=phi1)
 
 
 def test_double_parameter_dup():
     phi1 = P("phi")
     phi2 = P("phi")
     try:
-        phys.BS(phi_a=phi1, phi_b=phi2)
+        comp.GenericBS(phi_a=phi1, phi_b=phi2)
     except RuntimeError:
         pass
     else:
@@ -189,7 +188,7 @@ def test_double_parameter_dup_multi():
     phi1 = P("phi")
     phi2 = P("phi")
     try:
-        symb.BS(phi=phi1) // symb.BS(phi=phi2)
+        comp.SimpleBS(phi=phi1) // comp.SimpleBS(phi=phi2)
     except RuntimeError:
         pass
     else:
@@ -197,43 +196,43 @@ def test_double_parameter_dup_multi():
 
 
 def test_build_composition():
-    a = symb.BS()
-    b = symb.BS()
+    a = comp.SimpleBS()
+    b = comp.SimpleBS()
     c = a // b
     assert pdisplay_matrix(c.U) == "⎡0  I⎤\n⎣I  0⎦"
 
 
 def test_build_composition_2():
-    c = symb.BS() // phys.PS(phi=sp.pi/2)
+    c = comp.SimpleBS() // comp.PS(phi=sp.pi/2)
     assert pdisplay_matrix(c.U) == "⎡sqrt(2)*I/2  -sqrt(2)/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2 ⎦"
 
 
 def test_build_composition_3():
-    c = symb.BS() // (0, phys.PS(phi=sp.pi/2))
+    c = comp.SimpleBS() // (0, comp.PS(phi=sp.pi/2))
     assert pdisplay_matrix(c.U) == "⎡sqrt(2)*I/2  -sqrt(2)/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2 ⎦"
 
 
 def test_build_composition_4():
-    c = symb.BS() // (1, phys.PS(phi=sp.pi/2))
+    c = comp.SimpleBS() // (1, comp.PS(phi=sp.pi/2))
     assert pdisplay_matrix(c.U) == "⎡sqrt(2)/2   sqrt(2)*I/2⎤\n⎣-sqrt(2)/2  sqrt(2)*I/2⎦"
 
 
 def test_invalid_ifloor():
     with pytest.raises(AssertionError):
-        phys.BS() // (1, phys.BS())  # invalid ifloor should fail
+        comp.GenericBS() // (1, comp.GenericBS())  # invalid ifloor should fail
 
 
 def test_unitary_component():
     non_unitary_matrix = Matrix([[1, 2], [3, 4]])
     with pytest.raises(AssertionError):
-        phys.Unitary(non_unitary_matrix)
+        comp.Unitary(non_unitary_matrix)
 
     odd_size_matrix = Matrix.random_unitary(5)
     with pytest.raises(AssertionError):
         # In case the unitary component is polarized, the unitary matrix size must be even
-        phys.Unitary(odd_size_matrix, use_polarization=True)
+        comp.Unitary(odd_size_matrix, use_polarization=True)
 
-    unitary = phys.Unitary(odd_size_matrix)
+    unitary = comp.Unitary(odd_size_matrix)
     assert (unitary.U == odd_size_matrix).all()
 
 
@@ -243,9 +242,9 @@ def test_unitary_inverse():
     inverted circuit. The resulting circuit has to be equivalent to the input circuit.
     """
     size = 4
-    perm_tester = symb.PERM(list(range(size-1, -1, -1)))
-    input_component = symb.Unitary(Matrix.random_unitary(size))
-    inverted_component = symb.Unitary(input_component.U)
+    perm_tester = comp.PERM(list(range(size-1, -1, -1)))
+    input_component = comp.Unitary(Matrix.random_unitary(size))
+    inverted_component = comp.Unitary(input_component.U)
     inverted_component.inverse(v=True)
     test_circuit = Circuit(size)\
         .add(0, perm_tester)\
@@ -254,8 +253,8 @@ def test_unitary_inverse():
     assert np.array_equal(input_component.U, test_circuit.U)
 
     # Test v and h inversion interaction (the order should have no impact on the result)
-    u1 = symb.Unitary(Matrix.random_unitary(size))
-    u2 = symb.Unitary(U=u1.U)
+    u1 = comp.Unitary(Matrix.random_unitary(size))
+    u2 = comp.Unitary(U=u1.U)
     u1.inverse(h=True)
     u1.inverse(v=True)
     u2.inverse(v=True)
@@ -264,7 +263,7 @@ def test_unitary_inverse():
 
 
 def _gen_phys_bs(i: int):
-    return phys.BS(R=P("R%d" % i))
+    return comp.GenericBS(R=P("R%d" % i))
 
 
 # noinspection PyTypeChecker
@@ -281,11 +280,11 @@ def test_iterator():
     c = Circuit(3)
     comps = [(0, 1), (1, 2), (0, 1)]
     for k in range(len(comps)):
-        c.add(comps[k], phys.BS(R=1/(k+1)))
+        c.add(comps[k], comp.GenericBS(R=1/(k+1)))
 
     d = Circuit(4)
     d.add((0, 1, 2), c, merge=False)
-    d.add((2, 3), phys.BS(R=1/4))
+    d.add((2, 3), comp.GenericBS(R=1/4))
     comps.append((2, 3))
 
     l_comp = list(d.__iter__())
@@ -296,16 +295,16 @@ def test_iterator():
 
 
 def test_evolve():
-    c = phys.BS()
+    c = comp.GenericBS()
     for backend_name in ["SLOS", "Naive"]:
         simulator = BackendFactory().get_backend(backend_name)(c)
         assert str(simulator.evolve(BasicState("|1,0>"))) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
 
 
 def _generate_simple_circuit():
-    return (phys.Unitary(U=Matrix.random_unitary(3), name="U1")
-            // (0, phys.PS(sp.pi / 2))
-            // phys.Unitary(U=Matrix.random_unitary(3), name="U2"))
+    return (comp.Unitary(U=Matrix.random_unitary(3), name="U1")
+            // (0, comp.PS(sp.pi / 2))
+            // comp.Unitary(U=Matrix.random_unitary(3), name="U2"))
 
 
 def test_visualization_ucircuit(capfd):
@@ -329,23 +328,23 @@ TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 
 def test_depths_ncomponents():
-    assert phys.PS(0).depths() == [1]
-    assert phys.PS(0).ncomponents() == 1
+    assert comp.PS(0).depths() == [1]
+    assert comp.PS(0).ncomponents() == 1
     c = _generate_simple_circuit()
     assert c.depths() == [3, 2, 2]
     assert c.ncomponents() == 3
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
         M = Matrix(f)
         ub = (Circuit(2)
-              // symb.BS()
-              // (0, symb.PS(phi=P("φ_a")))
-              // symb.BS()
-              // (0, symb.PS(phi=P("φ_b"))))
+              // comp.SimpleBS()
+              // (0, comp.PS(phi=P("φ_a")))
+              // comp.SimpleBS()
+              // (0, comp.PS(phi=P("φ_b"))))
         C1 = Circuit.decomposition(M, ub, shape="triangle")
         assert C1 is not None and C1.depths() == [28, 38, 32, 26, 20, 14, 8, 2]
         assert C1.ncomponents() == 112
 
 
 def test_reflexivity():
-    c = phys.BS(R=1/3)
+    c = comp.GenericBS(R=1/3)
     assert pytest.approx(c.compute_unitary(use_symbolic=False)[0, 0]) == np.sqrt(1/3)
