@@ -43,11 +43,11 @@ def test_perm_0():
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, phase_shifter_fn=symb.PS, shape="triangle",
                                     permutation=symb.PERM)
     assert c1.describe().replace("\n", "").replace(" ", "") == """
-        Circuit(4).add([0, 1], symb.PERM([1, 0]))
-                  .add([1, 2], symb.PERM([1, 0]))
-                  .add([2, 3], symb.PERM([1, 0]))
-                  .add([1, 2], symb.PERM([1, 0]))
-                  .add([0, 1], symb.PERM([1, 0]))""".replace("\n", "").replace(" ", "")
+        Circuit(4).add([0, 1], PERM([1, 0]))
+                  .add([1, 2], PERM([1, 0]))
+                  .add([2, 3], PERM([1, 0]))
+                  .add([1, 2], PERM([1, 0]))
+                  .add([0, 1], PERM([1, 0]))""".replace("\n", "").replace(" ", "")
 
 
 def test_basic_perm_triangle():

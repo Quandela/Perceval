@@ -22,10 +22,8 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import Circuit
+from perceval.components import Circuit, base_components as cp
 from perceval.rendering.circuit.abstract_skin import ASkin
-import perceval.lib.symb as symb
-import perceval.lib.phys as phys
 
 
 class SymbSkin(ASkin):
@@ -35,76 +33,56 @@ class SymbSkin(ASkin):
                             "fill": "white",
                             "stroke_style": {"stroke": "black", "stroke_width": 1}}
 
-    @dispatch((Circuit, symb.Unitary, phys.Unitary))
+    @dispatch((Circuit, cp.Unitary))
     def get_width(self, c) -> int:
         return c.m
 
-    @dispatch((symb.BS, symb.PBS))
+    @dispatch((cp.SimpleBS, cp.GenericBS, cp.PBS))
     def get_width(self, c) -> int:
         w = 1 if self._compact else 2
         return w
 
-    @dispatch((phys.BS, phys.PBS))
-    def get_width(self, c) -> int:
-        return 2
-
-    @dispatch((symb.PS, phys.PS))
+    @dispatch((cp.PS, cp.TD, cp.PERM, cp.WP, cp.PR))
     def get_width(self, c) -> int:
         return 1
 
-    @dispatch((symb.TD, phys.TD))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.PERM, phys.PERM))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.WP, phys.WP))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch((symb.PR, phys.PR))
-    def get_width(self, c) -> int:
-        return 1
-
-    @dispatch(symb.BS)
+    @dispatch((cp.SimpleBS, cp.GenericBS))
     def get_shape(self, c):
         return self.bs_shape
 
-    @dispatch(symb.PS)
+    @dispatch(cp.PS)
     def get_shape(self, c):
         return self.ps_shape
 
-    @dispatch(symb.PBS)
+    @dispatch(cp.PBS)
     def get_shape(self, c):
         return self.pbs_shape
 
-    @dispatch(symb.TD)
+    @dispatch(cp.TD)
     def get_shape(self, c):
         return self.td_shape
 
-    @dispatch(symb.Unitary)
+    @dispatch(cp.Unitary)
     def get_shape(self, c):
         return self.unitary_shape
 
-    @dispatch(symb.PERM)
+    @dispatch(cp.PERM)
     def get_shape(self, c):
         return self.perm_shape
 
-    @dispatch(symb.WP)
+    @dispatch(cp.WP)
     def get_shape(self, c):
         return self.wp_shape
 
-    @dispatch(symb.HWP)
+    @dispatch(cp.HWP)
     def get_shape(self, c):
         return self.hwp_shape
 
-    @dispatch(symb.QWP)
+    @dispatch(cp.QWP)
     def get_shape(self, c):
         return self.qwp_shape
 
-    @dispatch(symb.PR)
+    @dispatch(cp.PR)
     def get_shape(self, c):
         return self.pr_shape
 
