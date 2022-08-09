@@ -94,8 +94,13 @@ class PhysSkin(ASkin):
         canvas.add_text((50, 80+5*bottom_nline), '\n'.join(bottom_content_list).replace('phi_', 'Φ_'),
                         size=bottom_size, ta="middle")
         canvas.add_text((50, 26), head_content.replace('theta=', 'Θ='), size=7, ta="middle")
-        if hasattr(circuit, '_phi_b') and circuit._phi_b.defined:
+        # Choose the side of the gray rectangle in beam splitter representation
+        m = None
+        if hasattr(circuit, '_phi_b') and circuit._phi_b.defined:  # GenericBS
             m = round(abs(float(circuit._phi_b.spv/sp.pi)))
+        elif hasattr(circuit, '_phi') and circuit._phi.defined:  # SimpleBS
+            m = round(abs(float(circuit._phi.spv/sp.pi)))
+        if m is not None:
             if (m + 1) % 2:
                 canvas.add_rect((25, 43), 50, 4, fill="lightgray")
             else:
