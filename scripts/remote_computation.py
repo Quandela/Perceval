@@ -35,11 +35,11 @@ cnot.add((3, 4), phys.BS(R=1 / 2))
 # pcvl.pdisplay(cnot)
 
 
-simulator_backend = pcvl.get_platform('local').get_backend("Naive")
-s_cnot = simulator_backend(cnot.U)
-result = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 5)
+# simulator_backend = pcvl.get_platform('local').get_backend("Naive")
+# s_cnot = simulator_backend(cnot.U)
+# result = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 5)
 
-credentials = pcvl.RemoteCredentials(url="http://127.0.0.1:5000")
+credentials = pcvl.RemoteCredentials(url="http://127.0.0.1:5000", token='testing_qrng')
 simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
 s_cnot = simulator_backend(cnot.U)
 

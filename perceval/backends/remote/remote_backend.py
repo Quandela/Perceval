@@ -38,7 +38,7 @@ from perceval.utils import Matrix
 from pkg_resources import get_distribution
 pcvl_version = get_distribution("perceval-quandela").version
 
-JOB_CREATE_ENDPOINT = '/job/create'
+JOB_CREATE_ENDPOINT = '/api/job'
 
 
 class RemoteBackendBuilder:
