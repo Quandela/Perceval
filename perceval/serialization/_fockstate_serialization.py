@@ -21,9 +21,10 @@
 # SOFTWARE.
 
 from perceval.utils.statevector import BasicState, AnnotatedBasicState
+from typing import Union
 
 
-def serialize_state(state: AnnotatedBasicState | BasicState):
+def serialize_state(state: Union[AnnotatedBasicState, BasicState]):
     return str(state)
 
 
