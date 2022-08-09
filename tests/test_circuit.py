@@ -25,6 +25,7 @@ from pathlib import Path
 
 from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyser
+from perceval.rendering.format import Format
 import perceval.components.base_components as comp
 import sympy as sp
 import numpy as np
@@ -309,7 +310,7 @@ def _generate_simple_circuit():
 
 def test_visualization_ucircuit(capfd):
     c = _generate_simple_circuit()
-    pdisplay(c, output_format="text")
+    pdisplay(c, output_format=Format.TEXT)
     out, err = capfd.readouterr()
     assert out.strip() == """
     ╭─────╮╭───────────╮╭─────╮

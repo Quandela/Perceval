@@ -21,3 +21,4 @@
 # SOFTWARE.
 
 from .pdisplay import pdisplay, pdisplay_to_file
+from .format import Format

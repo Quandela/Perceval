@@ -23,6 +23,7 @@
 from abc import ABC, abstractmethod
 import math
 import sys
+from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, DynamicSVGCanvas, StandardSVGCanvas
 from perceval.components import ACircuit, Circuit
 from perceval.utils.format import format_parameters
@@ -376,14 +377,14 @@ class CanvasRenderer(ICircuitRenderer):
         return self._canvas.draw()
 
 
-def create_renderer(n, output_format="text", skin=None, **opts) -> ICircuitRenderer:
-    if output_format == "text":
+def create_renderer(n, output_format: Format = Format.TEXT, skin=None, **opts) -> ICircuitRenderer:
+    if output_format == Format.TEXT:
         return TextRenderer(n)
-    if output_format == "latex":
+    if output_format == Format.LATEX:
         raise NotImplementedError("latex format not yet supported")
 
     assert skin is not None, "A skin must be selected for graphical display"
-    if output_format == "html" or output_format == "png":
+    if output_format == Format.HTML:
         # DynamicSVGCanvas is used only if drawSvg was imported beforehand
         if 'drawSvg' in sys.modules:
             canvas = DynamicSVGCanvas(**opts)

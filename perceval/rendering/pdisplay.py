@@ -23,7 +23,6 @@
 import os
 import sys
 import warnings
-from typing import Literal
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -33,7 +32,8 @@ from perceval.rendering.circuit import get_selected_skin, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
-from perceval.utils.statevector import StateVector
+from perceval.utils.statevector import StateVector, SVDistribution
+from .format import Format
 
 
 in_notebook = False
@@ -53,7 +53,7 @@ except AttributeError:
 def pdisplay_circuit(
         circuit: ACircuit,
         map_param_kid: dict = None,
-        output_format: Literal["text", "html", "mplot", "latex"] = "text",
+        output_format: Format = Format.TEXT,
         recursive: bool = False,
         compact: bool = False,
         precision: float = 1e-6,
@@ -74,7 +74,7 @@ def pdisplay_circuit(
 
 def pdisplay_processor(processor: Processor,
                        map_param_kid: dict = None,
-                       output_format: Literal["text", "html", "mplot", "latex"] = "text",
+                       output_format: Format = Format.TEXT,
                        recursive: bool = False,
                        compact: bool = False,
                        precision: float = 1e-6,
@@ -141,12 +141,9 @@ def pdisplay_processor(processor: Processor,
     return renderer.draw()
 
 
-def pdisplay_matrix(matrix, precision: float = None, output_format: Literal["text", "mplot", "html", "latex"] = "text") -> str:
-    """Generates representation of the matrix
-
-    :param precision:
-    :param output_format:
-    :return:
+def pdisplay_matrix(matrix, precision: float = None, output_format: Format = Format.TEXT) -> str:
+    """
+    Generates representation of the matrix
     """
     def simp(value):
         if isinstance(value, complex) or isinstance(value, int) or isinstance(value, float) or\
@@ -155,8 +152,8 @@ def pdisplay_matrix(matrix, precision: float = None, output_format: Literal["tex
         else:
             return value.__repr__()
 
-    if output_format != "text":
-        marker = output_format == "html" and "$" or ""
+    if output_format != Format.TEXT:
+        marker = output_format == Format.HTML and "$" or ""
         if isinstance(matrix, sp.Matrix):
             return marker+sp.latex(matrix)+marker
         rows = []
@@ -180,7 +177,15 @@ def pdisplay_matrix(matrix, precision: float = None, output_format: Literal["tex
         return (mlstr(left_bracket)+s+right_bracket)._s
 
 
-def pdisplay_analyser(analyser, output_format="text", nsimplify=True, precision=1e-6):
+_TABULATE_FMT_MAPPING = {
+    Format.TEXT: 'pretty',
+    Format.MPLOT: 'pretty',
+    Format.HTML: 'html',
+    Format.LATEX: 'latex'
+}
+
+
+def pdisplay_analyser(analyser, output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6):
     distribution = analyser.distribution
     d = []
     for iidx, _ in enumerate(analyser.input_states_list):
@@ -188,10 +193,10 @@ def pdisplay_analyser(analyser, output_format="text", nsimplify=True, precision=
                   for f in list(distribution[iidx])])
     return tabulate(d, headers=[analyser._mapping.get(o, str(o)) for o in analyser.output_states_list],
                     showindex=[analyser._mapping.get(i, str(i)) for i in analyser.input_states_list],
-                    tablefmt=output_format == "text" and "pretty" or output_format)
+                    tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_statevector(sv, output_format="text", n_simplify=True, precision=1e-6, max_v=None, sort=True):
+def pdisplay_statevector(sv, output_format: Format = Format.TEXT, n_simplify=True, precision=1e-6, max_v=None, sort=True):
     if sort:
         the_keys = sorted(sv.keys(), key=lambda a: -sv[a])
     else:
@@ -205,8 +210,7 @@ def pdisplay_statevector(sv, output_format="text", n_simplify=True, precision=1e
         else:
             d.append([k, simple_float(sv[k], nsimplify=n_simplify, precision=precision)[1]])
 
-    s_states = tabulate(d, headers=["state ", "probability"],
-                        tablefmt=output_format == "text" and "pretty" or output_format)
+    s_states = tabulate(d, headers=["state ", "probability"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
 
@@ -235,7 +239,7 @@ def _pdisplay(circuit_analyser, **kwargs):
     return pdisplay_analyser(circuit_analyser, **kwargs)
 
 
-@dispatch(StateVector)
+@dispatch((StateVector, SVDistribution))
 def _pdisplay(statevector, **kwargs):
     return pdisplay_statevector(statevector, **kwargs)
 
@@ -245,14 +249,13 @@ def _default_output_format(o):
     Deduces the best output format given the nature of the data to be displayed and the execution context
     """
     if in_notebook:
-        return "html"
-    elif in_pycharm_or_spyder \
-            and (isinstance(o, ACircuit) or isinstance(o, Processor)):
-        return "mplot"
-    return "text"
+        return Format.HTML
+    elif in_pycharm_or_spyder and (isinstance(o, ACircuit) or isinstance(o, Processor)):
+        return Format.MPLOT
+    return Format.TEXT
 
 
-def pdisplay(o, output_format=None, **opts):
+def pdisplay(o, output_format: Format = None, **opts):
     if output_format is None:
         output_format = _default_output_format(o)
     res = _pdisplay(o, output_format=output_format, **opts)
@@ -271,26 +274,26 @@ def pdisplay(o, output_format=None, **opts):
         import drawSvg
         if isinstance(res, drawSvg.Drawing):
             return res
-    elif in_notebook and output_format != "text":
+    elif in_notebook and output_format != Format.TEXT:
         display(HTML(res))
     else:
         print(res)
 
 
-def pdisplay_to_file(o, path: str, output_format=None, **opts):
+def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
     if output_format is None:
-        output_format = "mplot"
-    if output_format == "mplot":
+        output_format = Format.MPLOT
+    if output_format == Format.MPLOT:
         opts['mplot_savefig'] = path
         opts['mplot_noshow'] = True
     res = _pdisplay(o, output_format=output_format, **opts)
     if res is None:
         raise RuntimeError("pdisplay_to_file not defined for type %s" % type(o))
 
-    if output_format == 'mplot':
+    if output_format == Format.MPLOT:
         return  # File was generated by the _pdisplay call
 
-    if output_format == 'text':
+    if output_format == Format.TEXT:
         with open(path, 'w', encoding='utf-8') as f_out:
             f_out.write(res)
         return

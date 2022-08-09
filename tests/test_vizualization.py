@@ -21,15 +21,17 @@
 # SOFTWARE.
 
 import sys
+from typing import Type
+
 import pytest
 
 import perceval as pcvl
 from perceval.components.base_components import *
-from perceval.rendering.pdisplay import pdisplay_to_file
+from perceval.rendering import pdisplay_to_file, Format
 from pathlib import Path
 import re
 import sympy as sp
-from perceval.rendering.circuit import SymbSkin, PhysSkin
+from perceval.rendering.circuit import ASkin, SymbSkin, PhysSkin
 
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
@@ -66,10 +68,11 @@ def _check_image(test_path, ref_path):
     return True, "ok"
 
 
-def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False, skin_type=PhysSkin):
+def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False,
+                   skin_type: Type[ASkin] = PhysSkin) -> None:
     img_path = TEST_IMG_DIR if save_figs else tmp_path / Path(circuit_name + ".svg")
     skin = skin_type(compact)
-    pdisplay_to_file(c, img_path, output_format="mplot", recursive=recursive, skin=skin)
+    pdisplay_to_file(c, img_path, output_format=Format.MPLOT, recursive=recursive, skin=skin)
 
     if save_figs:
         with open(img_path) as f_saved:
