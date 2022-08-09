@@ -29,7 +29,7 @@ __version__ = get_distribution("perceval-quandela").version
 from .components import *
 from .backends import *
 from .utils import *
-from .rendering import pdisplay
+from .rendering import pdisplay, pdisplay_to_file
 
 
 def register_plugin(name, silent=False):

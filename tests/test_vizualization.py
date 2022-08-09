@@ -25,6 +25,7 @@ import pytest
 
 import perceval as pcvl
 from perceval.components.base_components import *
+from perceval.rendering.pdisplay import pdisplay_to_file
 from pathlib import Path
 import re
 import sympy as sp
@@ -66,33 +67,18 @@ def _check_image(test_path, ref_path):
 
 
 def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False, skin_type=PhysSkin):
+    img_path = TEST_IMG_DIR if save_figs else tmp_path / Path(circuit_name + ".svg")
     skin = skin_type(compact)
-    from perceval.rendering.pdisplay import pdisplay_circuit
+    pdisplay_to_file(c, img_path, output_format="mplot", recursive=recursive, skin=skin)
+
     if save_figs:
-        pdisplay_circuit(
-            c,
-            output_format="mplot",
-            mplot_savefig=TEST_IMG_DIR / Path(circuit_name + ".svg"),
-            mplot_noshow=True,
-            recursive=recursive,
-            compact=compact,
-            skin=skin)
-        with open(TEST_IMG_DIR / Path(circuit_name + ".svg")) as f_saved:
+        with open(img_path) as f_saved:
             saved = "".join(f_saved.readlines())
         saved = _norm(saved)
-        with open(TEST_IMG_DIR / Path(circuit_name + ".svg"), "w") as fw_saved:
+        with open(img_path, "w") as fw_saved:
             fw_saved.write(saved)
     else:
-        pdisplay_circuit(
-            c,
-            output_format="mplot",
-            mplot_savefig=tmp_path / Path(circuit_name + ".svg"),
-            mplot_noshow=True,
-            recursive=recursive,
-            compact=compact,
-            skin=skin)
-        ok, msg = _check_image(tmp_path / Path(circuit_name + ".svg"),
-                               TEST_IMG_DIR / Path(circuit_name + ".svg"))
+        ok, msg = _check_image(img_path, TEST_IMG_DIR / Path(circuit_name + ".svg"))
         assert ok, msg
 
 
