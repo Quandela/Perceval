@@ -64,7 +64,6 @@ class ICircuitRenderer(ABC):
                     self.append_circuit(shiftr, c, description)
 
         self.extend_pos(0, circuit.m - 1)
-        self.close()
 
     @abstractmethod
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):

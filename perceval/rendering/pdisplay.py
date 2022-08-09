@@ -68,6 +68,7 @@ def pdisplay_circuit(
     if map_param_kid is None:
         map_param_kid = circuit.map_parameters()
     renderer.render_circuit(circuit, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
+    renderer.close()
     renderer.add_mode_index()
     return renderer.draw()
 
@@ -97,6 +98,8 @@ def pdisplay_processor(processor: Processor,
                             recursive=recursive,
                             precision=precision,
                             nsimplify=nsimplify)
+    renderer.close()
+
     herald_num = 0
     incr_herald_num = False
     for k in range(n_modes):
