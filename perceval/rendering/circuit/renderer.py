@@ -302,14 +302,14 @@ class CanvasRenderer(ICircuitRenderer):
             self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
 
     def add_out_port(self, n_mode, content, **opts):
-        max_pos = self.extend_pos(0, self._nsize - 1)
+        max_pos = max(self._chart[0:self._nsize])
         self._canvas.set_offset((CanvasRenderer.affix_all_size + 50*max_pos, 50*n_mode),
-                                CanvasRenderer.affix_all_size, 50*(n_mode + 1))
+                                CanvasRenderer.affix_all_size, 50)
         self._canvas.add_shape(self._skin.detector_shape, None, content, **opts)
 
     def add_in_port(self, n_mode, content, **opts):
         self._canvas.set_offset((0, 50*n_mode),
-                                CanvasRenderer.affix_all_size, 50*(n_mode + 1))
+                                CanvasRenderer.affix_all_size, 50)
         self._canvas.add_shape(self._skin.source_shape, None, content, **opts)
 
     def open_subblock(self, lines, name, size, color=None):
