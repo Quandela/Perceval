@@ -31,7 +31,7 @@ JOB_RESULT_ENDPOINT = '/api/job/result/'
 
 
 class Job(ABC):
-    def __init__(self, uuid: Union[UUID | str] = None, credentials: RemoteCredentials = None):
+    def __init__(self, uuid: Union[UUID, str] = None, credentials: RemoteCredentials = None):
         if uuid is None:
             self.id = uuid4()
         elif isinstance(uuid, str):
