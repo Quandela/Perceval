@@ -24,41 +24,44 @@ import perceval as pcvl
 import perceval.lib.phys as phys
 import sympy as sp
 import numpy as np
-
+import time
 
 cnot = phys.Circuit(6, name="Ralph CNOT")
-cnot.add((0, 1), phys.BS(R=1/3, phi_b=sp.pi, phi_d=0))
-cnot.add((3, 4), phys.BS(R=1/2))
-cnot.add((2, 3), phys.BS(R=1/3, phi_b=sp.pi, phi_d=0))
-cnot.add((4, 5), phys.BS(R=1/3))
-cnot.add((3, 4), phys.BS(R=1/2))
-#pcvl.pdisplay(cnot)
+cnot.add((0, 1), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
+cnot.add((3, 4), phys.BS(R=1 / 2))
+cnot.add((2, 3), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
+cnot.add((4, 5), phys.BS(R=1 / 3))
+cnot.add((3, 4), phys.BS(R=1 / 2))
+# pcvl.pdisplay(cnot)
 
 
-credentials = pcvl.RemoteCredentials(url="localhost:5000")
+simulator_backend = pcvl.get_platform('local').get_backend("Naive")
+s_cnot = simulator_backend(cnot.U)
+result = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 5)
 
+credentials = pcvl.RemoteCredentials(url="http://127.0.0.1:5000")
 simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
 s_cnot = simulator_backend(cnot.U)
 
+job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10)
 
-states = {
-    pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
-    pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
-    pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
-    pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
-}
-
-
-job = s_cnot.sample(states, 1000000)
-
-while (job.get_status != 'complete'):
-    sleep(10)
+job_status = 'created'
+while (job_status != 'completed'):
+    print(f'job status : {job_status}')
+    time.sleep(2)
+    job_status = job.get_status()
 
 result = job.get_results()
-
-
-
-ca = pcvl.CircuitAnalyser(s_cnot, states)
-ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-pcvl.pdisplay(ca)
-print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))
+print(f'Result of sample : {result}')
+#
+# states = {
+#     pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
+#     pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
+#     pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
+#     pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
+# }
+#
+# ca = pcvl.CircuitAnalyser(s_cnot, states)
+# ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+# pcvl.pdisplay(ca)
+# print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))

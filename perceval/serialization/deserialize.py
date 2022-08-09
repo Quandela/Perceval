@@ -28,7 +28,7 @@ from perceval.utils import Matrix
 from perceval.serialization import _matrix_serialization
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
-
+from base64 import b64decode
 
 def deserialize_matrix(pb_mat: str | bytes | pb.Matrix) -> Matrix:
     if not isinstance(pb_mat, pb.Matrix):
@@ -103,3 +103,7 @@ class CircuitBuilder:
 
     def retrieve(self):
         return self._circuit
+
+
+def jsonstring_to_bytes(var):
+    return b64decode(var)

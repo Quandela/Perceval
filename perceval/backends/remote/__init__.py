@@ -21,5 +21,5 @@
 # SOFTWARE.
 
 from .credentials import RemoteCredentials
-from .remote_backend import RemoteBackend
+from .remote_backend import RemoteBackend, RemoteBackendBuilder
 from .remote_jobs import Job

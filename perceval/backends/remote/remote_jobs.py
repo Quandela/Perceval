@@ -25,8 +25,8 @@ from uuid import UUID, uuid4
 from .credentials import RemoteCredentials
 import requests
 
-JOB_STATUS_ENDPOINT = '/api/1.0/job'
-JOB_RESULT_ENDPOINT = '/api/1.0/job/result'
+JOB_STATUS_ENDPOINT = '/job/status/'
+JOB_RESULT_ENDPOINT = '/job/result/'
 
 
 class Job(ABC):
@@ -46,19 +46,25 @@ class Job(ABC):
 
         self.__credentials = credentials
 
-    def is_completed(self):
+    def get_status(self):
         if self.__credentials is None:
             raise TypeError
 
-        endpoint = self.__credentials.build_endpoint(JOB_STATUS_ENDPOINT)
-        res = requests.get(endpoint, headers=self.__credentials.http_headers())
+        try:
+            endpoint = self.__credentials.build_endpoint(JOB_STATUS_ENDPOINT) + str(self.id)
+            headers = self.__credentials.http_headers()
+            res = requests.get(endpoint, headers=headers)
+            json = res.json()
+            return json['status'], json['msg']
+        except Exception as e:
+            return 'error', str(e)
 
-        json = res.json()
-        if hasattr(json, 'status') and json['status'] == 'completed':
+    def is_completed(self):
+        status = self.get_status()
+        if status == 'completed':
             return True
 
         return False
-
 
     def result(self):
         return "ok"

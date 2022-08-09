@@ -27,6 +27,7 @@ from ._circuit_serialization import serialize_circuit
 from ._fockstate_serialization import serialize_state
 from perceval.components import ACircuit
 from perceval.utils import Matrix, AnnotatedBasicState, BasicState
+from base64 import b64encode
 
 
 @dispatch(ACircuit)
@@ -48,3 +49,7 @@ def serialize_to_file(obj, filepath: str) -> None:
     serial_repr = serialize(obj)
     with open(filepath, mode="wb") as f:
         f.write(serial_repr)
+
+
+def bytes_to_jsonstring(var):
+    return b64encode(var).decode('utf-8')

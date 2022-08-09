@@ -23,6 +23,7 @@
 import logging
 import time
 from json import JSONDecodeError
+from typing import Union
 
 import requests
 
@@ -30,41 +31,87 @@ from ..template import AbstractBackend
 from .credentials import RemoteCredentials
 from .remote_jobs import Job
 
-from perceval.serialization import serialize
+from perceval.serialization import serialize, bytes_to_jsonstring
+from perceval.components import ACircuit
+from perceval.utils import Matrix
+
+from pkg_resources import get_distribution
+pcvl_version = get_distribution("perceval-quandela").version
+
+JOB_CREATE_ENDPOINT = '/job/create'
 
 
-SAMPLE_ENDPOINT = '/api/1.0/backend/sample'
+class RemoteBackendBuilder:
+    def __init__(self, name: str, platform: str, credentials: RemoteCredentials):
+        self.name = name
+        self.platform = platform
+        self.credentials = credentials
+
+    def __call__(self, u, use_symbolic=None, n=None, mask=None):
+        return RemoteBackend(self.name, self.platform, self.credentials, u, use_symbolic, n, mask)
 
 
 class RemoteBackend(AbstractBackend):
-    def __init__(self, name, credentials: RemoteCredentials):
+    def __init__(self, name: str, platform: str, credentials: RemoteCredentials, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None, mask=None):
         self.name = name
+        self.__platform = platform
         self.__credentials = credentials
+        if isinstance(cu, ACircuit):
+            self.__cu_key = 'circuit'
+        else:
+            self.__cu_key = 'unitary'
+        self.__cu_data = bytes_to_jsonstring(serialize(cu))
+
+    def __defaults_payload(self, command):
+        return {
+            'platform': self.__platform,
+            'command': command,
+            'pcvl_version': pcvl_version
+        }
+
+    def __create_job_endpoint(self, body):
+        job = None
+        try:
+            endpoint = self.__credentials.build_endpoint(JOB_CREATE_ENDPOINT)
+            request = requests.post(endpoint,
+                                    headers=self.__credentials.http_headers(),
+                                    json=body)
+            request.raise_for_status()
+
+            json = request.json()
+            job = Job(json['id'], self.__credentials)
+        except ConnectionError as e:
+            logging.error(f"Connection error: {str(e)}")
+
+        except JSONDecodeError as ex:
+            logging.error(f"Could not load response :{ex.msg}")
+        return job
 
     def sample(self, input_state):
         job = self.async_sample(input_state)
         while True:
             if not job.is_completed():
-                time.sleep(1)
+                time.sleep(2)
             else:
                 return job.result()
 
     def async_sample(self, input_state):
-        body = {
+        payload = self.__defaults_payload('sample')
+        payload['data'] = {
             'backend_name': self.name,
-            'input_states': serialize(input_state)
+            self.__cu_key: self.__cu_data,
+            'input_state': serialize(input_state)
         }
 
-        endpoint = self.__credentials.build_endpoint(SAMPLE_ENDPOINT)
-        request = requests.post(endpoint,
-                                headers=self.__credentials.http_headers(), data=body)
-        request.raise_for_status()
+        return self.__create_job_endpoint(payload)
 
-        job = None
-        try:
-            json = request.json()
-            job = Job(json['job_id'], self.__credentials)
-        except JSONDecodeError as ex:
-            logging.error(f"Could not load response :{ex.msg}")
+    def async_samples(self, input_state, count):
+        payload = self.__defaults_payload('samples')
+        payload['data'] = {
+            'backend_name': self.name,
+            self.__cu_key: self.__cu_data,
+            'input_state': serialize(input_state),
+            'count': count
+        }
 
-        return job
+        return self.__create_job_endpoint(payload)

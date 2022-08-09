@@ -29,7 +29,7 @@ from .naive import NaiveBackend
 from .slos import SLOSBackend
 from .stepper import StepperBackend
 from .strawberryfields import SFBackend
-from .remote import RemoteCredentials, RemoteBackend
+from .remote import RemoteCredentials, RemoteBackendBuilder
 
 
 class Platform(ABC):
@@ -63,8 +63,9 @@ class LocalPlatform(Platform):
 
 
 class RemotePlatform(Platform):
-    def __init__(self, credentials: RemoteCredentials):
+    def __init__(self, name, credentials: RemoteCredentials):
         assert (hasattr(credentials, 'token'))
+        self.__name = name or 'simulator'
         self.__credentials = credentials
 
     def list_backend(self):
@@ -73,4 +74,4 @@ class RemotePlatform(Platform):
 
     def get_backend(self,
                     name: Union[str, None] = None) -> Type[AbstractBackend]:
-        return RemoteBackend(name, self.__credentials)
+        return RemoteBackendBuilder(name, self.__name, self.__credentials)

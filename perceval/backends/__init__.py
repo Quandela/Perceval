@@ -32,8 +32,12 @@ class BackendFactory(LocalPlatform):
     pass
 
 
-def get_platform(name_or_url: str | RemoteCredentials):
-    if name_or_url is None or name_or_url == "local":
+def get_platform(name: str, credentials: RemoteCredentials = None):
+    if isinstance(name, RemoteCredentials):
+        credentials = name
+        name = 'simulator'
+
+    if name is None or name == "local":
         return LocalPlatform()
     else:
-        return RemotePlatform(name_or_url)
+        return RemotePlatform(name, credentials)
