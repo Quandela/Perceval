@@ -20,10 +20,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.parameter import P
 from perceval.components import Circuit, PredefinedCircuit
-import perceval.lib.symb as symb
+from perceval.components.base_components import *
 
-c = Circuit(2) // symb.BS(theta=P("theta"), phi=P("phi")) // symb.PS(phi=P("phi_a")) // (1, symb.PS(phi=P("phi_b")))
 
-generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")
+c_cnot = (Circuit(6, name="PostProcessed CNOT")
+          .add((0, 1), GenericBS(R=1 / 3, phi_b=np.pi, phi_d=0))
+          .add((3, 4), GenericBS(R=1 / 2))
+          .add((2, 3), GenericBS(R=1 / 3, phi_b=np.pi, phi_d=0))
+          .add((4, 5), GenericBS(R=1 / 3))
+          .add((3, 4), GenericBS(R=1 / 2)))
+
+# With simple BS convention:
+# c_cnot = (Circuit(6, name="PostProcessed CNOT")
+#           .add((0, 1), SimpleBS(R=1 / 3, phi=np.pi))
+#           .add((3, 4), SimpleBS(R=1 / 2))
+#           .add((2, 3), SimpleBS(R=1 / 3, phi=np.pi))
+#           .add((4, 5), SimpleBS(R=1 / 3))
+#           .add((3, 4), SimpleBS(R=1 / 2)))
+
+
+def _post_process(s):
+    return (s[1] or s[2]) and (s[3] or s[4])
+
+
+postprocessed_cnot = PredefinedCircuit(c_cnot,
+                                       "postprocessed cnot",
+                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
+                                       heralds={0: 0, 5: 0},
+                                       post_select_fn=_post_process)

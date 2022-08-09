@@ -20,25 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
-
+from perceval.utils.parameter import P
 from perceval.components import Circuit, PredefinedCircuit
-import perceval.lib.symb as symb
+from perceval.components.base_components import *
 
-c_cnot = (Circuit(6, name="PostProcessed CNOT")
-              .add((0, 1), symb.BS(R=1 / 3, phi=np.pi))
-              .add((3, 4), symb.BS(R=1 / 2))
-              .add((2, 3), symb.BS(R=1 / 3, phi=np.pi))
-              .add((4, 5), symb.BS(R=1 / 3))
-              .add((3, 4), symb.BS(R=1 / 2)))
+c = Circuit(2) // GenericBS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
 
+# With simple BS convention:
+# c = SimpleBS(theta=P("theta"), phi=P("phi")) // PS(phi=P("phi_a")) // (1, PS(phi=P("phi_b")))
 
-def _post_process(s):
-    return (s[1] or s[2]) and (s[3] or s[4])
-
-
-postprocessed_cnot = PredefinedCircuit(c_cnot,
-                                       "postprocessed cnot",
-                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
-                                       heralds={0: 0, 5: 0},
-                                       post_select_fn=_post_process)
+generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")

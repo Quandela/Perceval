@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
-
 from perceval.components import Circuit, PredefinedCircuit
-import perceval.lib.symb as symb
+from perceval.components.base_components import *
 
 
 R1 = 0.228
@@ -31,21 +29,40 @@ R2 = 0.758
 
 
 c_hcnot = (Circuit(8, name="Heralded CNOT")
-               .add((0, 1, 2), symb.PERM([1, 2, 0]))
-               .add((4, 5), symb.BS())
-               .add((5, 6, 7), symb.PERM([1, 2, 0]))
-               .add((3, 4), symb.BS())
-               .add((2, 3), symb.BS(R=R1, phi=np.pi)).add(3, symb.PS(np.pi))
-               .add((4, 5), symb.BS(R=R1))
-               .add((3, 4), symb.BS())
-               .add((5, 6, 7), symb.PERM([2, 1, 0]))
-               .add((1, 2), symb.PERM([1, 0]))
-               .add((2, 3), symb.BS(R=R2))
-               .add((4, 5), symb.BS(R=R2, phi=np.pi)).add(5, symb.PS(np.pi))
-               .add((5, 6), symb.PERM([1, 0]))
-               .add((4, 5), symb.BS())
-               .add((0, 1, 2), symb.PERM([2, 1, 0])))
+           .add((0, 1, 2), PERM([1, 2, 0]))
+           .add((4, 5), GenericBS())
+           .add((5, 6, 7), PERM([1, 2, 0]))
+           .add((3, 4), GenericBS())
+           .add((2, 3), GenericBS(R=R1, phi_b=np.pi, phi_d=0))
+           .add((4, 5), GenericBS(R=R1))
+           .add((3, 4), GenericBS())
+           .add((5, 6, 7), PERM([2, 1, 0]))
+           .add((1, 2), PERM([1, 0]))
+           .add((2, 3), GenericBS(R=R2))
+           .add((4, 5), GenericBS(R=R2, phi_b=np.pi, phi_d=0))
+           .add((5, 6), PERM([1, 0]))
+           .add((4, 5), GenericBS())
+           .add((4, 5), PERM([1, 0]))
+           .add((0, 1, 2), PERM([2, 1, 0])))
 
+# With simple BS convention:
+# c_hcnot = (Circuit(8, name="Heralded CNOT")
+#            .add((0, 1, 2), PERM([1, 2, 0]))
+#            .add((4, 5), SimpleBS())
+#            .add((5, 6, 7), PERM([1, 2, 0]))
+#            .add((3, 4), SimpleBS())
+#            .add((2, 3), SimpleBS(R=R1, phi=np.pi))
+#            .add(3, PS(np.pi))
+#            .add((4, 5), SimpleBS(R=R1))
+#            .add((3, 4), SimpleBS())
+#            .add((5, 6, 7), PERM([2, 1, 0]))
+#            .add((1, 2), PERM([1, 0]))
+#            .add((2, 3), SimpleBS(R=R2))
+#            .add((4, 5), SimpleBS(R=R2, phi=np.pi))
+#            .add(5, PS(np.pi))
+#            .add((5, 6), PERM([1, 0]))
+#            .add((4, 5), SimpleBS())
+#            .add((0, 1, 2), PERM([2, 1, 0])))
 
 heralded_cnot = PredefinedCircuit(c_hcnot,
                                   "heralded cnot",
