@@ -140,7 +140,7 @@ class PhysSkin(ASkin):
         for i in range(m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.stroke_style)
         canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="gold")
-        canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit._name)
+        canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name)
 
     def perm_shape(self, circuit, canvas, content, **opts):
         for an_input, an_output in enumerate(circuit.perm_vector):

@@ -79,8 +79,8 @@ class ComponentSerializer:
         pb_umat = serialize_matrix(unitary.U)
         pb_unitary = pb.Unitary()
         pb_unitary.mat.CopyFrom(pb_umat)
-        if unitary._name != comp.Unitary._name:
-            pb_unitary.name = unitary._name
+        if unitary.name != comp.Unitary._name:
+            pb_unitary.name = unitary.name
         pb_unitary.use_polarization = unitary.requires_polarization
         self._pb.unitary.CopyFrom(pb_unitary)
 
@@ -131,8 +131,8 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
         circuit = Circuit(circuit.m).add(0, circuit)
 
     pb_circuit = pb.Circuit()
-    if circuit._name != Circuit._name:
-        pb_circuit.name = circuit._name
+    if circuit.name != Circuit._name:
+        pb_circuit.name = circuit.name
     pb_circuit.n_mode = circuit.m
     comp_serializer = ComponentSerializer()
     for r, c in circuit._components:

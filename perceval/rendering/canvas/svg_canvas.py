@@ -22,7 +22,6 @@
 
 from __future__ import annotations
 
-import sys
 from .canvas import Canvas
 
 
@@ -112,10 +111,11 @@ class DynamicSVGCanvas(Canvas):
 
     However, with drawSvg, it is possible to create dynamic svg graphics.
     """
-    def __init__(self, render_size=None, **opts):
+    def __init__(self, **opts):
         super().__init__(**opts, inverse_Y=True)
         self._draws = []
-        self._render_size = render_size
+        self._render_width = (opts["total_width"]+2)*50
+        self._render_height = (opts["total_height"])*50
         if 'group' in opts:
             self._group = opts['group']
 
@@ -190,11 +190,8 @@ class DynamicSVGCanvas(Canvas):
         if hasattr(self, "_group"):
             d = draw.Group(x=self._group[0], y=self._group[1])
         else:
-            d = draw.Drawing(self._maxx-self._miny, self._maxy-self._miny,
-                             origin=(self._minx, -self._maxy))
+            d = draw.Drawing(self._render_width, self._render_height,
+                             origin=(self._minx, -self._maxy+50))
         for dr in self._draws:
             d.append(dr)
-        if self._render_size is not None:
-            return d.setPixelScale(self._render_size)
-        else:
-            return d
+        return d.setPixelScale(1.5)

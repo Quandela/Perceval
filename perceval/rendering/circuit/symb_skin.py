@@ -156,7 +156,7 @@ class SymbSkin(ASkin):
              radius, radius, "l", 0, 6 * radius, "c", 0, 0, 0, radius, -radius, radius, "l", -6 * radius, 0, "c",
              -radius, 0, -radius, -radius, -radius, -radius, "l", 0, -6 * radius],
             **self.stroke_style, fill="lightyellow")
-        canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit._name)
+        canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
 
     def perm_shape(self, circuit, canvas, content, **opts):
         for an_input, an_output in enumerate(circuit.perm_vector):

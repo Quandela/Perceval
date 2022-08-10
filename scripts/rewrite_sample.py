@@ -78,6 +78,6 @@ while True:
         pattern.reset_parameters()
         rewrite.reset_parameters()
         start_pos = idx
-        print(pattern._name, res.fun, fidelity(u, a.compute_unitary(False)))
+        print(pattern.name, res.fun, fidelity(u, a.compute_unitary(False)))
     if not found_match:
         break

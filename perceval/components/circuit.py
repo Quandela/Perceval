@@ -55,7 +55,6 @@ class ACircuit(ABC):
     delay_circuit = False
     _supports_polarization = False
     _name = None
-    _color = None
 
     def __init__(self, m: int, params=None):
         if params is None:
@@ -190,6 +189,10 @@ class ACircuit(ABC):
     @property
     def m(self):
         return self._m
+
+    @property
+    def name(self):
+        return self._name
 
     def definition(self):
         params = {name: Parameter(name) for name in self._params.keys()}
@@ -393,7 +396,7 @@ class ACircuit(ABC):
     def match(self, pattern: ACircuit, pos: int = None,
               pattern_pos: int = None, match: Match = None, actual_pos = 0, actual_pattern_pos=0) -> Optional[Match]:
         # the component shape should match
-        if pattern._name == "CPLX" or self._m != pattern._m or pos is not None or pattern_pos is not None:
+        if pattern.name == "CPLX" or self._m != pattern._m or pos is not None or pattern_pos is not None:
             return None
         return ACircuit._match_unitary(self, pattern, match, actual_pos=actual_pos,
                                        actual_pattern_pos=actual_pattern_pos)
@@ -427,7 +430,7 @@ class Circuit(ACircuit):
     :param name: Name of the circuit
     """
     _name = "CPLX"
-    _fname = "Circuit"
+    _color = None  # A circuit can be given a background color when displayed as a subcircuit
 
     def __init__(self, m: int, name: str = None):
         assert m > 0, "invalid size"
@@ -456,7 +459,7 @@ class Circuit(ACircuit):
         cparams = ["%d" % self._m]
         if self._name != Circuit._name:
             cparams.append("name=%s" % self._name)
-        s = "%s(%s)" % (self._fname, ", ".join(cparams))
+        s = "Circuit(%s)" % (", ".join(cparams))
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         for r, c in self._components:
@@ -586,7 +589,7 @@ class Circuit(ACircuit):
                                fun_gen: Callable[[int], ACircuit],
                                shape: Literal["triangle", "rectangle"] = "rectangle",
                                depth: int = None,
-                               phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> ACircuit:
+                               phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> Circuit:
         r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
 
         :param m: number of modes
@@ -911,9 +914,3 @@ class Circuit(ACircuit):
             if match is None:
                 return None
         return match
-
-    def shape(self, _, canvas, compact: bool = False):
-        for i in range(self.m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
-        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
-        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)

@@ -70,7 +70,7 @@ def _check_image(test_path, ref_path):
 
 def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False,
                    skin_type: Type[ASkin] = PhysSkin) -> None:
-    img_path = TEST_IMG_DIR if save_figs else tmp_path / Path(circuit_name + ".svg")
+    img_path = (TEST_IMG_DIR if save_figs else tmp_path) / Path(circuit_name + ".svg")
     skin = skin_type(compact)
     pdisplay_to_file(c, img_path, output_format=Format.MPLOT, recursive=recursive, skin=skin)
 

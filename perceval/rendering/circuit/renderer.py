@@ -50,7 +50,7 @@ class ICircuitRenderer(ABC):
                 shiftr = [p+shift for p in r]
                 if c.is_composite() and c._components:
                     if recursive:
-                        self.open_subblock(r, c._name, self.get_circuit_size(c, recursive=True), c._color)
+                        self.open_subblock(r, c.name, self.get_circuit_size(c, recursive=True), c._color)
                         self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
                                             precision=precision, nsimplify=nsimplify)
                         self.close_subblock(r)
@@ -172,7 +172,7 @@ class TextRenderer(ICircuitRenderer):
         return None
 
     def append_subcircuit(self, lines, circuit, content):
-        self.open_subblock(lines, circuit._name)
+        self.open_subblock(lines, circuit.name)
         self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
         self.close_subblock(lines)
 
@@ -182,7 +182,7 @@ class TextRenderer(ICircuitRenderer):
         end = lines[-1]
         self.extend_pos(start, end)
         # put variables on the right number of lines
-        content = circuit._name + (content and "\n"+content or "")
+        content = circuit.name + (content and "\n"+content or "")
         lcontents = content.split("\n")
         if start == end:
             content = " ".join(lcontents)
@@ -360,7 +360,7 @@ class CanvasRenderer(ICircuitRenderer):
         max_pos = self.extend_pos(start, end)
         w = self._skin.style_subcircuit['width']
         self._canvas.set_offset((CanvasRenderer.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
-        self._canvas.add_shape(self._skin.subcircuit_shape, circuit, circuit._name)
+        self._canvas.add_shape(self._skin.subcircuit_shape, circuit, circuit.name)
         for i in range(start, end+1):
             self._chart[i] += w
 
