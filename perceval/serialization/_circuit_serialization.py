@@ -21,9 +21,9 @@
 # SOFTWARE.
 
 from multipledispatch import dispatch
-from perceval.serialization import _schema_circuit_pb2 as pb
 
-from perceval import ACircuit, Circuit
+from perceval.serialization import _schema_circuit_pb2 as pb
+from perceval.components import ACircuit, Circuit
 import perceval.components.base_components as comp
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter

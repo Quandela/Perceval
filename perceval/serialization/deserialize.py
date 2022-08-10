@@ -23,7 +23,8 @@
 from os import path
 from inspect import signature
 
-from perceval import Circuit, Matrix
+from perceval.components import Circuit
+from perceval.utils import Matrix
 from perceval.serialization import _matrix_serialization
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
