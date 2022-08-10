@@ -22,10 +22,15 @@
 
 import os
 import sys
-import warnings
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        action='ignore',
+        category=RuntimeWarning)
+    import drawSvg
 
 from perceval.components import ACircuit, Circuit, Processor, CircuitAnalyser
 from perceval.rendering.circuit import get_selected_skin, create_renderer
@@ -273,10 +278,8 @@ def pdisplay(o, output_format: Format = None, **opts):
         else:
             raise RuntimeError("pdisplay not defined for type %s" % type(o))
 
-    if 'drawSvg' in sys.modules:  # If drawSvg was imported beforehand
-        import drawSvg
-        if isinstance(res, drawSvg.Drawing):
-            return res
+    if isinstance(res, drawSvg.Drawing):
+        return res
     elif in_notebook and output_format != Format.TEXT:
         display(HTML(res))
     else:
@@ -301,13 +304,15 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
             f_out.write(res)
         return
 
-    if 'drawSvg' in sys.modules:  # If drawSvg was imported beforehand
-        import drawSvg
-        if isinstance(res, drawSvg.Drawing):
-            if output_format == "png":
+    if output_format == Format.HTML:
+        _, output_ext = os.path.splitext(path)
+        try:
+            if output_ext == ".png":
                 res.savePng(path)
             else:
                 res.saveSvg(path)
-        return
+            return
+        except:
+            pass
 
-    warnings.warn(f"No output file could be created for {type(o)} object at path {path}")
+    warnings.warn(f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}")

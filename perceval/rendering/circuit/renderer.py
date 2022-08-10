@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 import math
 import sys
 from perceval.rendering.format import Format
-from perceval.rendering.canvas import Canvas, MplotCanvas, DynamicSVGCanvas, StandardSVGCanvas
+from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas
 from perceval.components import ACircuit, Circuit
 from perceval.utils.format import format_parameters
 
@@ -384,11 +384,7 @@ def create_renderer(n, output_format: Format = Format.TEXT, skin=None, **opts) -
 
     assert skin is not None, "A skin must be selected for graphical display"
     if output_format == Format.HTML:
-        # DynamicSVGCanvas is used only if drawSvg was imported beforehand
-        if 'drawSvg' in sys.modules:
-            canvas = DynamicSVGCanvas(**opts)
-        else:
-            canvas = StandardSVGCanvas(**opts)
+        canvas = SvgCanvas(**opts)
     else:
         canvas = MplotCanvas(**opts)
     return CanvasRenderer(n, canvas, skin)
