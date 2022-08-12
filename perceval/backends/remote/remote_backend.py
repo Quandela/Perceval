@@ -26,12 +26,13 @@ from json import JSONDecodeError
 from typing import Union
 
 import requests
+from ast import literal_eval
 
 from ..template import AbstractBackend
 from .credentials import RemoteCredentials
 from .remote_jobs import Job
 
-from perceval.serialization import serialize, bytes_to_jsonstring
+from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state
 from perceval.components import ACircuit
 from perceval.utils import Matrix
 
@@ -40,6 +41,10 @@ pcvl_version = get_distribution("perceval-quandela").version
 
 JOB_CREATE_ENDPOINT = '/api/job'
 
+
+def deserialize_state_list(states):
+    state_list = literal_eval(states)
+    return [deserialize_state(s) for s in state_list]
 
 class RemoteBackendBuilder:
     def __init__(self, name: str, platform: str, credentials: RemoteCredentials):
@@ -62,10 +67,10 @@ class RemoteBackend(AbstractBackend):
             self.__cu_key = 'unitary'
         self.__cu_data = bytes_to_jsonstring(serialize(cu))
 
-    def __defaults_payload(self, command):
+    def __defaults_payload(self, command: str):
         return {
-            'platform': self.__platform,
-            'command': command,
+            'platform_id': self.__platform,
+            'job_name': command,
             'pcvl_version': pcvl_version
         }
 
@@ -79,7 +84,7 @@ class RemoteBackend(AbstractBackend):
             request.raise_for_status()
 
             json = request.json()
-            job = Job(json['id'], self.__credentials)
+            job = Job(json['job_id'], self.__credentials)
         except ConnectionError as e:
             logging.error(f"Connection error: {str(e)}")
 
@@ -97,21 +102,26 @@ class RemoteBackend(AbstractBackend):
 
     def async_sample(self, input_state):
         payload = self.__defaults_payload('sample')
-        payload['data'] = {
+        payload['payload'] = {
             'backend_name': self.name,
             self.__cu_key: self.__cu_data,
             'input_state': serialize(input_state)
         }
 
-        return self.__create_job_endpoint(payload)
+        job = self.__create_job_endpoint(payload)
+        job.set_deserializer(deserialize_state)
+
+        return job
 
     def async_samples(self, input_state, count):
         payload = self.__defaults_payload('samples')
-        payload['data'] = {
+        payload['payload'] = {
             'backend_name': self.name,
             self.__cu_key: self.__cu_data,
             'input_state': serialize(input_state),
             'count': count
         }
 
-        return self.__create_job_endpoint(payload)
+        job = self.__create_job_endpoint(payload)
+        job.set_deserializer(deserialize_state_list)
+        return job

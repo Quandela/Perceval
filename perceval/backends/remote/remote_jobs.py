@@ -40,6 +40,7 @@ class Job(ABC):
             self.id = uuid
 
         self.__credentials = credentials
+        self.__deserializer = None
 
     def set_credentials(self, credentials: RemoteCredentials):
         if credentials is None:
@@ -56,9 +57,9 @@ class Job(ABC):
             headers = self.__credentials.http_headers()
             res = requests.get(endpoint, headers=headers)
             json = res.json()
-            return json['status'], json['msg']
+            return json['status']
         except Exception as e:
-            return 'error', str(e)
+            return f'error: {str(e)}'
 
     def is_completed(self):
         status = self.get_status()
@@ -67,5 +68,22 @@ class Job(ABC):
 
         return False
 
-    def result(self):
-        return "ok"
+    def get_results(self):
+        if self.__credentials is None:
+            raise TypeError
+
+        try:
+            endpoint = self.__credentials.build_endpoint(JOB_RESULT_ENDPOINT) + str(self.id)
+            headers = self.__credentials.http_headers()
+            res = requests.get(endpoint, headers=headers)
+            results = res.json()['results']
+
+            if self.__deserializer:
+                return self.__deserializer(results)
+            else:
+                return results
+        except Exception as e:
+            return 'error', str(e)
+
+    def set_deserializer(self, deserializer):
+        self.__deserializer = deserializer

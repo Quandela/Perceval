@@ -35,7 +35,7 @@ class BackendFactory(LocalPlatform):
 def get_platform(name: str, credentials: RemoteCredentials = None):
     if isinstance(name, RemoteCredentials):
         credentials = name
-        name = 'simulator'
+        name = '1bf73239-192e-4b23-809f-007b323826f5'  # 'simulator'
 
     if name is None or name == "local":
         return LocalPlatform()

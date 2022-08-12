@@ -35,24 +35,30 @@ cnot.add((3, 4), phys.BS(R=1 / 2))
 # pcvl.pdisplay(cnot)
 
 
-# simulator_backend = pcvl.get_platform('local').get_backend("Naive")
-# s_cnot = simulator_backend(cnot.U)
-# result = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 5)
+local_simulator_backend = pcvl.get_platform('local').get_backend("Naive")
+local_s_cnot = local_simulator_backend(cnot.U)
+results = local_s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10)
+for s in results:
+    print(str(s))
 
-credentials = pcvl.RemoteCredentials(url="http://127.0.0.1:5000", token='testing_qrng')
+token_qcloud = 'YOUR_TOKEN'
+credentials = pcvl.RemoteCredentials(url="https://api.cloud.quandela.dev", token=token_qcloud)
+
 simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
 s_cnot = simulator_backend(cnot.U)
 
 job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10)
 
 job_status = 'created'
-while (job_status != 'completed'):
+while job_status not in ['completed', 'error', 'canceled']:
     print(f'job status : {job_status}')
     time.sleep(2)
     job_status = job.get_status()
 
-result = job.get_results()
-print(f'Result of sample : {result}')
+results = job.get_results()
+for s in results:
+    print(str(s))
+print(f'Result of sample : {results}')
 #
 # states = {
 #     pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
