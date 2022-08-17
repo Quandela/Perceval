@@ -22,4 +22,4 @@
 
 from .canvas import Canvas
 from .mplot_canvas import MplotCanvas
-from .svg_canvas import StandardSVGCanvas, DynamicSVGCanvas
+from .svg_canvas import SvgCanvas
