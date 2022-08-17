@@ -53,7 +53,7 @@ class QiskitConverter:
         self._source = source
         self._catalog = catalog
 
-    def convert(self, qc: qiskit.QuantumCircuit, heralded: bool = None) -> Processor:
+    def convert(self, qc, heralded: bool = None) -> Processor:
         r"""Convert a qiskit circuit into a perceval.Processor.
 
         :param qc: quantum-based qiskit circuit
