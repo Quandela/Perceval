@@ -20,20 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from typing import Type
+
 from .abstract_skin import ASkin
 from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
 from .renderer import create_renderer
 
 
-_selected_skin = PhysSkin  # Default skin is PhysSkin
+class DisplayConfig:
+    _selected_skin = PhysSkin  # Default skin is PhysSkin
 
+    @staticmethod
+    def select_skin(skin: Type[ASkin]) -> None:
+        DisplayConfig._selected_skin = skin
 
-def select_skin(skin: ASkin):
-    global _selected_skin
-    _selected_skin = skin
-
-
-def get_selected_skin(**kwargs):
-    global _selected_skin
-    return _selected_skin(**kwargs)
+    @staticmethod
+    def get_selected_skin(**kwargs) -> ASkin:
+        return DisplayConfig._selected_skin(**kwargs)

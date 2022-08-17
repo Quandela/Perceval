@@ -22,7 +22,7 @@
 
 from abc import ABC, abstractmethod
 import math
-import sys
+
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas
 from perceval.components import ACircuit, Circuit

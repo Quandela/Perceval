@@ -33,7 +33,7 @@ with warnings.catch_warnings():
     import drawSvg
 
 from perceval.components import ACircuit, Circuit, Processor, CircuitAnalyser
-from perceval.rendering.circuit import get_selected_skin, create_renderer
+from perceval.rendering.circuit import DisplayConfig, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
@@ -66,7 +66,7 @@ def pdisplay_circuit(
         skin=None,
         **opts):
     if skin is None:
-        skin = get_selected_skin(compact_display=compact)
+        skin = DisplayConfig.get_selected_skin(compact_display=compact)
     w, h = skin.get_size(circuit, recursive=recursive)
     renderer = create_renderer(circuit.m, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, ** opts)
@@ -93,7 +93,7 @@ def pdisplay_processor(processor: Processor,
     else:
         display_circ = processor.circuit
     if skin is None:
-        skin = get_selected_skin(compact_display=compact)
+        skin = DisplayConfig.get_selected_skin(compact_display=compact)
     # The display size of the processor is the same as the circuit it holds
     w, h = skin.get_size(display_circ, recursive=recursive)
     renderer = create_renderer(display_circ.m, output_format=output_format, skin=skin,

@@ -28,4 +28,4 @@ warnings.warn("perceval.lib.phys module is deprecated, use perceval.components.b
 from perceval.components.base_components import \
     GenericBS as BS,\
     PS, PBS, TD, Unitary, PERM, WP, HWP, QWP, PR
-from .predefined import catalog
+from perceval.components.circuit import Circuit
