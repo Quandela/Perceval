@@ -22,7 +22,7 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import Circuit, base_components as cp
+from perceval.components import ACircuit, Circuit, base_components as cp
 from perceval.rendering.circuit.abstract_skin import ASkin
 import sympy as sp
 
@@ -45,6 +45,10 @@ class PhysSkin(ASkin):
     @dispatch((cp.PS, cp.TD, cp.PERM, cp.WP, cp.PR))
     def get_width(self, c) -> int:
         return 1
+
+    @dispatch(ACircuit)
+    def get_shape(self, c):
+        return self.default_shape
 
     @dispatch((cp.SimpleBS, cp.GenericBS))
     def get_shape(self, c):
@@ -77,6 +81,16 @@ class PhysSkin(ASkin):
     @dispatch(cp.PR)
     def get_shape(self, c):
         return self.pr_shape
+
+    def default_shape(self, circuit, canvas, content, **opts):
+        """
+        Default shape is a gray box
+        """
+        w = self.get_width(circuit)
+        for i in range(circuit.m):
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.stroke_style)
+        canvas.add_rect((5, 5), 50*w - 10, 50*circuit.m - 10, fill="gray")
+        canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
 
     def bs_shape(self, circuit, canvas, content, **opts):
         split_content = content.split("\n")
