@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import os
-import sys
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -69,7 +68,7 @@ def pdisplay_circuit(
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
     w, h = skin.get_size(circuit, recursive=recursive)
     renderer = create_renderer(circuit.m, output_format=output_format, skin=skin,
-                               total_width=w, total_height=h, ** opts)
+                               total_width=w, total_height=h, **opts)
     if map_param_kid is None:
         map_param_kid = circuit.map_parameters()
     renderer.render_circuit(circuit, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
@@ -149,14 +148,15 @@ def pdisplay_processor(processor: Processor,
     return renderer.draw()
 
 
-def pdisplay_matrix(matrix, precision: float = None, output_format: Format = Format.TEXT) -> str:
+def pdisplay_matrix(matrix, precision: float = 1e-6, output_format: Format = Format.TEXT) -> str:
     """
-    Generates representation of the matrix
+    Generates representation of a matrix
     """
+
     def simp(value):
         if isinstance(value, complex) or isinstance(value, int) or isinstance(value, float) or\
            isinstance(value, sp.Number) or (isinstance(value, sp.Expr) and len(value.free_symbols) == 0):
-            return simple_complex(complex(value))[1]
+            return simple_complex(complex(value), precision=precision)[1]
         else:
             return value.__repr__()
 
@@ -204,7 +204,8 @@ def pdisplay_analyser(analyser, output_format: Format = Format.TEXT, nsimplify=T
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_statevector(sv, output_format: Format = Format.TEXT, n_simplify=True, precision=1e-6, max_v=None, sort=True):
+def pdisplay_statevector(sv, output_format: Format = Format.TEXT, n_simplify=True, precision=1e-6, max_v=None,
+                         sort=True):
     if sort:
         the_keys = sorted(sv.keys(), key=lambda a: -sv[a])
     else:
@@ -223,7 +224,7 @@ def pdisplay_statevector(sv, output_format: Format = Format.TEXT, n_simplify=Tru
 
 
 @dispatch(object)
-def _pdisplay(circuit, **kwargs):
+def _pdisplay(_, **kwargs):
     return None
 
 
@@ -264,6 +265,9 @@ def _default_output_format(o):
 
 
 def pdisplay(o, output_format: Format = None, **opts):
+    """
+    Main rendering entry point. Several data types can be displayed using pdisplay.
+    """
     if output_format is None:
         output_format = _default_output_format(o)
     res = _pdisplay(o, output_format=output_format, **opts)
@@ -308,11 +312,12 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
         _, output_ext = os.path.splitext(path)
         try:
             if output_ext == ".png":
-                res.savePng(path)
+                res.savePng(path)  # May fail when rasterization is not available (i.e. on Windows)
             else:
                 res.saveSvg(path)
             return
         except:
             pass
 
-    warnings.warn(f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}")
+    warnings.warn(
+        f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}")

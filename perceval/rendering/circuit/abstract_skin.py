@@ -27,15 +27,30 @@ from perceval.components import ACircuit
 
 
 class ASkin(ABC):
+    """
+    Abstract skin
+    -------------
+    A skin is required in the use of pdisplay for the following formats:
+    - Format.HTML
+    - Format.MPLOT
+
+    A skin has three major responsibilities:
+    - measuring the display size of a component / composite circuit
+    - providing shape functions to draw individual components
+    - exposing style data (stroke style, colors, etc.)
+    """
+
     def __init__(self, stroke_style, compact_display: bool = False):
         self._compact = compact_display
         self.stroke_style = stroke_style
 
     def get_size(self, c: ACircuit, recursive: bool = False) -> Tuple[int, int]:
-        """Gets the size of a circuit. If composite, it will take its components into account"""
+        """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():
             return self.measure(c)
 
+        # w represents the graph of the circuit.
+        # Each value being the ouput of the rightmost component on the corresponding mode
         w = [0] * c.m
         for modes, comp in c._components:
             r = slice(modes[0], modes[0]+comp.m)
@@ -50,7 +65,8 @@ class ASkin(ABC):
         return max(w), c.m
 
     def measure(self, c: ACircuit) -> Tuple[int, int]:
-        """Returns the measure (in arbitrary unit (AU) where the space between two modes = 1 AU)
+        """
+        Returns the measure (in arbitrary unit (AU) where the space between two modes = 1 AU)
         of a single component treated as a block (meaning that a composite circuit will not be
         measured recursively. Use get_size() instead)
         """
