@@ -27,20 +27,14 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
-from perceval import BackendFactory, StateVector
+from perceval import BackendFactory, StateVector, Circuit
 from perceval.converters import QiskitConverter
-import perceval.lib.phys as phys
-import perceval.lib.symb as symb
-
-
-def _check_perm(perm, c_perm):
-    u = c_perm.U
-    for v, i in enumerate(perm):
-        assert u[i, v] == 1
+import perceval.components.base_components as comp
+from perceval.components.core_catalog import catalog
 
 
 def test_basic_circuit_h():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     pc = convertor.convert(qc)
@@ -50,13 +44,13 @@ def test_basic_circuit_h():
     assert 0 in sources
     assert 1 not in sources
     assert len(c._components) == 1
-    assert isinstance(c._components[0][1], phys.Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
     c0 = c._components[0][1]._components[0][1]
-    assert isinstance(c0, phys.BS)
+    assert isinstance(c0, comp.GenericBS)
 
 
 def test_basic_circuit_double_h():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     qc.h(0)
@@ -70,7 +64,7 @@ def test_basic_circuit_double_h():
 
 
 def test_basic_circuit_s_phys():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
     pc = convertor.convert(qc)
@@ -80,15 +74,15 @@ def test_basic_circuit_s_phys():
     assert 0 in sources
     assert 1 not in sources
     assert len(c._components) == 1
-    assert isinstance(c._components[0][1], phys.Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
     r0 = c._components[0][1]._components[0][0]
     c0 = c._components[0][1]._components[0][1]
     assert r0 == (1,)
-    assert isinstance(c0, phys.PS)
+    assert isinstance(c0, comp.PS)
 
 
 def test_basic_circuit_s_symb():
-    convertor = QiskitConverter(symb)
+    convertor = QiskitConverter(catalog)  # symb
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
     pc = convertor.convert(qc)
@@ -100,7 +94,7 @@ def test_basic_circuit_s_symb():
 
 
 def test_basic_circuit_swap_direct():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.swap(0, 1)
     pc = convertor.convert(qc)
@@ -114,12 +108,12 @@ def test_basic_circuit_swap_direct():
     assert len(c._components) == 1
     r0, c0 = c._components[0]
     assert r0 == [0, 1, 2, 3]
-    assert isinstance(c0, phys.PERM)
-    _check_perm([2, 3, 0, 1], c0)
+    assert isinstance(c0, comp.PERM)
+    assert c0.perm_vector == [2, 3, 0, 1]
 
 
 def test_basic_circuit_swap_indirect():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.swap(1, 0)
     pc = convertor.convert(qc)
@@ -131,12 +125,12 @@ def test_basic_circuit_swap_indirect():
     assert len(c._components) == 1
     r0, c0 = c._components[0]
     assert r0 == [0, 1, 2, 3]
-    assert isinstance(c0, phys.PERM)
-    _check_perm([2, 3, 0, 1], c0)
+    assert isinstance(c0, comp.PERM)
+    assert c0.perm_vector == [2, 3, 0, 1]
 
 
 def test_cnot_1_heralded():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -149,16 +143,16 @@ def test_cnot_1_heralded():
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
-    assert isinstance(perm1, phys.PERM)
+    assert isinstance(perm1, comp.PERM)
     perm2 = c._components[3][1]
-    assert isinstance(perm2, phys.PERM)
+    assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    _check_perm([2, 3, 4, 5, 0, 1, 6, 7], perm1)
-    _check_perm([4, 5, 0, 1, 2, 3, 6, 7], perm2)
+    assert perm1.perm_vector == [2, 3, 4, 5, 0, 1, 6, 7]
+    assert perm2.perm_vector == [4, 5, 0, 1, 2, 3, 6, 7]
 
 
 def test_cnot_1_inverse_heralded():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(1, 0)
@@ -171,16 +165,16 @@ def test_cnot_1_inverse_heralded():
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
-    assert isinstance(perm1, phys.PERM)
+    assert isinstance(perm1, comp.PERM)
     perm2 = c._components[3][1]
-    assert isinstance(perm2, phys.PERM)
+    assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    _check_perm([4, 5, 2, 3, 0, 1, 6, 7], perm1)
-    _check_perm([4, 5, 2, 3, 0, 1, 6, 7], perm2)
+    assert perm1.perm_vector == [4, 5, 2, 3, 0, 1, 6, 7]
+    assert perm2.perm_vector == [4, 5, 2, 3, 0, 1, 6, 7]
 
 
 def test_cnot_2_heralded():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(3)
     qc.h(0)
     qc.cx(0, 2)
@@ -193,16 +187,16 @@ def test_cnot_2_heralded():
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
-    assert isinstance(perm1, phys.PERM)
+    assert isinstance(perm1, comp.PERM)
     perm2 = c._components[3][1]
-    assert isinstance(perm2, phys.PERM)
+    assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    _check_perm([2, 3, 8, 9, 4, 5, 0, 1, 6, 7], perm1)
-    _check_perm([6, 7, 0, 1, 4, 5, 8, 9, 2, 3], perm2)
+    assert perm1.perm_vector == [2, 3, 8, 9, 4, 5, 0, 1, 6, 7]
+    assert perm2.perm_vector == [6, 7, 0, 1, 4, 5, 8, 9, 2, 3]
 
 
 def test_cnot_1_postprocessed():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -215,16 +209,16 @@ def test_cnot_1_postprocessed():
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
-    assert isinstance(perm1, phys.PERM)
+    assert isinstance(perm1, comp.PERM)
     perm2 = c._components[3][1]
-    assert isinstance(perm2, phys.PERM)
+    assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    _check_perm([1, 2, 3, 4, 0, 5], perm1)
-    _check_perm([4, 0, 1, 2, 3, 5], perm2)
+    assert perm1.perm_vector == [1, 2, 3, 4, 0, 5]
+    assert perm2.perm_vector == [4, 0, 1, 2, 3, 5]
 
 
 def test_cnot_postprocess_phys():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -235,7 +229,7 @@ def test_cnot_postprocess_phys():
 
 
 def test_cnot_postprocess_symb():
-    convertor = QiskitConverter(symb)
+    convertor = QiskitConverter(catalog)  # symb
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -246,7 +240,7 @@ def test_cnot_postprocess_symb():
 
 
 def test_cnot_herald_phys():
-    convertor = QiskitConverter(phys)
+    convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -259,7 +253,7 @@ def test_cnot_herald_phys():
 
 
 def test_cnot_herald_symb():
-    convertor = QiskitConverter(symb)
+    convertor = QiskitConverter(catalog)  # symb
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)

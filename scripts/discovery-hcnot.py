@@ -31,14 +31,15 @@ import numpy as np
 from scipy.optimize import minimize
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.base_components as comp
+from perceval.rendering.pdisplay import pdisplay_analyser
 
 
 mapping = {
-    "HH": pcvl.FockState([1, 1, 0, 1, 1, 1, 0]),
-    "HL": pcvl.FockState([1, 1, 0, 1, 1, 0, 1]),
-    "LH": pcvl.FockState([1, 0, 1, 1, 1, 1, 0]),
-    "LL": pcvl.FockState([1, 0, 1, 1, 1, 0, 1])
+    "HH": pcvl.BasicState([1, 1, 0, 1, 1, 1, 0]),
+    "HL": pcvl.BasicState([1, 1, 0, 1, 1, 0, 1]),
+    "LH": pcvl.BasicState([1, 0, 1, 1, 1, 1, 0]),
+    "LL": pcvl.BasicState([1, 0, 1, 1, 1, 0, 1])
 }
 
 istates = {v: k for k, v in mapping.items()}
@@ -68,7 +69,7 @@ def discover(circuit, p, params=None, method=None, init_params=None, bounds=None
     ca.compute(expected={"LH": "LL", "LL": "LH", "HH": "HH", "HL": "HL"})
     performance = ca.performance
     ber = ca.error_rate
-    return ber, performance, ca.pdisplay()
+    return ber, performance, pdisplay_analyser(ca)
 
 
 global_lock = threading.Lock()
@@ -83,8 +84,8 @@ def run_a_discovery(name):
     n = 7
     gen_rect = pcvl.Circuit.generic_interferometer(
         n,
-        lambda i: random.randint(0, 1) and phys.BS(R=pcvl.P("R%d" % i), phi_b=np.pi, phi_d=0)
-            or phys.BS(R=pcvl.P("R%d" % i)),
+        lambda i: random.randint(0, 1) and comp.GenericBS(R=pcvl.P("R%d" % i), phi_b=np.pi, phi_d=0)
+                  or comp.GenericBS(R=pcvl.P("R%d" % i)),
         shape="rectangular",
         depth=4
     )

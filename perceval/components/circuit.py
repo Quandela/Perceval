@@ -30,7 +30,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
-from perceval.utils import create_printer, Parameter, Matrix, MatrixN, format_parameters, Canvas, global_params
+from perceval.utils import Parameter, Matrix, MatrixN, global_params
 import perceval.algorithm.decomposition as decomposition
 from perceval.algorithm.match import Match
 from perceval.algorithm.solve import solve
@@ -48,15 +48,13 @@ def _matrix_double_for_polarization(m, u):
 
 class ACircuit(ABC):
     """
-        Abstract circuit class. A circuit is defined by a dimension `n`, and by parameters.
+        Abstract circuit class. A circuit is defined by a dimension `m`, and by parameters.
         Parameters can be fixed (value) or variables.
-        A circuit is either simple, or is defined by a list of `(portlist, component)`
     """
 
     delay_circuit = False
     _supports_polarization = False
     _name = None
-    _color = None
 
     def __init__(self, m: int, params=None):
         if params is None:
@@ -65,10 +63,8 @@ class ACircuit(ABC):
         self._params = params
         for name, p in self._params.items():
             assert type(name) == str and isinstance(p, Parameter), "invalid parameter definition"
-        self._components = []
         self._params = {}
         self._vars = {}
-        self.defined_circuit = True
 
     @abstractmethod
     def _compute_unitary(self,
@@ -120,14 +116,20 @@ class ACircuit(ABC):
     @property
     def U(self):
         """
-        get the numeric unitary matrix, circuit has to be defined
+        get the symbolic unitary matrix
         """
         return self.compute_unitary(use_symbolic=True).simp()
+
+    def is_composite(self):
+        """
+        Returns True if the circuit is composed of subcomponents
+        """
+        return False
 
     @property
     def defined(self):
         """
-            check if all parameters of the circuit are fully defined
+        check if all parameters of the circuit are fully defined
         """
         for _, p in self._params.items():
             if not p.defined:
@@ -188,52 +190,17 @@ class ACircuit(ABC):
     def m(self):
         return self._m
 
+    @property
+    def name(self):
+        return self._name
+
     def definition(self):
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
             component: ACircuit, merge: bool = None) -> Circuit:
-        r"""Add a component in a circuit
-
-        :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
-                           component
-        :param component: the component to add, must be a circuit
-        :param merge: if the component is a complex circuit,
-        :return: the circuit itself, allowing to add multiple components in a same line
-        :raise: ``AssertionError`` if parameters are not valid
-        """
-        if isinstance(port_range, int):
-            port_range = list([i for i in range(port_range, port_range+component.m)])
-        assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
-        if not isinstance(self, Circuit):
-            self._components = [(list(range(self._m)), copy.copy(self))]
-            self.__class__ = self._fcircuit
-            self._params = {v.name: v for k, v in self._params.items() if not v.fixed}
-        if not self.defined_circuit:
-            self.defined_circuit = True
-            self.stroke_style = component.stroke_style
-        for i, x in enumerate(port_range):
-            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
-                "range must a consecutive valid set of ports"
-        assert len(port_range) == component.m, \
-            "range port (%d) is not matching component size (%d)" % (len(port_range), component.m)
-        # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
-        for _, p in component._params.items():
-            if not p.fixed:
-                if p.name in self._params and p._pid != self._params[p.name]._pid:
-                    raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
-                self._params[p.name] = p
-        if merge is None:
-            merge = len(port_range) != self._m
-        # register the component
-        if merge and component._components:
-            for sprange, sc in component._components:
-                nprange = tuple(r + port_range[0] for r in sprange)
-                self._components.append((nprange, sc))
-        else:
-            self._components.append((port_range, component))
-        return self
+        return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
     def __getitem__(self, key):
         return self._params[key]
@@ -256,8 +223,7 @@ class ACircuit(ABC):
             component = component[1]
         else:
             pos = 0
-        self.add(tuple(range(pos, component._m+pos)), component)
-        return self
+        return self.add(tuple(range(pos, component._m+pos)), component)
 
     def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Build a new circuit by adding `component` to the current circuit
@@ -271,15 +237,7 @@ class ACircuit(ABC):
         return c
 
     def __iter__(self):
-        """
-        Iterator on a circuit, recursively returns components applying in circuit order
-        """
-        if self._components:
-            for r, c in self._components:
-                for range_comp, comp in c:
-                    yield tuple(pos+r[0] for pos in range_comp), comp
-        else:
-            yield tuple(pos for pos in range(self._m)), self
+        yield tuple(pos for pos in range(self._m)), self
 
     def variable_def(self, out_parameters: dict, k, pname, default_value, map_param_kid=None):
         if map_param_kid is None:
@@ -298,7 +256,7 @@ class ACircuit(ABC):
     def get_variables(self, _=None):
         return {}
 
-    def copy(self, subs: Union[dict,list] = None):
+    def copy(self, subs: Union[dict, list] = None):
         nc = copy.deepcopy(self)
 
         if subs is None:
@@ -383,66 +341,6 @@ class ACircuit(ABC):
             counter += 1
         return None
 
-    def pdisplay(self,
-                 parent_printer=None,
-                 map_param_kid: dict = None,
-                 shift: int = 0,
-                 output_format: Literal["text", "html", "mplot", "latex"] = "text",
-                 recursive: bool = False,
-                 dry_run: bool = False,
-                 compact: bool = False,
-                 precision: float = 1e-6,
-                 nsimplify: bool = True,
-                 complete_drawing: bool = True,
-                 **opts):
-        if parent_printer is None:
-            if not dry_run:
-                total_width = self.pdisplay(parent_printer, map_param_kid, shift, output_format, recursive, True, compact,
-                                            precision, nsimplify, **opts)
-                printer = create_printer(self._m, output_format=output_format, stroke_style=self.stroke_style,
-                                         total_width=total_width, total_height=self._m, compact=compact, **opts)
-            else:
-                printer = create_printer(self._m, output_format="html", stroke_style=self.stroke_style, compact=compact, **opts)
-        else:
-            printer = parent_printer
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-
-        if not isinstance(self, Circuit):
-            variables = self.get_variables(map_param_kid)
-            description = format_parameters(variables, precision, nsimplify)
-            printer.append_circuit([p + shift for p in range(self._m)], self, description)
-
-        if self._components:
-            if dry_run:
-                self._areas = [None] * len(self._components)
-            for idx, (r, c) in enumerate(self._components):
-                shiftr = [p+shift for p in r]
-                if c._components and recursive:
-                    printer.open_subblock(r, c._name, self._areas[idx], c._color)
-                    c.pdisplay(printer, shift=shiftr[0])
-                    self._areas[idx] = printer.close_subblock(r)
-                elif c._components:
-                    component_vars = c.get_variables(map_param_kid)
-                    description = format_parameters(component_vars, precision, nsimplify)
-                    printer.append_subcircuit(shiftr, c, description)
-                elif isinstance(c, ACircuit):
-                    component_vars = c.get_variables(map_param_kid)
-                    description = format_parameters(component_vars, precision, nsimplify)
-                    printer.append_circuit(shiftr, c, description)
-
-        printer.extend_pos(0, self._m - 1)
-
-        if parent_printer is None:
-            printer.close()
-            if dry_run:
-                return printer.max_pos(0, self._m-1, True)
-            elif not complete_drawing:
-                return printer
-            else:
-                printer.add_mode_index()  # No other class with mess with the printer, so we can add mode index now
-                return printer.draw()
-
     @staticmethod
     def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,
                        actual_pos: Optional[int] = 0, actual_pattern_pos: Optional[int] = 0) -> Optional[Match]:
@@ -498,7 +396,7 @@ class ACircuit(ABC):
     def match(self, pattern: ACircuit, pos: int = None,
               pattern_pos: int = None, match: Match = None, actual_pos = 0, actual_pattern_pos=0) -> Optional[Match]:
         # the component shape should match
-        if pattern._name == "CPLX" or self._m != pattern._m or pos is not None or pattern_pos is not None:
+        if pattern.name == "CPLX" or self._m != pattern._m or pos is not None or pattern_pos is not None:
             return None
         return ACircuit._match_unitary(self, pattern, match, actual_pos=actual_pos,
                                        actual_pattern_pos=actual_pattern_pos)
@@ -521,20 +419,6 @@ class ACircuit(ABC):
     def ncomponents(self):
         return 1
 
-    stroke_style = {"stroke": "darkred", "stroke_width": 3}
-    subcircuit_width = 2
-    subcircuit_fill = 'lightpink'
-    subcircuit_stroke_style = {"stroke": "darkred", "stroke_width": 1}
-
-    @abstractmethod
-    def shape(self, content, canvas: Canvas, compact: bool = False):
-        """
-        Implement in subclasses to render the circuit on canvas
-        """
-
-    def get_width(self, compact: bool = False):
-        return self.width
-
     def inverse(self, v, h):
         raise NotImplementedError("component has no inverse operator")
 
@@ -542,21 +426,29 @@ class ACircuit(ABC):
 class Circuit(ACircuit):
     """Class to represent any circuit composed of one or multiple components
 
-    :param m: The number of port of the circuit, if omitted the parameter `U` should be defined
-    :param U: Unitary matrix defining the circuit
+    :param m: The number of port of the circuit
     :param name: Name of the circuit
-    :param use_polarization: defines if the circuit should be used with Polarized states. This value is automatically
-      induced when a component working on polarization is added to the circuit
     """
     _name = "CPLX"
-    _fname = "Circuit"
+    _color = None  # A circuit can be given a background color when displayed as a subcircuit
 
-    def __init__(self, m: int = None, name: str = None):
+    def __init__(self, m: int, name: str = None):
         assert m > 0, "invalid size"
         if name is not None:
             self._name = name
         super().__init__(m)
-        self.defined_circuit = False  # TODO remove this member?
+        self._components = []
+
+    def is_composite(self):
+        return True
+
+    def __iter__(self):
+        """
+        Iterator on a circuit, recursively returns components applying in circuit order
+        """
+        for r, c in self._components:
+            for range_comp, comp in c:
+                yield tuple(pos + r[0] for pos in range_comp), comp
 
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
@@ -567,7 +459,7 @@ class Circuit(ACircuit):
         cparams = ["%d" % self._m]
         if self._name != Circuit._name:
             cparams.append("name=%s" % self._name)
-        s = "%s(%s)" % (self._fname, ", ".join(cparams))
+        s = "Circuit(%s)" % (", ".join(cparams))
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
         for r, c in self._components:
@@ -592,6 +484,42 @@ class Circuit(ACircuit):
         Only defined for elementary circuits
         """
         raise RuntimeError("`definition` method is only available on elementary circuits")
+
+    def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
+            component: ACircuit, merge: bool = None) -> Circuit:
+        r"""Add a component in a circuit
+
+        :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
+                           component
+        :param component: the component to add, must be a circuit
+        :param merge: if the component is a complex circuit,
+        :return: the circuit itself, allowing to add multiple components in a same line
+        :raise: ``AssertionError`` if parameters are not valid
+        """
+        if isinstance(port_range, int):
+            port_range = list([i for i in range(port_range, port_range+component.m)])
+        assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
+        for i, x in enumerate(port_range):
+            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
+                "range must a consecutive valid set of ports"
+        assert len(port_range) == component.m, \
+            "range port (%d) is not matching component size (%d)" % (len(port_range), component.m)
+        # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
+        for _, p in component._params.items():
+            if not p.fixed:
+                if p.name in self._params and p._pid != self._params[p.name]._pid:
+                    raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
+                self._params[p.name] = p
+        if merge is None:
+            merge = len(port_range) != self._m
+        # register the component
+        if merge and isinstance(component, Circuit) and component._components:
+            for sprange, sc in component._components:
+                nprange = tuple(r + port_range[0] for r in sprange)
+                self._components.append((nprange, sc))
+        else:
+            self._components.append((port_range, component))
+        return self
 
     def _compute_unitary(self,
                          assign: dict = None,
@@ -661,7 +589,7 @@ class Circuit(ACircuit):
                                fun_gen: Callable[[int], ACircuit],
                                shape: Literal["triangle", "rectangle"] = "rectangle",
                                depth: int = None,
-                               phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> ACircuit:
+                               phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> Circuit:
         r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
 
         :param m: number of modes
@@ -986,16 +914,3 @@ class Circuit(ACircuit):
             if match is None:
                 return None
         return match
-
-    def subcircuit_shape(self, content, canvas):
-        for idx in range(self._m):
-            canvas.add_mline([0, 50*idx+25, self.subcircuit_width*50, 50*idx+25], **self.stroke_style)
-        canvas.add_rect((2.5, 2.5), self.subcircuit_width * 50 - 5, 50 * self._m - 5,
-                        fill=self.subcircuit_fill, **self.subcircuit_stroke_style)
-        canvas.add_text((16, 16), content.upper(), 8)
-
-    def shape(self, _, canvas, compact: bool = False):
-        for i in range(self.m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*self.width, 0], **self.stroke_style)
-        canvas.add_rect((5, 5), 50*self.width-10, 50*self.m-10, fill="lightgray")
-        canvas.add_text((25*self.width, 25*self.m), size=10, ta="middle", text=self._name)

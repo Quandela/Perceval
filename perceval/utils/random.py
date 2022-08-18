@@ -20,10 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import PredefinedCircuit
-from perceval.utils import P
-import perceval.lib.phys as phys
+import random
+import numpy as np
 
-c = phys.Circuit(2) // phys.BS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
 
-generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")
+def random_seed(seed=None):
+    """
+    seed: int = None
+    Initialize the seed used for random number generation
+
+    :param seed: if None, use a time-based seed
+    :return: the actual seed used
+    """
+    random.seed(seed)
+    np.random.seed(seed)

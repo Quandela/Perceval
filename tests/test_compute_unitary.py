@@ -20,25 +20,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import perceval as pcvl
+import perceval.components.base_components as comp
 import numpy as np
 
-from perceval.components import PredefinedCircuit
-import perceval.lib.phys as phys
 
-c_cnot = (phys.Circuit(6, name="PostProcessed CNOT")
-              .add((0, 1), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
-              .add((3, 4), phys.BS(R=1 / 2))
-              .add((2, 3), phys.BS(R=1 / 3, phi_b=np.pi, phi_d=0))
-              .add((4, 5), phys.BS(R=1 / 3))
-              .add((3, 4), phys.BS(R=1 / 2)))
+def _check_unitary(component: pcvl.ACircuit):
+    u_symb = component.compute_unitary(use_symbolic=True)
+    u_num = component.compute_unitary(use_symbolic=False)
+    assert u_symb.is_unitary()
+    assert u_num.is_unitary()
+    assert np.allclose(u_symb.tonp(), u_num)
 
 
-def _post_process(s):
-    return (s[1] or s[2]) and (s[3] or s[4])
+def test_generic_BS_unitary():
+    bs = comp.GenericBS(theta=0.43, phi_a=0.26, phi_b=1.6, phi_d=0.04)
+    _check_unitary(bs)
 
 
-postprocessed_cnot = PredefinedCircuit(c_cnot,
-                                       "postprocessed cnot",
-                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
-                                       heralds={0: 0, 5: 0},
-                                       post_select_fn=_post_process)
+def test_simple_BS_unitary():
+    bs = comp.SimpleBS(theta=0.43, phi=0.84)
+    _check_unitary(bs)
+
+
+def test_PS_unitary():
+    bs = comp.PS(phi=0.82)
+    _check_unitary(bs)
+
+
+def test_WP_unitary():
+    wp = comp.WP(delta=0.24, xsi=0.58)
+    _check_unitary(wp)
+
+
+def test_PR_unitary():
+    wp = comp.PR(delta=0.37)
+    _check_unitary(wp)

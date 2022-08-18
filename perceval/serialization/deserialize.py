@@ -67,8 +67,8 @@ class CircuitBuilder:
 
     deserialize_fn = {
         'circuit': deserialize_circuit,
-        'beam_splitter': _cd.deserialize_symb_bs,
-        'beam_splitter_complex': _cd.deserialize_phys_bs,
+        'beam_splitter': _cd.deserialize_simple_bs,
+        'beam_splitter_complex': _cd.deserialize_generic_bs,
         'phase_shifter': _cd.deserialize_ps,
         'permutation': _cd.deserialize_perm,
         'unitary': _cd.deserialize_unitary,
@@ -92,10 +92,7 @@ class CircuitBuilder:
         # find the correct deserialization function and use it
         if t in CircuitBuilder.deserialize_fn:
             func = CircuitBuilder.deserialize_fn[t]
-            if len(signature(func).parameters) == 1:
-                component = func(serial_sub_comp)
-            else:
-                component = func(serial_sub_comp, serial_comp.ns)
+            component = func(serial_sub_comp)
 
         if component is None:
             raise NotImplementedError(f'Component could not be deserialized (type = {t})')

@@ -21,30 +21,30 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.base_components as comp
 
 
 def test_permutation_3():
-    circuit = phys.PERM([2, 0, 1])
+    circuit = comp.PERM([2, 0, 1])
     simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
     s_circuit = simulator_backend(circuit)
     ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|1,0,0>")],
-                             output_states = "*")
+                              output_states="*")
     assert ca.output_states_list[2] == pcvl.BasicState("|0, 0, 1>")
     assert not((ca.distribution[0]-[0, 0, 1]).any())
     ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,1,0>")],
-                             output_states = "*")
+                              output_states="*")
     assert ca.output_states_list[0] == pcvl.BasicState("|1, 0, 0>")
     assert not((ca.distribution[0]-[1, 0, 0]).any())
     ca = pcvl.CircuitAnalyser(s_circuit, input_states=[pcvl.AnnotatedBasicState("|0,0,1>")],
-                             output_states = "*")
+                              output_states="*")
     assert ca.output_states_list[1] == pcvl.BasicState("|0, 1, 0>")
     assert not((ca.distribution[0]-[0, 1, 0]).any())
 
 
 def test_permutation_inverse():
     perm_vector = [4, 1, 3, 5, 2, 0]
-    perm = phys.PERM(perm_vector)
+    perm = comp.PERM(perm_vector)
     assert perm.perm_vector == perm_vector
     perm.inverse(h=True)
     assert perm.perm_vector == [perm_vector.index(i) for i in range(len(perm_vector))]

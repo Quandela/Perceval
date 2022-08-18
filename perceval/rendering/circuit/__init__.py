@@ -20,6 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .mplot_renderer import MplotRenderer
-from .svg_renderer import SVGRenderer
-from .generic_renderer import Canvas
+from typing import Type
+
+from .abstract_skin import ASkin
+from .phys_skin import PhysSkin
+from .symb_skin import SymbSkin
+from .renderer import create_renderer
+
+
+class DisplayConfig:
+    _selected_skin = PhysSkin  # Default skin is PhysSkin
+
+    @staticmethod
+    def select_skin(skin: Type[ASkin]) -> None:
+        DisplayConfig._selected_skin = skin
+
+    @staticmethod
+    def get_selected_skin(**kwargs) -> ASkin:
+        return DisplayConfig._selected_skin(**kwargs)

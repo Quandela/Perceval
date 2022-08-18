@@ -20,10 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import PredefinedCircuit
-from perceval.utils import P
-import perceval.lib.symb as symb
+from enum import Enum
 
-c = symb.Circuit(2) // symb.BS(theta=P("theta"), phi=P("phi")) // symb.PS(phi=P("phi_a")) // (1, symb.PS(phi=P("phi_b")))
 
-generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")
+class Format(Enum):
+    TEXT = 1
+    MPLOT = 2
+    HTML = 3
+    LATEX = 4
