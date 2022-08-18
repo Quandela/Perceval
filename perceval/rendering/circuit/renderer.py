@@ -22,7 +22,9 @@
 
 from abc import ABC, abstractmethod
 import math
+from typing import Any, Tuple
 
+from perceval.rendering.circuit import ASkin
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas
 from perceval.components import ACircuit, Circuit
@@ -30,6 +32,13 @@ from perceval.utils.format import format_parameters
 
 
 class ICircuitRenderer(ABC):
+    """
+    Base class for circuit renderers.
+    Provides an interface to implement + a render_circuit() generic method.
+    ICircuitRenderer internally works with circuit sizes in arbitrary units (AU), where single components and composite
+    circuits size are measured by a given skin object.
+    """
+
     def __init__(self, nsize):
         self._nsize = nsize  # number of modes
 
@@ -40,13 +49,16 @@ class ICircuitRenderer(ABC):
                        recursive: bool = False,
                        precision: float = 1e-6,
                        nsimplify: bool = True):
+        """
+        Renders the input circuit
+        """
         if not isinstance(circuit, Circuit):
             variables = circuit.get_variables(map_param_kid)
             description = format_parameters(variables, precision, nsimplify)
             self.append_circuit([p + shift for p in range(circuit.m)], circuit, description)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
-            for idx, (r, c) in enumerate(circuit._components):
+            for _, (r, c) in enumerate(circuit._components):
                 shiftr = [p+shift for p in r]
                 if c.is_composite() and c._components:
                     if recursive:
@@ -66,52 +78,82 @@ class ICircuitRenderer(ABC):
         self.extend_pos(0, circuit.m - 1)
 
     @abstractmethod
-    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
-        pass
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> Tuple[int, int]:
+        """
+        Returns the circuit size (in AU)
+        """
 
     @abstractmethod
-    def max_pos(self, start, end, header):
-        pass
+    def max_pos(self, start, end, header) -> int:
+        """
+        Returns the highest horizontal position on the circuit graph, between start and end modes (in AU)
+        """
 
     @abstractmethod
-    def close(self):
-        pass
+    def extend_pos(self, start: int, end: int) -> None:
+        """
+        Extends horizontal position on the circuit graph, from modes 'start' to 'end'
+        """
 
     @abstractmethod
-    def open_subblock(self, lines, name, size=None, color=None):
-        pass
+    def close(self) -> None:
+        """
+        Finalizes circuit rendering when nothing more needs to be added.
+        The opposite 'open' action should be run in __init__.
+        """
 
     @abstractmethod
-    def close_subblock(self, lines):
-        pass
+    def open_subblock(self, lines: Tuple[int, int], name: str, size: Tuple[int, int], color=None) -> None:
+        """
+        Opens a visual area, highlighting a part of the circuit
+        """
 
     @abstractmethod
-    def draw(self):
-        pass
+    def close_subblock(self, lines: Tuple[int, int]) -> None:
+        """
+        Close a visual area
+        """
 
     @abstractmethod
-    def append_subcircuit(self, lines, circuit, content):
-        pass
+    def draw(self) -> Any:
+        """
+        Finalize drawing, returns a fully drawn circuit (type is relative to the rendering method which was used).
+        This should always be the last call.
+        """
 
     @abstractmethod
-    def append_circuit(self, lines, circuit, content, min_size=5):
-        pass
+    def append_subcircuit(self, lines: Tuple[int, int], circuit: Circuit, content: str) -> None:
+        """
+        Add a composite circuit to the rendering. Render each subcomponent independently.
+        """
 
     @abstractmethod
-    def add_mode_index(self):
-        pass
+    def append_circuit(self, lines: Tuple[int, int], circuit: ACircuit, content: str) -> None:
+        """
+        Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
+        """
 
     @abstractmethod
-    def add_out_port(self, m, content, **opts):
-        pass
+    def add_mode_index(self) -> None:
+        """
+        Render mode indexes on the right and left side of a previously rendered circuit
+        """
 
     @abstractmethod
-    def add_in_port(self, m, content, **opts):
-        pass
+    def add_out_port(self, m: int, content: str, **opts) -> None:
+        """
+        Render a port on the right side (outputs) of a previously rendered circuit, located on mode 'm'
+        """
+
+    @abstractmethod
+    def add_in_port(self, m: int, content: str, **opts) -> None:
+        """
+        Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
+        """
 
 
 class TextRenderer(ICircuitRenderer):
-    def __init__(self, nsize, hc=3):
+    def __init__(self, nsize, hc=3, min_box_size=5):
         super().__init__(nsize)
         self._hc = hc
         self._h = ['']*(hc*nsize+2)
@@ -120,6 +162,7 @@ class TextRenderer(ICircuitRenderer):
         self.extend_pos(0, self._nsize-1)
         self._depth = [0]*nsize
         self._offset = 0
+        self.min_box_size = min_box_size
 
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
         return None  # Don't need circuit size for text rendering
@@ -144,7 +187,7 @@ class TextRenderer(ICircuitRenderer):
             else:
                 self._h[i] += ((i % self._hc) == 2 and "─" or char)*(maxpos-len(self._h[i]))
 
-    def open_subblock(self, lines, name, size=None, color=None):
+    def open_subblock(self, lines, name, size, color=None):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, header=True)
@@ -169,14 +212,13 @@ class TextRenderer(ICircuitRenderer):
             else:
                 self._h[k] += "║"
         self._h[end*self._hc+4] += "╝"
-        return None
 
     def append_subcircuit(self, lines, circuit, content):
         self.open_subblock(lines, circuit.name)
         self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
         self.close_subblock(lines)
 
-    def append_circuit(self, lines, circuit, content, min_size=5):
+    def append_circuit(self, lines, circuit, content):
         # opening the box
         start = lines[0]
         end = lines[-1]
@@ -215,8 +257,7 @@ class TextRenderer(ICircuitRenderer):
 
         lcontents = content.split("\n")
         maxw = max(len(nl) for nl in lcontents)
-        if maxw < min_size:
-            maxw = min_size
+        maxw = max(maxw, self.min_box_size)
         # check if there are some "special effects" (centering _, right adjusting)
         for idx, l in enumerate(lcontents):
             if l.startswith("_"):
@@ -316,7 +357,8 @@ class CanvasRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
 
-        area = (self.extend_pos(start, end), start, size[0], size[1])
+        self.extend_pos(start, end)
+        area = (self.max_pos(start, end), start, size[0], size[1])
         self._canvas.set_offset((CanvasRenderer.affix_all_size + 50 * area[0], 50 * area[1]),
                                 50 * area[2], 50 * area[3])
         if color is None:
@@ -329,24 +371,24 @@ class CanvasRenderer(ICircuitRenderer):
         end = lines[-1]
         self.extend_pos(start, end)
 
-    def max_pos(self, start, end, _):
+    def max_pos(self, start, end, _=None):
         return max(self._chart[start:end+1])
 
     def extend_pos(self, start, end):
-        maxpos = max(self._chart[start:end+1])
+        maxpos = self.max_pos(start, end)
         for p in range(start, end+1):
             if self._chart[p] != maxpos:
                 self._canvas.set_offset((CanvasRenderer.affix_all_size+self._chart[p]*50, p*50),
                                         (maxpos-self._chart[p])*50, 50)
                 self._canvas.add_mline([0, 25, (maxpos-self._chart[p])*50, 25], **self._skin.stroke_style)
             self._chart[p] = maxpos
-        return maxpos
 
     def append_circuit(self, lines, circuit, content):
         # opening the box
         start = lines[0]
         end = lines[-1]
-        max_pos = self.extend_pos(start, end)
+        self.extend_pos(start, end)
+        max_pos = self.max_pos(start, end)
         w = self._skin.get_width(circuit)
         self._canvas.set_offset((CanvasRenderer.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
         self._canvas.add_shape(self._skin.get_shape(circuit), circuit, content)
@@ -357,7 +399,8 @@ class CanvasRenderer(ICircuitRenderer):
         # opening the box
         start = lines[0]
         end = lines[-1]
-        max_pos = self.extend_pos(start, end)
+        self.extend_pos(start, end)
+        max_pos = self.max_pos(start, end)
         w = self._skin.style_subcircuit['width']
         self._canvas.set_offset((CanvasRenderer.affix_all_size+50*max_pos, 50*start), 50*w, 50*(end-start+1))
         self._canvas.add_shape(self._skin.subcircuit_shape, circuit, circuit.name)
@@ -365,7 +408,8 @@ class CanvasRenderer(ICircuitRenderer):
             self._chart[i] += w
 
     def close(self):
-        max_pos = self.extend_pos(0, self._nsize-1)
+        self.extend_pos(0, self._nsize - 1)
+        max_pos = self.max_pos(0, self._nsize-1)
         self._canvas.set_offset((CanvasRenderer.affix_all_size+50*max_pos, 0),
                                 CanvasRenderer.affix_all_size, 50*(self._nsize+1))
         for k in range(self._nsize):
@@ -376,13 +420,22 @@ class CanvasRenderer(ICircuitRenderer):
         return self._canvas.draw()
 
 
-def create_renderer(n, output_format: Format = Format.TEXT, skin=None, **opts) -> ICircuitRenderer:
+def create_renderer(
+        n: int,  # number of modes
+        output_format: Format = Format.TEXT,  # rendering method
+        skin: ASkin = None,  # skin (unused in text rendering)
+        **opts
+) -> ICircuitRenderer:
+    """
+    Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
+    A skin object is needed for circuit graphic rendering.
+    """
     if output_format == Format.TEXT:
         return TextRenderer(n)
     if output_format == Format.LATEX:
-        raise NotImplementedError("latex format not yet supported")
+        raise NotImplementedError("Latex format is not supported for circuit rendering")
 
-    assert skin is not None, "A skin must be selected for graphical display"
+    assert skin is not None, "A skin must be selected for circuit graphical rendering"
     if output_format == Format.HTML:
         canvas = SvgCanvas(**opts)
     else:
