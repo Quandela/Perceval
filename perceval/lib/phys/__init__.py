@@ -21,3 +21,4 @@
 # SOFTWARE.
 
 from .circuit import *
+from .predefined import catalog

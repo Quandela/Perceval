@@ -9,7 +9,7 @@ on:
     - main
     - release/*
   pull_request:
-    branches: 
+    branches:
     - main
     - release/*
 
@@ -44,7 +44,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-        
+
   build-docs:
     name: Build docs on ubuntu
     # The type of runner that the job will run on

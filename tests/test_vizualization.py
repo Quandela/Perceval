@@ -143,10 +143,10 @@ def test_svg_dump_symb_ps(tmp_path, save_figs):
     _save_or_check(symb.PS(sp.pi/2), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 def test_svg_dump_symb_pbs_compact(tmp_path, save_figs):
-    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs,compact=True)
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True)
 
 def test_svg_dump_symb_pbs_compact_false(tmp_path, save_figs):
-    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs,compact=False)
+    _save_or_check(symb.PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False)
 
 def test_svg_dump_symb_pr(tmp_path, save_figs):
     _save_or_check(symb.PR(sp.pi/4), tmp_path, sys._getframe().f_code.co_name, save_figs)
@@ -168,6 +168,27 @@ def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
           .add([1, 2], phys.PERM([1, 0]))
           .add([0, 1], phys.PERM([1, 0])))
     _save_or_check(nc, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
+
+def test_svg_dump_qrng(tmp_path, save_figs):
+    chip_QRNG = pcvl.Circuit(4, name='QRNG')
+    # Parameters
+    phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
+            pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
+    c = (chip_QRNG
+             .add((0, 1), symb.BS())
+             .add((2, 3), symb.BS())
+             .add((1, 2), symb.PERM([1, 0]))
+             .add(0, symb.PS(phis[0]))
+             .add(2, symb.PS(phis[2]))
+             .add((0, 1), symb.BS())
+             .add((2, 3), symb.BS())
+             .add(0, symb.PS(phis[1]))
+             .add(2, symb.PS(phis[3]))
+             .add((0, 1), symb.BS())
+             .add((2, 3), symb.BS())
+    )
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False)
 
 
 def test_svg_dump_qrng_compact(tmp_path, save_figs):
@@ -197,13 +218,14 @@ def test_svg_dump_phys_universal1(tmp_path, save_figs):
 
 
 def test_svg_dump_unitary(tmp_path, save_figs):
-    cA = phys.Circuit(6, name="W_1", U=pcvl.Matrix.random_unitary(6))
-    cB = phys.Circuit(6, name="W_2", U=pcvl.Matrix.random_unitary(6))
+    m = 6
+    c_a = phys.Unitary(name="W_1", U=pcvl.Matrix.random_unitary(m))
+    c_b = phys.Unitary(name="W_2", U=pcvl.Matrix.random_unitary(m))
     p_x = pcvl.P("x")
-    c = (phys.Circuit(6)
-         .add(0, cA, merge=False)
+    c = (phys.Circuit(m)
+         .add(0, c_a, merge=False)
          .add(0, phys.PS(p_x))
-         .add(0, cB, merge=False))
+         .add(0, c_b, merge=False))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 

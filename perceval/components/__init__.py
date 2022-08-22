@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from .circuit import Circuit, ACircuit
+from .predefined_circuit import PredefinedCircuit
 from .analyser import CircuitAnalyser
 from .processor import Processor
 from .source import Source

@@ -22,8 +22,8 @@
 
 import math
 from .renderer import SVGRenderer, MplotRenderer, Canvas
-import numpy as np
-
+from .renderer.shapes import detector_shape, source_shape
+from .utils import simple_float
 
 """
     Generic (abstract) class for drawing a LO schema - it covers different levels of representation:
@@ -39,14 +39,15 @@ class TextPrinter:
         self._hc = hc
         self._h = ['']*(hc*nsize+2)
         for k in range(nsize):
-            self._h[hc*k+2] = str(k)+":──"
+            self._h[hc*k+2] = "──"
         self.extend_pos(0, self._nsize-1)
         self._depth = [0]*nsize
+        self._offset = 0
 
     def close(self):
         self.extend_pos(0, self._nsize-1)
         for k in range(self._nsize):
-            self._h[self._hc*k+2] += "──:"+str(k)+" (depth %d)" % self._depth[k]
+            self._h[self._hc*k+2] += "──"
 
     def max_pos(self, start, end, header):
         maxpos = 0
@@ -161,6 +162,42 @@ class TextPrinter:
     def draw(self):
         return "\n".join(self._h)
 
+    def _set_offset(self, offset):
+        offset_diff = offset - self._offset
+        if offset_diff <= 0:
+            return
+        self._offset = offset
+        for nl in range(len(self._h)):
+            self._h[nl] = ' '*offset_diff + self._h[nl]
+
+    def add_mode_index(self):
+        self._set_offset(2)
+        for k in range(self._nsize):
+            self._h[self._hc*k + 2] = str(k) + ':' + self._h[self._hc*k + 2][2:]
+            self._h[self._hc*k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
+
+    def add_out_port(self, m, **opts):
+        content = ''
+        if 'content' in opts and opts['content']:
+            content = opts['content']
+        self._h[self._hc*m + 2] += f'[{content})'
+        if 'name' in opts and opts['name']:
+            self._h[self._hc*m + 3] += f"[{opts['name']}]"
+
+    def add_in_port(self, m, **opts):
+        content = ''
+        if 'content' in opts and opts['content']:
+            content = opts['content']
+        shape_size = len(content) + 2
+        name = ''
+        if 'name' in opts and opts['name']:
+            name = '[' + opts['name'] + ']'
+        name_size = len(name)
+        self._set_offset(max(shape_size, name_size))
+        self._h[self._hc*m + 2] = f'({content}]' + '─'*(self._offset-shape_size) \
+                                  + self._h[self._hc*m + 2][self._offset:]
+        self._h[self._hc*m + 3] = name + ' '*(self._offset-name_size) + self._h[self._hc*m + 3][self._offset:]
+
 
 class GraphicPrinter:
     affix_port_size = 15
@@ -174,13 +211,32 @@ class GraphicPrinter:
         self._canvas = canvas
         self._canvas.set_offset((0, 0),
                                 GraphicPrinter.affix_all_size, 50 * (nsize + 1))
+        self._n_font_size = min(12, max(6, self._nsize+1))
         for k in range(nsize):
             self._canvas.add_mpath(["M", GraphicPrinter.affix_all_size-GraphicPrinter.affix_port_size, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
-            self._canvas.add_text((0, 25 + 50 * k), str(k), 6, ta="left")
         self._current_block_open_offset = None
         self._current_block_name = ""
         self._compact = compact_rendering
+
+    def add_mode_index(self):
+        for k in range(self._nsize):
+            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), self._n_font_size, ta="right")
+
+        self._canvas.set_offset((0, 0), GraphicPrinter.affix_all_size, 50 * (self._nsize + 1))
+        for k in range(self._nsize):
+            self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
+
+    def add_out_port(self, n_mode, **opts):
+        max_pos = self.extend_pos(0, self._nsize - 1)
+        self._canvas.set_offset((GraphicPrinter.affix_all_size + 50*max_pos, 50*n_mode),
+                                GraphicPrinter.affix_all_size, 50*(n_mode + 1))
+        detector_shape(self._canvas, **opts)
+
+    def add_in_port(self, n_mode, **opts):
+        self._canvas.set_offset((0, 50*n_mode),
+                                GraphicPrinter.affix_all_size, 50*(n_mode + 1))
+        source_shape(self._canvas, **opts)
 
     def open_subblock(self, lines, name, area=None, color=None):
         start = lines[0]
@@ -251,13 +307,12 @@ class GraphicPrinter:
         for k in range(self._nsize):
             self._canvas.add_mpath(["M", 0, 25 + 50 * k,
                                     "l", GraphicPrinter.affix_port_size, 0], **self._stroke_style)
-            self._canvas.add_text((GraphicPrinter.affix_all_size, 25 + 50 * k), str(k), 6, ta="right")
 
     def draw(self):
         return self._canvas.draw()
 
 
-def QPrinter(n, output_format="text", stroke_style="", compact=False, **opts):
+def create_printer(n, output_format="text", stroke_style="", compact=False, **opts):
     if output_format == "text":
         return TextPrinter(n)
     elif output_format == "latex":
@@ -267,3 +322,30 @@ def QPrinter(n, output_format="text", stroke_style="", compact=False, **opts):
     else:
         canvas = MplotRenderer().new_canvas(**opts)
     return GraphicPrinter(n, canvas, stroke_style, compact)
+
+
+SPECIAL_OUTPUTS = {
+    'PERM': '_╲ ╱\n_ ╳ \n_╱ ╲'
+}
+
+
+def format_parameters(params: dict, precision: float = 1e-6, nsimplify: bool = True, separator: str = '\n') -> str:
+    """
+    Prepares a string output from a dictionnary of paramaters.
+    params: dictionnary where keys are the parameter names and values are the corresponding parameter value. Values can
+            either be a string or a float.
+            If a key is found in SPECIAL_OUTPUTS, the value is replaced by the hardcoded value.
+    precision: Rounds a float value to the given precision
+    nsimplify: Try to simplify numerical display in case of float value
+    separator: String separator for the final join
+    """
+    output = []
+    for key, value in params.items():
+        if key in SPECIAL_OUTPUTS:
+            output.append(SPECIAL_OUTPUTS[key])
+            continue
+
+        if not isinstance(value, str):
+            _, value = simple_float(value, precision, nsimplify)
+        output.append(f'{key}={value}')
+    return separator.join(output)
