@@ -119,7 +119,7 @@ class Source:
                 svd[StateVector([1], {1: {"_": noise_photon}})] = eta*(1-eta)*p2
             else:
                 svd[StateVector([1], {1: {"_": distinguishable_photon}})] = eta*distinguishability*p1+eta*(1-eta)*distinguishability*p2
-                svd[StateVector([1], {1: {"_": 0}})] = eta*(1-distinguishability*p1+eta*(1-eta)*(1-distinguishability)*p2)+eta*(1-eta)*p2
+                svd[StateVector([1], {1: {"_": 0}})] = eta*(1-distinguishability)*p1+eta*(1-eta)*(1-distinguishability)*p2+eta*(1-eta)*p2
 
         else:
             if p2 != 0:
