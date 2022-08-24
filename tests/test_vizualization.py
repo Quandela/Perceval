@@ -86,6 +86,8 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
 
 
 def test_svg_dump_phys_bs(tmp_path, save_figs):
+    import matplotlib
+    print(matplotlib.rcParams['backend'])
     _save_or_check(GenericBS(), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
