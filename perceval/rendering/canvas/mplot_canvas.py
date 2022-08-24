@@ -30,13 +30,6 @@ import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
-# In order to avoid matplotlib trying to use cairo (which is a dependency of cairocffi retrieved by drawSvg),
-# force the backend given the context.
-import matplotlib
-if in_pycharm_or_spyder:
-    matplotlib.use("module://backend_interagg")
-else:
-    matplotlib.use("TkAgg")
 
 
 class MplotCanvas(Canvas):
