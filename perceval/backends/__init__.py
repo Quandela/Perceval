@@ -28,10 +28,11 @@ from .naive import NaiveBackend
 from .slos import SLOSBackend
 from .stepper import StepperBackend
 from .strawberryfields import SFBackend
+from .mps import MPSBackend
 
 
 class BackendFactory:
-    _backends = (NaiveBackend, CliffordClifford2017Backend, SFBackend, SLOSBackend, StepperBackend)
+    _backends = (NaiveBackend, CliffordClifford2017Backend, SFBackend, SLOSBackend, StepperBackend, MPSBackend)
 
     def get_backend(self,
                     name: Union[str, None] = None) \
