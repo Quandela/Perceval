@@ -22,21 +22,14 @@
 
 from __future__ import annotations
 from .canvas import Canvas
-import os
-
-in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ
 
 import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
-# In order to avoid matplotlib trying to use cairo (which is a dependency of cairocffi retrieved by drawSvg),
-# force the backend given the context.
-import matplotlib
-if in_pycharm_or_spyder:
-    matplotlib.use("module://backend_interagg")
-else:
-    matplotlib.use("TkAgg")
+
+from .._mplot_utils import autoselect_backend
+autoselect_backend()
 
 
 class MplotCanvas(Canvas):
