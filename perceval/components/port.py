@@ -21,81 +21,112 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from .source import Source
+from enum import Enum
+from multipledispatch import dispatch
 
 
-class PortArray:
-    def __init__(self, processor, nport, input=True):
-        self._ports = [None] * nport
-        self._input = input
-        self._processor = processor
-
-    def __setitem__(self, idx, value):
-        assert isinstance(idx, int) and idx >= 0 and idx < len(self._ports), "invalid port index"
-        if self._input:
-            assert isinstance(value, InPort), "invalid port assignment"
-        else:
-            assert isinstance(value, OutPort), "invalid port assignment"
-
-        assert self._ports[idx] is None, "duplicate port definition"
-        self._ports[idx] = value
-        value.set_processor(self._processor)
-
-    def __getitem__(self, idx):
-        assert self._ports[idx] is not None
-        return self._ports[idx]
+class Encoding(Enum):
+    dual_ray = 0
+    polarization = 1
+    qudit = 2
+    time = 3
+    none = 4
 
 
-class InPort(ABC):
-    def __init__(self, connect):
-        self._connect = connect
-
-    def set_processor(self, p):
-        self._processor = p
-
-
-class InBinaryPort(InPort):
-    def __init__(self, source_port_id, connect):
-        self._source_port_id = source_port_id
-        super().__init__(connect=connect)
+def port_size(encoding: Encoding):
+    if encoding == Encoding.dual_ray:
+        return 2
+    elif encoding == Encoding.polarization:
+        return 1
+    elif encoding == Encoding.time:
+        return 1
+    elif encoding == Encoding.none:
+        return 1
+    return None  # Port size cannot be deduced only with encoding in case of Qudit-encoding
 
 
-class InOpticalPort(InPort):
-    def __init__(self, source, connect=None):
-        self._source = source
-        assert isinstance(source, Source)
-        super().__init__(connect)
+class PortLocation(Enum):
+    input = 0
+    output = 1
+    in_out = 2
 
 
-class InQBitPort(InPort):
-    def __init__(self, source, connect):
-        self._source = source
-        assert isinstance(source, OutQBitPort)
-        assert connect is not None
-        assert isinstance(connect, tuple) and len(connect) == 2
-        super().__init__(connect)
+class APort(ABC):
+    def __init__(self, size, name):
+        self._size = size
+        self._name = name
+
+    @property
+    def size(self) -> int:
+        return self._size
+
+    @staticmethod
+    def supports_location(loc: PortLocation) -> bool:
+        return True
 
 
-class OutPort(ABC):
-    def __init__(self, connect):
-        self._connect = connect
+class Port(APort):
+    def __init__(self, encoding, name):
+        assert encoding != Encoding.qudit, "Qudit encoded ports must be created by instanciating QuditPort"
+        super().__init__(port_size(encoding), name)
+        self._encoding = encoding
 
-    def set_processor(self, p):
-        self._processor = p
-
-
-class OutOpticalPort(OutPort, Source):
-    def __init__(self, connect):
-        super().__init__(connect)
+    @property
+    def encoding(self):
+        return self._encoding
 
 
-class OutQBitPort(OutPort):
-    def __init__(self, connect):
-        assert isinstance(connect, tuple) and len(connect) == 2
-        super().__init__(connect)
+class QuditPort(Port):
+    def __init__(self, n_qubits, name):
+        super(Port, self).__init__(2**n_qubits, name)
+        self._encoding = Encoding.qudit
 
 
-class OutCounterPort(OutPort):
-    def __init__(self, connect):
-        assert isinstance(connect, int)
-        super().__init__(connect)
+class Herald(APort):
+    def __init__(self, value: int, name=None):
+        assert value == 0 or value == 1, "Herald value should be 0 or 1"
+        super().__init__(1, name)
+        self._value = value
+
+
+class ADetector(APort, ABC):
+    def __init__(self, name=''):
+        super().__init__(1, name)
+
+    @abstractmethod
+    def trigger(self, value):
+        pass
+
+    @staticmethod
+    def supports_location(loc: PortLocation) -> bool:
+        return loc == PortLocation.output
+
+
+class CounterDetector(ADetector):
+    def __init__(self, name=''):
+        super().__init__(name)
+        self._counter = 0
+
+    def trigger(self, value):
+        if value:
+            self._counter += 1
+
+    @property
+    def count(self):
+        return self._counter
+
+
+class DigitalConverterDetector(ADetector):
+    def __init__(self, name=''):
+        super().__init__(name)
+        self._connections = {}
+
+    def trigger(self, value):
+        for component, action in self._connections.items():
+            action(value, component)
+
+    def connect_to(self, obj, action_func):
+        self._connections[obj] = action_func
+
+    def is_connected_to(self, component) -> bool:
+        return component in self._connections

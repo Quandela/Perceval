@@ -20,11 +20,34 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import Circuit, ACircuit
-from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
-from .processor import Processor
-from .source import Source
-# from .detector import Detector
-# from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
-from .base_components import *
+import perceval as pcvl
+from perceval.components.port import *
+from perceval.components.base_components import *
+import numpy as np
+
+
+def act_on_phi(value, obj):
+    if value:
+        obj.assign({"phi": np.pi/2})
+    else:
+        obj.assign({"phi": np.pi/4})
+
+
+def test_digital_converter():
+    phi = pcvl.P("phi")
+    ps = PS(phi)
+    bs = SimpleBS()
+    detector = DigitalConverterDetector('I act on phi')
+    detector.connect_to(ps, act_on_phi)
+
+    assert detector.is_connected_to(ps)
+    assert not detector.is_connected_to(bs)
+    assert phi.is_symbolic()
+
+    detector.trigger(True)
+    assert not phi.is_symbolic()
+    assert float(phi) == np.pi/2
+
+    detector.trigger(False)
+    assert not phi.is_symbolic()
+    assert float(phi) == np.pi/4
