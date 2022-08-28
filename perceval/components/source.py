@@ -38,8 +38,7 @@ class Source:
                  context: Dict = None) -> None:
         r"""Definition of a source
 
-        :param brightness: the brightness of the source defined the probability per laser pulse to collect >1 photon at
-            the input of the circuit
+        :param brightness: the probability per laser pulse to emmit at least one photon. Indenpendent of all losses.
         :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
         :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable`
           otherwise
