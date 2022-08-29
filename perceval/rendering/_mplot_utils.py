@@ -30,16 +30,18 @@ def autoselect_backend():
         # The next line may raise an exception if the backend needs to be autodetected, because gtk* candidate backends
         # require cairo which is not available on Windows
         matplotlib.rcParams['backend']
-    except Exception:
+    except Exception:  # We cannot guess the exception type we need to catch here: it can come from any Matplotlib
+        # backend or third party. We do not have control over this code
+
         # In order to avoid matplotlib trying to use cairo (which is a dependency of cairocffi retrieved by drawSvg),
-        # hint the backend given the context.
+        # hint the backend given the execution context, and avoid cairo related backends at all cost!
         in_notebook = False
         in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ
 
         try:
             from IPython import get_ipython
             in_notebook = 'IPKernelApp' in get_ipython().config
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         if in_pycharm_or_spyder:
@@ -52,5 +54,6 @@ def autoselect_backend():
             try:
                 import tkinter
                 matplotlib.use("TkAgg")
-            except Exception:
+            except (ModuleNotFoundError, ImportError):
+                # Last chance: use "agg" non-interactive backend (which should work "anywhere").
                 matplotlib.use("agg")
