@@ -24,12 +24,12 @@ from multipledispatch import dispatch
 
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._circuit_serialization import serialize_circuit
-from perceval.components import ACircuit
+from perceval.components import ALinearCircuit
 from perceval.utils import Matrix
 
 
-@dispatch(ACircuit)
-def serialize(circuit: ACircuit) -> str:
+@dispatch(ALinearCircuit)
+def serialize(circuit: ALinearCircuit) -> str:
     return serialize_circuit(circuit).SerializeToString()
 
 

@@ -47,7 +47,7 @@ def _matrix_double_for_polarization(m, u):
     return pu
 
 
-class ACircuit(AParametrizedComponent, ABC):
+class ALinearCircuit(AParametrizedComponent, ABC):
     """
     Abstract linear optics circuit class. A circuit is defined by a dimension `m`, and by parameters.
     Parameters can be fixed (value) or variables.
@@ -113,7 +113,7 @@ class ACircuit(AParametrizedComponent, ABC):
         return type(self)(**params).U
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = None) -> Circuit:
+            component: ALinearCircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
     def __getitem__(self, key):
@@ -122,7 +122,7 @@ class ACircuit(AParametrizedComponent, ABC):
     def __setitem__(self, key, value):
         self._params[key] = value
 
-    def __ifloordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
+    def __ifloordiv__(self, component: Union[ALinearCircuit, Tuple[int, ALinearCircuit]]) -> Circuit:
         r"""Shortcut for ``.add``
 
         >>> c //= b       # equivalent to: `c.add((0:b.n),b)`
@@ -139,7 +139,7 @@ class ACircuit(AParametrizedComponent, ABC):
             pos = 0
         return self.add(tuple(range(pos, component._m+pos)), component)
 
-    def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
+    def __floordiv__(self, component: Union[ALinearCircuit, Tuple[int, ALinearCircuit]]) -> Circuit:
         r"""Build a new circuit by adding `component` to the current circuit
 
         >>> c = a // b   # equivalent to: `Circuit(n) // self // component`
@@ -228,7 +228,7 @@ class ACircuit(AParametrizedComponent, ABC):
         return None
 
     @staticmethod
-    def _match_unitary(circuit: Union[ACircuit, Matrix], pattern: ACircuit, match: Match = None,
+    def _match_unitary(circuit: Union[ALinearCircuit, Matrix], pattern: ALinearCircuit, match: Match = None,
                        actual_pos: Optional[int] = 0, actual_pattern_pos: Optional[int] = 0) -> Optional[Match]:
         r"""match an elementary component by finding if possible the corresponding parameters.
 
@@ -242,7 +242,7 @@ class ACircuit(AParametrizedComponent, ABC):
 
         if match is None:
             match = Match()
-        if isinstance(circuit, ACircuit):
+        if isinstance(circuit, ALinearCircuit):
             u = circuit.compute_unitary(use_symbolic=False)
         else:
             u = circuit
@@ -279,15 +279,15 @@ class ACircuit(AParametrizedComponent, ABC):
 
         return None
 
-    def match(self, pattern: ACircuit, pos: int = None,
+    def match(self, pattern: ALinearCircuit, pos: int = None,
               pattern_pos: int = None, match: Match = None, actual_pos = 0, actual_pattern_pos=0) -> Optional[Match]:
         # the component shape should match
         if pattern.name == "CPLX" or self._m != pattern._m or pos is not None or pattern_pos is not None:
             return None
-        return ACircuit._match_unitary(self, pattern, match, actual_pos=actual_pos,
-                                       actual_pattern_pos=actual_pattern_pos)
+        return ALinearCircuit._match_unitary(self, pattern, match, actual_pos=actual_pos,
+                                             actual_pattern_pos=actual_pattern_pos)
 
-    def transfer_from(self, c: ACircuit, force: bool = False):
+    def transfer_from(self, c: ALinearCircuit, force: bool = False):
         r"""transfer parameters from a Circuit to another - should be the same circuit"""
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
@@ -309,7 +309,7 @@ class ACircuit(AParametrizedComponent, ABC):
         raise NotImplementedError("component has no inverse operator")
 
 
-class Circuit(ACircuit):
+class Circuit(ALinearCircuit):
     """Class to represent any circuit composed of one or multiple components
 
     :param m: The number of port of the circuit
@@ -370,7 +370,7 @@ class Circuit(ACircuit):
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = None) -> Circuit:
+            component: ALinearCircuit, merge: bool = None) -> Circuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
@@ -470,10 +470,10 @@ class Circuit(ACircuit):
 
     @staticmethod
     def generic_interferometer(m: int,
-                               fun_gen: Callable[[int], ACircuit],
+                               fun_gen: Callable[[int], ALinearCircuit],
                                shape: Literal["triangle", "rectangle"] = "rectangle",
                                depth: int = None,
-                               phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> Circuit:
+                               phase_shifter_fun_gen: Optional[Callable[[int], ALinearCircuit]] = None) -> Circuit:
         r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
 
         :param m: number of modes
@@ -526,10 +526,10 @@ class Circuit(ACircuit):
 
     @staticmethod
     def decomposition(U: MatrixN,
-                      component: ACircuit,
-                      phase_shifter_fn: Callable[[int], ACircuit] = None,
+                      component: ALinearCircuit,
+                      phase_shifter_fn: Callable[[int], ALinearCircuit] = None,
                       shape: Literal["triangle"] = "triangle",
-                      permutation: Type[ACircuit] = None,
+                      permutation: Type[ALinearCircuit] = None,
                       inverse_v: bool = False,
                       inverse_h: bool = False,
                       constraints=None,
@@ -603,7 +603,7 @@ class Circuit(ACircuit):
             n += c.ncomponents()
         return n
 
-    def transfer_from(self, source: ACircuit, force: bool = False):
+    def transfer_from(self, source: ALinearCircuit, force: bool = False):
         r"""Transfer parameters of a circuit to the current one
 
         :param source: the circuit to transfer the parameters from. The shape of the circuit to transfer from
@@ -674,7 +674,7 @@ class Circuit(ACircuit):
         self._components = nlc
         return pidx
 
-    def replace(self, p: int, pattern: ACircuit, merge: bool = False):
+    def replace(self, p: int, pattern: ALinearCircuit, merge: bool = False):
         nlc = []
         for idx, (r, c) in enumerate(self._components):
             if idx == p:
@@ -696,7 +696,7 @@ class Circuit(ACircuit):
                     return False
         return True
 
-    def match(self, pattern: ACircuit, pos: int = None,
+    def match(self, pattern: ALinearCircuit, pos: int = None,
               pattern_pos: int = 0, browse: bool = False,
               match: Match = None,
               actual_pos: int = None, actual_pattern_pos: int = None) -> Optional[Match]:

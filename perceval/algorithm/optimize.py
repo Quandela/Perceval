@@ -21,13 +21,13 @@
 # SOFTWARE.
 
 from typing import Optional, Callable, List
-from perceval.components.circuit import ACircuit
+from perceval.components.linear_circuit import ALinearCircuit
 from perceval.utils import Matrix, P, global_params
 
 from scipy import optimize as scpy_optimize
 
 
-def _min_fnc(c: ACircuit, params: List[P], x: List[int], v: Optional[Matrix],
+def _min_fnc(c: ALinearCircuit, params: List[P], x: List[int], v: Optional[Matrix],
              f: Callable[[Matrix, Matrix], float], sign: float):
     for idx, p in enumerate(x):
         params[idx].set_value(p)
@@ -42,7 +42,7 @@ def _stop_criterion(f, f0, precision, accept):
     return False
 
 
-def optimize(c: ACircuit,
+def optimize(c: ALinearCircuit,
              v: Optional[Matrix],
              f: Callable[[Matrix, Matrix], float],
              niter: int = 20,

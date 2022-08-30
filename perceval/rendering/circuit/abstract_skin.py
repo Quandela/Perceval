@@ -23,7 +23,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Tuple
 
-from perceval.components import ACircuit
+from perceval.components import ALinearCircuit
 
 
 class ASkin(ABC):
@@ -44,7 +44,7 @@ class ASkin(ABC):
         self._compact = compact_display
         self.stroke_style = stroke_style
 
-    def get_size(self, c: ACircuit, recursive: bool = False) -> Tuple[int, int]:
+    def get_size(self, c: ALinearCircuit, recursive: bool = False) -> Tuple[int, int]:
         """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():
             return self.measure(c)
@@ -64,7 +64,7 @@ class ASkin(ABC):
 
         return max(w), c.m
 
-    def measure(self, c: ACircuit) -> Tuple[int, int]:
+    def measure(self, c: ALinearCircuit) -> Tuple[int, int]:
         """
         Returns the measure (in arbitrary unit (AU) where the space between two modes = 1 AU)
         of a single component treated as a block (meaning that a composite circuit will not be

@@ -27,5 +27,6 @@ warnings.warn("perceval.lib.symb module is deprecated, use perceval.components.b
 
 from perceval.components.base_components import \
     SimpleBS as BS,\
-    PS, PBS, TD, Unitary, PERM, WP, HWP, QWP, PR
-from perceval.components.circuit import Circuit
+    PS, PBS, Unitary, PERM, WP, HWP, QWP, PR
+from perceval.components.non_linear_components import TD
+from perceval.components.linear_circuit import Circuit

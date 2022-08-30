@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from .source import Source
-from .circuit import ACircuit, Circuit
+from .linear_circuit import ALinearCircuit, Circuit
 from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
@@ -31,7 +31,7 @@ class Processor:
     """
         Generic definition of processor as sources + circuit
     """
-    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None,
+    def __init__(self, sources: Dict[int, Source], circuit: ALinearCircuit, post_select_fn: Callable = None,
                  heralds: Dict[int, int] = {}):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 

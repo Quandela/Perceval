@@ -23,11 +23,11 @@
 import sympy as sp
 import numpy as np
 
-from perceval.components import ACircuit
+from perceval.components import ALinearCircuit
 from perceval.utils import Matrix, format_parameters
 
 
-class GenericBS(ACircuit):
+class GenericBS(ALinearCircuit):
     DEFAULT_NAME = "BS"
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
@@ -98,7 +98,7 @@ class GenericBS(ACircuit):
             self._phi_b._value = sp.pi-(-self._phi_a.spv-self._phi_d.spv-self._phi_b.spv)
 
 
-class SimpleBS(ACircuit):
+class SimpleBS(ALinearCircuit):
     DEFAULT_NAME = "BS"
 
     def __init__(self, R=None, theta=None, phi=0):
@@ -162,7 +162,7 @@ class SimpleBS(ACircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class PBS(ACircuit):
+class PBS(ALinearCircuit):
     _supports_polarization = True
     DEFAULT_NAME = "PBS"
 
@@ -187,7 +187,7 @@ class PBS(ACircuit):
         raise NotImplementedError("inverse not yet implemented")
 
 
-class PS(ACircuit):
+class PS(ALinearCircuit):
     DEFAULT_NAME = "PS"
 
     def __init__(self, phi):
@@ -221,7 +221,7 @@ class PS(ACircuit):
                 self._phi = -float(self._phi)
 
 
-class WP(ACircuit):
+class WP(ALinearCircuit):
     DEFAULT_NAME = "WP"
     _supports_polarization = True
 
@@ -284,7 +284,7 @@ class QWP(WP):
         super().__init__(sp.pi/4, xsi)
 
 
-class PR(ACircuit):
+class PR(ALinearCircuit):
     """Polarization rotator"""
     _supports_polarization = True
     DEFAULT_NAME = "PR"
@@ -320,7 +320,7 @@ class PR(ACircuit):
         raise NotImplementedError("inverse not yet implemented")
 
 
-class Unitary(ACircuit):
+class Unitary(ALinearCircuit):
     DEFAULT_NAME = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):

@@ -31,7 +31,7 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawSvg
 
-from perceval.components import ACircuit, Circuit, Processor, CircuitAnalyser, non_linear_components as nl
+from perceval.components import ALinearCircuit, Circuit, Processor, CircuitAnalyser, non_linear_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
@@ -55,7 +55,7 @@ except AttributeError:
 
 
 def pdisplay_circuit(
-        circuit: ACircuit,
+        circuit: ALinearCircuit,
         map_param_kid: dict = None,
         output_format: Format = Format.TEXT,
         recursive: bool = False,
@@ -228,7 +228,7 @@ def _pdisplay(_, **kwargs):
     return None
 
 
-@dispatch((ACircuit, nl.TD))
+@dispatch((ALinearCircuit, nl.TD))
 def _pdisplay(circuit, **kwargs):
     return pdisplay_circuit(circuit, **kwargs)
 
@@ -259,7 +259,7 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_pycharm_or_spyder and (isinstance(o, ACircuit) or isinstance(o, Processor)):
+    elif in_pycharm_or_spyder and (isinstance(o, ALinearCircuit) or isinstance(o, Processor)):
         return Format.MPLOT
     return Format.TEXT
 
