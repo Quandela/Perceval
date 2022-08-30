@@ -22,56 +22,108 @@
 
 from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
+from .base_components import PERM
+from .port import APort, PortLocation
 from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
+
+
+class UnavailableModeException(Exception):
+    def __init__(self, mode: int, reason: str = None):
+        because = ''
+        if reason:
+            because = f' because: {reason}'
+        super().__init__(f"Mode {mode} is not available{because}")
 
 
 class Processor:
     """
         Generic definition of processor as sources + circuit
     """
-    def __init__(self, sources: Dict[int, Source], circuit: ALinearCircuit, post_select_fn: Callable = None,
-                 heralds: Dict[int, int] = {}):
+    def __init__(self, source: Source = Source()):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 
-        :param sources: a list of Source used by the processor
-        :param circuit: a circuit define the processor internal logic
-        :param post_select_fn: a post-selection function
+        :param source: the Source used by the processor
         """
-        self._sources = sources
-        self._circuit = circuit
-        self._post_select = post_select_fn
-        self._heralds = heralds
-        self._inputs_map = None
-        for k in range(circuit.m):
-            if k in sources:
-                distribution = sources[k].probability_distribution()
-            else:
-                distribution = SVDistribution(StateVector("|0>"))
-            # combine distributions
-            if self._inputs_map is None:
-                self._inputs_map = distribution
-            else:
-                self._inputs_map *= distribution
-        self._in_port_names = {}
-        self._out_port_names = {}
+        self._source = source
+        self._components = []  # Any type of components, not only linear ones
+        self._in_ports = {}
+        self._out_ports = {}
+        self._n_modes = 0  # number of modes
 
-    def set_port_names(self, in_port_names: Dict[int, str], out_port_names: Dict[int, str] = {}):
-        self._in_port_names = in_port_names
-        self._out_port_names = out_port_names
+        self._closed_photonic_modes = []
+
+        # self._circuit = circuit
+        # self._post_select = post_select_fn
+        # self._heralds = heralds
+        # self._inputs_map = None
+        # for k in range(circuit.m):
+        #     if k in sources:
+        #         distribution = sources[k].probability_distribution()
+        #     else:
+        #         distribution = SVDistribution(StateVector("|0>"))
+        #     # combine distributions
+        #     if self._inputs_map is None:
+        #         self._inputs_map = distribution
+        #     else:
+        #         self._inputs_map *= distribution
+        # self._in_port_names = {}
+        # self._out_port_names = {}
+
+    def add(self, mode_mapping, component):
+        """
+        Add a component (linear or non linear)
+        Checks if it's possible:
+        - No output is set on used modes
+        - Should fail if lock_inputs has been called and the component uses new modes or defines new inputs
+        """
+        if isinstance(mode_mapping, int):
+            mode_mapping = list(range(mode_mapping, mode_mapping + component.m))
+        # TODO mapping between port names and indexes
+        assert isinstance(mode_mapping, list) or isinstance(mode_mapping, tuple), "mode_mapping must be a list"
+
+        for mode in mode_mapping:
+            if mode in self._closed_photonic_modes:
+                raise UnavailableModeException(mode)
+
+        perm_modes, perm_component = self._generate_permutation(mode_mapping)
+        if perm_component is not None:
+            self._components.append((perm_modes, perm_component))
+
+        self._n_modes = max(self._n_modes, max(mode_mapping)+1)
+        component = Circuit(component.m).add(0, component, merge=False)
+        sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
+        self._components.append((sorted_modes, component))
+        return self
+
+    def _generate_permutation(self, mode_mapping):
+        min_m = min(mode_mapping)
+        max_m = max(mode_mapping)
+        missing_modes = [x for x in list(range(min_m, max_m+1)) if x not in mode_mapping]
+        mode_mapping.extend(missing_modes)
+        perm_modes = list(range(min_m, min_m+len(mode_mapping)))
+        perm_norm = [m - min_m for m in mode_mapping]
+        perm_vect = [perm_norm.index(i) for i in range(len(perm_norm))]
+        if mode_mapping == perm_modes:
+            return perm_modes, None  # No need for a permutation, modes are already sorted
+
+        return perm_modes, PERM(perm_vect)
+
+
+    def add_port(self, m, port: APort, location: PortLocation = PortLocation.in_out):
+        port_range = list(range(m, m + port._size))
+        assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
+        if location == PortLocation.in_out or location == PortLocation.input:
+            self._in_ports[port] = port_range
 
     @property
     def source_distribution(self):
         return self._inputs_map
 
     @property
-    def circuit(self):
-        return self._circuit
-
-    @property
-    def sources(self):
-        return self._sources
+    def source(self):
+        return self._source
 
     def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
         if not self._heralds or keep_herald:
