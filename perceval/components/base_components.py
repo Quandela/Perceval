@@ -24,7 +24,7 @@ import sympy as sp
 import numpy as np
 
 from perceval.components import ACircuit
-from perceval.utils import Matrix, format_parameters
+from perceval.utils import Matrix, format_parameters, Parameter
 
 
 class GenericBS(ACircuit):
@@ -256,6 +256,9 @@ class HWP(WP):
     def __init__(self, xsi):
         super().__init__(sp.pi/2, xsi)
 
+    def definition(self):
+        return HWP(xsi=Parameter('xsi')).U
+
 
 class QWP(WP):
     """Quarter wave plate"""
@@ -263,6 +266,9 @@ class QWP(WP):
 
     def __init__(self, xsi):
         super().__init__(sp.pi/4, xsi)
+
+    def definition(self):
+        return QWP(xsi=Parameter('xsi')).U
 
 
 class PR(ACircuit):
@@ -329,6 +335,9 @@ class TD(ACircuit):
     def inverse(self, v=False, h=False):
         if h:
             raise NotImplementedError("Cannot inverse a time delay")
+
+    def definition(self):
+        raise RuntimeError("DT circuit has no unitary matrix definition")
 
 
 class Unitary(ACircuit):
