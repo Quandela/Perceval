@@ -50,7 +50,7 @@ class StepperBackend(Backend):
     supports_symbolic = False
     supports_circuit_computing = True
 
-    def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
+    def apply(self, sv: StateVector, r: List[int], U: Matrix) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
 
         :param sv: input StateVector
@@ -60,22 +60,23 @@ class StepperBackend(Backend):
         """
         min_r = r[0]
         max_r = r[-1]
-        # build list of fockstates corresponding to subspace [min_r:max_r]
-        sub_input_state = set()
-        for state in sv:
-            sub_input_state.add(BasicState(state[min_r:max_r]))
+        key = tuple(U.flatten())
+        # build list of never visited fockstates corresponding to subspace [min_r:max_r]
+        sub_input_state = {BasicState(state[min_r:max_r]) for state in sv}.difference(self.result_dict[key]['set'])
         # get circuit probability for these input_states
-        sim_c = NaiveBackend(c.U, use_symbolic=self._use_symbolic)
-        mapping_input_output = {}
-        for input_state in sub_input_state:
-            mapping_input_output[input_state] = {}
-            for output_state in sim_c.allstate_iterator(input_state):
-                mapping_input_output[input_state][output_state] = sim_c.probampli(input_state, output_state)
+        if sub_input_state != set():
+            sim_c = NaiveBackend(U)
+            mapping_input_output = {input_state : \
+                                    {output_state : sim_c.probampli(input_state, output_state) \
+                                    for output_state in sim_c.allstate_iterator(input_state)} \
+                                    for input_state in sub_input_state}
+            self.result_dict[key] |= mapping_input_output  # Union of the dictionnaries
+            self.result_dict[key]['set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
         for state in sv:
             input_state = state[min_r:max_r]
-            for output_state, prob_ampli in mapping_input_output[input_state].items():
+            for output_state, prob_ampli in self.result_dict[key][input_state].items():
                 nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli*sv[state]
         return nsv
 
@@ -88,12 +89,14 @@ class StepperBackend(Backend):
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
-        for r, c in self._C:
-            if not c.delay_circuit:
+        self.matrices = [(r, c._dt, True) if c.delay_circuit else (r, c.compute_unitary(), False) for r, c in self._C]
+        self.result_dict = {tuple(m[1].flatten()) : {'set' : set()} for m in self.matrices if not m[2]}
+        for r, U, delay_circuit in self.matrices:
+            if not delay_circuit:
                 # nsv = sv.align(r)
-                sv = self.apply(sv, r, c)
+                sv = self.apply(sv, r, U)
             else:
-                sv.apply_delta_t(r[0], float(c._dt))
+                sv.apply_delta_t(r[0], float(U))
         self._out = sv
         return True
 
