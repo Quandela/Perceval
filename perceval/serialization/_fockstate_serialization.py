@@ -22,6 +22,7 @@
 
 from perceval.utils.statevector import BasicState, AnnotatedBasicState
 from typing import Union
+from ast import literal_eval
 
 
 def serialize_state(state: Union[AnnotatedBasicState, BasicState]):
@@ -34,3 +35,8 @@ def deserialize_state(pb_fs):
     except:
         s = AnnotatedBasicState(pb_fs)
     return s
+
+
+def deserialize_state_list(states):
+    state_list = literal_eval(states)
+    return [deserialize_state(s) for s in state_list]

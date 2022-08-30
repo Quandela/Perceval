@@ -35,27 +35,29 @@ cnot.add((3, 4), phys.BS(R=1 / 2))
 # pcvl.pdisplay(cnot)
 
 
-local_simulator_backend = pcvl.get_platform('local').get_backend("Naive")
-local_s_cnot = local_simulator_backend(cnot.U)
-results = local_s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10)
-for s in results:
-    print(str(s))
+# local_simulator_backend = pcvl.get_platform('local').get_backend("Naive")
+# local_s_cnot = local_simulator_backend(cnot.U)
+# results = local_s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10000)
+# for s in results:
+#     print(str(s))
 
-token_qcloud = 'YOUR_TOKEN'
-credentials = pcvl.RemoteCredentials(url="https://api.cloud.quandela.dev", token=token_qcloud)
+token_qcloud = '_T_eyJhbGciOiJIUzUxMiIsImlhdCI6MTY2MDc0MzU0MCwiZXhwIjoxNjYzMzM1NTQwfQ.eyJpZCI6MX0.g3u2J1hogz3RRvoh-WTnkp4aD1KdHZw2q0tQh_HolX8nSDlTPlYMNiqNbj6rkFfd8nn7gamdjhd01xUoznwaNw'
+credentials = pcvl.RemoteCredentials(url="http://127.0.0.1:5001", token=token_qcloud)
 
 simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
 s_cnot = simulator_backend(cnot.U)
 
-job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10)
+# job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+#
+# job_status = 'created'
+# while job_status not in ['completed', 'error', 'canceled']:
+#     print(f'job status : {job_status}')
+#     time.sleep(2)
+#     job_status = job.get_status()
+#
+# results = job.get_results()
 
-job_status = 'created'
-while job_status not in ['completed', 'error', 'canceled']:
-    print(f'job status : {job_status}')
-    time.sleep(2)
-    job_status = job.get_status()
-
-results = job.get_results()
+results = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
 for s in results:
     print(str(s))
 print(f'Result of sample : {results}')

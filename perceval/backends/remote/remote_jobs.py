@@ -63,7 +63,7 @@ class Job(ABC):
 
     def is_completed(self):
         status = self.get_status()
-        if status == 'completed':
+        if status in ['completed', 'error', 'canceled']:
             return True
 
         return False

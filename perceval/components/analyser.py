@@ -122,7 +122,7 @@ class CircuitAnalyser:
         return self
 
     def pdisplay(self, output_format="text", nsimplify=True, precision=1e-6):
-        distribution = self.distribution
+        distribution = self._distribution
         d = []
         for iidx, _ in enumerate(self.input_states_list):
             d.append([simple_float(f, nsimplify=nsimplify, precision=precision)[1]

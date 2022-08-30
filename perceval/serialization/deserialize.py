@@ -32,6 +32,11 @@ from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
 
 
+def deserialize_float(floatstring):
+    import typing
+    return float(floatstring)
+
+
 def deserialize_matrix(pb_mat: Union[str, bytes, pb.Matrix]) -> Matrix:
     if not isinstance(pb_mat, pb.Matrix):
         pb_binary_repr = pb_mat
@@ -66,7 +71,6 @@ def circuit_from_file(filepath: str) -> Circuit:
 
 
 class CircuitBuilder:
-
     deserialize_fn = {
         'circuit': deserialize_circuit,
         'beam_splitter': _cd.deserialize_symb_bs,

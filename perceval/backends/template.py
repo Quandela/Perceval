@@ -36,7 +36,6 @@ import numpy as np
 class AbstractBackend(ABC):
     name = None
 
-    @abstractmethod
     def sample(self, input_state):
         pass
 
