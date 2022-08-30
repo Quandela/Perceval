@@ -19,7 +19,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Union
 
-from .mplot_renderer import MplotRenderer
-from .svg_renderer import SVGRenderer
-from .generic_renderer import Canvas
+from perceval.utils import Parameter, Expression
+from perceval.serialization import _schema_circuit_pb2 as pb
+
+
+def serialize_parameter(param: Union[Parameter, float]):
+    pb_param = pb.Parameter()
+    if isinstance(param, float):
+        pb_param.real_value = param
+    else:
+        if param.fixed:
+            pb_param.real_value = float(param)
+        elif param._is_expression:
+            pb_param.expression = str(param.spv)
+        else:
+            pb_param.symbol = str(param.spv)
+    return pb_param
+
+
+def deserialize_parameter(serial_param: pb.Parameter):
+    t = serial_param.WhichOneof('type')
+    if t == 'real_value':
+        return serial_param.real_value
+    elif t == 'symbol':
+        return Parameter(serial_param.symbol)
+    elif t == 'expression':
+        return Expression(serial_param.expression)

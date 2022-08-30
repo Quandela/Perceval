@@ -151,10 +151,33 @@ We will simulate the behaviour of the circuit using the class `Circuit Analyser`
 ...                           [input_state],
 ...                           "*")
 
-Then, we display the result of `Circuit Analyser` via `pdisplay`.
+Then, we display the result of `Circuit Analyser` via ``pdisplay``.
 
 >>> pcvl.pdisplay(ca)
 
 .. figure:: _static/img/CircuitAnalyserHOM.png
   :align: center
   :width: 40%
+
+Random numbers
+-------------
+
+To achieve a reproducible result, for example in notebook execution, the pcvl.random_seed() function can be used at the beginning of the program.
+This function ensures that any random numbers in the optimisation or random parameter generation functions will be reproducible from run to run.
+
+Let's do a small example to understand:
+
+>>> pcvl.random_seed(2)
+>>> print(random.random())
+0.9478274870593494
+>>> print(random.random())
+0.9560342718892494
+
+>>> pcvl.random_seed(2)
+>>> print(random.random())
+0.9478274870593494
+>>> print(random.random())
+0.9560342718892494
+
+Since the seeds of the 2 cells are identical, the randomly generated numbers are also equal.
+It works the same way with notebook results.

@@ -21,18 +21,15 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from .generic_renderer import Renderer, Canvas
+from .canvas import Canvas
 
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib.path as mpath
-    import matplotlib.patches as mpatches
-    from matplotlib.collections import PatchCollection
-except ModuleNotFoundError:
-    plt = None
-    mpath = None
-    mpatches = None
-    PatchCollection = None
+import matplotlib.pyplot as plt
+import matplotlib.path as mpath
+import matplotlib.patches as mpatches
+from matplotlib.collections import PatchCollection
+
+from .._mplot_utils import autoselect_backend
+autoselect_backend()
 
 
 class MplotCanvas(Canvas):
@@ -93,11 +90,19 @@ class MplotCanvas(Canvas):
                                              fill=fill is not None, color=fill,
                                              ec=stroke, linewidth=stroke_width))
 
-    def add_text(self, points, text, size, ta="left"):
+    def add_text(self, points, text, size, ta="left", fontstyle="normal"):
         points = super().add_text(points, text, size, ta)
         if ta == "middle":
             ta = "center"
-        plt.text(points[0], points[1], text, ha=ta, size=size*3)
+        kwargs = {
+            'ha': ta,
+            'size': size*3
+        }
+        if fontstyle == "italic":
+            kwargs['fontstyle'] = fontstyle
+        elif fontstyle == "bold":
+            kwargs['fontweight'] = fontstyle
+        plt.text(points[0], points[1], text, **kwargs)
 
     def draw(self):
         super().draw()
@@ -113,9 +118,3 @@ class MplotCanvas(Canvas):
             plt.show()
         plt.close(self._fig)
         return self
-
-
-class MplotRenderer(Renderer):
-    def new_canvas(self, **opts) -> Canvas:
-        assert plt is not None, "matplotlib is not installed"
-        return MplotCanvas(**opts)

@@ -29,9 +29,9 @@ import itertools
 import re
 from typing import Dict, List, Union, Tuple, Optional
 
-from tabulate import tabulate
-
-from perceval.utils import simple_complex, simple_float, Matrix, global_params
+from .matrix import Matrix
+from .format import simple_complex, simple_float
+from .globals import global_params
 from .polarization import Polarization
 import numpy as np
 import sympy as sp
@@ -576,24 +576,6 @@ class SVDistribution(defaultdict):
                     break
                 prob -= v
         return sample
-
-    def pdisplay(self, output_format="text", n_simplify=True, precision=1e-6, max_v=None, sort=True):
-        if sort:
-            the_keys = sorted(self.keys(), key=lambda a: -self[a])
-        else:
-            the_keys = list(self.keys())
-        if max_v is not None:
-            the_keys = the_keys[:max_v]
-        d = []
-        for k in the_keys:
-            if isinstance(self[k], sp.Expr):
-                d.append([k, str(self[k])])
-            else:
-                d.append([k, simple_float(self[k], nsimplify=n_simplify, precision=precision)[1]])
-
-        s_states = tabulate(d, headers=["state ", "probability"],
-                            tablefmt=output_format == "text" and "pretty" or output_format)
-        return s_states
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

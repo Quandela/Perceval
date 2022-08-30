@@ -162,8 +162,8 @@ class Parameter:
 
     def __repr__(self):
         return "Parameter(name='%s', value=%s%s%s)" % (str(self.name), str(self._value),
-                                                       self._min is not None and ", min="+str(self._min) or "",
-                                                       self._max is not None and ", max="+str(self._max) or "")
+                                                       self._min is not None and ", min_v="+str(self._min) or "",
+                                                       self._max is not None and ", max_v="+str(self._max) or "")
 
     @property
     def bounds(self) -> Tuple[float, float]:

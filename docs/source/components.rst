@@ -130,9 +130,10 @@ The :math:`k` th spatial input mode is sent to the spatial output mode correspon
 For instance the following defines
 a 4-mode permutation. It matches the first input path (index 0) with the third output path (value 2), the second input path with the fourth output path, the third input path, with the first output path, and the fourth input path with the second output path.
 
+>>> import perceval as pcvl
 >>> c=phys.PERM([2,3,0,1])
 >>> pcvl.pdisplay(c)
->>> pcvl.pdisplay(c.compute_unitary(), output_format="latex")
+>>> pcvl.pdisplay(c.compute_unitary(), output_format=pcvl.Format.LATEX)
 
 .. list-table::
 
@@ -145,7 +146,7 @@ We can do exactly the same with the symb library.
 
 >>> c=symb.PERM([2,3,0,1])
 >>> pcvl.pdisplay(c)
->>> pcvl.pdisplay(c.compute_unitary(), output_format="latex")
+>>> pcvl.pdisplay(c.compute_unitary(), output_format=pcvl.Format.LATEX)
 
 .. list-table::
 

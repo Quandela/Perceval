@@ -20,21 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections import defaultdict
-import copy
 from .source import Source
-from .circuit import ACircuit
-from perceval.utils import SVDistribution, StateVector
+from .circuit import ACircuit, Circuit
+from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
 from perceval.backends import Backend
-import quandelibc as qc
-from typing import Dict, Callable, Type
+from typing import Dict, Callable, Type, Literal
 
 
 class Processor:
     """
         Generic definition of processor as sources + circuit
     """
-    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None):
+    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None,
+                 heralds: Dict[int, int] = {}):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 
         :param sources: a list of Source used by the processor
@@ -44,6 +42,7 @@ class Processor:
         self._sources = sources
         self._circuit = circuit
         self._post_select = post_select_fn
+        self._heralds = heralds
         self._inputs_map = None
         for k in range(circuit.m):
             if k in sources:
@@ -55,12 +54,35 @@ class Processor:
                 self._inputs_map = distribution
             else:
                 self._inputs_map *= distribution
+        self._in_port_names = {}
+        self._out_port_names = {}
+
+    def set_port_names(self, in_port_names: Dict[int, str], out_port_names: Dict[int, str] = {}):
+        self._in_port_names = in_port_names
+        self._out_port_names = out_port_names
 
     @property
     def source_distribution(self):
         return self._inputs_map
 
-    def run(self, simulator_backend: Type[Backend]):
+    @property
+    def circuit(self):
+        return self._circuit
+
+    @property
+    def sources(self):
+        return self._sources
+
+    def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
+        if not self._heralds or keep_herald:
+            return StateVector(s)
+        new_state = []
+        for idx, k in enumerate(s):
+            if idx not in self._heralds:
+                new_state.append(k)
+        return StateVector(new_state)
+
+    def run(self, simulator_backend: Type[Backend], keep_herald: bool=False):
         """
             calculate the output probabilities - returns performance, and output_maps
         """
@@ -70,8 +92,8 @@ class Processor:
         outputs = SVDistribution()
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in sim.allstateprob_iterator(input_state):
-                if p and (not self._post_select or self._post_select(output_state)):
-                    outputs[StateVector(output_state)] += p*input_prob
+                if p > global_params['min_p'] and self._state_selected(output_state):
+                    outputs[self.filter_herald(output_state, keep_herald)] += p*input_prob
         all_p = sum(v for v in outputs.values())
         if all_p == 0:
             return 0, outputs
@@ -79,3 +101,14 @@ class Processor:
         for k in outputs.keys():
             outputs[k] /= all_p
         return all_p, outputs
+
+    def _state_selected(self, state: AnnotatedBasicState) -> bool:
+        """
+        Computes if the state is selected given heralds and post selection function
+        """
+        for m, v in self._heralds.items():
+            if state[m] != v:
+                return False
+        if self._post_select is not None:
+            return self._post_select(state)
+        return True

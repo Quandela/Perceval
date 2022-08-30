@@ -64,6 +64,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    polarization
    backends
    components
+   convertors
    tools
 
 .. toctree::
@@ -79,6 +80,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/2-mode Grover algorithm
    notebooks/BS-based implementation notebook
    notebooks/Rewriting rules in Perceval
+   notebooks/Qiskit conversion
 
 .. toctree::
    :caption: Code Reference

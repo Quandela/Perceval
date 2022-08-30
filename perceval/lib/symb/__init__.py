@@ -20,4 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import *
+import warnings
+warnings.warn("perceval.lib.symb module is deprecated, use perceval.components.base_components instead",
+              DeprecationWarning,
+              stacklevel=2)
+
+from perceval.components.base_components import \
+    SimpleBS as BS,\
+    PS, PBS, TD, Unitary, PERM, WP, HWP, QWP, PR
+from perceval.components.circuit import Circuit
