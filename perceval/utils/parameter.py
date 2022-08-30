@@ -52,7 +52,7 @@ class Parameter:
         else:
             self._max = None
         if value is None:
-            self._symbol = sp.S(name)
+            self._symbol = sp.symbols(name, real=True)
             self._value = None
         else:
             if not isinstance(value, sp.Expr):
@@ -75,7 +75,7 @@ class Parameter:
         else:
             return self._symbol
 
-    def __float__(self, subs: dict = None):
+    def __float__(self):
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """
         return float(self._value)
