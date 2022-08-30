@@ -22,7 +22,8 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from multipledispatch import dispatch
+
+from perceval.components.abstract_component import AComponent
 
 
 class Encoding(Enum):
@@ -33,7 +34,7 @@ class Encoding(Enum):
     none = 4
 
 
-def port_size(encoding: Encoding):
+def _port_size(encoding: Encoding):
     if encoding == Encoding.dual_ray:
         return 2
     elif encoding == Encoding.polarization:
@@ -51,14 +52,9 @@ class PortLocation(Enum):
     in_out = 2
 
 
-class APort(ABC):
+class APort(AComponent, ABC):
     def __init__(self, size, name):
-        self._size = size
-        self._name = name
-
-    @property
-    def size(self) -> int:
-        return self._size
+        super().__init__(size, name)
 
     @staticmethod
     def supports_location(loc: PortLocation) -> bool:
@@ -68,7 +64,7 @@ class APort(ABC):
 class Port(APort):
     def __init__(self, encoding, name):
         assert encoding != Encoding.qudit, "Qudit encoded ports must be created by instanciating QuditPort"
-        super().__init__(port_size(encoding), name)
+        super().__init__(_port_size(encoding), name)
         self._encoding = encoding
 
     @property

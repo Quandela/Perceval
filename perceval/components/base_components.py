@@ -28,7 +28,7 @@ from perceval.utils import Matrix, format_parameters
 
 
 class GenericBS(ACircuit):
-    _name = "BS"
+    DEFAULT_NAME = "BS"
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
         super().__init__(2)
@@ -99,7 +99,7 @@ class GenericBS(ACircuit):
 
 
 class SimpleBS(ACircuit):
-    _name = "BS"
+    DEFAULT_NAME = "BS"
 
     def __init__(self, R=None, theta=None, phi=0):
         super().__init__(2)
@@ -163,8 +163,8 @@ class SimpleBS(ACircuit):
 
 
 class PBS(ACircuit):
-    _name = "PBS"
     _supports_polarization = True
+    DEFAULT_NAME = "PBS"
 
     def __init__(self):
         super().__init__(2)
@@ -188,7 +188,7 @@ class PBS(ACircuit):
 
 
 class PS(ACircuit):
-    _name = "PS"
+    DEFAULT_NAME = "PS"
 
     def __init__(self, phi):
         super().__init__(1)
@@ -222,7 +222,7 @@ class PS(ACircuit):
 
 
 class WP(ACircuit):
-    _name = "WP"
+    DEFAULT_NAME = "WP"
     _supports_polarization = True
 
     def __init__(self, delta, xsi):
@@ -271,14 +271,14 @@ class WP(ACircuit):
 
 
 class HWP(WP):
-    _name = "HWP"
+    DEFAULT_NAME = "HWP"
 
     def __init__(self, xsi):
         super().__init__(sp.pi/2, xsi)
 
 
 class QWP(WP):
-    _name = "QWP"
+    DEFAULT_NAME = "QWP"
 
     def __init__(self, xsi):
         super().__init__(sp.pi/4, xsi)
@@ -286,8 +286,8 @@ class QWP(WP):
 
 class PR(ACircuit):
     """Polarization rotator"""
-    _name = "PR"
     _supports_polarization = True
+    DEFAULT_NAME = "PR"
 
     def __init__(self, delta):
         super().__init__(1)
@@ -320,38 +320,8 @@ class PR(ACircuit):
         raise NotImplementedError("inverse not yet implemented")
 
 
-class TD(ACircuit):
-    """Time delay"""
-    _name = "TD"
-    delay_circuit = True
-    stroke_style = {"stroke": "black", "stroke_width": 2}
-
-    def __init__(self, t):
-        super().__init__(1)
-        self._dt = self._set_parameter("t", t, 0, sp.oo, False)
-
-    def _compute_unitary(self, assign=None, use_symbolic=False):
-        raise RuntimeError("DT circuit cannot be simulated with unitary matrix")
-
-    def get_variables(self, map_param_kid=None):
-        parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "t", "t", None, map_param_kid)
-        return parameters
-
-    def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid)
-        params_str = format_parameters(parameters, separator=', ')
-        return "TD(%s)" % params_str
-
-    def inverse(self, v=False, h=False):
-        if h:
-            raise NotImplementedError("Cannot inverse a time delay")
-
-
 class Unitary(ACircuit):
-    _name = "Unitary"
+    DEFAULT_NAME = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
         assert U is not None, "A unitary matrix is required"
@@ -359,14 +329,12 @@ class Unitary(ACircuit):
         # A symbolic matrix is not a use case for this component
         assert not U.is_symbolic(), "U parameter must not be symbolic"
         self._u = U
-        if name is not None:
-            self._name = name
         m = U.shape[0]
         self._supports_polarization = use_polarization
         if use_polarization:
             assert m % 2 == 0, "Polarization matrix should have an even number of rows/col"
             m //= 2
-        super().__init__(m)
+        super().__init__(m, name)
 
     def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
         # Ignore assign and use_symbolic parameters as __init__ checked the unitary matrix is numeric
@@ -380,7 +348,7 @@ class Unitary(ACircuit):
 
     def describe(self, _=None):
         params = [f"Matrix('''{self._u}''')"]
-        if self._name != Unitary._name:
+        if self.name != Unitary.DEFAULT_NAME:
             params.append(f"name='{self._name}'")
         if self._supports_polarization:
             params.append("use_polarization=True")
@@ -388,7 +356,7 @@ class Unitary(ACircuit):
 
 
 class PERM(Unitary):
-    _name = "PERM"
+    DEFAULT_NAME = "PERM"
 
     def __init__(self, perm):
         assert isinstance(perm, list), "permutation Operator needs list parameter"

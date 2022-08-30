@@ -89,11 +89,13 @@ class StepperBackend(Backend):
             return False
         self._compiled_input = copy.copy((var, sv))
         for r, c in self._C:
-            if not c.delay_circuit:
-                # nsv = sv.align(r)
-                sv = self.apply(sv, r, c)
-            else:
-                sv.apply_delta_t(r[0], float(c._dt))
+            sv = self.apply(sv, r, c)
+            # TODO how to fix the code below?
+            # if not c.delay_circuit:
+            #     # nsv = sv.align(r)
+            #     sv = self.apply(sv, r, c)
+            # else:
+            #     sv.apply_delta_t(r[0], float(c._dt))
         self._out = sv
         return True
 

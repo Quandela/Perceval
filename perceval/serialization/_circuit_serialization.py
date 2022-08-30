@@ -25,6 +25,7 @@ from multipledispatch import dispatch
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit
 import perceval.components.base_components as comp
+import perceval.components.non_linear_components as nl
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter
 
@@ -79,7 +80,7 @@ class ComponentSerializer:
         pb_umat = serialize_matrix(unitary.U)
         pb_unitary = pb.Unitary()
         pb_unitary.mat.CopyFrom(pb_umat)
-        if unitary.name != comp.Unitary._name:
+        if unitary.name != comp.Unitary.DEFAULT_NAME:
             pb_unitary.name = unitary.name
         pb_unitary.use_polarization = unitary.requires_polarization
         self._pb.unitary.CopyFrom(pb_unitary)
@@ -108,8 +109,8 @@ class ComponentSerializer:
         pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.wave_plate.CopyFrom(pb_wp)
 
-    @dispatch(comp.TD)
-    def _serialize(self, td: comp.TD):
+    @dispatch(nl.TD)
+    def _serialize(self, td: nl.TD):
         pb_td = pb.TimeDelay()
         pb_td.dt.CopyFrom(serialize_parameter(td._dt))
         self._pb.time_delay.CopyFrom(pb_td)
@@ -131,7 +132,7 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
         circuit = Circuit(circuit.m).add(0, circuit)
 
     pb_circuit = pb.Circuit()
-    if circuit.name != Circuit._name:
+    if circuit.name != Circuit.DEFAULT_NAME:
         pb_circuit.name = circuit.name
     pb_circuit.n_mode = circuit.m
     comp_serializer = ComponentSerializer()

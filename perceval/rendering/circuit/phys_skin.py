@@ -22,7 +22,7 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, Circuit, base_components as cp
+from perceval.components import ACircuit, Circuit, base_components as cp, non_linear_components as nl
 from perceval.rendering.circuit.abstract_skin import ASkin
 import sympy as sp
 
@@ -42,7 +42,7 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return 2
 
-    @dispatch((cp.PS, cp.TD, cp.PERM, cp.WP, cp.PR))
+    @dispatch((cp.PS, nl.TD, cp.PERM, cp.WP, cp.PR))
     def get_width(self, c) -> int:
         return 1
 
@@ -62,7 +62,7 @@ class PhysSkin(ASkin):
     def get_shape(self, c):
         return self.pbs_shape
 
-    @dispatch(cp.TD)
+    @dispatch(nl.TD)
     def get_shape(self, c):
         return self.td_shape
 
