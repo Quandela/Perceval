@@ -28,7 +28,7 @@ from perceval.utils.parameter import Parameter
 
 
 class AComponent(ABC):
-    DEFAULT_NAME = ''
+    DEFAULT_NAME = None
 
     def __init__(self, m: int, name: str = None):
         self._m = m

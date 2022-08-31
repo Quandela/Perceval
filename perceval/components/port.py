@@ -60,6 +60,12 @@ class APort(AComponent, ABC):
     def supports_location(loc: PortLocation) -> bool:
         return True
 
+    @abstractmethod
+    def is_output_photonic_mode_closed(self):
+        """
+        Returns True if the photonic mode is closed by the port
+        """
+
 
 class Port(APort):
     def __init__(self, encoding, name):
@@ -70,6 +76,9 @@ class Port(APort):
     @property
     def encoding(self):
         return self._encoding
+
+    def is_output_photonic_mode_closed(self):
+        return False
 
 
 class QuditPort(Port):
@@ -84,6 +93,9 @@ class Herald(APort):
         super().__init__(1, name)
         self._value = value
 
+    def is_output_photonic_mode_closed(self):
+        return True
+
 
 class ADetector(APort, ABC):
     def __init__(self, name=''):
@@ -96,6 +108,9 @@ class ADetector(APort, ABC):
     @staticmethod
     def supports_location(loc: PortLocation) -> bool:
         return loc == PortLocation.output
+
+    def is_output_photonic_mode_closed(self):
+        return True
 
 
 class CounterDetector(ADetector):

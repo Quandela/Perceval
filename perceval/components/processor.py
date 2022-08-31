@@ -23,18 +23,18 @@
 from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
-from .port import APort, PortLocation
+from .port import APort, PortLocation, Herald
 from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
 from perceval.backends import Backend
-from typing import Dict, Callable, Type, Literal
+from typing import Dict, Callable, Type, Literal, Union
 
 
 class UnavailableModeException(Exception):
-    def __init__(self, mode: int, reason: str = None):
+    def __init__(self, mode: Union[int, list[int]], reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'
-        super().__init__(f"Mode {mode} is not available{because}")
+        super().__init__(f"Mode(s) {mode} not available{because}")
 
 
 class Processor:
@@ -52,7 +52,9 @@ class Processor:
         self._out_ports = {}
         self._n_modes = 0  # number of modes
 
-        self._closed_photonic_modes = []
+        self._anon_herald_num = 0  # This is not a herald count!
+
+        # self._closed_photonic_modes = []
 
         # self._circuit = circuit
         # self._post_select = post_select_fn
@@ -84,7 +86,7 @@ class Processor:
         assert isinstance(mode_mapping, list) or isinstance(mode_mapping, tuple), "mode_mapping must be a list"
 
         for mode in mode_mapping:
-            if mode in self._closed_photonic_modes:
+            if not self.is_mode_connectible(mode):
                 raise UnavailableModeException(mode)
 
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
@@ -112,10 +114,63 @@ class Processor:
 
 
     def add_port(self, m, port: APort, location: PortLocation = PortLocation.in_out):
-        port_range = list(range(m, m + port._size))
+        port_range = list(range(m, m + port.m))
         assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
+        if port.name is None and isinstance(port, Herald):
+            port._name = f'herald{self._anon_herald_num}'
+            self._anon_herald_num += 1
+
         if location == PortLocation.in_out or location == PortLocation.input:
+            if not self.are_modes_free(port_range, PortLocation.input):
+                raise UnavailableModeException(port_range, "Another port overlaps")
             self._in_ports[port] = port_range
+
+        if location == PortLocation.in_out or location == PortLocation.output:
+            if not self.are_modes_free(port_range, PortLocation.output):
+                raise UnavailableModeException(port_range, "Another port overlaps")
+            self._out_ports[port] = port_range
+
+    @property
+    def _closed_photonic_modes(self):
+        output = [False] * self._n_modes
+        for port, m_range in self._out_ports.items():
+            if port.is_output_photonic_mode_closed():
+                for i in m_range:
+                    output[i] = True
+        return output
+
+    def is_mode_connectible(self, mode: int):
+        if mode < 0:
+            return False
+        if mode >= self._n_modes:
+            return True
+        return not self._closed_photonic_modes[mode]
+
+    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.output):
+        """
+        Returns True if all modes in mode_range are free of ports, for a given location (input, output or both)
+        """
+        if location == PortLocation.in_out or location == PortLocation.input:
+            for m in mode_range:
+                if self.get_input_port(m) is not None:
+                    return False
+        if location == PortLocation.in_out or location == PortLocation.output:
+            for m in mode_range:
+                if self.get_output_port(m) is not None:
+                    return False
+        return True
+
+    def get_input_port(self, mode):
+        for port, mode_range in self._in_ports.items():
+            if mode in mode_range:
+                return port
+        return None
+
+    def get_output_port(self, mode):
+        for port, mode_range in self._out_ports.items():
+            if mode in mode_range:
+                return port
+        return None
 
     @property
     def source_distribution(self):

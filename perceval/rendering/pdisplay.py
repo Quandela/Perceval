@@ -32,6 +32,7 @@ with warnings.catch_warnings():
     import drawSvg
 
 from perceval.components import ALinearCircuit, Circuit, Processor, CircuitAnalyser, non_linear_components as nl
+from perceval.components.port import Herald
 from perceval.rendering.circuit import DisplayConfig, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
@@ -106,6 +107,20 @@ def pdisplay_processor(processor: Processor,
                                 nsimplify=nsimplify,
                                 shift=shift)
     renderer.close()
+
+    for port, port_range in processor._in_ports.items():
+        in_display_params = {
+            'name': port.name,
+            'color': "white" if isinstance(port, Herald) else "lightgray"
+        }
+        renderer.add_in_port(port_range[0], 'A', **in_display_params)
+
+    for port, port_range in processor._out_ports.items():
+        in_display_params = {
+            'name': port.name,
+            'color': "white" if isinstance(port, Herald) else "lightgray"
+        }
+        renderer.add_out_port(port_range[0], 'A', **in_display_params)
 
     # herald_num = 0
     # incr_herald_num = False
