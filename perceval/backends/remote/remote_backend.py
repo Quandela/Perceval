@@ -27,7 +27,7 @@ from typing import Union
 
 import requests
 
-from ..template import AbstractBackend
+from ..template import Backend
 from .credentials import RemoteCredentials
 from .remote_jobs import Job
 
@@ -43,6 +43,8 @@ pcvl_version = get_distribution("perceval-quandela").version
 JOB_CREATE_ENDPOINT = '/api/job'
 
 
+################################
+# Factory
 class RemoteBackendBuilder:
     def __init__(self, name: str, platform: str, credentials: RemoteCredentials):
         self.name = name
@@ -50,21 +52,21 @@ class RemoteBackendBuilder:
         self.credentials = credentials
 
     def __call__(self, u, use_symbolic=None, n=None, mask=None):
-        for method in dir(RemoteBackend):
-            print(f'method {method}')
         return RemoteBackend(self.name, self.platform, self.credentials, u, use_symbolic, n, mask)
 
 
+################################
+# Sync methods Factory
 def _sync_wrapper(cls, func):
-    wrapped = getattr(cls, func)
+    async_func = getattr(cls, func)
 
     def await_job(*args):
-        job = wrapped(args)
+        job = async_func(*args)
         while True:
             if not job.is_completed():
-                time.sleep(2)
+                time.sleep(3)
             else:
-                return job.result()
+                return job.get_results()
 
     return await_job
 
@@ -74,15 +76,12 @@ def generate_sync_methods(cls):
         if method.startswith('async_'):
             sync_name = method.removeprefix('async_')
             setattr(cls, sync_name, _sync_wrapper(cls, method))
+    return cls
 
 
-def generate_sync_function(func):
-    sync_name = func.__name__.removeprefix('async_')
-    setattr(func.__qualname__.split('.')[-2], sync_name, _sync_wrapper(func.__qualname__.split('.')[-2], func.__name__))
-
-
+################################
 @generate_sync_methods
-class RemoteBackend(AbstractBackend):
+class RemoteBackend(Backend):
     def __init__(self, name: str, platform: str, credentials: RemoteCredentials, cu: Union[ACircuit, Matrix],
                  use_symbolic=None, n=None, mask=None):
         self.name = name
@@ -93,7 +92,7 @@ class RemoteBackend(AbstractBackend):
         else:
             self.__cu_key = 'unitary'
         self.__cu_data = bytes_to_jsonstring(serialize(cu))
-        self.generate_sync_methods()
+        super(RemoteBackend, self).__init__(cu, use_symbolic, n, mask)
 
     def __defaults_payload(self, command: str):
         return {
@@ -102,7 +101,7 @@ class RemoteBackend(AbstractBackend):
             'pcvl_version': pcvl_version
         }
 
-    def __create_job_endpoint(self, body):
+    def __request_job_create(self, body):
         job = None
         try:
             endpoint = self.__credentials.build_endpoint(JOB_CREATE_ENDPOINT)
@@ -120,15 +119,9 @@ class RemoteBackend(AbstractBackend):
             logging.error(f"Could not load response :{ex.msg}")
         return job
 
-    # def sample(self, input_state):
-    #     job = self.async_sample(input_state)
-    #     while True:
-    #         if not job.is_completed():
-    #             time.sleep(2)
-    #         else:
-    #             return job.result()
+    def prob_be(self, input_state, output_state, n=None):
+        raise NotImplementedError
 
-    # @generate_sync_function
     def async_sample(self, input_state):
         payload = self.__defaults_payload('sample')
         payload['payload'] = {
@@ -137,7 +130,7 @@ class RemoteBackend(AbstractBackend):
             'input_state': serialize(input_state)
         }
 
-        job = self.__create_job_endpoint(payload)
+        job = self.__request_job_create(payload)
         job.set_deserializer(deserialize_state)
 
         return job
@@ -151,7 +144,7 @@ class RemoteBackend(AbstractBackend):
             'count': count
         }
 
-        job = self.__create_job_endpoint(payload)
+        job = self.__request_job_create(payload)
         job.set_deserializer(deserialize_state_list)
         return job
 
@@ -170,6 +163,6 @@ class RemoteBackend(AbstractBackend):
             'skip_compile': skip_compile
         }
 
-        job = self.__create_job_endpoint(payload)
+        job = self.__request_job_create(payload)
         job.set_deserializer(deserialize_float)
         return job

@@ -41,35 +41,33 @@ cnot.add((3, 4), phys.BS(R=1 / 2))
 # for s in results:
 #     print(str(s))
 
-token_qcloud = '_T_eyJhbGciOiJIUzUxMiIsImlhdCI6MTY2MDc0MzU0MCwiZXhwIjoxNjYzMzM1NTQwfQ.eyJpZCI6MX0.g3u2J1hogz3RRvoh-WTnkp4aD1KdHZw2q0tQh_HolX8nSDlTPlYMNiqNbj6rkFfd8nn7gamdjhd01xUoznwaNw'
-credentials = pcvl.RemoteCredentials(url="http://127.0.0.1:5001", token=token_qcloud)
+token_qcloud = 'YOUR_TOKEN'
+credentials = pcvl.RemoteCredentials(url="https://api.cloud.quandela.dev", token=token_qcloud)
 
 simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
 s_cnot = simulator_backend(cnot.U)
 
-# job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
-#
-# job_status = 'created'
-# while job_status not in ['completed', 'error', 'canceled']:
-#     print(f'job status : {job_status}')
-#     time.sleep(2)
-#     job_status = job.get_status()
-#
-# results = job.get_results()
+job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
 
-results = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
-for s in results:
-    print(str(s))
-print(f'Result of sample : {results}')
-#
-# states = {
-#     pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
-#     pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
-#     pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
-#     pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
-# }
-#
-# ca = pcvl.CircuitAnalyser(s_cnot, states)
-# ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-# pcvl.pdisplay(ca)
-# print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))
+job_status = 'created'
+while job_status not in ['completed', 'error', 'canceled']:
+    print(f'job status : {job_status}')
+    time.sleep(2)
+    job_status = job.get_status()
+
+results = job.get_results()
+
+results2 = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+
+
+states = {
+    pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
+    pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
+    pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
+    pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
+}
+
+ca = pcvl.CircuitAnalyser(s_cnot, states)
+ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+pcvl.pdisplay(ca)
+print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))

@@ -33,14 +33,7 @@ import quandelibc as qc
 import numpy as np
 
 
-class AbstractBackend(ABC):
-    name = None
-
-    def sample(self, input_state):
-        pass
-
-
-class Backend(AbstractBackend):
+class Backend(ABC):
     supports_symbolic = None
     supports_circuit_computing = None
 
