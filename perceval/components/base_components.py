@@ -24,10 +24,11 @@ import sympy as sp
 import numpy as np
 
 from perceval.components import ACircuit
-from perceval.utils import Matrix, format_parameters
+from perceval.utils import Matrix, format_parameters, Parameter
 
 
 class GenericBS(ACircuit):
+    """Universal beam splitter"""
     _name = "BS"
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
@@ -99,6 +100,7 @@ class GenericBS(ACircuit):
 
 
 class SimpleBS(ACircuit):
+    """Beam splitter with a single phase"""
     _name = "BS"
 
     def __init__(self, R=None, theta=None, phi=0):
@@ -162,32 +164,8 @@ class SimpleBS(ACircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class PBS(ACircuit):
-    _name = "PBS"
-    _supports_polarization = True
-
-    def __init__(self):
-        super().__init__(2)
-
-    def _compute_unitary(self, assign=None, use_symbolic=False):
-        self.assign(assign)
-        return Matrix([[0, 0, 1, 0],
-                       [0, 1, 0, 0],
-                       [1, 0, 0, 0],
-                       [0, 0, 0, 1]], use_symbolic)
-
-    def get_variables(self, map_param_kid=None):
-        return {}
-
-    # noinspection PyMethodMayBeStatic
-    def describe(self, _=None):
-        return "PBS()"
-
-    def inverse(self, v=False, h=False):
-        raise NotImplementedError("inverse not yet implemented")
-
-
 class PS(ACircuit):
+    """Phase shifter"""
     _name = "PS"
 
     def __init__(self, phi):
@@ -222,6 +200,7 @@ class PS(ACircuit):
 
 
 class WP(ACircuit):
+    """Wave plate"""
     _name = "WP"
     _supports_polarization = True
 
@@ -271,17 +250,25 @@ class WP(ACircuit):
 
 
 class HWP(WP):
+    """Half wave plate"""
     _name = "HWP"
 
     def __init__(self, xsi):
         super().__init__(sp.pi/2, xsi)
 
+    def definition(self):
+        return HWP(xsi=Parameter('xsi')).U
+
 
 class QWP(WP):
+    """Quarter wave plate"""
     _name = "QWP"
 
     def __init__(self, xsi):
         super().__init__(sp.pi/4, xsi)
+
+    def definition(self):
+        return QWP(xsi=Parameter('xsi')).U
 
 
 class PR(ACircuit):
@@ -349,8 +336,12 @@ class TD(ACircuit):
         if h:
             raise NotImplementedError("Cannot inverse a time delay")
 
+    def definition(self):
+        raise RuntimeError("DT circuit has no unitary matrix definition")
+
 
 class Unitary(ACircuit):
+    """Generic component defined by a unitary matrix"""
     _name = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
@@ -388,6 +379,7 @@ class Unitary(ACircuit):
 
 
 class PERM(Unitary):
+    """Permutation"""
     _name = "PERM"
 
     def __init__(self, perm):
@@ -415,3 +407,22 @@ class PERM(Unitary):
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
+
+
+class PBS(Unitary):
+    """Polarized beam spliter"""
+    _name = "PBS"
+
+    def __init__(self):
+        u = Matrix([[0, 0, 1, 0],
+                    [0, 1, 0, 0],
+                    [1, 0, 0, 0],
+                    [0, 0, 0, 1]])
+        super().__init__(U=u, use_polarization=True)
+
+    def get_variables(self, map_param_kid=None):
+        return {}
+
+    # noinspection PyMethodMayBeStatic
+    def describe(self, _=None):
+        return "PBS()"
