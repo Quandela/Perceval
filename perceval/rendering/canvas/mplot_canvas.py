@@ -21,18 +21,15 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from .generic_renderer import Renderer, Canvas
+from .canvas import Canvas
 
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib.path as mpath
-    import matplotlib.patches as mpatches
-    from matplotlib.collections import PatchCollection
-except ModuleNotFoundError:
-    plt = None
-    mpath = None
-    mpatches = None
-    PatchCollection = None
+from .._mplot_utils import autoselect_backend
+autoselect_backend()
+
+import matplotlib.pyplot as plt
+import matplotlib.path as mpath
+import matplotlib.patches as mpatches
+from matplotlib.collections import PatchCollection
 
 
 class MplotCanvas(Canvas):
@@ -121,9 +118,3 @@ class MplotCanvas(Canvas):
             plt.show()
         plt.close(self._fig)
         return self
-
-
-class MplotRenderer(Renderer):
-    def new_canvas(self, **opts) -> Canvas:
-        assert plt is not None, "matplotlib is not installed"
-        return MplotCanvas(**opts)

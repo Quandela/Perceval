@@ -22,7 +22,7 @@
 
 import pytest
 import perceval as pcvl
-import perceval.lib.symb as symb
+import perceval.components.base_components as comp
 
 
 def test_processor_generator_0():
@@ -72,7 +72,7 @@ def test_processor_generator_2():
 def test_processor_run():
     simulator_backend = pcvl.BackendFactory().get_backend('Naive')
     source = pcvl.Source(brightness=1, purity=1, indistinguishability=1)
-    qpu = pcvl.Processor({0: source, 1: source}, symb.BS())
+    qpu = pcvl.Processor({0: source, 1: source}, comp.SimpleBS())
     all_p, sv_out = qpu.run(simulator_backend)
     assert pytest.approx(all_p) == 1
     assert pytest.approx(sv_out[pcvl.StateVector("|2,0>")]) == 0.5

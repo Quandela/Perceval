@@ -22,7 +22,7 @@
 
 import numpy as np
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.base_components as comp
 
 import pytest
 
@@ -33,7 +33,7 @@ def test_minimal():
     # default simulator backend
     simulator_backend = pcvl.BackendFactory().get_backend("Stepper")
     # simulator directly initialized on circuit
-    s = simulator_backend(phys.BS())
+    s = simulator_backend(comp.GenericBS())
     check_output(s, pcvl.AnnotatedBasicState([1, 1]), {pcvl.BasicState("|1,0>"): 0,
                                                        pcvl.BasicState("|0,1>"): 0,
                                                        pcvl.BasicState("|0,2>"): 0.5,
@@ -46,9 +46,9 @@ def test_c3():
         simulator_backend = pcvl.BackendFactory().get_backend(backend)
         # simulator directly initialized on circuit
         circuit = pcvl.Circuit(3)
-        circuit.add((0, 1), phys.BS())
-        circuit.add((1,), phys.PS(np.pi/4))
-        circuit.add((1, 2), phys.BS())
+        circuit.add((0, 1), comp.GenericBS())
+        circuit.add((1,), comp.PS(np.pi/4))
+        circuit.add((1, 2), comp.GenericBS())
         pcvl.pdisplay(circuit.U)
         s = simulator_backend(circuit)
         check_output(s, pcvl.AnnotatedBasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
@@ -62,6 +62,6 @@ def test_c3():
 
 def test_basic_interference():
     simulator_backend = pcvl.BackendFactory().get_backend("Stepper")
-    c = phys.BS()
+    c = comp.GenericBS()
     sim = simulator_backend(c, use_symbolic=False)
     assert pytest.approx(sim.prob(pcvl.BasicState([1, 1]), pcvl.BasicState([2, 0]))) == 0.5

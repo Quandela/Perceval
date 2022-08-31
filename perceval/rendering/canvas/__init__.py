@@ -20,25 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
-
-from perceval.components import PredefinedCircuit
-import perceval.lib.symb as symb
-
-c_cnot = (symb.Circuit(6, name="PostProcessed CNOT")
-              .add((0, 1), symb.BS(R=1 / 3, phi=np.pi))
-              .add((3, 4), symb.BS(R=1 / 2))
-              .add((2, 3), symb.BS(R=1 / 3, phi=np.pi))
-              .add((4, 5), symb.BS(R=1 / 3))
-              .add((3, 4), symb.BS(R=1 / 2)))
-
-
-def _post_process(s):
-    return (s[1] or s[2]) and (s[3] or s[4])
-
-
-postprocessed_cnot = PredefinedCircuit(c_cnot,
-                                       "postprocessed cnot",
-                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
-                                       heralds={0: 0, 5: 0},
-                                       post_select_fn=_post_process)
+from .canvas import Canvas
+from .mplot_canvas import MplotCanvas
+from .svg_canvas import SvgCanvas

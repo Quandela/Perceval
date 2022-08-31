@@ -21,47 +21,50 @@
 # SOFTWARE.
 
 r"""
-This script compares building of unitary when using Circuit or directly by building matrix.
+This script times the execution of pdisplay for circuits.
 """
 
 import perceval as pcvl
 import perceval.components.base_components as comp
 import time
-import numpy as np
 
-m = 8
-
-
-def phase_shift(n_mode, theta):
-    # phase shift in m x m unitary in mode 1 of angle theta
-    ps_matrix = np.eye(n_mode, dtype=complex)
-    ps_matrix[0, 0] = np.cos(theta) + 1j * np.sin(theta)
-    return ps_matrix
+m = 16
+trials = 5
+# render_format = pcvl.Format.MPLOT
+render_format = pcvl.Format.HTML
+modes = [4, 8, 16, 24]
 
 
-u1 = pcvl.Matrix.random_unitary(m)
-u2 = pcvl.Matrix.random_unitary(m)
-
-px = pcvl.P("x")
-c = comp.Unitary(u2) // (0, comp.PS(px)) // comp.Unitary(u1)
-
-dt_circuit = 0
-dt_raw = 0
-
-for _ in range(1000):
-    top0 = time.time_ns()
-    px.set_value(1)
-    c.compute_unitary(use_symbolic=False)
-    top1 = time.time_ns()
-    dt_circuit += top1-top0
-
-    top0 = time.time_ns()
-    U = u1 @ phase_shift(m, 1) @ u2
-    top1 = time.time_ns()
-    dt_raw += top1-top0
+def generate_circuit(n_mode):
+    u = pcvl.Matrix.random_unitary(n_mode)
+    mzi = (pcvl.Circuit(2)
+           // comp.SimpleBS()
+           // (0, comp.PS(phi=pcvl.P("φ_a")))
+           // comp.SimpleBS()
+           // (0, comp.PS(phi=pcvl.P("φ_b"))))
+    return pcvl.Circuit.decomposition(u, mzi, shape="triangle")
 
 
-if dt_circuit/dt_raw > 2.5:
-    print("TOO_SLOW", "circuit", dt_circuit, "raw", dt_raw, "factor", dt_circuit/dt_raw)
-else:
-    print("OK", "circuit", dt_circuit, "raw", dt_raw, "factor", dt_circuit/dt_raw)
+def benchmark_pdisplay(m, t, f):
+    c = generate_circuit(m)
+
+    render_time = 0
+
+    for _ in range(t):
+        tic = time.time()
+        pcvl.pdisplay(c, output_format=f)
+        # pcvl.pdisplay_to_file(c, path="tmp.svg", output_format=f)
+        tac = time.time()
+        render_time += tac-tic
+
+    print("Circuit rendering benchmark results")
+    print("===================================")
+    print(f"Circuit containing {c.ncomponents()} components")
+    print(f"with rendering method: {f.name}")
+    print(f" => {render_time/trials} s (average on {trials} trials)")
+    print(" ")
+
+
+if __name__ == "__main__":
+    for nm in modes:
+        benchmark_pdisplay(nm, trials, render_format)

@@ -20,10 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import heralded_cnot
-from .postprocessed_cnot import postprocessed_cnot
-from .generic_2mode import generic_2mode
+from perceval.utils.parameter import P
+from perceval.components import Circuit, PredefinedCircuit
+from perceval.components.base_components import *
 
-catalog = {"heralded_cnot": heralded_cnot,
-           "post_processed_cnot": postprocessed_cnot,
-           "generic_2mode": generic_2mode}
+c = Circuit(2) // GenericBS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
+
+# With simple BS convention:
+# c = SimpleBS(theta=P("theta"), phi=P("phi")) // PS(phi=P("phi_a")) // (1, PS(phi=P("phi_b")))
+
+generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")

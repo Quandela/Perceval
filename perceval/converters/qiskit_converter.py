@@ -24,6 +24,7 @@ from perceval.components import PredefinedCircuit, Circuit, Processor, Source
 from perceval.utils import P, BasicState
 from perceval.algorithm.norm import *
 from perceval.algorithm.optimize import optimize
+import perceval.components.base_components as comp
 
 import qiskit
 
@@ -41,7 +42,7 @@ def _swap(perm, port_a, port_b):
 
 class QiskitConverter:
 
-    def __init__(self, library, source: Source = None):
+    def __init__(self, catalog, source: Source = None):
         r"""Initialize qiskit to perceval circuit converter.
 
         :param library: a component library to use for the conversion
@@ -50,9 +51,9 @@ class QiskitConverter:
         if source is None:
             source = Source()
         self._source = source
-        self._lib = library
+        self._catalog = catalog
 
-    def convert(self, qc: qiskit.QuantumCircuit, heralded: bool = None) -> Processor:
+    def convert(self, qc, heralded: bool = None) -> Processor:
         r"""Convert a qiskit circuit into a perceval.Processor.
 
         :param qc: quantum-based qiskit circuit
@@ -68,13 +69,13 @@ class QiskitConverter:
             if instruction[0].name == "cx":
                 n_cnot += 1
 
-        cnot_component_heralded = self._lib.catalog["heralded_cnot"]
-        cnot_component_postprocessed = self._lib.catalog["post_processed_cnot"]
-        generic_2mode_component = self._lib.catalog["generic_2mode"]
-        lower_phase_component = PredefinedCircuit(self._lib.Circuit(2) // (0, self._lib.PS(P("phi2"))))
-        upper_phase_component = PredefinedCircuit(self._lib.Circuit(2) // (1, self._lib.PS(P("phi1"))))
+        cnot_component_heralded = self._catalog["heralded_cnot"]
+        cnot_component_postprocessed = self._catalog["post_processed_cnot"]
+        generic_2mode_component = self._catalog["generic_2mode"]
+        lower_phase_component = PredefinedCircuit(Circuit(2) // (0, comp.PS(P("phi2"))))
+        upper_phase_component = PredefinedCircuit(Circuit(2) // (1, comp.PS(P("phi1"))))
         two_phase_component = PredefinedCircuit(
-            self._lib.Circuit(2) // (0, self._lib.PS(P("phi1"))) // (1, self._lib.PS(P("phi2"))))
+            Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2"))))
 
         qubit_names = qc.qregs[0].name
         sources = {}
@@ -134,7 +135,7 @@ class QiskitConverter:
                 c_first = min(c_idx, c_data)
                 if instruction[0].name == "swap":
                     # c_idx and c_data are consecutive - not necessarily ordered
-                    pc.add(c_first, self._lib.PERM([2, 3, 0, 1]))
+                    pc.add(c_first, comp.PERM([2, 3, 0, 1]))
                 else:
                     cnot_idx += 1
                     if heralded is False or (heralded is None and cnot_idx == n_cnot):
@@ -194,7 +195,7 @@ class QiskitConverter:
                             inv_perm.append(p_idx)
                             perm[p_idx] = len(inv_perm) - 1
 
-                    pc.add(c_first, self._lib.PERM(perm))
+                    pc.add(c_first, comp.PERM(perm))
                     pc.add(c_first, cnot_component_instance, merge=False)
                     if heralds:
                         for k, v in heralds.items():
@@ -205,7 +206,7 @@ class QiskitConverter:
                                                                         BasicState([s[perm.index(ii)+c_first]
                                                                                     for ii in range(cnot_component_instance.m)]))
 
-                    pc.add(c_first, self._lib.PERM(inv_perm))
+                    pc.add(c_first, comp.PERM(inv_perm))
 
         p = Processor(sources, pc, post_select_fn=post_select_fn, heralds=global_heralds)
         p.set_port_names(port_names, port_names)

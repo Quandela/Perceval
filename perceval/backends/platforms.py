@@ -23,7 +23,7 @@
 from typing import Type, Union, List
 from abc import ABC
 
-from .template import AbstractBackend
+from .template import Backend
 from .cliffords2017 import CliffordClifford2017Backend
 from .naive import NaiveBackend
 from .slos import SLOSBackend
@@ -34,11 +34,11 @@ from .remote import RemoteCredentials, RemoteBackendBuilder
 
 class Platform(ABC):
     name: str
-    _backends: List[AbstractBackend]
+    _backends: List[Backend]
 
     def get_backend(self,
                     name: Union[str, None] = None) \
-            -> Type[AbstractBackend]:
+            -> Type[Backend]:
         """Returns a backend
 
         param name: The name of the simulator
@@ -73,5 +73,5 @@ class RemotePlatform(Platform):
         _backends = ['Naive']
 
     def get_backend(self,
-                    name: Union[str, None] = None) -> Type[AbstractBackend]:
+                    name: Union[str, None] = None) -> Type[Backend]:
         return RemoteBackendBuilder(name, self.__name, self.__credentials)

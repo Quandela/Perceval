@@ -23,13 +23,12 @@
 
 """
 @Author: Mathias Pont
-
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 import perceval as pcvl
-import perceval.lib.symb as symb
+import perceval.components.base_components as comp
 
 
 def outputstate_to_outcome(state_ket):
@@ -68,11 +67,10 @@ def mzi_AnnotatedBasicState_pcvl(input_state):
     phases = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
 
     (mzi_chip
-     .add(0, symb.PS(phases[0]))
-     .add((0, 1), symb.BS())
-     .add(0, symb.PS(phases[1]))
-     .add((0, 1), symb.BS())
-
+     .add(0, comp.PS(phases[0]))
+     .add((0, 1), comp.SimpleBS())
+     .add(0, comp.PS(phases[1]))
+     .add((0, 1), comp.SimpleBS())
      )
     pcvl.pdisplay(mzi_chip)
 
@@ -145,10 +143,10 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
     phases = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
 
     (mzi_chip
-     .add(0, symb.PS(phases[0]))
-     .add((0, 1), symb.BS())
-     .add(0, symb.PS(phases[1]))
-     .add((0, 1), symb.BS())
+     .add(0, comp.PS(phases[0]))
+     .add((0, 1), comp.SimpleBS())
+     .add(0, comp.PS(phases[1]))
+     .add((0, 1), comp.SimpleBS())
 
      )
 
@@ -244,4 +242,3 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
 
 if __name__ == '__main__':
     mzi_ImperfectSource_pcvl(1, 0, 0.9)
-    pass

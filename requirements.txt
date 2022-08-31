@@ -2,3 +2,5 @@ numpy
 quandelibc
 tabulate
 pytest
+setuptools
+multipledispatch

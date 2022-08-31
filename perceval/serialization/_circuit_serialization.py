@@ -21,11 +21,10 @@
 # SOFTWARE.
 
 from multipledispatch import dispatch
-from perceval.serialization import _schema_circuit_pb2 as pb
 
+from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit
-import perceval.lib.phys as phys
-import perceval.lib.symb as symb
+import perceval.components.base_components as comp
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter
 
@@ -38,12 +37,11 @@ class ComponentSerializer:
         self._pb = pb.Component()
         self._pb.starting_mode = r
         self._pb.n_mode = c.m
-        self._pb.ns = pb.Component.PHYS if '.phys' in c.__module__ else pb.Component.SYMB
         self._serialize(c)
         return self._pb
 
-    @dispatch(phys.BS)
-    def _serialize(self, bs: phys.BS):
+    @dispatch(comp.GenericBS)
+    def _serialize(self, bs: comp.GenericBS):
         pb_bs = pb.BeamSplitterComplex()
         if 'theta' in bs.params:
             pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
@@ -54,8 +52,8 @@ class ComponentSerializer:
         pb_bs.phi_d.CopyFrom(serialize_parameter(bs._phi_d))
         self._pb.beam_splitter_complex.CopyFrom(pb_bs)
 
-    @dispatch(symb.BS)
-    def _serialize(self, bs: symb.BS):
+    @dispatch(comp.SimpleBS)
+    def _serialize(self, bs: comp.SimpleBS):
         pb_bs = pb.BeamSplitter()
         if 'theta' in bs.params:
             pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
@@ -64,60 +62,60 @@ class ComponentSerializer:
         pb_bs.phi.CopyFrom(serialize_parameter(bs._phi))
         self._pb.beam_splitter.CopyFrom(pb_bs)
 
-    @dispatch((phys.PS, symb.PS))
-    def _serialize(self, ps):
+    @dispatch(comp.PS)
+    def _serialize(self, ps: comp.PS):
         pb_ps = pb.PhaseShifter()
         pb_ps.phi.CopyFrom(serialize_parameter(ps._phi))
         self._pb.phase_shifter.CopyFrom(pb_ps)
 
-    @dispatch((phys.PERM, symb.PERM))
-    def _serialize(self, p):
+    @dispatch(comp.PERM)
+    def _serialize(self, p: comp.PERM):
         pb_perm = pb.Permutation()
         pb_perm.permutations.extend(p.perm_vector)
         self._pb.permutation.CopyFrom(pb_perm)
 
-    @dispatch((phys.Unitary, symb.Unitary))
-    def _serialize(self, unitary):
+    @dispatch(comp.Unitary)
+    def _serialize(self, unitary: comp.Unitary):
         pb_umat = serialize_matrix(unitary.U)
         pb_unitary = pb.Unitary()
         pb_unitary.mat.CopyFrom(pb_umat)
-        if unitary._name != phys.Unitary._name:
-            pb_unitary.name = unitary._name
+        if unitary.name != comp.Unitary._name:
+            pb_unitary.name = unitary.name
         pb_unitary.use_polarization = unitary.requires_polarization
         self._pb.unitary.CopyFrom(pb_unitary)
 
-    @dispatch((phys.PBS, symb.PBS))
-    def _serialize(self, pbs):
+    @dispatch(comp.PBS)
+    def _serialize(self, _):
         pb_pbs = pb.PolarizedBeamSplitter()
         self._pb.polarized_beam_splitter.CopyFrom(pb_pbs)
 
-    @dispatch((phys.QWP, symb.QWP))
-    def _serialize(self, wp):
+    @dispatch(comp.QWP)
+    def _serialize(self, wp: comp.QWP):
         pb_wp = pb.WavePlate()
         pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.quarter_wave_plate.CopyFrom(pb_wp)
 
-    @dispatch((phys.HWP, symb.HWP))
-    def _serialize(self, wp):
+    @dispatch(comp.HWP)
+    def _serialize(self, wp: comp.HWP):
         pb_wp = pb.WavePlate()
         pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.half_wave_plate.CopyFrom(pb_wp)
 
-    @dispatch((phys.WP, symb.WP))
-    def _serialize(self, wp):
+    @dispatch(comp.WP)
+    def _serialize(self, wp: comp.WP):
         pb_wp = pb.WavePlate()
         pb_wp.delta.CopyFrom(serialize_parameter(wp._delta))
         pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.wave_plate.CopyFrom(pb_wp)
 
-    @dispatch((phys.TD, symb.TD))
-    def _serialize(self, dt):
+    @dispatch(comp.TD)
+    def _serialize(self, td: comp.TD):
         pb_td = pb.TimeDelay()
-        pb_td.dt.CopyFrom(serialize_parameter(dt._dt))
+        pb_td.dt.CopyFrom(serialize_parameter(td._dt))
         self._pb.time_delay.CopyFrom(pb_td)
 
-    @dispatch((phys.PR, symb.PR))
-    def _serialize(self, pr):
+    @dispatch(comp.PR)
+    def _serialize(self, pr: comp.PR):
         pb_pr = pb.PolarizationRotator()
         pb_pr.delta.CopyFrom(serialize_parameter(pr._delta))
         self._pb.polarization_rotator.CopyFrom(pb_pr)
@@ -133,8 +131,8 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
         circuit = Circuit(circuit.m).add(0, circuit)
 
     pb_circuit = pb.Circuit()
-    if circuit._name != Circuit._name:
-        pb_circuit.name = circuit._name
+    if circuit.name != Circuit._name:
+        pb_circuit.name = circuit.name
     pb_circuit.n_mode = circuit.m
     comp_serializer = ComponentSerializer()
     for r, c in circuit._components:
