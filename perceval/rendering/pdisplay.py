@@ -67,7 +67,7 @@ def pdisplay_circuit(
         **opts):
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
-    w, h = skin.get_size(circuit, recursive=recursive)
+    w, h = skin.get_size(circuit, recursive)
     renderer = create_renderer(circuit.m, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, **opts)
     if map_param_kid is None:
@@ -95,7 +95,7 @@ def pdisplay_processor(processor: Processor,
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
     # The display size of the processor is the same as the circuit it holds
-    w, h = skin.get_size(processor, recursive=recursive)
+    w, h = skin.get_size(processor, recursive)
     renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, compact=compact, **opts)
     for r, c in processor._components:

@@ -66,7 +66,7 @@ class ASkin(ABC):
             w[r] = [end_w] * comp.m
         return max(w), c.m
 
-    @dispatch(Processor)
+    @dispatch(Processor, bool)
     def get_size(self, p: Processor, recursive: bool = False) -> Tuple[int, int]:
         total_width = 0
         for modes, comp in p._components:  # TODO rework this: components can be displayed on top of each other

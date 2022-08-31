@@ -20,16 +20,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, PredefinedCircuit
+from perceval.components import Circuit, Processor
 from perceval.components.base_components import *
+from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.port import Herald, Port, Encoding
 
 
-c_cnot = (Circuit(6, name="PostProcessed CNOT")
-          .add((0, 1), GenericBS(R=1 / 3, phi_b=np.pi, phi_d=0))
-          .add((3, 4), GenericBS(R=1 / 2))
-          .add((2, 3), GenericBS(R=1 / 3, phi_b=np.pi, phi_d=0))
-          .add((4, 5), GenericBS(R=1 / 3))
-          .add((3, 4), GenericBS(R=1 / 2)))
+def _post_process(s):
+    return (s[1] or s[2]) and (s[3] or s[4])
+
+
+class PostProcessedCnotItem(CatalogItem):
+    article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
+    R1 = 1 / 3
+    R2 = 1 / 2
+
+    def __init__(self):
+        super().__init__("postprocessed cnot")
+        self._default_opts['type'] = AsType.PROCESSOR
+
+    def build(self):
+        c_cnot = (Circuit(6, name="PostProcessed CNOT")
+                  .add((0, 1), GenericBS(R=self.R1, phi_b=np.pi, phi_d=0))
+                  .add((3, 4), GenericBS(R=self.R2))
+                  .add((2, 3), GenericBS(R=self.R1, phi_b=np.pi, phi_d=0))
+                  .add((4, 5), GenericBS(R=self.R1))
+                  .add((3, 4), GenericBS(R=self.R2)))
+
+        if self._opt('type') == AsType.CIRCUIT:
+            return c_cnot
+        elif self._opt('type') == AsType.PROCESSOR:
+            p = Processor()
+            return p.add(0, c_cnot) \
+                .add_port(0, Herald(0)) \
+                .add_port(1, Port(Encoding.dual_ray, 'data')) \
+                .add_port(3, Port(Encoding.dual_ray, 'ctrl')) \
+                .add_port(5, Herald(0))
+
 
 # With simple BS convention:
 # c_cnot = (Circuit(6, name="PostProcessed CNOT")
@@ -40,12 +67,11 @@ c_cnot = (Circuit(6, name="PostProcessed CNOT")
 #           .add((3, 4), SimpleBS(R=1 / 2)))
 
 
-def _post_process(s):
-    return (s[1] or s[2]) and (s[3] or s[4])
 
 
-postprocessed_cnot = PredefinedCircuit(c_cnot,
-                                       "postprocessed cnot",
-                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
-                                       heralds={0: 0, 5: 0},
-                                       post_select_fn=_post_process)
+
+# postprocessed_cnot = PredefinedCircuit(c_cnot,
+#                                        "postprocessed cnot",
+#                                        description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
+#                                        heralds={0: 0, 5: 0},
+#                                        post_select_fn=_post_process)

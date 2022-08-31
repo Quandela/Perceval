@@ -25,6 +25,8 @@ from .predefined_circuit import PredefinedCircuit
 from .analyser import CircuitAnalyser
 from .processor import Processor
 from .source import Source
-# from .detector import Detector
-# from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
+from .port import Port, Herald, DigitalConverterDetector, CounterDetector
 from .base_components import *
+from .component_catalog import Catalog
+
+catalog = Catalog('perceval.components.core_catalog')

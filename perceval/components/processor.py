@@ -129,6 +129,7 @@ class Processor:
             if not self.are_modes_free(port_range, PortLocation.output):
                 raise UnavailableModeException(port_range, "Another port overlaps")
             self._out_ports[port] = port_range
+        return self
 
     @property
     def _closed_photonic_modes(self):
