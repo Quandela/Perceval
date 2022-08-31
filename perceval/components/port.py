@@ -96,6 +96,10 @@ class Herald(APort):
     def is_output_photonic_mode_closed(self):
         return True
 
+    @property
+    def expected(self):
+        return self._value
+
 
 class ADetector(APort, ABC):
     def __init__(self, name=''):

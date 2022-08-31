@@ -19,12 +19,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from multipledispatch import dispatch
 
 from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
 from .port import APort, PortLocation, Herald
-from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
+from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, BasicState, global_params
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal, Union
 
@@ -37,9 +38,27 @@ class UnavailableModeException(Exception):
         super().__init__(f"Mode(s) {mode} not available{because}")
 
 
+class PostProcessFunction:
+    def __init__(self):
+        self._func_list = {}
+
+    def add(self, func, perm=None):
+        self._func_list[func] = perm
+
+    def compose(self, other):
+        for func, perm in other._func_list.items():
+            self._func_list[func] = perm  # TODO update perm as it should be
+
+    def __call__(self, state: BasicState) -> bool:
+        for func, perm in self._func_list.items():
+            if not func(perm(state)):  # TODO fix perm(state): this is just pseudocode
+                return False
+        return True
+
+
 class Processor:
     """
-        Generic definition of processor as sources + circuit
+    Generic definition of processor as a source + components (both linear and non-linear) + ports
     """
     def __init__(self, source: Source = Source()):
         r"""Define a processor with sources connected to the circuit and possible post_selection
@@ -51,6 +70,8 @@ class Processor:
         self._in_ports = {}
         self._out_ports = {}
         self._n_modes = 0  # number of modes
+
+        self._post_process_func = PostProcessFunction()
 
         self._anon_herald_num = 0  # This is not a herald count!
 
@@ -112,7 +133,6 @@ class Processor:
 
         return perm_modes, PERM(perm_vect)
 
-
     def add_port(self, m, port: APort, location: PortLocation = PortLocation.in_out):
         port_range = list(range(m, m + port.m))
         assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
@@ -130,6 +150,9 @@ class Processor:
                 raise UnavailableModeException(port_range, "Another port overlaps")
             self._out_ports[port] = port_range
         return self
+
+    def add_postprocess_function(self, func):
+        self._post_process_func.add(func)
 
     @property
     def _closed_photonic_modes(self):
@@ -181,14 +204,14 @@ class Processor:
     def source(self):
         return self._source
 
-    def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
-        if not self._heralds or keep_herald:
-            return StateVector(s)
-        new_state = []
-        for idx, k in enumerate(s):
-            if idx not in self._heralds:
-                new_state.append(k)
-        return StateVector(new_state)
+    # def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
+    #     if not self._heralds or keep_herald:
+    #         return StateVector(s)
+    #     new_state = []
+    #     for idx, k in enumerate(s):
+    #         if idx not in self._heralds:
+    #             new_state.append(k)
+    #     return StateVector(new_state)
 
     def run(self, simulator_backend: Type[Backend], keep_herald: bool=False):
         """
@@ -214,9 +237,10 @@ class Processor:
         """
         Computes if the state is selected given heralds and post selection function
         """
-        for m, v in self._heralds.items():
-            if state[m] != v:
-                return False
-        if self._post_select is not None:
-            return self._post_select(state)
-        return True
+        for port, port_range in self._out_ports.items():
+            if isinstance(port, Herald):
+                m = port_range[0]
+                v = port.expected
+                if state[m] != v:
+                    return False
+        return self._post_process_func(state)
