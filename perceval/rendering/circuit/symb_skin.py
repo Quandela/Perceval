@@ -33,9 +33,13 @@ class SymbSkin(ASkin):
                             "fill": "white",
                             "stroke_style": {"stroke": "black", "stroke_width": 1}}
 
-    @dispatch((Circuit, cp.Unitary))
+    @dispatch(cp.Unitary)
     def get_width(self, c) -> int:
         return c.m
+
+    @dispatch(Circuit)
+    def get_width(self, c) -> int:
+        return 2
 
     @dispatch((cp.SimpleBS, cp.GenericBS, cp.PBS))
     def get_width(self, c) -> int:

@@ -51,7 +51,7 @@ class PostProcessedCnotItem(CatalogItem):
             return c_cnot
         elif self._opt('type') == AsType.PROCESSOR:
             p = Processor()
-            p.add_postprocess_function(_post_process)
+            # p.add_postprocess_function(_post_process)  # TODO remove: keep in mind it may break Qiskit conversion to remove this
             return p.add(0, c_cnot) \
                 .add_port(0, Herald(0)) \
                 .add_port(1, Port(Encoding.dual_ray, 'data')) \

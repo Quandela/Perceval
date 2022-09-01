@@ -21,6 +21,7 @@
 # SOFTWARE.
 from multipledispatch import dispatch
 
+from .abstract_component import AComponent
 from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
@@ -38,40 +39,23 @@ class UnavailableModeException(Exception):
         super().__init__(f"Mode(s) {mode} not available{because}")
 
 
-class PostProcessFunction:
-    def __init__(self):
-        self._func_list = {}
-
-    def add(self, func, perm=None):
-        self._func_list[func] = perm
-
-    def compose(self, other):
-        for func, perm in other._func_list.items():
-            self._func_list[func] = perm  # TODO update perm as it should be
-
-    def __call__(self, state: BasicState) -> bool:
-        for func, perm in self._func_list.items():
-            if not func(perm(state)):  # TODO fix perm(state): this is just pseudocode
-                return False
-        return True
-
-
 class Processor:
     """
     Generic definition of processor as a source + components (both linear and non-linear) + ports
     """
-    def __init__(self, source: Source = Source()):
+    def __init__(self, n_moi: int, source: Source = Source()):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 
+        :param n_moi: number of modes of interest (MOI)
+                      A mode of interest is any non-heralded mode
         :param source: the Source used by the processor
         """
         self._source = source
         self._components = []  # Any type of components, not only linear ones
         self._in_ports = {}
         self._out_ports = {}
-        self._n_modes = 0  # number of modes
-
-        self._post_process_func = PostProcessFunction()
+        self._n_moi = n_moi  # number of modes of interest (MOI)
+        self._n_heralds = 0
 
         self._anon_herald_num = 0  # This is not a herald count!
 
@@ -94,6 +78,10 @@ class Processor:
         # self._in_port_names = {}
         # self._out_port_names = {}
 
+    @property
+    def m(self):
+        return self._n_moi + self._n_heralds
+
     def add(self, mode_mapping, component):
         """
         Add a component (linear or non linear)
@@ -101,24 +89,93 @@ class Processor:
         - No output is set on used modes
         - Should fail if lock_inputs has been called and the component uses new modes or defines new inputs
         """
-        if isinstance(mode_mapping, int):
-            mode_mapping = list(range(mode_mapping, mode_mapping + component.m))
-        # TODO mapping between port names and indexes
-        assert isinstance(mode_mapping, list) or isinstance(mode_mapping, tuple), "mode_mapping must be a list"
+        if isinstance(component, Processor):
+            mode_mapping = self._resolve_mode_mapping(mode_mapping, component.m - len(component.heralds))
+            self._compose_processor(mode_mapping, component)
+        elif isinstance(component, AComponent):
+            mode_mapping = self._resolve_mode_mapping(mode_mapping, component.m)
+            self._add_component(mode_mapping, component)
+        else:
+            raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
+        return self
 
-        for mode in mode_mapping:
+    def _resolve_mode_mapping(self, mapping, n):
+        if isinstance(mapping, int):
+            mapping = list(range(mapping, mapping + n))
+        assert isinstance(mapping, list) or isinstance(mapping, tuple), "mode_mapping must be a list"
+        port_names = self.out_port_names
+        result = []
+        for value in mapping:
+            if isinstance(value, int):
+                result.append(value)
+            if isinstance(value, str):  # Mapping between port name and index
+                count = port_names.count(value)
+                if count == 0:
+                    raise RuntimeError(f"Port '{value}' not found in Processor")
+                pos = port_names.index(value)
+                for i in range(count):
+                    result.append(pos)
+                    pos += 1
+
+        for mode in result:
             if not self.is_mode_connectible(mode):
                 raise UnavailableModeException(mode)
+        return result
 
+    @property
+    def out_port_names(self):
+        result = [''] * self.m
+        for port, m_range in self._out_ports.items():
+            for m in m_range:
+                result[m] = port.name
+        return result
+
+    def _compose_processor(self, mode_mapping, processor):
+        # Remove output ports used to connect the new processor
+        for i in mode_mapping:
+            port = self.get_output_port(i)
+            if port is not None:
+                del self._out_ports[port]
+
+        other_herald_pos = list(processor.heralds.keys())
+        new_mode_index = self.m
+        mapping_with_heralds = []
+        j = 0
+        for i in range(processor.m):
+            if i in other_herald_pos:
+                mapping_with_heralds.append(new_mode_index)
+                new_mode_index += 1
+                self._n_heralds += 1
+            else:
+                mapping_with_heralds.append(mode_mapping[j])
+                j += 1
+        perm_modes, perm_component = self._generate_permutation(mapping_with_heralds)
+        if perm_component is not None:
+            self._components.append((perm_modes, perm_component))
+        for pos, c in processor._components:
+            pos = [x + min(mapping_with_heralds) for x in pos]
+            self._components.append((pos, c))
+        if perm_component is not None:
+            perm_inv = perm_component.copy()
+            perm_inv.inverse(h=True)
+            self._components.append((perm_modes, perm_inv))
+
+        # Retrieve ports from other processor
+        for port, port_range in processor._in_ports.items():
+            if isinstance(port, Herald):
+                self.add_port(mapping_with_heralds[port_range[0]], port, PortLocation.input)
+        for port, port_range in processor._out_ports.items():
+            self.add_port(mapping_with_heralds[port_range[0]], port, PortLocation.output)
+
+    def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        self._n_modes = max(self._n_modes, max(mode_mapping)+1)
-        component = Circuit(component.m).add(0, component, merge=False)
+        if isinstance(component, ALinearCircuit):
+            component = Circuit(component.m).add(0, component, merge=False)
         sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
-        return self
 
     def _generate_permutation(self, mode_mapping):
         min_m = min(mode_mapping)
@@ -133,12 +190,20 @@ class Processor:
 
         return perm_modes, PERM(perm_vect)
 
+    def add_herald(self, m, expected, name=None):
+        self._n_heralds += 1
+        if not self.are_modes_free([m], PortLocation.in_out):
+            raise UnavailableModeException(m, "Another port overlaps")
+        if name is None:
+            name = f'herald{self._anon_herald_num}'
+            self._anon_herald_num += 1
+        self._in_ports[Herald(expected, name)] = [m]
+        self._out_ports[Herald(expected, name)] = [m]
+        return self
+
     def add_port(self, m, port: APort, location: PortLocation = PortLocation.in_out):
         port_range = list(range(m, m + port.m))
         assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
-        if port.name is None and isinstance(port, Herald):
-            port._name = f'herald{self._anon_herald_num}'
-            self._anon_herald_num += 1
 
         if location == PortLocation.in_out or location == PortLocation.input:
             if not self.are_modes_free(port_range, PortLocation.input):
@@ -151,12 +216,9 @@ class Processor:
             self._out_ports[port] = port_range
         return self
 
-    def add_postprocess_function(self, func):
-        self._post_process_func.add(func)
-
     @property
     def _closed_photonic_modes(self):
-        output = [False] * self._n_modes
+        output = [False] * self.m
         for port, m_range in self._out_ports.items():
             if port.is_output_photonic_mode_closed():
                 for i in m_range:
@@ -166,7 +228,7 @@ class Processor:
     def is_mode_connectible(self, mode: int):
         if mode < 0:
             return False
-        if mode >= self._n_modes:
+        if mode >= self.m:
             return True
         return not self._closed_photonic_modes[mode]
 
@@ -195,6 +257,14 @@ class Processor:
             if mode in mode_range:
                 return port
         return None
+
+    @property
+    def heralds(self):
+        pos = {}
+        for port, port_range in self._out_ports.items():
+            if isinstance(port, Herald):
+                pos[port_range[0]] = port.expected
+        return pos
 
     @property
     def source_distribution(self):
@@ -237,10 +307,7 @@ class Processor:
         """
         Computes if the state is selected given heralds and post selection function
         """
-        for port, port_range in self._out_ports.items():
-            if isinstance(port, Herald):
-                m = port_range[0]
-                v = port.expected
-                if state[m] != v:
-                    return False
+        for m, v in self.heralds:
+            if state[m] != v:
+                return False
         return self._post_process_func(state)

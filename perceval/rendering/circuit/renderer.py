@@ -62,7 +62,7 @@ class ICircuitRenderer(ABC):
                 shiftr = [p+shift for p in r]
                 if c.is_composite() and c._components:
                     if recursive:
-                        self.open_subblock(r, c.name, self.get_circuit_size(c, recursive=True), c._color)
+                        self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
                         self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
                                             precision=precision, nsimplify=nsimplify)
                         self.close_subblock(r)
@@ -214,7 +214,7 @@ class TextRenderer(ICircuitRenderer):
         self._h[end*self._hc+4] += "╝"
 
     def append_subcircuit(self, lines, circuit, content):
-        self.open_subblock(lines, circuit.name)
+        self.open_subblock(lines, circuit.name, None)
         self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
         self.close_subblock(lines)
 

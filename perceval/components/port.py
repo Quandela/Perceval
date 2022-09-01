@@ -52,7 +52,7 @@ class PortLocation(Enum):
     in_out = 2
 
 
-class APort(AComponent, ABC):
+class APort(AComponent):
     def __init__(self, size, name):
         super().__init__(size, name)
 

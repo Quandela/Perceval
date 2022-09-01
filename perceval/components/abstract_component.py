@@ -45,7 +45,7 @@ class AComponent(ABC):
         return self._name
 
 
-class AParametrizedComponent(AComponent, ABC):
+class AParametrizedComponent(AComponent):
     def __init__(self, m: int, name: str = None):
         super().__init__(m, name)
         self._params = {}

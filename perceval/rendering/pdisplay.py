@@ -87,7 +87,7 @@ def pdisplay_processor(processor: Processor,
                        nsimplify: bool = True,
                        skin=None,
                        **opts):
-    n_modes = processor._n_modes
+    n_modes = processor.m
     # if not recursive:
     #     display_circ = Circuit(m=n_modes).add(0, processor.circuit, merge=False)
     # else:
