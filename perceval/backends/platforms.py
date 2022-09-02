@@ -64,13 +64,14 @@ class LocalPlatform(Platform):
 
 class RemotePlatform(Platform):
     def __init__(self, name, credentials: RemoteCredentials):
-        assert (hasattr(credentials, 'token'))
+        assert (isinstance(credentials, RemoteCredentials))
         self.__name = name or 'simulator'
         self.__credentials = credentials
+        # TODO Rest Call to init available backends
+        self.__available_backends = ['Naive', 'CliffordClifford2017', 'SLOS']
 
     def list_backend(self):
-        # TODO REST Call
-        _backends = ['Naive']
+        return self.__available_backends
 
     def get_backend(self,
                     name: Union[str, None] = None) -> Type[Backend]:
