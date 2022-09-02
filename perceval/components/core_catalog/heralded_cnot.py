@@ -28,6 +28,15 @@ from perceval.components.port import Herald, Port, Encoding
 
 class HeraldedCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
+    description = r"""CNOT gate with 4 heralded modes"""
+    str_repr = r"""                     ╭─────╮
+data (dual ray) ─────┤     ├───── data (dual ray)
+                ─────┤     ├─────
+                     │     │
+ctrl (dual ray) ─────┤     ├───── ctrl (dual ray)
+                ─────┤     ├─────
+                     ╰─────╯"""
+
     R1 = 0.228
     R2 = 0.758
 
@@ -56,14 +65,14 @@ class HeraldedCnotItem(CatalogItem):
         if self._opt('type') == AsType.CIRCUIT:
             return c_hcnot
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor()
+            p = Processor(4)
             return p.add(0, c_hcnot) \
-                .add_port(0, Herald(0)) \
-                .add_port(1, Herald(1)) \
+                .add_herald(0, 0) \
+                .add_herald(1, 1) \
                 .add_port(2, Port(Encoding.dual_ray, 'data')) \
                 .add_port(4, Port(Encoding.dual_ray, 'ctrl')) \
-                .add_port(6, Herald(0)) \
-                .add_port(7, Herald(1))
+                .add_herald(6, 0) \
+                .add_herald(7, 1)
 
 
 # With simple BS convention:

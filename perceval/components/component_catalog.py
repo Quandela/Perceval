@@ -64,7 +64,7 @@ class AsType(Enum):
 class CatalogItem(ABC):
     article_ref = None
     description = None
-    ascii_repr = None
+    str_repr = None
     see_also = None
 
     def __init__(self, name: str):
@@ -97,12 +97,12 @@ class CatalogItem(ABC):
     @property
     def doc(self):
         content = ''
-        if self.article_ref:
-            content += f'\nScientific article reference: {self.article_ref}\n'
         if self.description:
             content += f'\n{self.description}\n'
-        if self.ascii_repr:
-            content += f'\nSchema:\n\n{self.ascii_repr}\n'
+        if self.article_ref:
+            content += f'\nScientific article reference: {self.article_ref}\n'
+        if self.str_repr:
+            content += f'\nSchema:\n{self.str_repr}\n'
         if self.see_also:
             content += f'\nSee also: {self.see_also}\n'
         if content == '':
