@@ -28,7 +28,7 @@ from perceval.utils import StateVector, BasicState, Matrix
 from perceval.components import ACircuit
 from .naive import NaiveBackend
 
-import quandelibc as qc
+# import quandelibc as qc
 
 
 class StepperBackend(Backend):
@@ -50,7 +50,7 @@ class StepperBackend(Backend):
     supports_symbolic = False
     supports_circuit_computing = True
 
-    def apply(self, sv: StateVector, r: List[int], U: Matrix) -> StateVector:
+    def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
 
         :param sv: input StateVector
@@ -60,25 +60,43 @@ class StepperBackend(Backend):
         """
         min_r = r[0]
         max_r = r[-1]
-        key = tuple(U.flatten())
         # build list of never visited fockstates corresponding to subspace [min_r:max_r]
-        sub_input_state = {BasicState(state[min_r:max_r]) for state in sv}.difference(self.result_dict[key]['set'])
+        sub_input_state = {BasicState(state[min_r:max_r]) for state in sv}.difference(self.result_dict[c]['set'])
         # get circuit probability for these input_states
         if sub_input_state != set():
-            sim_c = NaiveBackend(U)
-            mapping_input_output = {input_state : \
-                                    {output_state : sim_c.probampli(input_state, output_state) \
-                                    for output_state in sim_c.allstate_iterator(input_state)} \
+            sim_c = NaiveBackend(c.compute_unitary(use_symbolic=False))
+            mapping_input_output = {input_state:
+                                    {output_state : sim_c.probampli(input_state, output_state)
+                                    for output_state in sim_c.allstate_iterator(input_state)}
                                     for input_state in sub_input_state}
-            self.result_dict[key] |= mapping_input_output  # Union of the dictionnaries
-            self.result_dict[key]['set'] |= sub_input_state  # Union of sets
+            self.result_dict[c] |= mapping_input_output  # Union of the dictionaries
+            self.result_dict[c]['set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
         for state in sv:
             input_state = state[min_r:max_r]
-            for output_state, prob_ampli in self.result_dict[key][input_state].items():
+            for output_state, prob_ampli in self.result_dict[c][input_state].items():
                 nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli*sv[state]
         return nsv
+
+    def apply_perm(self, sv: StateVector, r: List[int], c: ACircuit):
+        min_r = r[0]
+        max_r = r[-1]
+        perm = c.perm_vector
+        nsv = StateVector()
+        for state in sv:
+            new = [state[i + min_r] for i in perm]
+            if min_r != 0:
+                new = list(state[:min_r - 1]) + new
+            if max_r != state.m - 1:
+                print("plop")
+                new = new + list(state[max_r + 1: state.m - 1])
+
+            nsv[BasicState(new)] += sv[state]
+
+        return nsv
+
+
 
     def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
         if isinstance(input_states, BasicState):
@@ -89,14 +107,15 @@ class StepperBackend(Backend):
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
-        self.matrices = [(r, c._dt, True) if c.delay_circuit else (r, c.compute_unitary(), False) for r, c in self._C]
-        self.result_dict = {tuple(m[1].flatten()) : {'set' : set()} for m in self.matrices if not m[2]}
-        for r, U, delay_circuit in self.matrices:
-            if not delay_circuit:
-                # nsv = sv.align(r)
-                sv = self.apply(sv, r, U)
+        self.result_dict = {c: {'set': set()} for r, c in self._C}
+        for r, c in self._C:
+            if c.delay_circuit:
+                sv.apply_delta_t(r[0], c)
+            elif c._name == "PERM":
+                sv = self.apply_perm(sv, r, c)
             else:
-                sv.apply_delta_t(r[0], float(U))
+                # nsv = sv.align(r)
+                sv = self.apply(sv, r, c)
         self._out = sv
         return True
 
