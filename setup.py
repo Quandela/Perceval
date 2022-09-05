@@ -31,7 +31,7 @@ setuptools.setup(
     install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'quandelibc>=0.5.3', 'multipledispatch',
                       'protobuf>=4.21.2', 'drawSvg', 'Deprecated', 'requests'],
     setup_requires=["scmver"],
-    extras_require={"test": ["pytest", "pytest-cov"]},
+    extras_require={"test": ["pytest", "pytest-cov", "pytest-benchmark"]},
     python_requires=">=3.6",
     scmver=True
 )
