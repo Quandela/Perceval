@@ -26,12 +26,10 @@ from .canvas import Canvas
 from .._mplot_utils import autoselect_backend
 autoselect_backend()
 
-
 import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
-
 
 
 class MplotCanvas(Canvas):

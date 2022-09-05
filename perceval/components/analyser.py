@@ -119,6 +119,7 @@ class CircuitAnalyser:
             self.error_rate /= len(self.input_states_list)
         return self
 
+
     @property
     def distribution(self):
         if self._distribution is None:
