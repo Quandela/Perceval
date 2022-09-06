@@ -83,17 +83,6 @@ class StepperBackend(Backend):
                     })
         return nsv
 
-    @staticmethod
-    def apply_perm(sv: StateVector, r: List[int], c: ACircuit):
-        min_r = r[0]
-        max_r = r[-1]
-        perm = c.perm_vector
-        nsv = StateVector()
-        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r] for i in perm]))):
-                        prob_ampli for state, prob_ampli in sv.items()})
-        nsv.m = sv.m
-        return nsv
-
     def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
         if isinstance(input_states, BasicState):
             sv = StateVector(input_states)
@@ -108,7 +97,7 @@ class StepperBackend(Backend):
             if c.delay_circuit:
                 sv.apply_delta_t(r[0], c)
             elif c._name == "PERM":
-                sv = self.apply_perm(sv, r, c)
+                sv.apply_perm(r, c)
             else:
                 # nsv = sv.align(r)
                 sv = self.apply(sv, r, c)
