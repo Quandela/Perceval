@@ -35,3 +35,7 @@ jobs:
       - name:  run benchmark
         run: |
           pytest --benchmark-autosave benchmark/benchmark_stepper.py --benchmark-compare --benchmark-histogram
+          mv benchmark_*.svg .benchmarks/svg
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v3
+      
