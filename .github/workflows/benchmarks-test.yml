@@ -27,38 +27,34 @@ env:
   PYTHON_V: '3.10'
 
 jobs:
-  deploy:
-
+  benchmark:
+    name: Performance regression check
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2
         with:
           python-version: ${{env.PYTHON_V}}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest pytest-benchmark pytest-benchmark[histogram]
-          python -m pip install .
-      - name:  run local benchmark
-        run: |
-          pytest benchmark/benchmark_stepper.py
-      - name:  compare benchmark
-        run: |
-          pytest-benchmark compare Linux-CPython-${{env.PYTHON_V}}-64bit/*
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+      - uses: actions/setup-go@v1
+      # Run benchmark with `go test -bench` and stores the output to a file
+      - name: Run benchmark
+        run: go test -bench 'BenchmarkFib' | tee output.txt
+      # Download previous benchmark result from cache (if exists)
+      - name: Download previous benchmark data
+        uses: actions/cache@v1
         with:
-          name: my-artifact
-          path: .benchmarks/svg/*
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+      # Run `github-action-benchmark` action
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
         with:
-          name: my-artifact
-      - name: save log
-        if: "${{ github.event.inputs.save == true }}"
-        run:
-          echo "save"
+          # What benchmark tool the output.txt came from
+          tool: 'go'
+          # Where the output from the benchmark tool is stored
+          output-file-path: output.txt
+          # Where the previous data file is stored
+          external-data-json-path: ./cache/benchmark-data.json
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+      # Upload the updated cache file for the next job by actions/cache
