@@ -4,13 +4,20 @@ name: Benchmarks
 
 on:
   workflow_dispatch:
+  workflow_call:
+      inputs:
+        os:
+          type: choice
+          description: what os
+          options:
+            - ubuntu
+            - windows
   push:
 
 jobs:
   deploy:
-
+    if: ${{ github.event.inputs.name == "ubuntu" }}
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -22,9 +29,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest
           python -m pip install pytest-benchmark
-          python -m pip install pytest-benchmark[histogram]
+#         python -m pip install pytest-benchmark[histogram]
           python -m pip install .
       - name:  run benchmark
         run: |
           pytest --benchmark-autosave benchmark/benchmark_bosonsampling.py
-          pytest-benchmark compare --histogram
+      - name: compare
+        run: |
+          pytest-benchmark compare
