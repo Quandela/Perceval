@@ -36,7 +36,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: $PYTHON_V
+          python-version: ${{env.PYTHON_V}}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -47,7 +47,7 @@ jobs:
           pytest benchmark/benchmark_stepper.py
       - name:  compare benchmark
         run: |
-          pytest-benchmark compare Linux-CPython-$PYTHON_V-64bit/*
+          pytest-benchmark compare Linux-CPython-${{env.PYTHON_V}}-64bit/*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
