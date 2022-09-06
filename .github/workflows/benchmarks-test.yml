@@ -43,13 +43,13 @@ jobs:
       - uses: actions/setup-go@v1
       # Run benchmark with `go test -bench` and stores the output to a file
       - name: Run benchmark
-        run: pytest benchmark/benchmark_stepper.py | tee output.txt
+        run: pytest benchmark/benchmark_stepper.py
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache@v1
         with:
           path: ./cache
-          key: ${{ runner.os }}-benchmark
+          key: Linux-CPython-${{env.PYTHON_V}}-64bit
       # Run `github-action-benchmark` action
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
