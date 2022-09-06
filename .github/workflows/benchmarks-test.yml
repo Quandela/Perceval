@@ -6,15 +6,6 @@ on:
   push:
 
   workflow_dispatch:
-    inputs:
-      os:
-        description: 'choose OS'
-        required: true
-        default: 'Ubuntu'
-        type: choice
-        options:
-          - ubuntu
-          - windows
 
 jobs:
   deploy:
