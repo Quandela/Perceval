@@ -35,8 +35,4 @@ jobs:
           python -m pip install .
       - name:  run benchmark
         run: |
-          pytest --benchmark-autosave benchmark/benchmark_*.py
-
-      - name:  compare benchmark
-        run: |
-          for file in .benchmark; do pytest-benchmark compare '.benchmark/$file'; done
+          pytest --benchmark-autosave benchmark/benchmark_*.py --benchmark-compare --benchmark-histogram
