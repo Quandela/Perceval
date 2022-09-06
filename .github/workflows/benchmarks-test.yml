@@ -3,8 +3,9 @@
 name: Benchmarks
 
 on:
-  workflow_dispatch:
   push:
+
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -27,4 +28,7 @@ jobs:
       - name:  run benchmark
         run: |
           pytest --benchmark-autosave benchmark/benchmark_bosonsampling.py
+
+      - name:  compare benchmark
+        run: |
           pytest-benchmark compare --histogram
