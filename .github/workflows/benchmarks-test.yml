@@ -28,7 +28,7 @@ env:
 
 jobs:
   benchmark:
-    name: Performance regression check
+    name: Run pytest-benchmark benchmark example
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -37,29 +37,22 @@ jobs:
           python-version: ${{env.PYTHON_V}}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest pytest-benchmark pytest-benchmark[histogram]
-          python -m pip install .
-      - uses: actions/setup-go@v1
-      # Run benchmark with `go test -bench` and stores the output to a file
+            python -m pip install --upgrade pip
+            python -m pip install pytest pytest-benchmark pytest-benchmark[histogram]
+            python -m pip install .
       - name: Run benchmark
-        run: pytest benchmark/benchmark_stepper.py
-      # Download previous benchmark result from cache (if exists)
-      - name: Download previous benchmark data
-        uses: actions/cache@v1
-        with:
-          path: ./cache
-          key: Linux-CPython-${{env.PYTHON_V}}-64bit
-      # Run `github-action-benchmark` action
+        run: |
+          pytest benchmark/benchmark_stepper.py --benchmark-json output.json
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
-          # What benchmark tool the output.txt came from
-          tool: 'go'
-          # Where the output from the benchmark tool is stored
-          output-file-path: output.txt
-          # Where the previous data file is stored
-          external-data-json-path: ./cache/benchmark-data.json
-          # Workflow will fail when an alert happens
+          name: Python Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: pytest/output.json
+          # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t/github-action-not-triggering-gh-pages-upon-push/16096
+          # github-token: ${{ secrets.GITHUB_TOKEN }}
+          # auto-push: true
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
           fail-on-alert: true
-      # Upload the updated cache file for the next job by actions/cache
