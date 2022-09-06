@@ -308,7 +308,9 @@ class Backend(ABC):
         """
         return False
 
-    def sample(self, input_state):
+    def sample(self, input_state: AnnotatedBasicState) -> AnnotatedBasicState:
+        r"""Return one sample for the circuit according to the output probability distribution given an input state
+        """
         prob = random.random()
         output_state = None
         for (output_state, state_prob) in self.allstateprob_iterator(input_state):
@@ -316,3 +318,16 @@ class Backend(ABC):
                 return output_state
             prob -= state_prob
         return output_state
+
+    def samples(self, input_state: AnnotatedBasicState, count: int) -> np.ndarray[AnnotatedBasicState]:
+        r"""Return samples for the circuit according to the output probability distribution given an input state
+
+        :param input_state: a given input state
+        :param count: the number of returned samples
+        """
+        if count == 1:  # Faster in this case
+            return np.array([self.sample(input_state)])
+        states, p = zip(*self.allstateprob_iterator(input_state))
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=p / sum(p))
+        return results
