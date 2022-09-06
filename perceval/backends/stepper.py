@@ -60,43 +60,39 @@ class StepperBackend(Backend):
         """
         min_r = r[0]
         max_r = r[-1]
+        key = c.describe()  # Can't use c; two identical pieces aren't considered equal if they aren't at the same place
         # build list of never visited fockstates corresponding to subspace [min_r:max_r]
-        sub_input_state = {BasicState(state[min_r:max_r]) for state in sv}.difference(self.result_dict[c]['set'])
+        sub_input_state = {sliced_state for state in sv
+                           for sliced_state in (BasicState(state[min_r:max_r]),)
+                           if sliced_state not in self.result_dict[key]['set']}
         # get circuit probability for these input_states
         if sub_input_state != set():
             sim_c = NaiveBackend(c.compute_unitary(use_symbolic=False))
             mapping_input_output = {input_state:
-                                    {output_state : sim_c.probampli(input_state, output_state)
-                                    for output_state in sim_c.allstate_iterator(input_state)}
+                                    {output_state: sim_c.probampli(input_state, output_state)
+                                        for output_state in sim_c.allstate_iterator(input_state)}
                                     for input_state in sub_input_state}
-            self.result_dict[c] |= mapping_input_output  # Union of the dictionaries
-            self.result_dict[c]['set'] |= sub_input_state  # Union of sets
+            self.result_dict[key] |= mapping_input_output  # Union of the dictionaries
+            self.result_dict[key]['set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
-        for state in sv:
-            input_state = state[min_r:max_r]
-            for output_state, prob_ampli in self.result_dict[c][input_state].items():
-                nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli*sv[state]
+        nsv.m = sv.m
+        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), output_state)): prob_ampli*sv[state]
+                    for state in sv
+                    for output_state, prob_ampli in self.result_dict[key][state[min_r:max_r]].items()
+                    })
         return nsv
 
-    def apply_perm(self, sv: StateVector, r: List[int], c: ACircuit):
+    @staticmethod
+    def apply_perm(sv: StateVector, r: List[int], c: ACircuit):
         min_r = r[0]
         max_r = r[-1]
         perm = c.perm_vector
         nsv = StateVector()
-        for state in sv:
-            new = [state[i + min_r] for i in perm]
-            if min_r != 0:
-                new = list(state[:min_r - 1]) + new
-            if max_r != state.m - 1:
-                print("plop")
-                new = new + list(state[max_r + 1: state.m - 1])
-
-            nsv[BasicState(new)] += sv[state]
-
+        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r] for i in perm]))):
+                        prob_ampli for state, prob_ampli in sv.items()})
+        nsv.m = sv.m
         return nsv
-
-
 
     def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
         if isinstance(input_states, BasicState):
@@ -107,7 +103,7 @@ class StepperBackend(Backend):
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
-        self.result_dict = {c: {'set': set()} for r, c in self._C}
+        self.result_dict = {c.describe(): {'set': set()} for r, c in self._C}
         for r, c in self._C:
             if c.delay_circuit:
                 sv.apply_delta_t(r[0], c)
