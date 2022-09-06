@@ -6,6 +6,15 @@ on:
   push:
 
   workflow_dispatch:
+    inputs:
+      os:
+        description: 'choose OS'
+        required: true
+        default: 'Ubuntu'
+        type: choice
+        options:
+          - ubuntu
+          - windows
 
 jobs:
   deploy:
@@ -26,7 +35,8 @@ jobs:
           python -m pip install .
       - name:  run benchmark
         run: |
-          pytest --benchmark-autosave benchmark/benchmark_bosonsampling.py
+          pytest --benchmark-autosave benchmark/benchmark_*.py
+
       - name:  compare benchmark
         run: |
-          pytest-benchmark compare
+          for file in .benchmark; do pytest-benchmark compare '.benchmark/$file'; done
