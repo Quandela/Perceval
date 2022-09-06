@@ -40,4 +40,4 @@ jobs:
 
       - name:  compare benchmark
         run: |
-          for file in .benchmark; do pytest-benchmark compare '.benchmark/$file'; done
+          pytest-benchmark compare
