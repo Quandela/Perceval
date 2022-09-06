@@ -22,11 +22,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest
           python -m pip install pytest-benchmark
-#         python -m pip install pytest-benchmark[histogram]
+          python -m pip install pytest-benchmark[histogram]
           python -m pip install .
       - name:  run benchmark
         run: |
           pytest --benchmark-autosave benchmark/benchmark_bosonsampling.py
-      - name: compare
-        run: |
-          pytest-benchmark compare
+          pytest-benchmark compare --histogram
