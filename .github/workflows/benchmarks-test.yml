@@ -40,6 +40,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
-          path: .benchmark/*
+          path: .benchmark/*/*
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
