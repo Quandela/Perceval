@@ -30,9 +30,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest
-          python -m pip install pytest-benchmark
+          python -m pip install pytest pytest-benchmark pytest-benchmark[histogram]
           python -m pip install .
       - name:  run benchmark
         run: |
-          pytest --benchmark-autosave benchmark/benchmark_*.py --benchmark-compare --benchmark-histogram
+          pytest --benchmark-autosave benchmark/benchmark_stepper.py --benchmark-compare --benchmark-histogram
