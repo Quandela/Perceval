@@ -12,7 +12,6 @@ on:
           options:
             - ubuntu
             - windows
-  push:
 
 jobs:
   deploy:
