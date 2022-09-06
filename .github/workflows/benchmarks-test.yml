@@ -3,9 +3,8 @@
 name: Benchmarks
 
 on:
-  push:
-
   workflow_dispatch:
+  push:
 
 jobs:
   deploy:
