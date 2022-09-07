@@ -53,7 +53,17 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
-          path: compare_result result .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
+          path: compare_result
+      - name: Upload Artifact2
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: result
+      - name: Upload Artifact3
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
         with:
