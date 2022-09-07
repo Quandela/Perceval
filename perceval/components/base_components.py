@@ -431,6 +431,4 @@ class PERM(Unitary):
         nsv.clear()
         nsv.update(new_states)
 
-        if len(nsv) == 1:
-            return nsv[0]
         return nsv
