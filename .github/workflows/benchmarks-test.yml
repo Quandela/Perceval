@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
-          path: .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
+          path: .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/*_new.json
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
         with:
@@ -73,7 +73,7 @@ jobs:
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
-          output-file-path: ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
+          output-file-path: ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/*_new.json
           # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t/github-action-not-triggering-gh-pages-upon-push/16096
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
