@@ -4,8 +4,8 @@ name: Benchmarks
 
 on:
   push:
-     branches:
-       - benchmark_test
+    branches:
+      - benchmark_test
 
   workflow_dispatch:
     inputs:
@@ -29,6 +29,7 @@ env:
 jobs:
   benchmark:
     name: Run pytest-benchmark benchmark example
+    # ${{ github.event.inputs.os }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -38,17 +39,31 @@ jobs:
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            python -m pip install pytest pytest-benchmark pytest-benchmark[histogram]
+            python -m pip install pytest pytest-benchmark
             python -m pip install .
       - name: Run benchmark
         run: |
-          pytest benchmark/benchmark_stepper.py --benchmark-json output.json
-      - name: Store benchmark result
+          pytest benchmark/benchmark_stepper.py --benchmark-json new.json >> result
+      - name: compare benchmark
+        run: |
+          pytest-benchmark compare ${{RUNNER_OS}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
+
+      #- if: ${{ github.event.inputs.save == true }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: compare_result result new.json
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v3
+        with:
+            name: my-artifact
+      - name: store in page
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
-          output-file-path: output.json
+          output-file-path: ${{RUNNER_OS}}-CPython-${{env.PYTHON_V}}-64bit/new.json
           # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t/github-action-not-triggering-gh-pages-upon-push/16096
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
