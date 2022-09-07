@@ -36,11 +36,13 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{env.PYTHON_V}}
+
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
             python -m pip install pytest pytest-benchmark
             python -m pip install .
+
       - name: Run benchmark
         run: |
           mkdir .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
@@ -48,38 +50,36 @@ jobs:
       - name: compare benchmark
         run: |
           ls -a .benchmarks/*/
-          pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
+          pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/* >> compare_result
 
-      #- if: ${{ github.event.inputs.save == true }}
+      # upload the result on action git
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
-          path: compare_result
-      - name: Upload Artifact2
-        uses: actions/upload-artifact@v3
-        with:
-          name: my-artifact
-          path: result
-      - name: Upload Artifact3
-        uses: actions/upload-artifact@v3
-        with:
-          name: my-artifact
-          path: .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
+          path: compare_result result .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
         with:
             name: my-artifact
+
+      #- if: ${{ github.event.inputs.save == true }}
+      - name: Commit report
+        run: |
+          git config --global user.name 'test'
+          git config --global user.email 'test@users.noreply.github.com'
+          mv .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json
+          git add .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json
+          git commit -am "Automated report"
+          git push
       - name: store in page
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
           output-file-path: .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
-          # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t/github-action-not-triggering-gh-pages-upon-push/16096
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
-          # Show alert with commit comment on detecting possible performance regression
           # alert-threshold: '200%'
-          comment-on-alert: true
-          fail-on-alert: true
+          # comment-on-alert: true
+          # fail-on-alert: true
