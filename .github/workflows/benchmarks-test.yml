@@ -46,7 +46,7 @@ jobs:
           pytest benchmark/benchmark_stepper.py --benchmark-save=new.json >> result
       - name: compare benchmark
         run: |
-          ls
+          ls -a .benchmarks/*/
           pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
 
       #- if: ${{ github.event.inputs.save == true }}
