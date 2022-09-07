@@ -46,7 +46,7 @@ jobs:
           pytest benchmark/benchmark_stepper.py --benchmark-json new.json >> result
       - name: compare benchmark
         run: |
-          pytest-benchmark compare ${{RUNNER_OS}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
+          pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
 
       #- if: ${{ github.event.inputs.save == true }}
       - name: Upload Artifact
