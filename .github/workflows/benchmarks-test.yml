@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
-          path: .benchmark/Windows-CPython-3.10-64bit/0001_4f08d18865b17f9c6a3f680efce7a7b67e2711d5_20220902_075912_uncommited-changes.json
+          path: .benchmarks/Windows-CPython-3.10-64bit/0001_4f08d18865b17f9c6a3f680efce7a7b67e2711d5_20220902_075912_uncommited-changes.json
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
         with:
