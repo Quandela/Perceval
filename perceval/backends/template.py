@@ -316,3 +316,9 @@ class Backend(ABC):
                 return output_state
             prob -= state_prob
         return output_state
+
+    def set_cutoff(self, cutoff: int):
+        r"""
+        Set the cutoff dimension for the MPS simulator.
+        """
+        return

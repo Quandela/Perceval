@@ -27,7 +27,7 @@ import numpy as np
 from math import comb, factorial
 
 from .template import Backend
-from perceval.utils import StateVector, BasicState, Matrix
+from perceval.utils import StateVector, BasicState, Matrix, AnnotatedBasicState
 from perceval.components import ACircuit
 
 import quandelibc as qc
@@ -64,19 +64,14 @@ class MPSBackend(Backend):
         elif len(u) == 1:
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
-    def compile(self, input_states: BasicState) -> bool:
-        if isinstance(input_states, BasicState):
-            sv = [input_states]
-        else:
-            sv = input_states
+    def compile(self, input_state: Union[BasicState, AnnotatedBasicState]) -> bool:
         var = [float(p) for p in self._C.get_parameters()]
-        if self._compiled_input == (var, sv):
+        if self._compiled_input == (var, input_state):
             return False
-        self._compiled_input = copy.copy((var, sv))
+        self._compiled_input = copy.copy((var, input_state))
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS
-        input_state = sv[0]
-        input_state *= BasicState([0] * (self.m - input_state.m))
+        input_state *= AnnotatedBasicState([0] * (self.m - input_state.m))
         self.n = input_state.n
         self.d = self.n + 1
         self.cutoff = min(self.cutoff, self.d ** (self.m//2))

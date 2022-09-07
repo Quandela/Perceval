@@ -41,7 +41,7 @@ def test_minimal():
 
 
 def test_c3():
-    for backend in ["Stepper", "Naive", "SLOS"]:
+    for backend in ["Stepper", "Naive", "SLOS", "MPS"]:
         # default simulator backend
         simulator_backend = pcvl.BackendFactory().get_backend(backend)
         # simulator directly initialized on circuit
@@ -51,6 +51,7 @@ def test_c3():
         circuit.add((1, 2), comp.GenericBS())
         pcvl.pdisplay(circuit.U)
         s = simulator_backend(circuit)
+        s.set_cutoff(3)
         check_output(s, pcvl.AnnotatedBasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
                                                               pcvl.BasicState("|1,1,0>"): 0.25,
                                                               pcvl.BasicState("|1,0,1>"): 0.25,
@@ -64,4 +65,9 @@ def test_basic_interference():
     simulator_backend = pcvl.BackendFactory().get_backend("Stepper")
     c = comp.GenericBS()
     sim = simulator_backend(c, use_symbolic=False)
+    assert pytest.approx(sim.prob(pcvl.BasicState([1, 1]), pcvl.BasicState([2, 0]))) == 0.5
+
+    simulator_backend = pcvl.BackendFactory().get_backend("MPS")
+    sim = simulator_backend(c, use_symbolic=False)
+    sim.set_cutoff(3)
     assert pytest.approx(sim.prob(pcvl.BasicState([1, 1]), pcvl.BasicState([2, 0]))) == 0.5
