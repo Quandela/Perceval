@@ -43,7 +43,7 @@ jobs:
             python -m pip install .
       - name: Run benchmark
         run: |
-          pytest benchmark/benchmark_stepper.py --benchmark-json --benchmark-save=new.json >> result
+          pytest benchmark/benchmark_stepper.py --benchmark-save=new.json >> result
       - name: compare benchmark
         run: |
           pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
