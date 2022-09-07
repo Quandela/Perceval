@@ -55,7 +55,7 @@ jobs:
           # Show alert with commit comment on detecting possible performance regression
           # alert-threshold: '200%'
           # comment-on-alert: true
-          external-data-json-path: output2.json
+          external-data-json-path: .benchmarks/Windows-CPython-3.10-64bit/0001_4f08d18865b17f9c6a3f680efce7a7b67e2711d5_20220902_075912_uncommited-changes.json
           fail-on-alert: true
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
