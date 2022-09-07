@@ -43,7 +43,7 @@ jobs:
             python -m pip install .
       - name: Run benchmark
         run: |
-          pytest benchmark/benchmark_stepper.py --benchmark-json new.json >> result
+          pytest benchmark/benchmark_stepper.py --benchmark-json --benchmark-save=new.json >> result
       - name: compare benchmark
         run: |
           pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json >> compare_result
@@ -63,7 +63,7 @@ jobs:
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
-          output-file-path: ${{RUNNER_OS}}-CPython-${{env.PYTHON_V}}-64bit/new.json
+          output-file-path: ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
           # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t/github-action-not-triggering-gh-pages-upon-push/16096
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
