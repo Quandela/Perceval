@@ -33,7 +33,6 @@ from .matrix import Matrix
 from .format import simple_complex, simple_float
 from .globals import global_params
 from .polarization import Polarization
-#from perceval.components.circuit import ACircuit
 import numpy as np
 import sympy as sp
 
@@ -496,25 +495,6 @@ class StateVector(defaultdict):
                 else:
                     self[key] /= norm
             self._normalized = True
-
-    def apply_perm(self, r, perm):
-        r"""Permutate the sub-states of contiguous modes r given a permutation list or circuit
-        """
-        assert isinstance(r, (list, tuple)), "permutation Operator needs modes list or tuple"
-        if not isinstance(perm, (list, tuple)):
-            try:
-                perm = perm.perm_vector
-            except AttributeError:
-                raise TypeError("perm must be a list, tuple or a permutation circuit")
-        assert (min(perm) == 0 and
-                max(perm) + 1 == len(perm) == len(set(perm)) == len([n for n in perm if isinstance(n, int)])), \
-            "%s is not a permutation" % perm
-        min_r = r[0]
-        max_r = r[-1]
-        new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r] for i in perm]))):
-             prob_ampli for state, prob_ampli in self.items()}
-        self.clear()
-        self.update(new_states)
 
     def __str__(self):
         self._normalize()
