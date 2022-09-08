@@ -53,12 +53,11 @@ jobs:
         run: |
           [ ! -d .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit ] && mkdir .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
           echo ${{  github.ref_name }}
+          echo ${{  github.sha }}
           echo ${{ steps.previoustag.outputs.tag }}
-
           pytest benchmark/benchmark_stepper.py --benchmark-json .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json >> result
       - name: compare benchmark
         run: |
-          ls -a .benchmarks/*/
           pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/* >> compare_result
 
       # upload the result on action git
