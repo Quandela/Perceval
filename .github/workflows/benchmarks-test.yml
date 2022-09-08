@@ -50,14 +50,16 @@ jobs:
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
         with:
           fallback: 1.0.0
+      - name: create variable
+        id: variable
         run: |
           echo ::set-output name=FOLDER_BENCH::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
           echo ::set-output name=FILE_JSON::${{env.FOLDER_BENCH}}/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
-          
+
       - name: Run benchmark
         run: |
-          [ ! -d ${{env.FOLDER_BENCH}} ] && mkdir ${{env.FOLDER_BENCH}}
-          pytest benchmark/benchmark_stepper.py --benchmark-json ${{env.FILE_JSON}} >> result
+          [ ! -d ${{ steps.variable.outputs.FOLDER_BENCH }} ] && mkdir ${{ steps.variable.outputs.FOLDER_BENCH }}
+          pytest benchmark/benchmark_stepper.py --benchmark-json ${{ steps.variable.outputs.FILE_JSON }} >> result
       - name: compare benchmark
         run: |
           pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/* >> compare_result
@@ -70,7 +72,7 @@ jobs:
           path: |
            compare_result 
            result 
-           ${{env.FILE_JSON}}
+           ${{ steps.variable.outputs.FILE_JSON }}
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
         with:
@@ -81,7 +83,7 @@ jobs:
         run: |
           git config --global user.name 'test'
           git config --global user.email 'test@users.noreply.github.com'
-          git add ${{env.FILE_JSON}}
+          git add ${{ steps.variable.outputs.FILE_JSON }}
           git commit -am "Automated report"
           git push
       - name: store in page
@@ -89,7 +91,7 @@ jobs:
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
-          output-file-path: ${{env.FILE_JSON}}
+          output-file-path: ${{ steps.variable.outputs.FILE_JSON }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           # alert-threshold: '200%'
