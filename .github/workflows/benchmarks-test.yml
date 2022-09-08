@@ -50,9 +50,10 @@ jobs:
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
         with:
           fallback: 1.0.0
-        env:
-          FOLDER_BENCH: .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
-          FILE_JSON: ${{env.FOLDER_BENCH}}/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
+        run: |
+          echo ::set-output name=FOLDER_BENCH::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
+          echo ::set-output name=FILE_JSON::${{env.FOLDER_BENCH}}/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
+          
       - name: Run benchmark
         run: |
           [ ! -d ${{env.FOLDER_BENCH}} ] && mkdir ${{env.FOLDER_BENCH}}
