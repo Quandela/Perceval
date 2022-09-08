@@ -68,7 +68,7 @@ jobs:
         with:
             name: my-artifact
 
-      #- if: ${{ github.event.inputs.save == true }}
+      - if: ${{ github.event.inputs.save == true }}
       - name: Commit report
         run: |
           git config --global user.name 'test'
