@@ -58,7 +58,8 @@ jobs:
       - name: Run benchmark
         run: |
           pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
-          pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          pytest benchmark/benchmark_stepper.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+      
 
 
       - name: store result on gh-page branch
