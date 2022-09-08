@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       os:
-        description: 'choose OS'
+        description: 'Choose OS'
         required: true
         default: 'Ubuntu'
         type: choice
@@ -14,7 +14,7 @@ on:
           - ubuntu
           - windows
       save:
-        description: 'save log'
+        description: 'Save log'
         default: false
         required: false
         type: boolean
@@ -46,7 +46,7 @@ jobs:
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
-        if: ${{runner.os == Windows }}
+        if: runner.os == 'Windows'
         shell: Bash
 
       - name: Run benchmark
