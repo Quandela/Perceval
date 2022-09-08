@@ -46,6 +46,7 @@ jobs:
       - name: Run benchmark
         run: |
           mkdir .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
+          echo "Tag name from github.ref_name: ${{  github.ref_name }}"
           pytest benchmark/benchmark_stepper.py --benchmark-json .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json >> result
       - name: compare benchmark
         run: |
@@ -71,8 +72,7 @@ jobs:
         run: |
           git config --global user.name 'test'
           git config --global user.email 'test@users.noreply.github.com'
-          mv .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json
-          git add .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/last.json
+          git add .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json
           git commit -am "Automated report"
           git push
       - name: store in page
