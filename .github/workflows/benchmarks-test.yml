@@ -1,6 +1,6 @@
 #this workflow run benchmarks
 
-name: Benchmarks
+name: Benchmarks manual test
 
 on:
   workflow_dispatch:
@@ -74,8 +74,8 @@ jobs:
         with:
             name: pytest log
 
-      #- if: ${{ github.event.inputs.save == true }}
       - name: push report
+        if: ${{ github.event.inputs.save == true }}
         run: |
           git config --global user.name 'test'
           git config --global user.email 'test@users.noreply.github.com'
@@ -83,6 +83,7 @@ jobs:
           git commit -am "Automated report"
           git push
       - name: store result on gh-page branch
+        if: ${{ github.event.inputs.save == true }}
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Python Benchmark with pytest-benchmark
