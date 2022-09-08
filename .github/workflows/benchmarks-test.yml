@@ -54,6 +54,7 @@ jobs:
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
 #          echo ::set-output name=FOLDER_BENCH::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
 #          echo ::set-output name=FILE_JSON::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
+        shell: Bash
 
       - name: Run benchmark
         run: |
