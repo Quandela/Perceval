@@ -40,13 +40,21 @@ jobs:
             python -m pip install pytest pytest-benchmark
             python -m pip install .
 
-      - name: Initialize config
+      - name: Initialize config linux
+        if: runner.os == 'Linux'
         id: variable
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+
+      - name: Initialize config windows
         if: runner.os == 'Windows'
+        id: variable
+        run: |
+          echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
+          echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: Run benchmark
