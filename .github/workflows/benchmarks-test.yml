@@ -40,57 +40,57 @@ jobs:
             python -m pip install pytest pytest-benchmark
             python -m pip install .
 
-      - name: Get Previous tag version
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
-        with:
-          fallback: 1.0.0
+#      - name: Get Previous tag version
+#        id: previoustag
+#        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+#        with:
+#          fallback: 1.0.0
 
-      - name: create variable
+      - name: Initialize config
         id: variable
         run: |
-          echo ::set-output name=FOLDER_BENCH::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
-          echo ::set-output name=FILE_JSON::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
+          echo "tag_version=${ git describe --tags }" >> $GITHUB_ENV
+          echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+#          echo ::set-output name=FOLDER_BENCH::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
+#          echo ::set-output name=FILE_JSON::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
 
       - name: Run benchmark
         run: |
-          [ ! -d ${{ steps.variable.outputs.FOLDER_BENCH }} ] && mkdir ${{ steps.variable.outputs.FOLDER_BENCH }}
-          pytest benchmark/benchmark_stepper.py --benchmark-json ${{ steps.variable.outputs.FILE_JSON }} >> pytest_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
-      - name: compare benchmark
-        run: |
-          pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/* >> compare_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
+          pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
+          pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
 
-      # upload the result on action git
-      - name: upload the result on github action
-        uses: actions/upload-artifact@v3
-        with:
-          name: pytest log
-          path: |
-           compare_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }} 
-           pytest_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
-           ${{ steps.variable.outputs.FILE_JSON }}
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
-        with:
-            name: pytest log
 
-      - name: push report
-        if: ${{ github.event.inputs.save == true }}
-        run: |
-          git config --global user.name 'test'
-          git config --global user.email 'test@users.noreply.github.com'
-          git add ${{ steps.variable.outputs.FILE_JSON }}
-          git commit -am "Automated report"
-          git push
       - name: store result on gh-page branch
-        if: ${{ github.event.inputs.save == true }}
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
           output-file-path: ${{ steps.variable.outputs.FILE_JSON }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
-          # alert-threshold: '200%'
+          auto-push: ${{ github.event.inputs.save }}
+          alert-threshold: '10%'
           # comment-on-alert: true
-          # fail-on-alert: true
+          fail-on-alert: ${{ github.event.inputs.save }}
+
+      - name: Save benchmark report in current branch
+        if: ${{ github.event.inputs.save == true }}
+        run: |
+          git config --global user.name 'test'
+          git config --global user.email 'test@users.noreply.github.com'
+          git add ${{ steps.variable.outputs.FILE_JSON }}
+          git commit -am "Automated benchmark report"
+          git push
+
+      # upload the result on action git
+      - name: upload the result
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest_log
+          path: |
+            pytest_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
+            ${{ steps.variable.outputs.FILE_JSON }}
+      - name: Download the result on github action
+        uses: actions/download-artifact@v3
+        with:
+          name: pytest_log
