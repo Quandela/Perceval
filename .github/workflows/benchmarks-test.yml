@@ -1,6 +1,6 @@
 #this workflow run benchmarks
 
-name: Benchmarks manual test
+name: Benchmarks
 
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ env.tag_version }}_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
 #          echo ::set-output name=FOLDER_BENCH::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
 #          echo ::set-output name=FILE_JSON::.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/${{ steps.previoustag.outputs.tag }}_${{  github.ref_name }}_${{  github.sha }}.json
 
@@ -66,7 +66,7 @@ jobs:
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
-          output-file-path: ${{ steps.variable.outputs.FILE_JSON }}
+          output-file-path: ${{ env.file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ github.event.inputs.save }}
           alert-threshold: '10%'
@@ -78,7 +78,7 @@ jobs:
         run: |
           git config --global user.name 'test'
           git config --global user.email 'test@users.noreply.github.com'
-          git add ${{ steps.variable.outputs.FILE_JSON }}
+          git add ${{ env.file_json }}
           git commit -am "Automated benchmark report"
           git push
 
@@ -88,8 +88,8 @@ jobs:
         with:
           name: pytest_log
           path: |
-            pytest_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
-            ${{ steps.variable.outputs.FILE_JSON }}
+            pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+            ${{ env.file_json }}
       - name: Download the result on github action
         uses: actions/download-artifact@v3
         with:
