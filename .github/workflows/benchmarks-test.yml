@@ -45,7 +45,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          mkdir .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
+          [ ! -d .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit ] && mkdir .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
           echo "Tag name from github.ref_name: ${{  github.ref_name }}"
           pytest benchmark/benchmark_stepper.py --benchmark-json .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json >> result
       - name: compare benchmark
