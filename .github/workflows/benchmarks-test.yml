@@ -43,19 +43,17 @@ jobs:
             python -m pip install pytest pytest-benchmark
             python -m pip install .
 
-      - name: Branch name
-        id: branch_name
-        run: |
-          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
-          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+      - name: Get Previous tag
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        with:
+          fallback: 1.0.0
 
       - name: Run benchmark
         run: |
           [ ! -d .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit ] && mkdir .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit
-          echo ${{ steps.branch_name.outputs.SOURCE_NAME }}
-          echo: ${{ steps.branch_name.outputs.SOURCE_BRANCH }}
-          echo ${{ steps.branch_name.outputs.SOURCE_TAG }}
+          echo ${{  github.ref_name }}
+          echo ${{ steps.previoustag.outputs.tag }}
 
           pytest benchmark/benchmark_stepper.py --benchmark-json .benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/new.json >> result
       - name: compare benchmark
