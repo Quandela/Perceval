@@ -20,36 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from multipledispatch import dispatch
-
-from ._matrix_serialization import serialize_matrix
-from ._circuit_serialization import serialize_circuit
-from ._fockstate_serialization import serialize_state
-from perceval.components import ACircuit
-from perceval.utils import Matrix, AnnotatedBasicState, BasicState
-from base64 import b64encode
-
-
-@dispatch(ACircuit)
-def serialize(circuit: ACircuit) -> str:
-    return serialize_circuit(circuit).SerializeToString()
-
-
-@dispatch(Matrix)
-def serialize(m: Matrix) -> str:
-    return serialize_matrix(m).SerializeToString()
-
-
-@dispatch((AnnotatedBasicState, BasicState))
-def serialize(state) -> str:
-    return serialize_state(state)
-
-
-def serialize_to_file(obj, filepath: str) -> None:
-    serial_repr = serialize(obj)
-    with open(filepath, mode="wb") as f:
-        f.write(serial_repr)
-
-
-def bytes_to_jsonstring(var):
-    return b64encode(var).decode('utf-8')
+from .credentials import RemoteCredentials
+from .remote_backend import RemoteBackend, RemoteBackendBuilder
+from .remote_jobs import Job

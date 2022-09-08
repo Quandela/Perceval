@@ -34,7 +34,6 @@ import numpy as np
 
 
 class Backend(ABC):
-    _name = None
     supports_symbolic = None
     supports_circuit_computing = None
 
@@ -53,7 +52,7 @@ class Backend(ABC):
         :param n: expected number of input photons, necessary for applying masks
         :param mask: a mask for output states that we are interested in
         """
-        self._logger = logging.getLogger(self._name)
+        self._logger = logging.getLogger(self.name)
         if not self.supports_circuit_computing:
             if isinstance(cu, ACircuit):
                 if cu.requires_polarization:
@@ -88,9 +87,9 @@ class Backend(ABC):
             self._m: int = self._requires_polarization and u.shape[0] >> 1 or u.shape[0]
             "number of modes"
         else:
-            assert isinstance(cu, ACircuit),\
+            assert isinstance(cu, ACircuit), \
                 "Component Based simulation works on circuit"
-            assert not use_symbolic or self.supports_symbolic,\
+            assert not use_symbolic or self.supports_symbolic, \
                 "%s backend does not support symbolic calculation" % self._name
             # component based simulation - we keep the circuit
             self._U = None
@@ -198,7 +197,7 @@ class Backend(ABC):
 
     def all_prob(self, input_state: BasicState) -> np.ndarray:
         allprobs = []
-        for(output, prob_output) in self.allstateprob_iterator(input_state):
+        for (output, prob_output) in self.allstateprob_iterator(input_state):
             allprobs.append(prob_output)
         return np.asarray(allprobs)
 
@@ -256,8 +255,8 @@ class Backend(ABC):
                 probampli = 0
                 sv = input_state
                 for inp_state in sv:
-                    probampli += self.probampli(inp_state, output_state)*sv[inp_state]
-                yield output_state, abs(probampli)**2
+                    probampli += self.probampli(inp_state, output_state) * sv[inp_state]
+                yield output_state, abs(probampli) ** 2
             else:
                 # TODO: should not have a special case here
                 if isinstance(input_state, StateVector):
@@ -294,7 +293,7 @@ class Backend(ABC):
             if isinstance(input_state, StateVector):
                 sv = input_state
                 for inp_state in sv:
-                    output_state[basic_output_state] += self.probampli(inp_state, basic_output_state)*sv[inp_state]
+                    output_state[basic_output_state] += self.probampli(inp_state, basic_output_state) * sv[inp_state]
             else:
                 output_state[basic_output_state] += self.probampli(input_state, basic_output_state)
         return output_state
@@ -316,3 +315,9 @@ class Backend(ABC):
                 return output_state
             prob -= state_prob
         return output_state
+
+    def samples(self, input_state, count):
+        results = []
+        for i in range(count):
+            results.append(self.sample(input_state))
+        return results
