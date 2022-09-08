@@ -3,10 +3,6 @@
 name: Benchmarks
 
 on:
-  push:
-    branches:
-      - benchmark_test
-
   workflow_dispatch:
     inputs:
       os:
@@ -29,8 +25,7 @@ env:
 jobs:
   benchmark:
     name: Run pytest-benchmark benchmark example
-    # ${{ github.event.inputs.os }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.os }}-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -45,11 +40,12 @@ jobs:
             python -m pip install pytest pytest-benchmark
             python -m pip install .
 
-      - name: Get Previous tag
+      - name: Get Previous tag version
         id: previoustag
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
         with:
           fallback: 1.0.0
+
       - name: create variable
         id: variable
         run: |
@@ -59,34 +55,34 @@ jobs:
       - name: Run benchmark
         run: |
           [ ! -d ${{ steps.variable.outputs.FOLDER_BENCH }} ] && mkdir ${{ steps.variable.outputs.FOLDER_BENCH }}
-          pytest benchmark/benchmark_stepper.py --benchmark-json ${{ steps.variable.outputs.FILE_JSON }} >> result
+          pytest benchmark/benchmark_stepper.py --benchmark-json ${{ steps.variable.outputs.FILE_JSON }} >> pytest_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
       - name: compare benchmark
         run: |
-          pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/* >> compare_result
+          pytest-benchmark compare ${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/* >> compare_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
 
       # upload the result on action git
-      - name: Upload Artifact
+      - name: upload the result on github action
         uses: actions/upload-artifact@v3
         with:
-          name: my-artifact
+          name: pytest log
           path: |
-           compare_result 
-           result 
+           compare_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }} 
+           pytest_result_${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit_${{ steps.previoustag.outputs.tag }}
            ${{ steps.variable.outputs.FILE_JSON }}
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
         with:
-            name: my-artifact
+            name: pytest log
 
       #- if: ${{ github.event.inputs.save == true }}
-      - name: Commit report
+      - name: push report
         run: |
           git config --global user.name 'test'
           git config --global user.email 'test@users.noreply.github.com'
           git add ${{ steps.variable.outputs.FILE_JSON }}
           git commit -am "Automated report"
           git push
-      - name: store in page
+      - name: store result on gh-page branch
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Python Benchmark with pytest-benchmark
