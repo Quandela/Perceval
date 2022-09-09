@@ -36,7 +36,7 @@ from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
-from quandelibc import FockState
+from quandelibc import FockState, Annotation
 
 
 class BasicState(FockState):
@@ -44,10 +44,6 @@ class BasicState(FockState):
     """
     def __init__(self, *args, **kwargs):
         super(BasicState, self).__init__(*args, **kwargs)
-
-    @property
-    def has_polarization(self):
-        return False
 
     def __add__(self, o):
         return StateVector(self) + o

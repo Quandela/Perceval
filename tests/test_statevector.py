@@ -33,28 +33,28 @@ from test_circuit import strip_line_12
 
 
 def test_state():
-    st = pcvl.AnnotatedBasicState([1, 0])
+    st = pcvl.BasicState([1, 0])
     assert str(st) == "|1,0>"
     assert st.n == 1
     assert st.has_annotations is False
 
 
 def test_tensor_product_0():
-    st1 = pcvl.AnnotatedBasicState([0, 1])
-    st2 = pcvl.AnnotatedBasicState([1])
+    st1 = pcvl.BasicState([0, 1])
+    st2 = pcvl.BasicState([1])
     assert str(st1*st2) == "|0,1,1>"
 
 
 def test_tensor_product_1():
-    st1 = pcvl.AnnotatedBasicState([1, 2])
-    st2 = pcvl.AnnotatedBasicState([3, 4])
+    st1 = pcvl.BasicState([1, 2])
+    st2 = pcvl.BasicState([3, 4])
     assert str(st1*st2) == "|1,2,3,4>"
 
 
 def test_tensor_product_2():
-    st1 = pcvl.AnnotatedBasicState([1, 2], {2: {"P": "V"}})
+    st1 = pcvl.BasicState("|1,{P:V}1>")
     assert str(st1) == "|1,{P:V}1>"
-    st2 = pcvl.AnnotatedBasicState([3, 4], {4: {"P": "H"}})
+    st2 = pcvl.BasicState("|3,{P:H}3>")
     assert str(st2) == "|3,{P:H}3>"
     assert str(st1*st2) == "|1,{P:V}1,3,{P:H}3>"
 
@@ -75,24 +75,24 @@ def test_tensor_svdistribution_1():
 
 
 def test_state_annots():
-    st = pcvl.AnnotatedBasicState("|0,1,2>", {2: {"P": "V"}})
+    st = pcvl.BasicState("|0,1,{P:V}1>")
     assert st.n == 3
     assert st.m == 3
     assert st.has_annotations
     assert str(st) == '|0,1,{P:V}1>'
-    assert st.get_mode_annotations(1) == ({},)
-    assert st.get_mode_annotations(2) == ({'P': 'V'}, {})
-    assert st.get_photon_annotations(2) == {'P': 'V'}
-    assert st.get_photon_annotations(3) == {}
-    st.set_photon_annotations(3, {"P": "H"})
-    assert str(st) == '|0,1,{P:H}{P:V}>'
-    st.set_photon_annotations(3, {"P": "V"})
-    assert str(st) == '|0,1,2{P:V}>'
+    assert [str(a) for a in st.get_mode_annotations(1)] == [""]
+    assert [str(a) for a in st.get_mode_annotations(2)] == ["P:V", ""]
+    # assert st.get_photon_annotations(2) == {'P': 'V'}
+    # assert st.get_photon_annotations(3) == {}
+    # st.set_photon_annotations(3, {"P": "H"})
+    # assert str(st) == '|0,1,{P:H}{P:V}>'
+    # st.set_photon_annotations(3, {"P": "V"})
+    # assert str(st) == '|0,1,2{P:V}>'
 
 
-def test_state_has_annots():
-    st1 = pcvl.AnnotatedBasicState("|0,1,2>", {2: {"P": "V"}})
-    st2 = pcvl.AnnotatedBasicState("|0,1,2>", {3: {"P": "V"}})
+def test_state_indentical_annots():
+    st1 = pcvl.BasicState("|0,1,{P:V}1>")
+    st2 = pcvl.BasicState("|0,1,{P:V}1>")
     assert str(st1) == str(st2)
 
 
@@ -144,35 +144,35 @@ def test_svdistribution():
 
 
 def test_sv_separation_0():
-    st1 = pcvl.AnnotatedBasicState("|0,0>")
+    st1 = pcvl.BasicState("|0,0>")
     assert st1.separate_state() == [pcvl.BasicState("|0,0>")]
 
 
 def test_sv_separation_1():
-    st1 = pcvl.AnnotatedBasicState("|0,1>")
+    st1 = pcvl.BasicState("|0,1>")
     assert st1.separate_state() == [pcvl.BasicState("|0,1>")]
-    st2 = pcvl.AnnotatedBasicState("|2,1>")
+    st2 = pcvl.BasicState("|2,1>")
     assert st2.separate_state() == [pcvl.BasicState("|2,1>")]
 
 
 def test_sv_separation_2():
-    st1 = pcvl.AnnotatedBasicState("|0,1>", {1: {"_": 1}})
+    st1 = pcvl.BasicState("|0,1>", {1: {"_": 1}})
     assert st1.separate_state() == [pcvl.BasicState("|0,1>")]
-    st2 = pcvl.AnnotatedBasicState("|1,1>", {1: {"_": 1}, 2: {"P": "V"}})
+    st2 = pcvl.BasicState("|{_:1},{P:V}>", {1: {"_": 1}, 2: {"P": "V"}})
     assert st2.separate_state() == [pcvl.BasicState("|1,1>")]
-    st3 = pcvl.AnnotatedBasicState("|1,1>", {1: {"_": 1}, 2: {"_": 1}})
+    st3 = pcvl.BasicState("|1,1>", {1: {"_": 1}, 2: {"_": 1}})
     assert st3.separate_state() == [pcvl.BasicState("|1,1>")]
 
 
 def test_sv_separation_3():
-    st1 = pcvl.AnnotatedBasicState("|1,1>", {1: {"_": 1}, 2: {"_": 0}})
+    st1 = pcvl.BasicState("|1,1>", {1: {"_": 1}, 2: {"_": 0}})
     assert st1.separate_state() == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
-    st2 = pcvl.AnnotatedBasicState("|1,1,1>", {1: {"_": 0}, 2: {"_": 0}, 3: {"_": 1}})
+    st2 = pcvl.BasicState("|1,1,1>", {1: {"_": 0}, 2: {"_": 0}, 3: {"_": 1}})
     assert st2.separate_state() == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
 
 
 def test_sv_split():
-    st1 = pcvl.AnnotatedBasicState("|1,1,1>")
+    st1 = pcvl.BasicState("|1,1,1>")
     partition = st1.partition([2, 1])
     expected = ["|1,1,0> |0,0,1>", "|1,0,1> |0,1,0>", "|0,1,1> |1,0,0>"]
     result = []
@@ -202,9 +202,9 @@ def test_sv_parse_symb_annot():
 
 
 def test_sv_parse_tuple_annot():
-    st1 = pcvl.AnnotatedBasicState("|{P:(0.30,0)}>")
+    st1 = pcvl.BasicState("|{P:(0.30,0)}>")
     assert str(st1) == "|{P:0.3}>"
-    st1 = pcvl.AnnotatedBasicState("|{P:(pi/2,0.3)}>")
+    st1 = pcvl.BasicState("|{P:(pi/2,0.3)}>")
     assert str(st1) == "|{P:(pi/2,0.3)}>"
 
 
