@@ -20,13 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from datetime import datetime
-
 import pytest
 
 import perceval as pcvl
-from perceval.algorithm.optimize import optimize
-from perceval.algorithm.norm import fidelity, frobenius
+from perceval.utils.algorithms.optimize import optimize
+from perceval.utils.algorithms.norm import fidelity, frobenius
 import perceval.components.base_components as comp
 
 
