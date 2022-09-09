@@ -12,7 +12,7 @@ on:
         type: choice
         options:
           - ubuntu
-          - windows
+#          - windows
       save:
         description: 'Save log'
         default: false
@@ -60,28 +60,6 @@ jobs:
           pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
           pytest benchmark/benchmark_stepper.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
 
-
-      - name: compare result with last version and save on gh-page branch
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Python Benchmark with pytest-benchmark
-          tool: 'pytest'
-          output-file-path: ${{ env.file_json }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: ${{ github.event.inputs.save }}
-          alert-threshold: '1%'
-          # comment-on-alert: true
-          fail-on-alert: true
-
-      - name: Save benchmark report in current branch
-        if: ${{ github.event.inputs.save == true }}
-        run: |
-          git config --global user.name 'test'
-          git config --global user.email 'test@users.noreply.github.com'
-          git add ${{ env.file_json }}
-          git commit -am "Automated benchmark report"
-          git push
-
       # upload the result on action git
       - name: upload the result
         uses: actions/upload-artifact@v3
@@ -94,3 +72,24 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pytest_log
+
+      - name: compare result with last version and save on gh-page branch
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: ${{ env.file_json }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: ${{ github.event.inputs.save }}
+          alert-threshold: '10%'
+          # comment-on-alert: true
+          fail-on-alert: true
+
+      - name: Save benchmark report in current branch
+        if: ${{ github.event.inputs.save == true }}
+        run: |
+          git config --global user.name 'test'
+          git config --global user.email 'test@users.noreply.github.com'
+          git add ${{ env.file_json }}
+          git commit -am "Automated benchmark report"
+          git push
