@@ -21,4 +21,4 @@
 # SOFTWARE.
 
 from .match import Match
-import perceval.algorithm.norm as norm
+import perceval.utils.algorithms.norm as norm
