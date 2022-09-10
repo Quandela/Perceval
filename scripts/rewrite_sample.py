@@ -22,8 +22,8 @@
 
 import perceval as pcvl
 import perceval.components.base_components as comp
-from perceval.algorithm.optimize import optimize
-from perceval.algorithm.norm import fidelity, frobenius
+from perceval.utils.algorithms.optimize import optimize
+from perceval.utils.algorithms.norm import fidelity, frobenius
 import time
 import random
 
