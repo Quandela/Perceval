@@ -400,9 +400,9 @@ def convert_polarized_state(state: BasicState,
             vectors = []
             for k_n in range(state[k_m]):
                 # for each state we can handle up to two orthogonal vectors
-                annot = state.get_photon_annotations(idx + 1)
+                annot = state.get_photon_annotation(idx)
                 idx += 1
-                v_hv = annot.get("P", Polarization(0)).project_eh_ev(use_symbolic)
+                v_hv = Polarization(annot.get("P", complex(Polarization(0)))).project_eh_ev(use_symbolic)
                 v_idx = None
                 for i, v in enumerate(vectors):
                     if v == v_hv:
