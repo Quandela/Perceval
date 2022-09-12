@@ -14,14 +14,20 @@ on:
           - ARM64
           - ubuntu
 #          - windows
+      python_v:
+        description: 'python version'
+        required: true
+        default: '3.9'
+        type: choice
+        options:
+          - '3.10'
+          - '3.9'
+          - '3.8'
       save:
         description: 'Save log'
         default: false
         required: false
         type: boolean
-
-env:
-  PYTHON_V: '3.10'
 
 jobs:
   benchmark:
@@ -33,7 +39,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{env.PYTHON_V}}
+          python-version: ${{ github.event.inputs.python_v }}
 
       - name: Install dependencies
         run: |
@@ -45,15 +51,15 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
 
       - name: Initialize config windows
         if: runner.os == 'Windows'
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: echo
