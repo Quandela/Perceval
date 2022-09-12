@@ -11,6 +11,7 @@ on:
         default: 'Ubuntu'
         type: choice
         options:
+          - ARM64
           - ubuntu
 #          - windows
       save:
@@ -55,6 +56,11 @@ jobs:
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{env.PYTHON_V}}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
+      - name: echo
+        run: |
+          echo "${{runner.os}}"
+        shell: Bash
+
       - name: Run benchmark
         run: |
           pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
@@ -81,12 +87,12 @@ jobs:
           output-file-path: ${{ env.file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ github.event.inputs.save }}
-          alert-threshold: '10%'
+          alert-threshold: '20%'
           # comment-on-alert: true
           fail-on-alert: true
 
       - name: Save benchmark report in current branch
-        if: ${{ github.event.inputs.save == true }}
+        if: inputs.save
         run: |
           git config --global user.name 'test'
           git config --global user.email 'test@users.noreply.github.com'
