@@ -39,17 +39,13 @@ jobs:
           fetch-depth: 0
 
       - name: setup-python
-        if: runner.os == 'ARM64'
+        if: runner.os == 'macOS'
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           brew update && brew upgrade
 
-      - name: echo
-        run: |
-          echo "${{runner.os}}"
-        shell: Bash
 
-      - if: runner.os != 'ARM64'
+      - if: runner.os != 'macOS'
         uses: actions/setup-python@v2
         with:
           python-version: ${{ github.event.inputs.python_v }}
@@ -61,21 +57,20 @@ jobs:
             python -m pip install pytest pytest-benchmark
             python -m pip install .
 
-      - name: Initialize config linux
-        if: runner.os == 'Linux'
+      - if: runner.os == 'Linux'
+        name: Initialize config linux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
 
-      - name: Initialize config windows
-        if: runner.os == 'Windows'
+      - if: runner.os != 'Linux'
+        name: Initialize config windows
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
-
 
 
       - name: Run benchmark
