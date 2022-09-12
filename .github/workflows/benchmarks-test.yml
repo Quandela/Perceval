@@ -45,7 +45,7 @@ jobs:
           brew update && brew upgrade
 
 
-      - if: runner.os != 'macOS--'
+      - if: runner.os != 'macOS'
         uses: actions/setup-python@v4
         with:
           python-version: ${{ github.event.inputs.python_v }}
