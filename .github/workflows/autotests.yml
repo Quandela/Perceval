@@ -13,6 +13,14 @@ on:
     - main
     - release/*
 
+  workflow_dispatch:
+    inputs:
+      quandelibc_ref:
+        description: Use specific Quandelibc's ref (branch, tag or SHA)
+        default: ''
+        type: string
+        required: false
+
 jobs:
   build:
     name: Run PyTest on ${{ matrix.os }}
