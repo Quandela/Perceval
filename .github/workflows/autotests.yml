@@ -53,6 +53,7 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD_VERBOSITY: 1
         run: |
+          cd quandelibc
           python -m pip install cibuildwheel
           python -m cibuildwheel --output-dir dist
 
