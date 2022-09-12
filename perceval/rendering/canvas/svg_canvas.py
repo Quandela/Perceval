@@ -37,8 +37,11 @@ class SvgCanvas(Canvas):
     def __init__(self, **opts):
         super().__init__(**opts, inverse_Y=True)
         self._draws = []
-        self._render_width = (opts["total_width"]+2)*50
-        self._render_height = opts["total_height"]*50
+        self._render_width = (opts["total_width"]+3)*50
+        self._render_height = (opts["total_height"]+1)*50
+        self._pixel_size = 1.25
+        if 'render_size' in opts:
+            self._pixel_size *= opts['render_size']
         if 'group' in opts:
             self._group = opts['group']
 
@@ -108,7 +111,7 @@ class SvgCanvas(Canvas):
             d = draw.Group(x=self._group[0], y=self._group[1])
         else:
             d = draw.Drawing(self._render_width, self._render_height,
-                             origin=(self._minx, -self._maxy+50))
+                             origin=(self._minx-25, -self._maxy))
         for dr in self._draws:
             d.append(dr)
-        return d.setPixelScale(1.5)
+        return d.setPixelScale(self._pixel_size)
