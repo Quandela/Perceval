@@ -36,7 +36,7 @@ jobs:
         with:
           repository: Quandela/Perceval
           ref: ${{ inputs.quandelibc_ref }}
-          path: quandelibc
+          path: ../quandelibc
           submodules: recursive
 
       - name: Set up Python 3.9
@@ -53,6 +53,7 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD_VERBOSITY: 1
         run: |
+          cd ../quandelibc
           python -m pip install cibuildwheel
           python -m cibuildwheel --output-dir dist
 
