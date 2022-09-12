@@ -41,7 +41,7 @@ jobs:
       - name: setup-python
         if: runner.os == 'macOS'
         run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+          /bin/bash -c "$(sudo curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           brew update && brew upgrade
 
 
