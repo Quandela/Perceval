@@ -25,7 +25,7 @@ from .predefined_circuit import PredefinedCircuit
 from .analyser import CircuitAnalyser
 from .processor import Processor
 from .source import Source
-from .port import Port, Herald, DigitalConverterDetector, CounterDetector
+from .port import Port, Herald, DigitalConverterDetector, CounterDetector, Encoding, PortLocation
 from .base_components import *
 from .component_catalog import Catalog
 

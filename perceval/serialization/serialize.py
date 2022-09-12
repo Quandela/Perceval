@@ -25,7 +25,7 @@ from multipledispatch import dispatch
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
 from ._fockstate_serialization import serialize_state
-from perceval.components import ACircuit
+from perceval.components import ALinearCircuit
 from perceval.utils import Matrix, AnnotatedBasicState, BasicState
 from base64 import b64encode
 
