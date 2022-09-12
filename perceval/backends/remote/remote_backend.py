@@ -33,7 +33,7 @@ from .remote_jobs import Job
 
 from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state, deserialize_state_list, \
     deserialize_float
-from perceval.components import ACircuit
+from perceval.components import ALinearCircuit
 from perceval.utils import Matrix, AnnotatedBasicState
 
 from pkg_resources import get_distribution
@@ -82,12 +82,12 @@ def generate_sync_methods(cls):
 ################################
 @generate_sync_methods
 class RemoteBackend(Backend):
-    def __init__(self, name: str, platform: str, credentials: RemoteCredentials, cu: Union[ACircuit, Matrix],
+    def __init__(self, name: str, platform: str, credentials: RemoteCredentials, cu: Union[ALinearCircuit, Matrix],
                  use_symbolic=None, n=None, mask=None):
         self.name = name
         self.__platform = platform
         self.__credentials = credentials
-        if isinstance(cu, ACircuit):
+        if isinstance(cu, ALinearCircuit):
             self.__cu_key = 'circuit'
         else:
             self.__cu_key = 'unitary'
