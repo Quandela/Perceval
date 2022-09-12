@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: python-package-distributions
-          path: precompiled-quandelibc
+          path: quandelibc/precompiled-quandelibc
 
   build:
     name: Run PyTest on ${{ matrix.os }}
