@@ -64,6 +64,8 @@ jobs:
 
   build:
     name: Run PyTest on ${{ matrix.os }}
+    needs:
+    - build-quandelibc
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -114,7 +116,8 @@ jobs:
 
   build-docs:
     name: Build docs on ubuntu
-    # The type of runner that the job will run on
+    needs:
+    - build-quandelibc
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
