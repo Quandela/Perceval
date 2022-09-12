@@ -102,7 +102,7 @@ jobs:
         ls
         echo ==============================================
         ls precompiled-quandelibc
-        python -m pip install "precompiled-quandelibc/*-cp310-${{ matrix.wheel }}.whl"
+        python -m pip install "precompiled-quandelibc/*${{ matrix.wheel }}.whl"
 
     - name: Install dependencies
       run: |
