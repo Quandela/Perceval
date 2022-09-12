@@ -49,9 +49,7 @@ try:
     if 'IPKernelApp' in get_ipython().config:
         in_notebook = True
         from IPython.display import HTML, display
-except ImportError:
-    pass
-except AttributeError:
+except (ImportError, AttributeError):
     pass
 
 

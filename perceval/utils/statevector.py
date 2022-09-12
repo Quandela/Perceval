@@ -450,6 +450,8 @@ class StateVector(defaultdict):
     def __add__(self, other):
         r"""Add two StateVectors"""
         assert isinstance(other, (StateVector, AnnotatedBasicState, BasicState)), "addition requires states"
+        if self.m is None:
+            self.m = other.m
         assert other.m == self.m, "invalid mix of different modes"
         copy_state = copy(self)
         if not isinstance(other, StateVector):
@@ -469,6 +471,61 @@ class StateVector(defaultdict):
     def __sub__(self, other):
         r"""Sub two StateVectors"""
         return self + -1 * other
+
+    def sample(self) -> AnnotatedBasicState:
+        r"""Sample a single state from the statevector.
+        It does not perform a measure - so do not change the value of the statevector
+
+        :return: an annotated basic state
+        """
+        p = random.random()
+        idx = 0
+        keys = list(self.keys())
+        self._normalize()
+        while idx < len(keys)-1:
+            p = p - abs(self[keys[idx]])**2
+            if p < 0:
+                break
+            idx += 1
+        return AnnotatedBasicState(keys[idx])
+
+    def samples(self, shots: int) -> List[AnnotatedBasicState]:
+        r"""Generate a list of samples.
+        It does not perform a measure - so do not change the value of statevector.
+        This function is more efficient than run :math:$shots$ times :method:sample
+
+        :param shots: the number of samples
+        :return: a list of AnnotatedBasicState
+        """
+        self._normalize()
+        p = random.random()
+        keys = [AnnotatedBasicState(key) for key in self.keys()]
+        weight = [abs(self[key])**2 for key in self.keys()]
+        rng = np.random.default_rng()
+        return rng.choice(keys, shots, p=weight)
+
+    def measure(self, modes: Union[int, List[int]]) -> Dict[AnnotatedBasicState, Tuple[float, StateVector]]:
+        r"""perform a measure on one or multiple modes and collapse the remaining statevector
+
+        :param modes: the mode to measure
+        :return: a dictionary - key is the possible measures, values are pairs (probability, state vector)
+        """
+        self._normalize()
+        if isinstance(modes, int):
+            modes = [modes]
+        map_measure_sv = defaultdict(lambda: [0, StateVector()])
+        for s, pa in self.items():
+            out = []
+            remaining_state = []
+            p = abs(pa)**2
+            for i in range(self.m):
+                if i in modes:
+                    out.append(s[i])
+                else:
+                    remaining_state.append(s[i])
+            map_measure_sv[AnnotatedBasicState(out)][0] += p
+            map_measure_sv[AnnotatedBasicState(out)][1] += pa*StateVector(remaining_state)
+        return {k: tuple(v) for k, v in map_measure_sv.items()}
 
     @property
     def n(self):

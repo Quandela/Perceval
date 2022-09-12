@@ -32,9 +32,9 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, global_params
-import perceval.algorithm.decomposition as decomposition
-from perceval.algorithm.match import Match
-from perceval.algorithm.solve import solve
+import perceval.utils.algorithms.decomposition as decomposition
+from perceval.utils.algorithms.match import Match
+from perceval.utils.algorithms.solve import solve
 
 
 def _matrix_double_for_polarization(m, u):

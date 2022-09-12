@@ -23,8 +23,8 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, Circuit
-from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit
+from perceval import Matrix, P, Circuit, BasicState, AnnotatedBasicState
+from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state
 import perceval.components.base_components as comp
 
 
@@ -80,3 +80,16 @@ def test_circuit_serialization():
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize_circuit(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
+
+
+# def test_fockstate_serialization():
+#     states = [
+#         BasicState("|0,1>"),
+#         BasicState([0, 1, 0, 0, 1, 0]),
+#         AnnotatedBasicState("|0,1>"),
+#         AnnotatedBasicState("|{P:H}{P:V},0>")
+#     ]
+#     for s in states:
+#         serialized = serialize(s)
+#         deserialized = deserialize_state(serialized)
+#         assert s == deserialized

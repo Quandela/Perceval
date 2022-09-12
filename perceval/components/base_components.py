@@ -28,6 +28,7 @@ from perceval.utils import Matrix, format_parameters
 
 
 class GenericBS(ALinearCircuit):
+    """Universal beam splitter"""
     DEFAULT_NAME = "BS"
 
     def __init__(self, R=None, theta=None, phi_a=0, phi_b=3*sp.pi/2, phi_d=sp.pi):
@@ -99,6 +100,7 @@ class GenericBS(ALinearCircuit):
 
 
 class SimpleBS(ALinearCircuit):
+    """Beam splitter with a single phase"""
     DEFAULT_NAME = "BS"
 
     def __init__(self, R=None, theta=None, phi=0):
@@ -162,32 +164,8 @@ class SimpleBS(ALinearCircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class PBS(ALinearCircuit):
-    _supports_polarization = True
-    DEFAULT_NAME = "PBS"
-
-    def __init__(self):
-        super().__init__(2)
-
-    def _compute_unitary(self, assign=None, use_symbolic=False):
-        self.assign(assign)
-        return Matrix([[0, 0, 1, 0],
-                       [0, 1, 0, 0],
-                       [1, 0, 0, 0],
-                       [0, 0, 0, 1]], use_symbolic)
-
-    def get_variables(self, map_param_kid=None):
-        return {}
-
-    # noinspection PyMethodMayBeStatic
-    def describe(self, _=None):
-        return "PBS()"
-
-    def inverse(self, v=False, h=False):
-        raise NotImplementedError("inverse not yet implemented")
-
-
 class PS(ALinearCircuit):
+    """Phase shifter"""
     DEFAULT_NAME = "PS"
 
     def __init__(self, phi):
@@ -222,6 +200,7 @@ class PS(ALinearCircuit):
 
 
 class WP(ALinearCircuit):
+    """Wave plate"""
     DEFAULT_NAME = "WP"
     _supports_polarization = True
 
@@ -271,17 +250,25 @@ class WP(ALinearCircuit):
 
 
 class HWP(WP):
+    """Half wave plate"""
     DEFAULT_NAME = "HWP"
 
     def __init__(self, xsi):
         super().__init__(sp.pi/2, xsi)
 
+    def definition(self):
+        return HWP(xsi=Parameter('xsi')).U
+
 
 class QWP(WP):
+    """Quarter wave plate"""
     DEFAULT_NAME = "QWP"
 
     def __init__(self, xsi):
         super().__init__(sp.pi/4, xsi)
+
+    def definition(self):
+        return QWP(xsi=Parameter('xsi')).U
 
 
 class PR(ALinearCircuit):
@@ -321,6 +308,7 @@ class PR(ALinearCircuit):
 
 
 class Unitary(ALinearCircuit):
+    """Generic component defined by a unitary matrix"""
     DEFAULT_NAME = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
@@ -356,6 +344,7 @@ class Unitary(ALinearCircuit):
 
 
 class PERM(Unitary):
+    """Permutation"""
     DEFAULT_NAME = "PERM"
 
     def __init__(self, perm):
@@ -383,3 +372,23 @@ class PERM(Unitary):
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
+
+
+class PBS(Unitary):
+    """Polarized beam spliter"""
+    _supports_polarization = True
+    DEFAULT_NAME = "PBS"
+
+    def __init__(self):
+        u = Matrix([[0, 0, 1, 0],
+                    [0, 1, 0, 0],
+                    [1, 0, 0, 0],
+                    [0, 0, 0, 1]])
+        super().__init__(U=u, use_polarization=True)
+
+    def get_variables(self, map_param_kid=None):
+        return {}
+
+    # noinspection PyMethodMayBeStatic
+    def describe(self, _=None):
+        return "PBS()"

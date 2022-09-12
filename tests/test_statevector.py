@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections import Counter
+
 import pytest
 import perceval as pcvl
 import perceval.components.base_components as comp
@@ -215,3 +217,54 @@ def test_sv_sample():
     assert len(sample) == 2
     assert isinstance(sample[0], pcvl.StateVector)
     assert isinstance(sample[1], pcvl.StateVector)
+
+
+def test_statevector_sample():
+    sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
+    counter = Counter()
+    for s in range(20):
+        counter[sv.sample()] += 1
+    states = [str(s) for s in counter]
+    assert len(states) == 2 and "|1,0>" in states and "|0,1>" in states
+
+
+def test_statevector_samples():
+    sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
+    counter = Counter()
+    for s in sv.samples(20):
+        counter[s] += 1
+    states = [str(s) for s in counter]
+    assert len(states) == 2 and "|1,0>" in states and "|0,1>" in states
+
+
+def test_statevector_measure_1():
+    sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
+    map_measure_sv = sv.measure(0)
+    assert len(map_measure_sv) == 2 and\
+           pcvl.AnnotatedBasicState("|0>") in map_measure_sv and\
+           pcvl.AnnotatedBasicState("|1>") in map_measure_sv
+    assert pytest.approx(0.5) == map_measure_sv[pcvl.AnnotatedBasicState("|0>")][0]
+    assert str(map_measure_sv[pcvl.AnnotatedBasicState("|0>")][1]) == "|1>"
+    assert pytest.approx(0.5) == map_measure_sv[pcvl.AnnotatedBasicState("|1>")][0]
+    assert str(map_measure_sv[pcvl.AnnotatedBasicState("|1>")][1]) == "|0>"
+
+
+def test_statevector_measure_1():
+    sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
+    map_measure_sv = sv.measure([0, 1])
+    assert len(map_measure_sv) == 2 and\
+           pcvl.AnnotatedBasicState("|0,1>") in map_measure_sv and\
+           pcvl.AnnotatedBasicState("|1,0>") in map_measure_sv
+    assert pytest.approx(0.5) == map_measure_sv[pcvl.AnnotatedBasicState("|0,1>")][0]
+    assert str(map_measure_sv[pcvl.AnnotatedBasicState("|0,1>")][1]) == "|>"
+    assert pytest.approx(0.5) == map_measure_sv[pcvl.AnnotatedBasicState("|1,0>")][0]
+    assert str(map_measure_sv[pcvl.AnnotatedBasicState("|1,0>")][1]) == "|>"
+
+
+def test_statevector_measure_2():
+    sv = pcvl.StateVector("|0,1,1>")+pcvl.StateVector("|1,1,0>")
+    map_measure_sv = sv.measure(1)
+    assert len(map_measure_sv) == 1 and\
+           pcvl.AnnotatedBasicState("|1>") in map_measure_sv
+    assert pytest.approx(1) == map_measure_sv[pcvl.AnnotatedBasicState("|1>")][0]
+    assert str(map_measure_sv[pcvl.AnnotatedBasicState("|1>")][1]) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
