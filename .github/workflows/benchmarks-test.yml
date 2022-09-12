@@ -13,11 +13,11 @@ on:
         options:
           - ARM64
           - ubuntu
-#          - windows
+          - windows
       python_v:
         description: 'python version'
         required: true
-        default: '3.9'
+        default: '3.10'
         type: choice
         options:
           - '3.10'
@@ -38,8 +38,15 @@ jobs:
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v2
+        if: runner.os != 'ARM64'
         with:
           python-version: ${{ github.event.inputs.python_v }}
+
+      - name: setup-python
+        if: runner.os == 'ARM64'
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+          brew update && brew upgrade
 
       - name: Install dependencies
         run: |
