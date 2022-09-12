@@ -1,8 +1,8 @@
 # Perceval
 
-![CI](https://github.com/github/docs/actions/workflows/python-publish.yml/badge.svg)
-[![GitHub release](https://img.shields.io/github/release/SimonRit/RTK.svg)](https://github.com/Quandela/Perceval/releases/latest)
-[![QuandeLibC release](https://img.shields.io/github/release/SimonRit/RTK.svg)](https://github.com/Quandela/QuandeLibC/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/release/Quandela/Perceval.svg)](https://github.com/Quandela/Perceval/releases/latest)
+[![CI](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml)
+[![QuandeLibC release](https://img.shields.io/github/v/release/Quandela/QuandeLibC.svg)](https://github.com/Quandela/QuandeLibC/releases/latest)
 
 Through a simple object-oriented python API, Perceval provides tools for building a circuit with linear optics components,
 defining single-photon source, manipulating Fock states, running simulation, reproducing published experimental papers
