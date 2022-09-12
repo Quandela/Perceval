@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: https://github.com/Quandela/QuandeLibC.git
+          repository: Quandela/Perceval
           ref: ${{ inputs.quandelibc_ref }}
           path: quandelibc
           submodules: recursive
