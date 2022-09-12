@@ -39,14 +39,14 @@ jobs:
           fetch-depth: 0
 
       - name: setup-python
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS--'
         run: |
           /bin/bash -c "$(sudo curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           brew update && brew upgrade
 
 
-      - if: runner.os != 'macOS'
-        uses: actions/setup-python@v2
+      - if: runner.os != 'macOS--'
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ github.event.inputs.python_v }}
 
