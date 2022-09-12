@@ -1,5 +1,9 @@
 # Perceval
 
+![CI](https://github.com/github/docs/actions/workflows/python-publish.yml/badge.svg)
+[![GitHub release](https://img.shields.io/github/release/SimonRit/RTK.svg)](https://github.com/Quandela/Perceval/releases/latest)
+[![QuandeLibC release](https://img.shields.io/github/release/SimonRit/RTK.svg)](https://github.com/Quandela/QuandeLibC/releases/latest)
+
 Through a simple object-oriented python API, Perceval provides tools for building a circuit with linear optics components,
 defining single-photon source, manipulating Fock states, running simulation, reproducing published experimental papers
 and experiment new generation of quantum algorithms. It aims to be a companion tool for developing photonics circuits
