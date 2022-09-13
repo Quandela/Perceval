@@ -103,7 +103,7 @@ jobs:
           tool: 'pytest'
           output-file-path: ${{ env.file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: ${{ github.event.inputs.save }}
+          auto-push: ${{ inputs.save }}
           benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
           alert-threshold: '120%'
           # comment-on-alert: true
