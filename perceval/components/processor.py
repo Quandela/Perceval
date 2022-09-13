@@ -19,20 +19,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from multipledispatch import dispatch
-
 from .abstract_component import AComponent
 from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
 from .port import APort, PortLocation, Herald
-from .mode_connection import ModeConnectionResolver, UnavailableModeException, InvalidMappingException
+from .mode_connection import ModeConnectionResolver, UnavailableModeException
 from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, BasicState, global_params
 from perceval.backends import Backend
-from typing import Dict, Callable, Type, Literal, Union
-
-
-
+from typing import Dict, Type
 
 
 class Processor:
@@ -55,8 +50,6 @@ class Processor:
         self._post_select = None
 
         self._anon_herald_num = 0  # This is not a herald count!
-
-        # self._closed_photonic_modes = []
 
         # for k in range(circuit.m):
         #     if k in sources:
@@ -140,13 +133,12 @@ class Processor:
             self._components.append((perm_modes, perm_inv))
 
         # Retrieve ports from other processor
-        for port, port_range in processor._in_ports.items():
-            if isinstance(port, Herald):
-                port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
-                self.add_port(port_mode, port, PortLocation.input)
         for port, port_range in processor._out_ports.items():
             port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
-            self.add_port(port_mode, port, PortLocation.output)
+            if isinstance(port, Herald):
+                self._add_herald(port_mode, port.expected, port.user_given_name)
+            else:
+                self.add_port(port_mode, port, PortLocation.output)
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
@@ -172,16 +164,19 @@ class Processor:
             return perm_modes, None  # No need for a permutation, modes are already sorted
         return perm_modes, PERM(perm_vect)
 
-    def add_herald(self, m, expected, name=None):
-        self._n_heralds += 1
-        self._n_moi -= 1
-        if not self.are_modes_free([m], PortLocation.in_out):
-            raise UnavailableModeException(m, "Another port overlaps")
+    def _add_herald(self, mode, expected, name=None):
+        if not self.are_modes_free([mode], PortLocation.in_out):
+            raise UnavailableModeException(mode, "Another port overlaps")
         if name is None:
-            name = f'herald{self._anon_herald_num}'
+            name = self._anon_herald_num
             self._anon_herald_num += 1
-        self._in_ports[Herald(expected, name)] = [m]
-        self._out_ports[Herald(expected, name)] = [m]
+        self._in_ports[Herald(expected, name)] = [mode]
+        self._out_ports[Herald(expected, name)] = [mode]
+
+    def add_herald(self, mode, expected, name=None):
+        self._n_moi -= 1
+        self._n_heralds += 1
+        self._add_herald(mode, expected, name)
         return self
 
     def add_port(self, m, port: APort, location: PortLocation = PortLocation.in_out):
