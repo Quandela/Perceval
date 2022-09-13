@@ -1,4 +1,9 @@
-#this workflow run benchmarks
+#this is a manual workflow that runs benchmarks at benchmarks/benchmark_*.py
+# file name .benchmarks/<runner>_CPython-<PyVersion>/<tagVersion>_<branches>_<workflowNB>_<commit>.json
+# compare the logs with the same runner and the same version of python
+# upload the artifact to the github action
+# save the log on the gh-page branch (benchmarks/<runner>_CPython-<PyVersion>/data)
+# push on the current branch
 
 name: Benchmarks
 
@@ -8,12 +13,10 @@ on:
       os:
         description: 'Choose OS'
         required: true
-        default: 'Ubuntu'
+        default: 'MiniMac_arm64'
         type: choice
         options:
-          - ARM64
-          - ubuntu
-          - windows
+          - MiniMac_arm64
       save:
         description: 'Save log'
         default: false
@@ -35,18 +38,17 @@ env:
 jobs:
   benchmark:
     name: Run pytest-benchmark benchmark example
-    runs-on: ${{ github.event.inputs.os }}-latest
+    runs-on: ${{ github.event.inputs.os }}
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-
-      - if: runner.os != 'macOS'
+      # install python, already DL on MiniMac_arm64
+      - if:  ${{ github.event.inputs.os }} != 'MiniMac_arm64'
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
-
 
       - name: Install dependencies
         run: |
@@ -54,19 +56,20 @@ jobs:
             python -m pip install pytest pytest-benchmark
             python -m pip install .
 
+      # save var env use bash shell for notLinux
       - if: runner.os == 'Linux'
         name: Initialize config linux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{runner.os}}-CPython-${{ env.python_v }}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ env.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
 
       - if: runner.os != 'Linux'
         name: Initialize config notLinux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{runner.os}}-CPython-${{ env.python_v }}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ env.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
 
@@ -82,7 +85,7 @@ jobs:
       - name: upload the result
         uses: actions/upload-artifact@v3
         with:
-          name: pytest_log
+          name: pytest_benchmarks_${{ env.folder_env }}_${{ env.tag_version }}_log
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             compare_result_${{ env.folder_env }}_${{ env.tag_version }}
@@ -92,6 +95,7 @@ jobs:
         with:
           name: pytest_log
 
+      # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -101,15 +105,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ github.event.inputs.save }}
           benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
-          alert-threshold: '10%'
+          alert-threshold: '120%'
           # comment-on-alert: true
-          fail-on-alert: false
+          fail-on-alert: true
 
       - name: Save benchmark report in current branch
         if: inputs.save
         run: |
-          git config --global user.name 'test'
-          git config --global user.email 'test@users.noreply.github.com'
+          git config --global user.name 'benchmark_test'
+          git config --global user.email 'benchmark_test@users.noreply.github.com'
           git add ${{ env.file_json }}
           git commit -am "Automated benchmark report"
           git pull
