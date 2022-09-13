@@ -56,7 +56,7 @@ class StepperBackend(Backend):
         :return: evolved StateVector
         """
         min_r = r[0]
-        max_r = r[-1]
+        max_r = r[-1]+1
         key = c.describe()  # Can't use c; two identical pieces aren't considered equal if they aren't at the same place
         # build list of never visited fockstates corresponding to subspace [min_r:max_r]
         sub_input_state = {sliced_state for state in sv

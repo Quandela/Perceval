@@ -25,6 +25,7 @@ import numpy as np
 
 from perceval.components import ACircuit
 from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
+from copy import copy
 
 
 class GenericBS(ACircuit):
@@ -413,7 +414,7 @@ class PERM(Unitary):
             sv = StateVector(sv)
 
         min_r = r[0]
-        max_r = r[-1]
+        max_r = r[-1]+1
         nsv = copy(sv)
         new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
                                                                                   for i in self.perm_vector]))):
@@ -421,8 +422,6 @@ class PERM(Unitary):
         nsv.clear()
         nsv.update(new_states)
 
-        if len(nsv) == 1:
-            return nsv[0]
         return nsv
 
 
