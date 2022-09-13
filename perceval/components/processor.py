@@ -50,8 +50,13 @@ class Processor:
         self._post_select = None
 
         self._anon_herald_num = 0  # This is not a herald count!
+        self._is_on = False
 
-        # for k in range(circuit.m):
+    def turn_on(self):
+        if self._is_on:
+            return
+        self._is_on = True
+        # for k in range(self.m):
         #     if k in sources:
         #         distribution = sources[k].probability_distribution()
         #     else:
@@ -61,9 +66,9 @@ class Processor:
         #         self._inputs_map = distribution
         #     else:
         #         self._inputs_map *= distribution
-        # self._in_port_names = {}
-        # self._out_port_names = {}
 
+    def set_postprocess(self, postprocess_func):
+        self._post_select = postprocess_func
 
     @property
     def mode_of_interest_count(self) -> int:
@@ -80,6 +85,9 @@ class Processor:
         - No output is set on used modes
         - Should fail if lock_inputs has been called and the component uses new modes or defines new inputs
         """
+        if self._post_select is not None:
+            raise RuntimeError("Cannot add any component to a processor with post-process function")
+
         connector = ModeConnectionResolver(self, component)
         mode_mapping = connector.resolve(mode_mapping)
         if isinstance(component, Processor):
@@ -121,6 +129,7 @@ class Processor:
             new_mode_index += 1
             self._n_heralds += 1
 
+        # Add PERM, component, PERM^-1
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
@@ -132,13 +141,23 @@ class Processor:
             perm_inv.inverse(h=True)
             self._components.append((perm_modes, perm_inv))
 
-        # Retrieve ports from other processor
+        # Retrieve ports from the other processor
         for port, port_range in processor._out_ports.items():
             port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
             if isinstance(port, Herald):
                 self._add_herald(port_mode, port.expected, port.user_given_name)
             else:
                 self.add_port(port_mode, port, PortLocation.output)
+
+        # Retrieve post process function from the other processor
+        if processor._post_select is not None:
+            if perm_component is None:
+                self._post_select = processor._post_select
+            else:
+                perm = perm_component.perm_vector
+                c_first = perm_modes[0]
+                self._post_select = lambda s: processor._post_select(BasicState([s[perm.index(ii) + c_first]
+                                                                                 for ii in range(processor.m)]))
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
@@ -165,6 +184,9 @@ class Processor:
         return perm_modes, PERM(perm_vect)
 
     def _add_herald(self, mode, expected, name=None):
+        """
+        This internal implementation does not increase the herald count or decrease the mode of interest count
+        """
         if not self.are_modes_free([mode], PortLocation.in_out):
             raise UnavailableModeException(mode, "Another port overlaps")
         if name is None:
@@ -288,4 +310,4 @@ class Processor:
         for m, v in self.heralds:
             if state[m] != v:
                 return False
-        return self._post_process_func(state)
+        return self._post_select(state)
