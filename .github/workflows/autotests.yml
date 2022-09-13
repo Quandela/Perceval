@@ -157,7 +157,7 @@ jobs:
 
     - name: Install previously compiled Quandelibc
       if: github.event_name == 'workflow_dispatch' && inputs.quandelibc_ref != ''
-      run: bash -c "python -m pip install precompiled-quandelibc/*${{ matrix.wheel }}.whl"
+      run: bash -c "python -m pip install precompiled-quandelibc/*manylinux2014_x86_64.whl"
 
     - name: Install dependencies
       run: |
