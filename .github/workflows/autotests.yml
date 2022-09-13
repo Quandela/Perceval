@@ -48,35 +48,35 @@ jobs:
 #        if: matrix.os != 'macos-latest'
 #        run: sed -i -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
 #
-#      - name: Set up Python 3.9
-#        uses: actions/setup-python@v3
-#        with:
-#          python-version: 3.9
-#
-#      - name: Build wheels for cp310
-#        env:
-#          CIBW_BUILD: 'cp310-*'
-#          CIBW_SKIP: '*-musllinux_*'
-#          CIBW_ARCHS_LINUX: x86_64
-#          CIBW_ARCHS_MACOS: x86_64
-#          CIBW_ARCHS_WINDOWS: AMD64
-#          CIBW_BUILD_VERBOSITY: 1
-#        run: |
-#          cd quandelibc
-#          python -m pip install cibuildwheel
-#          python -m cibuildwheel --output-dir precompiled-quandelibc
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
 
-      - name: Build wheel manually
+      - name: Build wheels for cp310
+        env:
+          CIBW_BUILD: 'cp310-*'
+          CIBW_SKIP: '*-musllinux_*'
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_MACOS: x86_64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_BUILD_VERBOSITY: 1
         run: |
           cd quandelibc
-          python -m pip install .
-          python setup.py bdist_wheel
+          python -m pip install cibuildwheel
+          python -m cibuildwheel --output-dir precompiled-quandelibc
+
+#      - name: Build wheel manually
+#        run: |
+#          cd quandelibc
+#          python -m pip install .
+#          python setup.py bdist_wheel
 
       - name: Store wheel
         uses: actions/upload-artifact@v2
         with:
           name: python-package-distributions
-          path: quandelibc/dist
+          path: quandelibc/precompiled-quandelibc
 
   build:
     name: Run PyTest on ${{ matrix.os }}
@@ -109,7 +109,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: python-package-distributions
-        path: dist
+        path: precompiled-quandelibc
 
     - name: Install previously compiled Quandelibc
       if: github.event_name == 'workflow_dispatch' && inputs.quandelibc_ref != ''
