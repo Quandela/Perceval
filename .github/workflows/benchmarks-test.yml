@@ -45,7 +45,7 @@ jobs:
           fetch-depth: 0
 
       # install python, already DL on MiniMac_arm64
-      - if:  ${{ github.event.inputs.os }} != 'MiniMac_arm64'
+      - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
