@@ -44,6 +44,10 @@ jobs:
         with:
           python-version: 3.9
 
+      - name: Update quandelibc's version
+        run: sed -i -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
+
+
       - name: Build wheels for cp310
         env:
           CIBW_BUILD: 'cp310-*'
@@ -76,7 +80,7 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
         include:
           - os: 'ubuntu-latest'
-            wheel: 'manylinux_2_17_x86_64'
+            wheel: 'manylinux2014_x86_64'
           - os: 'macos-latest'
             wheel: 'macosx_10_9_x86_64'
           - os: 'windows-latest'
