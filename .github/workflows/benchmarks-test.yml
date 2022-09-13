@@ -38,12 +38,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup-python
-        if: runner.os == 'macOS--'
-        run: |
-          /bin/bash -c "$(sudo curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          brew update && brew upgrade
-
 
       - if: runner.os != 'macOS'
         uses: actions/setup-python@v4
@@ -65,7 +59,7 @@ jobs:
           echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
 
       - if: runner.os != 'Linux'
-        name: Initialize config windows
+        name: Initialize config notLinux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
@@ -75,8 +69,8 @@ jobs:
 
       - name: Run benchmark
         run: |
-          pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
-          pytest benchmark/benchmark_stepper.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          python -m pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
+          python -m pytest benchmark/benchmark_stepper.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
 
       # upload the result on action git
       - name: upload the result
