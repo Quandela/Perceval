@@ -71,10 +71,10 @@ jobs:
         run: |
           python -m pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
           python -m pytest benchmark/benchmark_stepper.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
-
       - name: compare benchmark
         run: |
           python -m pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+
       # upload the result on action git
       - name: upload the result
         uses: actions/upload-artifact@v3
