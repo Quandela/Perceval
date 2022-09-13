@@ -26,17 +26,13 @@ from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
 from .port import APort, PortLocation, Herald
+from .mode_connection import ModeConnectionResolver, UnavailableModeException, InvalidMappingException
 from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, BasicState, global_params
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal, Union
 
 
-class UnavailableModeException(Exception):
-    def __init__(self, mode: Union[int, list[int]], reason: str = None):
-        because = ''
-        if reason:
-            because = f' because: {reason}'
-        super().__init__(f"Mode(s) {mode} not available{because}")
+
 
 
 class Processor:
@@ -56,15 +52,12 @@ class Processor:
         self._out_ports = {}
         self._n_moi = n_moi  # number of modes of interest (MOI)
         self._n_heralds = 0
+        self._post_select = None
 
         self._anon_herald_num = 0  # This is not a herald count!
 
         # self._closed_photonic_modes = []
 
-        # self._circuit = circuit
-        # self._post_select = post_select_fn
-        # self._heralds = heralds
-        # self._inputs_map = None
         # for k in range(circuit.m):
         #     if k in sources:
         #         distribution = sources[k].probability_distribution()
@@ -78,8 +71,13 @@ class Processor:
         # self._in_port_names = {}
         # self._out_port_names = {}
 
+
     @property
-    def m(self):
+    def mode_of_interest_count(self) -> int:
+        return self._n_moi
+
+    @property
+    def m(self) -> int:
         return self._n_moi + self._n_heralds
 
     def add(self, mode_mapping, component):
@@ -89,43 +87,28 @@ class Processor:
         - No output is set on used modes
         - Should fail if lock_inputs has been called and the component uses new modes or defines new inputs
         """
+        connector = ModeConnectionResolver(self, component)
+        mode_mapping = connector.resolve(mode_mapping)
         if isinstance(component, Processor):
-            mode_mapping = self._resolve_mode_mapping(mode_mapping, component.m - len(component.heralds))
             self._compose_processor(mode_mapping, component)
         elif isinstance(component, AComponent):
-            mode_mapping = self._resolve_mode_mapping(mode_mapping, component.m)
             self._add_component(mode_mapping, component)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
         return self
 
-    def _resolve_mode_mapping(self, mapping, n):
-        if isinstance(mapping, int):
-            mapping = list(range(mapping, mapping + n))
-        assert isinstance(mapping, list) or isinstance(mapping, tuple), "mode_mapping must be a list"
-        port_names = self.out_port_names
-        result = []
-        for value in mapping:
-            if isinstance(value, int):
-                result.append(value)
-            if isinstance(value, str):  # Mapping between port name and index
-                count = port_names.count(value)
-                if count == 0:
-                    raise RuntimeError(f"Port '{value}' not found in Processor")
-                pos = port_names.index(value)
-                for i in range(count):
-                    result.append(pos)
-                    pos += 1
-
-        for mode in result:
-            if not self.is_mode_connectible(mode):
-                raise UnavailableModeException(mode)
-        return result
-
     @property
     def out_port_names(self):
         result = [''] * self.m
         for port, m_range in self._out_ports.items():
+            for m in m_range:
+                result[m] = port.name
+        return result
+
+    @property
+    def in_port_names(self):
+        result = [''] * self.m
+        for port, m_range in self._in_ports.items():
             for m in m_range:
                 result[m] = port.name
         return result
@@ -137,23 +120,19 @@ class Processor:
             if port is not None:
                 del self._out_ports[port]
 
+        # Compute herald positions
         other_herald_pos = list(processor.heralds.keys())
         new_mode_index = self.m
-        mapping_with_heralds = []
-        j = 0
-        for i in range(processor.m):
-            if i in other_herald_pos:
-                mapping_with_heralds.append(new_mode_index)
-                new_mode_index += 1
-                self._n_heralds += 1
-            else:
-                mapping_with_heralds.append(mode_mapping[j])
-                j += 1
-        perm_modes, perm_component = self._generate_permutation(mapping_with_heralds)
+        for pos in other_herald_pos:
+            mode_mapping[new_mode_index] = pos
+            new_mode_index += 1
+            self._n_heralds += 1
+
+        perm_modes, perm_component = self._generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
         for pos, c in processor._components:
-            pos = [x + min(mapping_with_heralds) for x in pos]
+            pos = [x + min(mode_mapping) for x in pos]
             self._components.append((pos, c))
         if perm_component is not None:
             perm_inv = perm_component.copy()
@@ -163,9 +142,11 @@ class Processor:
         # Retrieve ports from other processor
         for port, port_range in processor._in_ports.items():
             if isinstance(port, Herald):
-                self.add_port(mapping_with_heralds[port_range[0]], port, PortLocation.input)
+                port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+                self.add_port(port_mode, port, PortLocation.input)
         for port, port_range in processor._out_ports.items():
-            self.add_port(mapping_with_heralds[port_range[0]], port, PortLocation.output)
+            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            self.add_port(port_mode, port, PortLocation.output)
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
@@ -177,21 +158,23 @@ class Processor:
         sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
 
-    def _generate_permutation(self, mode_mapping):
-        min_m = min(mode_mapping)
-        max_m = max(mode_mapping)
-        missing_modes = [x for x in list(range(min_m, max_m+1)) if x not in mode_mapping]
-        mode_mapping.extend(missing_modes)
+    @staticmethod
+    def _generate_permutation(mode_mapping: Dict[int, int]):
+        m_keys = list(mode_mapping.keys())
+        min_m = min(m_keys)
+        max_m = max(m_keys)
+        missing_modes = [x for x in list(range(min_m, max_m+1)) if x not in m_keys]
+        for mm in missing_modes:
+            mode_mapping[mm] = max(mode_mapping.values()) + 1
         perm_modes = list(range(min_m, min_m+len(mode_mapping)))
-        perm_norm = [m - min_m for m in mode_mapping]
-        perm_vect = [perm_norm.index(i) for i in range(len(perm_norm))]
-        if mode_mapping == perm_modes:
+        perm_vect = [mode_mapping[i] for i in sorted(mode_mapping.keys())]
+        if m_keys == perm_modes:
             return perm_modes, None  # No need for a permutation, modes are already sorted
-
         return perm_modes, PERM(perm_vect)
 
     def add_herald(self, m, expected, name=None):
         self._n_heralds += 1
+        self._n_moi -= 1
         if not self.are_modes_free([m], PortLocation.in_out):
             raise UnavailableModeException(m, "Another port overlaps")
         if name is None:

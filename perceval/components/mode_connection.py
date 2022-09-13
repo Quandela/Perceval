@@ -81,8 +81,12 @@ class ModeConnectionResolver:
         # Handle int input case
         if isinstance(mapping, int):
             self._map = {}
+            r_list = list(range(self._n_modes_to_connect))
+            if not self._r_is_component:
+                r_list = list(range(self._ro.m))
+                r_list = [x for x in r_list if x not in list(self._ro.heralds.keys())]
             for i in range(self._n_modes_to_connect):
-                self._map[mapping + i] = i
+                self._map[mapping + i] = r_list[i]
             self._check_consistency()
             return self._map
 

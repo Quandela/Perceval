@@ -65,7 +65,7 @@ ctrl (dual ray) ─────┤     ├───── ctrl (dual ray)
         if self._opt('type') == AsType.CIRCUIT:
             return c_hcnot
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor(4)
+            p = Processor(8)
             return p.add(0, c_hcnot) \
                 .add_herald(0, 0) \
                 .add_herald(1, 1) \
