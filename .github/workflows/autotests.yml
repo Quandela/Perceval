@@ -69,6 +69,7 @@ jobs:
       - name: Build wheel manually
         run: |
           cd quandelibc
+          python -m pip install .
           python setup.py bdist_wheel
 
       - name: Store wheel
