@@ -38,6 +38,7 @@ jobs:
           ref: ${{ inputs.quandelibc_ref }}
           path: quandelibc
           submodules: recursive
+          fetch-depth: 0
 
 #      - name: Update quandelibc's version
 #        if: matrix.os == 'macos-latest'
@@ -68,7 +69,7 @@ jobs:
       - name: Build wheel manually
         run: |
           cd quandelibc
-          python -m setup.py bdist_wheel
+          python setup.py bdist_wheel
 
       - name: Store wheel
         uses: actions/upload-artifact@v2
