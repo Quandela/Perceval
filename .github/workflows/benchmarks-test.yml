@@ -104,4 +104,5 @@ jobs:
           git config --global user.email 'test@users.noreply.github.com'
           git add ${{ env.file_json }}
           git commit -am "Automated benchmark report"
+          git pull
           git push
