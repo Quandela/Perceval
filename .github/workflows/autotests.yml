@@ -40,14 +40,6 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-#      - name: Update quandelibc's version
-#        if: matrix.os == 'macos-latest'
-#        run: sed -i '' -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
-#
-#      - name: Update quandelibc's version
-#        if: matrix.os != 'macos-latest'
-#        run: sed -i -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
-#
       - name: Set up Python 3.9
         uses: actions/setup-python@v3
         with:
@@ -66,19 +58,13 @@ jobs:
           python -m pip install cibuildwheel
           python -m cibuildwheel --output-dir precompiled-quandelibc
 
-#      - name: Build wheel manually
-#        run: |
-#          cd quandelibc
-#          python -m pip install .
-#          python setup.py bdist_wheel
-
       - name: Store wheel
         uses: actions/upload-artifact@v2
         with:
           name: python-package-distributions
           path: quandelibc/precompiled-quandelibc
 
-  build:
+  perceval-autotests:
     name: Run PyTest on ${{ matrix.os }}
     if: always()
     needs:
@@ -96,7 +82,6 @@ jobs:
             wheel: 'macosx_10_9_x86_64'
           - os: 'windows-latest'
             wheel: 'win_amd64'
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -121,6 +106,7 @@ jobs:
         python -m pip install flake8 pytest
         python -m pip install -r requirements.txt
         python -m pip install .
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -131,10 +117,10 @@ jobs:
       run: |
         pytest
 
-  build-docs:
+  perceval-docs-test:
     name: Build docs on ubuntu
     needs:
-    - build
+    - perceval-autotests
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
