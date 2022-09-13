@@ -39,14 +39,18 @@ jobs:
           path: quandelibc
           submodules: recursive
 
+      - name: Update quandelibc's version
+        if: matrix.os == 'macos-latest'
+        run: sed -i '' -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
+
+      - name: Update quandelibc's version
+        if: matrix.os != 'macos-latest'
+        run: sed -i -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
+
       - name: Set up Python 3.9
         uses: actions/setup-python@v3
         with:
           python-version: 3.9
-
-      - name: Update quandelibc's version
-        run: sed -i -e 's/scmver=.*/scmver=True,/' -e 's/version=/#version=/' quandelibc/setup.py
-
 
       - name: Build wheels for cp310
         env:
