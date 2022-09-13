@@ -72,3 +72,6 @@ class CliffordClifford2017Backend(Backend):
             mode_seq.append(next_mode)
             fs[next_mode] += 1
         return BasicState(fs)
+
+    def samples(self, input_state, count):
+        return [self.sample(input_state) for _ in range(count)]
