@@ -14,20 +14,23 @@ on:
           - ARM64
           - ubuntu
           - windows
-      python_v:
-        description: 'python version'
-        required: true
-        default: '3.10'
-        type: choice
-        options:
-          - '3.10'
-          - '3.9'
-          - '3.8'
       save:
         description: 'Save log'
         default: false
         required: false
         type: boolean
+#      python_v:
+#        description: 'python version'
+#        required: true
+#        default: '3.10'
+#        type: choice
+#        options:
+#          - '3.10'
+#          - '3.9'
+#          - '3.8'
+
+env:
+  python_v: '3.9'
 
 jobs:
   benchmark:
@@ -40,9 +43,9 @@ jobs:
 
 
       - if: runner.os != 'macOS'
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v2
         with:
-          python-version: ${{ github.event.inputs.python_v }}
+          python-version: ${{ env.python_v }}
 
 
       - name: Install dependencies
@@ -55,22 +58,22 @@ jobs:
         name: Initialize config linux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{runner.os}}-CPython-${{ env.python_v }}-64bit" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ env.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
 
       - if: runner.os != 'Linux'
         name: Initialize config notLinux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ github.event.inputs.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{runner.os}}-CPython-${{ env.python_v }}-64bit" >> $GITHUB_ENV
+          echo "file_json=.benchmarks/${{runner.os}}-CPython-${{ env.python_v }}-64bit/$( git describe --tags )_${{  github.ref_name }}_${{  github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
 
       - name: Run benchmark
         run: |
           python -m pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
-          python -m pytest benchmark/benchmark_stepper.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
       - name: compare benchmark
         run: |
           pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
@@ -97,7 +100,8 @@ jobs:
           output-file-path: ${{ env.file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ github.event.inputs.save }}
-          alert-threshold: '20%'
+          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
+          alert-threshold: '10%'
           # comment-on-alert: true
           fail-on-alert: false
 
