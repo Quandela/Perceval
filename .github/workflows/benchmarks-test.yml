@@ -98,16 +98,6 @@ jobs:
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
 
-      - name: Save benchmark report in current branch
-        if: inputs.save
-        run: |
-          git config --global user.name 'benchmark_test'
-          git config --global user.email 'benchmark_test@users.noreply.github.com'
-          git add ${{ env.folder_file_json }}
-          git commit -am "Automated benchmark report"
-          git pull
-          git push
-
       # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
         uses: benchmark-action/github-action-benchmark@v1
@@ -121,4 +111,15 @@ jobs:
           alert-threshold: '120%'
           # comment-on-alert: true
           fail-on-alert: true
+
+      - name: Save benchmark report in current branch
+        if: inputs.save
+        run: |
+          git config --global user.name 'benchmark_test'
+          git config --global user.email 'benchmark_test@users.noreply.github.com'
+          git add ${{ env.folder_file_json }}
+          git commit -am "Automated benchmark report"
+          git pull
+          git push
+
 
