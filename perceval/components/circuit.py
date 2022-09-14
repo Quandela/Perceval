@@ -450,6 +450,36 @@ class Circuit(ACircuit):
             for range_comp, comp in c:
                 yield tuple(pos + r[0] for pos in range_comp), comp
 
+    def getitem(self, idx: Tuple[int, int], only_parameterized: bool=False) -> ACircuit:
+        """
+        Direct access to components of the circuit
+        :param idx: index of the component as (row, col)
+        :param only_parameterized: if True, only count components with parameters
+        :return: the component
+        """
+        if not(isinstance(idx, tuple) and len(idx) == 2):
+            raise ValueError("__getitem__ type should be len-2 tuple")
+        # get j-th component found on mode i
+        i, j = idx
+        if i >= self._m or i < 0:
+            raise IndexError("row index out of range")
+        for r, c in self._components:
+            if only_parameterized and c.defined:
+                continue
+            if i in r:
+                if j == 0:
+                    return c
+                j -= 1
+        raise IndexError("column index out of range")
+
+    def __getitem__(self, idx) -> ACircuit:
+        """
+        Direct access to components - using __getitem__ operator
+        :param idx: index of the component as (row, col)
+        :return: the component
+        """
+        return self.getitem(idx, only_parameterized=False)
+
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
 

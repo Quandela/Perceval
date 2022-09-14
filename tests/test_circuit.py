@@ -349,3 +349,24 @@ def test_depths_ncomponents():
 def test_reflexivity():
     c = comp.GenericBS(R=1/3)
     assert pytest.approx(c.compute_unitary(use_symbolic=False)[0, 0]) == np.sqrt(1/3)
+
+
+def test_getitem1_index():
+    c = Circuit(2) // comp.GenericBS() // comp.PS(P("phi1")) // comp.GenericBS() // comp.PS(P("phi2"))
+    with pytest.raises(IndexError):
+        c[0,5]
+    with pytest.raises(ValueError):
+        c[-1]
+    with pytest.raises(IndexError):
+        c[4,0]
+
+
+def test_getitem2_value():
+    c = Circuit(2) // comp.GenericBS() // comp.PS(P("phi1")) // comp.GenericBS() // comp.PS(P("phi2"))
+    assert c[0,0].describe() == "GenericBS()"
+    assert c[0,1].describe() == "PS(phi=phi1)"
+
+
+def test_getitem3_parameter():
+    c = Circuit(2) // comp.GenericBS() // comp.PS(P("phi1")) // comp.GenericBS() // comp.PS(P("phi2"))
+    assert c.getitem((0,0), True).describe() == "PS(phi=phi1)"
