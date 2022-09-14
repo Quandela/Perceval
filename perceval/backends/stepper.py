@@ -63,7 +63,7 @@ class StepperBackend(Backend):
         # build list of fockstates corresponding to subspace [min_r:max_r]
         sub_input_state = set()
         for state in sv:
-            sub_input_state.add(BasicState(state[min_r:max_r]))
+            sub_input_state.add(BasicState(state[min_r:max_r+1]))
         # get circuit probability for these input_states
         sim_c = NaiveBackend(c.U, use_symbolic=self._use_symbolic)
         mapping_input_output = {}
@@ -74,9 +74,9 @@ class StepperBackend(Backend):
         # now rebuild the new state vector
         nsv = StateVector()
         for state in sv:
-            input_state = state[min_r:max_r]
+            input_state = state[min_r:max_r+1]
             for output_state, prob_ampli in mapping_input_output[input_state].items():
-                nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli*sv[state]
+                nsv[BasicState(state.set_slice(slice(min_r, max_r+1), output_state))] += prob_ampli*sv[state]
         return nsv
 
     def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
