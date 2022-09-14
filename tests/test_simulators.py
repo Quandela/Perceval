@@ -206,9 +206,9 @@ def test_evolve_indistinguishable():
         check_output(simulator, sv1, {pcvl.BasicState("|0,2>"): 0.5, pcvl.BasicState("|2,0>"): 0.5})
         sv1_out = simulator.evolve(sv1)
         assert str(sv1_out) == "sqrt(2)/2*|2,0>-sqrt(2)/2*|0,2>"
-        sv2 = pcvl.StateVector([1, 1], {1: {"_": 0}})
+        sv2 = pcvl.StateVector([1, 1], {0: ["_:0"]})
         check_output(simulator, sv2, {pcvl.BasicState("|0,2>"): 0.5, pcvl.BasicState("|2,0>"): 0.5})
-        sv3 = pcvl.StateVector([1, 1], {1: {"_": 0}, 2: {"_": 0}})
+        sv3 = pcvl.StateVector([1, 1], {0: ["_:0"], 1: ["_:0"]})
         check_output(simulator, sv3, {pcvl.BasicState("|0,2>"): 0.5, pcvl.BasicState("|2,0>"): 0.5})
 
 
@@ -216,7 +216,7 @@ def test_hybrid_state():
     c = comp.GenericBS()
     for backend_name in ["SLOS", "Naive"]:
         simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
-        sv1 = pcvl.StateVector([1, 1], {1: {"_": 1}, 2: {"_": 2}})
+        sv1 = pcvl.StateVector([1, 1], {0: ["_:1"], 1: ["_:2"]})
         check_output(simulator, sv1, {pcvl.BasicState("|0,2>"): 0.25,
                                       pcvl.BasicState("|2,0>"): 0.25,
                                       pcvl.BasicState("|1,1>"): 0.5})
@@ -267,18 +267,18 @@ def test_polarization_circuit_0():
     for backend_name in ["Naive", "SLOS"]:
         simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
         check_output(simulator,
-                     pcvl.AnnotatedBasicState("|{P:H}>"),
+                     pcvl.BasicState("|{P:H}>"),
                      {pcvl.BasicState("|1>"): 1})
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"),
-                                            pcvl.AnnotatedBasicState("|{P:H}>"))) == 0
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"),
-                                            pcvl.AnnotatedBasicState("|{P:V}>"))) == 1
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"),
-                                            pcvl.AnnotatedBasicState("|{P:H}>"))) == 1
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:D}>"),
-                                            pcvl.AnnotatedBasicState("|{P:D}>"))) == 1
-        assert pytest.approx(simulator.prob(pcvl.AnnotatedBasicState("|{P:A}>"),
-                                            pcvl.AnnotatedBasicState("|{P:A}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.BasicState("|{P:H}>"),
+                                            pcvl.BasicState("|{P:H}>"))) == 0
+        assert pytest.approx(simulator.prob(pcvl.BasicState("|{P:H}>"),
+                                            pcvl.BasicState("|{P:V}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.BasicState("|{P:V}>"),
+                                            pcvl.BasicState("|{P:H}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.BasicState("|{P:D}>"),
+                                            pcvl.BasicState("|{P:D}>"))) == 1
+        assert pytest.approx(simulator.prob(pcvl.BasicState("|{P:A}>"),
+                                            pcvl.BasicState("|{P:A}>"))) == 1
 
 
 def test_polarization_circuit_1():
@@ -287,10 +287,10 @@ def test_polarization_circuit_1():
     for backend_name in ["SLOS", "Naive"]:
         simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
         check_output(simulator,
-                     pcvl.AnnotatedBasicState("|{P:H}>"),
+                     pcvl.BasicState("|{P:H}>"),
                      {pcvl.BasicState("|1>"): 1})
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:D}>")) == 1
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"), pcvl.AnnotatedBasicState("|{P:A}>")) == 1
+        assert pytest.approx(1) == simulator.prob(pcvl.BasicState("|{P:H}>"), pcvl.BasicState("|{P:D}>"))
+        assert pytest.approx(1) == simulator.prob(pcvl.BasicState("|{P:V}>"), pcvl.BasicState("|{P:A}>"))
 
 
 def test_polarization_circuit_2():
@@ -299,10 +299,10 @@ def test_polarization_circuit_2():
     for backend_name in ["SLOS", "Naive"]:
         simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
         # check_output(simulator,
-        #              pcvl.AnnotatedBasicState("|{P:H}>"),
+        #              pcvl.BasicState("|{P:H}>"),
         #              {pcvl.BasicState("|1>"): 1})
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:H}>"), pcvl.AnnotatedBasicState("|{P:L}>")) == 1
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:V}>"), pcvl.AnnotatedBasicState("|{P:R}>")) == 1
+        assert pytest.approx(1) == simulator.prob(pcvl.BasicState("|{P:H}>"), pcvl.BasicState("|{P:L}>"))
+        assert pytest.approx(1) == simulator.prob(pcvl.BasicState("|{P:V}>"), pcvl.BasicState("|{P:R}>"))
 
 
 def test_polarization_circuit_3():
@@ -311,10 +311,10 @@ def test_polarization_circuit_3():
     for backend_name in ["Naive", "SLOS"]:
         simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
         check_output(simulator,
-                     pcvl.AnnotatedBasicState("|1,0>"),
+                     pcvl.BasicState("|1,0>"),
                      {pcvl.BasicState("|0,1>"): 1})
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:H},0>"), pcvl.AnnotatedBasicState("|0,{P:H}>")) == 1
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:V},0>"), pcvl.AnnotatedBasicState("|{P:V},0>")) == 1
+        assert pytest.approx(1) == simulator.prob(pcvl.BasicState("|{P:H},0>"), pcvl.BasicState("|0,{P:H}>"))
+        assert pytest.approx(1) == simulator.prob(pcvl.BasicState("|{P:V},0>"), pcvl.BasicState("|{P:V},0>"))
 
 
 @pytest.mark.skip(reason="cannot map multiple polarization to one single-mode")
@@ -324,23 +324,23 @@ def test_polarization_circuit_4():
     for backend_name in ["Naive", "SLOS"]:
         simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
         check_output(simulator,
-                     pcvl.AnnotatedBasicState("|1,0>"),
+                     pcvl.BasicState("|1,0>"),
                      {pcvl.BasicState("|0,1>"): 1})
-        assert simulator.prob(pcvl.AnnotatedBasicState("|{P:H},{P:V}>"),
-                              pcvl.AnnotatedBasicState("|0,{P:H}{P:V}>")) == 1
+        assert simulator.prob(pcvl.BasicState("|{P:H},{P:V}>"),
+                              pcvl.BasicState("|0,{P:H}{P:V}>")) == 1
 
 
 def test_bs_polarization():
     c = comp.GenericBS()
     sim = pcvl.BackendFactory().get_backend("Naive")(c)
 
-    input_state = pcvl.AnnotatedBasicState("|{P:V},0>")
+    input_state = pcvl.BasicState("|{P:V},0>")
 
-    states = [(pcvl.AnnotatedBasicState("|0,{P:H}>"), 0),
-              (pcvl.AnnotatedBasicState("|{P:V},0>"), 1/2),
-              (pcvl.AnnotatedBasicState("|0,{P:V}>"), 1/2),
-              (pcvl.AnnotatedBasicState("|{P:H},0>"), 0),
-              (pcvl.AnnotatedBasicState("|{P:V},0>"), 1/2)]
+    states = [(pcvl.BasicState("|0,{P:H}>"), 0),
+              (pcvl.BasicState("|{P:V},0>"), 1/2),
+              (pcvl.BasicState("|0,{P:V}>"), 1/2),
+              (pcvl.BasicState("|{P:H},0>"), 0),
+              (pcvl.BasicState("|{P:V},0>"), 1/2)]
 
     for output_state, prob in states:
         assert pytest.approx(sim.prob(input_state, output_state)) == prob

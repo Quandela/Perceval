@@ -26,7 +26,7 @@ from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
 from ._fockstate_serialization import serialize_state
 from perceval.components import ACircuit
-from perceval.utils import Matrix, AnnotatedBasicState, BasicState
+from perceval.utils import Matrix, BasicState
 from base64 import b64encode
 
 
@@ -40,7 +40,7 @@ def serialize(m: Matrix) -> str:
     return serialize_matrix(m).SerializeToString()
 
 
-@dispatch((AnnotatedBasicState, BasicState))
+@dispatch(BasicState)
 def serialize(state) -> str:
     return serialize_state(state)
 

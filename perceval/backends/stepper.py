@@ -56,12 +56,12 @@ class StepperBackend(Backend):
         :return: evolved StateVector
         """
         min_r = r[0]
-        max_r = r[-1]+1
-        key = c.describe()  # Can't use c; two identical pieces aren't considered equal if they aren't at the same place
-        # build list of never visited fockstates corresponding to subspace [min_r:max_r]
-        sub_input_state = {sliced_state for state in sv
-                           for sliced_state in (BasicState(state[min_r:max_r]),)
-                           if sliced_state not in self.result_dict[key]['set']}
+
+        max_r = r[-1]
+        # build list of fockstates corresponding to subspace [min_r:max_r]
+        sub_input_state = set()
+        for state in sv:
+            sub_input_state.add(BasicState(state[min_r:max_r+1]))
         # get circuit probability for these input_states
         if sub_input_state != set():
             sim_c = NaiveBackend(c.compute_unitary(use_symbolic=False))
@@ -73,11 +73,10 @@ class StepperBackend(Backend):
             self.result_dict[key]['set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
-        nsv.m = sv.m
-        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), output_state)): prob_ampli*sv[state]
-                    for state in sv
-                    for output_state, prob_ampli in self.result_dict[key][state[min_r:max_r]].items()
-                    })
+        for state in sv:
+            input_state = state[min_r:max_r+1]
+            for output_state, prob_ampli in mapping_input_output[input_state].items():
+                nsv[BasicState(state.set_slice(slice(min_r, max_r+1), output_state))] += prob_ampli*sv[state]
         return nsv
 
     def compile(self, input_states: Union[BasicState, AnnotatedBasicState, StateVector]) -> bool:

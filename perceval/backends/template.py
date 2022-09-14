@@ -25,7 +25,7 @@ import logging
 import random
 from typing import List, Tuple, Union, Iterator, Optional
 
-from perceval.utils import Matrix, StateVector, AnnotatedBasicState, BasicState
+from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
 from ..components.circuit import ACircuit, _matrix_double_for_polarization
 
@@ -139,8 +139,8 @@ class Backend(ABC):
         raise NotImplementedError
 
     def prob(self,
-             input_state: AnnotatedBasicState,
-             output_state: AnnotatedBasicState,
+             input_state: BasicState,
+             output_state: BasicState,
              n: int = None,
              skip_compile: bool = False) -> float:
         r"""
@@ -156,7 +156,7 @@ class Backend(ABC):
             if hasattr(input_state, "separate_state"):
                 input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
                 all_prob = 0
-                for p_output_state in AnnotatedBasicState(output_state).partition(
+                for p_output_state in BasicState(output_state).partition(
                         [input_state.n for input_state in input_states]):
                     prob = 1
                     for i_state, o_state in zip(input_states, p_output_state):
@@ -177,7 +177,7 @@ class Backend(ABC):
         else:
             _U_new = self._U
         _U_new = _U_new @ prep_matrix_input
-        if isinstance(output_state, AnnotatedBasicState) and output_state.has_polarization:
+        if isinstance(output_state, BasicState) and output_state.has_polarization:
             # if output state is polarized, we will directly calculating probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
             self.U = un_prep_matrix_output @ _U_new
@@ -202,8 +202,8 @@ class Backend(ABC):
         return np.asarray(allprobs)
 
     def probampli(self,
-                  input_state: AnnotatedBasicState,
-                  output_state: AnnotatedBasicState,
+                  input_state: BasicState,
+                  output_state: BasicState,
                   n: int = None) -> complex:
         """Gives the probability amplitude of an output state given an input state
 
@@ -225,7 +225,7 @@ class Backend(ABC):
             self._realm = 2 * self._realm
         self.compile(spatial_mode_input_state)
         self._U = self._U @ prep_matrix_input
-        if isinstance(output_state, AnnotatedBasicState) and output_state.has_polarization:
+        if output_state.has_polarization:
             # if output state is polarized, we will directly calculate probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
             self._U = un_prep_matrix_output @ self._U
@@ -241,8 +241,8 @@ class Backend(ABC):
         return prob_ampli
 
     def allstateprob_iterator(self,
-                              input_state: Union[AnnotatedBasicState, StateVector]) \
-            -> Iterator[Tuple[AnnotatedBasicState, float]]:
+                              input_state: Union[BasicState, StateVector]) \
+            -> Iterator[Tuple[BasicState, float]]:
         """Iterator on all possible output states compatibles with mask generating (`StateVector`, probability)
 
         :param input_state: a given input state
@@ -264,7 +264,7 @@ class Backend(ABC):
                 yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
                 skip_compile = True
 
-    def allstate_iterator(self, input_state: Union[AnnotatedBasicState, StateVector]) -> AnnotatedBasicState:
+    def allstate_iterator(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         """Iterator on all possible output states compatible with mask generating StateVector
 
         :param input_state: a given input state vector
@@ -280,9 +280,9 @@ class Backend(ABC):
             else:
                 output_array = qc.FSArray(m, n)
             for output_idx, output_state in enumerate(output_array):
-                yield AnnotatedBasicState(output_state)
+                yield BasicState(output_state)
 
-    def evolve(self, input_state: [AnnotatedBasicState, StateVector]) -> StateVector:
+    def evolve(self, input_state: [BasicState, StateVector]) -> StateVector:
         r"""StateVector evolution through a circuit
 
         :param input_state: the input_state
