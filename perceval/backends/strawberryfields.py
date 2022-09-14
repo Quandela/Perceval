@@ -23,6 +23,7 @@
 import copy
 import sys
 from .template import Backend
+from importlib import import_module
 
 sf = None
 
@@ -34,6 +35,17 @@ class SFBackend(Backend):
     name = "SF"
     supports_symbolic = False
     supports_circuit_computing = False
+
+    @staticmethod
+    def is_available():
+        if 'strawberryfields' in sys.modules:
+            return True
+
+        try:
+            sf_mod = import_module('strawberryfields')
+            return True
+        except ImportError:
+            return False
 
     def compile(self, input_state):
         # load only on demands so that program can run with dependencies

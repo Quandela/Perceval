@@ -22,15 +22,22 @@
 
 from os import path
 from inspect import signature
+from typing import Union
 
 from perceval.components import Circuit
 from perceval.utils import Matrix
 from perceval.serialization import _matrix_serialization
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
+from base64 import b64decode
 
 
-def deserialize_matrix(pb_mat: str | bytes | pb.Matrix) -> Matrix:
+def deserialize_float(floatstring):
+    import typing
+    return float(floatstring)
+
+
+def deserialize_matrix(pb_mat: Union[str, bytes, pb.Matrix]) -> Matrix:
     if not isinstance(pb_mat, pb.Matrix):
         pb_binary_repr = pb_mat
         pb_mat = pb.Matrix()
@@ -45,7 +52,7 @@ def matrix_from_file(filepath: str) -> Matrix:
         return deserialize_matrix(f.read())
 
 
-def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
+def deserialize_circuit(pb_circ: Union[str, bytes, pb.Circuit]) -> Circuit:
     if not isinstance(pb_circ, pb.Circuit):
         pb_binary_repr = pb_circ
         pb_circ = pb.Circuit()
@@ -64,7 +71,6 @@ def circuit_from_file(filepath: str) -> Circuit:
 
 
 class CircuitBuilder:
-
     deserialize_fn = {
         'circuit': deserialize_circuit,
         'beam_splitter': _cd.deserialize_simple_bs,
@@ -100,3 +106,7 @@ class CircuitBuilder:
 
     def retrieve(self):
         return self._circuit
+
+
+def jsonstring_to_bytes(var):
+    return b64decode(var)

@@ -20,35 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Type, Union
 
+from deprecated import deprecated
+from .platforms import LocalPlatform, RemotePlatform
 from .template import Backend
-from .cliffords2017 import CliffordClifford2017Backend
-from .naive import NaiveBackend
-from .slos import SLOSBackend
-from .stepper import StepperBackend
-from .strawberryfields import SFBackend
-from .mps import MPSBackend
+from .remote import RemoteBackend, RemoteCredentials, Job
 
 
-class BackendFactory:
-    _backends = (NaiveBackend, CliffordClifford2017Backend, SFBackend, SLOSBackend, StepperBackend, MPSBackend)
+@deprecated(reason='Please use get_platform("local") instead')
+class BackendFactory(LocalPlatform):
+    pass
 
-    def get_backend(self,
-                    name: Union[str, None] = None) \
-            -> Type[Backend]:
-        """Returns a simulator backend
 
-        :param name: The name of the simulator
-        :return: the backend
-        """
-        if name is None:
-            name = "SLOS"
-        for backend in self._backends:
-            if backend.name == name:
-                return backend
-        # TODO: check this exception
-        raise ValueError("Unknown backend: %s" % name)
+def get_platform(name: str, credentials: RemoteCredentials = None):
+    if isinstance(name, RemoteCredentials):
+        credentials = name
+        name = '1bf73239-192e-4b23-809f-007b323826f5'  # 'simulator'
 
-    def list_backend(self):
-        return [backend.name for backend in self._backends]
+    if name is None or name == "local":
+        return LocalPlatform()
+    else:
+        return RemotePlatform(name, credentials)

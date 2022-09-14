@@ -22,10 +22,12 @@
 
 from multipledispatch import dispatch
 
-from perceval.serialization._matrix_serialization import serialize_matrix
-from perceval.serialization._circuit_serialization import serialize_circuit
+from ._matrix_serialization import serialize_matrix
+from ._circuit_serialization import serialize_circuit
+from ._fockstate_serialization import serialize_state
 from perceval.components import ACircuit
-from perceval.utils import Matrix
+from perceval.utils import Matrix, BasicState
+from base64 import b64encode
 
 
 @dispatch(ACircuit)
@@ -38,7 +40,16 @@ def serialize(m: Matrix) -> str:
     return serialize_matrix(m).SerializeToString()
 
 
+@dispatch(BasicState)
+def serialize(state) -> str:
+    return serialize_state(state)
+
+
 def serialize_to_file(obj, filepath: str) -> None:
     serial_repr = serialize(obj)
     with open(filepath, mode="wb") as f:
         f.write(serial_repr)
+
+
+def bytes_to_jsonstring(var):
+    return b64encode(var).decode('utf-8')

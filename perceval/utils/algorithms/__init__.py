@@ -20,13 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
-
-import perceval as pcvl
+from .match import Match
 import perceval.utils.algorithms.norm as norm
-
-
-def test_fidelity():
-    for _ in range(5):
-        u = pcvl.MatrixN.random_unitary(5)
-        assert pytest.approx(1) == norm.fidelity(u, u)
