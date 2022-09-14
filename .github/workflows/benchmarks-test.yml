@@ -117,7 +117,7 @@ jobs:
           output-file-path: ${{ env.folder_file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ inputs.save }}
-          #benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
+          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
           alert-threshold: '120%'
           # comment-on-alert: true
           fail-on-alert: true
