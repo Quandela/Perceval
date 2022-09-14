@@ -115,9 +115,10 @@ jobs:
       - name: Save benchmark report in current branch
         if: inputs.save
         run: |
-          git config --global user.name 'benchmark_test'
-          git config --global user.email 'benchmark_test@users.noreply.github.com'
           git add ${{ env.folder_file_json }}
           git commit -am "Automated benchmark report"
           git pull
           git push
+          
+#          git config --global user.name 'benchmark_test'
+#          git config --global user.email 'benchmark_test@users.noreply.github.com'
