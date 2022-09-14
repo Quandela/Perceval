@@ -17,6 +17,7 @@ on:
         type: choice
         options:
           - MiniMac_arm64
+          - ubuntu-latest
       save:
         description: 'Save log'
         default: false
