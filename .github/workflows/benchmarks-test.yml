@@ -38,7 +38,7 @@ env:
 
 jobs:
   benchmark:
-    name: Run pytest-benchmark
+    name: Run pytest-benchmark benchmark example
     runs-on: ${{ github.event.inputs.os }}
     steps:
       - uses: actions/checkout@v2
