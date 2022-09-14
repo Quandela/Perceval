@@ -1,9 +1,9 @@
 #this is a manual workflow that runs benchmarks at benchmarks/benchmark_*.py
-# file name .benchmarks/<runner>_CPython-<PyVersion>/<tagVersion>_<branches>_<workflowNB>_<commit>.json
-# compare the logs with the same runner and the same version of python
-# upload the artifact to the github action
+# file name .benchmarks/<runner>_CPython-<PyVersion>/<lastTag>_<branches>_<runNB>_<commit>.json
+# compare the logs benchmarks with the logs of the same runner and the same version of python
+# upload the artifact to the GitHub action
 # save the log on the gh-page branch (benchmarks/<runner>_CPython-<PyVersion>/data)
-# push on the current branch
+# push the log on the current branch
 
 name: Benchmarks
 
