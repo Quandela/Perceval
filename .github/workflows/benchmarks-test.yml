@@ -70,14 +70,15 @@ jobs:
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
-          echo "file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
 
       - name: Run benchmark
         run: |
-          python -m pytest --benchmark-storage file://./.benchmarks/${{ env.folder_env }}
-          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          mv ${{ env.file_json }} ${{ env.folder_file_json }}
       - name: compare benchmark
         run: |
           pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
@@ -90,7 +91,7 @@ jobs:
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             compare_result_${{ env.folder_env }}_${{ env.tag_version }}
-            ${{ env.file_json }}
+            ${{ env.folder_file_json }}
       - name: Download the result on github action
         uses: actions/download-artifact@v3
         with:
@@ -102,7 +103,7 @@ jobs:
         with:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
-          output-file-path: ${{ env.file_json }}
+          output-file-path: ${{ env.folder_file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ inputs.save }}
           benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
@@ -115,7 +116,7 @@ jobs:
         run: |
           git config --global user.name 'benchmark_test'
           git config --global user.email 'benchmark_test@users.noreply.github.com'
-          git add ${{ env.file_json }}
+          git add ${{ env.folder_file_json }}
           git commit -am "Automated benchmark report"
           git pull
           git push
