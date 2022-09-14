@@ -98,6 +98,8 @@ def pdisplay_processor(processor: Processor,
                                total_width=w, total_height=h, compact=compact, **opts)
     for r, c in processor._components:
         shift = r[0]
+        if isinstance(c, Circuit):
+            c = Circuit(c.m).add(0, c)
         renderer.render_circuit(c,
                                 map_param_kid=map_param_kid,
                                 recursive=recursive,

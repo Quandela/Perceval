@@ -23,7 +23,7 @@ from .abstract_component import AComponent
 from .source import Source
 from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
-from .port import APort, PortLocation, Herald
+from .port import APort, PortLocation, Herald, Encoding
 from .mode_connection import ModeConnectionResolver, UnavailableModeException
 from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, BasicState, global_params
 from perceval.backends import Backend
@@ -51,21 +51,36 @@ class Processor:
 
         self._anon_herald_num = 0  # This is not a herald count!
         self._is_on = False
+        self._inputs_map = None
 
     def turn_on(self):
         if self._is_on:
             return
         self._is_on = True
-        # for k in range(self.m):
-        #     if k in sources:
-        #         distribution = sources[k].probability_distribution()
-        #     else:
-        #         distribution = SVDistribution(StateVector("|0>"))
-        #     # combine distributions
-        #     if self._inputs_map is None:
-        #         self._inputs_map = distribution
-        #     else:
-        #         self._inputs_map *= distribution
+
+        for k in range(self.m):
+            port = self.get_input_port(k)
+            if port is None:
+                continue
+            mode_range = self._in_ports[port]
+            if isinstance(port, Herald):
+                if port.expected:
+                    distribution = self._source.probability_distribution()
+                else:
+                    distribution = SVDistribution(StateVector("|0>"))
+            else:
+                if port.encoding == Encoding.dual_ray:
+                    if k == mode_range[0]:
+                        distribution = self._source.probability_distribution()
+                    else:
+                        distribution = SVDistribution(StateVector("|0>"))
+                else:
+                    raise NotImplementedError(f"Not implemented for {port.encoding.name}")
+
+            if self._inputs_map is None:
+                self._inputs_map = distribution
+            else:
+                self._inputs_map *= distribution
 
     def set_postprocess(self, postprocess_func):
         self._post_select = postprocess_func
@@ -164,8 +179,8 @@ class Processor:
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        if isinstance(component, ALinearCircuit):
-            component = Circuit(component.m).add(0, component, merge=False)
+        # if isinstance(component, ALinearCircuit) and not isinstance(component, Circuit):
+        #     component = Circuit(component.m).add(0, component, merge=False)
         sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
 
@@ -179,7 +194,7 @@ class Processor:
             mode_mapping[mm] = max(mode_mapping.values()) + 1
         perm_modes = list(range(min_m, min_m+len(mode_mapping)))
         perm_vect = [mode_mapping[i] for i in sorted(mode_mapping.keys())]
-        if m_keys == perm_modes:
+        if perm_vect == perm_modes:
             return perm_modes, None  # No need for a permutation, modes are already sorted
         return perm_modes, PERM(perm_vect)
 
@@ -225,14 +240,14 @@ class Processor:
                     output[i] = True
         return output
 
-    def is_mode_connectible(self, mode: int):
+    def is_mode_connectible(self, mode: int) -> bool:
         if mode < 0:
             return False
         if mode >= self.m:
             return True
         return not self._closed_photonic_modes[mode]
 
-    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.output):
+    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.output) -> bool:
         """
         Returns True if all modes in mode_range are free of ports, for a given location (input, output or both)
         """

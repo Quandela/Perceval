@@ -30,13 +30,14 @@ class Generic2ModeItem(CatalogItem):
     def __init__(self):
         super().__init__("generic 2 mode circuit")
         self._default_opts['type'] = AsType.CIRCUIT
+        self._reset_opts()
 
     def build(self):
         c = Circuit(2) // GenericBS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
         if self._opt('type') == AsType.CIRCUIT:
             return c
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor()
+            p = Processor(2)
             return p.add(0, c)
 
 
