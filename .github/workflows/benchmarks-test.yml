@@ -27,7 +27,7 @@ on:
         description: Use specific perceval's ref (tag or SHA)
         default: ''
         type: string
-        required: true
+        required: false
 #      python_v:
 #        description: 'python version'
 #        required: true
