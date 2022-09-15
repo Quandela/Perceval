@@ -24,7 +24,7 @@ on:
         required: false
         type: boolean
       commit_ref:
-        description: Use specific perceval's ref (branch, tag or SHA)
+        description: Use specific perceval's ref (tag or SHA)
         default: ''
         type: string
         required: true
@@ -62,7 +62,6 @@ jobs:
             python -m pip install --upgrade pip
             python -m pip install pytest pytest-benchmark
             python -m pip install .
-            git pull
 
       # save var env use bash shell for notLinux
       - if: runner.os == 'Linux'
