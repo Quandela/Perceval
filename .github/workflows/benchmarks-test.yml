@@ -105,8 +105,7 @@ jobs:
           auto-push: ${{ inputs.save }}
           benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
           alert-threshold: '1%'
-          comment-on-alert: true
-          fail-on-alert: false
+          fail-on-alert: true
 
 
       - name: Save benchmark report in current branch
