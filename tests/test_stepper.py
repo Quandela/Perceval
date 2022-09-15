@@ -34,10 +34,10 @@ def test_minimal():
     simulator_backend = pcvl.BackendFactory().get_backend("Stepper")
     # simulator directly initialized on circuit
     s = simulator_backend(comp.GenericBS())
-    check_output(s, pcvl.AnnotatedBasicState([1, 1]), {pcvl.BasicState("|1,0>"): 0,
-                                                       pcvl.BasicState("|0,1>"): 0,
-                                                       pcvl.BasicState("|0,2>"): 0.5,
-                                                       pcvl.BasicState("|2,0>"): 0.5})
+    check_output(s, pcvl.BasicState([1, 1]), {pcvl.BasicState("|1,0>"): 0,
+                                              pcvl.BasicState("|0,1>"): 0,
+                                              pcvl.BasicState("|0,2>"): 0.5,
+                                              pcvl.BasicState("|2,0>"): 0.5})
 
 
 def test_c3():
@@ -51,13 +51,13 @@ def test_c3():
         circuit.add((1, 2), comp.GenericBS())
         pcvl.pdisplay(circuit.U)
         s = simulator_backend(circuit)
-        check_output(s, pcvl.AnnotatedBasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
-                                                              pcvl.BasicState("|1,1,0>"): 0.25,
-                                                              pcvl.BasicState("|1,0,1>"): 0.25,
-                                                              pcvl.BasicState("|2,0,0>"): 0,
-                                                              pcvl.BasicState("|0,2,0>"): 0.25,
-                                                              pcvl.BasicState("|0,0,2>"): 0.25,
-                                                              })
+        check_output(s, pcvl.BasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
+                                                     pcvl.BasicState("|1,1,0>"): 0.25,
+                                                     pcvl.BasicState("|1,0,1>"): 0.25,
+                                                     pcvl.BasicState("|2,0,0>"): 0,
+                                                     pcvl.BasicState("|0,2,0>"): 0.25,
+                                                     pcvl.BasicState("|0,0,2>"): 0.25,
+                                                     })
 
 
 def test_basic_interference():

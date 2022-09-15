@@ -34,7 +34,7 @@ from .remote_jobs import Job
 from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state, deserialize_state_list, \
     deserialize_float
 from perceval.components import ACircuit
-from perceval.utils import Matrix, AnnotatedBasicState
+from perceval.utils import Matrix, BasicState
 
 from pkg_resources import get_distribution
 
@@ -149,8 +149,8 @@ class RemoteBackend(Backend):
         return job
 
     def async_prob(self,
-                   input_state: AnnotatedBasicState,
-                   output_state: AnnotatedBasicState,
+                   input_state: BasicState,
+                   output_state: BasicState,
                    n: int = None,
                    skip_compile: bool = False):
         payload = self.__defaults_payload('prob')
