@@ -202,8 +202,8 @@ class ACircuit(ABC):
             component: ACircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
-    def __getitem__(self, key):
-        return self._params[key]
+    def param(self, param_name):
+        return self._params[param_name]
 
     def __setitem__(self, key, value):
         self._params[key] = value
@@ -406,7 +406,7 @@ class ACircuit(ABC):
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
             assert p in self._params, "missing parameter %s when transfering component" % p.name
-            param = c[p]
+            param = c.param(p)
             if param.defined:
                 try:
                     self._params[p].set_value(float(param), force=force)

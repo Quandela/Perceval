@@ -292,7 +292,7 @@ def test_iterator():
 
     assert len(l_comp) == 4
     for i in range(4):
-        assert float(l_comp[i][1]["R"]) == 1/(i+1) and l_comp[i][0] == comps[i]
+        assert float(l_comp[i][1].param("R")) == 1/(i+1) and l_comp[i][0] == comps[i]
 
 
 def test_evolve():
