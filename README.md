@@ -1,8 +1,8 @@
 [![GitHub release](https://img.shields.io/github/v/release/Quandela/Perceval.svg?style=plastic)](https://github.com/Quandela/Perceval/releases/latest)
+[![CI](https://github.com/Quandela/Perceval/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/python-publish.yml)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/Perceval?style=plastic)
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml)
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/build-and-deploy-docs.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/build-and-deploy-docs.ym)
-[![CI](https://github.com/Quandela/Perceval/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/python-publish.yml)
 
 # Perceval <img src="https://perceval.quandela.net/img/Perceval_logo_white_320X320.png" width="50" height="50"> 
 

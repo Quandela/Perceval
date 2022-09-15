@@ -23,6 +23,11 @@ on:
         default: false
         required: false
         type: boolean
+      commit_ref:
+        description: Use specific perceval's ref (branch, tag or SHA)
+        default: ''
+        type: string
+        required: true
 #      python_v:
 #        description: 'python version'
 #        required: true
@@ -43,6 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
+          ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
       # install python, already DL on MiniMac_arm64
