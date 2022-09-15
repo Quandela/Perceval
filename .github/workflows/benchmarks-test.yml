@@ -104,7 +104,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ inputs.save }}
           benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
-          alert-threshold: '10%'
+          alert-threshold: '1%'
           comment-on-alert: true
           fail-on-alert: false
 
