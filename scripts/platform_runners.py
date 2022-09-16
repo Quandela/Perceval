@@ -53,7 +53,7 @@ nsample = 100000
 async_job = sampler.samples.execute_async(pcvl.BasicState([0, 1, 0, 1, 0, 0]), nsample)
 
 previous_prog = 0
-with tqdm(total=1, bar_format='{desc}: {percentage:3.0f}%|{bar}|') as tq:
+with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.set_description(f'Get {nsample} samples from {cnot.name} using simulator backend {my_platform.name}')
     while not async_job.is_completed():
         # print(f"Waiting for job to finish. Status = {async_job.status()}, Progress = {async_job.status.progress}")
