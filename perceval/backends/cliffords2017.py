@@ -41,7 +41,7 @@ class CliffordClifford2017Backend(Backend):
     supports_circuit_computing = False
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        raise NotImplementedError
+        raise NotImplementedError(f'Cannot use prob_be on {self.name}')
 
     def sample(self, input_state, **kwargs):
         # prepare Us that is a m*n matrix

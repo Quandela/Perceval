@@ -31,6 +31,7 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawSvg
 
+from perceval.algorithm.analyzer import Analyzer
 from perceval.components import ACircuit, Circuit, Processor, CircuitAnalyser
 from perceval.rendering.circuit import DisplayConfig, create_renderer
 from perceval.utils.format import simple_float, simple_complex
@@ -241,7 +242,7 @@ def _pdisplay(matrix, **kwargs):
     return pdisplay_matrix(matrix, **kwargs)
 
 
-@dispatch(CircuitAnalyser)
+@dispatch((CircuitAnalyser, Analyzer))
 def _pdisplay(circuit_analyser, **kwargs):
     return pdisplay_analyser(circuit_analyser, **kwargs)
 

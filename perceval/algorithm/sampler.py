@@ -22,9 +22,14 @@
 
 from .runner import Runner
 from perceval.platforms.job import Job
+from perceval.platforms import Platform
 
 
 class Sampler(Runner):
+    def __init__(self, platform: Platform, cu):
+        super().__init__(platform)
+        self.circuit = cu
+
     @property
     def sample(self) -> Job:
         return self._job_type(self._backend.sample)

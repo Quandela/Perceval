@@ -22,3 +22,4 @@
 
 from .job_status import JobStatus, RunningStatus
 from .local_job import LocalJob
+from .platform import Platform, LocalPlatform, RemotePlatform, PlatformType

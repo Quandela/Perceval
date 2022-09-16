@@ -21,3 +21,4 @@
 # SOFTWARE.
 
 from .sampler import Sampler
+from .analyzer import Analyzer
