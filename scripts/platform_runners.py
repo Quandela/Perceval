@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import time
-
+from tqdm import tqdm
 from perceval.platforms.platform import *
 import perceval as pcvl
 import perceval.components as cp
@@ -50,16 +50,23 @@ assert not my_platform.is_remote()
 
 sampler = Sampler(my_platform, cnot)
 
-res = sampler.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
-for r in res:
-    print(str(r))
+res = sampler.sample(pcvl.BasicState([0, 1, 0, 1, 0, 0]))
+print(res)
+# for r in res:
+#     print(str(r))
 
 nsample = 100000
 async_job = sampler.samples.execute_async(pcvl.BasicState([0, 1, 0, 1, 0, 0]), nsample)
 
-while not async_job.is_completed():
-    print(f"Waiting for job to finish. Status = {async_job.status()}")
-    time.sleep(1)
+previous_prog = 0
+with tqdm(total=1, bar_format='{desc}: {percentage:3.0f}%|{bar}|') as tq:
+    while not async_job.is_completed():
+        # print(f"Waiting for job to finish. Status = {async_job.status()}, Progress = {async_job.status.progress}")
+        tq.update(async_job.status.progress-previous_prog)
+        previous_prog = async_job.status.progress
+        time.sleep(.2)
+    tq.update(1-previous_prog)
+    tq.close()
 
 print(f"Job status = {async_job.status()}")
 results = async_job.get_results()

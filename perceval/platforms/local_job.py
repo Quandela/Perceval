@@ -42,7 +42,7 @@ class LocalJob(Job):
 
     def execute_sync(self, *args, **kwargs):
         assert self._status.waiting, "job as already been executed"
-        # kwargs['status'] = self._status
+        kwargs['status'] = self._status
         self._status.start_run()
         try:
             self._results = self._fn(*args, **kwargs)
@@ -66,7 +66,7 @@ class LocalJob(Job):
     def execute_async(self, *args, **kwargs) -> Job:
         assert self._status.waiting, "job has already been executed"
         # we are launching the function in a separate thread
-        # kwargs['status'] = self._status
+        kwargs['status'] = self._status
         self._status.start_run()
         self._worker = threading.Thread(target=self._call_fn_safe, args=args, kwargs=kwargs)
         self._worker.start()
