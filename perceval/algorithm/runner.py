@@ -20,43 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
-from typing import Any, Callable
+from perceval.platforms.platform import Platform
+from perceval.platforms.local_job import LocalJob
+from perceval.platforms.remote_job import RemoteJob
+from perceval.components import ACircuit
+from perceval.utils import Matrix
 
-from .job_status import JobStatus
 
 
-class Job(ABC):
-    def __init__(self, fn: Callable):
-        # create an id or check existence of current id
-        self._fn = fn
-        # id will be assigned by remote job - not implemented for local class
-        self._id = None
-        self._results = None
-        pass
+class Runner:
+    def __init__(self, platform: Platform, cu):
+        self._platform = platform
+        assert isinstance(cu, ACircuit) or isinstance(cu, Matrix), \
+            f'Runner accepts linear circuits or unitary matrix as input, not {type(cu)}'
+        if not self._check_compatibility():
+            raise RuntimeError('Incompatible platform and circuit')
+        self._backend = self._platform.backend(cu)
+        self._job_type = RemoteJob if platform.is_remote() else LocalJob
 
-    def __call__(self, *args, **kwargs) -> Any:
-        return self.execute_sync(*args, **kwargs)
-
-    @property
-    def id(self):
-        return self._id
-
-    def get_results(self) -> Any:
-        return self._results
-
-    @property
-    @abstractmethod
-    def status(self) -> JobStatus:
-        pass
-
-    def is_completed(self) -> bool:
-        return self.status.completed
-
-    @abstractmethod
-    def execute_sync(self, *args, **kwargs) -> Any:
-        pass
-
-    @abstractmethod
-    def execute_async(self, *args, **kwargs):
-        pass
+    def _check_compatibility(self) -> bool:
+        if self._platform.is_remote():
+            # TODO remote compatibility check
+            return False
+        return True

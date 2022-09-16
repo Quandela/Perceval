@@ -26,11 +26,11 @@ from enum import Enum
 
 
 class RunningStatus(Enum):
-    WAITING = 'WAITING'
-    RUNNING = 'RUNNING'
-    SUCCESS = 'SUCCESS'
-    ERROR = 'ERROR'
-    CANCELLED = 'CANCELLED'
+    WAITING = 0
+    RUNNING = 1
+    SUCCESS = 2
+    ERROR = 3
+    CANCELLED = 4
 
 
 class JobStatus:
@@ -44,6 +44,9 @@ class JobStatus:
         self._stop_message = None
         self._waiting_progress: Optional[int] = None
         self._last_progress_time: float = 0
+
+    def __call__(self):
+        return self._status.name
 
     @property
     def status(self):

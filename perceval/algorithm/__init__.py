@@ -20,43 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
-from typing import Any, Callable
-
-from .job_status import JobStatus
-
-
-class Job(ABC):
-    def __init__(self, fn: Callable):
-        # create an id or check existence of current id
-        self._fn = fn
-        # id will be assigned by remote job - not implemented for local class
-        self._id = None
-        self._results = None
-        pass
-
-    def __call__(self, *args, **kwargs) -> Any:
-        return self.execute_sync(*args, **kwargs)
-
-    @property
-    def id(self):
-        return self._id
-
-    def get_results(self) -> Any:
-        return self._results
-
-    @property
-    @abstractmethod
-    def status(self) -> JobStatus:
-        pass
-
-    def is_completed(self) -> bool:
-        return self.status.completed
-
-    @abstractmethod
-    def execute_sync(self, *args, **kwargs) -> Any:
-        pass
-
-    @abstractmethod
-    def execute_async(self, *args, **kwargs):
-        pass
+from .sampler import Sampler

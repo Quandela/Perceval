@@ -33,7 +33,8 @@ class LocalJob(Job):
         self._status = JobStatus()
         self._worker = None
 
-    def get_status(self):
+    @property
+    def status(self) -> JobStatus:
         # for local job
         if self._status.running and not self._worker.is_alive():
             self._status.stop_run()
@@ -41,7 +42,7 @@ class LocalJob(Job):
 
     def execute_sync(self, *args, **kwargs):
         assert self._status.waiting, "job as already been executed"
-        kwargs['status'] = self._status
+        # kwargs['status'] = self._status
         self._status.start_run()
         try:
             self._results = self._fn(*args, **kwargs)
@@ -62,10 +63,11 @@ class LocalJob(Job):
         except Exception as e:
             self._status.stop_run(RunningStatus.ERROR, str(type(e))+": "+str(e))
 
-    def execute_async(self, *args, **kwargs):
-        assert self._status.waiting, "job as already been executed"
+    def execute_async(self, *args, **kwargs) -> Job:
+        assert self._status.waiting, "job has already been executed"
         # we are launching the function in a separate thread
-        kwargs['status'] = self._status
+        # kwargs['status'] = self._status
         self._status.start_run()
         self._worker = threading.Thread(target=self._call_fn_safe, args=args, kwargs=kwargs)
         self._worker.start()
+        return self
