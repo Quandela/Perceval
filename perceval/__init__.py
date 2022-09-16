@@ -56,6 +56,7 @@ from .components import *
 from .backends import *
 from .utils import *
 from .rendering import *
+from .platforms import *
 
 
 def register_plugin(name, silent=False):
