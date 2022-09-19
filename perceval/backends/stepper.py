@@ -24,7 +24,7 @@ from typing import List, Union
 import copy
 
 from .template import Backend
-from perceval.utils import StateVector, BasicState, Matrix, AnnotatedBasicState
+from perceval.utils import StateVector, BasicState, Matrix
 from perceval.components import ACircuit
 from .naive import NaiveBackend
 
@@ -73,15 +73,14 @@ class StepperBackend(Backend):
             self.result_dict[key]['set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
-        nsv.m = sv.m
-        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), output_state)): prob_ampli*sv[state]
-                    for state in sv
-                    for output_state, prob_ampli in self.result_dict[key][state[min_r:max_r]].items()
-                    })
+        # May be faster in c++ (impossible to use comprehension here due to successive additions)
+        for state in sv:
+            for output_state, prob_ampli in self.result_dict[key][state[min_r:max_r]].items():
+                nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli * sv[state]
         return nsv
 
-    def compile(self, input_states: Union[BasicState, AnnotatedBasicState, StateVector]) -> bool:
-        if isinstance(input_states, (BasicState, AnnotatedBasicState)):
+    def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
+        if isinstance(input_states, BasicState):
             sv = StateVector(input_states)
         else:
             sv = input_states
@@ -107,13 +106,13 @@ class StepperBackend(Backend):
             return 0
         return self._out[output_state]
 
-    def evolve(self, input_state: [AnnotatedBasicState, StateVector]) -> StateVector:
+    def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         self.compile(input_state)
         return self._out
 
     def prob(self,
-             input_state: Union[AnnotatedBasicState, StateVector],
-             output_state: AnnotatedBasicState,
+             input_state: Union[BasicState, StateVector],
+             output_state: BasicState,
              n: int = None,
              skip_compile: bool = False) -> float:
         if not skip_compile:
@@ -121,8 +120,8 @@ class StepperBackend(Backend):
         return self.prob_be(input_state, output_state, n)
 
     def probampli(self,
-                  input_state: Union[AnnotatedBasicState, StateVector],
-                  output_state: AnnotatedBasicState,
+                  input_state: Union[BasicState, StateVector],
+                  output_state: BasicState,
                   n: int = None) -> complex:
         self.compile(input_state)
         return self.probampli_be(input_state, output_state, n)
