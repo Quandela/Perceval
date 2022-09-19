@@ -423,7 +423,7 @@ class PERM(Unitary):
             sv = StateVector(sv)
 
         min_r = r[0]
-        max_r = r[-1]
+        max_r = r[-1] + 1
         nsv = copy(sv)
         new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
                                                                                   for i in self.perm_vector]))):
