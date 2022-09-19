@@ -24,23 +24,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Type
 
-from perceval.backends import Backend
-from perceval.backends.cliffords2017 import CliffordClifford2017Backend
-from perceval.backends.naive import NaiveBackend
-from perceval.backends.slos import SLOSBackend
-from perceval.backends.stepper import StepperBackend
-from perceval.backends.strawberryfields import SFBackend
+from perceval.backends import Backend, BACKEND_LIST
 from .remote_backend import RemoteBackend
-
-
-LOCAL_PF = {
-    CliffordClifford2017Backend.name.lower(): CliffordClifford2017Backend,
-    NaiveBackend.name.lower(): NaiveBackend,
-    SLOSBackend.name.lower(): SLOSBackend,
-    StepperBackend.name.lower(): StepperBackend,
-}
-if SFBackend.is_available():
-    LOCAL_PF[SFBackend.name.lower()] = SFBackend
 
 DEFAULT_URL = "https://api.cloud.quandela.dev"
 
@@ -89,7 +74,7 @@ class LocalPlatform(Platform):
         self._params = {}
 
     def backend(self, *args, **kwargs):
-        return LOCAL_PF[self._name](*args, **kwargs)
+        return BACKEND_LIST[self._name](*args, **kwargs)
 
     def is_remote(self) -> bool:
         return False
@@ -132,10 +117,7 @@ def get_platform(name: str, token: str = None, url: str = None):
     if token is not None:
         return RemotePlatform(name, token, url, _platform_type(url, token))
 
-    backend_name = name
-    if name.startswith('local:'):
-        backend_name = name[6:]  # strip 'local:'
-    if backend_name in LOCAL_PF:
-        return LocalPlatform(backend_name)
+    if name in BACKEND_LIST:
+        return LocalPlatform(name)
     else:
         raise RuntimeError(f"Platform '{name}' not found")

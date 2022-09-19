@@ -20,6 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .credentials import RemoteCredentials
-from .remote_backend import RemoteBackend, RemoteBackendBuilder
 from .remote_jobs import Job

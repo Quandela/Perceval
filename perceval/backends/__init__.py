@@ -20,24 +20,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
 from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
+from perceval.backends.cliffords2017 import CliffordClifford2017Backend
+from perceval.backends.naive import NaiveBackend
+from perceval.backends.slos import SLOSBackend
+from perceval.backends.stepper import StepperBackend
+from perceval.backends.strawberryfields import SFBackend
 
+BACKEND_LIST = {
+    CliffordClifford2017Backend.name.lower(): CliffordClifford2017Backend,
+    NaiveBackend.name.lower(): NaiveBackend,
+    SLOSBackend.name.lower(): SLOSBackend,
+    StepperBackend.name.lower(): StepperBackend,
+}
+if SFBackend.is_available():
+    BACKEND_LIST[SFBackend.name.lower()] = SFBackend
 
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
-
-
-def get_platform(name: str, credentials: RemoteCredentials = None):
-    if isinstance(name, RemoteCredentials):
-        credentials = name
-        name = '1bf73239-192e-4b23-809f-007b323826f5'  # 'simulator'
-
-    if name is None or name == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name, credentials)
+@deprecated(reason='Please use get_platform("platform name") instead')
+class BackendFactory:
+    def get_backend(self, backend_name="slos"):
+        name = backend_name.lower()
+        if name in BACKEND_LIST:
+            return BACKEND_LIST[name]
+        return BACKEND_LIST['slos']

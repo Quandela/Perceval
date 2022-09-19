@@ -32,7 +32,7 @@ with warnings.catch_warnings():
     import drawSvg
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.components import ACircuit, Circuit, Processor, CircuitAnalyser
+from perceval.components import ACircuit, Circuit, Processor
 from perceval.rendering.circuit import DisplayConfig, create_renderer
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
@@ -192,7 +192,7 @@ _TABULATE_FMT_MAPPING = {
 }
 
 
-def pdisplay_analyser(analyser, output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6):
+def pdisplay_analyzer(analyser, output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6):
     distribution = analyser.distribution
     d = []
     for iidx, _ in enumerate(analyser.input_states_list):
@@ -242,9 +242,9 @@ def _pdisplay(matrix, **kwargs):
     return pdisplay_matrix(matrix, **kwargs)
 
 
-@dispatch((CircuitAnalyser, Analyzer))
-def _pdisplay(circuit_analyser, **kwargs):
-    return pdisplay_analyser(circuit_analyser, **kwargs)
+@dispatch(Analyzer)
+def _pdisplay(analyzer, **kwargs):
+    return pdisplay_analyzer(analyzer, **kwargs)
 
 
 @dispatch((StateVector, SVDistribution))

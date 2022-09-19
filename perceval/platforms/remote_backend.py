@@ -91,7 +91,7 @@ class RemoteBackend(Backend):
             request.raise_for_status()
 
             json = request.json()
-            # job = Job(json['job_id'], self.__credentials)
+            # job = Job(json['job_id'], self.__credentials)  # TODO implement RemoteJob before uncommenting this line
         except ConnectionError as e:
             logging.error(f"Connection error: {str(e)}")
 
