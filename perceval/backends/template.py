@@ -143,7 +143,7 @@ class Backend(ABC):
              output_state: BasicState,
              n: int = None,
              skip_compile: bool = False,
-             status=None) -> float:
+             progress_callback=None) -> float:
         r"""
         gives the probability of an output state given an input state
         :param input_state: the input state
@@ -308,7 +308,7 @@ class Backend(ABC):
         """
         return False
 
-    def sample(self, input_state, status=None):
+    def sample(self, input_state, progress_callback=None):
         prob = random.random()
         output_state = None
         for (output_state, state_prob) in self.allstateprob_iterator(input_state):
@@ -317,12 +317,12 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state, count, status=None):
-        if status:
-            status.update_progress(0)
+    def samples(self, input_state, count, progress_callback=None):
+        if progress_callback:
+            progress_callback(0)
         results = []
         for i in range(count):
             results.append(self.sample(input_state))
-            if status:
-                status.update_progress(i/count)
+            if progress_callback:
+                progress_callback(i/count)
         return results

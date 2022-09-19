@@ -106,7 +106,7 @@ class Analyzer(Sampler):
             for oidx, ostate in enumerate(self.output_states_list):
                 if self._post_select_fn is None or self._post_select_fn(ostate):
                     if istate.n == ostate.n:
-                        self._distribution[iidx, oidx] = self.prob(istate, ostate)  # LocalJob run synchronously
+                        self._distribution[iidx, oidx] = self.prob(istate, ostate)  # job run synchronously
                         if expected is not None and self._expected_distribution[iidx, oidx]:
                             found_in_row = self._distribution[iidx, oidx]
                             if self._distribution[iidx, oidx] < self.performance:
