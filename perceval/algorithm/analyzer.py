@@ -80,12 +80,14 @@ class Analyzer(Sampler):
         self.error_rate = None
         self._distribution = None
 
-    def compute(self, normalize=False, expected=None):
+    def compute(self, normalize=False, expected=None, progress_callback=None):
         """
             Go through the input states, generate (post-selected) output states and calculate if provided
             distance with expected
         """
         self._distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
+        computation_count = 0
+        total_count = len(self.input_states_list) * len (self.output_states_list)
         if expected is not None:
             self._expected_distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
             self.performance = 1
@@ -112,6 +114,11 @@ class Analyzer(Sampler):
                             if self._distribution[iidx, oidx] < self.performance:
                                 self.performance = self._distribution[iidx, oidx]
                     sump += self._distribution[iidx, oidx]
+                computation_count += 1
+                if progress_callback:
+                    progress_callback(computation_count/total_count)
+                    import time
+                    time.sleep(0.1)
             if normalize or expected is not None:
                 self._distribution[iidx, :] /= sump
             if expected is not None:

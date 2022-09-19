@@ -56,7 +56,6 @@ previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.set_description(f'Get {nsample} samples from {cnot.name} using simulator backend {my_platform.name}')
     while not async_job.is_completed():
-        # print(f"Waiting for job to finish. Status = {async_job.status()}, Progress = {async_job.status.progress}")
         tq.update(async_job.status.progress-previous_prog)
         previous_prog = async_job.status.progress
         time.sleep(.2)
@@ -91,8 +90,17 @@ phis[1].set_value(0.2)
 phis[2].set_value(0)
 phis[3].set_value(0.4)
 
+print("Use circuit analyzer algorithm")
 analyzer = Analyzer(get_platform('slos'), chip_QRNG, [pcvl.BasicState("[1,0,1,0]"), pcvl.BasicState("[0,1,1,0]")], "*")
-d = analyzer.distribution
+with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
+    def update_progress(p):
+        tq.update(p-update_progress.prev)
+        update_progress.prev = p
+
+    tq.set_description("Analyzing QRNG circuit with SLOS")
+    update_progress.prev = 0
+    analyzer.compute(progress_callback=update_progress)
+    tq.close()
 
 pcvl.pdisplay(analyzer)
 
