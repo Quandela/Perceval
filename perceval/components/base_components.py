@@ -19,12 +19,101 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from enum import Enum
 import sympy as sp
 import numpy as np
 
 from perceval.components import ACircuit
 from perceval.utils import Matrix, format_parameters, Parameter
+
+
+class BSConvention(Enum):
+    RX = 0
+    RY = 1
+    H = 2
+
+
+class BS(ACircuit):
+    """Beam splitter"""
+    _name = "BS"
+
+    def __init__(self, theta=sp.pi/2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0,
+                 convention: BSConvention = BSConvention.RX):
+        super().__init__(2)
+        self._convention = convention
+        self._theta = self._set_parameter("theta", theta, 0, 2*sp.pi)
+        self._phi_tl = self._set_parameter("phi_tl", phi_tl, 0, 2*sp.pi)
+        self._phi_bl = self._set_parameter("phi_bl", phi_bl, 0, 2*sp.pi)
+        self._phi_tr = self._set_parameter("phi_tr", phi_tr, 0, 2*sp.pi)
+        self._phi_br = self._set_parameter("phi_br", phi_br, 0, 2*sp.pi)
+
+    @staticmethod
+    def r_to_theta(r):
+        return 2*np.arccos(np.sqrt(float(r)))
+
+    def _compute_unitary(self, assign=None, use_symbolic=False):
+        if use_symbolic:
+            theta = self._theta.spv
+            cos_theta = sp.cos(theta/2)
+            sin_theta = sp.sin(theta/2)
+            phi_tl = self._phi_tl.spv
+            phi_tr = self._phi_tr.spv
+            phi_bl = self._phi_bl.spv
+            phi_br = self._phi_br.spv
+            u00_mul = sp.exp((phi_tl + phi_tr)*sp.I)
+            u01_mul = sp.exp((phi_tr + phi_bl)*sp.I)
+            u10_mul = sp.exp((phi_tl + phi_br)*sp.I)
+            u11_mul = sp.exp((phi_br + phi_bl)*sp.I)
+        else:
+            cos_theta = np.cos(float(self._theta)/2)
+            sin_theta = np.sin(float(self._theta)/2)
+            phi_tl_tr = float(self._phi_tl) + float(self._phi_tr)
+            u00_mul = np.cos(phi_tl_tr) + 1j*np.sin(phi_tl_tr)
+            phi_tr_bl = float(self._phi_tr) + float(self._phi_bl)
+            u01_mul = np.cos(phi_tr_bl) + 1j*np.sin(phi_tr_bl)
+            phi_tl_br = float(self._phi_tl) + float(self._phi_br)
+            u10_mul = np.cos(phi_tl_br) + 1j*np.sin(phi_tl_br)
+            phi_bl_br = float(self._phi_bl) + float(self._phi_br)
+            u11_mul = np.cos(phi_bl_br) + 1j*np.sin(phi_bl_br)
+
+        umat = self._matrix_template(use_symbolic)
+        umat[0, 0] *= u00_mul*cos_theta
+        umat[0, 1] *= u01_mul*sin_theta
+        umat[1, 1] *= u11_mul*cos_theta
+        umat[1, 0] *= u10_mul*sin_theta
+        return umat
+
+    def _matrix_template(self, use_symbolic):
+        if self._convention == BSConvention.RX:
+            if use_symbolic:
+                return Matrix([[1, sp.I], [sp.I, 1]], True)
+            return Matrix([[1, 1j], [1j, 1]], False)
+        elif self._convention == BSConvention.RY:
+            return Matrix([[1, -1], [1, 1]], use_symbolic)
+        elif self._convention == BSConvention.H:
+            return Matrix([[1, 1], [1, -1]], use_symbolic)
+        raise NotImplementedError(f'Unitary matrix computation not implemented for convention {self._convention.name}')
+
+    def get_variables(self, map_param_kid=None):
+        parameters = {}
+        if map_param_kid is None:
+            map_param_kid = self.map_parameters()
+        self.variable_def(parameters, "theta", "theta", sp.pi/2, map_param_kid)
+        self.variable_def(parameters, "phi_tl", "phi_tl", 0, map_param_kid)
+        self.variable_def(parameters, "phi_bl", "phi_bl", 0, map_param_kid)
+        self.variable_def(parameters, "phi_tr", "phi_tr", 0, map_param_kid)
+        self.variable_def(parameters, "phi_br", "phi_br", 0, map_param_kid)
+        return parameters
+
+    def describe(self, map_param_kid=None):
+        parameters = self.get_variables(map_param_kid)
+        parameters['convention'] = f'BSConvention.{self._convention.name}'
+        params_str = format_parameters(parameters, separator=', ')
+        return "BS(%s)" % params_str
+
+    # TODO
+    def inverse(self, v, h):
+        pass
 
 
 class GenericBS(ACircuit):

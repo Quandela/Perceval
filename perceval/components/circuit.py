@@ -90,6 +90,8 @@ class ACircuit(ABC):
         :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
                  if not.
         """
+        if not use_symbolic:
+            assert self.defined, 'All parameters must be defined to compute numeric unitary matrix'
         if self._supports_polarization:
             assert use_polarization is not False, "polarized circuit cannot generates non-polarized unitary"
             use_polarization = True
