@@ -23,7 +23,9 @@
 from multipledispatch import dispatch
 
 from perceval.components import ACircuit, Circuit, base_components as cp
-from perceval.rendering.circuit.abstract_skin import ASkin
+from .abstract_skin import ASkin
+from .skin_common import bs_convention_color
+
 import sympy as sp
 
 
@@ -38,7 +40,7 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return c.m
 
-    @dispatch((cp.SimpleBS, cp.GenericBS, cp.PBS))
+    @dispatch((cp.BS, cp.PBS))
     def get_width(self, c) -> int:
         return 2
 
@@ -50,7 +52,7 @@ class PhysSkin(ASkin):
     def get_shape(self, c):
         return self.default_shape
 
-    @dispatch((cp.SimpleBS, cp.GenericBS))
+    @dispatch(cp.BS)
     def get_shape(self, c):
         return self.bs_shape
 
@@ -92,7 +94,7 @@ class PhysSkin(ASkin):
         canvas.add_rect((5, 5), 50*w - 10, 50*circuit.m - 10, fill="gray")
         canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
 
-    def bs_shape(self, circuit, canvas, content, **opts):
+    def bs_shape(self, bs, canvas, content, **opts):
         split_content = content.split("\n")
         head_content = "\n".join([s for s in split_content
                                   if s.startswith("R=") or s.startswith("theta=")])
@@ -110,15 +112,18 @@ class PhysSkin(ASkin):
         canvas.add_text((50, 26), head_content.replace('theta=', 'Θ='), size=7, ta="middle")
         # Choose the side of the gray rectangle in beam splitter representation
         m = None
-        if hasattr(circuit, '_phi_b') and circuit._phi_b.defined:  # GenericBS
-            m = round(abs(float(circuit._phi_b.spv/sp.pi)))
-        elif hasattr(circuit, '_phi') and circuit._phi.defined:  # SimpleBS
-            m = round(abs(float(circuit._phi.spv/sp.pi)))
+        if hasattr(bs, '_phi_b') and bs._phi_b.defined:  # GenericBS
+            m = round(abs(float(bs._phi_b.spv / sp.pi)))
+        elif hasattr(bs, '_phi') and bs._phi.defined:  # SimpleBS
+            m = round(abs(float(bs._phi.spv / sp.pi)))
         if m is not None:
             if (m + 1) % 2:
                 canvas.add_rect((25, 43), 50, 4, fill="lightgray")
             else:
                 canvas.add_rect((25, 53), 50, 4, fill="lightgray")
+        # Add BS convention badge
+        canvas.add_rect((68, 50), 10, 10, fill=bs_convention_color(bs.convention))
+        canvas.add_text((73, 57), bs.convention.name, size=6, ta="middle")
 
     def ps_shape(self, circuit, canvas, content, **opts):
         canvas.add_mline([0, 25, 50, 25], **self.stroke_style)

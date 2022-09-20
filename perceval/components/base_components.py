@@ -28,8 +28,8 @@ from perceval.utils import Matrix, format_parameters, Parameter
 
 
 class BSConvention(Enum):
-    RX = 0
-    RY = 1
+    Rx = 0
+    Ry = 1
     H = 2
 
 
@@ -38,7 +38,7 @@ class BS(ACircuit):
     _name = "BS"
 
     def __init__(self, theta=sp.pi/2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0,
-                 convention: BSConvention = BSConvention.RX):
+                 convention: BSConvention = BSConvention.Rx):
         super().__init__(2)
         self._convention = convention
         self._theta = self._set_parameter("theta", theta, 0, 4*sp.pi)
@@ -47,17 +47,25 @@ class BS(ACircuit):
         self._phi_tr = self._set_parameter("phi_tr", phi_tr, 0, 2*sp.pi)
         self._phi_br = self._set_parameter("phi_br", phi_br, 0, 2*sp.pi)
 
+    @property
+    def name(self):
+        return f'{self._name}({self._convention.name})'
+
+    @property
+    def convention(self):
+        return self._convention
+
     @staticmethod
     def H(theta=sp.pi/2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
         return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.H)
 
     @staticmethod
     def Rx(theta=sp.pi / 2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
-        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.RX)
+        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.Rx)
 
     @staticmethod
     def Ry(theta=sp.pi / 2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
-        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.RY)
+        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.Ry)
 
     @staticmethod
     def r_to_theta(r):
@@ -96,11 +104,11 @@ class BS(ACircuit):
         return umat
 
     def _matrix_template(self, use_symbolic):
-        if self._convention == BSConvention.RX:
+        if self._convention == BSConvention.Rx:
             if use_symbolic:
                 return Matrix([[1, sp.I], [sp.I, 1]], True)
             return Matrix([[1, 1j], [1j, 1]], False)
-        elif self._convention == BSConvention.RY:
+        elif self._convention == BSConvention.Ry:
             return Matrix([[1, -1], [1, 1]], use_symbolic)
         elif self._convention == BSConvention.H:
             return Matrix([[1, 1], [1, -1]], use_symbolic)

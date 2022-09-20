@@ -23,7 +23,8 @@
 from multipledispatch import dispatch
 
 from perceval.components import ACircuit, Circuit, base_components as cp
-from perceval.rendering.circuit.abstract_skin import ASkin
+from .abstract_skin import ASkin
+from .skin_common import bs_convention_color
 
 
 class SymbSkin(ASkin):
@@ -37,7 +38,7 @@ class SymbSkin(ASkin):
     def get_width(self, c) -> int:
         return c.m
 
-    @dispatch((cp.SimpleBS, cp.GenericBS, cp.PBS))
+    @dispatch((cp.BS, cp.PBS))
     def get_width(self, c) -> int:
         w = 1 if self._compact else 2
         return w
@@ -50,7 +51,7 @@ class SymbSkin(ASkin):
     def get_shape(self, c):
         return self.default_shape
 
-    @dispatch((cp.SimpleBS, cp.GenericBS))
+    @dispatch(cp.BS)
     def get_shape(self, c):
         return self.bs_shape
 
@@ -100,7 +101,7 @@ class SymbSkin(ASkin):
         canvas.add_rect((5, 5), 50*w - 10, 50*circuit.m - 10, fill="lightgray")
         canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
 
-    def bs_shape(self, circuit, canvas, content, **opts):
+    def bs_shape(self, bs, canvas, content, **opts):
         if self._compact:
             path_data = ["M", 6.4721, 25.0002, "c", 6.8548, 0, 6.8241, 24.9998, 13.6789, 24.9998, "m", 0.0009, 0, "c",
                          -6.8558, 0, -6.825, 24.9998, -13.6799, 24.9998, "m", 13.6799, -24.9998, "h", 10.9423, "m", 0,
@@ -117,6 +118,9 @@ class SymbSkin(ASkin):
         canvas.add_text((25 if self._compact else 50, 38),
                         content.replace('phi=', 'Φ=').replace('theta=', 'Θ='),
                         7, "middle")
+        # Add BS convention badge
+        canvas.add_rect((68, 50), 10, 10, fill=bs_convention_color(bs.convention))
+        canvas.add_text((73, 57), bs.convention.name, size=6, ta="middle")
 
     def ps_shape(self, circuit, canvas, content, **opts):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], **self.stroke_style)
