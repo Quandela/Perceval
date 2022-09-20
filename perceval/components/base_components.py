@@ -424,9 +424,15 @@ class PERM(Unitary):
 
         min_r = r[0]
         max_r = r[-1] + 1
+
+        permutation = self.perm_vector
+        inv = np.empty_like(permutation)
+        inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
+        inv = [inv[i].item() for i in range(len(inv))]
+
         nsv = copy(sv)
         new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
-                                                                                  for i in self.perm_vector]))):
+                                                                                  for i in inv]))):
                       prob_ampli for state, prob_ampli in sv.items()}
         nsv.clear()
         nsv.update(new_states)
