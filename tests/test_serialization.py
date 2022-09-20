@@ -67,9 +67,9 @@ def _check_circuits_eq(c_a, c_b):
 
 
 def _build_test_circuit():
-    c1 = Circuit(3) // comp.SimpleBS(R=2 / 3) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
+    c1 = Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
          // comp.Unitary(Matrix.random_unitary(3))
-    c2 = Circuit(2) // comp.GenericBS(R=1 / 4) // comp.PERM([1, 0])
+    c2 = Circuit(2) // comp.BS.H(theta=0.36, phi_tl=1.94, phi_br=5.8817, phi_bl=0.0179) // comp.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
     c1.add(0, comp.PR(delta=0.89))
     return c1
