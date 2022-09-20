@@ -41,11 +41,23 @@ class BS(ACircuit):
                  convention: BSConvention = BSConvention.RX):
         super().__init__(2)
         self._convention = convention
-        self._theta = self._set_parameter("theta", theta, 0, 2*sp.pi)
+        self._theta = self._set_parameter("theta", theta, 0, 4*sp.pi)
         self._phi_tl = self._set_parameter("phi_tl", phi_tl, 0, 2*sp.pi)
         self._phi_bl = self._set_parameter("phi_bl", phi_bl, 0, 2*sp.pi)
         self._phi_tr = self._set_parameter("phi_tr", phi_tr, 0, 2*sp.pi)
         self._phi_br = self._set_parameter("phi_br", phi_br, 0, 2*sp.pi)
+
+    @staticmethod
+    def H(theta=sp.pi/2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
+        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.H)
+
+    @staticmethod
+    def Rx(theta=sp.pi / 2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
+        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.RX)
+
+    @staticmethod
+    def Ry(theta=sp.pi / 2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
+        return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.RY)
 
     @staticmethod
     def r_to_theta(r):

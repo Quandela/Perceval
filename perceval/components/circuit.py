@@ -424,6 +424,10 @@ class ACircuit(ABC):
     def inverse(self, v, h):
         raise NotImplementedError("component has no inverse operator")
 
+    @abstractmethod
+    def describe(self, map_param_kid=None) -> str:
+        pass
+
 
 class Circuit(ACircuit):
     """Class to represent any circuit composed of one or multiple components

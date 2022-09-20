@@ -36,17 +36,17 @@ def test_analyser_on_qrng():
             pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
     # Defining the LO elements of chip
     (chip_QRNG
-     .add((0, 1), comp.SimpleBS())
-     .add((2, 3), comp.SimpleBS())
+     .add((0, 1), comp.BS())
+     .add((2, 3), comp.BS())
      .add((1, 2), comp.PERM([1, 0]))
      .add(0, comp.PS(phis[0]))
      .add(2, comp.PS(phis[2]))
-     .add((0, 1), comp.SimpleBS())
-     .add((2, 3), comp.SimpleBS())
+     .add((0, 1), comp.BS())
+     .add((2, 3), comp.BS())
      .add(0, comp.PS(phis[1]))
      .add(2, comp.PS(phis[3]))
-     .add((0, 1), comp.SimpleBS())
-     .add((2, 3), comp.SimpleBS())
+     .add((0, 1), comp.BS())
+     .add((2, 3), comp.BS())
      )
     # Setting parameters value and see how chip specs evolve
     phis[0].set_value(sp.pi/2)
