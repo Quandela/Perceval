@@ -68,9 +68,9 @@ def mzi_AnnotatedBasicState_pcvl(input_state):
 
     (mzi_chip
      .add(0, comp.PS(phases[0]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      .add(0, comp.PS(phases[1]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      )
     pcvl.pdisplay(mzi_chip)
 
@@ -144,9 +144,9 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
 
     (mzi_chip
      .add(0, comp.PS(phases[0]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      .add(0, comp.PS(phases[1]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
 
      )
 
