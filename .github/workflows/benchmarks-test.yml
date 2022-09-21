@@ -17,7 +17,7 @@ on:
           - MiniMac_arm64
           - ubuntu-latest
       commit_ref:
-        description: Use specific perceval's ref (tag or SHA)
+        description: Use specific perceval's ref (branch, tag or SHA)
         default: ''
         type: string
         required: false
@@ -76,8 +76,8 @@ jobs:
           path: quandelibc/precompiled-quandelibc
 
   benchmark:
-    if: ${{ always() }}
     name: Run pytest-benchmark benchmark example
+    if: ${{ always() }}
     needs:
       - build-quandelibc
     runs-on: ${{ github.event.inputs.os }}
@@ -93,15 +93,15 @@ jobs:
         with:
           python-version: ${{ env.python_v }}
 
-      - name: Fetch previously compiled Quandelibc
-        if: inputs.quandelibc_ref != ''
+      - if: inputs.quandelibc_ref != ''
+        name: Fetch previously compiled Quandelibc
         uses: actions/download-artifact@v2
         with:
           name: python-package-distributions
           path: precompiled-quandelibc
 
-      - name: Install previously compiled Quandelibc
-        if: inputs.quandelibc_ref != ''
+      - if: inputs.quandelibc_ref != ''
+        name: Install previously compiled Quandelibc
         run: bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
 
       - name: Install dependencies
@@ -117,14 +117,14 @@ jobs:
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
           echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/$( git describe --tags )_${{ github.ref_name }}_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
       - if: runner.os != 'Linux'
         name: Initialize config notLinux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
           echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/$( git describe --tags )_${{ github.ref_name }}_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: Run benchmark
