@@ -116,11 +116,11 @@ class SymbSkin(ASkin):
                          49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056]
         canvas.add_mpath(path_data, **self.stroke_style)
         canvas.add_text((25 if self._compact else 50, 38),
-                        content.replace('phi=', 'Φ=').replace('theta=', 'Θ='),
+                        content.replace('phi', 'Φ').replace('theta=', 'Θ='),
                         7, "middle")
         # Add BS convention badge
-        canvas.add_rect((68, 50), 10, 10, fill=bs_convention_color(bs.convention))
-        canvas.add_text((73, 57), bs.convention.name, size=6, ta="middle")
+        canvas.add_rect((35 if self._compact else 72, 53), 10, 10, fill=bs_convention_color(bs.convention))
+        canvas.add_text((40 if self._compact else 77, 60), bs.convention.name, size=6, ta="middle")
 
     def ps_shape(self, circuit, canvas, content, **opts):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], **self.stroke_style)

@@ -24,7 +24,7 @@
 from perceval.components.base_components import BSConvention
 
 BS_CONVENTION_COLOR = {
-    BSConvention.Rx: 'lavender',
+    BSConvention.Rx: 'thistle',
     BSConvention.Ry: 'lightsalmon',
     BSConvention.H: 'aquamarine'
 }
