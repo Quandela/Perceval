@@ -131,9 +131,35 @@ class BS(ACircuit):
         params_str = format_parameters(parameters, separator=', ')
         return "BS(%s)" % params_str
 
-    # TODO
-    def inverse(self, v, h):
-        pass
+    def inverse(self, v=False, h=False):
+        if not self.defined:
+            raise ValueError('Cannot invert BS with variable parameters')
+        if v:
+            phi_bl = float(self._phi_bl)
+            phi_tl = float(self._phi_tl)
+            phi_tr = float(self._phi_tr)
+            phi_br = float(self._phi_br)
+            self._phi_bl.set_value(phi_tl, force=True)
+            self._phi_tr.set_value(phi_br, force=True)
+            self._phi_tl.set_value(phi_bl, force=True)
+            self._phi_br.set_value(phi_tr, force=True)
+            # For Rx BS, vertical inversion does not impact theta parameter
+            if self._convention == BSConvention.Ry:
+                self._theta.set_value(- float(self._theta), force=True)
+            elif self._convention == BSConvention.H:
+                self._theta.set_value(2*np.pi - float(self._theta), force=True)
+        if h:
+            phi_bl = float(self._phi_bl)
+            phi_tl = float(self._phi_tl)
+            phi_tr = float(self._phi_tr)
+            phi_br = float(self._phi_br)
+            self._phi_bl.set_value(-phi_br, force=True)
+            self._phi_tr.set_value(-phi_tl, force=True)
+            self._phi_tl.set_value(-phi_tr, force=True)
+            self._phi_br.set_value(-phi_bl, force=True)
+            # For H BS, horizontal inversion does not impact theta parameter
+            if self._convention == BSConvention.Rx or self._convention == BSConvention.Ry:
+                self._theta.set_value(- float(self._theta), force=True)
 
 
 class GenericBS(ACircuit):
@@ -303,9 +329,9 @@ class PS(ACircuit):
     def inverse(self, v=False, h=False):
         if h:
             if self._phi.is_symbolic():
-                self._phi = -self._phi.spv
+                raise ValueError('Cannot invert PS with variable parameters')
             else:
-                self._phi = -float(self._phi)
+                self._phi.set_value(-float(self._phi), force=True)
 
 
 class WP(ACircuit):
