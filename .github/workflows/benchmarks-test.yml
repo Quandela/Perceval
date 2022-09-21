@@ -76,9 +76,6 @@ jobs:
         run: |
           python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
-      - name: compare benchmark
-        run: |
-          pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
 
       # upload the result on action GitHub
       - name: upload the result
@@ -87,7 +84,6 @@ jobs:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
-            compare_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
       - name: Download the result on github action
         uses: actions/download-artifact@v3
@@ -107,14 +103,3 @@ jobs:
           alert-threshold: '120%'
           comment-on-alert: true
           fail-on-alert: true
-
-
-      - name: Save benchmark report in current branch
-        if: inputs.save
-        run: |
-          git pull
-          git config --global user.name 'github-action-benchmark'
-          git config --global user.email 'github@users.noreply.github.com'
-          git add ${{ env.folder_file_json }}
-          git commit -am "Automated benchmark report"
-          git push
