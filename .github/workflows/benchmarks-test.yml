@@ -94,7 +94,7 @@ jobs:
           python-version: ${{ env.python_v }}
 
       - name: Fetch previously compiled Quandelibc
-        if: github.event_name == 'workflow_dispatch' && inputs.quandelibc_ref != ''
+        if: inputs.quandelibc_ref != ''
         uses: actions/download-artifact@v2
         with:
           name: python-package-distributions
