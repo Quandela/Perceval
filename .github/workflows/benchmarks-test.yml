@@ -76,6 +76,7 @@ jobs:
           path: quandelibc/precompiled-quandelibc
 
   benchmark:
+    if: ${{ always() }}
     name: Run pytest-benchmark benchmark example
     needs:
       - build-quandelibc
