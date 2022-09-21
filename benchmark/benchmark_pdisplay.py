@@ -26,13 +26,8 @@ This script times the execution of pdisplay for circuits.
 
 import perceval as pcvl
 import perceval.components.base_components as comp
-import time
 
-m = 16
-trials = 5
-# render_format = pcvl.Format.MPLOT
-render_format = pcvl.Format.HTML
-modes = [4, 8, 16, 24]
+trials = 2
 
 
 def generate_circuit(n_mode):
@@ -45,26 +40,42 @@ def generate_circuit(n_mode):
     return pcvl.Circuit.decomposition(u, mzi, shape="triangle")
 
 
-def benchmark_pdisplay(m, t, f):
-    c = generate_circuit(m)
+c6 = generate_circuit(6)
+c12 = generate_circuit(12)
 
-    render_time = 0
 
+def run_pdisplay(c, t, f):
     for _ in range(t):
-        tic = time.time()
-        pcvl.pdisplay(c, output_format=f)
-        # pcvl.pdisplay_to_file(c, path="tmp.svg", output_format=f)
-        tac = time.time()
-        render_time += tac-tic
-
-    print("Circuit rendering benchmark results")
-    print("===================================")
-    print(f"Circuit containing {c.ncomponents()} components")
-    print(f"with rendering method: {f.name}")
-    print(f" => {render_time/trials} s (average on {trials} trials)")
-    print(" ")
+        pcvl.pdisplay(c, output_format=f, mplot_noshow=True)
 
 
-if __name__ == "__main__":
-    for nm in modes:
-        benchmark_pdisplay(nm, trials, render_format)
+def _run_pdisplay_mplot_6():
+    run_pdisplay(c6, trials, pcvl.Format.MPLOT)
+
+
+def _run_pdisplay_mplot_12():
+    run_pdisplay(c12, trials, pcvl.Format.MPLOT)
+
+
+def _run_pdisplay_svg_6():
+    run_pdisplay(c6, trials, pcvl.Format.HTML)
+
+
+def _run_pdisplay_svg_12():
+    run_pdisplay(c12, trials, pcvl.Format.HTML)
+
+
+def test_pdisplay_mplot_6(benchmark):
+    benchmark(_run_pdisplay_mplot_6)
+
+
+def test_pdisplay_mplot_12(benchmark):
+    benchmark(_run_pdisplay_mplot_12)
+
+
+def test_pdisplay_svg_6(benchmark):
+    benchmark(_run_pdisplay_svg_6)
+
+
+def test_pdisplay_svg_12(benchmark):
+    benchmark(_run_pdisplay_svg_12)
