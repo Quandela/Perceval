@@ -1,9 +1,7 @@
 #this is a manual workflow that runs benchmarks at benchmarks/benchmark_*.py
-# log_file name .benchmarks/<runner>_CPython-<PyVersion>/<lastTag>_<branches>_<runNB>_<commit>.json
 # compare the logs benchmarks with the logs of the same runner and the same version of python
 # upload the artifact to the GitHub action
 # save the log on the gh-page branch (benchmarks/<runner>_CPython-<PyVersion>/data)
-# push the log on the current branch
 
 name: Benchmarks
 
@@ -23,6 +21,11 @@ on:
         default: ''
         type: string
         required: false
+      quandelibc_ref:
+        description: Use specific Quandelibc's ref (branch, tag or SHA)
+        default: ''
+        type: string
+        required: false
       save:
         description: 'Save log'
         default: false
@@ -34,8 +37,48 @@ env:
   python_v: '3.9'
 
 jobs:
+  build-quandelibc:
+    if: inputs.quandelibc_ref != ''
+    name: Build quandelibc "${{ inputs.quandelibc_ref }}" wheels for ${{ github.event.inputs.os }}
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: Quandela/QuandeLibC
+          ref: ${{ inputs.quandelibc_ref }}
+          path: quandelibc
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+      - name: Build wheels for cp39
+        env:
+          CIBW_BUILD: 'cp39-*'
+          CIBW_SKIP: '*-musllinux_*'
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_MACOS: arm64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_BUILD_VERBOSITY: 1
+        run: |
+          cd quandelibc
+          python -m pip install cibuildwheel
+          python -m cibuildwheel --output-dir precompiled-quandelibc
+
+      - name: Store wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-package-distributions
+          path: quandelibc/precompiled-quandelibc
+
   benchmark:
     name: Run pytest-benchmark benchmark example
+    needs:
+      - build-quandelibc
     runs-on: ${{ github.event.inputs.os }}
     steps:
       - uses: actions/checkout@v2
@@ -48,6 +91,17 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
+
+      - name: Fetch previously compiled Quandelibc
+        if: github.event_name == 'workflow_dispatch' && inputs.quandelibc_ref != ''
+        uses: actions/download-artifact@v2
+        with:
+          name: python-package-distributions
+          path: precompiled-quandelibc
+
+      - name: Install previously compiled Quandelibc
+        if: inputs.quandelibc_ref != ''
+        run: bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
 
       - name: Install dependencies
         run: |
@@ -85,10 +139,7 @@ jobs:
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
-      - name: Download the result on github action
-        uses: actions/download-artifact@v3
-        with:
-          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+      
 
       # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
@@ -99,7 +150,41 @@ jobs:
           output-file-path: ${{ env.folder_file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ inputs.save }}
-          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
+          benchmark-data-dir-path: benchmarks_tmp/${{ env.folder_env }}
           alert-threshold: '120%'
           comment-on-alert: true
-          fail-on-alert: true
+
+      - uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+
+      - name: Download the result on github action
+        uses: actions/download-artifact@v3
+        with:
+          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+
+      - name: compare benchmark
+        run: |
+          pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+
+      - name: upload the result
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          path: |
+            compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+
+      - name: Download the result on github action
+        uses: actions/download-artifact@v3
+        with:
+          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+
+      - name: Save benchmark report in gh-pages branch
+        if: inputs.save
+        run: |
+          git pull
+          git config --global user.name 'github-action-benchmark'
+          git config --global user.email 'github@users.noreply.github.com'
+          git add ${{ env.folder_file_json }}
+          git commit -am "Automated benchmark report"
+          git push
