@@ -94,7 +94,7 @@ jobs:
           venv/Scripts/activate
 
       - if:  runner.os != 'Windows'
-        name: Venv not Windows
+        name: Venv notWindows
         run: |
           python -m venv venv
           source venv/bin/activate
@@ -145,7 +145,7 @@ jobs:
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
-      - name: upload the result
+      - name: upload the result Log
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
@@ -171,7 +171,7 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Download the result on github action
+      - name: Download the result Log on github action
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
@@ -180,14 +180,14 @@ jobs:
         run: |
           pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
 
-      - name: upload the result
+      - name: upload the result compare
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
           path: |
             compare_result_${{ env.folder_env }}_${{ env.tag_version }}
 
-      - name: Download the result on github action
+      - name: Download the result compare
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
