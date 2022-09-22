@@ -42,7 +42,7 @@ def test_numeric_matrix_serialization():
 
 def test_symbolic_matrix_serialization():
     theta = P('theta')
-    bs = comp.SimpleBS(theta=theta)
+    bs = comp.BS(theta=theta)
     input_mat = bs.U
     serialized_mat = serialize(input_mat)
     deserialized_mat = deserialize_matrix(serialized_mat)
@@ -82,14 +82,13 @@ def test_circuit_serialization():
     _check_circuits_eq(c1, deserialized_c1)
 
 
-# def test_fockstate_serialization():
-#     states = [
-#         BasicState("|0,1>"),
-#         BasicState([0, 1, 0, 0, 1, 0]),
-#         AnnotatedBasicState("|0,1>"),
-#         AnnotatedBasicState("|{P:H}{P:V},0>")
-#     ]
-#     for s in states:
-#         serialized = serialize(s)
-#         deserialized = deserialize_state(serialized)
-#         assert s == deserialized
+def test_fockstate_serialization():
+    states = [
+        BasicState("|0,1>"),
+        BasicState([0, 1, 0, 0, 1, 0]),
+        BasicState("|{P:H}{P:V},0>")
+    ]
+    for s in states:
+        serialized = serialize(s)
+        deserialized = deserialize_state(serialized)
+        assert s == deserialized
