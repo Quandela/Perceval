@@ -25,11 +25,12 @@ import perceval as pcvl
 import time
 
 
-def quadratic_count_down(n, speed=0.1, status: Optional[pcvl.JobStatus] = None):
+def quadratic_count_down(n, speed=0.1, progress_callback=None):
     l = []
     for i in range(n):
         time.sleep(speed)
-        status.update_progress(i/n, "counting %d" % i)
+        if progress_callback:
+            progress_callback(i/n, "counting %d" % i)
         l.append(i**2)
     assert speed >= 0.1
     return l
@@ -43,37 +44,37 @@ def test_run_sync_1():
     job = pcvl.LocalJob(quadratic_count_down)
     assert job.execute_sync(5) == [0, 1, 4, 9, 16]
     assert job.is_completed()
-    assert job.get_status().success
+    assert job.status.success
     assert job.get_results() == [0, 1, 4, 9, 16]
     # should be ~ 0.5 s
-    assert job.get_status().running_time < 0.8
+    assert job.status.running_time < 0.8
 
 
 def test_run_async():
     job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.3) == None
+    assert job.execute_async(5, speed=0.3) is job
     assert not job.is_completed()
     counter = 0
     while not job.is_completed():
         counter += 1
         time.sleep(0.5)
     assert counter > 1
-    assert job.get_status().success
-    assert job.get_status().stop_message is None
+    assert job.status.success
+    assert job.status.stop_message is None
     assert job.get_results() == [0, 1, 4, 9, 16]
-    assert job.get_status().progress == 1
+    assert job.status.progress == 1
     # should be at least 1.5s
-    assert job.get_status().running_time > 1
+    assert job.status.running_time > 1
 
 def test_run_async_fail():
     job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.01) == None
+    assert job.execute_async(5, speed=0.01) is job
     counter = 0
     while not job.is_completed():
         counter += 1
         time.sleep(1)
-    assert not job.get_status().success
-    assert job.get_status().progress == 0.8
-    assert "AssertionError" in job.get_status().stop_message
+    assert not job.status.success
+    assert job.status.progress == 0.8
+    assert "AssertionError" in job.status.stop_message
     # should be ~0.05 s
-    assert job.get_status().running_time < 0.5
+    assert job.status.running_time < 0.5

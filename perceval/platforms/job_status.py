@@ -26,11 +26,18 @@ from enum import Enum
 
 
 class RunningStatus(Enum):
-    WAITING = 'WAITING'
-    RUNNING = 'RUNNING'
-    SUCCESS = 'SUCCESS'
-    ERROR = 'ERROR'
-    CANCELLED = 'CANCELLED'
+    WAITING = 0
+    RUNNING = 1
+    SUCCESS = 2
+    ERROR = 3
+    CANCELED = 4
+
+    @staticmethod
+    def from_server_response(res):
+        if res == 'completed':
+            return RunningStatus.SUCCESS
+        else:
+            return RunningStatus[res.upper()]
 
 
 class JobStatus:
@@ -45,9 +52,16 @@ class JobStatus:
         self._waiting_progress: Optional[int] = None
         self._last_progress_time: float = 0
 
+    def __call__(self):
+        return self._status.name
+
     @property
     def status(self):
         return self._status
+
+    @status.setter
+    def status(self, status: RunningStatus):
+        self._status = status
 
     def start_run(self):
         self._running_time_start = time()

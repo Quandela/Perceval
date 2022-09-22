@@ -32,7 +32,7 @@ from scipy.optimize import minimize
 
 import perceval as pcvl
 import perceval.components.base_components as comp
-from perceval.rendering.pdisplay import pdisplay_analyser
+from perceval.rendering.pdisplay import pdisplay_analyzer
 
 
 mapping = {
@@ -69,7 +69,7 @@ def discover(circuit, p, params=None, method=None, init_params=None, bounds=None
     ca.compute(expected={"LH": "LL", "LL": "LH", "HH": "HH", "HL": "HL"})
     performance = ca.performance
     ber = ca.error_rate
-    return ber, performance, pdisplay_analyser(ca)
+    return ber, performance, pdisplay_analyzer(ca)
 
 
 global_lock = threading.Lock()

@@ -24,7 +24,8 @@ import sympy as sp
 import numpy as np
 
 from perceval.components import ACircuit
-from perceval.utils import Matrix, format_parameters, Parameter
+from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
+from copy import copy
 
 
 class BSConvention(Enum):
@@ -542,6 +543,21 @@ class PERM(Unitary):
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
+
+    def apply(self, r, sv):
+        if isinstance(sv, BasicState):
+            sv = StateVector(sv)
+
+        min_r = r[0]
+        max_r = r[-1]+1
+        nsv = copy(sv)
+        new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
+                                                                                  for i in self.perm_vector]))):
+                      prob_ampli for state, prob_ampli in sv.items()}
+        nsv.clear()
+        nsv.update(new_states)
+
+        return nsv
 
 
 class PBS(Unitary):

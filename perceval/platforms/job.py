@@ -45,18 +45,18 @@ class Job(ABC):
     def get_results(self) -> Any:
         return self._results
 
+    @property
     @abstractmethod
-    def get_status(self) -> JobStatus:
+    def status(self) -> JobStatus:
         pass
 
     def is_completed(self) -> bool:
-        status = self.get_status()
-        return status.completed
+        return self.status.completed
 
     @abstractmethod
     def execute_sync(self, *args, **kwargs) -> Any:
         pass
 
     @abstractmethod
-    def execute_async(self, *args, **kwargs) -> None:
+    def execute_async(self, *args, **kwargs):
         pass
