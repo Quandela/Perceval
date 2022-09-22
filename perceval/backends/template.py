@@ -308,7 +308,7 @@ class Backend(ABC):
         """
         return False
 
-    def sample(self, input_state: AnnotatedBasicState) -> AnnotatedBasicState:
+    def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         r"""Return one sample for the circuit according to the output probability distribution given an input state
         """
         prob = random.random()
@@ -319,7 +319,7 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state: AnnotatedBasicState, count: int) -> list[AnnotatedBasicState]:
+    def samples(self, input_state: Union[BasicState, StateVector], count: int) -> list[BasicState]:
         r"""Return samples for the circuit according to the output probability distribution given an input state
 
         :param input_state: a given input state
