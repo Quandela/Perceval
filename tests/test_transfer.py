@@ -44,9 +44,9 @@ def test_basic_transfer_fix():
     theta = P("theta")
     b = comp.GenericBS(theta=theta)
     b.transfer_from(a)
-    assert pytest.approx(3*np.pi/2) != float(b["phi_a"])
+    assert pytest.approx(3*np.pi/2) != float(b.param("phi_a"))
     b.transfer_from(a, force=True)
-    assert pytest.approx(0.1) == float(b["phi_a"])
+    assert pytest.approx(0.1) == float(b.param("phi_a"))
 
 
 def test_transfer_complex_1():

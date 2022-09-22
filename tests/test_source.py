@@ -76,7 +76,7 @@ def test_source_indistinguishability():
         assert len(k) == 1
         state = k[0]
         assert state.n == 1
-        annot = state.get_photon_annotations(1)
+        annot = state.get_photon_annotation(0)
         assert "_" in annot, "missing distinguishability feature _"
         if annot["_"] != 0:
             assert pytest.approx(v) == 0.1
@@ -92,7 +92,7 @@ def test_source_indistinguishability_homv():
         assert len(k) == 1
         state = k[0]
         assert state.n == 1
-        annot = state.get_photon_annotations(1)
+        annot = state.get_photon_annotation(0)
         assert "_" in annot, "missing distinguishability feature _"
         if annot["_"] != 0:
             assert pytest.approx(1-math.sqrt(0.5)) == v

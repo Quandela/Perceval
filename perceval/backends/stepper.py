@@ -52,14 +52,13 @@ class StepperBackend(Backend):
 
     def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
-
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position
         :param c: a circuit
         :return: evolved StateVector
         """
         min_r = r[0]
-        max_r = r[-1]
+        max_r = r[-1] + 1
         # build list of fockstates corresponding to subspace [min_r:max_r]
         sub_input_state = set()
         for state in sv:

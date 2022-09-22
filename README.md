@@ -38,6 +38,22 @@ git clone https://github.com/quandela/Perceval
 python setup.py install # [or 'develop' for developpers]
 ```
 
+# Running tests and benchmarks
+
+Unit tests files are part of the repository in `tests/` and can be run with:
+
+```
+pytest tests/
+```
+
+Benchmark tests for computing-intensive functions are in `benchmark/` and can be run with:
+
+```
+pytest benchmark/benchmark_*.py
+```
+
+Comparison benchmarks for different platforms are also commit in `.benchmarks/` - see [pytest-benchmark documentation](https://pytest-benchmark.readthedocs.io/en/stable/usage.html) for more information.
+
 # Documentation and Forum
 
 * The [documentation](https://perceval.quandela.net/docs)

@@ -20,13 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
+class RemoteCredentials:
+    def __init__(self, url=None, token=None):
+        self.url = url
+        self.token = token
 
-import perceval as pcvl
-import perceval.utils.algorithms.norm as norm
+    def http_headers(self):
+        return {'Authorization': f"Bearer {self.token}"}
 
-
-def test_fidelity():
-    for _ in range(5):
-        u = pcvl.MatrixN.random_unitary(5)
-        assert pytest.approx(1) == norm.fidelity(u, u)
+    def build_endpoint(self, endpoint):
+        return self.url + endpoint

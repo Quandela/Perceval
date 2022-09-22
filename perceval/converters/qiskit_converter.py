@@ -22,8 +22,8 @@
 
 from perceval.components import PredefinedCircuit, Circuit, Processor, Source
 from perceval.utils import P, BasicState
-from perceval.algorithm.norm import *
-from perceval.algorithm.optimize import optimize
+from perceval.utils.algorithms.optimize import optimize
+from perceval.utils.algorithms.norm import frobenius
 import perceval.components.base_components as comp
 
 import qiskit

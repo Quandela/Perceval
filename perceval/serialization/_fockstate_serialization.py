@@ -20,13 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
+from perceval.utils.statevector import BasicState
+from typing import Union
+from ast import literal_eval
 
-import perceval as pcvl
-import perceval.utils.algorithms.norm as norm
+
+def serialize_state(state: BasicState):
+    return str(state)
 
 
-def test_fidelity():
-    for _ in range(5):
-        u = pcvl.MatrixN.random_unitary(5)
-        assert pytest.approx(1) == norm.fidelity(u, u)
+def deserialize_state(pb_fs):
+    return BasicState(pb_fs)
+
+
+def deserialize_state_list(states):
+    state_list = literal_eval(states)
+    return [deserialize_state(s) for s in state_list]

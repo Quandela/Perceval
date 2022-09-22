@@ -27,8 +27,8 @@ import pytest
 
 import perceval as pcvl
 import perceval.components.base_components as comp
-from perceval.algorithm.optimize import optimize
-from perceval.algorithm import norm
+from perceval.utils.algorithms.optimize import optimize
+from perceval.utils.algorithms import norm
 from perceval.utils import random_seed
 
 
@@ -131,7 +131,7 @@ def test_match_rewrite_phase():
     rewrite2 = pcvl.Circuit(1, name="rewrite") // comp.PS(pcvl.P("phi"))
     matched = a.match(pattern2)
     for k, v in matched.v_map.items():
-        pattern2[k].set_value(v)
+        pattern2.param(k).set_value(v)
     v = pattern2.compute_unitary(False)
     res = optimize(rewrite2, v, norm.frobenius, sign=-1)
     assert pytest.approx(0+1) == res.fun+1

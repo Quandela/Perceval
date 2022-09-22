@@ -20,13 +20,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
+from abc import ABC, abstractmethod
+from typing import Any, Callable
 
-import perceval as pcvl
-import perceval.utils.algorithms.norm as norm
+from .job_status import JobStatus
 
 
-def test_fidelity():
-    for _ in range(5):
-        u = pcvl.MatrixN.random_unitary(5)
-        assert pytest.approx(1) == norm.fidelity(u, u)
+class Job(ABC):
+    def __init__(self, fn: Callable):
+        # create an id or check existence of current id
+        self._fn = fn
+        # id will be assigned by remote job - not implemented for local class
+        self._id = None
+        self._results = None
+        pass
+
+    def __call__(self, *args, **kwargs) -> Any:
+        return self.execute_sync(*args, **kwargs)
+
+    @property
+    def id(self):
+        return self._id
+
+    def get_results(self) -> Any:
+        return self._results
+
+    @abstractmethod
+    def get_status(self) -> JobStatus:
+        pass
+
+    def is_completed(self) -> bool:
+        status = self.get_status()
+        return status.completed
+
+    @abstractmethod
+    def execute_sync(self, *args, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    def execute_async(self, *args, **kwargs) -> None:
+        pass
