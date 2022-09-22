@@ -28,9 +28,6 @@ from perceval.utils import StateVector, BasicState, Matrix
 from perceval.components import ACircuit
 from .naive import NaiveBackend
 
-import quandelibc as qc
-
-
 class StepperBackend(Backend):
     """Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
        on a circuit defined with a unitary matrix.
@@ -59,23 +56,26 @@ class StepperBackend(Backend):
         """
         min_r = r[0]
         max_r = r[-1] + 1
-        # build list of fockstates corresponding to subspace [min_r:max_r]
-        sub_input_state = set()
-        for state in sv:
-            sub_input_state.add(BasicState(state[min_r:max_r]))
+        key = c.describe()  # Can't use c; two identical pieces aren't considered equal if they aren't at the same place
+        # build list of never visited fockstates corresponding to subspace [min_r:max_r]
+        sub_input_state = {sliced_state for state in sv
+                           for sliced_state in (BasicState(state[min_r:max_r]),)
+                           if sliced_state not in self.result_dict[key]['set']}
         # get circuit probability for these input_states
-        sim_c = NaiveBackend(c.U, use_symbolic=self._use_symbolic)
-        mapping_input_output = {}
-        for input_state in sub_input_state:
-            mapping_input_output[input_state] = {}
-            for output_state in sim_c.allstate_iterator(input_state):
-                mapping_input_output[input_state][output_state] = sim_c.probampli(input_state, output_state)
+        if sub_input_state != set():
+            sim_c = NaiveBackend(c.compute_unitary(use_symbolic=False))
+            mapping_input_output = {input_state:
+                                    {output_state: sim_c.probampli(input_state, output_state)
+                                        for output_state in sim_c.allstate_iterator(input_state)}
+                                    for input_state in sub_input_state}
+            self.result_dict[key] |= mapping_input_output  # Union of the dictionaries
+            self.result_dict[key]['set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
+        # May be faster in c++ (impossible to use comprehension here due to successive additions)
         for state in sv:
-            input_state = state[min_r:max_r]
-            for output_state, prob_ampli in mapping_input_output[input_state].items():
-                nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli*sv[state]
+            for output_state, prob_ampli in self.result_dict[key][state[min_r:max_r]].items():
+                nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli * sv[state]
         return nsv
 
     def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
@@ -87,12 +87,12 @@ class StepperBackend(Backend):
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
+        self.result_dict = {c.describe(): {'set': set()} for r, c in self._C}
         for r, c in self._C:
-            if not c.delay_circuit:
-                # nsv = sv.align(r)
-                sv = self.apply(sv, r, c)
+            if hasattr(c, "apply"):
+                sv = c.apply(r, sv)
             else:
-                sv.apply_delta_t(r[0], float(c._dt))
+                sv = self.apply(sv, r, c)
         self._out = sv
         return True
 
@@ -103,3 +103,29 @@ class StepperBackend(Backend):
         if output_state not in self._out:
             return 0
         return self._out[output_state]
+
+    def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
+        self.compile(input_state)
+        return self._out
+
+    def prob(self,
+             input_state: Union[BasicState, StateVector],
+             output_state: BasicState,
+             n: int = None,
+             skip_compile: bool = False) -> float:
+        if not skip_compile:
+            self.compile(input_state)
+        return self.prob_be(input_state, output_state, n)
+
+    def probampli(self,
+                  input_state: Union[BasicState, StateVector],
+                  output_state: BasicState,
+                  n: int = None) -> complex:
+        self.compile(input_state)
+        return self.probampli_be(input_state, output_state, n)
+
+    def allstateprob_iterator(self, input_state):
+        skip_compile = False
+        for output_state in self.allstate_iterator(input_state):
+            yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
+            skip_compile = True

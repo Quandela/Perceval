@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sympy as sp
+from copy import copy
 import numpy as np
+import sympy as sp
 
 from perceval.components import ACircuit
 from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
-from copy import copy
 
 
 class GenericBS(ACircuit):
@@ -414,13 +414,18 @@ class PERM(Unitary):
             sv = StateVector(sv)
 
         min_r = r[0]
-        max_r = r[-1]+1
+        max_r = r[-1] + 1
+
+        permutation = self.perm_vector
+        inv = np.empty_like(permutation)
+        inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
+        inv = [inv[i].item() for i in range(len(inv))]
+
         nsv = copy(sv)
-        new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
-                                                                                  for i in self.perm_vector]))):
-                      prob_ampli for state, prob_ampli in sv.items()}
         nsv.clear()
-        nsv.update(new_states)
+        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
+                                                                                for i in inv]))):
+                        prob_ampli for state, prob_ampli in sv.items()})
 
         return nsv
 
