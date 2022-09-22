@@ -133,6 +133,6 @@ def computation(params):
     return current_loss
 
 
-def test_QML(benchmark):
+def test_QML_DE_solver(benchmark):
     benchmark(minimize, computation, parameters,
               method='BFGS', options={'gtol': 1E-2})
