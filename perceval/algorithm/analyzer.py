@@ -20,14 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
 import copy
+import numpy as np
 
-from perceval.utils.statevector import BasicState
+from .sampler import Sampler
+from perceval.utils import BasicState
 
 
-class CircuitAnalyser:
-    def __init__(self, simulator, input_states, output_states=None, mapping=None, post_select_fn=None):
+class Analyzer(Sampler):
+    def __init__(self, platform, circuit, input_states, output_states=None, mapping=None, post_select_fn=None):
         """
             Initialization of Circuit Analyzer
             `simulator` is a simulator instance initialized for the circuit
@@ -37,7 +38,7 @@ class CircuitAnalyser:
             `mapping` is a mapping of FockState => name for display
             `post_select_fn` is a post selection function
         """
-        self._simulator = simulator
+        super().__init__(platform, circuit)
         if mapping is None:
             self._mapping = {}
         else:
@@ -51,7 +52,7 @@ class CircuitAnalyser:
             self.input_states_list = input_states
         for input_state in self.input_states_list:
             assert isinstance(input_state, BasicState), "input_states should be BasicStates"
-            assert input_state.m == simulator.m, "incorrect BasicState"
+            assert input_state.m == self._backend.m, "incorrect BasicState"
         if output_states is None:
             self.output_states_list = self.input_states_list
         elif output_states == "*":
@@ -62,7 +63,7 @@ class CircuitAnalyser:
                 if input_state.n in explored_n:
                     continue
                 explored_n.add(input_state.n)
-                for output_state in simulator.allstate_iterator(input_state):
+                for output_state in self._backend.allstate_iterator(input_state):
                     if post_select_fn is None or post_select_fn(output_state):
                         if output_state not in outs:
                             outs.add(output_state)
@@ -79,12 +80,14 @@ class CircuitAnalyser:
         self.error_rate = None
         self._distribution = None
 
-    def compute(self, normalize=False, expected=None):
+    def compute(self, normalize=False, expected=None, progress_callback=None):
         """
             Go through the input states, generate (post-selected) output states and calculate if provided
             distance with expected
         """
         self._distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
+        computation_count = 0
+        total_count = len(self.input_states_list) * len (self.output_states_list)
         if expected is not None:
             self._expected_distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
             self.performance = 1
@@ -105,12 +108,17 @@ class CircuitAnalyser:
             for oidx, ostate in enumerate(self.output_states_list):
                 if self._post_select_fn is None or self._post_select_fn(ostate):
                     if istate.n == ostate.n:
-                        self._distribution[iidx, oidx] = self._simulator.prob(istate, ostate)
+                        self._distribution[iidx, oidx] = self.prob(istate, ostate)  # job run synchronously
                         if expected is not None and self._expected_distribution[iidx, oidx]:
                             found_in_row = self._distribution[iidx, oidx]
                             if self._distribution[iidx, oidx] < self.performance:
                                 self.performance = self._distribution[iidx, oidx]
                     sump += self._distribution[iidx, oidx]
+                computation_count += 1
+                if progress_callback:
+                    progress_callback(computation_count/total_count)
+                    import time
+                    time.sleep(0.1)
             if normalize or expected is not None:
                 self._distribution[iidx, :] /= sump
             if expected is not None:

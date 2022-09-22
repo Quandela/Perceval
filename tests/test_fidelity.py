@@ -23,7 +23,7 @@
 import pytest
 
 import perceval as pcvl
-import perceval.algorithm.norm as norm
+import perceval.utils.algorithms.norm as norm
 
 
 def test_fidelity():

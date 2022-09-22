@@ -100,7 +100,7 @@ def test_polar_circuit2():
 
 
 def test_prep_state():
-    s, m = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H},{P:V},0,{P:A}>"))
+    s, m = convert_polarized_state(pcvl.BasicState("|{P:H},{P:V},0,{P:A}>"))
     assert str(s) == "|1,0,1,0,0,0,1,0>"
     assert pdisplay_matrix(m) == """
             ⎡1  0  0  0   0  0  0           0        ⎤
@@ -112,23 +112,23 @@ def test_prep_state():
             ⎢0  0  0  0   0  0  sqrt(2)/2   sqrt(2)/2⎥
             ⎣0  0  0  0   0  0  -sqrt(2)/2  sqrt(2)/2⎦
     """.strip().replace("            ", "")
-    s2, m2 = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:H},{P:V},0,{P:A}>"))
+    s2, m2 = convert_polarized_state(pcvl.BasicState("|{P:H}{P:H},{P:V},0,{P:A}>"))
     assert str(s2) == "|2,0,1,0,0,0,1,0>"
     assert (m2-m).all() == 0
 
 
 def test_prep_multi_state():
-    convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
+    convert_polarized_state(pcvl.BasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
 
 
 def test_convert_multistate():
-    input_state, prep_matrix = convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:V}>"))
+    input_state, prep_matrix = convert_polarized_state(pcvl.BasicState("|2{P:H}3{P:V}>"))
     assert str(input_state) == "|2,3>"
 
 
 def test_convert_multistate_nonorthogonal():
     with pytest.raises(ValueError):
-        convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:D}>"))
+        convert_polarized_state(pcvl.BasicState("|2{P:H}3{P:D}>"))
 
 
 def test_build_spatial_output():

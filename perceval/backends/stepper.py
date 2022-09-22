@@ -49,7 +49,6 @@ class StepperBackend(Backend):
 
     def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
-
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position
         :param c: a circuit
@@ -93,7 +92,6 @@ class StepperBackend(Backend):
             if hasattr(c, "apply"):
                 sv = c.apply(r, sv)
             else:
-                # nsv = sv.align(r)
                 sv = self.apply(sv, r, c)
         self._out = sv
         return True

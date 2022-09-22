@@ -20,34 +20,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Type, Union
-
+from deprecated import deprecated
 from .template import Backend
-from .cliffords2017 import CliffordClifford2017Backend
-from .naive import NaiveBackend
-from .slos import SLOSBackend
-from .stepper import StepperBackend
-from .strawberryfields import SFBackend
+from perceval.backends.cliffords2017 import CliffordClifford2017Backend
+from perceval.backends.naive import NaiveBackend
+from perceval.backends.slos import SLOSBackend
+from perceval.backends.stepper import StepperBackend
+from perceval.backends.strawberryfields import SFBackend
 
+BACKEND_LIST = {
+    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
+    NaiveBackend.name: NaiveBackend,
+    SLOSBackend.name: SLOSBackend,
+    StepperBackend.name: StepperBackend,
+}
+if SFBackend.is_available():
+    BACKEND_LIST[SFBackend.name] = SFBackend
 
+@deprecated(reason='Please use get_platform("platform name") instead')
 class BackendFactory:
-    _backends = (NaiveBackend, CliffordClifford2017Backend, SFBackend, SLOSBackend, StepperBackend)
-
-    def get_backend(self,
-                    name: Union[str, None] = None) \
-            -> Type[Backend]:
-        """Returns a simulator backend
-
-        :param name: The name of the simulator
-        :return: the backend
-        """
-        if name is None:
-            name = "SLOS"
-        for backend in self._backends:
-            if backend.name == name:
-                return backend
-        # TODO: check this exception
-        raise ValueError("Unknown backend: %s" % name)
-
-    def list_backend(self):
-        return [backend.name for backend in self._backends]
+    def get_backend(self, backend_name="SLOS"):
+        name = backend_name
+        if name in BACKEND_LIST:
+            return BACKEND_LIST[name]
+        return BACKEND_LIST['SLOS']

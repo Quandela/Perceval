@@ -31,9 +31,9 @@ import sympy as sp
 import scipy.optimize as so
 
 from perceval.utils import Parameter, Matrix, MatrixN, global_params
-import perceval.algorithm.decomposition as decomposition
-from perceval.algorithm.match import Match
-from perceval.algorithm.solve import solve
+import perceval.utils.algorithms.decomposition as decomposition
+from perceval.utils.algorithms.match import Match
+from perceval.utils.algorithms.solve import solve
 
 
 def _matrix_double_for_polarization(m, u):
@@ -202,8 +202,8 @@ class ACircuit(ABC):
             component: ACircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
-    def __getitem__(self, key):
-        return self._params[key]
+    def param(self, param_name):
+        return self._params[param_name]
 
     def __setitem__(self, key, value):
         self._params[key] = value
@@ -406,7 +406,7 @@ class ACircuit(ABC):
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
             assert p in self._params, "missing parameter %s when transfering component" % p.name
-            param = c[p]
+            param = c.param(p)
             if param.defined:
                 try:
                     self._params[p].set_value(float(param), force=force)
@@ -449,6 +449,36 @@ class Circuit(ACircuit):
         for r, c in self._components:
             for range_comp, comp in c:
                 yield tuple(pos + r[0] for pos in range_comp), comp
+
+    def getitem(self, idx: Tuple[int, int], only_parameterized: bool=False) -> ACircuit:
+        """
+        Direct access to components of the circuit
+        :param idx: index of the component as (row, col)
+        :param only_parameterized: if True, only count components with parameters
+        :return: the component
+        """
+        if not(isinstance(idx, tuple) and len(idx) == 2):
+            raise ValueError("__getitem__ type should be len-2 tuple")
+        # get j-th component found on mode i
+        i, j = idx
+        if i >= self._m or i < 0:
+            raise IndexError("row index out of range")
+        for r, c in self._components:
+            if only_parameterized and c.defined:
+                continue
+            if i in r:
+                if j == 0:
+                    return c
+                j -= 1
+        raise IndexError("column index out of range")
+
+    def __getitem__(self, idx) -> ACircuit:
+        """
+        Direct access to components - using __getitem__ operator
+        :param idx: index of the component as (row, col)
+        :return: the component
+        """
+        return self.getitem(idx, only_parameterized=False)
 
     def describe(self, map_param_kid=None) -> str:
         r"""Describe a circuit
