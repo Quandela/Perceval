@@ -154,21 +154,7 @@ jobs:
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
       
-
-      # use github-action-benchmark for graph
-      - name: compare result with last version and save on gh-page branch
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Python Benchmark with pytest-benchmark
-          tool: 'pytest'
-          output-file-path: ${{ env.folder_file_json }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: ${{ inputs.save }}
-          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
-          alert-threshold: '120%'
-          comment-on-alert: true
-
-      - uses: actions/checkout@v2
+            - uses: actions/checkout@v2
         with:
           ref: gh-pages
 
@@ -202,3 +188,16 @@ jobs:
           git add ${{ env.folder_file_json }}
           git commit -am "Automated benchmark report"
           git push
+
+      # use github-action-benchmark for graph
+      - name: compare result with last version and save on gh-page branch
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: ${{ env.folder_file_json }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: ${{ inputs.save }}
+          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
+          alert-threshold: '120%'
+          comment-on-alert: true
