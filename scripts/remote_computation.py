@@ -44,7 +44,7 @@ cnot.add((3, 4), phys.BS(R=1 / 2))
 # for s in results:
 #     print(str(s))
 
-token_qcloud = '_T_eyJhbGciOiJIUzUxMiIsImlhdCI6MTY2MjQ3NjY3NSwiZXhwIjoxNjY1MDY4Njc1fQ.eyJpZCI6Mn0.wmBX9LU0T05XTpYhBcGRNeeusFh-Rmt4rk4g1Po0YGPoo_LMlUa4-l1nVD_jn9z2_LYqesO3RTw3DVR3w0EJhw'
+token_qcloud = 'YOUR_TOKEN'
 platform_url = "http://127.0.0.1:5001"
 
 naive_remote_platform = pcvl.get_platform("Naive", token_qcloud, platform_url)

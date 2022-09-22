@@ -91,7 +91,7 @@ phis[2].set_value(0)
 phis[3].set_value(0.4)
 
 print("Use circuit analyzer algorithm")
-analyzer = Analyzer(get_platform('slos'), chip_QRNG, [pcvl.BasicState("[1,0,1,0]"), pcvl.BasicState("[0,1,1,0]")], "*")
+analyzer = Analyzer(get_platform('SLOS'), chip_QRNG, [pcvl.BasicState("[1,0,1,0]"), pcvl.BasicState("[0,1,1,0]")], "*")
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     def update_progress(p):
         tq.update(p-update_progress.prev)

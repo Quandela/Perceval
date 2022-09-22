@@ -308,7 +308,9 @@ class Backend(ABC):
         """
         return False
 
-    def sample(self, input_state, progress_callback=None):
+    def sample(self, input_state: Union[BasicState, StateVector], progress_callback=None) -> BasicState:
+        r"""Return one sample for the circuit according to the output probability distribution given an input state
+        """
         prob = random.random()
         output_state = None
         for (output_state, state_prob) in self.allstateprob_iterator(input_state):
@@ -317,12 +319,21 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state, count, progress_callback=None):
-        if progress_callback:
-            progress_callback(0)
-        results = []
-        for i in range(count):
-            results.append(self.sample(input_state))
-            if progress_callback:
-                progress_callback(i/count)
-        return results
+    def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None) -> list[BasicState]:
+        r"""Return samples for the circuit according to the output probability distribution given an input state
+
+        :param input_state: a given input state
+        :param count: the number of returned samples
+        """
+        if count == 1:  # Faster in this case
+            return [self.sample(input_state)]
+        states, p = zip(*self.allstateprob_iterator(input_state))
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=p / sum(p))
+        return list(results)
+
+    def set_cutoff(self, cutoff: int):
+        r"""
+        Set the cutoff dimension for the MPS simulator.
+        """
+        pass
