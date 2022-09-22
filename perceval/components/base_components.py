@@ -431,10 +431,9 @@ class PERM(Unitary):
         inv = [inv[i].item() for i in range(len(inv))]
 
         nsv = copy(sv)
-        new_states = {BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
-                                                                                  for i in inv]))):
-                      prob_ampli for state, prob_ampli in sv.items()}
         nsv.clear()
-        nsv.update(new_states)
+        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
+                                                                                for i in inv]))):
+                        prob_ampli for state, prob_ampli in sv.items()})
 
         return nsv
