@@ -22,8 +22,8 @@
 
 from perceval.utils.parameter import P
 from perceval.components import Circuit, PredefinedCircuit
-from perceval.components.base_components import *
+from perceval.components.base_components import BS
 
-c = Circuit(2) // BS(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
+c = Circuit(2) // BS.H(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
 
 generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")
