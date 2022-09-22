@@ -328,13 +328,12 @@ class StateVector(defaultdict):
         return self.__str__().__hash__()
 
 
-def tensorproduct(states: list[Union[StateVector, BasicState]], _current=None):
+def tensorproduct(states: list[Union[StateVector, BasicState]]):
     r""" Computes states[0] * states[1] * ...
     """
-    _current = _current or StateVector()
-    if not len(states):
-        return _current
-    return tensorproduct(states[1:], _current=_current * states[0])
+    if len(states) == 1:
+        return states[0]
+    return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
 
 class SVTimeSequence:
