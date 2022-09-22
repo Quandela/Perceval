@@ -29,6 +29,7 @@ from .naive import NaiveBackend
 from .slos import SLOSBackend
 from .stepper import StepperBackend
 from .strawberryfields import SFBackend
+from .mps import MPSBackend
 from .remote import RemoteCredentials, RemoteBackendBuilder
 
 
@@ -57,7 +58,7 @@ class Platform(ABC):
 
 
 class LocalPlatform(Platform):
-    _backends = [NaiveBackend, CliffordClifford2017Backend, SLOSBackend, StepperBackend]
+    _backends = [NaiveBackend, CliffordClifford2017Backend, SLOSBackend, StepperBackend, MPSBackend]
     if SFBackend.is_available():
         _backends.append(SFBackend)
 

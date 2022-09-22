@@ -316,8 +316,15 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
+    def set_cutoff(self, cutoff: int):
+        r"""
+        Set the cutoff dimension for the MPS simulator.
+        """
+        return
+
     def samples(self, input_state, count):
         results = []
         for i in range(count):
             results.append(self.sample(input_state))
         return results
+
