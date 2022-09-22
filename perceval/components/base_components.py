@@ -70,6 +70,8 @@ class BS(ACircuit):
 
     @staticmethod
     def r_to_theta(r):
+        """Compute theta given a reflectivity value
+        """
         return 2*np.arccos(np.sqrt(float(r)))
 
     def _compute_unitary(self, assign=None, use_symbolic=False):

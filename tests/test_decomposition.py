@@ -218,7 +218,7 @@ def test_decomposition_inverse_rx():
 
 def test_decomposition_inverse_h():
     ub = (pcvl.Circuit(2)
-          // (0, comp.BS.H(theta=pcvl.Parameter("theta"), phi_bl=np.pi, phi_br=np.pi/2, phi_tl=-np.pi/2))
+          // (0, comp.BS.H(theta=pcvl.Parameter("theta")))
           // (1, comp.PS(phi=pcvl.Parameter("phi"))))
 
     u = pcvl.Matrix.random_unitary(6)
