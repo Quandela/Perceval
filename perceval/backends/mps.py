@@ -20,17 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import List, Union
+from typing import Union
 import copy
 
 import numpy as np
 from math import comb, factorial
+from collections import defaultdict
 
 from .template import Backend
-from perceval.utils import StateVector, BasicState, Matrix, AnnotatedBasicState
+from perceval.utils import BasicState, Matrix
 from perceval.components import ACircuit
-
-import quandelibc as qc
 
 
 class MPSBackend(Backend):
@@ -45,8 +44,13 @@ class MPSBackend(Backend):
                  n: int = None,
                  mask: list = None):
         super().__init__(cu, use_symbolic, n, mask)
+        for r, c in self._C:
+            assert c.compute_unitary(use_symbolic=False).shape[0] <= 2,\
+                "MPS backend can not be used with components of using more than 2 modes"
         self._s_min = 1e-8
         self.cutoff = self.m
+        self.res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
+        self.current_input = None
 
     name = "MPS"
     supports_symbolic = False
@@ -64,37 +68,42 @@ class MPSBackend(Backend):
         elif len(u) == 1:
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
-    def compile(self, input_state: Union[BasicState, AnnotatedBasicState]) -> bool:
+    def compile(self, input_state: BasicState) -> bool:
         var = [float(p) for p in self._C.get_parameters()]
-        if self._compiled_input == (var, input_state):
+        if self._compiled_input and self._compiled_input[0] == var and input_state in self.res:
             return False
         self._compiled_input = copy.copy((var, input_state))
+        self.current_input = None
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS
-        input_state *= AnnotatedBasicState([0] * (self.m - input_state.m))
+        input_state *= BasicState([0] * (self.m - input_state.m))
         self.n = input_state.n
         self.d = self.n + 1
         self.cutoff = min(self.cutoff, self.d ** (self.m//2))
         self.gamma = np.zeros((self.m, self.cutoff, self.cutoff, self.d), dtype='complex_')
         for i in range(self.m):
             self.gamma[i, 0, 0, input_state[i]] = 1
-        self.sv = np.zeros((self.m, self.cutoff))
+        self.sv = np.zeros((self.m - 1, self.cutoff))
         self.sv[:, 0] = 1
 
         for r, c in self._C:
             self.apply(r, c)
+
+        self.res[tuple(input_state)]["gamma"] = self.gamma.copy()
+        self.res[tuple(input_state)]["sv"] = self.sv.copy()
         return True
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
         return abs(self.probampli_be(input_state, output_state, n, output_idx))**2
 
-    def probampli_be(self, _, output_state, n=None, output_idx=None):
+    def probampli_be(self, input_state, output_state, n=None, output_idx=None):
         # TODO: put in quandelibc
         mps_in_list = []
+        self.current_input = tuple(input_state)
         for k in range(self.m - 1):
-            mps_in_list.append(self.gamma[k, :, :, output_state[k]])
+            mps_in_list.append(self.res[tuple(input_state)]["gamma"][k, :, :, output_state[k]])
             mps_in_list.append(self._sv_diag(k))
-        mps_in_list.append(self.gamma[self.m-1, :, :, output_state[self.m-1]])
+        mps_in_list.append(self.res[tuple(input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
 ################# From here, everything must be in quandelibc ##############################
@@ -109,7 +118,6 @@ class MPSBackend(Backend):
         return big_u
 
     def update_state_1_mode(self, k, u):
-        # TODO: put in quandelibc
         self.gamma[k] = np.tensordot(self.gamma[k], self._transition_matrix_1_mode(u), axes=(2,0))
 
     def update_state(self, k, u):
@@ -181,6 +189,10 @@ class MPSBackend(Backend):
         return big_u
 
     def _sv_diag(self, k):
+        if self.res[self.current_input]["sv"].any():
+            sv = self.res[self.current_input]["sv"]
+        else:
+            sv = self.sv
         sv_diag = np.zeros((self.cutoff, self.cutoff))
-        np.fill_diagonal(sv_diag, self.sv[k,:])
+        np.fill_diagonal(sv_diag, sv[k - 1,:])
         return sv_diag
