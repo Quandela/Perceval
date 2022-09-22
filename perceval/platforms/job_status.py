@@ -30,7 +30,14 @@ class RunningStatus(Enum):
     RUNNING = 1
     SUCCESS = 2
     ERROR = 3
-    CANCELLED = 4
+    CANCELED = 4
+
+    @staticmethod
+    def from_server_response(res):
+        if res == 'completed':
+            return RunningStatus.SUCCESS
+        else:
+            return RunningStatus[res.upper()]
 
 
 class JobStatus:
@@ -51,6 +58,10 @@ class JobStatus:
     @property
     def status(self):
         return self._status
+
+    @status.setter
+    def status(self, status: RunningStatus):
+        self._status = status
 
     def start_run(self):
         self._running_time_start = time()

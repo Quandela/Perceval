@@ -104,13 +104,14 @@ class RemotePlatform(Platform):
         return {'Authorization': f"Bearer {self._token}"}
 
 
+
 def _platform_type(endpoint: str, token: str) -> PlatformType:
     # TODO request platform type to the server via a dedicated web service
     return PlatformType.SIMULATOR  # Temp
 
 
 def get_platform(name: str, token: str = None, url: str = None):
-    name = name.lower()
+
     if url is None:
         url = DEFAULT_URL
 

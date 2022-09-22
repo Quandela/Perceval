@@ -29,18 +29,18 @@ from perceval.backends.stepper import StepperBackend
 from perceval.backends.strawberryfields import SFBackend
 
 BACKEND_LIST = {
-    CliffordClifford2017Backend.name.lower(): CliffordClifford2017Backend,
-    NaiveBackend.name.lower(): NaiveBackend,
-    SLOSBackend.name.lower(): SLOSBackend,
-    StepperBackend.name.lower(): StepperBackend,
+    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
+    NaiveBackend.name: NaiveBackend,
+    SLOSBackend.name: SLOSBackend,
+    StepperBackend.name: StepperBackend,
 }
 if SFBackend.is_available():
-    BACKEND_LIST[SFBackend.name.lower()] = SFBackend
+    BACKEND_LIST[SFBackend.name] = SFBackend
 
 @deprecated(reason='Please use get_platform("platform name") instead')
 class BackendFactory:
-    def get_backend(self, backend_name="slos"):
-        name = backend_name.lower()
+    def get_backend(self, backend_name="SLOS"):
+        name = backend_name
         if name in BACKEND_LIST:
             return BACKEND_LIST[name]
-        return BACKEND_LIST['slos']
+        return BACKEND_LIST['SLOS']

@@ -37,6 +37,7 @@ from pkg_resources import get_distribution
 pcvl_version = get_distribution("perceval-quandela").version
 JOB_CREATE_ENDPOINT = '/api/job'
 
+
 ################################
 # Sync methods Factory
 def _sync_wrapper(cls, func):
@@ -76,28 +77,20 @@ class RemoteBackend(Backend):
 
     def __defaults_payload(self, command: str):
         return {
-            'platform_id': self.name,
+            'platform_name': self.name,
             'job_name': command,
             'pcvl_version': pcvl_version
         }
 
     def __request_job_create(self, body):
-        job = None
-        try:
-            endpoint = self.__platform.build_endpoint(JOB_CREATE_ENDPOINT)
-            request = requests.post(endpoint,
-                                    headers=self.__platform.get_http_headers(),
-                                    json=body)
-            request.raise_for_status()
+        endpoint = self.__platform.build_endpoint(JOB_CREATE_ENDPOINT)
+        request = requests.post(endpoint,
+                                headers=self.__platform.get_http_headers(),
+                                json=body)
+        request.raise_for_status()
 
-            json = request.json()
-            # job = Job(json['job_id'], self.__credentials)  # TODO implement RemoteJob before uncommenting this line
-        except ConnectionError as e:
-            logging.error(f"Connection error: {str(e)}")
-
-        except JSONDecodeError as ex:
-            logging.error(f"Could not load response :{ex.msg}")
-        return job
+        json = request.json()
+        return json['job_id']
 
     def prob_be(self, input_state, output_state, n=None):
         raise NotImplementedError
@@ -110,10 +103,7 @@ class RemoteBackend(Backend):
             'input_state': serialize(input_state)
         }
 
-        job = self.__request_job_create(payload)
-        job.set_deserializer(deserialize_state)
-
-        return job
+        return self.__request_job_create(payload)
 
     def async_samples(self, input_state, count):
         payload = self.__defaults_payload('samples')
@@ -124,9 +114,7 @@ class RemoteBackend(Backend):
             'count': count
         }
 
-        job = self.__request_job_create(payload)
-        job.set_deserializer(deserialize_state_list)
-        return job
+        return self.__request_job_create(payload)
 
     def async_prob(self,
                    input_state: BasicState,
@@ -143,6 +131,4 @@ class RemoteBackend(Backend):
             'skip_compile': skip_compile
         }
 
-        job = self.__request_job_create(payload)
-        job.set_deserializer(deserialize_float)
-        return job
+        return self.__request_job_create(payload)

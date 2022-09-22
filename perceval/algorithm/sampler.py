@@ -22,7 +22,8 @@
 
 from .runner import Runner
 from perceval.platforms.job import Job
-from perceval.platforms import Platform
+from perceval.platforms import Platform, RemoteJob, LocalJob
+from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_float
 
 
 class Sampler(Runner):
@@ -32,12 +33,21 @@ class Sampler(Runner):
 
     @property
     def sample(self) -> Job:
-        return self._job_type(self._backend.sample)
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_sample, self._platform, deserialize_state)
+        else:
+            return LocalJob(self._backend.sample)
 
     @property
     def samples(self) -> Job:
-        return self._job_type(self._backend.samples)
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_samples, self._platform, deserialize_state_list)
+        else:
+            return LocalJob(self._backend.samples)
 
     @property
     def prob(self) -> Job:
-        return self._job_type(self._backend.prob)
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_prob, self._platform, deserialize_float)
+        else:
+            return LocalJob(self._backend.prob)
