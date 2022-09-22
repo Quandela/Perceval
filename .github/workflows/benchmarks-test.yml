@@ -2,7 +2,7 @@
 # runs benchmarks at benchmarks/benchmark_*.py
 # compare the result on the gh-page branch
 # save the log on (.benchmark/<runner>_CPython-<PyVersion>/<branch>_<tag_version>_<nb_runner>_<commit>.json)
-# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/)
+# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/) 
 
 name: Benchmarks
 
