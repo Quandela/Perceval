@@ -59,7 +59,12 @@ class BasicState(FockState):
         return [BasicState(s) for s in super(BasicState, self).separate_state()]
 
     def __mul__(self, s):
+        if isinstance(s, StateVector):
+            return StateVector(self) * s
         return BasicState(super(BasicState, self).__mul__(s))
+
+    def __pow__(self, power):
+        return BasicState(power * list(self))
 
     def partition(self, distribution_photons: List[int]):
         r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
@@ -147,8 +152,23 @@ class StateVector(defaultdict):
         return super().__iter__()
 
     def __mul__(self, other):
-        r"""Multiply a StateVector by a numeric value prior in a linear combination
+        r"""Multiply a StateVector by a numeric value prior in a linear combination,
+        or computes the tensor product between two StateVectors
         """
+        if isinstance(other, (StateVector, BasicState)):
+            if isinstance(other, BasicState):
+                other = StateVector(other)
+            sv = StateVector()
+            if not other:
+                return self
+            if not self:
+                return other
+            sv.update({l_state * r_state: self[l_state] * other[r_state] for r_state in other for l_state in self})
+            sv.m = self.m + other.m
+            sv._has_symbolic = (other._has_symbolic or self._has_symbolic)
+            sv._normalized = (other._normalized and self._normalized)
+            return sv
+
         assert isinstance(other, (int, float, complex, np.number, sp.Expr)), "normalization factor has to be numeric"
         copy_state = StateVector(None)
         # multiplying - the outcome is a non-normalized StateVector
@@ -160,6 +180,19 @@ class StateVector(defaultdict):
         if isinstance(other, sp.Expr):
             self._has_symbolic = True
         return copy_state
+
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_state = self
+        out = StateVector()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_state
+            if i != len(binary) - 1:
+                power_state *= power_state
+        return out
 
     def __copy__(self):
         sv_copy = StateVector(None)
@@ -279,6 +312,8 @@ class StateVector(defaultdict):
     def __str__(self):
         self._normalize()
         ls = []
+        if not self:
+            return "|>"
         for key, value in self.items():
             if value == 1:
                 ls.append(str(key))
@@ -291,6 +326,15 @@ class StateVector(defaultdict):
 
     def __hash__(self):
         return self.__str__().__hash__()
+
+
+def tensorproduct(states: list[Union[StateVector, BasicState]], _current=None):
+    r""" Computes states[0] * states[1] * ...
+    """
+    _current = _current or StateVector()
+    if not len(states):
+        return _current
+    return tensorproduct(states[1:], _current=_current * states[0])
 
 
 class SVTimeSequence:
