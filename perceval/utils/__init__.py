@@ -24,7 +24,7 @@ from .matrix import Matrix, MatrixN, MatrixS
 from .format import simple_float, simple_complex, format_parameters
 from .parameter import Parameter, P, Expression, E
 from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, tensorproduct, AnnotatedBasicState
+from .statevector import BasicState, StateVector, SVDistribution, tensorproduct, AnnotatedBasicState, Annotation
 from .polarization import Polarization
 from .random import random_seed
 from .globals import global_params
