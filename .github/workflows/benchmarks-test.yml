@@ -1,7 +1,8 @@
-#this is a manual workflow that runs benchmarks at benchmarks/benchmark_*.py
-# compare the logs benchmarks with the logs of the same runner and the same version of python
-# upload the artifact to the GitHub action
-# save the log on the gh-page branch (benchmarks/<runner>_CPython-<PyVersion>/data)
+#this is a manual workflow that compare benchmarks with the same runner and the same version of python
+# runs benchmarks at benchmarks/benchmark_*.py
+# compare the result on the gh-page branch
+# save the log on (.benchmark/<runner>_CPython-<PyVersion>/<branch>_<tag_version>_<nb_runner>_<commit>.json)
+# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/)
 
 name: Benchmarks
 
@@ -141,7 +142,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} 
+          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
