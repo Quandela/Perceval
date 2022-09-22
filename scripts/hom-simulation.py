@@ -43,7 +43,7 @@ def photon_length_fn(t):
     return length, 1-(length-t)*h*(length-t)/2/length, 0
 
 
-st0 = pcvl.AnnotatedBasicState([1, 0])
+st0 = pcvl.BasicState([1, 0])
 backend = pcvl.BackendFactory().get_backend("Stepper")
 
 sim = backend(c)

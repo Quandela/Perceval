@@ -22,14 +22,17 @@
 
 from deprecated import deprecated
 from .template import Backend
-from perceval.backends.cliffords2017 import CliffordClifford2017Backend
-from perceval.backends.naive import NaiveBackend
-from perceval.backends.slos import SLOSBackend
-from perceval.backends.stepper import StepperBackend
-from perceval.backends.strawberryfields import SFBackend
+from .cliffords2017 import CliffordClifford2017Backend
+from .naive import NaiveBackend
+from .slos import SLOSBackend
+from .stepper import StepperBackend
+from .strawberryfields import SFBackend
+from .mps import MPSBackend
+
 
 BACKEND_LIST = {
     CliffordClifford2017Backend.name: CliffordClifford2017Backend,
+    MPSBackend.name: MPSBackend,
     NaiveBackend.name: NaiveBackend,
     SLOSBackend.name: SLOSBackend,
     StepperBackend.name: StepperBackend,
