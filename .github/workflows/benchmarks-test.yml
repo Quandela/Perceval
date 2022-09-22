@@ -77,6 +77,9 @@ jobs:
 
   benchmark:
     name: Run pytest-benchmark benchmark example
+    if: ${{ always() }}
+    needs:
+      - build-quandelibc
     runs-on: ${{ github.event.inputs.os }}
     steps:
       - uses: actions/checkout@v2
@@ -84,11 +87,34 @@ jobs:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
+      - if: runner.os == 'Windows'
+        name: Venv Windows
+        run: |
+          python -m venv venv
+          venv/Scripts/activate
+
+      - if:  runner.os != 'Windows'
+        name: Venv not Windows
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
+
+      - if: inputs.quandelibc_ref != ''
+        name: Fetch previously compiled Quandelibc
+        uses: actions/download-artifact@v2
+        with:
+          name: python-package-distributions
+          path: precompiled-quandelibc
+
+      - if: inputs.quandelibc_ref != ''
+        name: Install previously compiled Quandelibc
+        run: bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
 
       - name: Install dependencies
         run: |
