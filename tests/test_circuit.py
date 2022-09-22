@@ -23,9 +23,10 @@
 import pytest
 from pathlib import Path
 
-from perceval import BackendFactory, CircuitAnalyser, Circuit, P, BasicState, pdisplay, Matrix
-from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyser
+from perceval import get_platform, Circuit, P, BasicState, pdisplay, Matrix, BackendFactory
+from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
 from perceval.rendering.format import Format
+import perceval.algorithm as algo
 import perceval.components.base_components as comp
 import sympy as sp
 import numpy as np
@@ -48,8 +49,9 @@ def test_helloword():
     for p_res, p_exp in zip(c.get_parameters(True), expected):
         assert str(p_res) == str(p_exp)
     assert c.U.is_unitary()
-    for backend_name in [None, "SLOS", "Naive"]:
-        simulator = BackendFactory().get_backend(backend_name)(c.U)
+    for backend_name in ["SLOS", "Naive"]:
+        platform = get_platform(backend_name)
+        simulator = platform.backend(c.U)
         expected_outputs = {
             BasicState("|0,1>"): 0.5,
             BasicState("|1,0>"): 0.5
@@ -61,11 +63,11 @@ def test_helloword():
             assert pytest.approx(expected_outputs[output_state]) == simulator.prob(input_state, output_state)
             count += 1
         assert count == len(expected_outputs)
-        ca = CircuitAnalyser(simulator,
-                             [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
-                             "*"  # all possible output states that can be generated with 1 or 2 photons
-                             )
-        assert strip_line_12(pdisplay_analyser(ca)) == strip_line_12("""
+        ca = algo.Analyzer(platform, c.U,
+                           [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
+                           "*"  # all possible output states that can be generated with 1 or 2 photons
+                           )
+        assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-------+-------+-------+-------+-------+-------+
             |       | |1,0> | |0,1> | |2,0> | |1,1> | |0,2> |
             +-------+-------+-------+-------+-------+-------+
@@ -110,21 +112,21 @@ def test_sbs():
     bs = comp.SimpleBS()
     assert pdisplay_matrix(bs.U) == "⎡sqrt(2)/2    sqrt(2)*I/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2  ⎦"
     for backend in ["SLOS", "Naive"]:
-        simulator_backend = BackendFactory().get_backend(backend)
-        sbs = simulator_backend(bs.U)
+        pf = get_platform(backend)
+        sbs = pf.backend(bs.U)
         for _ in range(10):
             out = sbs.sample(BasicState("|0,1>"))
             assert str(out) == "|0,1>" or str(out) == "|1,0>"
-        ca = CircuitAnalyser(sbs, [BasicState([0, 1]), BasicState([1, 0])])
+        ca = algo.Analyzer(pf, bs.U, [BasicState([0, 1]), BasicState([1, 0])])
         ca.compute()
-        assert pdisplay_analyser(ca, nsimplify=True) == strip_line_12("""
+        assert pdisplay_analyzer(ca, nsimplify=True) == strip_line_12("""
             +-------+-------+-------+
             |       | |0,1> | |1,0> |
             +-------+-------+-------+
             | |0,1> |  1/2  |  1/2  |
             | |1,0> |  1/2  |  1/2  |
             +-------+-------+-------+""")
-        assert pdisplay_analyser(ca, nsimplify=False) == strip_line_12("""
+        assert pdisplay_analyzer(ca, nsimplify=False) == strip_line_12("""
             +-------+-------+-------+
             |       | |0,1> | |1,0> |
             +-------+-------+-------+

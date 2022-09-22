@@ -20,27 +20,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from deprecated import deprecated
-from .template import Backend
-from perceval.backends.cliffords2017 import CliffordClifford2017Backend
-from perceval.backends.naive import NaiveBackend
-from perceval.backends.slos import SLOSBackend
-from perceval.backends.stepper import StepperBackend
-from perceval.backends.strawberryfields import SFBackend
+from perceval.platforms.platform import Platform
+from perceval.platforms.local_job import LocalJob
+from perceval.platforms.remote_job import RemoteJob
+from perceval.components import ACircuit
+from perceval.utils import Matrix
 
-BACKEND_LIST = {
-    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
-    NaiveBackend.name: NaiveBackend,
-    SLOSBackend.name: SLOSBackend,
-    StepperBackend.name: StepperBackend,
-}
-if SFBackend.is_available():
-    BACKEND_LIST[SFBackend.name] = SFBackend
 
-@deprecated(reason='Please use get_platform("platform name") instead')
-class BackendFactory:
-    def get_backend(self, backend_name="SLOS"):
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name]
-        return BACKEND_LIST['SLOS']
+class Runner:
+    def __init__(self, platform: Platform):
+        self._platform = platform
+        self._cu = None
+        self._backend = None
+        self._job_type = RemoteJob if platform.is_remote() else LocalJob
+
+    @property
+    def circuit(self):
+        return self._cu
+
+    @circuit.setter
+    def circuit(self, cu):
+        assert isinstance(cu, ACircuit) or isinstance(cu, Matrix), \
+            f'Runner accepts linear circuits or unitary matrix as input, not {type(cu)}'
+        self._cu = cu
+        self._backend = self._platform.backend(cu)
+        if not self._check_compatibility():
+            raise RuntimeError('Incompatible platform and circuit')
+
+    def _check_compatibility(self) -> bool:
+        # if self._platform.is_remote():
+        #     # TODO remote compatibility check
+        #     return False
+        return True

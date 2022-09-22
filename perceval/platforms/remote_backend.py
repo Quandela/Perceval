@@ -20,39 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from typing import Union
 import logging
+import requests
 import time
 from json import JSONDecodeError
-from typing import Union
 
-import requests
-
-from ..template import Backend
-from .credentials import RemoteCredentials
-from .remote_jobs import Job
-
+from perceval.backends import Backend
+from perceval.components import ACircuit
 from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state, deserialize_state_list, \
     deserialize_float
-from perceval.components import ACircuit
 from perceval.utils import Matrix, BasicState
 
 from pkg_resources import get_distribution
 
 pcvl_version = get_distribution("perceval-quandela").version
-
 JOB_CREATE_ENDPOINT = '/api/job'
-
-
-################################
-# Factory
-class RemoteBackendBuilder:
-    def __init__(self, name: str, platform: str, credentials: RemoteCredentials):
-        self.name = name
-        self.platform = platform
-        self.credentials = credentials
-
-    def __call__(self, u, use_symbolic=None, n=None, mask=None):
-        return RemoteBackend(self.name, self.platform, self.credentials, u, use_symbolic, n, mask)
 
 
 ################################
@@ -82,11 +65,9 @@ def generate_sync_methods(cls):
 ################################
 @generate_sync_methods
 class RemoteBackend(Backend):
-    def __init__(self, name: str, platform: str, credentials: RemoteCredentials, cu: Union[ACircuit, Matrix],
-                 use_symbolic=None, n=None, mask=None):
-        self.name = name
+    def __init__(self, platform, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None, mask=None):
+        self.name = platform.name
         self.__platform = platform
-        self.__credentials = credentials
         if isinstance(cu, ACircuit):
             self.__cu_key = 'circuit'
         else:
@@ -96,28 +77,20 @@ class RemoteBackend(Backend):
 
     def __defaults_payload(self, command: str):
         return {
-            'platform_id': self.__platform,
+            'platform_name': self.name,
             'job_name': command,
             'pcvl_version': pcvl_version
         }
 
     def __request_job_create(self, body):
-        job = None
-        try:
-            endpoint = self.__credentials.build_endpoint(JOB_CREATE_ENDPOINT)
-            request = requests.post(endpoint,
-                                    headers=self.__credentials.http_headers(),
-                                    json=body)
-            request.raise_for_status()
+        endpoint = self.__platform.build_endpoint(JOB_CREATE_ENDPOINT)
+        request = requests.post(endpoint,
+                                headers=self.__platform.get_http_headers(),
+                                json=body)
+        request.raise_for_status()
 
-            json = request.json()
-            job = Job(json['job_id'], self.__credentials)
-        except ConnectionError as e:
-            logging.error(f"Connection error: {str(e)}")
-
-        except JSONDecodeError as ex:
-            logging.error(f"Could not load response :{ex.msg}")
-        return job
+        json = request.json()
+        return json['job_id']
 
     def prob_be(self, input_state, output_state, n=None):
         raise NotImplementedError
@@ -130,10 +103,7 @@ class RemoteBackend(Backend):
             'input_state': serialize(input_state)
         }
 
-        job = self.__request_job_create(payload)
-        job.set_deserializer(deserialize_state)
-
-        return job
+        return self.__request_job_create(payload)
 
     def async_samples(self, input_state, count):
         payload = self.__defaults_payload('samples')
@@ -144,9 +114,7 @@ class RemoteBackend(Backend):
             'count': count
         }
 
-        job = self.__request_job_create(payload)
-        job.set_deserializer(deserialize_state_list)
-        return job
+        return self.__request_job_create(payload)
 
     def async_prob(self,
                    input_state: BasicState,
@@ -163,6 +131,4 @@ class RemoteBackend(Backend):
             'skip_compile': skip_compile
         }
 
-        job = self.__request_job_create(payload)
-        job.set_deserializer(deserialize_float)
-        return job
+        return self.__request_job_create(payload)

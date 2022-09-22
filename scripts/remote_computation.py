@@ -24,7 +24,10 @@ import perceval as pcvl
 import perceval.lib.phys as phys
 import sympy as sp
 import numpy as np
+from tqdm import tqdm
 import time
+
+from perceval.algorithm import Sampler
 
 cnot = phys.Circuit(6, name="Ralph CNOT")
 cnot.add((0, 1), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
@@ -42,32 +45,44 @@ cnot.add((3, 4), phys.BS(R=1 / 2))
 #     print(str(s))
 
 token_qcloud = 'YOUR_TOKEN'
-credentials = pcvl.RemoteCredentials(url="https://api.cloud.quandela.dev", token=token_qcloud)
+platform_url = "http://127.0.0.1:5001"
 
-simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
-s_cnot = simulator_backend(cnot.U)
-
-job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
-
-job_status = 'created'
-while job_status not in ['completed', 'error', 'canceled']:
-    print(f'job status : {job_status}')
-    time.sleep(2)
-    job_status = job.get_status()
-
-results = job.get_results()
-
-results2 = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+naive_remote_platform = pcvl.get_platform("Naive", token_qcloud, platform_url)
 
 
-states = {
-    pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
-    pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
-    pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
-    pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
-}
+sampler = Sampler(naive_remote_platform, cnot)
 
-ca = pcvl.CircuitAnalyser(s_cnot, states)
-ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-pcvl.pdisplay(ca)
-print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))
+nsample = 10000
+async_job = sampler.samples.execute_async(pcvl.BasicState([0, 1, 0, 1, 0, 0]), nsample)
+
+previous_prog = 0
+with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
+    tq.set_description(f'Get {nsample} samples from {cnot.name} using simulator backend {naive_remote_platform.name}')
+    while not async_job.is_completed():
+        tq.update(async_job.status.progress-previous_prog)
+        previous_prog = async_job.status.progress
+        time.sleep(.2)
+    tq.update(1-previous_prog)
+    tq.close()
+
+print(f"Job status = {async_job.status()}")
+results = async_job.get_results()
+assert len(results) == nsample
+
+#
+# results = job.get_results()
+#
+# results2 = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+#
+#
+# states = {
+#     pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
+#     pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
+#     pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
+#     pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
+# }
+#
+# ca = pcvl.CircuitAnalyser(s_cnot, states)
+# ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+# pcvl.pdisplay(ca)
+# print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))

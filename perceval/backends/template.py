@@ -142,7 +142,8 @@ class Backend(ABC):
              input_state: BasicState,
              output_state: BasicState,
              n: int = None,
-             skip_compile: bool = False) -> float:
+             skip_compile: bool = False,
+             progress_callback=None) -> float:
         r"""
         gives the probability of an output state given an input state
         :param input_state: the input state
@@ -307,7 +308,7 @@ class Backend(ABC):
         """
         return False
 
-    def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
+    def sample(self, input_state: Union[BasicState, StateVector], progress_callback=None) -> BasicState:
         r"""Return one sample for the circuit according to the output probability distribution given an input state
         """
         prob = random.random()
@@ -318,7 +319,7 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state: Union[BasicState, StateVector], count: int) -> list[BasicState]:
+    def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None) -> list[BasicState]:
         r"""Return samples for the circuit according to the output probability distribution given an input state
 
         :param input_state: a given input state
