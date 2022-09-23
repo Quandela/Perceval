@@ -25,6 +25,7 @@ from .base_components import PERM
 from .port import APort, PortLocation, Herald, Encoding
 from .mode_connection import ModeConnectionResolver, UnavailableModeException
 from perceval.utils import SVDistribution, BasicState, StateVector, global_params
+from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import Backend
 from typing import Dict, Type
 
@@ -92,7 +93,7 @@ class Processor:
     def m(self) -> int:
         return self._n_moi + self._n_heralds
 
-    def add(self, mode_mapping, component):
+    def add(self, mode_mapping, component, keep_port=True):
         """
         Add a component (linear or non linear)
         Checks if it's possible:
@@ -105,7 +106,7 @@ class Processor:
         connector = ModeConnectionResolver(self, component)
         mode_mapping = connector.resolve(mode_mapping)
         if isinstance(component, Processor):
-            self._compose_processor(mode_mapping, component)
+            self._compose_processor(mode_mapping, component, keep_port)
         elif isinstance(component, AComponent):
             self._add_component(mode_mapping, component)
         else:
@@ -128,12 +129,13 @@ class Processor:
                 result[m] = port.name
         return result
 
-    def _compose_processor(self, mode_mapping, processor):
-        # Remove output ports used to connect the new processor
-        for i in mode_mapping:
-            port = self.get_output_port(i)
-            if port is not None:
-                del self._out_ports[port]
+    def _compose_processor(self, mode_mapping, processor, keep_port: bool):
+        if not keep_port:
+            # Remove output ports used to connect the new processor
+            for i in mode_mapping:
+                port = self.get_output_port(i)
+                if port is not None:
+                    del self._out_ports[port]
 
         # Compute herald positions
         other_herald_pos = list(processor.heralds.keys())
@@ -146,7 +148,15 @@ class Processor:
         # Add PERM, component, PERM^-1
         perm_modes, perm_component = self._generate_permutation(mode_mapping)
         if perm_component is not None:
-            self._components.append((perm_modes, perm_component))
+            if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
+                l_perm_r = self._components[-1][0]
+                l_perm_vect = self._components[-1][1].perm_vector
+                new_range, new_perm_vect = perm_compose(l_perm_r, l_perm_vect, perm_modes, perm_component.perm_vector)
+
+                self._components[-1] = (new_range, PERM(new_perm_vect))
+
+            else:
+                self._components.append((perm_modes, perm_component))
         for pos, c in processor._components:
             pos = [x + min(mode_mapping) for x in pos]
             self._components.append((pos, c))
@@ -161,7 +171,8 @@ class Processor:
             if isinstance(port, Herald):
                 self._add_herald(port_mode, port.expected, port.user_given_name)
             else:
-                self.add_port(port_mode, port, PortLocation.output)
+                if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                    self.add_port(port_mode, port, PortLocation.output)
 
         # Retrieve post process function from the other processor
         if processor._post_select is not None:

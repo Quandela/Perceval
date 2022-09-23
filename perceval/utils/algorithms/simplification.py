@@ -23,7 +23,7 @@
 import numpy as np
 
 import perceval.components.base_components as comp
-from perceval import Circuit
+from perceval.components import Circuit
 
 
 def simplify(circuit: Circuit, display: bool = False) -> Circuit:
