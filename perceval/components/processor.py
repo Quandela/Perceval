@@ -21,11 +21,10 @@
 # SOFTWARE.
 from .abstract_component import AComponent
 from .source import Source
-from .linear_circuit import ALinearCircuit, Circuit
 from .base_components import PERM
 from .port import APort, PortLocation, Herald, Encoding
 from .mode_connection import ModeConnectionResolver, UnavailableModeException
-from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, BasicState, global_params
+from perceval.utils import SVDistribution, BasicState, StateVector, global_params
 from perceval.backends import Backend
 from typing import Dict, Type
 
@@ -289,7 +288,7 @@ class Processor:
     def source(self):
         return self._source
 
-    # def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
+    # def filter_herald(self, s: BasicState, keep_herald: bool) -> StateVector:
     #     if not self._heralds or keep_herald:
     #         return StateVector(s)
     #     new_state = []
@@ -318,7 +317,7 @@ class Processor:
             outputs[k] /= all_p
         return all_p, outputs
 
-    def _state_selected(self, state: AnnotatedBasicState) -> bool:
+    def _state_selected(self, state: BasicState) -> bool:
         """
         Computes if the state is selected given heralds and post selection function
         """

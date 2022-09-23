@@ -23,7 +23,7 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, Circuit, BasicState, AnnotatedBasicState
+from perceval import Matrix, P, Circuit, BasicState
 from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state
 import perceval.components.base_components as comp
 

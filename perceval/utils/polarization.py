@@ -67,12 +67,17 @@ class Polarization:
             if v[0] < sp.S("0") or v[0] >= sp.S("2*pi"):
                 raise ValueError("theta should be in [0,2*pi[")
             self.theta_phi = v
+        elif isinstance(v, complex):
+            self.theta_phi = (v.real, v.imag)
         elif isinstance(v, float) or isinstance(v, int):
             if v < sp.S("0") or v > sp.S("pi"):
                 raise ValueError("theta should be in [0,pi]")
             self.theta_phi = (v, 0)
         else:
             raise ValueError("Polarization init should be string or tuple")
+
+    def __complex__(self):
+        return self.theta_phi[0]+1j*self.theta_phi[1]
 
     @staticmethod
     def parse(s: str) -> Polarization:

@@ -131,7 +131,7 @@ def test_match_rewrite_phase():
     rewrite2 = pcvl.Circuit(1, name="rewrite") // comp.PS(pcvl.P("phi"))
     matched = a.match(pattern2)
     for k, v in matched.v_map.items():
-        pattern2[k].set_value(v)
+        pattern2.param(k).set_value(v)
     v = pattern2.compute_unitary(False)
     res = optimize(rewrite2, v, norm.frobenius, sign=-1)
     assert pytest.approx(0+1) == res.fun+1

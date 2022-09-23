@@ -20,40 +20,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import perceval.components.base_components as comp
-import quandelibc as qc
+from abc import ABC, abstractmethod
+from typing import Any, Callable
+
+from .job_status import JobStatus
 
 
-dt = pcvl.Parameter("Δt")
+class Job(ABC):
+    def __init__(self, fn: Callable):
+        # create an id or check existence of current id
+        self._fn = fn
+        # id will be assigned by remote job - not implemented for local class
+        self._id = None
+        self._results = None
+        pass
 
-c = pcvl.Circuit(2)
-c //= comp.SimpleBS()
-c //= (1, comp.TD(dt))
-c //= comp.SimpleBS()
+    def __call__(self, *args, **kwargs) -> Any:
+        return self.execute_sync(*args, **kwargs)
 
-pcvl.pdisplay(c)
+    @property
+    def id(self):
+        return self._id
 
+    def get_results(self) -> Any:
+        return self._results
 
-def photon_length_fn(t):
-    length = 0.2e-9
-    h = 2 / length
-    if t > length:
-        return length, 1, 0
-    return length, 1-(length-t)*h*(length-t)/2/length, 0
+    @property
+    @abstractmethod
+    def status(self) -> JobStatus:
+        pass
 
+    def is_completed(self) -> bool:
+        return self.status.completed
 
-st0 = pcvl.BasicState([1, 0])
-backend = pcvl.BackendFactory().get_backend("Stepper")
+    @abstractmethod
+    def execute_sync(self, *args, **kwargs) -> Any:
+        pass
 
-sim = backend(c)
-
-
-def f(x):
-    dt.set_value(x)
-    return sim.prob(st0, qc.FockState([2, 0]))+sim.prob(st0, qc.FockState([0, 2]))
-
-
-for i in range(100):
-    x = i * 2e-9/50
-    print("f(%g)=%g" % (x, f(x)))
+    @abstractmethod
+    def execute_async(self, *args, **kwargs):
+        pass

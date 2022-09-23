@@ -22,7 +22,6 @@
 
 from .linear_circuit import Circuit, ALinearCircuit
 from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
 from .processor import Processor
 from .source import Source
 from .port import Port, Herald, DigitalConverterDetector, CounterDetector, Encoding, PortLocation

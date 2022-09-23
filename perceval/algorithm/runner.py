@@ -20,40 +20,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import perceval.components.base_components as comp
-import quandelibc as qc
+from perceval.platforms.platform import Platform
+from perceval.platforms.local_job import LocalJob
+from perceval.platforms.remote_job import RemoteJob
+from perceval.components import ALinearCircuit
+from perceval.utils import Matrix
 
 
-dt = pcvl.Parameter("Δt")
+class Runner:
+    def __init__(self, platform: Platform):
+        self._platform = platform
+        self._cu = None
+        self._backend = None
+        self._job_type = RemoteJob if platform.is_remote() else LocalJob
 
-c = pcvl.Circuit(2)
-c //= comp.SimpleBS()
-c //= (1, comp.TD(dt))
-c //= comp.SimpleBS()
+    @property
+    def circuit(self):
+        return self._cu
 
-pcvl.pdisplay(c)
+    @circuit.setter
+    def circuit(self, cu):
+        assert isinstance(cu, ALinearCircuit) or isinstance(cu, Matrix), \
+            f'Runner accepts linear circuits or unitary matrix as input, not {type(cu)}'
+        self._cu = cu
+        self._backend = self._platform.backend(cu)
+        if not self._check_compatibility():
+            raise RuntimeError('Incompatible platform and circuit')
 
-
-def photon_length_fn(t):
-    length = 0.2e-9
-    h = 2 / length
-    if t > length:
-        return length, 1, 0
-    return length, 1-(length-t)*h*(length-t)/2/length, 0
-
-
-st0 = pcvl.BasicState([1, 0])
-backend = pcvl.BackendFactory().get_backend("Stepper")
-
-sim = backend(c)
-
-
-def f(x):
-    dt.set_value(x)
-    return sim.prob(st0, qc.FockState([2, 0]))+sim.prob(st0, qc.FockState([0, 2]))
-
-
-for i in range(100):
-    x = i * 2e-9/50
-    print("f(%g)=%g" % (x, f(x)))
+    def _check_compatibility(self) -> bool:
+        # if self._platform.is_remote():
+        #     # TODO remote compatibility check
+        #     return False
+        return True

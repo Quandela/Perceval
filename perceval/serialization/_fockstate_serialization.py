@@ -20,21 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import BasicState, AnnotatedBasicState
+from perceval.utils.statevector import BasicState
 from typing import Union
 from ast import literal_eval
 
 
-def serialize_state(state: Union[AnnotatedBasicState, BasicState]):
+def serialize_state(state: BasicState):
     return str(state)
 
 
 def deserialize_state(pb_fs):
-    try:
-        s = BasicState(pb_fs)
-    except:
-        s = AnnotatedBasicState(pb_fs)
-    return s
+    return BasicState(pb_fs)
 
 
 def deserialize_state_list(states):

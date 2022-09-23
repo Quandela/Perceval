@@ -20,13 +20,34 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-class RemoteCredentials:
-    def __init__(self, url=None, token=None):
-        self.url = url
-        self.token = token
+from .runner import Runner
+from perceval.platforms.job import Job
+from perceval.platforms import Platform, RemoteJob, LocalJob
+from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_float
 
-    def http_headers(self):
-        return {'Authorization': f"Bearer {self.token}"}
 
-    def build_endpoint(self, endpoint):
-        return self.url + endpoint
+class Sampler(Runner):
+    def __init__(self, platform: Platform, cu):
+        super().__init__(platform)
+        self.circuit = cu
+
+    @property
+    def sample(self) -> Job:
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_sample, self._platform, deserialize_state)
+        else:
+            return LocalJob(self._backend.sample)
+
+    @property
+    def samples(self) -> Job:
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_samples, self._platform, deserialize_state_list)
+        else:
+            return LocalJob(self._backend.samples)
+
+    @property
+    def prob(self) -> Job:
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_prob, self._platform, deserialize_float)
+        else:
+            return LocalJob(self._backend.prob)

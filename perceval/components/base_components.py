@@ -20,11 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sympy as sp
+from copy import copy
 import numpy as np
+import sympy as sp
 
 from perceval.components import ALinearCircuit
-from perceval.utils import Matrix, format_parameters
+from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
 
 
 class GenericBS(ALinearCircuit):
@@ -372,6 +373,26 @@ class PERM(Unitary):
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
+
+    def apply(self, r, sv):
+        if isinstance(sv, BasicState):
+            sv = StateVector(sv)
+
+        min_r = r[0]
+        max_r = r[-1] + 1
+
+        permutation = self.perm_vector
+        inv = np.empty_like(permutation)
+        inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
+        inv = [inv[i].item() for i in range(len(inv))]
+
+        nsv = copy(sv)
+        nsv.clear()
+        nsv.update({BasicState(state.set_slice(slice(min_r, max_r), BasicState([state[i + min_r]
+                                                                                for i in inv]))):
+                        prob_ampli for state, prob_ampli in sv.items()})
+
+        return nsv
 
 
 class PBS(Unitary):
