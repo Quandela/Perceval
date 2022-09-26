@@ -146,49 +146,13 @@ jobs:
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
-      - name: upload the Log result
+      - name: upload the result Log
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
-
-      - name: checkout gh-pages
-        uses: actions/checkout@v2
-        with:
-          ref: gh-pages
-
-      - name: Download the Log result
-        uses: actions/download-artifact@v3
-        with:
-          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
-
-      - name: compare benchmark
-        run: |
-          pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
-
-      - name: upload the compare result
-        uses: actions/upload-artifact@v3
-        with:
-          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
-          path: |
-            compare_result_${{ env.folder_env }}_${{ env.tag_version }}
-
-      - name: Download the compare result
-        uses: actions/download-artifact@v3
-        with:
-          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
-
-      - name: Save benchmark report in gh-pages branch
-        if: inputs.save
-        run: |
-          git pull
-          git config --global user.name 'github-action-benchmark'
-          git config --global user.email 'github@users.noreply.github.com'
-          git add ${{ env.folder_file_json }}
-          git commit -am "Automated benchmark report"
-          git push
 
       # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
@@ -202,3 +166,39 @@ jobs:
           benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
           alert-threshold: '120%'
           comment-on-alert: true
+
+      - name: checkout gh-pages
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+
+      - name: Download the result Log on github action
+        uses: actions/download-artifact@v3
+        with:
+          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+
+      - name: compare benchmark
+        run: |
+          pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+
+      - name: upload the result compare
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          path: |
+            compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+
+      - name: Download the result compare
+        uses: actions/download-artifact@v3
+        with:
+          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+
+      - name: Save benchmark report in gh-pages branch
+        if: inputs.save
+        run: |
+          git pull
+          git config --global user.name 'github-action-benchmark'
+          git config --global user.email 'github@users.noreply.github.com'
+          git add ${{ env.folder_file_json }}
+          git commit -am "Automated benchmark report"
+          git push
