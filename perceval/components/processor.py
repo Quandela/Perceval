@@ -24,7 +24,7 @@ from .source import Source
 from .base_components import PERM
 from .port import APort, PortLocation, Herald, Encoding
 from .mode_connection import ModeConnectionResolver, UnavailableModeException
-from perceval.utils import SVDistribution, BasicState, StateVector, global_params
+from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Matrix
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import Backend
 from typing import Dict, Type
@@ -298,6 +298,23 @@ class Processor:
     @property
     def source(self):
         return self._source
+
+    def compute_unitary(self, use_symbolic=False) -> Matrix:
+        """Computes unitary matrix when containing only linear components,
+        Fails otherwise"""
+        u = None
+        multiplier = 1  # TODO handle polarization
+        for r, c in self._components:
+            cU = c.compute_unitary(use_symbolic=use_symbolic)
+            if len(r) != multiplier * self.m:
+                nU = Matrix.eye(multiplier * self.m, use_symbolic)
+                nU[multiplier * r[0]:multiplier * (r[-1] + 1), multiplier * r[0]:multiplier * (r[-1] + 1)] = cU
+                cU = nU
+            if u is None:
+                u = cU
+            else:
+                u = cU @ u
+        return u
 
     # def filter_herald(self, s: BasicState, keep_herald: bool) -> StateVector:
     #     if not self._heralds or keep_herald:
