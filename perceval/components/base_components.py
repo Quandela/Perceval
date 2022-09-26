@@ -74,6 +74,17 @@ class BS(ACircuit):
         """
         return 2*np.arccos(np.sqrt(float(r)))
 
+    @staticmethod
+    def theta_to_r(theta):
+        if isinstance(theta, Parameter) and not theta.defined:
+            return sp.cos(theta.spv/2)**2
+        else:
+            return np.cos(float(theta)/2)**2
+
+    @property
+    def reflectivity(self):
+        return self.theta_to_r(self._theta)
+
     def _compute_unitary(self, assign=None, use_symbolic=False):
         if use_symbolic:
             theta = self._theta.spv
