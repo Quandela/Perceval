@@ -2,7 +2,7 @@
 # runs benchmarks at benchmarks/benchmark_*.py
 # compare the result on the gh-page branch
 # save the log on (.benchmark/<runner>_CPython-<PyVersion>/<branch>_<tag_version>_<nb_runner>_<commit>.json)
-# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/)
+# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/) 
 
 name: Benchmarks
 
@@ -88,23 +88,15 @@ jobs:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
-      - if: runner.os == 'Windows'
-        name: Venv Windows
-        run: |
-          python -m venv venv
-          venv/Scripts/activate
-
-      - if:  runner.os != 'Windows'
-        name: Venv notWindows
-        run: |
-          python -m venv venv
-          source venv/bin/activate
 
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
+
+      - uses: syphar/restore-virtualenv@v1
+        id: cache-virtualenv
 
       - if: inputs.quandelibc_ref != ''
         name: Fetch previously compiled Quandelibc
@@ -115,12 +107,14 @@ jobs:
 
       - if: inputs.quandelibc_ref != ''
         name: Install previously compiled Quandelibc
-        run: bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
+        run: |
+          python -m pip uninstall -r requirements.txt -y
+          bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
 
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            python -m pip install pytest pytest-benchmark
+            python -m pip install -r requirements.txt pytest pytest-benchmark
             python -m pip install .
 
       # save var env use bash shell for notLinux
