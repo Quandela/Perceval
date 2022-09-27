@@ -45,10 +45,16 @@ class InvalidMappingException(Exception):
 
 
 class ModeConnector:
+    """
+    Resolves a mapping supporting multiple syntaxes in order to connect two objects.
+    The left object must be a Processor
+    The right object can be a Processor, a (linear or non-linear) component
+    """
+
     def __init__(self, left_processor, right_obj, mapping):
         self._lp = left_processor
         self._ro = right_obj  # Can either be a component or a processor
-        self._r_is_component = isinstance(right_obj, AComponent)
+        self._r_is_component = isinstance(right_obj, AComponent)  # False means it is a Processor
         self._map = mapping
         self._l_port_names = None
         self._r_port_names = None
@@ -78,7 +84,13 @@ class ModeConnector:
          Case dict:
             keys and values can either be integers or strings. If strings, it expects port names of the same size.
 
-        TODO describe consistency checks
+        Consistency checks:
+        - The input map key and value types are checked.
+        - Each key/value pair size should match. For instance, 'data': [1,2,3] will fail if 'data' port length is 2
+        - The constructed mapping must be the right size (= length of modes to connect of right object)
+        - Resolved indexes must not be negative
+        - All left output modes used in the mapping must be connectible
+        - Duplicates are checked
         """
         # Handle int input case
         if isinstance(self._map, int):
@@ -172,6 +184,12 @@ class ModeConnector:
 
     @staticmethod
     def generate_permutation(mode_mapping: Dict[int, int]):
+        """
+        Generate a PERM component given an already resolved mode mapping
+        Returns a tuple containing:
+        - The mode range occupied by the PERM component
+        - The PERM component or None if no PERM is needed (no swap in the mapping)
+        """
         m_keys = list(mode_mapping.keys())
         min_m = min(m_keys)
         max_m = max(m_keys)

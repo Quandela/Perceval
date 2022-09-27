@@ -369,6 +369,8 @@ class SVDistribution(defaultdict):
         :param svd:
         :return:
         """
+        if len(self) == 0:
+            return svd
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():

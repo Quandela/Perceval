@@ -53,11 +53,20 @@ class Processor:
         self._is_on = False
         self._inputs_map = None
 
+    @property
+    def components(self):
+        return self._components
+
     def turn_on(self):
+        """
+        Simulates turning on the photonic source.
+        Computes the probability distribution of the processor input
+        """
         if self._is_on:
             return
         self._is_on = True
 
+        self._inputs_map = SVDistribution()
         for k in range(self.m):
             port = self.get_input_port(k)
             if port is None:
@@ -76,11 +85,7 @@ class Processor:
                         distribution = SVDistribution(StateVector("|0>"))
                 else:
                     raise NotImplementedError(f"Not implemented for {port.encoding.name}")
-
-            if self._inputs_map is None:
-                self._inputs_map = distribution
-            else:
-                self._inputs_map *= distribution
+            self._inputs_map *= distribution
 
     def set_postprocess(self, postprocess_func):
         self._post_select = postprocess_func
@@ -142,16 +147,17 @@ class Processor:
         self._n_heralds += n_new_heralds
 
         # Add PERM, component, PERM^-1
-        perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
+        perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         if perm_component is not None:
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
+                # Simplify composition by merging two consecutive PERM components
                 l_perm_r = self._components[-1][0]
                 l_perm_vect = self._components[-1][1].perm_vector
                 new_range, new_perm_vect = perm_compose(l_perm_r, l_perm_vect, perm_modes, perm_component.perm_vector)
                 self._components[-1] = (new_range, PERM(new_perm_vect))
             else:
                 self._components.append((perm_modes, perm_component))
-        for pos, c in processor._components:
+        for pos, c in processor.components:
             pos = [x + min(mode_mapping) for x in pos]
             self._components.append((pos, c))
         if perm_component is not None:
@@ -305,7 +311,7 @@ class Processor:
                 new_state.append(k)
         return StateVector(new_state)
 
-    def run(self, simulator_backend: Type[Backend], keep_herald: bool=False):
+    def run(self, simulator_backend: Type[Backend], keep_herald: bool = False):
         """
             calculate the output probabilities - returns performance, and output_maps
         """
