@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Callable, Tuple
 
 from multipledispatch import dispatch
@@ -28,6 +29,12 @@ from multipledispatch import dispatch
 from perceval.components import ALinearCircuit, Processor
 from perceval.components.abstract_component import AComponent
 from perceval.components.non_linear_components import TD
+
+
+class ModeStyle(Enum):
+    PHOTONIC = 0
+    HERALD = 1
+    DIGITAL = 2
 
 
 class ASkin(ABC):
@@ -44,9 +51,13 @@ class ASkin(ABC):
     - exposing style data (stroke style, colors, etc.)
     """
 
-    def __init__(self, stroke_style, compact_display: bool = False):
+    def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
         self._compact = compact_display
-        self.stroke_style = stroke_style
+        self.style = {ModeStyle.PHOTONIC: stroke_style,
+                      ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
+                      # ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}
+                      }
+        self.style_subcircuit = style_subcircuit
 
     @dispatch((ALinearCircuit, TD), bool)
     def get_size(self, c: ALinearCircuit, recursive: bool = False) -> Tuple[int, int]:
@@ -71,7 +82,7 @@ class ASkin(ABC):
     @dispatch(Processor, bool)
     def get_size(self, p: Processor, recursive: bool = False) -> Tuple[int, int]:
         total_width = 0
-        for modes, comp in p._components:  # TODO rework this: components can be displayed on top of each other
+        for modes, comp in p.components:  # TODO rework this: components can be displayed on top of each other
             w, h = self.get_size(comp, recursive)
             total_width += w
         return total_width, p.m
