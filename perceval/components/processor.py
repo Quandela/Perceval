@@ -190,7 +190,7 @@ class Processor:
 
     def _add_herald(self, mode, expected, name=None):
         """
-        This internal implementation does not increase the herald count or decrease the mode of interest count
+        This internal implementation neither increases the herald count nor decreases the mode of interest count
         """
         if not self.are_modes_free([mode], PortLocation.in_out):
             raise UnavailableModeException(mode, "Another port overlaps")
@@ -296,21 +296,21 @@ class Processor:
                 u = cU @ u
         return u
 
-    # def filter_herald(self, s: BasicState, keep_herald: bool) -> StateVector:
-    #     if not self._heralds or keep_herald:
-    #         return StateVector(s)
-    #     new_state = []
-    #     for idx, k in enumerate(s):
-    #         if idx not in self._heralds:
-    #             new_state.append(k)
-    #     return StateVector(new_state)
+    def filter_herald(self, s: BasicState, keep_herald: bool) -> StateVector:
+        if not self.heralds or keep_herald:
+            return StateVector(s)
+        new_state = []
+        for idx, k in enumerate(s):
+            if idx not in self.heralds:
+                new_state.append(k)
+        return StateVector(new_state)
 
     def run(self, simulator_backend: Type[Backend], keep_herald: bool=False):
         """
             calculate the output probabilities - returns performance, and output_maps
         """
         # first generate all possible outputs
-        sim = simulator_backend(self._circuit.compute_unitary(use_symbolic=False))
+        sim = simulator_backend(self.compute_unitary(use_symbolic=False))
         # now generate all possible outputs
         outputs = SVDistribution()
         for input_state, input_prob in self._inputs_map.items():
@@ -329,7 +329,7 @@ class Processor:
         """
         Computes if the state is selected given heralds and post selection function
         """
-        for m, v in self.heralds:
+        for m, v in self.heralds.items():
             if state[m] != v:
                 return False
         return self._post_select(state)

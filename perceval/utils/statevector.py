@@ -111,7 +111,7 @@ class StateVector(defaultdict):
     """
 
     def __init__(self,
-                 bs: Union[BasicState, List[int], str, BasicState, None] = None,
+                 bs: Union[BasicState, List[int], str, None] = None,
                  photon_annotations: Dict[int, str] = None):
         r"""Init of a StateVector from a BasicState, or from BasicState constructor
         :param bs: a BasicState, or `BasicState` constructor,
