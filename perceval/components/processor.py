@@ -23,7 +23,7 @@ from .abstract_component import AComponent
 from .source import Source
 from .base_components import PERM
 from .port import APort, PortLocation, Herald, Encoding
-from .mode_connection import ModeConnectionResolver, UnavailableModeException
+from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Matrix
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import Backend
@@ -103,12 +103,11 @@ class Processor:
         if self._post_select is not None:
             raise RuntimeError("Cannot add any component to a processor with post-process function")
 
-        connector = ModeConnectionResolver(self, component)
-        mode_mapping = connector.resolve(mode_mapping)
+        connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, Processor):
-            self._compose_processor(mode_mapping, component, keep_port)
+            self._compose_processor(connector, component, keep_port)
         elif isinstance(component, AComponent):
-            self._add_component(mode_mapping, component)
+            self._add_component(connector.resolve(), component)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
         return self
@@ -129,7 +128,8 @@ class Processor:
                 result[m] = port.name
         return result
 
-    def _compose_processor(self, mode_mapping, processor, keep_port: bool):
+    def _compose_processor(self, connector, processor, keep_port: bool):
+        mode_mapping = connector.resolve()
         if not keep_port:
             # Remove output ports used to connect the new processor
             for i in mode_mapping:
@@ -137,24 +137,18 @@ class Processor:
                 if port is not None:
                     del self._out_ports[port]
 
-        # Compute herald positions
-        other_herald_pos = list(processor.heralds.keys())
-        new_mode_index = self.m
-        for pos in other_herald_pos:
-            mode_mapping[new_mode_index] = pos
-            new_mode_index += 1
-            self._n_heralds += 1
+        # Compute new herald positions
+        n_new_heralds = connector.add_heralded_modes(mode_mapping)
+        self._n_heralds += n_new_heralds
 
         # Add PERM, component, PERM^-1
-        perm_modes, perm_component = self._generate_permutation(mode_mapping)
+        perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
                 l_perm_r = self._components[-1][0]
                 l_perm_vect = self._components[-1][1].perm_vector
                 new_range, new_perm_vect = perm_compose(l_perm_r, l_perm_vect, perm_modes, perm_component.perm_vector)
-
                 self._components[-1] = (new_range, PERM(new_perm_vect))
-
             else:
                 self._components.append((perm_modes, perm_component))
         for pos, c in processor._components:
@@ -185,7 +179,7 @@ class Processor:
                                                                                  for ii in range(processor.m)]))
 
     def _add_component(self, mode_mapping, component):
-        perm_modes, perm_component = self._generate_permutation(mode_mapping)
+        perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
@@ -193,20 +187,6 @@ class Processor:
         #     component = Circuit(component.m).add(0, component, merge=False)
         sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
-
-    @staticmethod
-    def _generate_permutation(mode_mapping: Dict[int, int]):
-        m_keys = list(mode_mapping.keys())
-        min_m = min(m_keys)
-        max_m = max(m_keys)
-        missing_modes = [x for x in list(range(min_m, max_m+1)) if x not in m_keys]
-        for mm in missing_modes:
-            mode_mapping[mm] = max(mode_mapping.values()) + 1
-        perm_modes = list(range(min_m, min_m+len(mode_mapping)))
-        perm_vect = [mode_mapping[i] for i in sorted(mode_mapping.keys())]
-        if perm_vect == perm_modes:
-            return perm_modes, None  # No need for a permutation, modes are already sorted
-        return perm_modes, PERM(perm_vect)
 
     def _add_herald(self, mode, expected, name=None):
         """

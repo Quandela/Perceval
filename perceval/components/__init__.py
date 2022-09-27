@@ -27,5 +27,6 @@ from .source import Source
 from .port import Port, Herald, DigitalConverterDetector, CounterDetector, Encoding, PortLocation
 from .base_components import *
 from .component_catalog import Catalog
+from ._mode_connector import ModeConnector, UnavailableModeException
 
 catalog = Catalog('perceval.components.core_catalog')

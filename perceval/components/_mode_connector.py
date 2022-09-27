@@ -21,9 +21,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, Callable, Type, Literal, Union
+from typing import Dict, Union
+import warnings
 
-from perceval.components.abstract_component import AComponent
+from .abstract_component import AComponent
+from .base_components import PERM
 
 
 class UnavailableModeException(Exception):
@@ -42,12 +44,12 @@ class InvalidMappingException(Exception):
         super().__init__(f"Invalid mapping ({mapping}){because}")
 
 
-class ModeConnectionResolver:
-    def __init__(self, left_processor, right_obj):
+class ModeConnector:
+    def __init__(self, left_processor, right_obj, mapping):
         self._lp = left_processor
         self._ro = right_obj  # Can either be a component or a processor
         self._r_is_component = isinstance(right_obj, AComponent)
-        self._map = {}
+        self._map = mapping
         self._l_port_names = None
         self._r_port_names = None
         if self._r_is_component:
@@ -66,7 +68,7 @@ class ModeConnectionResolver:
                 assert isinstance(v, int) or isinstance(v, str) or isinstance(v, list), \
                     f"Mapping values supported types are str and int, found {v}"
 
-    def resolve(self, mapping):
+    def resolve(self):
         """
         Resolves mode mapping and checks if the mapping is consistent.
 
@@ -79,28 +81,28 @@ class ModeConnectionResolver:
         TODO describe consistency checks
         """
         # Handle int input case
-        if isinstance(mapping, int):
+        if isinstance(self._map, int):
+            map_begin = self._map
             self._map = {}
             r_list = list(range(self._n_modes_to_connect))
             if not self._r_is_component:
                 r_list = list(range(self._ro.m))
                 r_list = [x for x in r_list if x not in list(self._ro.heralds.keys())]
             for i in range(self._n_modes_to_connect):
-                self._map[mapping + i] = r_list[i]
+                self._map[map_begin + i] = r_list[i]
             self._check_consistency()
             return self._map
 
-        self._map = mapping
         self._mapping_type_checks()
         result = {}
-        for k, v in mapping.items():
+        for k, v in self._map.items():
             if isinstance(k, int) and isinstance(v, int):
                 result[k] = v
             elif isinstance(k, str):  # Mapping between port name and index
                 l_idx = self._resolve_port_left(k)
                 r_idx = []
                 if l_idx is None:
-                    raise InvalidMappingException(mapping, f"port '{k}' was not found in processor")
+                    raise InvalidMappingException(self._map, f"port '{k}' was not found in processor")
                 if isinstance(v, int) and len(l_idx) == 1:
                     result[l_idx[0]] = v
                 elif isinstance(v, list):
@@ -108,9 +110,9 @@ class ModeConnectionResolver:
                 else:  # str
                     r_idx = self._resolve_port_right(v)
                     if r_idx is None:
-                        raise InvalidMappingException(mapping, f"port '{v}' was not found in processor")
+                        raise InvalidMappingException(self._map, f"port '{v}' was not found in processor")
                 if len(l_idx) != len(r_idx):
-                    raise InvalidMappingException(mapping, f"Unable to resolve '{k}: {v}' - imbalanced ports")
+                    raise InvalidMappingException(self._map, f"Unable to resolve '{k}: {v}' - imbalanced ports")
                 for i in range(len(l_idx)):
                     result[l_idx[i]] = r_idx[i]
         self._map = result
@@ -120,10 +122,7 @@ class ModeConnectionResolver:
     def _check_consistency(self):
         if len(self._map) != self._n_modes_to_connect:
             raise InvalidMappingException(self._map)
-        max_out = max(self._map.keys())
         min_out = min(self._map.keys())
-        if max_out > self._lp.mode_of_interest_count - 1:
-            raise UnavailableModeException(max_out)
         if min_out < 0:
             raise UnavailableModeException(min_out)
         for m_out, m_in in self._map.items():
@@ -159,3 +158,28 @@ class ModeConnectionResolver:
             res.append(pos)
             pos += 1
         return res
+
+    def add_heralded_modes(self, mapping):
+        if self._r_is_component:
+            warnings.warn("Right object is not a processor, thus doesn't contain heralded modes")
+            return 0
+        other_herald_pos = list(self._ro.heralds.keys())
+        new_mode_index = self._lp.m
+        for pos in other_herald_pos:
+            mapping[new_mode_index] = pos
+            new_mode_index += 1
+        return new_mode_index-self._lp.m
+
+    @staticmethod
+    def generate_permutation(mode_mapping: Dict[int, int]):
+        m_keys = list(mode_mapping.keys())
+        min_m = min(m_keys)
+        max_m = max(m_keys)
+        missing_modes = [x for x in list(range(min_m, max_m + 1)) if x not in m_keys]
+        for mm in missing_modes:
+            mode_mapping[mm] = max(mode_mapping.values()) + 1
+        perm_modes = list(range(min_m, min_m + len(mode_mapping)))
+        perm_vect = [mode_mapping[i] for i in sorted(mode_mapping.keys())]
+        if perm_vect == perm_modes:
+            return perm_modes, None  # No need for a permutation, modes are already sorted
+        return perm_modes, PERM(perm_vect)

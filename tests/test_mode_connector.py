@@ -22,7 +22,7 @@
 
 import pytest
 
-from perceval.components.mode_connection import ModeConnectionResolver, UnavailableModeException, \
+from perceval.components._mode_connector import ModeConnector, UnavailableModeException, \
     InvalidMappingException
 from perceval.components import Processor, Circuit, Port, Encoding, PortLocation
 
@@ -31,12 +31,12 @@ def test_connection_resolver_init():
     in_modes = 6
     p1 = Processor(8)
     p2 = Processor(in_modes)
-    connector = ModeConnectionResolver(p1, p2)
+    connector = ModeConnector(p1, p2, {})
     assert not connector._r_is_component
     assert connector._n_modes_to_connect == in_modes
 
     circuit = Circuit(in_modes)
-    connector = ModeConnectionResolver(p1, circuit)
+    connector = ModeConnector(p1, circuit, {})
     assert connector._r_is_component
     assert connector._n_modes_to_connect == in_modes
 
@@ -44,35 +44,34 @@ def test_connection_resolver_init():
 def test_connection_int():
     p1 = Processor(6)
     p2 = Processor(4)
-    connector = ModeConnectionResolver(p1, p2)
-    assert connector.resolve(0) == {0: 0, 1: 1, 2: 2, 3: 3}
-    assert connector.resolve(1) == {1: 0, 2: 1, 3: 2, 4: 3}
-    assert connector.resolve(2) == {2: 0, 3: 1, 4: 2, 5: 3}
+    connector = ModeConnector(p1, p2, 0)
+    assert connector.resolve() == {0: 0, 1: 1, 2: 2, 3: 3}
+    connector = ModeConnector(p1, p2, 1)
+    assert connector.resolve() == {1: 0, 2: 1, 3: 2, 4: 3}
+    connector = ModeConnector(p1, p2, 2)
+    assert connector.resolve() == {2: 0, 3: 1, 4: 2, 5: 3}
 
     with pytest.raises(UnavailableModeException):
-        connector.resolve(-1)
-    with pytest.raises(UnavailableModeException):
-        connector.resolve(3)
+        connector = ModeConnector(p1, p2, -1)
+        connector.resolve()
 
 
 def test_connection_dict_int():
     p1 = Processor(8)
     p2 = Processor(6)
-    connector = ModeConnectionResolver(p1, p2)
     valid_mapping = {0: 2, 1: 4, 2: 5, 3: 0, 4: 1, 5: 3}
-    assert connector.resolve(valid_mapping) == valid_mapping
+    connector = ModeConnector(p1, p2, valid_mapping)
+    assert connector.resolve() == valid_mapping
 
     invalid_mapping = {-1: 2, 1: 4, 2: 5, 3: 0, 4: 1, 5: 3}  # -1 is invalid
+    connector = ModeConnector(p1, p2, invalid_mapping)
     with pytest.raises(UnavailableModeException):
-        connector.resolve(invalid_mapping)
-
-    invalid_mapping = {0: 2, 1: 4, 2: 5, 3: 0, 8: 1, 5: 3}  # 8 is invalid
-    with pytest.raises(UnavailableModeException):
-        connector.resolve(invalid_mapping)
+        connector.resolve()
 
     invalid_mapping = {0: 2, 1: 4, 2: 5, 3: 0, 4: 1, 5: 3, 6: 6}  # mapping too big
+    connector = ModeConnector(p1, p2, invalid_mapping)
     with pytest.raises(InvalidMappingException):
-        connector.resolve(invalid_mapping)
+        connector.resolve()
 
 
 def test_connection_dict_str():
@@ -84,22 +83,31 @@ def test_connection_dict_str():
     p2.add_port(0, Port(Encoding.dual_ray, "in_A"), PortLocation.input)
     p2.add_port(2, Port(Encoding.dual_ray, "in_B"), PortLocation.input)
 
-    connector = ModeConnectionResolver(p1, p2)
-    assert connector.resolve({'q0': 'in_A', 'q1': 'in_B'}) == {0: 0, 1: 1, 2: 2, 3: 3}
-    assert connector.resolve({'q0': 'in_B', 'q1': 'in_A'}) == {0: 2, 1: 3, 2: 0, 3: 1}
-    assert connector.resolve({'q0': [2, 3], 'q1': [0, 1]}) == {0: 2, 1: 3, 2: 0, 3: 1}
+    connector = ModeConnector(p1, p2, {'q0': 'in_A', 'q1': 'in_B'})
+    assert connector.resolve() == {0: 0, 1: 1, 2: 2, 3: 3}
 
-    with pytest.raises(InvalidMappingException):
-        connector.resolve({'q0': 1, 'q1': 'in_B'})  # imbalanced size (size of q0 is 2)
+    connector = ModeConnector(p1, p2, {'q0': 'in_B', 'q1': 'in_A'})
+    assert connector.resolve() == {0: 2, 1: 3, 2: 0, 3: 1}
 
-    with pytest.raises(InvalidMappingException):
-        connector.resolve({'q0': 'bad name', 'q1': 'in_B'})  # unknown port 'bad name'
+    connector = ModeConnector(p1, p2, {'q0': [2, 3], 'q1': [0, 1]})
+    assert connector.resolve() == {0: 2, 1: 3, 2: 0, 3: 1}
 
+    connector = ModeConnector(p1, p2, {'q0': 1, 'q1': 'in_B'})
     with pytest.raises(InvalidMappingException):
-        connector.resolve({'q0': 'in_A', 'bad name': 'in_B'})  # unknown port 'bad name'
+        connector.resolve()  # imbalanced size (size of q0 is 2)
 
+    connector = ModeConnector(p1, p2, {'q0': 'bad name', 'q1': 'in_B'})
     with pytest.raises(InvalidMappingException):
-        connector.resolve({'q0': 'in_A', 'q1': 'in_A'})  # duplicates
+        connector.resolve()  # unknown port 'bad name'
 
+    connector = ModeConnector(p1, p2, {'q0': 'in_A', 'bad name': 'in_B'})
     with pytest.raises(InvalidMappingException):
-        connector.resolve({'q0': 'in_A'})  # mapping too small
+        connector.resolve()  # unknown port 'bad name'
+
+    connector = ModeConnector(p1, p2, {'q0': 'in_A', 'q1': 'in_A'})
+    with pytest.raises(InvalidMappingException):
+        connector.resolve()  # duplicates
+
+    connector = ModeConnector(p1, p2, {'q0': 'in_A'})
+    with pytest.raises(InvalidMappingException):
+        connector.resolve()  # mapping too small
