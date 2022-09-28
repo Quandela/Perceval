@@ -69,7 +69,6 @@ jobs:
           cd quandelibc
           python -m pip install cibuildwheel
           python -m cibuildwheel --output-dir precompiled-quandelibc
-
       - name: Store wheel
         uses: actions/upload-artifact@v2
         with:
@@ -88,23 +87,15 @@ jobs:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
-      - if: runner.os == 'Windows'
-        name: Venv Windows
-        run: |
-          python -m venv venv
-          venv/Scripts/activate
-
-      - if:  runner.os != 'Windows'
-        name: Venv notWindows
-        run: |
-          python -m venv venv
-          source venv/bin/activate
 
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
+
+      - uses: syphar/restore-virtualenv@v1
+        id: cache-virtualenv
 
       - if: inputs.quandelibc_ref != ''
         name: Fetch previously compiled Quandelibc
@@ -115,14 +106,14 @@ jobs:
 
       - if: inputs.quandelibc_ref != ''
         name: Install previously compiled Quandelibc
-        run: bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
-
+        run: |
+          python -m pip uninstall -r requirements.txt -y
+          bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            python -m pip install pytest pytest-benchmark
+            python -m pip install -r requirements.txt pytest pytest-benchmark
             python -m pip install .
-
       # save var env use bash shell for notLinux
       - if: runner.os == 'Linux'
         name: Initialize config linux
@@ -144,7 +135,6 @@ jobs:
         run: |
           python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
-
       # upload the result on action GitHub
       - name: upload the result Log
         uses: actions/upload-artifact@v3
@@ -153,8 +143,21 @@ jobs:
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
-      
-            - uses: actions/checkout@v2
+      # use github-action-benchmark for graph
+      - name: compare result with last version and save on gh-page branch
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: ${{ env.folder_file_json }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: ${{ inputs.save }}
+          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
+          alert-threshold: '120%'
+          comment-on-alert: true
+
+      - name: checkout gh-pages
+        uses: actions/checkout@v2
         with:
           ref: gh-pages
 
@@ -166,14 +169,12 @@ jobs:
       - name: compare benchmark
         run: |
           pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
-
       - name: upload the result compare
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
           path: |
             compare_result_${{ env.folder_env }}_${{ env.tag_version }}
-
       - name: Download the result compare
         uses: actions/download-artifact@v3
         with:
@@ -188,16 +189,3 @@ jobs:
           git add ${{ env.folder_file_json }}
           git commit -am "Automated benchmark report"
           git push
-
-      # use github-action-benchmark for graph
-      - name: compare result with last version and save on gh-page branch
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Python Benchmark with pytest-benchmark
-          tool: 'pytest'
-          output-file-path: ${{ env.folder_file_json }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: ${{ inputs.save }}
-          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
-          alert-threshold: '120%'
-          comment-on-alert: true
