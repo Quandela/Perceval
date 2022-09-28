@@ -24,16 +24,17 @@ import time
 from tqdm import tqdm
 from perceval.platforms.platform import *
 import perceval as pcvl
-import perceval.components as cp
+import perceval.components.base_components as cp
 import numpy as np
 from perceval.algorithm import Sampler, Analyzer
 
+theta_r13 = cp.BS.r_to_theta(1/3)
 cnot = pcvl.Circuit(6, name="Ralph CNOT")
-cnot.add((0, 1), cp.GenericBS(R=1 / 3, phi_b=np.pi, phi_d=0))
-cnot.add((3, 4), cp.GenericBS(R=1 / 2))
-cnot.add((2, 3), cp.GenericBS(R=1 / 3, phi_b=np.pi, phi_d=0))
-cnot.add((4, 5), cp.GenericBS(R=1 / 3))
-cnot.add((3, 4), cp.GenericBS(R=1 / 2))
+cnot.add((0, 1), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+cnot.add((3, 4), cp.BS.H())
+cnot.add((2, 3), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+cnot.add((4, 5), cp.BS.H(theta=theta_r13))
+cnot.add((3, 4), cp.BS.H())
 
 try:
     platform = get_platform('Toto')
@@ -72,17 +73,17 @@ phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
         pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
 # Defining the LO elements of chip
 (chip_QRNG
- .add((0, 1), cp.SimpleBS())
- .add((2, 3), cp.SimpleBS())
+ .add((0, 1), cp.BS())
+ .add((2, 3), cp.BS())
  .add((1, 2), cp.PERM([1, 0]))
  .add(0, cp.PS(phis[0]))
  .add(2, cp.PS(phis[2]))
- .add((0, 1), cp.SimpleBS())
- .add((2, 3), cp.SimpleBS())
+ .add((0, 1), cp.BS())
+ .add((2, 3), cp.BS())
  .add(0, cp.PS(phis[1]))
  .add(2, cp.PS(phis[3]))
- .add((0, 1), cp.SimpleBS())
- .add((2, 3), cp.SimpleBS())
+ .add((0, 1), cp.BS())
+ .add((2, 3), cp.BS())
  )
 # Setting parameters value and see how chip specs evolve
 phis[0].set_value(np.pi / 2)
@@ -103,40 +104,3 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.close()
 
 pcvl.pdisplay(analyzer)
-
-
-# Brain storm 2022-09-15:
-# rp = get_platform('SLOS', 'dummy-token')
-# rb = rp.backend(cnot)
-#
-# rb.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
-#
-# # runner
-# class Sampler(Runner):
-#     __init__(platform, cu):
-#         self._backend = self._platform.backend(cu)
-#
-#     @property
-#     def sample(self):
-#         if self._platform.is_remote:
-#             job = RemoteJob(self._backend.sample_async)
-#         else:
-#             job = LocalJob(self._backend.sample)
-#         return job
-#
-#
-# class SLOSSampler(Sampler):  # faux : la plateforme sait qu'elle est SLOS
-#
-#
-# class QML(Runner):
-#     __init__(platform)
-#
-#
-# class SamplerFactory:
-#     string => Sampler
-#
-# s = Sampler(platform)
-# s.samples(input_state)
-#
-# my_platform = get_platform('NAIVE', token=pouet, endpoint=cloud)
-# res = my_platform.backend(cnot).samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)

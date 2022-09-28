@@ -26,43 +26,27 @@ from perceval.components.base_components import *
 
 R1 = 0.228
 R2 = 0.758
+theta1 = BS.r_to_theta(R1)
+theta2 = BS.r_to_theta(R2)
 
 
 c_hcnot = (Circuit(8, name="Heralded CNOT")
            .add((0, 1, 2), PERM([1, 2, 0]))
-           .add((4, 5), GenericBS())
+           .add((4, 5), BS.H())
            .add((5, 6, 7), PERM([1, 2, 0]))
-           .add((3, 4), GenericBS())
-           .add((2, 3), GenericBS(R=R1, phi_b=np.pi, phi_d=0))
-           .add((4, 5), GenericBS(R=R1))
-           .add((3, 4), GenericBS())
+           .add((3, 4), BS.H())
+           .add((2, 3), BS.H(theta=theta1, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+           .add((4, 5), BS.H(theta=theta1))
+           .add((3, 4), BS.H())
            .add((5, 6, 7), PERM([2, 1, 0]))
            .add((1, 2), PERM([1, 0]))
-           .add((2, 3), GenericBS(R=R2))
-           .add((4, 5), GenericBS(R=R2, phi_b=np.pi, phi_d=0))
+           .add((2, 3), BS.H(theta=theta2))
+           .add((4, 5), BS.H(theta=theta2, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
            .add((5, 6), PERM([1, 0]))
-           .add((4, 5), GenericBS())
+           .add((4, 5), BS.H())
            .add((4, 5), PERM([1, 0]))
            .add((0, 1, 2), PERM([2, 1, 0])))
 
-# With simple BS convention:
-# c_hcnot = (Circuit(8, name="Heralded CNOT")
-#            .add((0, 1, 2), PERM([1, 2, 0]))
-#            .add((4, 5), SimpleBS())
-#            .add((5, 6, 7), PERM([1, 2, 0]))
-#            .add((3, 4), SimpleBS())
-#            .add((2, 3), SimpleBS(R=R1, phi=np.pi))
-#            .add(3, PS(np.pi))
-#            .add((4, 5), SimpleBS(R=R1))
-#            .add((3, 4), SimpleBS())
-#            .add((5, 6, 7), PERM([2, 1, 0]))
-#            .add((1, 2), PERM([1, 0]))
-#            .add((2, 3), SimpleBS(R=R2))
-#            .add((4, 5), SimpleBS(R=R2, phi=np.pi))
-#            .add(5, PS(np.pi))
-#            .add((5, 6), PERM([1, 0]))
-#            .add((4, 5), SimpleBS())
-#            .add((0, 1, 2), PERM([2, 1, 0])))
 
 heralded_cnot = PredefinedCircuit(c_hcnot,
                                   "heralded cnot",
