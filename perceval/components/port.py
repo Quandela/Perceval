@@ -27,7 +27,7 @@ from perceval.components.abstract_component import AComponent
 
 
 class Encoding(Enum):
-    dual_ray = 0
+    dual_rail = 0
     polarization = 1
     qudit = 2
     time = 3
@@ -35,7 +35,7 @@ class Encoding(Enum):
 
 
 def _port_size(encoding: Encoding):
-    if encoding == Encoding.dual_ray:
+    if encoding == Encoding.dual_rail:
         return 2
     elif encoding == Encoding.polarization:
         return 1

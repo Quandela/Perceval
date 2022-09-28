@@ -53,8 +53,8 @@ class PostProcessedCnotItem(CatalogItem):
             p = Processor(6)
             p.add(0, c_cnot) \
                 .add_herald(0, 0) \
-                .add_port(1, Port(Encoding.dual_ray, 'data')) \
-                .add_port(3, Port(Encoding.dual_ray, 'ctrl')) \
+                .add_port(1, Port(Encoding.dual_rail, 'data')) \
+                .add_port(3, Port(Encoding.dual_rail, 'ctrl')) \
                 .add_herald(5, 0)
             p.set_postprocess(_post_process)
             return p

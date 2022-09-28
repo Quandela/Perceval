@@ -77,11 +77,11 @@ def test_connection_dict_int():
 def test_connection_dict_str():
     """Test with port names"""
     p1 = Processor(4)
-    p1.add_port(0, Port(Encoding.dual_ray, "q0"), PortLocation.output)
-    p1.add_port(2, Port(Encoding.dual_ray, "q1"), PortLocation.output)
+    p1.add_port(0, Port(Encoding.dual_rail, "q0"), PortLocation.output)
+    p1.add_port(2, Port(Encoding.dual_rail, "q1"), PortLocation.output)
     p2 = Processor(4)
-    p2.add_port(0, Port(Encoding.dual_ray, "in_A"), PortLocation.input)
-    p2.add_port(2, Port(Encoding.dual_ray, "in_B"), PortLocation.input)
+    p2.add_port(0, Port(Encoding.dual_rail, "in_A"), PortLocation.input)
+    p2.add_port(2, Port(Encoding.dual_rail, "in_B"), PortLocation.input)
 
     connector = ModeConnector(p1, p2, {'q0': 'in_A', 'q1': 'in_B'})
     assert connector.resolve() == {0: 0, 1: 1, 2: 2, 3: 3}

@@ -86,7 +86,7 @@ class Processor:
                 else:
                     distribution = SVDistribution(StateVector("|0>"))
             else:
-                if port.encoding == Encoding.dual_ray:
+                if port.encoding == Encoding.dual_rail:
                     if k == mode_range[0]:
                         distribution = self._source.probability_distribution()
                     else:
