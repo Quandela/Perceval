@@ -27,7 +27,8 @@ from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Matrix
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import Backend
-from typing import Dict, Type
+from typing import Union, Type
+import copy
 
 
 class Processor:
@@ -56,6 +57,13 @@ class Processor:
     @property
     def components(self):
         return self._components
+
+    def copy(self, subs: Union[dict, list] = None):
+        new_proc = copy.deepcopy(self)
+        new_proc._components = []
+        for r, c in self._components:
+            new_proc._components.append((r, c.copy(subs=subs)))
+        return new_proc
 
     def turn_on(self):
         """
@@ -108,6 +116,7 @@ class Processor:
         if self._post_select is not None:
             raise RuntimeError("Cannot add any component to a processor with post-process function")
 
+        component = component.copy()
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, Processor):
             self._compose_processor(connector, component, keep_port)

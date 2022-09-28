@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Union
 import sympy as sp
+import copy
 
 from perceval.utils.parameter import Parameter
 
@@ -147,3 +148,35 @@ class AParametrizedComponent(AComponent):
             if not p.defined:
                 map_param_kid[p._pid] = p.name
         return map_param_kid
+
+    def copy(self, subs: Union[dict, list] = None):
+        nc = copy.deepcopy(self)
+
+        if subs is None:
+            for k, p in nc._params.items():
+                if p.defined:
+                    v = float(p)
+                else:
+                    v = None
+                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
+                nc.__setattr__("_"+k, nc._params[k])
+        else:
+            if isinstance(subs, list):
+                subs = {p.name: p.spv for p in subs}
+            for k, p in nc._params.items():
+                name = p.name
+                min_v = p.min
+                max_v = p.max
+                is_periodic = p.is_periodic
+                if p._value is None:
+                    p = p._symbol.evalf(subs=subs)
+                else:
+                    p = p.evalf(subs=subs)
+                if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
+                    nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
+                else:
+                    nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
+        for k, p in nc._params.items():
+            nc.__setattr__("_" + k, nc._params[k])
+
+        return nc
