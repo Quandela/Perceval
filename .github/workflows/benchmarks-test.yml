@@ -111,9 +111,11 @@ jobs:
           bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
       - name: Install dependencies
         run: |
+            python -m pip uninstall -r requirements.txt -y
             python -m pip install --upgrade pip
             python -m pip install -r requirements.txt pytest pytest-benchmark
             python -m pip install .
+
       # save var env use bash shell for notLinux
       - if: runner.os == 'Linux'
         name: Initialize config linux
