@@ -192,7 +192,7 @@ class PhysSkin(ASkin):
                 canvas.add_mline([0, 25+an_input*50, 3, 25+an_input*50, 47, 25+an_output*50, 50, 25+an_output*50],
                                  **style)
 
-    def wp_shape(self, circuit, canvas, content, **opts):
+    def wp_shape(self, circuit, canvas, content, mode_style, **opts):
         params = content.replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
         canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
         canvas.add_rect((13, 7), width=14, height=36, fill="gray",
@@ -201,7 +201,7 @@ class PhysSkin(ASkin):
         canvas.add_text((28.5, 36), text=params[0], size=7, ta="left")
         canvas.add_text((28.5, 45), text=params[1], size=7, ta="left")
 
-    def pr_shape(self, circuit, canvas, content, **opts):
+    def pr_shape(self, circuit, canvas, content, mode_style, **opts):
         canvas.add_mline([0, 25, 15, 25], **self.style[ModeStyle.PHOTONIC])
         canvas.add_mline([35, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
         canvas.add_rect((14, 14), width=22, height=22, stroke="black", fill="lightgray",
@@ -234,34 +234,6 @@ class PhysSkin(ASkin):
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
         title = circuit.name.upper().split(" ")
         canvas.add_text((10, 8+8*len(title)), "\n".join(title), 8, fontstyle="bold")
-
-    # def source_shape(self, circuit, canvas, content, **opts):
-    #     r = 10
-    #     color = "lightgray"
-    #     if 'color' in opts:
-    #         color = opts['color']
-    #     canvas.add_mpath(["M", 0, 25, "c", 0, 0, 0, -r, r, -r,
-    #                       "h", 8, "v", 2 * r, "h", -8,
-    #                       "c", -r, 0, -r, -r, -r, -r, "z"],
-    #                      stroke="black", stroke_width=1, fill=color)
-    #     if 'name' in opts and opts['name']:
-    #         canvas.add_text((8, 44), text='[' + opts['name'] + ']', size=6, ta="middle", fontstyle="italic")
-    #     if content:
-    #         canvas.add_text((10, 28), text=content, size=7, ta="middle")
-    #
-    # def detector_shape(self, circuit, canvas, content, **opts):
-    #     r = 10  # Radius of the half-circle
-    #     color = "lightgray"
-    #     if 'color' in opts:
-    #         color = opts['color']
-    #     canvas.add_mpath(["M", 20, 35, "h", -8, "v", -2 * r, "h", 8,
-    #                       "c", 0, 0, r, 0, r, r,
-    #                       "c", 0, r, -r, r, -r, r, "z"],
-    #                      stroke="black", stroke_width=1, fill=color)
-    #     if 'name' in opts:
-    #         canvas.add_text((18, 44), text='[' + opts['name'] + ']', size=6, ta="middle", fontstyle="italic")
-    #     if content:
-    #         canvas.add_text((20, 28), text=content, size=7, ta="middle")
 
     def herald_shape_in(self, herald, canvas, content, mode_style, **opts):
         r = 10
