@@ -46,6 +46,13 @@ class Sampler(Runner):
             return LocalJob(self._backend.samples)
 
     @property
+    def sample_count(self) -> Job:
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_sample_count, self._platform, lambda i:i)
+        else:
+            return LocalJob(self._backend.samples)
+
+    @property
     def prob(self) -> Job:
         if self._platform.is_remote():
             return RemoteJob(self._backend.async_prob, self._platform, deserialize_float)

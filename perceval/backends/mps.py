@@ -83,7 +83,7 @@ class MPSBackend(Backend):
         self.gamma = np.zeros((self.m, self.cutoff, self.cutoff, self.d), dtype='complex_')
         for i in range(self.m):
             self.gamma[i, 0, 0, input_state[i]] = 1
-        self.sv = np.zeros((self.m - 1, self.cutoff))
+        self.sv = np.zeros((self.m, self.cutoff))
         self.sv[:, 0] = 1
 
         for r, c in self._C:
@@ -194,5 +194,5 @@ class MPSBackend(Backend):
         else:
             sv = self.sv
         sv_diag = np.zeros((self.cutoff, self.cutoff))
-        np.fill_diagonal(sv_diag, sv[k - 1,:])
+        np.fill_diagonal(sv_diag, sv[k, :])
         return sv_diag

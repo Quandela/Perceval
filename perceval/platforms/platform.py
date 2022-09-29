@@ -81,11 +81,19 @@ class LocalPlatform(Platform):
 
 
 class RemotePlatform(Platform):
-    def __init__(self, name: str, token: str, endpoint: str, type: PlatformType):
-        super().__init__(name)
+    def __init__(self, name: str, token: str, endpoint: str, ptype: PlatformType):
+
+        colon_pos = name.find(":")
+        self._backend_name = name
+        if colon_pos != -1:
+            platform_name = name[:colon_pos]
+            self._backend_name = name[colon_pos + 1:]
+            super().__init__(platform_name)
+        else:
+            super().__init__(name)
         self._token = token
         self._endpoint_prefix = endpoint
-        self._type = type
+        self._type = ptype
 
     def build_endpoint(self, suffix: str) -> str:
         return self._endpoint_prefix + suffix
@@ -94,7 +102,7 @@ class RemotePlatform(Platform):
         return True
 
     def backend(self, *args, **kwargs):
-        return RemoteBackend(self, *args, **kwargs)
+        return RemoteBackend(self, self._backend_name, *args, **kwargs)
 
     def is_available(self) -> bool:
         # TODO request platform availability
@@ -104,14 +112,12 @@ class RemotePlatform(Platform):
         return {'Authorization': f"Bearer {self._token}"}
 
 
-
 def _platform_type(endpoint: str, token: str) -> PlatformType:
     # TODO request platform type to the server via a dedicated web service
     return PlatformType.SIMULATOR  # Temp
 
 
 def get_platform(name: str, token: str = None, url: str = None):
-
     if url is None:
         url = DEFAULT_URL
 

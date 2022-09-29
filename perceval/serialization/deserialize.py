@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 from os import path
-from inspect import signature
 from typing import Union
 
 from perceval.components import Circuit
@@ -33,7 +32,6 @@ from base64 import b64decode
 
 
 def deserialize_float(floatstring):
-    import typing
     return float(floatstring)
 
 
@@ -73,8 +71,7 @@ def circuit_from_file(filepath: str) -> Circuit:
 class CircuitBuilder:
     deserialize_fn = {
         'circuit': deserialize_circuit,
-        'beam_splitter': _cd.deserialize_simple_bs,
-        'beam_splitter_complex': _cd.deserialize_generic_bs,
+        'beam_splitter': _cd.deserialize_bs,
         'phase_shifter': _cd.deserialize_ps,
         'permutation': _cd.deserialize_perm,
         'unitary': _cd.deserialize_unitary,
