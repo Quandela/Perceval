@@ -86,7 +86,7 @@ class Processor:
                 else:
                     distribution = SVDistribution(StateVector("|0>"))
             else:
-                if port.encoding == Encoding.dual_rail:
+                if port.encoding == Encoding.DUAL_RAIL:
                     if k == mode_range[0]:
                         distribution = self._source.probability_distribution()
                     else:
@@ -181,7 +181,7 @@ class Processor:
                 self._add_herald(port_mode, port.expected, port.user_given_name)
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m)):
-                    self.add_port(port_mode, port, PortLocation.output)
+                    self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         # Retrieve post process function from the other processor
         if processor._post_select is not None:
@@ -207,7 +207,7 @@ class Processor:
         """
         This internal implementation neither increases the herald count nor decreases the mode of interest count
         """
-        if not self.are_modes_free([mode], PortLocation.in_out):
+        if not self.are_modes_free([mode], PortLocation.IN_OUT):
             raise UnavailableModeException(mode, "Another port overlaps")
         if name is None:
             name = self._anon_herald_num
@@ -221,17 +221,17 @@ class Processor:
         self._add_herald(mode, expected, name)
         return self
 
-    def add_port(self, m, port: APort, location: PortLocation = PortLocation.in_out):
+    def add_port(self, m, port: APort, location: PortLocation = PortLocation.IN_OUT):
         port_range = list(range(m, m + port.m))
         assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
 
-        if location == PortLocation.in_out or location == PortLocation.input:
-            if not self.are_modes_free(port_range, PortLocation.input):
+        if location == PortLocation.IN_OUT or location == PortLocation.INPUT:
+            if not self.are_modes_free(port_range, PortLocation.INPUT):
                 raise UnavailableModeException(port_range, "Another port overlaps")
             self._in_ports[port] = port_range
 
-        if location == PortLocation.in_out or location == PortLocation.output:
-            if not self.are_modes_free(port_range, PortLocation.output):
+        if location == PortLocation.IN_OUT or location == PortLocation.OUTPUT:
+            if not self.are_modes_free(port_range, PortLocation.OUTPUT):
                 raise UnavailableModeException(port_range, "Another port overlaps")
             self._out_ports[port] = port_range
         return self
@@ -252,15 +252,15 @@ class Processor:
             return True
         return not self._closed_photonic_modes[mode]
 
-    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.output) -> bool:
+    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
         """
         Returns True if all modes in mode_range are free of ports, for a given location (input, output or both)
         """
-        if location == PortLocation.in_out or location == PortLocation.input:
+        if location == PortLocation.IN_OUT or location == PortLocation.INPUT:
             for m in mode_range:
                 if self.get_input_port(m) is not None:
                     return False
-        if location == PortLocation.in_out or location == PortLocation.output:
+        if location == PortLocation.IN_OUT or location == PortLocation.OUTPUT:
             for m in mode_range:
                 if self.get_output_port(m) is not None:
                     return False

@@ -76,7 +76,7 @@ class QiskitConverter:
         p = Processor(n_moi, self._source)
         qubit_names = qc.qregs[0].name
         for i in range(qc.qregs[0].size):
-            p.add_port(i * 2, Port(Encoding.dual_rail, f'{qubit_names}{i}'))
+            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qubit_names}{i}'))
 
         for instruction in qc.data:
             # barrier has no effect

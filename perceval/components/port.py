@@ -27,29 +27,29 @@ from perceval.components.abstract_component import AComponent
 
 
 class Encoding(Enum):
-    dual_rail = 0
-    polarization = 1
-    qudit = 2
-    time = 3
-    none = 4
+    DUAL_RAIL = 0
+    POLARIZATION = 1
+    QUDIT = 2
+    TIME = 3
+    RAW = 4
 
 
 def _port_size(encoding: Encoding):
-    if encoding == Encoding.dual_rail:
+    if encoding == Encoding.DUAL_RAIL:
         return 2
-    elif encoding == Encoding.polarization:
+    elif encoding == Encoding.POLARIZATION:
         return 1
-    elif encoding == Encoding.time:
+    elif encoding == Encoding.TIME:
         return 1
-    elif encoding == Encoding.none:
+    elif encoding == Encoding.RAW:
         return 1
     return None  # Port size cannot be deduced only with encoding in case of Qudit-encoding
 
 
 class PortLocation(Enum):
-    input = 0
-    output = 1
-    in_out = 2
+    INPUT = 0
+    OUTPUT = 1
+    IN_OUT = 2
 
 
 class APort(AComponent):
@@ -69,7 +69,7 @@ class APort(AComponent):
 
 class Port(APort):
     def __init__(self, encoding, name):
-        assert encoding != Encoding.qudit, "Qudit encoded ports must be created by instanciating QuditPort"
+        assert encoding != Encoding.QUDIT, "Qudit encoded ports must be created by instanciating QuditPort"
         super().__init__(_port_size(encoding), name)
         self._encoding = encoding
 
@@ -84,7 +84,7 @@ class Port(APort):
 class QuditPort(Port):
     def __init__(self, n_qubits, name):
         super(Port, self).__init__(2**n_qubits, name)
-        self._encoding = Encoding.qudit
+        self._encoding = Encoding.QUDIT
 
 
 class Herald(APort):
@@ -120,7 +120,7 @@ class ADetector(APort, ABC):
 
     @staticmethod
     def supports_location(loc: PortLocation) -> bool:
-        return loc == PortLocation.output
+        return loc == PortLocation.OUTPUT
 
     def is_output_photonic_mode_closed(self):
         return True

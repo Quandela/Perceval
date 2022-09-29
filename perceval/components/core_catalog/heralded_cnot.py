@@ -69,8 +69,8 @@ ctrl (dual ray) ─────┤     ├───── ctrl (dual ray)
             return p.add(0, c_hcnot) \
                 .add_herald(0, 0) \
                 .add_herald(1, 1) \
-                .add_port(2, Port(Encoding.dual_rail, 'data')) \
-                .add_port(4, Port(Encoding.dual_rail, 'ctrl')) \
+                .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
+                .add_port(4, Port(Encoding.DUAL_RAIL, 'ctrl')) \
                 .add_herald(6, 0) \
                 .add_herald(7, 1)
 
