@@ -36,15 +36,15 @@ cnot.add((2, 3), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-
 cnot.add((4, 5), cp.BS.H(theta=theta_r13))
 cnot.add((3, 4), cp.BS.H())
 
-token_qcloud = 'YOUR_TOKEN'
-platform_url = "http://127.0.0.1:5001"
+token_qcloud = '_T_eyJhbGciOiJIUzUxMiIsImlhdCI6MTY2NDQ1Mzc0OSwiZXhwIjoxNjY3MDQ1NzQ5fQ.eyJpZCI6OH0.Y9kKZaZ9xX_pN89uE1Z3niRkqAK1EFeECjNtIeQK045KyHuGcWBKTIces2VAUoQNTAAwgfwgwcW9OSd9NUm14Q'
+platform_url = "https://api.cloud.quandela.dev"
 
-naive_remote_platform = pcvl.get_platform("Naive", token_qcloud, platform_url)
+naive_remote_platform = pcvl.get_platform("AbaertLaptop", token_qcloud, platform_url)
 
 sampler = Sampler(naive_remote_platform, cnot)
 
 nsample = 10000
-async_job = sampler.samples.execute_async(pcvl.BasicState([0, 1, 0, 1, 0, 0]), nsample)
+async_job = sampler.sample_count.execute_async(pcvl.BasicState([0, 1, 0, 1, 0, 0]), nsample)
 
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
@@ -58,7 +58,8 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
 
 print(f"Job status = {async_job.status()}")
 results = async_job.get_results()
-assert len(results) == nsample
+print(results)
+#assert len(results) == nsample
 
 #
 # results = job.get_results()
