@@ -65,8 +65,8 @@ def generate_sync_methods(cls):
 ################################
 @generate_sync_methods
 class RemoteBackend(Backend):
-    def __init__(self, platform, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None, mask=None):
-        self.name = platform.name
+    def __init__(self, platform, backend_name, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None, mask=None):
+        self.name = backend_name
         self.__platform = platform
         if isinstance(cu, ACircuit):
             self.__cu_key = 'circuit'
@@ -77,7 +77,7 @@ class RemoteBackend(Backend):
 
     def __defaults_payload(self, command: str):
         return {
-            'platform_name': self.name,
+            'platform_name': self.__platform.name,
             'job_name': command,
             'pcvl_version': pcvl_version
         }
