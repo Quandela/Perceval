@@ -116,6 +116,17 @@ class RemoteBackend(Backend):
 
         return self.__request_job_create(payload)
 
+    def async_sample_count(self, input_state, count):
+        payload = self.__defaults_payload('sample_count')
+        payload['payload'] = {
+            'backend_name': self.name,
+            self.__cu_key: self.__cu_data,
+            'input_state': serialize(input_state),
+            'count': count
+        }
+
+        return self.__request_job_create(payload)
+
     def async_prob(self,
                    input_state: BasicState,
                    output_state: BasicState,

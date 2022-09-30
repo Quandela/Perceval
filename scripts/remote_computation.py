@@ -36,19 +36,43 @@ cnot.add((2, 3), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-
 cnot.add((4, 5), cp.BS.H(theta=theta_r13))
 cnot.add((3, 4), cp.BS.H())
 
+
+[phi_0, phi_1, phi_2, phi_3] = [pcvl.P("p_{0}".format(i)) for i in range(4)]
+
+c = (pcvl.Circuit(4, name="Q4R")
+     .add(0, cp.BS())
+     .add(2, cp.BS())
+     .add(1, cp.PERM([1, 0]))
+     .add(0, cp.PS(phi_0))
+     .add(0, cp.BS())
+     .add(0, cp.PS(phi_1))
+     .add(0, cp.BS())
+     .add(2, cp.PS(phi_2))
+     .add(2, cp.BS())
+     .add(2, cp.PS(phi_3))
+     .add(2, cp.BS()))
+
+phi_0.set_value(0)
+phi_1.set_value(1)
+phi_2.set_value(2)
+phi_3.set_value(3)
+
+U = c.compute_unitary(use_symbolic=False)
+
+
 token_qcloud = 'YOUR_TOKEN'
-platform_url = "http://127.0.0.1:5001"
+platform_url = "https://api.cloud.quandela.dev"
 
-naive_remote_platform = pcvl.get_platform("Naive", token_qcloud, platform_url)
+naive_remote_platform = pcvl.get_platform("al3", token_qcloud, platform_url)
 
-sampler = Sampler(naive_remote_platform, cnot)
+sampler = Sampler(naive_remote_platform, U)
 
 nsample = 10000
-async_job = sampler.samples.execute_async(pcvl.BasicState([0, 1, 0, 1, 0, 0]), nsample)
+async_job = sampler.sample_count.execute_async(pcvl.BasicState([1, 0, 1, 0]), nsample)
 
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
-    tq.set_description(f'Get {nsample} samples from {cnot.name} using simulator backend {naive_remote_platform.name}')
+    tq.set_description(f'Get {nsample} samples from {c.name} using simulator backend {naive_remote_platform.name}')
     while not async_job.is_completed():
         tq.update(async_job.status.progress-previous_prog)
         previous_prog = async_job.status.progress
@@ -58,7 +82,8 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
 
 print(f"Job status = {async_job.status()}")
 results = async_job.get_results()
-assert len(results) == nsample
+print(results)
+#assert len(results) == nsample
 
 #
 # results = job.get_results()

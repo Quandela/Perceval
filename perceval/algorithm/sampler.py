@@ -23,7 +23,8 @@
 from .runner import Runner
 from perceval.platforms.job import Job
 from perceval.platforms import Platform, RemoteJob, LocalJob
-from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_float
+from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_float,\
+    deserialize_sample_count
 
 
 class Sampler(Runner):
@@ -44,6 +45,13 @@ class Sampler(Runner):
             return RemoteJob(self._backend.async_samples, self._platform, deserialize_state_list)
         else:
             return LocalJob(self._backend.samples)
+
+    @property
+    def sample_count(self) -> Job:
+        if self._platform.is_remote():
+            return RemoteJob(self._backend.async_sample_count, self._platform, deserialize_sample_count)
+        else:
+            raise NotImplementedError
 
     @property
     def prob(self) -> Job:

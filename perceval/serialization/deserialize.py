@@ -19,13 +19,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import json
 from os import path
 from typing import Union
 
 from perceval.components import Circuit
 from perceval.utils import Matrix
-from perceval.serialization import _matrix_serialization
+from perceval.serialization import _matrix_serialization, deserialize_state
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
@@ -66,6 +66,19 @@ def circuit_from_file(filepath: str) -> Circuit:
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
         return deserialize_circuit(f.read())
+
+
+def deserialize_sample_count(json_count: Union[str, bytes]) -> dict:
+    count = json.loads(json_count)
+    count = {deserialize_state(state): ct for state, ct in count.items()}
+    return count
+
+
+def sample_count_from_file(filepath: str) -> dict:
+    if not path.isfile(filepath):
+        raise FileNotFoundError(f'No file at path {filepath}')
+    with open(filepath, 'rb') as f:
+        return deserialize_sample_count(f.read())
 
 
 class CircuitBuilder:
