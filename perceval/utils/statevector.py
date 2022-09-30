@@ -47,6 +47,9 @@ class BasicState(FockState):
     def __init__(self, *args, **kwargs):
         super(BasicState, self).__init__(*args, **kwargs)
 
+    def __len__(self):
+        return self.m
+
     def __add__(self, o):
         return StateVector(self) + o
 
@@ -356,10 +359,14 @@ class SVDistribution(defaultdict):
         self[sv] += proba
 
     def __setitem__(self, key, value):
-        assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution keys must be StateVector"
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
+        if isinstance(key, BasicState):
+            key = StateVector(key)
         assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
         return super().__getitem__(key)
 
