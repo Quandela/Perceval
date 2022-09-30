@@ -39,10 +39,9 @@ def test_basic_circuit_h():
     qc.h(0)
     pc = convertor.convert(qc)
     c = pc.circuit
-    sources = pc._sources
-    assert len(sources) == 1
-    assert 0 in sources
-    assert 1 not in sources
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
     assert len(c._components) == 1
     assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
     c0 = c._components[0][1]._components[0][1]
@@ -57,10 +56,7 @@ def test_basic_circuit_double_h():
     qc.h(0)
     pc = convertor.convert(qc)
     c = pc.circuit
-    sources = pc._sources
-    assert len(sources) == 1
-    assert 0 in sources
-    assert 1 not in sources
+    assert pc.source_distribution[StateVector('|1,0>')] == 1
     assert len(c._components) == 2
 
 
@@ -70,10 +66,7 @@ def test_basic_circuit_s_phys():
     qc.s(0)
     pc = convertor.convert(qc)
     c = pc.circuit
-    sources = pc._sources
-    assert len(sources) == 1
-    assert 0 in sources
-    assert 1 not in sources
+    assert pc.source_distribution[StateVector('|1,0>')] == 1
     assert len(c._components) == 1
     assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
     r0 = c._components[0][1]._components[0][0]
@@ -88,10 +81,7 @@ def test_basic_circuit_s_symb():
     qc.s(0)
     pc = convertor.convert(qc)
     c = pc.circuit
-    sources = pc._sources
-    assert len(sources) == 1
-    assert 0 in sources
-    assert 1 not in sources
+    assert pc.source_distribution[StateVector('|1,0>')] == 1
 
 
 def test_basic_circuit_swap_direct():
@@ -100,12 +90,7 @@ def test_basic_circuit_swap_direct():
     qc.swap(0, 1)
     pc = convertor.convert(qc)
     c = pc.circuit
-    sources = pc._sources
-    assert len(sources) == 2
-    assert 0 in sources
-    assert 1 not in sources
-    assert 2 in sources
-    assert 3 not in sources
+    assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
     assert len(c._components) == 1
     r0, c0 = c._components[0]
     assert r0 == [0, 1, 2, 3]
@@ -119,10 +104,7 @@ def test_basic_circuit_swap_indirect():
     qc.swap(1, 0)
     pc = convertor.convert(qc)
     c = pc.circuit
-    sources = pc._sources
-    assert len(sources) == 2
-    assert 0 in sources
-    assert 2 in sources
+    assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
     assert len(c._components) == 1
     r0, c0 = c._components[0]
     assert r0 == [0, 1, 2, 3]
@@ -138,9 +120,7 @@ def test_cnot_1_heralded():
     pc = convertor.convert(qc, True)
     c = pc.circuit
     assert c.m == 8
-    sources = pc._sources
-    assert len(sources) == 4
-    assert 0 in sources and 2 in sources and 5 in sources and 7 in sources
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
@@ -160,9 +140,7 @@ def test_cnot_1_inverse_heralded():
     pc = convertor.convert(qc, True)
     c = pc.circuit
     assert c.m == 8
-    sources = pc._sources
-    assert len(sources) == 4
-    assert 0 in sources and 2 in sources and 5 in sources and 7 in sources
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
@@ -182,9 +160,7 @@ def test_cnot_2_heralded():
     pc = convertor.convert(qc, True)
     c = pc.circuit
     assert c.m == 10
-    sources = pc._sources
-    assert len(sources) == 5
-    assert 0 in sources and 2 in sources and 4 in sources and 7 in sources and 9 in sources
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,0,0,1,0,1>')] == 1
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
@@ -204,9 +180,7 @@ def test_cnot_1_postprocessed():
     pc = convertor.convert(qc, False)
     c = pc.circuit
     assert c.m == 6
-    sources = pc._sources
-    assert len(sources) == 2
-    assert 0 in sources and 2 in sources
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
     assert len(c._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = c._components[1][1]
@@ -224,8 +198,7 @@ def test_cnot_postprocess_phys():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
-    simulator_backend = BackendFactory().get_backend('Naive')
-    all_p, sv_out = pc.run(simulator_backend)
+    sv_out = pc.prob()
     assert len(sv_out) == 2
 
 
@@ -235,8 +208,7 @@ def test_cnot_postprocess_symb():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
-    simulator_backend = BackendFactory().get_backend('Naive')
-    all_p, sv_out = pc.run(simulator_backend)
+    sv_out = pc.prob()
     assert len(sv_out) == 2
 
 
@@ -246,8 +218,7 @@ def test_cnot_herald_phys():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, True)
-    simulator_backend = BackendFactory().get_backend('Naive')
-    all_p, sv_out = pc.run(simulator_backend)
+    sv_out = pc.prob()
     assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
     assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
     assert len(sv_out) == 4
@@ -259,8 +230,7 @@ def test_cnot_herald_symb():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, True)
-    simulator_backend = BackendFactory().get_backend('Naive')
-    all_p, sv_out = pc.run(simulator_backend)
+    sv_out = pc.prob()
     assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
     assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
     assert len(sv_out) == 4
