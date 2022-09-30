@@ -21,14 +21,25 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from typing import Dict
+from enum import Enum
+from typing import Dict, List
 
 from perceval.utils import BasicState, SVDistribution, Parameter
+
+
+class ProcessorType(Enum):
+    SIMULATOR = 1
+    PHYSICAL = 2
 
 
 class AProcessor(ABC):
     def __init__(self):
         self._parameters = {}
+
+    @property
+    @abstractmethod
+    def type(self) -> ProcessorType:
+        pass
 
     def set_parameters(self, params: Dict):
         self._parameters = params
@@ -45,7 +56,7 @@ class AProcessor(ABC):
     def available_sampling_method(self) -> str:
         pass
 
-    def samples(self, count: int) -> BasicState:
+    def samples(self, count: int) -> List[BasicState]:
         raise RuntimeError(f"Cannot call samples(). Available method is {self.available_sampling_method}")
 
     def sample_count(self, duration) -> Dict[BasicState, int]:
