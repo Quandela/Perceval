@@ -27,6 +27,15 @@ from perceval.utils import BasicState, SVDistribution, Parameter
 
 
 class AProcessor(ABC):
+    def __init__(self):
+        self._parameters = {}
+
+    def set_parameters(self, params: Dict):
+        self._parameters = params
+
+    def clear_parameters(self):
+        self._parameters = {}
+
     @abstractmethod
     def with_input(self, input_state: BasicState) -> None:
         pass
