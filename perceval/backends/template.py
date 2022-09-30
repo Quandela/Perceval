@@ -330,7 +330,7 @@ class Backend(ABC):
             return [self.sample(input_state)]
         states, p = zip(*self.allstateprob_iterator(input_state))
         rng = np.random.default_rng()
-        results = rng.choice(states, count, p=p / sum(p))
+        results = rng.choice(states, count, p=np.array(p) / sum(p))
         return list(results)
 
     def set_cutoff(self, cutoff: int):
