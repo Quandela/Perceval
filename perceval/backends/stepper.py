@@ -129,3 +129,6 @@ class StepperBackend(Backend):
         for output_state in self.allstate_iterator(input_state):
             yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
             skip_compile = True
+
+    def preferred_command(self) -> str:
+        return 'evolve'

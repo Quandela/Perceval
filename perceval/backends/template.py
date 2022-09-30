@@ -319,7 +319,8 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None) -> list[BasicState]:
+    def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None)\
+            -> list[BasicState]:
         r"""Return samples for the circuit according to the output probability distribution given an input state
 
         :param input_state: a given input state
@@ -337,3 +338,11 @@ class Backend(ABC):
         Set the cutoff dimension for the MPS simulator.
         """
         pass
+
+    @abstractmethod
+    def preferred_command(self) -> str:
+        pass
+
+    @staticmethod
+    def available_commands(self) -> List[str]:
+        return ['prob', 'prob_be', 'probampli', 'probampli_be', 'sample', 'samples', 'evolve']

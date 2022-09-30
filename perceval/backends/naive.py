@@ -57,3 +57,6 @@ class NaiveBackend(Backend):
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
         return abs(self.probampli_be(input_state, output_state, n, output_idx))**2
+
+    def preferred_command(self) -> str:
+        return 'probampli'
