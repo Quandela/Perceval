@@ -131,5 +131,5 @@ class StepperBackend(Backend):
             skip_compile = True
 
     @staticmethod
-    def preferred_command(self) -> str:
+    def preferred_command() -> str:
         return 'evolve'

@@ -341,9 +341,9 @@ class Backend(ABC):
 
     @staticmethod
     @abstractmethod
-    def preferred_command(self) -> str:
+    def preferred_command() -> str:
         pass
 
     @staticmethod
-    def available_commands(self) -> List[str]:
+    def available_commands() -> List[str]:
         return ['prob', 'prob_be', 'probampli', 'probampli_be', 'sample', 'samples', 'evolve']

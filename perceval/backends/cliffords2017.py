@@ -86,9 +86,9 @@ class CliffordClifford2017Backend(Backend):
         return results
 
     @staticmethod
-    def preferred_command(self) -> str:
+    def preferred_command() -> str:
         return 'samples'
 
     @staticmethod
-    def available_commands(self):
+    def available_commands():
         return ['sample', 'samples']

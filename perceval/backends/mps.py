@@ -107,7 +107,7 @@ class MPSBackend(Backend):
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     @staticmethod
-    def preferred_command(self) -> str:
+    def preferred_command() -> str:
         return 'probampli'
 
 # ################ From here, everything must be in quandelibc ##############################

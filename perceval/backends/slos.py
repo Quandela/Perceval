@@ -196,5 +196,5 @@ class SLOSBackend(Backend):
         return abs(c)**2
 
     @staticmethod
-    def preferred_command(self) -> str:
+    def preferred_command() -> str:
         return 'probampli'
