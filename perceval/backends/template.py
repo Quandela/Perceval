@@ -339,6 +339,7 @@ class Backend(ABC):
         """
         pass
 
+    @staticmethod
     @abstractmethod
     def preferred_command(self) -> str:
         pass

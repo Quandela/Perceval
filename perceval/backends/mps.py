@@ -106,6 +106,7 @@ class MPSBackend(Backend):
         mps_in_list.append(self.res[tuple(input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
+    @staticmethod
     def preferred_command(self) -> str:
         return 'probampli'
 

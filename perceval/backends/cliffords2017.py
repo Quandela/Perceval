@@ -85,6 +85,7 @@ class CliffordClifford2017Backend(Backend):
                 progress_callback((i+1) / count)
         return results
 
+    @staticmethod
     def preferred_command(self) -> str:
         return 'samples'
 

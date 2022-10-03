@@ -361,13 +361,13 @@ class SVDistribution(defaultdict):
     def __setitem__(self, key, value):
         if isinstance(key, BasicState):
             key = StateVector(key)
-        assert isinstance(key, StateVector), "SVDistribution keys must be StateVector"
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
         if isinstance(key, BasicState):
             key = StateVector(key)
-        assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
     def __mul__(self, svd):
