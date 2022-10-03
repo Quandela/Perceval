@@ -22,7 +22,7 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 from perceval.utils import BasicState, SVDistribution, Parameter
 
@@ -61,13 +61,13 @@ class AProcessor(ABC):
     def available_sampling_method(self) -> str:
         pass
 
-    def samples(self, count: int) -> List[BasicState]:
+    def samples(self, count: int, progress_callback: Callable = None) -> List[BasicState]:
         raise RuntimeError(f"Cannot call samples(). Available method is {self.available_sampling_method}")
 
-    def sample_count(self, count: int) -> Dict[BasicState, int]:
+    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict[BasicState, int]:
         raise RuntimeError(f"Cannot call sample_count(). Available method is {self.available_sampling_method}")
 
-    def probs(self) -> SVDistribution:
+    def probs(self, progress_callback: Callable = None) -> SVDistribution:
         raise RuntimeError(f"Cannot call probs(). Available method is {self.available_sampling_method}")
 
     @abstractmethod
