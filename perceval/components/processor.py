@@ -116,7 +116,7 @@ class Processor(AProcessor):
                 output.append(self.filter_herald(sampled_state))
         return output
 
-    def prob(self) -> SVDistribution:
+    def probs(self) -> SVDistribution:
         assert self._simulator is not None and self._inputs_map is not None, "Input or simulator is missing"
         assert self.available_sampling_method == 'prob', \
             f"Cannot call prob(). Available method is {self.available_sampling_method} "
