@@ -24,7 +24,7 @@ from .template import Backend
 
 import numpy as np
 import quandelibc as qc
-from perceval.utils import BasicState
+from perceval.utils import BasicState, StateVector
 
 
 def _square(x):
@@ -44,6 +44,8 @@ class CliffordClifford2017Backend(Backend):
         raise NotImplementedError(f'Cannot use prob_be on {self.name}')
 
     def sample(self, input_state, progress_callback=None):
+        if isinstance(input_state, StateVector):
+            input_state = input_state.sample()
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
@@ -76,6 +78,8 @@ class CliffordClifford2017Backend(Backend):
         return BasicState(fs)
 
     def samples(self, input_state, count, progress_callback=None):
+        if isinstance(input_state, StateVector) and len(input_state) == 1:
+            input_state = input_state[0]
         if progress_callback:
             progress_callback(0)
         results = []
