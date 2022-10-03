@@ -58,6 +58,10 @@ class Processor(AProcessor):
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
 
+    @property
+    def is_remote(self) -> bool:
+        return False
+
     def with_input(self, input_state: BasicState) -> None:
         self._inputs_map = None
         expected_input_length = self._circuit.m - len(self._heralds)
@@ -110,14 +114,16 @@ class Processor(AProcessor):
         assert self.available_sampling_method == command_name, \
             f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
 
-    def samples(self, count: int) -> List[BasicState]:
+    def samples(self, count: int, progress_callback=None) -> List[BasicState]:
         self._run_checks("samples")
         output = []
         while len(output) < count:
-            selected_input = self._inputs_map.sample()
+            selected_input = self._inputs_map.sample()[0]
             sampled_state = self._simulator.sample(selected_input)
             if self._state_selected(sampled_state):
                 output.append(self.filter_herald(sampled_state))
+            if progress_callback:
+                progress_callback(len(output)/count, "sampling")
         return output
 
     def probs(self) -> SVDistribution:
