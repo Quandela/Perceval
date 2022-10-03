@@ -62,8 +62,8 @@ class AProcessor(ABC):
     def sample_count(self, duration) -> Dict[BasicState, int]:
         raise RuntimeError(f"Cannot call sample_count(). Available method is {self.available_sampling_method}")
 
-    def prob(self) -> SVDistribution:
-        raise RuntimeError(f"Cannot call prob(). Available method is {self.available_sampling_method}")
+    def probs(self) -> SVDistribution:
+        raise RuntimeError(f"Cannot call probs(). Available method is {self.available_sampling_method}")
 
     @abstractmethod
     def get_circuit_parameters(self) -> Dict[str, Parameter]:

@@ -104,10 +104,14 @@ class Processor(AProcessor):
                 new_state.append(k)
         return BasicState(new_state)
 
+    def _run_checks(self, command_name: str):
+        assert self._simulator is not None, "Simulator is missing"
+        assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
+        assert self.available_sampling_method == command_name, \
+            f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
+
     def samples(self, count: int) -> List[BasicState]:
-        assert self._simulator is not None and self._inputs_map is not None, "Input or simulator is missing"
-        assert self.available_sampling_method == 'samples',\
-            f"Cannot call samples(). Available method is {self.available_sampling_method} "
+        self._run_checks("samples")
         output = []
         while len(output) < count:
             selected_input = self._inputs_map.sample()
@@ -117,9 +121,7 @@ class Processor(AProcessor):
         return output
 
     def probs(self) -> SVDistribution:
-        assert self._simulator is not None and self._inputs_map is not None, "Input or simulator is missing"
-        assert self.available_sampling_method == 'prob', \
-            f"Cannot call prob(). Available method is {self.available_sampling_method} "
+        self._run_checks("probs")
         output = SVDistribution()
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
@@ -169,10 +171,13 @@ class Processor(AProcessor):
         preferred_command = self._simulator.preferred_command()
         if preferred_command == 'samples':
             return 'samples'
-        return 'prob'
+        return 'probs'
 
     def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        return self._circuit.get_parameters()
+        return {p.name: p for p in self._circuit.get_parameters()}
 
-    def set_circuit_parameters(self, params: Dict[str, Parameter]) -> None:
-        pass
+    def set_circuit_parameters(self, params: Dict[str, float]) -> None:
+        circuit_params = self.get_circuit_parameters()
+        for param_name, param_value in params.items():
+            if param_name in circuit_params:
+                circuit_params[param_name].set_value(param_value)
