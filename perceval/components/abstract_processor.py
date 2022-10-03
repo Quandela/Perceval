@@ -41,6 +41,11 @@ class AProcessor(ABC):
     def type(self) -> ProcessorType:
         pass
 
+    @property
+    @abstractmethod
+    def is_remote(self) -> bool:
+        pass
+
     def set_parameters(self, params: Dict):
         self._parameters = params
 
@@ -59,11 +64,11 @@ class AProcessor(ABC):
     def samples(self, count: int) -> List[BasicState]:
         raise RuntimeError(f"Cannot call samples(). Available method is {self.available_sampling_method}")
 
-    def sample_count(self, duration) -> Dict[BasicState, int]:
+    def sample_count(self, count: int) -> Dict[BasicState, int]:
         raise RuntimeError(f"Cannot call sample_count(). Available method is {self.available_sampling_method}")
 
-    def prob(self) -> SVDistribution:
-        raise RuntimeError(f"Cannot call prob(). Available method is {self.available_sampling_method}")
+    def probs(self) -> SVDistribution:
+        raise RuntimeError(f"Cannot call probs(). Available method is {self.available_sampling_method}")
 
     @abstractmethod
     def get_circuit_parameters(self) -> Dict[str, Parameter]:

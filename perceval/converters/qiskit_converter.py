@@ -42,7 +42,7 @@ def _swap(perm, port_a, port_b):
 
 class QiskitConverter:
 
-    def __init__(self, catalog, source: Source = None):
+    def __init__(self, catalog, backend_name: str = "Naive", source: Source = None):
         r"""Initialize qiskit to perceval circuit converter.
 
         :param library: a component library to use for the conversion
@@ -52,6 +52,7 @@ class QiskitConverter:
             source = Source()
         self._source = source
         self._catalog = catalog
+        self._backend_name = backend_name
 
     def convert(self, qc, heralded: bool = None) -> Processor:
         r"""Convert a qiskit circuit into a perceval.Processor.
@@ -78,10 +79,8 @@ class QiskitConverter:
             Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2"))))
 
         qubit_names = qc.qregs[0].name
-        sources = {}
         port_names = {}
         for i in range(qc.qregs[0].size):
-            sources[2*i] = self._source
             port_names[2*i] = "%s_%s:%d" % (qubit_names, i, 0)
             port_names[2*i+1] = "%s_%s:%d" % (qubit_names, i, 1)
 
@@ -169,8 +168,6 @@ class QiskitConverter:
                         if p_idx in heralds:
                             inv_perm.append(idx_herald - c_first)
                             perm[idx_herald - c_first] = p_idx
-                            if heralds[p_idx]:
-                                sources[idx_herald] = self._source
                             idx_herald += 1
                         else:
                             if real_port < 2:
@@ -208,6 +205,7 @@ class QiskitConverter:
 
                     pc.add(c_first, comp.PERM(inv_perm))
 
-        p = Processor(sources, pc, post_select_fn=post_select_fn, heralds=global_heralds)
+        p = Processor(self._backend_name, pc, self._source, post_select_fn=post_select_fn, heralds=global_heralds)
+        p.with_input(BasicState([1, 0]*qc.qregs[0].size))
         p.set_port_names(port_names, port_names)
         return p

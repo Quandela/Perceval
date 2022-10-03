@@ -84,3 +84,11 @@ class CliffordClifford2017Backend(Backend):
             if progress_callback:
                 progress_callback((i+1) / count)
         return results
+
+    @staticmethod
+    def preferred_command() -> str:
+        return 'samples'
+
+    @staticmethod
+    def available_commands():
+        return ['sample', 'samples']
