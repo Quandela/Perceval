@@ -384,28 +384,23 @@ class SVDistribution(defaultdict):
 
         return new_svd
 
-    def sample(self, k: int = 1, non_null: bool = True) -> List[StateVector]:
+    def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
-        :param k: number of samples to draw
-        :return: if :math:`k=1` a single sample, if :math:`k>1` a list of :math:`k` samples
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
         """
-        sample = []
-        for _ in range(k):
-            prob = random.random()
-            if non_null:
-                prob -= sum(v for sv, v in self.items() if sv.n == 0)
-            for sv, v in self.items():
-                if non_null and sv.n == 0:
-                    continue
-                if prob < v:
-                    if k == 1:
-                        return sv
-                    sample.append(sv)
-                    break
-                prob -= v
-        return sample
+        d = self
+        if non_null:
+            d = {sv: p for sv, p in self.items() if max(sv.n) != 0}
+        states = list(d.keys())
+        probs = list(d.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        if len(results) == 1:
+            return results[0]
+        return list(results)
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

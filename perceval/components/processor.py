@@ -126,13 +126,19 @@ class Processor(AProcessor):
                 progress_callback(len(output)/count, "sampling")
         return output
 
-    def probs(self) -> SVDistribution:
+    def probs(self, progress_callback: Callable = None) -> SVDistribution:
         self._run_checks("probs")
         output = SVDistribution()
+        idx = 0
+        input_length = len(self._inputs_map)
+
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
                 if p > global_params['min_p'] and self._state_selected(output_state):
                     output[self.filter_herald(output_state)] += p * input_prob
+            idx += 1
+            if progress_callback:
+                progress_callback(idx/input_length)
         all_p = sum(v for v in output.values())
         if all_p == 0:
             return output
