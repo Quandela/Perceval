@@ -55,6 +55,10 @@ def sample_count_to_probs(sample_count: Dict[BasicState, int]):
     svd = SVDistribution()
     n_samples = 0
     for state, count in sample_count.items():
+        if count == 0:
+            continue
+        if count < 0:
+            raise RuntimeError(f"A sample count must be positive (got {count})")
         svd[state] = count
         n_samples += count
     for state, value in svd.items():
@@ -105,11 +109,11 @@ class Sampler(AAlgorithm):
         sample_count = self._processor.sample_count(count, progress_callback)
         return sample_count_to_probs(sample_count)
 
-    def _samples_from_sample_count(self, count: int, progress_callback):
+    def _samples_from_sample_count(self, count: int, progress_callback: Callable = None):
         sample_count = self._processor.sample_count(count, progress_callback)
         return sample_count_to_samples(sample_count, count)
 
-    def _samples_from_probs(self, count: int, progress_callback):
+    def _samples_from_probs(self, count: int, progress_callback: Callable = None):
         probs = self._processor.probs(progress_callback)
         return probs_to_samples(probs, count)
 

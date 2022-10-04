@@ -389,7 +389,7 @@ class SVDistribution(defaultdict):
 
         :param non_null: excludes null states from the sample generation
         :param count: number of samples to draw
-        :return: if :math:`k=1` a single sample, if :math:`k>1` a list of :math:`k` samples
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
         """
         d = self
         if non_null:
