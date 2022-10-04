@@ -19,55 +19,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Callable, Dict, List
+from typing import Callable
 
 from .abstract_algorithm import AAlgorithm
-from perceval.utils import BasicState, SVDistribution
+from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
+    probs_to_samples, probs_to_sample_count
 from perceval.components.abstract_processor import AProcessor
 from perceval.platforms.job import Job
 from perceval.platforms import RemoteJob, LocalJob
 from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_float,\
     deserialize_sample_count
-
-
-# Conversion functions (samples <=> probs <=> sample_count)
-def samples_to_sample_count(sample_list: List[BasicState]) -> Dict[BasicState, int]:
-    results = {}
-    for s in sample_list:
-        if s not in results:
-            results[s] = sample_list.count(s)
-    return results
-
-
-def samples_to_probs(sample_list: List[BasicState]) -> SVDistribution:
-    return sample_count_to_probs(samples_to_sample_count(sample_list))
-
-
-def probs_to_sample_count(probs: SVDistribution, count: int) -> Dict[BasicState, int]:
-    return samples_to_sample_count(probs.sample(count))
-
-
-def probs_to_samples(probs: SVDistribution, count: int) -> List[BasicState]:
-    return probs.sample(count)
-
-
-def sample_count_to_probs(sample_count: Dict[BasicState, int]):
-    svd = SVDistribution()
-    n_samples = 0
-    for state, count in sample_count.items():
-        if count == 0:
-            continue
-        if count < 0:
-            raise RuntimeError(f"A sample count must be positive (got {count})")
-        svd[state] = count
-        n_samples += count
-    for state, value in svd.items():
-        svd[state] = value / n_samples
-    return svd
-
-
-def sample_count_to_samples(sample_count: Dict[BasicState, int], count: int):
-    return sample_count_to_probs(sample_count).sample(count)
 
 
 class Sampler(AAlgorithm):
