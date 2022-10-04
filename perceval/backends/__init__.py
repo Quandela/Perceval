@@ -26,7 +26,6 @@ from .cliffords2017 import CliffordClifford2017Backend
 from .naive import NaiveBackend
 from .slos import SLOSBackend
 from .stepper import StepperBackend
-from .strawberryfields import SFBackend
 from .mps import MPSBackend
 
 
@@ -37,8 +36,7 @@ BACKEND_LIST = {
     SLOSBackend.name: SLOSBackend,
     StepperBackend.name: StepperBackend,
 }
-if SFBackend.is_available():
-    BACKEND_LIST[SFBackend.name] = SFBackend
+
 
 @deprecated(reason='Please use get_platform("platform name") instead')
 class BackendFactory:
