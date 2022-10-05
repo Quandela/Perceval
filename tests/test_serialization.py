@@ -23,8 +23,9 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, Circuit, BasicState
-from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state
+from perceval import Matrix, P, Circuit, BasicState, SVDistribution
+from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state, \
+    deserialize_svdistribution
 import perceval.components.base_components as comp
 
 
@@ -92,3 +93,13 @@ def test_fockstate_serialization():
         serialized = serialize(s)
         deserialized = deserialize_state(serialized)
         assert s == deserialized
+
+
+def test_svdistribution_deserialization():
+    svd = SVDistribution()
+    svd[BasicState("|0,1>")] = 0.2
+    svd[BasicState("|1,0>")] = 0.3
+    svd[BasicState("|1,1>")] = 0.5
+    json = '{"|0,1>":0.2,"|1,0>":0.3,"|1,1>":0.5}'
+    svd2 = deserialize_svdistribution(json)
+    assert svd == svd2

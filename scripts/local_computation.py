@@ -22,7 +22,6 @@
 
 import time
 from tqdm import tqdm
-from perceval.platforms.platform import *
 import perceval as pcvl
 import perceval.components.base_components as cp
 import numpy as np

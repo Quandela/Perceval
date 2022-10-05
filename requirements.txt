@@ -4,3 +4,11 @@ tabulate
 pytest
 setuptools
 multipledispatch
+
+sympy
+matplotlib
+scipy
+tqdm
+Deprecated
+requests
+drawSvg

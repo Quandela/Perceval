@@ -20,27 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-Through a simple object-oriented Python API, Perceval provides tools for composing photonic circuits from linear
-optical components like beamsplitters and phase shifters, defining single-photon sources, manipulating Fock states,
-and running simulations."""
-
-from pkg_resources import get_distribution
-import importlib
-
-__version__ = get_distribution("perceval-quandela").version
-
-from .components import *
-from .backends import *
-from .utils import *
-from .rendering import *
-from .runtime import *
+import time
 
 
-def register_plugin(name, silent=False):
-    try:
-        plugin = importlib.import_module(name)
-        assert plugin.register(silent) is True
-    except Exception as e:
-        raise RuntimeError("cannot import %s: %s" % (name, str(e)))
-    return True
+def _sync_wrapper(cls, func):
+    async_func = getattr(cls, func)
+
+    def await_job(*args):
+        job = async_func(*args)
+        while True:
+            if not job.is_completed():
+                time.sleep(3)
+            else:
+                return job.get_results()
+
+    return await_job
+
+
+def generate_sync_methods(cls):
+    for method in dir(cls):
+        if method.startswith('async_'):
+            sync_name = method.removeprefix('async_')
+            setattr(cls, sync_name, _sync_wrapper(cls, method))
+    return cls
