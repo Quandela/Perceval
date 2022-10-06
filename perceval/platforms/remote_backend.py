@@ -57,7 +57,7 @@ def _sync_wrapper(cls, func):
 def generate_sync_methods(cls):
     for method in dir(cls):
         if method.startswith('async_'):
-            sync_name = method.removeprefix('async_')
+            sync_name = method[6:]
             setattr(cls, sync_name, _sync_wrapper(cls, method))
     return cls
 
