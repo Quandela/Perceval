@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import io
 import re
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional, Union, Tuple
 import numpy as np
 import sympy as sp
 
@@ -94,7 +94,7 @@ class Matrix(ABC):
         return MatrixN(np.eye(n, dtype=complex))
 
     @staticmethod
-    def zeros(shape: tuple[int, int], use_symbolic: bool = False) -> Matrix:
+    def zeros(shape: Tuple[int, int], use_symbolic: bool = False) -> Matrix:
         """Generate an empty matrix
 
         :param shape: 2D shape of the matrix

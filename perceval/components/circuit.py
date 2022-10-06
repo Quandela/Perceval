@@ -142,7 +142,7 @@ class ACircuit(ABC):
     def params(self):
         return self._params.keys()
 
-    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
+    def get_parameters(self, all_params: bool = False) -> List[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
