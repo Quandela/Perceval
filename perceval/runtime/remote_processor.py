@@ -41,18 +41,18 @@ def _extract_commands(specs):
 
 def _get_first_spec(specs, name):
     for v in specs.values():
-        if 'name' in v:
-            return v['name']
+        if name in v:
+            return v[name]
     return None
 
 
 def _split_platform_and_backend_name(name: str):
     backend_name = 'Naive'
     platform_name = name
-    colon_pos = name.find(":")
-    if colon_pos != -1:
-        platform_name = name[:colon_pos]
-        backend_name = name[colon_pos + 1:]
+    names = name.split(":")
+    if len(names) == 2:
+        platform_name = names[0]
+        backend_name = names[1]
     return platform_name, backend_name
 
 
@@ -109,8 +109,7 @@ class RemoteProcessor(AProcessor):
     @property
     def available_sampling_method(self) -> str:
         for k, v in _extract_commands(self._specs):
-            if v.startswith('sample'):
-                return v
+            return v
         return None
 
     def async_samples(self, count):

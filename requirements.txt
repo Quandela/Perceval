@@ -12,3 +12,4 @@ tqdm
 Deprecated
 requests
 drawSvg
+protobuf>=4.21.2
