@@ -80,7 +80,7 @@ def test_polar_circuit1():
 
 
 def test_polar_nmode():
-    c = comp.GenericBS()
+    c = comp.BS.H()
     u = c.compute_unitary()
     pu = c.compute_unitary(use_polarization=True)
     assert u.shape == (2, 2)
@@ -91,7 +91,7 @@ def test_polar_nmode():
 
 def test_polar_circuit2():
     c = pcvl.Circuit(2)
-    c //= comp.GenericBS()
+    c //= comp.BS.H()
     c //= (1, comp.WP(sp.pi/4, sp.pi/2))
     u = c.compute_unitary(use_symbolic=True, use_polarization=True)
     assert u.shape == (4, 4)
@@ -100,7 +100,7 @@ def test_polar_circuit2():
 
 
 def test_prep_state():
-    s, m = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H},{P:V},0,{P:A}>"))
+    s, m = convert_polarized_state(pcvl.BasicState("|{P:H},{P:V},0,{P:A}>"))
     assert str(s) == "|1,0,1,0,0,0,1,0>"
     assert pdisplay_matrix(m) == """
             ⎡1  0  0  0   0  0  0           0        ⎤
@@ -112,23 +112,23 @@ def test_prep_state():
             ⎢0  0  0  0   0  0  sqrt(2)/2   sqrt(2)/2⎥
             ⎣0  0  0  0   0  0  -sqrt(2)/2  sqrt(2)/2⎦
     """.strip().replace("            ", "")
-    s2, m2 = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:H},{P:V},0,{P:A}>"))
+    s2, m2 = convert_polarized_state(pcvl.BasicState("|{P:H}{P:H},{P:V},0,{P:A}>"))
     assert str(s2) == "|2,0,1,0,0,0,1,0>"
     assert (m2-m).all() == 0
 
 
 def test_prep_multi_state():
-    convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
+    convert_polarized_state(pcvl.BasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
 
 
 def test_convert_multistate():
-    input_state, prep_matrix = convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:V}>"))
+    input_state, prep_matrix = convert_polarized_state(pcvl.BasicState("|2{P:H}3{P:V}>"))
     assert str(input_state) == "|2,3>"
 
 
 def test_convert_multistate_nonorthogonal():
     with pytest.raises(ValueError):
-        convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:D}>"))
+        convert_polarized_state(pcvl.BasicState("|2{P:H}3{P:D}>"))
 
 
 def test_build_spatial_output():
@@ -145,5 +145,5 @@ def test_build_spatial_output():
 def test_subcircuit_polarization():
     a = pcvl.Circuit(2) // comp.PBS() // comp.PBS()
     assert a.requires_polarization, "subcircuit does not propagate polarization state"
-    b = comp.GenericBS() // a // a // comp.GenericBS()
+    b = comp.BS.H() // a // a // comp.BS.H()
     assert b.requires_polarization, "subcircuit does not propagate polarization state"

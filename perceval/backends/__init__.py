@@ -20,24 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
 from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
+from .cliffords2017 import CliffordClifford2017Backend
+from .naive import NaiveBackend
+from .slos import SLOSBackend
+from .stepper import StepperBackend
+from .strawberryfields import SFBackend
+from .mps import MPSBackend
 
 
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
+BACKEND_LIST = {
+    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
+    MPSBackend.name: MPSBackend,
+    NaiveBackend.name: NaiveBackend,
+    SLOSBackend.name: SLOSBackend,
+    StepperBackend.name: StepperBackend,
+}
+if SFBackend.is_available():
+    BACKEND_LIST[SFBackend.name] = SFBackend
 
-
-def get_platform(name: str, credentials: RemoteCredentials = None):
-    if isinstance(name, RemoteCredentials):
-        credentials = name
-        name = '1bf73239-192e-4b23-809f-007b323826f5'  # 'simulator'
-
-    if name is None or name == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name, credentials)
+@deprecated(reason='Please use get_platform("platform name") instead')
+class BackendFactory:
+    def get_backend(self, backend_name="SLOS"):
+        name = backend_name
+        if name in BACKEND_LIST:
+            return BACKEND_LIST[name]
+        return BACKEND_LIST['SLOS']

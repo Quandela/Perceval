@@ -62,6 +62,7 @@ jobs:
       - name: Build wheels for ${{ env.PYTHON_V_CP }}
         env:
           CIBW_BUILD: '${{ env.PYTHON_V_CP }}-*'
+
           CIBW_SKIP: '*-musllinux_*'
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_MACOS: x86_64
@@ -71,6 +72,7 @@ jobs:
           cd quandelibc
           python -m pip install cibuildwheel
           python -m cibuildwheel --output-dir precompiled-quandelibc
+
       - name: Store wheel
         uses: actions/upload-artifact@v2
         with:
@@ -118,6 +120,7 @@ jobs:
         python -m pip install flake8 pytest
         python -m pip install -r requirements.txt
         python -m pip install .
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -127,6 +130,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+        
   perceval-docs-test:
     name: Build docs on ubuntu
     needs:

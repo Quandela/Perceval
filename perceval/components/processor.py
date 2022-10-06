@@ -22,7 +22,7 @@
 
 from .source import Source
 from .circuit import ACircuit, Circuit
-from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
+from perceval.utils import SVDistribution, BasicState, StateVector, global_params
 from perceval.backends import Backend
 from typing import Dict, Callable, Type, Literal
 
@@ -73,7 +73,7 @@ class Processor:
     def sources(self):
         return self._sources
 
-    def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
+    def filter_herald(self, s: BasicState, keep_herald: bool) -> StateVector:
         if not self._heralds or keep_herald:
             return StateVector(s)
         new_state = []
@@ -102,7 +102,7 @@ class Processor:
             outputs[k] /= all_p
         return all_p, outputs
 
-    def _state_selected(self, state: AnnotatedBasicState) -> bool:
+    def _state_selected(self, state: BasicState) -> bool:
         """
         Computes if the state is selected given heralds and post selection function
         """

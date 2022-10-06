@@ -1,8 +1,6 @@
 States
 ======
 
-TODO: INTRO
-
 Basic State
 -----------
 
@@ -118,7 +116,35 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 >>> st4 = alpha*st1 + beta*st2
 
 .. WARNING::
-  ``StateVector`` will normalize themselves so it will add normalization terms to any combination.
+  ``StateVector`` will normalize themselves so normalization terms will be added to any combination.
+
+Sampling
+^^^^^^^^
+
+:meth:`perceval.utils.StateVector.sample` and :meth:`perceval.utils.StateVector.samples` methods are used to generate samples from state vectors:
+
+>>> st = pcvl.StateVector([0,1]) + pcvl.StateVector([1,0])
+>>> c = Counter()
+>>> for s in st.samples(10):
+>>>    c[s] += 1
+>>> print("\n".join(["%s: %d" % (str(k), v) for k,v in c.items()]))
+|0,1>: 3
+|1,0>: 7
+
+.. INFO::
+  These methods do not modify the state vector
+
+Measurement
+^^^^^^^^^^^
+
+:meth:`perceval.utils.StateVector.measure` is used to perform a measure on one or multiple modes. It returns for each
+possible fock state value of the selected modes, its probability and the collapsed state vector on the remaining modes.
+
+>>> sv = pcvl.StateVector("|0,1,1>")+pcvl.StateVector("|1,1,0>")
+>>> map_measure_sv = sv.measure(1)
+>>> for s, (p, sv) in map_measure_sv.items():
+>>>    print(s, p, sv)
+|1> 0.9999999999999998 sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>
 
 State Vector Distribution
 -------------------------

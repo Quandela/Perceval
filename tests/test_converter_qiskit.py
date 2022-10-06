@@ -46,7 +46,8 @@ def test_basic_circuit_h():
     assert len(c._components) == 1
     assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
     c0 = c._components[0][1]._components[0][1]
-    assert isinstance(c0, comp.GenericBS)
+    assert isinstance(c0, comp.BS)
+    assert c0._convention == comp.BSConvention.H
 
 
 def test_basic_circuit_double_h():
