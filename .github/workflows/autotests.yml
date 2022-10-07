@@ -105,15 +105,15 @@ jobs:
           - os: 'windows-latest'
             wheel: 'win_amd64'
     steps:
-      - if: runner.os == 'Linux'
-        name: Initialize PYTHON_V_CP linux
-        run: |
-          echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
-      - if: runner.os != 'Linux'
-        name: Initialize PYTHON_V_CP notLinux
-        run: |
-          echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
-        shell: Bash
+    - if: runner.os == 'Linux'
+      name: Initialize PYTHON_V_CP linux
+      run: |
+        echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+    - if: runner.os != 'Linux'
+      name: Initialize PYTHON_V_CP notLinux
+      run: |
+        echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+      shell: Bash
 
     - uses: actions/checkout@v3
     - name: Set up Python ${{ env.PYTHON_V }}
@@ -166,7 +166,7 @@ jobs:
       run: |
         echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
       shell: Bash
-      
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
