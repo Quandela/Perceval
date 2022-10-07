@@ -38,6 +38,11 @@ class AProcessor(ABC):
 
     @property
     @abstractmethod
+    def m(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
     def type(self) -> ProcessorType:
         pass
 

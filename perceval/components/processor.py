@@ -69,9 +69,17 @@ class Processor(AProcessor):
         super().mode_post_selection(n)
         self._min_mode_post_select = n
 
+    @property
+    def m(self) -> int:
+        return self._circuit.m - len(self._heralds)
+
+    @property
+    def post_select_fn(self):
+        return self._post_select
+
     def with_input(self, input_state: BasicState) -> None:
         self._inputs_map = None
-        expected_input_length = self._circuit.m - len(self._heralds)
+        expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
         input_idx = 0
