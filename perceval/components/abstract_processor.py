@@ -22,7 +22,7 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
 from perceval.utils import BasicState, SVDistribution, Parameter
 
@@ -49,8 +49,14 @@ class AProcessor(ABC):
     def set_parameters(self, params: Dict):
         self._parameters = params
 
+    def set_parameter(self, key: str, value: Any):
+        self._parameters[key] = value
+
     def clear_parameters(self):
         self._parameters = {}
+
+    def mode_post_selection(self, n: int):
+        self.set_parameter('mode_post_select', n)
 
     @abstractmethod
     def with_input(self, input_state: BasicState) -> None:

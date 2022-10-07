@@ -53,30 +53,30 @@ class Sampler(AAlgorithm):
         }
 
     def _sample_count_from_samples(self, count: int, progress_callback: Callable = None):  # signature of sample_count()
-        sample_list = self._processor.samples(count, progress_callback)
-        return samples_to_sample_count(sample_list)
+        sample_list, perf_mode, perf_logic = self._processor.samples(count, progress_callback)
+        return samples_to_sample_count(sample_list), perf_mode, perf_logic
 
     def _sample_count_from_probs(self, count: int, progress_callback: Callable = None):
-        probs = self._processor.probs(progress_callback)
-        return probs_to_sample_count(probs, count)
+        probs, perf_mode, perf_logic = self._processor.probs(progress_callback)
+        return probs_to_sample_count(probs, count), perf_mode, perf_logic
 
     def _probs_from_samples(self, progress_callback: Callable = None):
         count = self.PROBS_SIMU_SAMPLE_COUNT
-        sample_list = self._processor.samples(count, progress_callback)
-        return samples_to_probs(sample_list)
+        sample_list, perf_mode, perf_logic = self._processor.samples(count, progress_callback)
+        return samples_to_probs(sample_list), perf_mode, perf_logic
 
     def _probs_from_sample_count(self, progress_callback: Callable = None):
         count = self.PROBS_SIMU_SAMPLE_COUNT
-        sample_count = self._processor.sample_count(count, progress_callback)
-        return sample_count_to_probs(sample_count)
+        sample_count, perf_mode, perf_logic = self._processor.sample_count(count, progress_callback)
+        return sample_count_to_probs(sample_count), perf_mode, perf_logic
 
     def _samples_from_sample_count(self, count: int, progress_callback: Callable = None):
-        sample_count = self._processor.sample_count(count, progress_callback)
-        return sample_count_to_samples(sample_count, count)
+        sample_count, perf_mode, perf_logic = self._processor.sample_count(count, progress_callback)
+        return sample_count_to_samples(sample_count, count), perf_mode, perf_logic
 
     def _samples_from_probs(self, count: int, progress_callback: Callable = None):
-        probs = self._processor.probs(progress_callback)
-        return probs_to_samples(probs, count)
+        probs, perf_mode, perf_logic = self._processor.probs(progress_callback)
+        return probs_to_samples(probs, count), perf_mode, perf_logic
 
     @property
     def samples(self) -> Job:
