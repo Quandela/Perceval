@@ -69,7 +69,7 @@ jobs:
 
       - name: Build wheels for ${{ env.PYTHON_V_CP }}
         env:
-          CIBW_BUILD: '${{ env.PYTHON_V_CP }}}-*'
+          CIBW_BUILD: '${{ env.PYTHON_V_CP }}-*'
           CIBW_SKIP: '*-musllinux_*'
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_MACOS: x86_64
