@@ -23,18 +23,19 @@ on:
       python_v:
         description: 'python version'
         required: true
-        default: '6'
+        default: '3.6'
         type: choice
         options:
-          - '6'
-          - '7'
-          - '8'
-          - '9'
-          - '10'
+          - '3.6'
+          - '3.7'
+          - '3.8'
+          - '3.9'
+          - '3.10'
 
 env:
-  PYTHON_V: 3.${{ github.event.inputs.python_v || '9' }}
-  PYTHON_V_CP: cp3${{ github.event.inputs.python_v || '9' }}
+  PYTHON_V: ${{ github.event.inputs.python_v || '3.9' }}
+      
+
 
 jobs:
   build-quandelibc:
@@ -46,6 +47,9 @@ jobs:
         os: [ 'ubuntu-latest', 'macos-latest', 'windows-latest' ]
 
     steps:
+      - name: Set python_cp
+        run: echo '::set-output name=GERP::cp$( echo "${{env.PYTHON_V}}" | sed "s/\.\([0-9]\)/\1/" )'
+        id: python_cp
       - uses: actions/checkout@v3
         with:
           repository: Quandela/QuandeLibC
@@ -59,9 +63,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_V }}
 
-      - name: Build wheels for ${{ env.PYTHON_V_CP }}
+      - name: Build wheels for ${{ steps.python_cp.outputs.GERP }}
         env:
-          CIBW_BUILD: '${{ env.PYTHON_V_CP }}-*'
+          CIBW_BUILD: '${{ steps.python_cp.outputs.GERP }}}-*'
           CIBW_SKIP: '*-musllinux_*'
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_MACOS: x86_64
@@ -110,7 +114,7 @@ jobs:
 
     - name: Install previously compiled Quandelibc
       if: github.event_name == 'workflow_dispatch'
-      run: bash -c "python -m pip install precompiled-quandelibc/*${{ env.PYTHON_V_CP }}*${{ matrix.wheel }}.whl"
+      run: bash -c "python -m pip install precompiled-quandelibc/*${{ steps.python_cp.outputs.GERP }}*${{ matrix.wheel }}.whl"
 
     - name: Install dependencies
       run: |
@@ -153,7 +157,7 @@ jobs:
 
     - name: Install previously compiled Quandelibc
       if: github.event_name == 'workflow_dispatch'
-      run: bash -c "python -m pip install precompiled-quandelibc/*${{ env.PYTHON_V_CP }}*manylinux2014_x86_64.whl"
+      run: bash -c "python -m pip install precompiled-quandelibc/*${{ steps.python_cp.outputs.GERP }}*manylinux2014_x86_64.whl"
 
     - name: Install dependencies
       run: |
