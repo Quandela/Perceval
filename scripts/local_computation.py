@@ -22,20 +22,19 @@
 
 import time
 from tqdm import tqdm
-from perceval.platforms.platform import *
 import perceval as pcvl
 import perceval.components.base_components as cp
 import numpy as np
 from perceval.algorithm import Sampler, Analyzer
 from perceval.components import Processor, Source
 
-theta_r13 = cp.BS.r_to_theta(2/3)
-cnot = pcvl.Circuit(6, name="Ralph CNOT")
-cnot.add((0, 1), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-cnot.add((3, 4), cp.BS.H())
-cnot.add((2, 3), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-cnot.add((4, 5), cp.BS.H(theta=theta_r13))
-cnot.add((3, 4), cp.BS.H())
+theta_13 = cp.BS.r_to_theta(1/3)
+cnot = (pcvl.Circuit(6, name="PostProcessed CNOT")
+        .add((0, 1), cp.BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+        .add((3, 4), cp.BS.H())
+        .add((2, 3), cp.BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+        .add((4, 5), cp.BS.H(theta_13))
+        .add((3, 4), cp.BS.H()))
 
 # Clifford & Clifford 2017 backend does not support probability computation
 # However, the Sampler algorithm is able to estimate output probabilities, transparently, through sampling
