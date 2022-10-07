@@ -46,14 +46,15 @@ jobs:
 
     steps:
       - if: runner.os == 'Linux'
-        name: Initialize config linux
+        name: Initialize PYTHON_V_CP linux
         run: |
           echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
       - if: runner.os != 'Linux'
-        name: Initialize config notLinux
+        name: Initialize PYTHON_V_CP notLinux
         run: |
           echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
         shell: Bash
+
       - uses: actions/checkout@v3
         with:
           repository: Quandela/QuandeLibC
@@ -104,6 +105,16 @@ jobs:
           - os: 'windows-latest'
             wheel: 'win_amd64'
     steps:
+      - if: runner.os == 'Linux'
+        name: Initialize PYTHON_V_CP linux
+        run: |
+          echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+      - if: runner.os != 'Linux'
+        name: Initialize PYTHON_V_CP notLinux
+        run: |
+          echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+        shell: Bash
+
     - uses: actions/checkout@v3
     - name: Set up Python ${{ env.PYTHON_V }}
       uses: actions/setup-python@v3
@@ -146,6 +157,16 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+    - if: runner.os == 'Linux'
+      name: Initialize PYTHON_V_CP linux
+      run: |
+        echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+    - if: runner.os != 'Linux'
+      name: Initialize PYTHON_V_CP notLinux
+      run: |
+        echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+      shell: Bash
+      
     - uses: actions/checkout@v2
       with:
         submodules: recursive
