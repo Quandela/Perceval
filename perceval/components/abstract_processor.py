@@ -67,13 +67,13 @@ class AProcessor(ABC):
     def available_sampling_method(self) -> str:
         pass
 
-    def samples(self, count: int, progress_callback: Callable = None) -> List[BasicState]:
+    def samples(self, count: int, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call samples(). Available method is {self.available_sampling_method}")
 
-    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict[BasicState, int]:
+    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call sample_count(). Available method is {self.available_sampling_method}")
 
-    def probs(self, progress_callback: Callable = None) -> SVDistribution:
+    def probs(self, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call probs(). Available method is {self.available_sampling_method}")
 
     @abstractmethod

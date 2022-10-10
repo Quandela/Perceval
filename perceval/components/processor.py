@@ -124,7 +124,7 @@ class Processor(AProcessor):
         assert self.available_sampling_method == command_name, \
             f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
 
-    def samples(self, count: int, progress_callback=None) -> List[BasicState]:
+    def samples(self, count: int, progress_callback=None) -> Dict:
         self._run_checks("samples")
         output = []
         not_selected_mode = 0
@@ -149,9 +149,9 @@ class Processor(AProcessor):
                 progress_callback(len(output)/count, "sampling")
         perf_selected_mode = (count + not_selected) / (count + not_selected + not_selected_mode)
         perf_logic = count / (count + not_selected)
-        return output, perf_selected_mode, perf_logic
+        return {'results': output, 'perf_selected_mode': perf_selected_mode, 'perf_logic': perf_logic}
 
-    def probs(self, progress_callback: Callable = None) -> SVDistribution:
+    def probs(self, progress_callback: Callable = None) -> Dict:
         self._run_checks("probs")
         output = SVDistribution()
         idx = 0
@@ -181,7 +181,7 @@ class Processor(AProcessor):
         # normalize probabilities
         for k in output.keys():
             output[k] /= all_p
-        return output, perf_selected_mode, perf_logic
+        return {'results': output, 'perf_selected_mode': perf_selected_mode, 'perf_logic': perf_logic}
 
     # def run(self, simulator_backend: Type[Backend], keep_herald: bool = False):
     #     """
