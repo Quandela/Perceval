@@ -25,9 +25,8 @@ from .abstract_algorithm import AAlgorithm
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
     probs_to_samples, probs_to_sample_count
 from perceval.components.abstract_processor import AProcessor
-from perceval.platforms.job import Job
-from perceval.platforms import RemoteJob, LocalJob
-from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_float,\
+from perceval.runtime import Job, RemoteJob, LocalJob
+from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_svdistribution,\
     deserialize_sample_count
 
 
@@ -97,7 +96,7 @@ class Sampler(AAlgorithm):
     @property
     def samples(self) -> Job:
         if self._processor.is_remote:
-            return RemoteJob(self._backend.async_samples, self._platform, deserialize_state_list)
+            return RemoteJob(self._processor.async_samples, self._processor.get_rpc_handler(), deserialize_state_list)
         else:
             try:
                 method = self._samples_mapping[self._processor.available_sampling_method]
@@ -109,7 +108,8 @@ class Sampler(AAlgorithm):
     @property
     def sample_count(self) -> Job:
         if self._processor.is_remote:
-            return RemoteJob(self._backend.async_sample_count, self._platform, deserialize_sample_count)
+            return RemoteJob(self._processor.async_sample_count, self._processor.get_rpc_handler(),
+                             deserialize_sample_count)
         else:
             try:
                 method = self._sample_count_mapping[self._processor.available_sampling_method]
@@ -121,7 +121,7 @@ class Sampler(AAlgorithm):
     @property
     def probs(self) -> Job:
         if self._processor.is_remote:
-            return RemoteJob(self._backend.async_prob, self._platform, deserialize_float)
+            return RemoteJob(self._processor.async_probs, self._processor.get_rpc_handler(), deserialize_svdistribution)
         else:
             try:
                 method = self._probs_mapping[self._processor.available_sampling_method]

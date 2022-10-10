@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from .job_status import JobStatus, RunningStatus
+from .job import Job
 from .local_job import LocalJob
 from .remote_job import RemoteJob
-from .platform import Platform, LocalPlatform, RemotePlatform, PlatformType, get_platform
+from .remote_processor import RemoteProcessor
