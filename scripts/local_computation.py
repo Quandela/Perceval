@@ -44,7 +44,10 @@ assert not my_proc.is_remote
 my_proc.with_input(pcvl.BasicState([1, 0, 1, 0]))
 
 sampler = Sampler(my_proc)
-probability_dist, perf_modes, perf_logic = sampler.probs()
+output = sampler.probs()
+probability_dist = output['results']
+perf_modes = output['perf_selected_mode']
+perf_logic = output['perf_logic']
 pcvl.pdisplay(probability_dist)
 print(f"Performance on mode detection: {perf_modes}")
 print(f"Performance on post process / heralding: {perf_logic}")
@@ -65,8 +68,8 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.close()
 
 print(f"Job status = {async_job.status()}")
-results, perf_modes, perf_logic = async_job.get_results()
-assert len(results) == nsample
+output = async_job.get_results()
+assert len(output['results']) == nsample
 
 # Now, try an async sample_count with SLOS backend
 local_simulator_name = 'SLOS'
@@ -87,10 +90,10 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.close()
 
 print(f"Job status = {job2.status()}")
-results, perf_modes, perf_logic = job2.get_results()
-for state, count in results.items():
+output = job2.get_results()
+for state, count in output['results'].items():
     print(f"{state}: {count}")
-print(f"Performance on mode detection: {perf_modes}")
+print(f"Performance on mode detection: {output['perf_selected_mode']}")
 
 # FIX ME WITH PCVL-216
 # chip_QRNG = pcvl.Circuit(4, name='QRNG')
