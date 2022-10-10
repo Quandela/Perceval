@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import json
 import time
 from typing import Any, Callable
 
@@ -61,9 +62,9 @@ class RemoteJob(Job):
 
     def get_results(self) -> Any:
         response = self._rpc_handler.get_job_results(self._id)
-        results = response['results']
+        results = json.loads(response['results'])
 
         if self._deserializer is not None:
-            return self._deserializer(results)
-        else:
-            return results
+            results['results'] = self._deserializer(results['results'])
+
+        return results

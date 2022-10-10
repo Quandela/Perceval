@@ -68,14 +68,12 @@ def circuit_from_file(filepath: str) -> Circuit:
         return deserialize_circuit(f.read())
 
 
-def deserialize_sample_count(json_count: Union[str, bytes]) -> dict:
-    count = json.loads(json_count)
+def deserialize_sample_count(count: dict) -> dict:
     count = {deserialize_state(state): ct for state, ct in count.items()}
     return count
 
 
-def deserialize_svdistribution(json_count: Union[str, bytes]) -> dict:
-    count = json.loads(json_count)
+def deserialize_svdistribution(count: dict) -> dict:
     svd = SVDistribution()
     for state, ct in count.items():
         svd.add(BasicState(state), float(ct))
