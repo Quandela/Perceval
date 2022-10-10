@@ -151,16 +151,16 @@ class Processor(AProcessor):
                 not_selected += 1
             if progress_callback:
                 progress_callback(len(output)/count, "sampling")
-        perf_selected_mode = (count + not_selected) / (count + not_selected + not_selected_mode)
-        perf_logic = count / (count + not_selected)
-        return {'results': output, 'perf_selected_mode': perf_selected_mode, 'perf_logic': perf_logic}
+        physical_perf = (count + not_selected) / (count + not_selected + not_selected_mode)
+        logical_perf = count / (count + not_selected)
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
     def probs(self, progress_callback: Callable = None) -> Dict:
         self._run_checks("probs")
         output = SVDistribution()
         idx = 0
         input_length = len(self._inputs_map)
-        perf_selected_mode = 1
+        physical_perf = 1
         p_logic_discard = 0
 
         for input_state, input_prob in self._inputs_map.items():
@@ -169,7 +169,7 @@ class Processor(AProcessor):
                     continue
                 output_prob = p * input_prob
                 if not self._state_mode_selected(output_state):
-                    perf_selected_mode -= output_prob
+                    physical_perf -= output_prob
                     continue
                 if self._state_selected(output_state):
                     output[self.filter_herald(output_state)] += output_prob
@@ -179,33 +179,13 @@ class Processor(AProcessor):
             if progress_callback:
                 progress_callback(idx/input_length)
         all_p = sum(v for v in output.values())
-        perf_logic = 1 - p_logic_discard / (p_logic_discard + all_p)
+        logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
         if all_p == 0:
             return output
         # normalize probabilities
         for k in output.keys():
             output[k] /= all_p
-        return {'results': output, 'perf_selected_mode': perf_selected_mode, 'perf_logic': perf_logic}
-
-    # def run(self, simulator_backend: Type[Backend], keep_herald: bool = False):
-    #     """
-    #         calculate the output probabilities - returns performance, and output_maps
-    #     """
-    #     # first generate all possible outputs
-    #     sim = simulator_backend(self._circuit.compute_unitary(use_symbolic=False))
-    #     # now generate all possible outputs
-    #     outputs = SVDistribution()
-    #     for input_state, input_prob in self._inputs_map.items():
-    #         for (output_state, p) in sim.allstateprob_iterator(input_state):
-    #             if p > global_params['min_p'] and self._state_selected(output_state):
-    #                 outputs[StateVector(self.filter_herald(output_state, keep_herald))] += p * input_prob
-    #     all_p = sum(v for v in outputs.values())
-    #     if all_p == 0:
-    #         return 0, outputs
-    #     # normalize probabilities
-    #     for k in outputs.keys():
-    #         outputs[k] /= all_p
-    #     return all_p, outputs
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
     def _state_mode_selected(self, state: BasicState) -> bool:
         modes_with_photons = len([n for n in state if n > 0])

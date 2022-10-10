@@ -45,12 +45,9 @@ my_proc.with_input(pcvl.BasicState([1, 0, 1, 0]))
 
 sampler = Sampler(my_proc)
 output = sampler.probs()
-probability_dist = output['results']
-perf_modes = output['perf_selected_mode']
-perf_logic = output['perf_logic']
-pcvl.pdisplay(probability_dist)
-print(f"Performance on mode detection: {perf_modes}")
-print(f"Performance on post process / heralding: {perf_logic}")
+pcvl.pdisplay(output['results'])
+print(f"Physical performance: {output['physical_perf']}")
+print(f"Performance on post process / heralding: {output['logical_perf']}")
 
 # Let's sample asynchronously
 nsample = 100000
@@ -93,7 +90,7 @@ print(f"Job status = {job2.status()}")
 output = job2.get_results()
 for state, count in output['results'].items():
     print(f"{state}: {count}")
-print(f"Performance on mode detection: {output['perf_selected_mode']}")
+print(f"Physical performance: {output['physical_perf']}")
 
 # FIX ME WITH PCVL-216
 # chip_QRNG = pcvl.Circuit(4, name='QRNG')

@@ -22,9 +22,9 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict
 
-from perceval.utils import BasicState, SVDistribution, Parameter
+from perceval.utils import BasicState, Parameter
 
 
 class ProcessorType(Enum):
