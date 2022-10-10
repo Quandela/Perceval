@@ -22,35 +22,36 @@
 
 import time
 from tqdm import tqdm
-from perceval.platforms.platform import *
 import perceval as pcvl
 import perceval.components.base_components as cp
 import numpy as np
 from perceval.algorithm import Sampler, Analyzer
-from perceval.components import Processor
+from perceval.components import Processor, Source
 
-theta_r13 = cp.BS.r_to_theta(1/3)
-cnot = pcvl.Circuit(6, name="Ralph CNOT")
-cnot.add((0, 1), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-cnot.add((3, 4), cp.BS.H())
-cnot.add((2, 3), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-cnot.add((4, 5), cp.BS.H(theta=theta_r13))
-cnot.add((3, 4), cp.BS.H())
+theta_13 = cp.BS.r_to_theta(1/3)
+cnot = (pcvl.Circuit(6, name="PostProcessed CNOT")
+        .add((0, 1), cp.BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+        .add((3, 4), cp.BS.H())
+        .add((2, 3), cp.BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+        .add((4, 5), cp.BS.H(theta_13))
+        .add((3, 4), cp.BS.H()))
 
 # Clifford & Clifford 2017 backend does not support probability computation
 # However, the Sampler algorithm is able to estimate output probabilities, transparently, through sampling
 local_simulator_name = 'CliffordClifford2017'
-my_proc = Processor(local_simulator_name, cnot)
+my_proc = Processor(local_simulator_name, cnot, source=Source(brightness=0.5), heralds={0: 0, 5: 0})
 assert not my_proc.is_remote
-my_proc.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
+my_proc.with_input(pcvl.BasicState([1, 0, 1, 0]))
 
 sampler = Sampler(my_proc)
-res = sampler.probs()
-pcvl.pdisplay(res)
+output = sampler.probs()
+pcvl.pdisplay(output['results'])
+print(f"Physical performance: {output['physical_perf']}")
+print(f"Performance on post process / heralding: {output['logical_perf']}")
 
 # Let's sample asynchronously
 nsample = 100000
-my_proc.with_input(pcvl.BasicState([0, 1, 0, 1, 0, 0]))  # You can change the inputs of your processor anytime
+my_proc.with_input(pcvl.BasicState([0, 1, 0, 1]))  # You can change the input of your processor anytime
 async_job = sampler.samples.execute_async(nsample)
 
 previous_prog = 0
@@ -64,8 +65,8 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.close()
 
 print(f"Job status = {async_job.status()}")
-results = async_job.get_results()
-assert len(results) == nsample
+output = async_job.get_results()
+assert len(output['results']) == nsample
 
 # Now, try an async sample_count with SLOS backend
 local_simulator_name = 'SLOS'
@@ -86,9 +87,10 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.close()
 
 print(f"Job status = {job2.status()}")
-results = job2.get_results()
-for state, count in results.items():
+output = job2.get_results()
+for state, count in output['results'].items():
     print(f"{state}: {count}")
+print(f"Physical performance: {output['physical_perf']}")
 
 # FIX ME WITH PCVL-216
 # chip_QRNG = pcvl.Circuit(4, name='QRNG')

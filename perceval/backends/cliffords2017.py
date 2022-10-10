@@ -49,6 +49,8 @@ class CliffordClifford2017Backend(Backend):
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
+        if n == 0:
+            return input_state
         fs = [0]*m
         Us = np.zeros((n, m), dtype=np.complex128)
         # build Us while transposing it

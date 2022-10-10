@@ -19,7 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Callable
+from typing import Callable, Dict
 
 from .abstract_algorithm import AAlgorithm
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
@@ -32,6 +32,16 @@ from perceval.serialization import deserialize_state, deserialize_state_list, de
 
 
 class Sampler(AAlgorithm):
+    """
+    Base algorithm able to retrieve some sampling results via 3 methods
+    - samples(count) : returns a list of sampled states
+    - sample_count(count) : return a table (output state) : (sampled count)
+                            the sum of 'sampled counts' can slightly differ from requested 'count'
+    - probs() : returns a probability distribution of output states
+
+    The form of the output for all 3 sampling methods is a dictionary containing a 'results' key and several performance
+    values.
+    """
     PROBS_SIMU_SAMPLE_COUNT = 10000  # Arbitrary value
 
     def __init__(self, processor: AProcessor):
@@ -52,31 +62,37 @@ class Sampler(AAlgorithm):
             'samples': self._probs_from_samples
         }
 
-    def _sample_count_from_samples(self, count: int, progress_callback: Callable = None):  # signature of sample_count()
-        sample_list = self._processor.samples(count, progress_callback)
-        return samples_to_sample_count(sample_list)
+    def _sample_count_from_samples(self, count: int, progress_callback: Callable = None) -> Dict:
+        output = self._processor.samples(count, progress_callback)
+        output['results'] = samples_to_sample_count(output['results'])
+        return output
 
-    def _sample_count_from_probs(self, count: int, progress_callback: Callable = None):
-        probs = self._processor.probs(progress_callback)
-        return probs_to_sample_count(probs, count)
+    def _sample_count_from_probs(self, count: int, progress_callback: Callable = None) -> Dict:
+        output = self._processor.probs(progress_callback)
+        output['results'] = probs_to_sample_count(output['results'], count)
+        return output
 
-    def _probs_from_samples(self, progress_callback: Callable = None):
+    def _probs_from_samples(self, progress_callback: Callable = None) -> Dict:
         count = self.PROBS_SIMU_SAMPLE_COUNT
-        sample_list = self._processor.samples(count, progress_callback)
-        return samples_to_probs(sample_list)
+        output = self._processor.samples(count, progress_callback)
+        output['results'] = samples_to_probs(output['results'])
+        return output
 
-    def _probs_from_sample_count(self, progress_callback: Callable = None):
+    def _probs_from_sample_count(self, progress_callback: Callable = None) -> Dict:
         count = self.PROBS_SIMU_SAMPLE_COUNT
-        sample_count = self._processor.sample_count(count, progress_callback)
-        return sample_count_to_probs(sample_count)
+        output = self._processor.sample_count(count, progress_callback)
+        output['results'] = sample_count_to_probs(output['results'])
+        return output
 
-    def _samples_from_sample_count(self, count: int, progress_callback: Callable = None):
-        sample_count = self._processor.sample_count(count, progress_callback)
-        return sample_count_to_samples(sample_count, count)
+    def _samples_from_sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
+        output = self._processor.sample_count(count, progress_callback)
+        output['results'] = sample_count_to_samples(output['results'], count)
+        return output
 
-    def _samples_from_probs(self, count: int, progress_callback: Callable = None):
-        probs = self._processor.probs(progress_callback)
-        return probs_to_samples(probs, count)
+    def _samples_from_probs(self, count: int, progress_callback: Callable = None) -> Dict:
+        output = self._processor.probs(progress_callback)
+        output['results'] = probs_to_samples(output['results'], count)
+        return output
 
     @property
     def samples(self) -> Job:

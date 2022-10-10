@@ -22,9 +22,9 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict
 
-from perceval.utils import BasicState, SVDistribution, Parameter
+from perceval.utils import BasicState, Parameter
 
 
 class ProcessorType(Enum):
@@ -49,8 +49,14 @@ class AProcessor(ABC):
     def set_parameters(self, params: Dict):
         self._parameters = params
 
+    def set_parameter(self, key: str, value: Any):
+        self._parameters[key] = value
+
     def clear_parameters(self):
         self._parameters = {}
+
+    def mode_post_selection(self, n: int):
+        self.set_parameter('mode_post_select', n)
 
     @abstractmethod
     def with_input(self, input_state: BasicState) -> None:
@@ -61,13 +67,13 @@ class AProcessor(ABC):
     def available_sampling_method(self) -> str:
         pass
 
-    def samples(self, count: int, progress_callback: Callable = None) -> List[BasicState]:
+    def samples(self, count: int, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call samples(). Available method is {self.available_sampling_method}")
 
-    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict[BasicState, int]:
+    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call sample_count(). Available method is {self.available_sampling_method}")
 
-    def probs(self, progress_callback: Callable = None) -> SVDistribution:
+    def probs(self, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call probs(). Available method is {self.available_sampling_method}")
 
     @abstractmethod

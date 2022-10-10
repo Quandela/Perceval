@@ -43,6 +43,9 @@ class Processor(AProcessor):
         super().__init__()
         self._source = source
         self._circuit = circuit
+        # Mode post selection: expect at least # modes with photons in output
+        self._min_mode_post_select = None
+        # Logical post selection
         self._post_select = post_select_fn
         self._heralds = heralds
         self._inputs_map: SVDistribution = None
@@ -62,26 +65,37 @@ class Processor(AProcessor):
     def is_remote(self) -> bool:
         return False
 
+    def mode_post_selection(self, n: int):
+        super().mode_post_selection(n)
+        self._min_mode_post_select = n
+
     def with_input(self, input_state: BasicState) -> None:
         self._inputs_map = None
         expected_input_length = self._circuit.m - len(self._heralds)
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
         input_idx = 0
+        expected_photons = 0
         for k in range(self._circuit.m):
             distribution = SVDistribution(StateVector("|0>"))
             if k in self._heralds:
                 if self._heralds[k] == 1:
                     distribution = self._source.probability_distribution()
+                    expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
                     distribution = self._source.probability_distribution()
+                    expected_photons += 1
                 input_idx += 1
             # combine distributions
             if self._inputs_map is None:
                 self._inputs_map = distribution
             else:
                 self._inputs_map *= distribution
+
+        self._min_mode_post_select = expected_photons
+        if 'mode_post_select' in self._parameters:
+            self._min_mode_post_select = self._parameters['mode_post_select']
 
     def set_port_names(self, in_port_names: Dict[int, str], out_port_names: Dict[int, str] = {}):
         self._in_port_names = in_port_names
@@ -114,58 +128,74 @@ class Processor(AProcessor):
         assert self.available_sampling_method == command_name, \
             f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
 
-    def samples(self, count: int, progress_callback=None) -> List[BasicState]:
+    def samples(self, count: int, progress_callback=None) -> Dict:
         self._run_checks("samples")
         output = []
+        not_selected_physical = 0
+        not_selected = 0
+        selected_inputs = self._inputs_map.sample(count, non_null=False)
+        idx = 0
         while len(output) < count:
-            selected_input = self._inputs_map.sample()[0]
+            selected_input = selected_inputs[idx][0]
+            idx += 1
+            if idx == count:
+                idx = 0
+                selected_inputs = self._inputs_map.sample(count, non_null=False)
+            if not self._state_preselected_physical(selected_input):
+                not_selected_physical += 1
+                continue
             sampled_state = self._simulator.sample(selected_input)
+            if not self._state_selected_physical(sampled_state):
+                not_selected_physical += 1
+                continue
             if self._state_selected(sampled_state):
                 output.append(self.filter_herald(sampled_state))
+            else:
+                not_selected += 1
             if progress_callback:
                 progress_callback(len(output)/count, "sampling")
-        return output
+        physical_perf = (count + not_selected) / (count + not_selected + not_selected_physical)
+        logical_perf = count / (count + not_selected)
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def probs(self, progress_callback: Callable = None) -> SVDistribution:
+    def probs(self, progress_callback: Callable = None) -> Dict:
         self._run_checks("probs")
         output = SVDistribution()
         idx = 0
         input_length = len(self._inputs_map)
+        physical_perf = 1
+        p_logic_discard = 0
 
         for input_state, input_prob in self._inputs_map.items():
             for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
-                if p > global_params['min_p'] and self._state_selected(output_state):
-                    output[self.filter_herald(output_state)] += p * input_prob
+                if p < global_params['min_p']:
+                    continue
+                output_prob = p * input_prob
+                if not self._state_selected_physical(output_state):
+                    physical_perf -= output_prob
+                    continue
+                if self._state_selected(output_state):
+                    output[self.filter_herald(output_state)] += output_prob
+                else:
+                    p_logic_discard += output_prob
             idx += 1
             if progress_callback:
                 progress_callback(idx/input_length)
         all_p = sum(v for v in output.values())
+        logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
         if all_p == 0:
             return output
         # normalize probabilities
         for k in output.keys():
             output[k] /= all_p
-        return output
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    # def run(self, simulator_backend: Type[Backend], keep_herald: bool = False):
-    #     """
-    #         calculate the output probabilities - returns performance, and output_maps
-    #     """
-    #     # first generate all possible outputs
-    #     sim = simulator_backend(self._circuit.compute_unitary(use_symbolic=False))
-    #     # now generate all possible outputs
-    #     outputs = SVDistribution()
-    #     for input_state, input_prob in self._inputs_map.items():
-    #         for (output_state, p) in sim.allstateprob_iterator(input_state):
-    #             if p > global_params['min_p'] and self._state_selected(output_state):
-    #                 outputs[StateVector(self.filter_herald(output_state, keep_herald))] += p * input_prob
-    #     all_p = sum(v for v in outputs.values())
-    #     if all_p == 0:
-    #         return 0, outputs
-    #     # normalize probabilities
-    #     for k in outputs.keys():
-    #         outputs[k] /= all_p
-    #     return all_p, outputs
+    def _state_preselected_physical(self, input_state: BasicState):
+        return input_state.n >= self._min_mode_post_select
+
+    def _state_selected_physical(self, output_state: BasicState) -> bool:
+        modes_with_photons = len([n for n in output_state if n > 0])
+        return modes_with_photons >= self._min_mode_post_select
 
     def _state_selected(self, state: BasicState) -> bool:
         """

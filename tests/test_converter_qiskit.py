@@ -198,7 +198,7 @@ def test_cnot_postprocess_phys():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
-    sv_out = pc.probs()
+    sv_out = pc.probs()['results']
     assert len(sv_out) == 2
 
 
@@ -208,7 +208,7 @@ def test_cnot_postprocess_symb():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
-    sv_out = pc.probs()
+    sv_out = pc.probs()['results']
     assert len(sv_out) == 2
 
 
@@ -218,7 +218,7 @@ def test_cnot_herald_phys():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, True)
-    sv_out = pc.probs()
+    sv_out = pc.probs()['results']
     assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
     assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
     assert len(sv_out) == 4
@@ -230,7 +230,7 @@ def test_cnot_herald_symb():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, True)
-    sv_out = pc.probs()
+    sv_out = pc.probs()['results']
     assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
     assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
     assert len(sv_out) == 4
