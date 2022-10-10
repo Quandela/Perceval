@@ -65,6 +65,10 @@ class Processor(AProcessor):
     def is_remote(self) -> bool:
         return False
 
+    def mode_post_selection(self, n: int):
+        super().mode_post_selection(n)
+        self._min_mode_post_select = n
+
     def with_input(self, input_state: BasicState) -> None:
         self._inputs_map = None
         expected_input_length = self._circuit.m - len(self._heralds)
@@ -204,10 +208,7 @@ class Processor(AProcessor):
     #     return all_p, outputs
 
     def _state_mode_selected(self, state: BasicState) -> bool:
-        modes_with_photons = 0
-        for n in state:
-            if n > 0:
-                modes_with_photons += 1
+        modes_with_photons = len([n for n in state if n > 0])
         return modes_with_photons >= self._min_mode_post_select
 
     def _state_selected(self, state: BasicState) -> bool:
