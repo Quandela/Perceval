@@ -257,11 +257,9 @@ class StateVector(defaultdict):
         :return: a list of BasicState
         """
         self._normalize()
-        p = random.random()
-        keys = [BasicState(key) for key in self.keys()]
         weight = [abs(self[key])**2 for key in self.keys()]
         rng = np.random.default_rng()
-        return rng.choice(keys, shots, p=weight)
+        return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
 
     def measure(self, modes: Union[int, List[int]]) -> Dict[BasicState, Tuple[float, StateVector]]:
         r"""perform a measure on one or multiple modes and collapse the remaining statevector

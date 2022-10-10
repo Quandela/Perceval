@@ -181,10 +181,12 @@ class Processor(AProcessor):
             idx += 1
             if progress_callback:
                 progress_callback(idx/input_length)
+        if physical_perf < global_params['min_p']:
+            physical_perf = 0
         all_p = sum(v for v in output.values())
-        logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
         if all_p == 0:
-            return output
+            return {'results': output, 'physical_perf': physical_perf}
+        logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
         # normalize probabilities
         for k in output.keys():
             output[k] /= all_p

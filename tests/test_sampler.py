@@ -39,12 +39,13 @@ def test_sampler():
 
     for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'Stepper', 'MPS']:
         p = pcvl.Processor(backend_name, cnot, imperfect_source)
+        p.mode_post_selection(1)
         p.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
         sampler = Sampler(p)
         probs = sampler.probs()
-        assert probs[pcvl.BasicState('|0,1,2,0,0,0>')] > 0.1
-        assert probs[pcvl.BasicState('|0,1,0,0,2,0>')] > 0.1
+        assert probs['results'][pcvl.BasicState('|0,1,2,0,0,0>')] > 0.1
+        assert probs['results'][pcvl.BasicState('|0,1,0,0,2,0>')] > 0.1
         samples = sampler.samples(50)
-        assert len(samples) == 50
+        assert len(samples['results']) == 50
         sample_count = sampler.sample_count(1000)
-        assert 950 < sum(list(sample_count.values())) < 1050
+        assert 950 < sum(list(sample_count['results'].values())) < 1050
