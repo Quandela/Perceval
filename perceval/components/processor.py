@@ -131,7 +131,7 @@ class Processor(AProcessor):
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._run_checks("samples")
         output = []
-        not_selected_mode = 0
+        not_selected_physical = 0
         not_selected = 0
         selected_inputs = self._inputs_map.sample(count, non_null=False)
         idx = 0
@@ -141,9 +141,12 @@ class Processor(AProcessor):
             if idx == count:
                 idx = 0
                 selected_inputs = self._inputs_map.sample(count, non_null=False)
+            if not self._state_preselected_physical(selected_input):
+                not_selected_physical += 1
+                continue
             sampled_state = self._simulator.sample(selected_input)
-            if not self._state_mode_selected(sampled_state):
-                not_selected_mode += 1
+            if not self._state_selected_physical(sampled_state):
+                not_selected_physical += 1
                 continue
             if self._state_selected(sampled_state):
                 output.append(self.filter_herald(sampled_state))
@@ -151,7 +154,7 @@ class Processor(AProcessor):
                 not_selected += 1
             if progress_callback:
                 progress_callback(len(output)/count, "sampling")
-        physical_perf = (count + not_selected) / (count + not_selected + not_selected_mode)
+        physical_perf = (count + not_selected) / (count + not_selected + not_selected_physical)
         logical_perf = count / (count + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
@@ -168,7 +171,7 @@ class Processor(AProcessor):
                 if p < global_params['min_p']:
                     continue
                 output_prob = p * input_prob
-                if not self._state_mode_selected(output_state):
+                if not self._state_selected_physical(output_state):
                     physical_perf -= output_prob
                     continue
                 if self._state_selected(output_state):
@@ -187,8 +190,11 @@ class Processor(AProcessor):
             output[k] /= all_p
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def _state_mode_selected(self, state: BasicState) -> bool:
-        modes_with_photons = len([n for n in state if n > 0])
+    def _state_preselected_physical(self, input_state: BasicState):
+        return input_state.n >= self._min_mode_post_select
+
+    def _state_selected_physical(self, output_state: BasicState) -> bool:
+        modes_with_photons = len([n for n in output_state if n > 0])
         return modes_with_photons >= self._min_mode_post_select
 
     def _state_selected(self, state: BasicState) -> bool:
