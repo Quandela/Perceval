@@ -22,33 +22,24 @@
 import time
 from typing import Any, Callable
 
-import requests
-
 from .job import Job
 from .job_status import JobStatus, RunningStatus
-from .platform import RemotePlatform
-
-_ENDPOINT_JOB_STATUS = '/api/job/status/'
-_ENDPOINT_JOB_RESULT = '/api/job/result/'
+from .rpc_handler import RPCHandler
 
 
 class RemoteJob(Job):
-    def __init__(self, fn: Callable, platform: RemotePlatform, deserializer: Callable):
+    def __init__(self, fn: Callable, rpc_handler: RPCHandler, deserializer: Callable):
         super().__init__(fn)
-        self._platform = platform
+        self._rpc_handler = rpc_handler
         self._deserializer = deserializer
         self._job_status = JobStatus()
 
     @property
     def status(self) -> JobStatus:
-        endpoint = self._platform.build_endpoint(_ENDPOINT_JOB_STATUS) + str(self._id)
-        headers = self._platform.get_http_headers()
-
-        # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=headers)
-        res.raise_for_status()
-        json_response = res.json()
-        self._job_status.status = RunningStatus.from_server_response(json_response['status'])
+        response = self._rpc_handler.get_job_status(self._id)
+        self._job_status.status = RunningStatus.from_server_response(response['status'])
+        if self._job_status.status == RunningStatus.RUNNING:
+            self._job_status.update_progress(float(response['progress']))
         # TODO get _init_time_start and _completed_time from server response
         return self._job_status
 
@@ -57,7 +48,7 @@ class RemoteJob(Job):
         job = self.execute_async(*args, **kwargs)
         while not job.is_completed():
             time.sleep(3)
-        return job.get_
+        return self.get_results()
 
     def execute_async(self, *args, **kwargs):
         assert self._job_status.waiting, "job as already been executed"
@@ -69,13 +60,8 @@ class RemoteJob(Job):
         return self
 
     def get_results(self) -> Any:
-        endpoint = self._platform.build_endpoint(_ENDPOINT_JOB_RESULT) + str(self._id)
-        headers = self._platform.get_http_headers()
-
-        # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=headers)
-        res.raise_for_status()
-        results = res.json()['results']
+        response = self._rpc_handler.get_job_results(self._id)
+        results = response['results']
 
         if self._deserializer is not None:
             return self._deserializer(results)

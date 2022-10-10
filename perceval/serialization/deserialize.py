@@ -24,7 +24,7 @@ from os import path
 from typing import Union
 
 from perceval.components import Circuit
-from perceval.utils import Matrix
+from perceval.utils import Matrix, SVDistribution, BasicState
 from perceval.serialization import _matrix_serialization, deserialize_state
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
@@ -72,6 +72,14 @@ def deserialize_sample_count(json_count: Union[str, bytes]) -> dict:
     count = json.loads(json_count)
     count = {deserialize_state(state): ct for state, ct in count.items()}
     return count
+
+
+def deserialize_svdistribution(json_count: Union[str, bytes]) -> dict:
+    count = json.loads(json_count)
+    svd = SVDistribution()
+    for state, ct in count.items():
+        svd.add(BasicState(state), float(ct))
+    return svd
 
 
 def sample_count_from_file(filepath: str) -> dict:

@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from deprecated import deprecated
 from .template import Backend
 from .cliffords2017 import CliffordClifford2017Backend
 from .naive import NaiveBackend
@@ -38,9 +37,10 @@ BACKEND_LIST = {
 }
 
 
-@deprecated(reason='Please use get_platform("platform name") instead')
+
 class BackendFactory:
-    def get_backend(self, backend_name="SLOS"):
+    @staticmethod
+    def get_backend(backend_name="SLOS"):
         name = backend_name
         if name in BACKEND_LIST:
             return BACKEND_LIST[name]

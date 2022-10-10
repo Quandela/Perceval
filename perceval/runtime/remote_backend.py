@@ -28,46 +28,24 @@ from json import JSONDecodeError
 
 from perceval.backends import Backend
 from perceval.components import ACircuit
+from .rpc_handler import RPCHandler
 from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state, deserialize_state_list, \
     deserialize_float
-from perceval.utils import Matrix, BasicState
+from perceval.utils import Matrix, BasicState, generate_sync_methods
 
 from pkg_resources import get_distribution
 
 pcvl_version = get_distribution("perceval-quandela").version
-JOB_CREATE_ENDPOINT = '/api/job'
-
-
-################################
-# Sync methods Factory
-def _sync_wrapper(cls, func):
-    async_func = getattr(cls, func)
-
-    def await_job(*args):
-        job = async_func(*args)
-        while True:
-            if not job.is_completed():
-                time.sleep(3)
-            else:
-                return job.get_results()
-
-    return await_job
-
-
-def generate_sync_methods(cls):
-    for method in dir(cls):
-        if method.startswith('async_'):
-            sync_name = method.removeprefix('async_')
-            setattr(cls, sync_name, _sync_wrapper(cls, method))
-    return cls
 
 
 ################################
 @generate_sync_methods
 class RemoteBackend(Backend):
-    def __init__(self, platform, backend_name, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None, mask=None):
+
+    def __init__(self, rpc: RPCHandler, backend_name, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None,
+                 mask=None):
         self.name = backend_name
-        self.__platform = platform
+        self.__rpc_handler = rpc
         if isinstance(cu, ACircuit):
             self.__cu_key = 'circuit'
         else:
@@ -75,71 +53,64 @@ class RemoteBackend(Backend):
         self.__cu_data = bytes_to_jsonstring(serialize(cu))
         super(RemoteBackend, self).__init__(cu, use_symbolic, n, mask)
 
-    def __defaults_payload(self, command: str):
+    @staticmethod
+    def preferred_command() -> str:
+        return 'sample_count'
+
+    def __defaults_job_params(self, command: str):
         return {
-            'platform_name': self.__platform.name,
+            'platform_name': self.__rpc_handler.name,
             'job_name': command,
             'pcvl_version': pcvl_version
         }
 
-    def __request_job_create(self, body):
-        endpoint = self.__platform.build_endpoint(JOB_CREATE_ENDPOINT)
-        request = requests.post(endpoint,
-                                headers=self.__platform.get_http_headers(),
-                                json=body)
-        request.raise_for_status()
-
-        json = request.json()
-        return json['job_id']
-
-    def prob_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
-
     def async_sample(self, input_state):
-        payload = self.__defaults_payload('sample')
-        payload['payload'] = {
+        job_params = self.__defaults_job_params('sample')
+        job_params['job_params'] = {
+            self.__cu_key: self.__cu_data,
+            'input_state': serialize(input_state)
+        }
+
+        return self.__rpc_handler.create_job(job_params)
+
+    def async_samples(self, input_state, count):
+        job_params = self.__defaults_job_params('samples')
+        job_params['job_params'] = {
+            'backend_name': self.name,
+            self.__cu_key: self.__cu_data,
+            'input_state': serialize(input_state),
+            'count': count
+        }
+
+        return self.__rpc_handler.create_job(job_params)
+
+    def async_sample_count(self, input_state, count):
+        job_params = self.__defaults_job_params('sample_count')
+        job_params['payload'] = {
+            'backend_name': self.name,
+            self.__cu_key: self.__cu_data,
+            'input_state': serialize(input_state),
+            'count': count
+        }
+
+        return self.__rpc_handler.create_job(job_params)
+
+    def async_probs(self,
+                   input_state: BasicState,
+                   output_state: BasicState,
+                   n: int = None,
+                   skip_compile: bool = False):
+        job_params = self.__defaults_job_params('prob')
+        job_params['payload'] = {
             'backend_name': self.name,
             self.__cu_key: self.__cu_data,
             'input_state': serialize(input_state)
         }
 
-        return self.__request_job_create(payload)
+        return self.__rpc_handler.create_job(job_params)
 
-    def async_samples(self, input_state, count):
-        payload = self.__defaults_payload('samples')
-        payload['payload'] = {
-            'backend_name': self.name,
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state),
-            'count': count
-        }
+    def probampli_be(self, input_state, output_state, n=None):
+        raise NotImplementedError
 
-        return self.__request_job_create(payload)
-
-    def async_sample_count(self, input_state, count):
-        payload = self.__defaults_payload('sample_count')
-        payload['payload'] = {
-            'backend_name': self.name,
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state),
-            'count': count
-        }
-
-        return self.__request_job_create(payload)
-
-    def async_prob(self,
-                   input_state: BasicState,
-                   output_state: BasicState,
-                   n: int = None,
-                   skip_compile: bool = False):
-        payload = self.__defaults_payload('prob')
-        payload['payload'] = {
-            'backend_name': self.name,
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state),
-            'output_state': serialize(output_state),
-            'n': n,
-            'skip_compile': skip_compile
-        }
-
-        return self.__request_job_create(payload)
+    def prob_be(self, input_state, output_state, n=None):
+        raise NotImplementedError
