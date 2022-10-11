@@ -63,16 +63,18 @@ class RemoteBackend(Backend):
             'pcvl_version': pcvl_version
         }
 
-    def async_sample(self, input_state):
+    def async_sample(self, input_state, parameters=None):
         job_params = self.__defaults_job_params('sample')
         job_params['job_params'] = {
             self.__cu_key: self.__cu_data,
             'input_state': serialize(input_state)
         }
+        if parameters is not None:
+            job_params['payload']['parameters'] = parameters
 
         return self.__rpc_handler.create_job(job_params)
 
-    def async_samples(self, input_state, count):
+    def async_samples(self, input_state, count, parameters=None):
         job_params = self.__defaults_job_params('samples')
         job_params['job_params'] = {
             'backend_name': self.name,
@@ -80,10 +82,12 @@ class RemoteBackend(Backend):
             'input_state': serialize(input_state),
             'count': count
         }
+        if parameters is not None:
+            job_params['payload']['parameters'] = parameters
 
         return self.__rpc_handler.create_job(job_params)
 
-    def async_sample_count(self, input_state, count):
+    def async_sample_count(self, input_state, count, parameters=None):
         job_params = self.__defaults_job_params('sample_count')
         job_params['payload'] = {
             'backend_name': self.name,
@@ -91,6 +95,8 @@ class RemoteBackend(Backend):
             'input_state': serialize(input_state),
             'count': count
         }
+        if parameters is not None:
+            job_params['payload']['parameters'] = parameters
 
         return self.__rpc_handler.create_job(job_params)
 
