@@ -130,6 +130,11 @@ class RemoteProcessor(AProcessor):
 
         return self._backend.async_probs(self._input_state, parameters=self._parameters)
 
+    def async_execute(self, command: str, **args):
+        if self._backend is None:
+            self.__build_backend()
+        return self._backend.async_execute(command, parameters=self._parameters, **args)
+
     def get_circuit_parameters(self) -> Dict[str, Parameter]:
         pass
 

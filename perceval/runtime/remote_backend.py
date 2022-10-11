@@ -21,10 +21,6 @@
 # SOFTWARE.
 
 from typing import Union
-import logging
-import requests
-import time
-from json import JSONDecodeError
 
 from perceval.backends import Backend
 from perceval.components import ACircuit
@@ -60,59 +56,35 @@ class RemoteBackend(Backend):
         return {
             'platform_name': self.__rpc_handler.name,
             'job_name': command,
-            'pcvl_version': pcvl_version
+            'pcvl_version': pcvl_version,
+            'backend_name': self.name,
+            self.__cu_key: self.__cu_data
         }
-
-    def async_sample(self, input_state, parameters=None):
-        job_params = self.__defaults_job_params('sample')
-        job_params['job_params'] = {
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state)
-        }
-        if parameters is not None:
-            job_params['payload']['parameters'] = parameters
-
-        return self.__rpc_handler.create_job(job_params)
 
     def async_samples(self, input_state, count, parameters=None):
-        job_params = self.__defaults_job_params('samples')
-        job_params['job_params'] = {
-            'backend_name': self.name,
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state),
-            'count': count
-        }
-        if parameters is not None:
-            job_params['payload']['parameters'] = parameters
-
-        return self.__rpc_handler.create_job(job_params)
+        return self.async_execute('samples', parameters,
+                                  args={'input_state': serialize(input_state),
+                                        'count': count})
 
     def async_sample_count(self, input_state, count, parameters=None):
-        job_params = self.__defaults_job_params('sample_count')
+        return self.async_execute('sample_count', parameters,
+                                  args={'input_state': serialize(input_state),
+                                        'count': count})
+
+    def async_probs(self, input_state: BasicState, parameters=None):
+        return self.async_execute('probs', parameters,
+                                  args={'input_state': serialize(input_state)})
+
+    def async_execute(self, command: str, parameters=None, **args):
+        job_params = self.__defaults_job_params(command)
         job_params['payload'] = {
-            'backend_name': self.name,
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state),
-            'count': count
+            **args
         }
         if parameters is not None:
             job_params['payload']['parameters'] = parameters
 
         return self.__rpc_handler.create_job(job_params)
 
-    def async_probs(self,
-                   input_state: BasicState,
-                   output_state: BasicState,
-                   n: int = None,
-                   skip_compile: bool = False):
-        job_params = self.__defaults_job_params('prob')
-        job_params['payload'] = {
-            'backend_name': self.name,
-            self.__cu_key: self.__cu_data,
-            'input_state': serialize(input_state)
-        }
-
-        return self.__rpc_handler.create_job(job_params)
 
     def probampli_be(self, input_state, output_state, n=None):
         raise NotImplementedError
