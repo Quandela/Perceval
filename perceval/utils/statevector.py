@@ -348,10 +348,18 @@ class SVTimeSequence:
 class SVDistribution(defaultdict):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[StateVector] = None):
+    def __init__(self, sv: Optional[str,StateVector] = None):
         super(SVDistribution, self).__init__(float)
-        if sv is not None:
+        if isinstance(sv, str):
+            assert sv[0] == '{' and sv[-1]=='}', "invalid serialized svdistribution"
+            for s in sv[1:-1].split(";"):
+                k, v=s.split("=")
+                self[StateVector(k)] = float(v)
+        elif sv is not None:
             self[sv] = 1
+
+    def __str__(self):
+        return "{"+";".join(["%s=%f" % (str(k), v) for k, v in self.items()])+"}"
 
     def add(self, sv: StateVector, proba: float):
         self[sv] += proba

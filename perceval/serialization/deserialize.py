@@ -24,7 +24,7 @@ from os import path
 from typing import Union
 
 from perceval.components import Circuit
-from perceval.utils import Matrix, SVDistribution, BasicState
+from perceval.utils import Matrix, SVDistribution, BasicState, StateVector
 from perceval.serialization import _matrix_serialization, deserialize_state
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
@@ -35,11 +35,12 @@ def deserialize_float(floatstring):
     return float(floatstring)
 
 
-def deserialize_matrix(pb_mat: Union[str, bytes, pb.Matrix]) -> Matrix:
+def deserialize_matrix(pb_mat: Union[str, pb.Matrix]) -> Matrix:
     if not isinstance(pb_mat, pb.Matrix):
         pb_binary_repr = pb_mat
         pb_mat = pb.Matrix()
-        pb_mat.ParseFromString(pb_binary_repr)
+        assert pb_binary_repr.startswith(":PCVL:Matrix:")
+        pb_mat.ParseFromString(b64decode(pb_binary_repr[13:]))
     return _matrix_serialization.deserialize_pb_matrix(pb_mat)
 
 
@@ -50,11 +51,12 @@ def matrix_from_file(filepath: str) -> Matrix:
         return deserialize_matrix(f.read())
 
 
-def deserialize_circuit(pb_circ: Union[str, bytes, pb.Circuit]) -> Circuit:
+def deserialize_circuit(pb_circ: Union[str, pb.Circuit]) -> Circuit:
     if not isinstance(pb_circ, pb.Circuit):
         pb_binary_repr = pb_circ
         pb_circ = pb.Circuit()
-        pb_circ.ParseFromString(pb_binary_repr)
+        assert pb_binary_repr.startswith(":PCVL:ACircuit:")
+        pb_circ.ParseFromString(b64decode(pb_binary_repr[15:]))
     builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name)
     for pb_c in pb_circ.components:
         builder.add(pb_c)
@@ -73,11 +75,37 @@ def deserialize_sample_count(count: dict) -> dict:
     return count
 
 
-def deserialize_svdistribution(count: dict) -> dict:
-    svd = SVDistribution()
-    for state, ct in count.items():
-        svd.add(BasicState(state), float(ct))
-    return svd
+def deserialize(obj):
+    if isinstance(obj, dict):
+        r = {}
+        for k, v in obj.items():
+            r[deserialize(k)] = deserialize(v)
+    elif isinstance(obj, list):
+        r = []
+        for k in obj:
+            r.append(deserialize(k))
+    elif isinstance(obj, str) and obj.startswith(":PCVL:"):
+        p = obj[6:].find(":")
+        cl = obj[6:p+6]
+        sobj = obj[p+7:]
+        if cl == "BasicState":
+            r = BasicState(sobj)
+        elif cl == "StateVector":
+            r = StateVector(sobj)
+        elif cl == "SVDistribution":
+            r = SVDistribution(sobj)
+        elif cl == "Matrix":
+            r = deserialize_matrix(obj)
+        elif cl == "ACircuit":
+            r = deserialize_circuit(obj)
+    else:
+        r = obj
+    return r
+
+
+def deserialize_svdistribution(svd_serial) -> SVDistribution:
+    assert svd_serial.startswith(":PCVL:SVDistribution:")
+    return SVDistribution(svd_serial[21:])
 
 
 def sample_count_from_file(filepath: str) -> dict:

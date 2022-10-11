@@ -23,10 +23,11 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, Circuit, BasicState, SVDistribution
+from perceval import Matrix, P, ACircuit, Circuit, BasicState, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state, \
-    deserialize_svdistribution
+    deserialize_svdistribution, deserialize
 import perceval.components.base_components as comp
+import json
 
 
 def test_numeric_matrix_serialization():
@@ -97,9 +98,25 @@ def test_fockstate_serialization():
 
 def test_svdistribution_deserialization():
     svd = SVDistribution()
-    svd[BasicState("|0,1>")] = 0.2
+    svd[StateVector("|0,1>")] = 0.2
     svd[BasicState("|1,0>")] = 0.3
     svd[BasicState("|1,1>")] = 0.5
-    json = '{"|0,1>":0.2,"|1,0>":0.3,"|1,1>":0.5}'
-    svd2 = deserialize_svdistribution(json)
+    svd2 = deserialize_svdistribution(serialize(svd))
     assert svd == svd2
+
+
+def test_json():
+    svd = SVDistribution()
+    svd.add(BasicState("|1,0>"), 0.5)
+    svd.add(BasicState("|0,1>"), 0.5)
+    encoded = serialize({"a": BasicState("|1,0>"),
+                                   "b": Circuit(2) // comp.BS(),
+                                   "c": Matrix.random_unitary(3),
+                                   "d": svd
+                                  })
+    s = json.dumps(encoded)
+    d = deserialize(json.loads(s))
+    assert isinstance(d["a"], BasicState)
+    assert isinstance(d["b"], ACircuit)
+    assert isinstance(d["c"], Matrix)
+    assert isinstance(d["d"], SVDistribution)
