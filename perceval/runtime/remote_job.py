@@ -19,19 +19,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import json
 import time
 from typing import Any, Callable
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 from .rpc_handler import RPCHandler
+from perceval.serialization import deserialize
 
 
 class RemoteJob(Job):
-    def __init__(self, fn: Callable, rpc_handler: RPCHandler, deserializer: Callable):
+    def __init__(self, fn: Callable, rpc_handler: RPCHandler):
         super().__init__(fn)
         self._rpc_handler = rpc_handler
-        self._deserializer = deserializer
         self._job_status = JobStatus()
 
     @property
@@ -61,9 +62,5 @@ class RemoteJob(Job):
 
     def get_results(self) -> Any:
         response = self._rpc_handler.get_job_results(self._id)
-        results = response['results']
-
-        if self._deserializer is not None:
-            return self._deserializer(results)
-        else:
-            return results
+        results = deserialize(json.loads(response['results']))
+        return results

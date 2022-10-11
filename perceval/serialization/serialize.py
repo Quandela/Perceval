@@ -24,32 +24,57 @@ from multipledispatch import dispatch
 
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
-from ._fockstate_serialization import serialize_state
 from perceval.components import ACircuit
-from perceval.utils import Matrix, BasicState
+from perceval.utils import Matrix, BasicState, SVDistribution, StateVector
 from base64 import b64encode
 
 
 @dispatch(ACircuit)
 def serialize(circuit: ACircuit) -> str:
-    return serialize_circuit(circuit).SerializeToString()
+    return ":PCVL:ACircuit:"+b64encode(serialize_circuit(circuit).SerializeToString()).decode('utf-8')
 
 
 @dispatch(Matrix)
 def serialize(m: Matrix) -> str:
-    return serialize_matrix(m).SerializeToString()
+    return ":PCVL:Matrix:"+b64encode(serialize_matrix(m).SerializeToString()).decode('utf-8')
 
 
 @dispatch(BasicState)
-def serialize(state) -> str:
-    return serialize_state(state)
+def serialize(obj) -> str:
+    return ":PCVL:BasicState:"+str(obj)
+
+
+@dispatch(StateVector)
+def serialize(obj) -> str:
+    return ":PCVL:StateVector:"+str(obj)
+
+
+@dispatch(SVDistribution)
+def serialize(obj) -> str:
+    return ":PCVL:SVDistribution:"+str(obj)
+
+
+@dispatch(dict)
+def serialize(obj) -> dict:
+    r = {}
+    for k, v in obj.items():
+        r[serialize(k)] = serialize(v)
+    return r
+
+
+@dispatch(list)
+def serialize(obj) -> list:
+    r = []
+    for k in obj:
+        r.append(serialize(k))
+    return r
+
+@dispatch(object)
+def serialize(obj) -> object:
+    return obj
 
 
 def serialize_to_file(obj, filepath: str) -> None:
     serial_repr = serialize(obj)
     with open(filepath, mode="wb") as f:
         f.write(serial_repr)
-
-
-def bytes_to_jsonstring(var):
-    return b64encode(var).decode('utf-8')

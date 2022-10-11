@@ -29,8 +29,7 @@ from json import JSONDecodeError
 from perceval.backends import Backend
 from perceval.components import ACircuit
 from .rpc_handler import RPCHandler
-from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state, deserialize_state_list, \
-    deserialize_float
+from perceval.serialization import serialize
 from perceval.utils import Matrix, BasicState, generate_sync_methods
 
 from pkg_resources import get_distribution
@@ -50,7 +49,7 @@ class RemoteBackend(Backend):
             self.__cu_key = 'circuit'
         else:
             self.__cu_key = 'unitary'
-        self.__cu_data = bytes_to_jsonstring(serialize(cu))
+        self.__cu_data = serialize(cu)
         super(RemoteBackend, self).__init__(cu, use_symbolic, n, mask)
 
     @staticmethod

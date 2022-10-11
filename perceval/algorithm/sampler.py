@@ -96,7 +96,7 @@ class Sampler(AAlgorithm):
     @property
     def samples(self) -> Job:
         if self._processor.is_remote:
-            return RemoteJob(self._processor.async_samples, self._processor.get_rpc_handler(), deserialize_state_list)
+            return RemoteJob(self._processor.async_samples, self._processor.get_rpc_handler())
         else:
             try:
                 method = self._samples_mapping[self._processor.available_sampling_method]
@@ -108,8 +108,7 @@ class Sampler(AAlgorithm):
     @property
     def sample_count(self) -> Job:
         if self._processor.is_remote:
-            return RemoteJob(self._processor.async_sample_count, self._processor.get_rpc_handler(),
-                             deserialize_sample_count)
+            return RemoteJob(self._processor.async_sample_count, self._processor.get_rpc_handler())
         else:
             try:
                 method = self._sample_count_mapping[self._processor.available_sampling_method]
@@ -121,7 +120,7 @@ class Sampler(AAlgorithm):
     @property
     def probs(self) -> Job:
         if self._processor.is_remote:
-            return RemoteJob(self._processor.async_probs, self._processor.get_rpc_handler(), deserialize_svdistribution)
+            return RemoteJob(self._processor.async_probs, self._processor.get_rpc_handler())
         else:
             try:
                 method = self._probs_mapping[self._processor.available_sampling_method]
