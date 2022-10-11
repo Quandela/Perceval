@@ -78,7 +78,3 @@ def serialize_to_file(obj, filepath: str) -> None:
     serial_repr = serialize(obj)
     with open(filepath, mode="wb") as f:
         f.write(serial_repr)
-
-
-def bytes_to_jsonstring(var):
-    return b64encode(var).decode('utf-8')

@@ -150,7 +150,3 @@ class CircuitBuilder:
 
     def retrieve(self):
         return self._circuit
-
-
-def jsonstring_to_bytes(var):
-    return b64decode(var)

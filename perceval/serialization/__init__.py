@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .serialize import serialize, serialize_to_file, bytes_to_jsonstring
+from .serialize import serialize, serialize_to_file
 from ._fockstate_serialization import deserialize_state, deserialize_state_list
 from .deserialize import deserialize_circuit, circuit_from_file, deserialize_matrix, matrix_from_file, \
       deserialize_float, deserialize_sample_count, deserialize_svdistribution, sample_count_from_file, \
