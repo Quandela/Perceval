@@ -40,7 +40,7 @@ def samples_to_probs(sample_list: List[BasicState]) -> SVDistribution:
 
 
 def probs_to_sample_count(probs: SVDistribution, count: int) -> Dict[BasicState, int]:
-    perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
+    perturbed_dist = {state[0]: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
     fac = 1 / sum(prob for prob in perturbed_dist.values())
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
@@ -51,7 +51,7 @@ def probs_to_sample_count(probs: SVDistribution, count: int) -> Dict[BasicState,
 
 
 def probs_to_samples(probs: SVDistribution, count: int) -> List[BasicState]:
-    return probs.sample(count)
+    return [s[0] for s in probs.sample(count)]
 
 
 def sample_count_to_probs(sample_count: Dict[BasicState, int]):
