@@ -116,19 +116,24 @@ class RemoteProcessor(AProcessor):
         if self._backend is None:
             self.__build_backend()
 
-        return self._backend.async_samples(self._input_state, count)
+        return self._backend.async_samples(self._input_state, count, parameters=self._parameters)
 
     def async_sample_count(self, count) -> str:
         if self._backend is None:
             self.__build_backend()
 
-        return self._backend.async_sample_count(self._input_state, count)
+        return self._backend.async_sample_count(self._input_state, count, parameters=self._parameters)
 
     def async_probs(self) -> SVDistribution:
         if self._backend is None:
             self.__build_backend()
 
-        return self._backend.async_probs(self._input_state)
+        return self._backend.async_probs(self._input_state, parameters=self._parameters)
+
+    def async_execute(self, command: str, **args):
+        if self._backend is None:
+            self.__build_backend()
+        return self._backend.async_execute(command, parameters=self._parameters, **args)
 
     def get_circuit_parameters(self) -> Dict[str, Parameter]:
         pass
