@@ -27,7 +27,7 @@ import numpy as np
 
 from .abstract_algorithm import AAlgorithm
 from .sampler import Sampler
-from perceval.utils import BasicState, StateVector
+from perceval.utils import BasicState, StateVector, allstate_iterator
 from perceval.components import AProcessor
 
 
@@ -44,7 +44,7 @@ class Analyzer(AAlgorithm):
         """
         if mapping is None:
             mapping = {}
-        processor.mode_post_selection(0)
+        processor.mode_post_selection(0)  # Do not preselect / postselect on number of modes with photon(s) in it
         super().__init__(processor)
         self._sampler = Sampler(processor)
         self._mapping = mapping
@@ -76,22 +76,22 @@ class Analyzer(AAlgorithm):
                 self._mapping[k] = v
                 self.output_states_list.append(k)
         elif output_states == '*':
-            self.output_states_list = None  # All states will be used in compute()
+            out_set = set()
+            for input_state in self.input_states_list:
+                for os in allstate_iterator(input_state):
+                    out_set.add(os)
+            self.output_states_list = list(out_set)  # All states will be used in compute()
 
-    def _generate_displayable_output_states(self, expected) -> List:
-        """
-        Generate a list of output states to consider for display.
-        Merges the output states from self.output_states_list and expected if they exist
-        When none is defined, returns an empty list
-        """
-        disp_out_s = set()
-        if self.output_states_list is not None:
-            for s in self.output_states_list:
-                disp_out_s.add(s)
-        if expected is not None:
-            for s in expected.values():
-                disp_out_s.add(s)
-        return list(disp_out_s)
+    # def _add_expected_to_output_states(self, expected) -> None:
+    #     """
+    #     Generate a list of output states to consider.
+    #     Merges the output states from self.output_states_list and expected if they exist
+    #     """
+    #     if expected is None:
+    #         return
+    #     for s in expected.values():
+    #         if s not in self.output_states_list:
+    #             self.output_states_list.append(s)
 
     def compute(self, normalize=False, expected=None, progress_callback=None):
         """
@@ -99,25 +99,23 @@ class Analyzer(AAlgorithm):
         provided)
         """
         probs_res = {}
+        phys_perf = []
         perf_res = []
-        expected_out_states_to_display = self._generate_displayable_output_states(expected)
-        out_states_to_display = set()
         if expected is not None:
             normalize = True
+            self.error_rate = 0
 
+        # Compute probabilities for all input states
         for idx, i_state in enumerate(self.input_states_list):
             self._processor.with_input(i_state)
             probs_output = self._sampler.probs()
             probs = probs_output['results']
             probs_res[i_state] = probs
-            for s in probs:
-                if len(expected_out_states_to_display) == 0 or s[0] in expected_out_states_to_display:
-                    out_states_to_display.add(s[0])
+            phys_perf.append(probs_output['physical_perf'])
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self.input_states_list))
-        self.output_states_list = list(out_states_to_display)
 
-        # Create distribution matrix
+        # Create a distribution matrix and compute performance / error rate if needed
         self._distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
         for iidx, i_state in enumerate(self.input_states_list):
             sum_p = 0
@@ -125,58 +123,37 @@ class Analyzer(AAlgorithm):
                 if StateVector(o_state) in probs_res[i_state]:
                     self._distribution[iidx, oidx] = probs_res[i_state][o_state]
                     sum_p += probs_res[i_state][o_state]
-            if normalize:
+            if expected is not None:
+                if i_state in expected:
+                    expected_o = expected[i_state]
+                elif i_state in self._mapping and self._mapping[i_state] in expected:
+                    expected_o = expected[self._mapping[i_state]]
+                if not isinstance(expected_o, BasicState):
+                    for k, v in self._mapping.items():
+                        if v == expected_o:
+                            expected_o = k
+                            break
+                if sum_p > 0:
+                    self.error_rate += 1 - self._distribution[iidx, self.output_states_list.index(expected_o)]/sum_p
+            if normalize and sum_p != 0:
                 self._distribution[iidx, :] /= sum_p
             perf_res.append(sum_p)
         self.performance = min(perf_res)
-
-    # def compute_(self, normalize=False, expected=None, progress_callback=None):
-    #     """
-    #         Go through the input states, generate (post-selected) output states and calculate if provided
-    #         distance with expected
-    #     """
-    #     self._distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
-    #     computation_count = 0
-    #     total_count = len(self.input_states_list) * len(self.output_states_list)
-    #     if expected is not None:
-    #         self._expected_distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
-    #         self.performance = 1
-    #         self.error_rate = 0
-    #     for iidx, istate in enumerate(self.input_states_list):
-    #         sump = 1e-6
-    #         if expected is not None:
-    #             if istate in expected:
-    #                 expected_o = expected[istate]
-    #             elif istate in self._mapping and self._mapping[istate] in expected:
-    #                 expected_o = expected[self._mapping[istate]]
-    #             if not isinstance(expected_o, BasicState):
-    #                 for k, v in self._mapping.items():
-    #                     if v == expected_o:
-    #                         expected_o = k
-    #                         break
-    #             self._expected_distribution[iidx, self.output_states_list.index(expected_o)] = 1
-    #         for oidx, ostate in enumerate(self.output_states_list):
-    #             if self._post_select_fn is None or self._post_select_fn(ostate):
-    #                 if istate.n == ostate.n:
-    #                     self._distribution[iidx, oidx] = self.prob(istate, ostate)  # job run synchronously
-    #                     if expected is not None and self._expected_distribution[iidx, oidx]:
-    #                         found_in_row = self._distribution[iidx, oidx]
-    #                         if self._distribution[iidx, oidx] < self.performance:
-    #                             self.performance = self._distribution[iidx, oidx]
-    #                 sump += self._distribution[iidx, oidx]
-    #             computation_count += 1
-    #             if progress_callback:
-    #                 progress_callback(computation_count/total_count)
-    #         if normalize or expected is not None:
-    #             self._distribution[iidx, :] /= sump
-    #         if expected is not None:
-    #             self.error_rate += 1-found_in_row/sump
-    #     if expected is not None:
-    #         self.error_rate /= len(self.input_states_list)
-    #     return self
+        output = {'results': self._distribution, 'input_states': self.input_states_list,
+                  'output_states': self.output_states_list}
+        if expected is not None:
+            self.error_rate /= len(self.input_states_list)
+            output['error_rate'] = self.error_rate
+            output['performance'] = self.performance
+        return output
 
     @property
     def distribution(self):
         if self._distribution is None:
             self.compute()
         return self._distribution
+
+    def col(self, output_state: BasicState) -> int:
+        if output_state in self.output_states_list:
+            return self.output_states_list.index(output_state)
+        return None
