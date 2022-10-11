@@ -30,7 +30,7 @@ def serialize_parameter(param: Union[Parameter, float]):
     if isinstance(param, float):
         pb_param.real_value = param
     else:
-        if param.fixed:
+        if param.defined:
             pb_param.real_value = float(param)
         elif param._is_expression:
             pb_param.expression = str(param.spv)

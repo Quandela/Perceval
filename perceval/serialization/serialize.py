@@ -46,7 +46,7 @@ def serialize(obj) -> str:
 
 @dispatch(StateVector)
 def serialize(obj) -> str:
-    return ":PCVL:StateVector:"+str(obj)
+    return ":PCVL:StateVector:"+obj.serialize()
 
 
 @dispatch(SVDistribution)

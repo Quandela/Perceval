@@ -152,6 +152,17 @@ class StateVector(defaultdict):
         self._normalized = True
         self._has_symbolic = False
 
+    @staticmethod
+    def deserialize(s):
+        sv = StateVector()
+        for c in s.split("+"):
+            m=re.match(r"\((.*),(.*)\)\*(.*)$", c)
+            assert m, "invalid state vector serialization: %s" % s
+            sv[BasicState(m.group(3))]=float(m.group(1))+1j*float(m.group(2))
+        sv._normalized = True
+        sv._has_symbolic = False
+        return sv
+
     def __rmul__(self, other):
         r"""Multiply a StateVector by a numeric value, right side
         """
@@ -342,8 +353,20 @@ class StateVector(defaultdict):
                 if isinstance(value, sp.Expr):
                     ls.append(str(value) + "*" + str(key))
                 else:
-                    ls.append(simple_complex(value)[1] + "*" + str(key))
+                    value = simple_complex(value)[1]
+                    if value[1:].find("-") != -1 or value.find("+") != -1:
+                        value = "("+value+")"
+                    ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
+
+    def serialize(self):
+        self._normalize()
+        ls = []
+        for key, value in self.items():
+            real = simple_float(value.real, nsimplify=False)[1]
+            imag = simple_float(value.imag, nsimplify=False)[1]
+            ls.append("(%s,%s)*%s" % (real, imag, str(key)))
+        return "+".join(ls)
 
     def __hash__(self):
         return self.__str__().__hash__()
@@ -374,12 +397,12 @@ class SVDistribution(defaultdict):
             assert sv[0] == '{' and sv[-1]=='}', "invalid serialized svdistribution"
             for s in sv[1:-1].split(";"):
                 k, v=s.split("=")
-                self[StateVector(k)] = float(v)
+                self[StateVector.deserialize(k)] = float(v)
         elif sv is not None:
             self[sv] = 1
 
     def __str__(self):
-        return "{"+";".join(["%s=%f" % (str(k), v) for k, v in self.items()])+"}"
+        return "{"+";".join(["%s=%s" % (k.serialize(), simple_float(v, nsimplify=False)[1]) for k, v in self.items()])+"}"
 
     def add(self, sv: StateVector, proba: float):
         self[sv] += proba

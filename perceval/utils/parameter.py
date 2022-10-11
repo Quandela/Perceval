@@ -70,7 +70,7 @@ class Parameter:
     def spv(self) -> sp.Expr:
         r"""The current value of the parameter defined as a sympy expression
         """
-        if self._value is not None:
+        if self._is_expression and self._value is not None:
             return sp.S(self._value)
         else:
             return self._symbol
