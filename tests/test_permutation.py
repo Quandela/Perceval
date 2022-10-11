@@ -23,22 +23,30 @@
 import perceval as pcvl
 import perceval.components.base_components as comp
 import perceval.algorithm as algo
+import numpy as np
 
 
 def test_permutation_3():
     circuit = comp.PERM([2, 0, 1])
-    import pytest
-    pytest.fail("Reimplement me with PCVL-216")
-    # pf = pcvl.BackendFactory.get_backend("SLOS")
-    # ca = algo.Analyzer(pf, circuit, input_states=[pcvl.BasicState("|1,0,0>")], output_states="*")
-    # assert ca.output_states_list[2] == pcvl.BasicState("|0, 0, 1>")
-    # assert not((ca.distribution[0]-[0, 0, 1]).any())
-    # ca = algo.Analyzer(pf, circuit, input_states=[pcvl.BasicState("|0,1,0>")], output_states="*")
-    # assert ca.output_states_list[0] == pcvl.BasicState("|1, 0, 0>")
-    # assert not((ca.distribution[0]-[1, 0, 0]).any())
-    # ca = algo.Analyzer(pf, circuit, input_states=[pcvl.BasicState("|0,0,1>")], output_states="*")
-    # assert ca.output_states_list[1] == pcvl.BasicState("|0, 1, 0>")
-    # assert not((ca.distribution[0]-[0, 1, 0]).any())
+    p = pcvl.Processor("SLOS", circuit)
+
+    ca = algo.Analyzer(p, input_states=[pcvl.BasicState("|1,0,0>")], output_states="*")
+    i_001 = ca.col(pcvl.BasicState("|0, 0, 1>"))
+    expected_dist = np.zeros(3)
+    expected_dist[i_001] = 1
+    assert np.allclose(ca.distribution, expected_dist)
+
+    ca = algo.Analyzer(p, input_states=[pcvl.BasicState("|0,1,0>")], output_states="*")
+    i_100 = ca.col(pcvl.BasicState("|1, 0, 0>"))
+    expected_dist = np.zeros(3)
+    expected_dist[i_100] = 1
+    assert np.allclose(ca.distribution, expected_dist)
+
+    ca = algo.Analyzer(p, input_states=[pcvl.BasicState("|0,0,1>")], output_states="*")
+    i_010 = ca.col(pcvl.BasicState("|0, 1, 0>"))
+    expected_dist = np.zeros(3)
+    expected_dist[i_010] = 1
+    assert np.allclose(ca.distribution, expected_dist)
 
 
 def test_permutation_inverse():
