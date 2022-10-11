@@ -70,6 +70,8 @@ class Analyzer(AAlgorithm):
 
         if output_states is None:
             self.output_states_list = self.input_states_list
+        elif isinstance(output_states, list):
+            self.output_states_list = output_states
         elif isinstance(output_states, dict):
             self.output_states_list = []
             for k, v in output_states.items():
@@ -120,7 +122,7 @@ class Analyzer(AAlgorithm):
         for iidx, i_state in enumerate(self.input_states_list):
             sum_p = 0
             for oidx, o_state in enumerate(self.output_states_list):
-                if StateVector(o_state) in probs_res[i_state]:
+                if o_state in probs_res[i_state] or StateVector(o_state) in probs_res[i_state]:  # TODO cleanup
                     self._distribution[iidx, oidx] = probs_res[i_state][o_state]
                     sum_p += probs_res[i_state][o_state]
             if expected is not None:
