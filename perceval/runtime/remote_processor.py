@@ -140,3 +140,9 @@ class RemoteProcessor(AProcessor):
         job = RemoteJob(rpc_handler=self._rpc_handler, deserializer=deserializer)
         job.status()
         return job
+
+    @property
+    def m(self) -> int:
+        if self._circuit is None:
+            return 0
+        return self._circuit.m

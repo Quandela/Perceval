@@ -23,7 +23,7 @@
 import pytest
 from pathlib import Path
 
-from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory
+from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
@@ -67,13 +67,14 @@ def test_helloword():
             assert pytest.approx(expected_outputs[output_state]) == simulator.prob(input_state, output_state)
             count += 1
         assert count == len(expected_outputs)
-        ca = algo.Analyzer(simulator, c.U,
+        p = Processor(backend_name, c)
+        ca = algo.Analyzer(p,
                            [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
                            "*"  # all possible output states that can be generated with 1 or 2 photons
                            )
         assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-------+-------+-------+-------+-------+-------+
-            |       | |1,0> | |0,1> | |2,0> | |1,1> | |0,2> |
+            |       | |0,1> | |1,0> | |2,0> | |1,1> | |0,2> |
             +-------+-------+-------+-------+-------+-------+
             | |0,1> |  1/2  |  1/2  |   0   |   0   |   0   |
             | |1,0> |  1/2  |  1/2  |   0   |   0   |   0   |
@@ -121,7 +122,8 @@ def test_bs():
         for _ in range(10):
             out = sbs.sample(BasicState("|0,1>"))
             assert str(out) == "|0,1>" or str(out) == "|1,0>"
-        ca = algo.Analyzer(backend, bs.U, [BasicState([0, 1]), BasicState([1, 0])])
+        p = Processor(backend_name, bs)
+        ca = algo.Analyzer(p, [BasicState([0, 1]), BasicState([1, 0])])
         ca.compute()
         assert pdisplay_analyzer(ca, nsimplify=True) == strip_line_12("""
             +-------+-------+-------+

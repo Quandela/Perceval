@@ -92,41 +92,44 @@ for state, count in output['results'].items():
     print(f"{state}: {count}")
 print(f"Physical performance: {output['physical_perf']}")
 
-# FIX ME WITH PCVL-216
-# chip_QRNG = pcvl.Circuit(4, name='QRNG')
-# # Parameters
-# phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
-#         pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
-# # Defining the LO elements of chip
-# (chip_QRNG
-#  .add((0, 1), cp.BS())
-#  .add((2, 3), cp.BS())
-#  .add((1, 2), cp.PERM([1, 0]))
-#  .add(0, cp.PS(phis[0]))
-#  .add(2, cp.PS(phis[2]))
-#  .add((0, 1), cp.BS())
-#  .add((2, 3), cp.BS())
-#  .add(0, cp.PS(phis[1]))
-#  .add(2, cp.PS(phis[3]))
-#  .add((0, 1), cp.BS())
-#  .add((2, 3), cp.BS())
-#  )
-# # Setting parameters value and see how chip specs evolve
-# phis[0].set_value(np.pi / 2)
-# phis[1].set_value(0.2)
-# phis[2].set_value(0)
-# phis[3].set_value(0.4)
-#
-# print("Use circuit analyzer algorithm")
-# analyzer = Analyzer(get_platform('SLOS'), chip_QRNG, [pcvl.BasicState("[1,0,1,0]"), pcvl.BasicState("[0,1,1,0]")], "*")
-# with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
-#     def update_progress(p):
-#         tq.update(p-update_progress.prev)
-#         update_progress.prev = p
-#
-#     tq.set_description("Analyzing QRNG circuit with SLOS")
-#     update_progress.prev = 0
-#     analyzer.compute(progress_callback=update_progress)
-#     tq.close()
-#
-# pcvl.pdisplay(analyzer)
+
+chip_QRNG = pcvl.Circuit(4, name='QRNG')
+# Parameters
+phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
+        pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
+# Defining the LO elements of chip
+(chip_QRNG
+ .add((0, 1), cp.BS())
+ .add((2, 3), cp.BS())
+ .add((1, 2), cp.PERM([1, 0]))
+ .add(0, cp.PS(phis[0]))
+ .add(2, cp.PS(phis[2]))
+ .add((0, 1), cp.BS())
+ .add((2, 3), cp.BS())
+ .add(0, cp.PS(phis[1]))
+ .add(2, cp.PS(phis[3]))
+ .add((0, 1), cp.BS())
+ .add((2, 3), cp.BS())
+ )
+# Setting parameters value and see how chip specs evolve
+phis[0].set_value(np.pi / 2)
+phis[1].set_value(0.2)
+phis[2].set_value(0)
+phis[3].set_value(0.4)
+
+print("Use analyzer algorithm")
+qrng_processor = Processor("SLOS", chip_QRNG, Source(brightness=0.8))
+
+analyzer = Analyzer(qrng_processor, {pcvl.BasicState([1, 0, 1, 0]): '00', pcvl.BasicState([0, 1, 1, 0]): '10'}, '*')
+with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
+    def update_progress(p):
+        tq.update(p-update_progress.prev)
+        update_progress.prev = p
+
+    tq.set_description("Analyzing QRNG circuit with SLOS")
+    update_progress.prev = 0
+    res = analyzer.compute(progress_callback=update_progress, normalize=True)
+    tq.close()
+
+pcvl.pdisplay(analyzer)
+print(f"perf = {analyzer.performance}")

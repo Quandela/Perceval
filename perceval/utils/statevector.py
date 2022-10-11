@@ -37,7 +37,7 @@ from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
-from quandelibc import FockState, Annotation
+from quandelibc import FockState, Annotation, FSArray
 
 
 class BasicState(FockState):
@@ -97,6 +97,26 @@ class BasicState(FockState):
                 o_state.append(BasicState(state))
             partitions_states.add(tuple(o_state))
         return list(partitions_states)
+
+
+def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
+    """Iterator on all possible output states compatible with mask generating StateVector
+
+    :param input_state: a given input state vector
+    :param mask: an optional mask
+    :return: list of output_state
+    """
+    m = input_state.m
+    ns = input_state.n
+    if not isinstance(ns, list):
+        ns = [ns]
+    for n in ns:
+        if mask is not None:
+            output_array = FSArray(m, n, mask)
+        else:
+            output_array = FSArray(m, n)
+        for output_idx, output_state in enumerate(output_array):
+            yield BasicState(output_state)
 
 
 class AnnotatedBasicState(FockState):

@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from .abstract_processor import AProcessor
 from .circuit import Circuit, ACircuit
 from .predefined_circuit import PredefinedCircuit
 from .processor import Processor
