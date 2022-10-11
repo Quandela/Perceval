@@ -382,7 +382,7 @@ class SVDistribution(defaultdict):
             self[sv] = 1
 
     def __str__(self):
-        return "{"+";".join(["%s=%f" % (k.serialize(), v) for k, v in self.items()])+"}"
+        return "{"+";".join(["%s=%s" % (k.serialize(), simple_float(v, nsimplify=False)[1]) for k, v in self.items()])+"}"
 
     def add(self, sv: StateVector, proba: float):
         self[sv] += proba
