@@ -91,7 +91,7 @@ def deserialize(obj):
         if cl == "BasicState":
             r = BasicState(sobj)
         elif cl == "StateVector":
-            r = StateVector(sobj)
+            r = StateVector.deserialize(sobj)
         elif cl == "SVDistribution":
             r = SVDistribution(sobj)
         elif cl == "Matrix":
