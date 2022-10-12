@@ -19,9 +19,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import RemoteJob, Job
-from perceval.algorithm.abstract_algorithm import AAlgorithm
-
+from perceval.runtime import RemoteJob, Job
+from .abstract_algorithm import AAlgorithm
 from perceval.components.abstract_processor import AProcessor
 
 
@@ -43,4 +42,3 @@ class QRNG(AAlgorithm):
             "Qrng algorithm is not implemented"
         return RemoteJob(lambda **kwargs: self._processor.async_execute("qrng", **kwargs),
                          self._processor.get_rpc_handler())
-
