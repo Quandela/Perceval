@@ -454,3 +454,54 @@ class PBS(Unitary):
     # noinspection PyMethodMayBeStatic
     def describe(self, _=None):
         return "PBS()"
+
+
+class LC(ACircuit):
+    """Loss channel"""
+    _name = "LC"
+
+    def __init__(self, loss):
+        super().__init__(1)
+        self._loss = self._set_parameter("loss", loss, 0, 1, False)
+
+    def _compute_unitary(self, assign=None, use_symbolic=False):
+        raise RuntimeError("LC circuit cannot be simulated with unitary matrix")
+
+    def get_variables(self, map_param_kid=None):
+        parameters = {}
+        if map_param_kid is None:
+            map_param_kid = self.map_parameters()
+        self.variable_def(parameters, "loss", "loss", None, map_param_kid)
+        return parameters
+
+    def describe(self, map_param_kid=None):
+        parameters = self.get_variables(map_param_kid)
+        params_str = format_parameters(parameters, separator=', ')
+        return "LC(%s)" % params_str
+
+    def inverse(self, v=False, h=False):
+        if h:
+            raise NotImplementedError("Cannot inverse a loss channel")
+
+    def definition(self):
+        raise RuntimeError("LC circuit has no unitary matrix definition")
+
+    def apply(self, r, sv):
+        # Assumes r of size 1
+        if isinstance(sv, BasicState):
+            sv = StateVector(sv)
+
+        r = r[0]
+        loss = self.get_variables()["loss"]
+
+        nsv = copy(sv)
+        nsv.clear()
+        for state, prob_ampli in sv.items():
+            n = state[r]
+            for i in range(n + 1):
+                nsv[BasicState(state.set_slice(slice(r, r+1), BasicState([i])))] += prob_ampli \
+                                                                                    * loss ** (n - i) \
+                                                                                    * (1 - loss) ** i \
+                                                                                    * comb(n, i)
+
+        return nsv
