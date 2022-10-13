@@ -54,7 +54,7 @@ class LocalJob(Job):
         if 'progress_callback' not in kwargs:
             kwargs['progress_callback'] = self._progress_cb
         self._call_fn_safe(*args, **kwargs)
-        return self._results
+        return self.get_results()
 
     def _call_fn_safe(self, *args, **kwargs):
         r"""
