@@ -73,6 +73,6 @@ def test_probs_to_sample_count():
     svd[b2] = 0.15
     svd[b3] = 0.5
     output = probs_to_sample_count(svd, 1000)
-    assert output[StateVector(b0)] < output[StateVector(b2)]
-    assert output[StateVector(b2)] < output[StateVector(b1)]
-    assert output[StateVector(b1)] < output[StateVector(b3)]
+    assert output[b0] < output[b2]
+    assert output[b2] < output[b1]
+    assert output[b1] < output[b3]
