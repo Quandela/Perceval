@@ -27,7 +27,7 @@ import time
 from json import JSONDecodeError
 
 from perceval.backends import Backend
-from perceval.components import ALinearCircuit
+from perceval.components import ACircuit
 from perceval.serialization import serialize, bytes_to_jsonstring, deserialize_state, deserialize_state_list, \
     deserialize_float
 from perceval.utils import Matrix, BasicState
@@ -65,7 +65,7 @@ def generate_sync_methods(cls):
 ################################
 @generate_sync_methods
 class RemoteBackend(Backend):
-    def __init__(self, platform, cu: Union[ALinearCircuit, Matrix], use_symbolic=None, n=None, mask=None):
+    def __init__(self, platform, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None, mask=None):
         self.name = platform.name
         self.__platform = platform
         if isinstance(cu, ACircuit):

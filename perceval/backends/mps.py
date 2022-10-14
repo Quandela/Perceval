@@ -29,7 +29,7 @@ from collections import defaultdict
 
 from .template import Backend
 from perceval.utils import BasicState, Matrix
-from perceval.components import ALinearCircuit
+from perceval.components import ACircuit
 
 
 class MPSBackend(Backend):
@@ -39,7 +39,7 @@ class MPSBackend(Backend):
     """
 
     def __init__(self,
-                 cu: Union[ALinearCircuit, Matrix],
+                 cu: Union[ACircuit, Matrix],
                  use_symbolic: bool = None,
                  n: int = None,
                  mask: list = None):

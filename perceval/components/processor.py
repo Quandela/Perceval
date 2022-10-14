@@ -75,7 +75,7 @@ class Processor:
         self._is_on = True
 
         self._inputs_map = SVDistribution()
-        for k in range(self.m):
+        for k in range(self.circuit_size):
             port = self.get_input_port(k)
             if port is None:
                 continue
@@ -99,11 +99,11 @@ class Processor:
         self._post_select = postprocess_func
 
     @property
-    def mode_of_interest_count(self) -> int:
+    def m(self) -> int:
         return self._n_moi
 
     @property
-    def m(self) -> int:
+    def circuit_size(self) -> int:
         return self._n_moi + self._n_heralds
 
     def add(self, mode_mapping, component, keep_port=True):
@@ -128,7 +128,7 @@ class Processor:
 
     @property
     def out_port_names(self):
-        result = [''] * self.m
+        result = [''] * self.circuit_size
         for port, m_range in self._out_ports.items():
             for m in m_range:
                 result[m] = port.name
@@ -136,7 +136,7 @@ class Processor:
 
     @property
     def in_port_names(self):
-        result = [''] * self.m
+        result = [''] * self.circuit_size
         for port, m_range in self._in_ports.items():
             for m in m_range:
                 result[m] = port.name
@@ -191,15 +191,13 @@ class Processor:
                 perm = perm_component.perm_vector
                 c_first = perm_modes[0]
                 self._post_select = lambda s: processor._post_select(BasicState([s[perm.index(ii) + c_first]
-                                                                                 for ii in range(processor.m)]))
+                                                                                 for ii in range(processor.circuit_size)]))
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        # if isinstance(component, ALinearCircuit) and not isinstance(component, Circuit):
-        #     component = Circuit(component.m).add(0, component, merge=False)
         sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
 
@@ -238,7 +236,7 @@ class Processor:
 
     @property
     def _closed_photonic_modes(self):
-        output = [False] * self.m
+        output = [False] * self.circuit_size
         for port, m_range in self._out_ports.items():
             if port.is_output_photonic_mode_closed():
                 for i in m_range:
@@ -248,7 +246,7 @@ class Processor:
     def is_mode_connectible(self, mode: int) -> bool:
         if mode < 0:
             return False
-        if mode >= self.m:
+        if mode >= self.circuit_size:
             return True
         return not self._closed_photonic_modes[mode]
 
@@ -301,8 +299,8 @@ class Processor:
         multiplier = 1  # TODO handle polarization
         for r, c in self._components:
             cU = c.compute_unitary(use_symbolic=use_symbolic)
-            if len(r) != multiplier * self.m:
-                nU = Matrix.eye(multiplier * self.m, use_symbolic)
+            if len(r) != multiplier * self.circuit_size:
+                nU = Matrix.eye(multiplier * self.circuit_size, use_symbolic)
                 nU[multiplier * r[0]:multiplier * (r[-1] + 1), multiplier * r[0]:multiplier * (r[-1] + 1)] = cU
                 cU = nU
             if u is None:

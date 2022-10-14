@@ -24,11 +24,11 @@ from copy import copy
 import numpy as np
 import sympy as sp
 
-from perceval.components import ALinearCircuit
+from perceval.components import ACircuit
 from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
 
 
-class GenericBS(ALinearCircuit):
+class GenericBS(ACircuit):
     """Universal beam splitter"""
     DEFAULT_NAME = "BS"
 
@@ -100,7 +100,7 @@ class GenericBS(ALinearCircuit):
             self._phi_b._value = sp.pi-(-self._phi_a.spv-self._phi_d.spv-self._phi_b.spv)
 
 
-class SimpleBS(ALinearCircuit):
+class SimpleBS(ACircuit):
     """Beam splitter with a single phase"""
     DEFAULT_NAME = "BS"
 
@@ -165,7 +165,7 @@ class SimpleBS(ALinearCircuit):
                 self._phi = float(self._phi)+np.pi
 
 
-class PS(ALinearCircuit):
+class PS(ACircuit):
     """Phase shifter"""
     DEFAULT_NAME = "PS"
 
@@ -200,7 +200,7 @@ class PS(ALinearCircuit):
                 self._phi = -float(self._phi)
 
 
-class WP(ALinearCircuit):
+class WP(ACircuit):
     """Wave plate"""
     DEFAULT_NAME = "WP"
     _supports_polarization = True
@@ -272,7 +272,7 @@ class QWP(WP):
         return QWP(xsi=Parameter('xsi')).U
 
 
-class PR(ALinearCircuit):
+class PR(ACircuit):
     """Polarization rotator"""
     _supports_polarization = True
     DEFAULT_NAME = "PR"
@@ -308,7 +308,7 @@ class PR(ALinearCircuit):
         raise NotImplementedError("inverse not yet implemented")
 
 
-class Unitary(ALinearCircuit):
+class Unitary(ACircuit):
     """Generic component defined by a unitary matrix"""
     DEFAULT_NAME = "Unitary"
 

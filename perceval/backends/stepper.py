@@ -25,7 +25,7 @@ import copy
 
 from .template import Backend
 from perceval.utils import StateVector, BasicState, Matrix
-from perceval.components import ALinearCircuit
+from perceval.components import ACircuit
 from .naive import NaiveBackend
 
 class StepperBackend(Backend):
@@ -36,7 +36,7 @@ class StepperBackend(Backend):
     """
 
     def __init__(self,
-                 cu: Union[ALinearCircuit, Matrix],
+                 cu: Union[ACircuit, Matrix],
                  use_symbolic: bool = None,
                  n: int = None,
                  mask: list = None):
@@ -47,7 +47,7 @@ class StepperBackend(Backend):
     supports_symbolic = False
     supports_circuit_computing = True
 
-    def apply(self, sv: StateVector, r: List[int], c: ALinearCircuit) -> StateVector:
+    def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position

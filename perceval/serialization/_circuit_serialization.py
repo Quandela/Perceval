@@ -23,7 +23,7 @@
 from multipledispatch import dispatch
 
 from perceval.serialization import _schema_circuit_pb2 as pb
-from perceval.components import ALinearCircuit, Circuit
+from perceval.components import ACircuit, Circuit
 import perceval.components.base_components as comp
 import perceval.components.non_linear_components as nl
 from perceval.serialization._matrix_serialization import serialize_matrix
@@ -34,7 +34,7 @@ class ComponentSerializer:
     def __init__(self):
         self._pb = None
 
-    def serialize(self, r: int, c: ALinearCircuit):
+    def serialize(self, r: int, c: ACircuit):
         self._pb = pb.Component()
         self._pb.starting_mode = r
         self._pb.n_mode = c.m
@@ -127,7 +127,7 @@ class ComponentSerializer:
         self._pb.circuit.CopyFrom(pb_circ)
 
 
-def serialize_circuit(circuit: ALinearCircuit) -> pb.Circuit:
+def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     if not isinstance(circuit, Circuit):
         circuit = Circuit(circuit.m).add(0, circuit)
 

@@ -27,7 +27,7 @@ from typing import List, Tuple, Union, Iterator, Optional
 
 from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
-from ..components.linear_circuit import ALinearCircuit, _matrix_double_for_polarization
+from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
 
 import quandelibc as qc
 import numpy as np
@@ -38,7 +38,7 @@ class Backend(ABC):
     supports_circuit_computing = None
 
     def __init__(self,
-                 cu: Union[ALinearCircuit, Matrix],
+                 cu: Union[ACircuit, Matrix],
                  use_symbolic: bool = None,
                  use_polarization: Optional[bool] = None,
                  n: int = None,
@@ -54,7 +54,7 @@ class Backend(ABC):
         """
         self._logger = logging.getLogger(self.name)
         if not self.supports_circuit_computing:
-            if isinstance(cu, ALinearCircuit):
+            if isinstance(cu, ACircuit):
                 if cu.requires_polarization:
                     if use_polarization is None:
                         use_polarization = True
@@ -87,7 +87,7 @@ class Backend(ABC):
             self._m: int = self._requires_polarization and u.shape[0] >> 1 or u.shape[0]
             "number of modes"
         else:
-            assert isinstance(cu, ALinearCircuit), \
+            assert isinstance(cu, ACircuit), \
                 "Component Based simulation works on circuit"
             assert not use_symbolic or self.supports_symbolic, \
                 "%s backend does not support symbolic calculation" % self._name

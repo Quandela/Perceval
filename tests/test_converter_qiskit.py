@@ -101,8 +101,8 @@ def test_cnot_1_heralded():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, use_postselection=False)
-    assert pc.m == 8
-    assert pc.mode_of_interest_count == 4
+    assert pc.circuit_size == 8
+    assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
@@ -121,8 +121,8 @@ def test_cnot_1_inverse_heralded():
     qc.h(0)
     qc.cx(1, 0)
     pc = convertor.convert(qc, use_postselection=False)
-    assert pc.m == 8
-    assert pc.mode_of_interest_count == 4
+    assert pc.circuit_size == 8
+    assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
@@ -141,8 +141,8 @@ def test_cnot_2_heralded():
     qc.h(0)
     qc.cx(0, 2)
     pc = convertor.convert(qc, use_postselection=False)
-    assert pc.m == 10
-    assert pc.mode_of_interest_count == 6
+    assert pc.circuit_size == 10
+    assert pc.m == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,1,0,0,1,0,1>')] == 1
     assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
@@ -161,7 +161,7 @@ def test_cnot_1_postprocessed():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, use_postselection=True)
-    assert pc.m == 6
+    assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
     assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM

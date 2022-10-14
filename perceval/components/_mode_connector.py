@@ -58,10 +58,7 @@ class ModeConnector:
         self._map = mapping
         self._l_port_names = None
         self._r_port_names = None
-        if self._r_is_component:
-            self._n_modes_to_connect = right_obj.m
-        else:
-            self._n_modes_to_connect = right_obj.mode_of_interest_count
+        self._n_modes_to_connect = right_obj.m
 
     def _mapping_type_checks(self):
         assert isinstance(self._map, dict), f"Mapping should be a Python dictionnary, got {type(self._map)}"
@@ -98,7 +95,7 @@ class ModeConnector:
             self._map = {}
             r_list = list(range(self._n_modes_to_connect))
             if not self._r_is_component:
-                r_list = list(range(self._ro.m))
+                r_list = list(range(self._ro.circuit_size))
                 r_list = [x for x in r_list if x not in list(self._ro.heralds.keys())]
             for i in range(self._n_modes_to_connect):
                 self._map[map_begin + i] = r_list[i]
@@ -176,11 +173,11 @@ class ModeConnector:
             warnings.warn("Right object is not a processor, thus doesn't contain heralded modes")
             return 0
         other_herald_pos = list(self._ro.heralds.keys())
-        new_mode_index = self._lp.m
+        new_mode_index = self._lp.circuit_size
         for pos in other_herald_pos:
             mapping[new_mode_index] = pos
             new_mode_index += 1
-        return new_mode_index-self._lp.m
+        return new_mode_index-self._lp.circuit_size
 
     @staticmethod
     def generate_permutation(mode_mapping: Dict[int, int]):

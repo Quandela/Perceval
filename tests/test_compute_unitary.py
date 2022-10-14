@@ -25,7 +25,7 @@ import perceval.components.base_components as comp
 import numpy as np
 
 
-def _check_unitary(component: pcvl.ALinearCircuit):
+def _check_unitary(component: pcvl.ACircuit):
     u_symb = component.compute_unitary(use_symbolic=True)
     u_num = component.compute_unitary(use_symbolic=False)
     assert u_symb.is_unitary()

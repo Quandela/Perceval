@@ -23,7 +23,7 @@
 from perceval.platforms.platform import Platform
 from perceval.platforms.local_job import LocalJob
 from perceval.platforms.remote_job import RemoteJob
-from perceval.components import ALinearCircuit
+from perceval.components import ACircuit
 from perceval.utils import Matrix
 
 
@@ -40,7 +40,7 @@ class Runner:
 
     @circuit.setter
     def circuit(self, cu):
-        assert isinstance(cu, ALinearCircuit) or isinstance(cu, Matrix), \
+        assert isinstance(cu, ACircuit) or isinstance(cu, Matrix), \
             f'Runner accepts linear circuits or unitary matrix as input, not {type(cu)}'
         self._cu = cu
         self._backend = self._platform.backend(cu)
