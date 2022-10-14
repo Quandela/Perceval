@@ -34,8 +34,8 @@ def serialize_parameter(param: Union[Parameter, float]):
             pb_param.real_value = float(param)
         elif param._is_expression:
             pb_param.expression = str(param.spv)
-        else:
-            pb_param.symbol = str(param.spv)
+        else:  # If param has no value and is not an expression, it is defined only by a symbol
+            pb_param.symbol = str(param._symbol)
     return pb_param
 
 
