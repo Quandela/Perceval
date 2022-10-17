@@ -27,10 +27,13 @@ from perceval.components._mode_connector import ModeConnector, UnavailableModeEx
 from perceval.components import Processor, Circuit, Port, Encoding, PortLocation
 
 
+slos = "SLOS"
+
+
 def test_connection_resolver_init():
     in_modes = 6
-    p1 = Processor(8)
-    p2 = Processor(in_modes)
+    p1 = Processor(slos, 8)
+    p2 = Processor(slos, in_modes)
     connector = ModeConnector(p1, p2, {})
     assert not connector._r_is_component
     assert connector._n_modes_to_connect == in_modes
@@ -42,8 +45,8 @@ def test_connection_resolver_init():
 
 
 def test_connection_int():
-    p1 = Processor(6)
-    p2 = Processor(4)
+    p1 = Processor(slos, 6)
+    p2 = Processor(slos, 4)
     connector = ModeConnector(p1, p2, 0)
     assert connector.resolve() == {0: 0, 1: 1, 2: 2, 3: 3}
     connector = ModeConnector(p1, p2, 1)
@@ -57,8 +60,8 @@ def test_connection_int():
 
 
 def test_connection_dict_int():
-    p1 = Processor(8)
-    p2 = Processor(6)
+    p1 = Processor(slos, 8)
+    p2 = Processor(slos, 6)
     valid_mapping = {0: 2, 1: 4, 2: 5, 3: 0, 4: 1, 5: 3}
     connector = ModeConnector(p1, p2, valid_mapping)
     assert connector.resolve() == valid_mapping
@@ -76,10 +79,10 @@ def test_connection_dict_int():
 
 def test_connection_dict_str():
     """Test with port names"""
-    p1 = Processor(4)
+    p1 = Processor(slos, 4)
     p1.add_port(0, Port(Encoding.DUAL_RAIL, "q0"), PortLocation.OUTPUT)
     p1.add_port(2, Port(Encoding.DUAL_RAIL, "q1"), PortLocation.OUTPUT)
-    p2 = Processor(4)
+    p2 = Processor(slos, 4)
     p2.add_port(0, Port(Encoding.DUAL_RAIL, "in_A"), PortLocation.INPUT)
     p2.add_port(2, Port(Encoding.DUAL_RAIL, "in_B"), PortLocation.INPUT)
 

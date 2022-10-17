@@ -41,7 +41,7 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return c.m
 
-    @dispatch((cp.BS, cp.PBS))
+    @dispatch((Circuit, cp.BS, cp.PBS))
     def get_width(self, c) -> int:
         return 2
 

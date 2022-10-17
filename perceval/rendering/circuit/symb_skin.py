@@ -38,6 +38,10 @@ class SymbSkin(ASkin):
     def get_width(self, c) -> int:
         return c.m
 
+    @dispatch(Circuit)
+    def get_width(self, c) -> int:
+        return 2
+
     @dispatch((cp.BS, cp.PBS))
     def get_width(self, c) -> int:
         w = 1 if self._compact else 2
