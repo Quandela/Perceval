@@ -23,7 +23,7 @@
 from multipledispatch import dispatch
 
 from perceval.serialization import _schema_circuit_pb2 as pb
-from perceval.components import ALinearCircuit, Circuit
+from perceval.components import ACircuit, Circuit
 import perceval.components.base_components as comp
 import perceval.components.non_linear_components as nl
 from perceval.serialization._matrix_serialization import serialize_matrix
@@ -34,33 +34,29 @@ class ComponentSerializer:
     def __init__(self):
         self._pb = None
 
-    def serialize(self, r: int, c: ALinearCircuit):
+    def serialize(self, r: int, c: ACircuit):
         self._pb = pb.Component()
         self._pb.starting_mode = r
         self._pb.n_mode = c.m
         self._serialize(c)
         return self._pb
 
-    @dispatch(comp.GenericBS)
-    def _serialize(self, bs: comp.GenericBS):
-        pb_bs = pb.BeamSplitterComplex()
-        if 'theta' in bs.params:
-            pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
-        if 'R' in bs.params:
-            pb_bs.R.CopyFrom(serialize_parameter(bs._R))
-        pb_bs.phi_a.CopyFrom(serialize_parameter(bs._phi_a))
-        pb_bs.phi_b.CopyFrom(serialize_parameter(bs._phi_b))
-        pb_bs.phi_d.CopyFrom(serialize_parameter(bs._phi_d))
-        self._pb.beam_splitter_complex.CopyFrom(pb_bs)
+    def _convert_bs_convention(self, convention):
+        if convention == comp.BSConvention.H:
+            return pb.BeamSplitter.H
+        elif convention == comp.BSConvention.Ry:
+            return pb.BeamSplitter.Ry
+        return pb.BeamSplitter.Rx
 
-    @dispatch(comp.SimpleBS)
-    def _serialize(self, bs: comp.SimpleBS):
+    @dispatch(comp.BS)
+    def _serialize(self, bs: comp.BS):
         pb_bs = pb.BeamSplitter()
-        if 'theta' in bs.params:
-            pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
-        if 'R' in bs.params:
-            pb_bs.R.CopyFrom(serialize_parameter(bs._R))
-        pb_bs.phi.CopyFrom(serialize_parameter(bs._phi))
+        pb_bs.convention = self._convert_bs_convention(bs.convention)
+        pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
+        pb_bs.phi_tl.CopyFrom(serialize_parameter(bs._phi_tl))
+        pb_bs.phi_bl.CopyFrom(serialize_parameter(bs._phi_bl))
+        pb_bs.phi_tr.CopyFrom(serialize_parameter(bs._phi_tr))
+        pb_bs.phi_br.CopyFrom(serialize_parameter(bs._phi_br))
         self._pb.beam_splitter.CopyFrom(pb_bs)
 
     @dispatch(comp.PS)
@@ -127,7 +123,7 @@ class ComponentSerializer:
         self._pb.circuit.CopyFrom(pb_circ)
 
 
-def serialize_circuit(circuit: ALinearCircuit) -> pb.Circuit:
+def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     if not isinstance(circuit, Circuit):
         circuit = Circuit(circuit.m).add(0, circuit)
 

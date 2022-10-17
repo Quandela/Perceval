@@ -31,16 +31,22 @@ def deserialize_ps(serial_ps: pb.PhaseShifter) -> comp.PS:
     return comp.PS(deserialize_parameter(serial_ps.phi))
 
 
-def deserialize_generic_bs(serial_bs: pb.BeamSplitterComplex) -> comp.GenericBS:
-    args = {}
-    if serial_bs.HasField('R'):
-        args['R'] = deserialize_parameter(serial_bs.R)
-    if serial_bs.HasField('theta'):
-        args['theta'] = deserialize_parameter(serial_bs.theta)
-    args['phi_a'] = deserialize_parameter(serial_bs.phi_a)
-    args['phi_b'] = deserialize_parameter(serial_bs.phi_b)
-    args['phi_d'] = deserialize_parameter(serial_bs.phi_d)
-    return comp.GenericBS(**args)
+def _convert_bs_convention(ser_convention):
+    if ser_convention == pb.BeamSplitter.Ry:
+        return comp.BSConvention.Ry
+    elif ser_convention == pb.BeamSplitter.H:
+        return comp.BSConvention.H
+    return comp.BSConvention.Rx
+
+
+def deserialize_bs(serial_bs: pb.BeamSplitter) -> comp.BS:
+    conv = _convert_bs_convention(serial_bs.convention)
+    return comp.BS(theta=deserialize_parameter(serial_bs.theta),
+                   phi_tl=deserialize_parameter(serial_bs.phi_tl),
+                   phi_bl=deserialize_parameter(serial_bs.phi_bl),
+                   phi_tr=deserialize_parameter(serial_bs.phi_tr),
+                   phi_br=deserialize_parameter(serial_bs.phi_br),
+                   convention=conv)
 
 
 def deserialize_perm(serial_perm) -> comp.PERM:
@@ -50,15 +56,6 @@ def deserialize_perm(serial_perm) -> comp.PERM:
 def deserialize_unitary(serial_unitary) -> comp.Unitary:
     m = deserialize_pb_matrix(serial_unitary.mat)
     return comp.Unitary(U=m)
-
-
-def deserialize_simple_bs(serial_bs: pb.BeamSplitter) -> comp.SimpleBS:
-    args = {}
-    if serial_bs.HasField('R'):
-        args['R'] = deserialize_parameter(serial_bs.R)
-    if serial_bs.HasField('theta'):
-        args['theta'] = deserialize_parameter(serial_bs.theta)
-    return comp.SimpleBS(**args)
 
 
 def deserialize_wp(serial_wp) -> comp.WP:

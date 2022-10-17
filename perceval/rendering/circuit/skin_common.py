@@ -1,3 +1,4 @@
+
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -20,13 +21,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
-warnings.warn("perceval.lib.phys module is deprecated, use perceval.components.base_components instead",
-              DeprecationWarning,
-              stacklevel=2)
+from perceval.components.base_components import BSConvention
 
-from perceval.components.base_components import \
-    GenericBS as BS,\
-    PS, PBS, Unitary, PERM, WP, HWP, QWP, PR
-from perceval.components.non_linear_components import TD
-from perceval.components.linear_circuit import Circuit
+BS_CONVENTION_COLOR = {
+    BSConvention.Rx: 'thistle',
+    BSConvention.Ry: 'lightsalmon',
+    BSConvention.H: 'aquamarine'
+}
+
+
+def bs_convention_color(convention):
+    if convention in BS_CONVENTION_COLOR:
+        return BS_CONVENTION_COLOR[convention]
+    return BS_CONVENTION_COLOR[BSConvention.Rx]

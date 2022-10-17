@@ -60,7 +60,7 @@ def mzi_BasicState_pcvl(input_state):
     :return: plot
     """
     # Set up Perceval
-    naive_platform = pcvl.get_platform('Naive')
+    naive_backend = pcvl.BackendFactory.get_backend('Naive')
 
     # Create a MZI interferometer
     mzi_chip = pcvl.Circuit(m=2, name="mzi")
@@ -69,9 +69,9 @@ def mzi_BasicState_pcvl(input_state):
 
     (mzi_chip
      .add(0, comp.PS(phases[0]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      .add(0, comp.PS(phases[1]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      )
     pcvl.pdisplay(mzi_chip)
 
@@ -82,7 +82,7 @@ def mzi_BasicState_pcvl(input_state):
     phases[1].set_value(np.pi)
 
     # We run the simulator once with any phase (here pi) to get all the possible outputs.
-    ca = algo.Analyzer(naive_platform, mzi_chip,
+    ca = algo.Analyzer(naive_backend, mzi_chip,
                        [pcvl.BasicState(input_state)],
                        "*")
     ca.compute()
@@ -99,7 +99,7 @@ def mzi_BasicState_pcvl(input_state):
         phases[1].set_value(theta)
 
         # Run the analyser
-        ca = algo.Analyzer(naive_platform, mzi_chip,
+        ca = algo.Analyzer(naive_backend, mzi_chip,
                            [pcvl.BasicState(input_state)],
                            "*")
 
@@ -133,7 +133,7 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
     """
 
     # Set up Perceval
-    naive_platform = pcvl.get_platform('Naive')
+    naive_backend = pcvl.BackendFactory.get_backend('Naive')
 
     # Create a MZI interferometer
     mzi_chip = pcvl.Circuit(m=2, name="mzi")
@@ -142,9 +142,9 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
 
     (mzi_chip
      .add(0, comp.PS(phases[0]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      .add(0, comp.PS(phases[1]))
-     .add((0, 1), comp.SimpleBS())
+     .add((0, 1), comp.BS())
      )
 
     # Initial phase set to zero
@@ -178,7 +178,7 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
         for input_n in input_states_dict:
 
             phases[1].set_value(theta)
-            ca = algo.Analyzer(naive_platform, mzi_chip,
+            ca = algo.Analyzer(naive_backend, mzi_chip,
                                [pcvl.BasicState(input_n)],
                                "*")
             ca.compute()
@@ -212,7 +212,7 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
     for input_n in input_states_dict:
         print(input_n, input_states_dict[input_n])
         phases[1].set_value(np.pi / 2)
-        ca = algo.Analyzer(naive_platform, mzi_chip,
+        ca = algo.Analyzer(naive_backend, mzi_chip,
                            [pcvl.BasicState(input_n)],
                            "*")
 

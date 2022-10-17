@@ -29,7 +29,7 @@ from collections import defaultdict
 
 from .template import Backend
 from perceval.utils import BasicState, Matrix
-from perceval.components import ALinearCircuit
+from perceval.components import ACircuit
 
 
 class MPSBackend(Backend):
@@ -39,7 +39,7 @@ class MPSBackend(Backend):
     """
 
     def __init__(self,
-                 cu: Union[ALinearCircuit, Matrix],
+                 cu: Union[ACircuit, Matrix],
                  use_symbolic: bool = None,
                  n: int = None,
                  mask: list = None):
@@ -83,7 +83,7 @@ class MPSBackend(Backend):
         self.gamma = np.zeros((self.m, self.cutoff, self.cutoff, self.d), dtype='complex_')
         for i in range(self.m):
             self.gamma[i, 0, 0, input_state[i]] = 1
-        self.sv = np.zeros((self.m - 1, self.cutoff))
+        self.sv = np.zeros((self.m, self.cutoff))
         self.sv[:, 0] = 1
 
         for r, c in self._C:
@@ -106,7 +106,11 @@ class MPSBackend(Backend):
         mps_in_list.append(self.res[tuple(input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
-################# From here, everything must be in quandelibc ##############################
+    @staticmethod
+    def preferred_command() -> str:
+        return 'probampli'
+
+# ################ From here, everything must be in quandelibc ##############################
 
     def _transition_matrix_1_mode(self, u):
         d = self.d
@@ -194,5 +198,5 @@ class MPSBackend(Backend):
         else:
             sv = self.sv
         sv_diag = np.zeros((self.cutoff, self.cutoff))
-        np.fill_diagonal(sv_diag, sv[k - 1,:])
+        np.fill_diagonal(sv_diag, sv[k, :])
         return sv_diag

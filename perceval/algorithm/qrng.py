@@ -19,14 +19,26 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.runtime import RemoteJob, Job
+from .abstract_algorithm import AAlgorithm
+from perceval.components.abstract_processor import AProcessor
 
-import warnings
-warnings.warn("perceval.lib.symb module is deprecated, use perceval.components.base_components instead",
-              DeprecationWarning,
-              stacklevel=2)
 
-from perceval.components.base_components import \
-    SimpleBS as BS,\
-    PS, PBS, Unitary, PERM, WP, HWP, QWP, PR
-from perceval.components.non_linear_components import TD
-from perceval.components.linear_circuit import Circuit
+class QRNG(AAlgorithm):
+    r"""
+    Parameters:
+        - `count`: int
+        - `safest`: bool
+    Return:
+        - list[0, 1]
+    """
+
+    def __init__(self, processor: AProcessor):
+        super().__init__(processor)
+
+    @property
+    def qrng(self) -> Job:
+        assert self._processor.is_remote and "qrng" in self._processor.specs['available_commands'], \
+            "Qrng algorithm is not implemented"
+        return RemoteJob(lambda **kwargs: self._processor.async_execute("qrng", **kwargs),
+                         self._processor.get_rpc_handler())

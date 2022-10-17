@@ -27,25 +27,20 @@ import numpy as np
 
 
 def test_determinant_base():
-    c = comp.GenericBS()
+    c = comp.BS()
     assert abs(c.U.det().simplify()) == 1
 
 
 def test_determinant_generic():
-    c = comp.GenericBS(theta=pcvl.P("θ"), phi_a=pcvl.P("phi_a"), phi_b=pcvl.P("phi_b"), phi_d=pcvl.P("phi_d"))
+    c = comp.BS(theta=pcvl.P("θ"), phi_tl=pcvl.P("phi_tl"), phi_bl=pcvl.P("phi_bl"), phi_tr=pcvl.P("phi_tr"))
     assert abs(c.U.det().simplify()) == 1
 
 
 def test_determinant_1():
-    c = comp.GenericBS(theta=pcvl.P("θ"), phi_a=np.pi/2, phi_b=np.pi/2, phi_d=0)
+    c = comp.BS(theta=pcvl.P("θ"), phi_tl=np.pi/2, phi_bl=np.pi/2, phi_tr=0)
     assert abs(c.U.det().simplify()) == 1
 
 
 def test_determinant_2():
-    c = comp.GenericBS(theta=pcvl.P("θ"), phi_a=np.pi/2, phi_b=np.pi/2, phi_d=np.pi/2)
-    assert abs(c.U.det().simplify()) == 1
-
-
-def test_determinant_3():
-    c = comp.GenericBS(theta=pcvl.P("θ"), phi_a=0, phi_b=0, phi_d=0)
+    c = comp.BS(theta=pcvl.P("θ"), phi_tl=np.pi/2, phi_bl=np.pi/2, phi_tr=np.pi/2)
     assert abs(c.U.det().simplify()) == 1

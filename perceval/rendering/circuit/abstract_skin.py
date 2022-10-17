@@ -26,7 +26,7 @@ from typing import Callable, Tuple
 
 from multipledispatch import dispatch
 
-from perceval.components import ALinearCircuit, Processor
+from perceval.components import ACircuit, Processor
 from perceval.components.abstract_component import AComponent
 from perceval.components.non_linear_components import TD
 
@@ -59,8 +59,8 @@ class ASkin(ABC):
                       }
         self.style_subcircuit = style_subcircuit
 
-    @dispatch((ALinearCircuit, TD), bool)
-    def get_size(self, c: ALinearCircuit, recursive: bool = False) -> Tuple[int, int]:
+    @dispatch((ACircuit, TD), bool)
+    def get_size(self, c: ACircuit, recursive: bool = False) -> Tuple[int, int]:
         """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():
             return self.measure(c)
@@ -85,7 +85,7 @@ class ASkin(ABC):
         for modes, comp in p.components:  # TODO rework this: components can be displayed on top of each other
             w, h = self.get_size(comp, recursive)
             total_width += w
-        return total_width, p.m
+        return total_width, p.circuit_size
 
     def measure(self, c: AComponent) -> Tuple[int, int]:
         """

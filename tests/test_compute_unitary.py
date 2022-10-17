@@ -25,7 +25,7 @@ import perceval.components.base_components as comp
 import numpy as np
 
 
-def _check_unitary(component: pcvl.ALinearCircuit):
+def _check_unitary(component: pcvl.ACircuit):
     u_symb = component.compute_unitary(use_symbolic=True)
     u_num = component.compute_unitary(use_symbolic=False)
     assert u_symb.is_unitary()
@@ -33,13 +33,12 @@ def _check_unitary(component: pcvl.ALinearCircuit):
     assert np.allclose(u_symb.tonp(), u_num)
 
 
-def test_generic_BS_unitary():
-    bs = comp.GenericBS(theta=0.43, phi_a=0.26, phi_b=1.6, phi_d=0.04)
+def test_BS_unitary():
+    bs = comp.BS(theta=0.43, phi_tl=0.26, phi_bl=1.6, phi_tr=0.04, phi_br=2.13)
     _check_unitary(bs)
-
-
-def test_simple_BS_unitary():
-    bs = comp.SimpleBS(theta=0.43, phi=0.84)
+    bs = comp.BS.H(theta=0.43, phi_tl=0.26, phi_bl=1.6, phi_tr=0.04, phi_br=2.13)
+    _check_unitary(bs)
+    bs = comp.BS.Ry(theta=0.43, phi_tl=0.26, phi_bl=1.6, phi_tr=0.04, phi_br=2.13)
     _check_unitary(bs)
 
 

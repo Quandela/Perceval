@@ -27,7 +27,7 @@ from typing import List, Tuple, Union, Iterator, Optional
 
 from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
-from ..components.linear_circuit import ALinearCircuit, _matrix_double_for_polarization
+from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
 
 import quandelibc as qc
 import numpy as np
@@ -38,7 +38,7 @@ class Backend(ABC):
     supports_circuit_computing = None
 
     def __init__(self,
-                 cu: Union[ALinearCircuit, Matrix],
+                 cu: Union[ACircuit, Matrix],
                  use_symbolic: bool = None,
                  use_polarization: Optional[bool] = None,
                  n: int = None,
@@ -54,7 +54,7 @@ class Backend(ABC):
         """
         self._logger = logging.getLogger(self.name)
         if not self.supports_circuit_computing:
-            if isinstance(cu, ALinearCircuit):
+            if isinstance(cu, ACircuit):
                 if cu.requires_polarization:
                     if use_polarization is None:
                         use_polarization = True
@@ -87,7 +87,7 @@ class Backend(ABC):
             self._m: int = self._requires_polarization and u.shape[0] >> 1 or u.shape[0]
             "number of modes"
         else:
-            assert isinstance(cu, ALinearCircuit), \
+            assert isinstance(cu, ACircuit), \
                 "Component Based simulation works on circuit"
             assert not use_symbolic or self.supports_symbolic, \
                 "%s backend does not support symbolic calculation" % self._name
@@ -154,8 +154,8 @@ class Backend(ABC):
         if input_state.n == 0:
             return output_state.n == 0
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
-            if hasattr(input_state, "separate_state"):
-                input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
+            if input_state.has_annotations:
+                input_states = input_state.separate_state()
                 all_prob = 0
                 for p_output_state in BasicState(output_state).partition(
                         [input_state.n for input_state in input_states]):
@@ -319,7 +319,8 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None) -> list[BasicState]:
+    def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None)\
+            -> list[BasicState]:
         r"""Return samples for the circuit according to the output probability distribution given an input state
 
         :param input_state: a given input state
@@ -329,7 +330,7 @@ class Backend(ABC):
             return [self.sample(input_state)]
         states, p = zip(*self.allstateprob_iterator(input_state))
         rng = np.random.default_rng()
-        results = rng.choice(states, count, p=p / sum(p))
+        results = rng.choice(states, count, p=np.array(p) / sum(p))
         return list(results)
 
     def set_cutoff(self, cutoff: int):
@@ -337,3 +338,12 @@ class Backend(ABC):
         Set the cutoff dimension for the MPS simulator.
         """
         pass
+
+    @staticmethod
+    @abstractmethod
+    def preferred_command() -> str:
+        pass
+
+    @staticmethod
+    def available_commands() -> List[str]:
+        return ['prob', 'prob_be', 'probampli', 'probampli_be', 'sample', 'samples', 'evolve']

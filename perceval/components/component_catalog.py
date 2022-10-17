@@ -71,6 +71,7 @@ class CatalogItem(ABC):
         self._name = name
         self._default_opts = {
             'type': AsType.PROCESSOR,
+            'backend': 'SLOS'
         }
         self._reset_opts()
 
@@ -81,8 +82,10 @@ class CatalogItem(ABC):
         self._build_opts['type'] = AsType.CIRCUIT
         return self
 
-    def as_processor(self):
+    def as_processor(self, backend_name: str = None):
         self._build_opts['type'] = AsType.PROCESSOR
+        if backend_name is not None:
+            self._build_opts['backend'] = backend_name
         return self
 
     def _opt(self, key):

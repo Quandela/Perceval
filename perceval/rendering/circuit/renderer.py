@@ -28,7 +28,7 @@ from typing import Any, Tuple
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas
-from perceval.components import ALinearCircuit, Circuit, PortLocation, PERM
+from perceval.components import ACircuit, Circuit, PortLocation, PERM
 from perceval.utils.format import format_parameters
 
 
@@ -68,7 +68,7 @@ class ICircuitRenderer(ABC):
             self._in_port_pos[index].fixed = False
 
     def render_circuit(self,
-                       circuit: ALinearCircuit,
+                       circuit: ACircuit,
                        map_param_kid: dict = None,
                        shift: int = 0,
                        recursive: bool = False,
@@ -103,7 +103,7 @@ class ICircuitRenderer(ABC):
         self.extend_pos(0, circuit.m - 1)
 
     @abstractmethod
-    def get_circuit_size(self, circuit: ALinearCircuit, recursive: bool = False) -> Tuple[int, int]:
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> Tuple[int, int]:
         """
         Returns the circuit size (in AU)
         """
@@ -153,7 +153,7 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def append_circuit(self, lines: Tuple[int, int], circuit: ALinearCircuit, content: str) -> None:
+    def append_circuit(self, lines: Tuple[int, int], circuit: ACircuit, content: str) -> None:
         """
         Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
         """
@@ -189,7 +189,7 @@ class TextRenderer(ICircuitRenderer):
         self._offset = 0
         self.min_box_size = min_box_size
 
-    def get_circuit_size(self, circuit: ALinearCircuit, recursive: bool = False):
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
         return None  # Don't need circuit size for text rendering
 
     def close(self):
@@ -360,7 +360,7 @@ class CanvasRenderer(ICircuitRenderer):
                 self._canvas.add_mpath(["M", CanvasRenderer.affix_all_size-CanvasRenderer.affix_port_size, 25 + 50 * k,
                                         "l", CanvasRenderer.affix_port_size, 0], **mode_style)
 
-    def get_circuit_size(self, circuit: ALinearCircuit, recursive: bool = False):
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
         return self._skin.get_size(circuit, recursive)
 
     def add_mode_index(self):
@@ -379,13 +379,13 @@ class CanvasRenderer(ICircuitRenderer):
         v_pos = self._out_port_pos[n_mode].y
         self._canvas.set_offset((CanvasRenderer.affix_all_size + 50*(h_pos or max_pos), 50*v_pos),
                                 CanvasRenderer.affix_all_size, 50)
-        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.output), port, None, None, **opts)
+        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.OUTPUT), port, None, None, **opts)
 
     def add_in_port(self, n_mode, port, **opts):
         h_pos = self._in_port_pos[n_mode].x*50
         v_pos = self._in_port_pos[n_mode].y*50
         self._canvas.set_offset((h_pos, v_pos), CanvasRenderer.affix_all_size, 50)
-        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.input), port, None, None, **opts)
+        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.INPUT), port, None, None, **opts)
 
     def open_subblock(self, lines, name, size, color=None):
         start = lines[0]

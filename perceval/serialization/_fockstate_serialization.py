@@ -30,7 +30,8 @@ def serialize_state(state: BasicState):
 
 
 def deserialize_state(pb_fs):
-    return BasicState(pb_fs)
+    assert pb_fs.startswith(":PCVL:BasicState:")
+    return BasicState(pb_fs[17:])
 
 
 def deserialize_state_list(states):
