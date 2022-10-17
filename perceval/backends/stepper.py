@@ -106,6 +106,7 @@ class StepperBackend(Backend):
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         self.compile(input_state)
+        assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out
 
     def prob(self,
@@ -115,20 +116,26 @@ class StepperBackend(Backend):
              skip_compile: bool = False) -> float:
         if not skip_compile:
             self.compile(input_state)
-        return self.prob_be(input_state, output_state, n)
+        if self._out.m == input_state.m:
+            return self.prob_be(input_state, output_state, n)
+        # Else we need a state reduction
+        return sum(self.prob_be(input_state, state) for state in self._out if state[:output_state.m] == output_state)
 
     def probampli(self,
                   input_state: Union[BasicState, StateVector],
                   output_state: BasicState,
                   n: int = None) -> complex:
         self.compile(input_state)
+        assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self.probampli_be(input_state, output_state, n)
 
     def allstateprob_iterator(self, input_state):
-        skip_compile = False
-        for output_state in self.allstate_iterator(input_state):
-            yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
-            skip_compile = True
+        self.compile(input_state)
+        n = max(input_state.n) if isinstance(input_state, StateVector) else input_state.n
+        out = StateVector()
+        out.update({BasicState([i]): 1 for i in range(n + 1)})  # Give it all useful n
+        for output_state in self.allstate_iterator(out):
+            yield output_state, self.prob(input_state, output_state, skip_compile=True)
 
     @staticmethod
     def preferred_command() -> str:

@@ -21,6 +21,8 @@
 # SOFTWARE.
 from copy import copy
 from enum import Enum
+from math import comb
+
 import numpy as np
 import sympy as sp
 
@@ -488,6 +490,7 @@ class LC(ACircuit):
 
     def apply(self, r, sv):
         # Assumes r of size 1
+        # Returns a stateVector of size m + 1. Stepper backend should support this
         if isinstance(sv, BasicState):
             sv = StateVector(sv)
 
@@ -496,12 +499,13 @@ class LC(ACircuit):
 
         nsv = copy(sv)
         nsv.clear()
+        nsv.m += 1
         for state, prob_ampli in sv.items():
             n = state[r]
             for i in range(n + 1):
-                nsv[BasicState(state.set_slice(slice(r, r+1), BasicState([i])))] += prob_ampli \
-                                                                                    * loss ** (n - i) \
-                                                                                    * (1 - loss) ** i \
-                                                                                    * comb(n, i)
+                nsv[BasicState(state.set_slice(slice(r, r+1), BasicState([i]))) * BasicState([n - i])] += prob_ampli \
+                                                                                    * (loss ** (n - i)
+                                                                                       * (1 - loss) ** i
+                                                                                       * comb(n, i)) ** 0.5
 
         return nsv
