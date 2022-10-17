@@ -20,13 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
-warnings.warn("perceval.lib.phys module is deprecated, use perceval.components.base_components instead",
-              DeprecationWarning,
-              stacklevel=2)
-
-from perceval.components.base_components import \
-    GenericBS as BS,\
-    PS, PBS, Unitary, PERM, WP, HWP, QWP, PR
-from perceval.components.non_linear_components import TD
-from perceval.components.linear_circuit import Circuit
+from .job_status import JobStatus, RunningStatus
+from .job import Job
+from .local_job import LocalJob
+from .remote_job import RemoteJob
+from .remote_processor import RemoteProcessor

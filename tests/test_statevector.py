@@ -212,7 +212,8 @@ def test_sv_parse_tuple_annot():
 
 def test_sv_sample():
     source = pcvl.Source(brightness=1, purity=0.9, indistinguishability=0.9)
-    qpu = pcvl.Processor({0: source, 1: source}, comp.SimpleBS())
+    qpu = pcvl.Processor("Naive", comp.BS(), source)
+    qpu.with_input(pcvl.BasicState([1, 0]))
     sample = qpu.source_distribution.sample(1)
     assert isinstance(sample, pcvl.StateVector)
     sample = qpu.source_distribution.sample(2)
@@ -231,7 +232,7 @@ def test_statevector_sample():
 
 
 def test_statevector_samples():
-    sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
+    sv = pcvl.StateVector("|0,1>") + pcvl.StateVector("|1,0>")
     counter = Counter()
     for s in sv.samples(20):
         counter[s] += 1

@@ -81,6 +81,8 @@ class ACircuit(AParametrizedComponent, ABC):
         :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
                  if not.
         """
+        if not use_symbolic:
+            assert self.defined, 'All parameters must be defined to compute numeric unitary matrix'
         if self._supports_polarization:
             assert use_polarization is not False, "polarized circuit cannot generates non-polarized unitary"
             use_polarization = True
@@ -275,6 +277,10 @@ class ACircuit(AParametrizedComponent, ABC):
 
     def inverse(self, v, h):
         raise NotImplementedError("component has no inverse operator")
+
+    @abstractmethod
+    def describe(self, map_param_kid=None) -> str:
+        pass
 
 
 class Circuit(ACircuit):

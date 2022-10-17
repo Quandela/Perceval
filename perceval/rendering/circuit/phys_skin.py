@@ -23,8 +23,11 @@
 from multipledispatch import dispatch
 
 from perceval.components import ACircuit, Circuit, base_components as cp, non_linear_components as nl
-from perceval.rendering.circuit.abstract_skin import ASkin
+from .abstract_skin import ASkin
+from .skin_common import bs_convention_color
+
 import sympy as sp
+import numpy as np
 
 
 class PhysSkin(ASkin):
@@ -38,7 +41,7 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return c.m
 
-    @dispatch((Circuit, cp.SimpleBS, cp.GenericBS, cp.PBS))
+    @dispatch((cp.BS, cp.PBS))
     def get_width(self, c) -> int:
         return 2
 
@@ -50,7 +53,7 @@ class PhysSkin(ASkin):
     def get_shape(self, c):
         return self.default_shape
 
-    @dispatch((cp.SimpleBS, cp.GenericBS))
+    @dispatch(cp.BS)
     def get_shape(self, c):
         return self.bs_shape
 
@@ -92,7 +95,26 @@ class PhysSkin(ASkin):
         canvas.add_rect((5, 5), 50*w - 10, 50*circuit.m - 10, fill="gray")
         canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
 
-    def bs_shape(self, circuit, canvas, content, **opts):
+    @staticmethod
+    def _reflective_side(theta, convention: cp.BSConvention) -> int:
+        """
+        Return the reflective side of a beam splitter given a theta parameter and a BSConvention
+        1 means top
+        -1 means bottom
+        0 means undecided
+        """
+        if convention == cp.BSConvention.Rx:
+            return 1  # top
+        if not theta.defined:
+            return 0
+        theta = float(theta)
+        if convention == cp.BSConvention.Ry:
+            return 1 if theta < 2*np.pi else -1
+        elif convention == cp.BSConvention.H:
+            return -1 if round(theta/2/np.pi) % 2 else 1
+
+
+    def bs_shape(self, bs, canvas, content, **opts):
         split_content = content.split("\n")
         head_content = "\n".join([s for s in split_content
                                   if s.startswith("R=") or s.startswith("theta=")])
@@ -109,16 +131,15 @@ class PhysSkin(ASkin):
                         size=bottom_size, ta="middle")
         canvas.add_text((50, 26), head_content.replace('theta=', 'Θ='), size=7, ta="middle")
         # Choose the side of the gray rectangle in beam splitter representation
-        m = None
-        if hasattr(circuit, '_phi_b') and circuit._phi_b.defined:  # GenericBS
-            m = round(abs(float(circuit._phi_b.spv/sp.pi)))
-        elif hasattr(circuit, '_phi') and circuit._phi.defined:  # SimpleBS
-            m = round(abs(float(circuit._phi.spv/sp.pi)))
-        if m is not None:
-            if (m + 1) % 2:
-                canvas.add_rect((25, 43), 50, 4, fill="lightgray")
-            else:
-                canvas.add_rect((25, 53), 50, 4, fill="lightgray")
+
+        r_side = self._reflective_side(bs.param('theta'), bs.convention)
+        if r_side == 1:
+            canvas.add_rect((25, 43), 50, 4, fill="lightgray")
+        elif r_side == -1:
+            canvas.add_rect((25, 53), 50, 4, fill="lightgray")
+        # Add BS convention badge
+        canvas.add_rect((68, 50), 10, 10, fill=bs_convention_color(bs.convention))
+        canvas.add_text((73, 57), bs.convention.name, size=6, ta="middle")
 
     def ps_shape(self, circuit, canvas, content, **opts):
         canvas.add_mline([0, 25, 50, 25], **self.stroke_style)

@@ -38,11 +38,15 @@ def test_basic_circuit_h():
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     pc = convertor.convert(qc)
-    assert pc.source_distribution[StateVector('|1,0>')] == 1
-    assert len(pc._components) == 1
-    assert isinstance(pc._components[0][1], Circuit) and len(pc._components[0][1]._components) == 1
-    c0 = pc._components[0][1]._components[0][1]
-    assert isinstance(c0, comp.GenericBS)
+    c = pc.circuit
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    c0 = c._components[0][1]._components[0][1]
+    assert isinstance(c0, comp.BS)
+    assert c0._convention == comp.BSConvention.H
 
 
 def test_basic_circuit_double_h():
@@ -55,7 +59,7 @@ def test_basic_circuit_double_h():
     assert len(pc._components) == 2
 
 
-def test_basic_circuit_s_phys():
+def test_basic_circuit_s():
     convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
@@ -180,8 +184,7 @@ def test_cnot_postprocess():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
-    simulator_backend = BackendFactory().get_backend('Naive')
-    all_p, sv_out = pc.run(simulator_backend)
+    sv_out = pc.probs()['results']
     assert len(sv_out) == 2
 
 
@@ -191,8 +194,7 @@ def test_cnot_herald():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, True)
-    simulator_backend = BackendFactory().get_backend('Naive')
-    all_p, sv_out = pc.run(simulator_backend)
+    sv_out = pc.probs()['results']
     assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
     assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
     assert len(sv_out) == 4

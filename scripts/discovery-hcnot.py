@@ -84,8 +84,9 @@ def run_a_discovery(name):
     n = 7
     gen_rect = pcvl.Circuit.generic_interferometer(
         n,
-        lambda i: random.randint(0, 1) and comp.GenericBS(R=pcvl.P("R%d" % i), phi_b=np.pi, phi_d=0)
-                  or comp.GenericBS(R=pcvl.P("R%d" % i)),
+        lambda i: random.randint(0, 1)
+                  and comp.BS.H(theta=pcvl.P("theta%d" % i), phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2)
+                  or comp.BS.H(theta=pcvl.P("theta%d" % i)),
         shape="rectangular",
         depth=4
     )

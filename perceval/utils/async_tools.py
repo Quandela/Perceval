@@ -20,7 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .platform import Platform, LocalPlatform, RemotePlatform, PlatformType, get_platform
+import time
+
+
+def _sync_wrapper(cls, func):
+    async_func = getattr(cls, func)
+
+    def await_job(*args):
+        job = async_func(*args)
+        while True:
+            if not job.is_completed():
+                time.sleep(3)
+            else:
+                return job.get_results()
+
+    return await_job
+
+
+def generate_sync_methods(cls):
+    for method in dir(cls):
+        if method.startswith('async_'):
+            sync_name = method.removeprefix('async_')
+            setattr(cls, sync_name, _sync_wrapper(cls, method))
+    return cls

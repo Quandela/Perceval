@@ -37,7 +37,7 @@ from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
-from quandelibc import FockState, Annotation
+from quandelibc import FockState, Annotation, FSArray
 
 
 class BasicState(FockState):
@@ -46,6 +46,9 @@ class BasicState(FockState):
 
     def __init__(self, *args, **kwargs):
         super(BasicState, self).__init__(*args, **kwargs)
+
+    def __len__(self):
+        return self.m
 
     def __add__(self, o):
         return StateVector(self) + o
@@ -96,6 +99,26 @@ class BasicState(FockState):
         return list(partitions_states)
 
 
+def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
+    """Iterator on all possible output states compatible with mask generating StateVector
+
+    :param input_state: a given input state vector
+    :param mask: an optional mask
+    :return: list of output_state
+    """
+    m = input_state.m
+    ns = input_state.n
+    if not isinstance(ns, list):
+        ns = [ns]
+    for n in ns:
+        if mask is not None:
+            output_array = FSArray(m, n, mask)
+        else:
+            output_array = FSArray(m, n)
+        for output_idx, output_state in enumerate(output_array):
+            yield BasicState(output_state)
+
+
 class AnnotatedBasicState(FockState):
     r"""Extends `BasicState` with annotations
     """
@@ -128,6 +151,17 @@ class StateVector(defaultdict):
             self[bs] = 1
         self._normalized = True
         self._has_symbolic = False
+
+    @staticmethod
+    def deserialize(s):
+        sv = StateVector()
+        for c in s.split("+"):
+            m=re.match(r"\((.*),(.*)\)\*(.*)$", c)
+            assert m, "invalid state vector serialization: %s" % s
+            sv[BasicState(m.group(3))]=float(m.group(1))+1j*float(m.group(2))
+        sv._normalized = True
+        sv._has_symbolic = False
+        return sv
 
     def __rmul__(self, other):
         r"""Multiply a StateVector by a numeric value, right side
@@ -254,11 +288,9 @@ class StateVector(defaultdict):
         :return: a list of BasicState
         """
         self._normalize()
-        p = random.random()
-        keys = [BasicState(key) for key in self.keys()]
         weight = [abs(self[key])**2 for key in self.keys()]
         rng = np.random.default_rng()
-        return rng.choice(keys, shots, p=weight)
+        return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
 
     def measure(self, modes: Union[int, List[int]]) -> Dict[BasicState, Tuple[float, StateVector]]:
         r"""perform a measure on one or multiple modes and collapse the remaining statevector
@@ -321,8 +353,20 @@ class StateVector(defaultdict):
                 if isinstance(value, sp.Expr):
                     ls.append(str(value) + "*" + str(key))
                 else:
-                    ls.append(simple_complex(value)[1] + "*" + str(key))
+                    value = simple_complex(value)[1]
+                    if value[1:].find("-") != -1 or value.find("+") != -1:
+                        value = "("+value+")"
+                    ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
+
+    def serialize(self):
+        self._normalize()
+        ls = []
+        for key, value in self.items():
+            real = simple_float(value.real, nsimplify=False)[1]
+            imag = simple_float(value.imag, nsimplify=False)[1]
+            ls.append("(%s,%s)*%s" % (real, imag, str(key)))
+        return "+".join(ls)
 
     def __hash__(self):
         return self.__str__().__hash__()
@@ -347,20 +391,32 @@ class SVTimeSequence:
 class SVDistribution(defaultdict):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[StateVector] = None):
+    def __init__(self, sv: Optional[str,StateVector] = None):
         super(SVDistribution, self).__init__(float)
-        if sv is not None:
+        if isinstance(sv, str):
+            assert sv[0] == '{' and sv[-1]=='}', "invalid serialized svdistribution"
+            for s in sv[1:-1].split(";"):
+                k, v=s.split("=")
+                self[StateVector.deserialize(k)] = float(v)
+        elif sv is not None:
             self[sv] = 1
+
+    def __str__(self):
+        return "{"+";".join(["%s=%s" % (k.serialize(), simple_float(v, nsimplify=False)[1]) for k, v in self.items()])+"}"
 
     def add(self, sv: StateVector, proba: float):
         self[sv] += proba
 
     def __setitem__(self, key, value):
-        assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
-        assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
     def __mul__(self, svd):
@@ -379,28 +435,23 @@ class SVDistribution(defaultdict):
 
         return new_svd
 
-    def sample(self, k: int = 1, non_null: bool = True) -> List[StateVector]:
+    def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
-        :param k: number of samples to draw
-        :return: if :math:`k=1` a single sample, if :math:`k>1` a list of :math:`k` samples
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
         """
-        sample = []
-        for _ in range(k):
-            prob = random.random()
-            if non_null:
-                prob -= sum(v for sv, v in self.items() if sv.n == 0)
-            for sv, v in self.items():
-                if non_null and sv.n == 0:
-                    continue
-                if prob < v:
-                    if k == 1:
-                        return sv
-                    sample.append(sv)
-                    break
-                prob -= v
-        return sample
+        d = self
+        if non_null:
+            d = {sv: p for sv, p in self.items() if max(sv.n) != 0}
+        states = list(d.keys())
+        probs = list(d.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        if len(results) == 1:
+            return results[0]
+        return list(results)
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

@@ -80,7 +80,7 @@ def test_polar_circuit1():
 
 
 def test_polar_nmode():
-    c = comp.GenericBS()
+    c = comp.BS.H()
     u = c.compute_unitary()
     pu = c.compute_unitary(use_polarization=True)
     assert u.shape == (2, 2)
@@ -91,7 +91,7 @@ def test_polar_nmode():
 
 def test_polar_circuit2():
     c = pcvl.Circuit(2)
-    c //= comp.GenericBS()
+    c //= comp.BS.H()
     c //= (1, comp.WP(sp.pi/4, sp.pi/2))
     u = c.compute_unitary(use_symbolic=True, use_polarization=True)
     assert u.shape == (4, 4)
@@ -145,5 +145,5 @@ def test_build_spatial_output():
 def test_subcircuit_polarization():
     a = pcvl.Circuit(2) // comp.PBS() // comp.PBS()
     assert a.requires_polarization, "subcircuit does not propagate polarization state"
-    b = comp.GenericBS() // a // a // comp.GenericBS()
+    b = comp.BS.H() // a // a // comp.BS.H()
     assert b.requires_polarization, "subcircuit does not propagate polarization state"

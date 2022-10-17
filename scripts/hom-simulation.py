@@ -28,9 +28,9 @@ import quandelibc as qc
 dt = pcvl.Parameter("Δt")
 
 c = pcvl.Circuit(2)
-c //= comp.SimpleBS()
+c //= comp.BS()
 c //= (1, comp.TD(dt))
-c //= comp.SimpleBS()
+c //= comp.BS()
 
 pcvl.pdisplay(c)
 

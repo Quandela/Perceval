@@ -23,9 +23,11 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, Circuit, BasicState
-from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state
+from perceval import Matrix, P, ACircuit, Circuit, BasicState, SVDistribution, StateVector
+from perceval.serialization import serialize, deserialize_matrix, deserialize_circuit, deserialize_state, \
+    deserialize_svdistribution, deserialize
 import perceval.components.base_components as comp
+import json
 
 
 def test_numeric_matrix_serialization():
@@ -42,7 +44,7 @@ def test_numeric_matrix_serialization():
 
 def test_symbolic_matrix_serialization():
     theta = P('theta')
-    bs = comp.SimpleBS(theta=theta)
+    bs = comp.BS(theta=theta)
     input_mat = bs.U
     serialized_mat = serialize(input_mat)
     deserialized_mat = deserialize_matrix(serialized_mat)
@@ -67,9 +69,9 @@ def _check_circuits_eq(c_a, c_b):
 
 
 def _build_test_circuit():
-    c1 = Circuit(3) // comp.SimpleBS(R=2 / 3) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
+    c1 = Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
          // comp.Unitary(Matrix.random_unitary(3))
-    c2 = Circuit(2) // comp.GenericBS(R=1 / 4) // comp.PERM([1, 0])
+    c2 = Circuit(2) // comp.BS.H(theta=0.36, phi_tl=1.94, phi_br=5.8817, phi_bl=0.0179) // comp.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
     c1.add(0, comp.PR(delta=0.89))
     return c1
@@ -82,14 +84,52 @@ def test_circuit_serialization():
     _check_circuits_eq(c1, deserialized_c1)
 
 
-# def test_fockstate_serialization():
-#     states = [
-#         BasicState("|0,1>"),
-#         BasicState([0, 1, 0, 0, 1, 0]),
-#         AnnotatedBasicState("|0,1>"),
-#         AnnotatedBasicState("|{P:H}{P:V},0>")
-#     ]
-#     for s in states:
-#         serialized = serialize(s)
-#         deserialized = deserialize_state(serialized)
-#         assert s == deserialized
+def test_fockstate_serialization():
+    states = [
+        BasicState("|0,1>"),
+        BasicState([0, 1, 0, 0, 1, 0]),
+        BasicState("|{P:H}{P:V},0>")
+    ]
+    for s in states:
+        serialized = serialize(s)
+        deserialized = deserialize_state(serialized)
+        assert s == deserialized
+
+
+def test_svdistribution_deserialization():
+    svd = SVDistribution()
+    svd[StateVector("|0,1>")] = 0.2
+    svd[BasicState("|1,0>")] = 0.3
+    svd[BasicState("|1,1>")] = 0.5
+    svd2 = deserialize_svdistribution(serialize(svd))
+    assert svd == svd2
+
+
+def test_sv_txt_serialization():
+    sv = (1+1j) * StateVector("|0,1>") + (1-1j) * StateVector("|1,0>")
+    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>"
+
+
+def test_sv_serialization():
+    sv = (1+1j) * StateVector("|0,1>") + (1-1j) * StateVector("|1,0>")
+    sv_serialized = serialize(sv)
+    assert  sv_serialized == ":PCVL:StateVector:(0.5,0.5)*|0,1>+(0.5,-0.5)*|1,0>"
+    sv_deserialized = deserialize(sv_serialized)
+    assert sv == sv_deserialized
+
+
+def test_json():
+    svd = SVDistribution()
+    svd.add(BasicState("|1,0>"), 0.5)
+    svd.add(BasicState("|0,1>"), 0.5)
+    encoded = serialize({"a": BasicState("|1,0>"),
+                                   "b": Circuit(2) // comp.BS(),
+                                   "c": Matrix.random_unitary(3),
+                                   "d": svd
+                                  })
+    s = json.dumps(encoded)
+    d = deserialize(json.loads(s))
+    assert isinstance(d["a"], BasicState)
+    assert isinstance(d["b"], ACircuit)
+    assert isinstance(d["c"], Matrix)
+    assert isinstance(d["d"], SVDistribution)

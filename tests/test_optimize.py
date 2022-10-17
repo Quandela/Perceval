@@ -28,34 +28,28 @@ from perceval.utils.algorithms.norm import fidelity, frobenius
 import perceval.components.base_components as comp
 
 
+def _create_circuit():
+    return (pcvl.Circuit(3, name="rewrite")
+            // (0, comp.PS(pcvl.P("beta2")))
+            // (1, comp.PS(pcvl.P("beta1")))
+            // (1, comp.BS.H(theta=pcvl.P("alpha1")))
+            // (0, comp.BS.H(theta=pcvl.P("alpha2")))
+            // (1, comp.PS(pcvl.P("beta3")))
+            // (1, comp.BS.H(theta=pcvl.P("alpha3")))
+            // (0, comp.PS(pcvl.P("beta4")))
+            // (1, comp.PS(pcvl.P("beta5")))
+            // (2, comp.PS(pcvl.P("beta6"))))
+
 
 def test_optimize_fidelity():
-    c = (pcvl.Circuit(3, name="rewrite")
-         // (0, comp.PS(pcvl.P("beta2")))
-         // (1, comp.PS(pcvl.P("beta1")))
-         // (1, comp.GenericBS(theta=pcvl.P("alpha1")))
-         // (0, comp.GenericBS(theta=pcvl.P("alpha2")))
-         // (1, comp.PS(pcvl.P("beta3")))
-         // (1, comp.GenericBS(theta=pcvl.P("alpha3")))
-         // (0, comp.PS(pcvl.P("beta4")))
-         // (1, comp.PS(pcvl.P("beta5")))
-         // (2, comp.PS(pcvl.P("beta6"))))
+    c = _create_circuit()
     v = pcvl.Matrix.random_unitary(3)
     res = optimize(c, v, fidelity)
     assert pytest.approx(1) == res.fun
 
 
 def test_optimize_frobenius():
-    c = (pcvl.Circuit(3, name="rewrite")
-         // (0, comp.PS(pcvl.P("beta2")))
-         // (1, comp.PS(pcvl.P("beta1")))
-         // (1, comp.GenericBS(theta=pcvl.P("alpha1")))
-         // (0, comp.GenericBS(theta=pcvl.P("alpha2")))
-         // (1, comp.PS(pcvl.P("beta3")))
-         // (1, comp.GenericBS(theta=pcvl.P("alpha3")))
-         // (0, comp.PS(pcvl.P("beta4")))
-         // (1, comp.PS(pcvl.P("beta5")))
-         // (2, comp.PS(pcvl.P("beta6"))))
+    c = _create_circuit()
     v = pcvl.Matrix.random_unitary(3)
     res = optimize(c, v, frobenius, sign=-1)
     # test that the frobenius norm is almost 0 (pytest.approx will not work with almost 0)

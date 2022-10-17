@@ -42,6 +42,7 @@ class StepperBackend(Backend):
                  mask: list = None):
         self._out = None
         super().__init__(cu, use_symbolic, n, mask)
+        self.result_dict = {c.describe(): {'set': set()} for r, c in self._C}
 
     name = "Stepper"
     supports_symbolic = False
@@ -87,7 +88,6 @@ class StepperBackend(Backend):
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
-        self.result_dict = {c.describe(): {'set': set()} for r, c in self._C}
         for r, c in self._C:
             if hasattr(c, "apply"):
                 sv = c.apply(r, sv)
@@ -129,3 +129,7 @@ class StepperBackend(Backend):
         for output_state in self.allstate_iterator(input_state):
             yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
             skip_compile = True
+
+    @staticmethod
+    def preferred_command() -> str:
+        return 'evolve'

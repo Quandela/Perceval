@@ -32,20 +32,19 @@ def _post_process(s):
 
 class PostProcessedCnotItem(CatalogItem):
     article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
-    R1 = 1 / 3
-    R2 = 1 / 2
 
     def __init__(self):
         super().__init__("postprocessed cnot")
         self._default_opts['type'] = AsType.PROCESSOR
 
     def build(self):
+        theta_13 = BS.r_to_theta(1/3)
         c_cnot = (Circuit(6, name="PostProcessed CNOT")
-                  .add((0, 1), GenericBS(R=self.R1, phi_b=np.pi, phi_d=0))
-                  .add((3, 4), GenericBS(R=self.R2))
-                  .add((2, 3), GenericBS(R=self.R1, phi_b=np.pi, phi_d=0))
-                  .add((4, 5), GenericBS(R=self.R1))
-                  .add((3, 4), GenericBS(R=self.R2)))
+                  .add((0, 1), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                  .add((3, 4), BS.H())
+                  .add((2, 3), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                  .add((4, 5), BS.H(theta_13))
+                  .add((3, 4), BS.H()))
 
         if self._opt('type') == AsType.CIRCUIT:
             return c_cnot
@@ -58,21 +57,3 @@ class PostProcessedCnotItem(CatalogItem):
                 .add_herald(5, 0)
             p.set_postprocess(_post_process)
             return p
-
-# With simple BS convention:
-# c_cnot = (Circuit(6, name="PostProcessed CNOT")
-#           .add((0, 1), SimpleBS(R=1 / 3, phi=np.pi))
-#           .add((3, 4), SimpleBS(R=1 / 2))
-#           .add((2, 3), SimpleBS(R=1 / 3, phi=np.pi))
-#           .add((4, 5), SimpleBS(R=1 / 3))
-#           .add((3, 4), SimpleBS(R=1 / 2)))
-
-
-
-
-
-# postprocessed_cnot = PredefinedCircuit(c_cnot,
-#                                        "postprocessed cnot",
-#                                        description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
-#                                        heralds={0: 0, 5: 0},
-#                                        post_select_fn=_post_process)

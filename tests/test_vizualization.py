@@ -87,7 +87,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
 
 
 def test_svg_dump_phys_bs(tmp_path, save_figs):
-    _save_or_check(GenericBS(), tmp_path, sys._getframe().f_code.co_name, save_figs)
+    _save_or_check(BS.H(), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
 def test_svg_dump_phys_ps(tmp_path, save_figs):
@@ -135,12 +135,12 @@ def test_svg_dump_no_circuit_4(tmp_path, save_figs):
 
 
 def test_svg_dump_symb_bs_compact(tmp_path, save_figs):
-    _save_or_check(SimpleBS(R=1 / 3), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True,
+    _save_or_check(BS(BS.r_to_theta(1/3)), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True,
                    skin_type=SymbSkin)
 
 
 def test_svg_dump_symb_bs_compact_false(tmp_path, save_figs):
-    _save_or_check(SimpleBS(R=1 / 3), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False,
+    _save_or_check(BS(BS.r_to_theta(1/3)), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False,
                    skin_type=SymbSkin)
 
 
@@ -174,58 +174,46 @@ def test_svg_dump_symb_qwp(tmp_path, save_figs):
 
 def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
     nc = (pcvl.Circuit(4)
-          .add([0, 1], PERM([1, 0]))
-          .add([1, 2], PERM([1, 0]))
-          .add([2, 3], PERM([1, 0]))
-          .add([1, 2], PERM([1, 0]))
-          .add([0, 1], PERM([1, 0])))
+          .add((0, 1), PERM([1, 0]))
+          .add((1, 2), PERM([1, 0]))
+          .add((2, 3), PERM([1, 0]))
+          .add((1, 2), PERM([1, 0]))
+          .add((0, 1), PERM([1, 0])))
     _save_or_check(nc, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-def test_svg_dump_qrng(tmp_path, save_figs):
-    chip_QRNG = pcvl.Circuit(4, name='QRNG')
+def _create_qrng():
+    chip_qrng = pcvl.Circuit(4, name='QRNG')
     # Parameters
     phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
             pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
-    c = (chip_QRNG
-         .add((0, 1), SimpleBS())
-         .add((2, 3), SimpleBS())
-         .add((1, 2), PERM([1, 0]))
-         .add(0, PS(phis[0]))
-         .add(2, PS(phis[2]))
-         .add((0, 1), SimpleBS())
-         .add((2, 3), SimpleBS())
-         .add(0, PS(phis[1]))
-         .add(2, PS(phis[3]))
-         .add((0, 1), SimpleBS())
-         .add((2, 3), SimpleBS())
-         )
+    return (chip_qrng
+            .add((0, 1), BS())
+            .add((2, 3), BS())
+            .add((1, 2), PERM([1, 0]))
+            .add(0, PS(phis[0]))
+            .add(2, PS(phis[2]))
+            .add((0, 1), BS())
+            .add((2, 3), BS())
+            .add(0, PS(phis[1]))
+            .add(2, PS(phis[3]))
+            .add((0, 1), BS())
+            .add((2, 3), BS())
+            )
+
+
+def test_svg_dump_qrng(tmp_path, save_figs):
+    c = _create_qrng()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False, skin_type=SymbSkin)
 
 
 def test_svg_dump_qrng_compact(tmp_path, save_figs):
-    chip_QRNG = pcvl.Circuit(4, name='QRNG')
-    # Parameters
-    phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
-            pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
-    c = (chip_QRNG
-         .add((0, 1), SimpleBS())
-         .add((2, 3), SimpleBS())
-         .add((1, 2), PERM([1, 0]))
-         .add(0, PS(phis[0]))
-         .add(2, PS(phis[2]))
-         .add((0, 1), SimpleBS())
-         .add((2, 3), SimpleBS())
-         .add(0, PS(phis[1]))
-         .add(2, PS(phis[3]))
-         .add((0, 1), SimpleBS())
-         .add((2, 3), SimpleBS())
-         )
+    c = _create_qrng()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True, skin_type=SymbSkin)
 
 
 def test_svg_dump_phys_universal1(tmp_path, save_figs):
-    ub1 = pcvl.Circuit(2) // GenericBS() // (0, PS(pcvl.P("2θ"))) // GenericBS() // (0, PS(pcvl.P("φ")))
+    ub1 = pcvl.Circuit(2) // BS.H() // (0, PS(pcvl.P("θ"))) // BS.H() // (0, PS(pcvl.P("φ")))
     _save_or_check(ub1, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
@@ -266,7 +254,7 @@ def test_svg_dump_grover(tmp_path, save_figs):
         hwp.add(0, HWP(xsi)).add(0, PS(-sp.pi / 2))
         return hwp
 
-    bs = GenericBS(theta=sp.pi / 4, phi_a=0, phi_b=sp.pi / 2, phi_d=0)
+    bs = BS.H(phi_tr=sp.pi / 2, phi_tl=-sp.pi / 2)
     init_circuit = pcvl.Circuit(m=2, name="Initialization")
     init_circuit.add(0, _HWP(sp.pi / 8))
     init_circuit.add((0, 1), bs)
@@ -288,14 +276,14 @@ def test_svg_dump_grover(tmp_path, save_figs):
 
 def test_svg_bs_based_generic_no_phase_rectangle(tmp_path, save_figs):
     c = pcvl.Circuit.generic_interferometer(5,
-                                            fun_gen=lambda idx: GenericBS() // PS(pcvl.P("φ_%d" % idx)),
+                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("φ_%d" % idx)),
                                             shape="rectangle")
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
 def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
     c = pcvl.Circuit.generic_interferometer(5,
-                                            fun_gen=lambda idx: GenericBS() // PS(pcvl.P("φ_%d" % idx)),
+                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("φ_%d" % idx)),
                                             shape="rectangle",
                                             depth=10,
                                             phase_shifter_fun_gen=lambda idx: PS(pcvl.P("Φ_%d" % idx)))
@@ -304,13 +292,13 @@ def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
 
 def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
     c = pcvl.Circuit.generic_interferometer(5,
-                                            fun_gen=lambda idx: GenericBS() // PS(pcvl.P("φ_%d" % idx)),
+                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("φ_%d" % idx)),
                                             shape="triangle",
                                             phase_shifter_fun_gen=lambda idx: PS(pcvl.P("Φ_%d" % idx)))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
 def test_svg_decomposition_symb_compact(tmp_path, save_figs):
-    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(PERM([3, 1, 0, 2]).U), SimpleBS(R=pcvl.P("R")))
+    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(PERM([3, 1, 0, 2]).U), BS(theta=pcvl.P("theta")))
     _save_or_check(c1, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, compact=True,
                    skin_type=SymbSkin)

@@ -42,7 +42,7 @@ def _swap(perm, port_a, port_b):
 
 class QiskitConverter:
 
-    def __init__(self, catalog, source: Source = Source()):
+    def __init__(self, catalog, backend_name: str = "Naive", source: Source = Source()):
         r"""Initialize qiskit to perceval circuit converter.
 
         :param library: a component library to use for the conversion
@@ -55,6 +55,7 @@ class QiskitConverter:
         self._lower_phase_component = Circuit(2) // (0, comp.PS(P("phi2")))
         self._upper_phase_component = Circuit(2) // (1, comp.PS(P("phi1")))
         self._two_phase_component = Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2")))
+        self._backend_name = backend_name
 
     def convert(self, qc, use_postselection: bool = True) -> Processor:
         r"""Convert a qiskit circuit into a perceval.Processor.
