@@ -25,7 +25,7 @@ from .abstract_processor import AProcessor, ProcessorType
 from .base_components import PERM
 from .port import APort, PortLocation, Herald, Encoding
 from .source import Source
-from .circuit import ACircuit
+from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Matrix, Parameter
 from perceval.utils.algorithms.simplification import perm_compose
@@ -38,12 +38,15 @@ import copy
 class Processor(AProcessor):
     """
     Generic definition of processor as a source + components (both linear and non-linear) + ports
+    + optional post-processing logic
     """
-    def __init__(self, n_moi: int, source: Source = Source()):
+    def __init__(self, backend_name: str, m_circuit: Union[int, ACircuit], source: Source = Source()):
         r"""Define a processor with sources connected to the circuit and possible post_selection
 
-        :param n_moi: number of modes of interest (MOI)
-                      A mode of interest is any non-heralded mode
+        :param backend_name: Name of the simulator backend to run
+        :param m_circuit: can either be:
+            - a int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
+            - a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
         :param source: the Source used by the processor (defaults to perfect source)
         """
         super().__init__()
@@ -51,20 +54,26 @@ class Processor(AProcessor):
         self._components = []  # Any type of components, not only linear ones
         self._in_ports = {}
         self._out_ports = {}
-        self._n_moi = n_moi  # number of modes of interest (MOI)
-        self._n_heralds = 0
+
         self._post_select = None
+        self._n_heralds = 0
+        if isinstance(m_circuit, int):
+            self._n_moi = m_circuit  # number of modes of interest (MOI)
+        else:
+            self._n_moi = m_circuit.m
+            self.add(0, m_circuit)
 
         # Mode post selection: expect at least # modes with photons in output
         self._min_mode_post_select = None
 
-        self._inputs_map: SVDistribution = None
+        self._anon_herald_num = 0  # This is not a herald count!
+        self._inputs_map: Union[SVDistribution, None] = None
         self._simulator = None
-        self.set_backend(backend_name)
-
-    def set_backend(self, backend_name):
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
-        self._simulator = BACKEND_LIST[backend_name](self._circuit)
+        self._backend_name = backend_name
+
+    def _setup_simulator(self, **kwargs):
+        self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -79,23 +88,31 @@ class Processor(AProcessor):
 
     @property
     def m(self) -> int:
-        return self._circuit.m - len(self._heralds)
+        return self._n_moi
+
+    @property
+    def circuit_size(self) -> int:
+        return self._n_moi + self._n_heralds
 
     @property
     def post_select_fn(self):
         return self._post_select
 
     def with_input(self, input_state: BasicState) -> None:
-        self._inputs_map = None
+        """
+        Simulates plugging the photonic source on certain modes and turning it on.
+        Computes the probability distribution of the processor input
+        """
+        self._inputs_map = SVDistribution()
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
         input_idx = 0
         expected_photons = 0
-        for k in range(self._circuit.m):
+        for k in range(self.circuit_size):
             distribution = SVDistribution(StateVector("|0>"))
-            if k in self._heralds:
-                if self._heralds[k] == 1:
+            if k in self.heralds:
+                if self.heralds[k] == 1:
                     distribution = self._source.probability_distribution()
                     expected_photons += 1
             else:
@@ -103,19 +120,11 @@ class Processor(AProcessor):
                     distribution = self._source.probability_distribution()
                     expected_photons += 1
                 input_idx += 1
-            # combine distributions
-            if self._inputs_map is None:
-                self._inputs_map = distribution
-            else:
-                self._inputs_map *= distribution
+            self._inputs_map *= distribution  # combine distributions
 
         self._min_mode_post_select = expected_photons
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
-
-        self._anon_herald_num = 0  # This is not a herald count!
-        self._is_on = False
-        self._inputs_map = None
 
     @property
     def components(self):
@@ -128,46 +137,8 @@ class Processor(AProcessor):
             new_proc._components.append((r, c.copy(subs=subs)))
         return new_proc
 
-    def turn_on(self):
-        """
-        Simulates turning on the photonic source.
-        Computes the probability distribution of the processor input
-        """
-        if self._is_on:
-            return
-        self._is_on = True
-
-        self._inputs_map = SVDistribution()
-        for k in range(self.circuit_size):
-            port = self.get_input_port(k)
-            if port is None:
-                continue
-            mode_range = self._in_ports[port]
-            if isinstance(port, Herald):
-                if port.expected:
-                    distribution = self._source.probability_distribution()
-                else:
-                    distribution = SVDistribution(StateVector("|0>"))
-            else:
-                if port.encoding == Encoding.DUAL_RAIL:
-                    if k == mode_range[0]:
-                        distribution = self._source.probability_distribution()
-                    else:
-                        distribution = SVDistribution(StateVector("|0>"))
-                else:
-                    raise NotImplementedError(f"Not implemented for {port.encoding.name}")
-            self._inputs_map *= distribution
-
     def set_postprocess(self, postprocess_func):
         self._post_select = postprocess_func
-
-    @property
-    def m(self) -> int:
-        return self._n_moi
-
-    @property
-    def circuit_size(self) -> int:
-        return self._n_moi + self._n_heralds
 
     def add(self, mode_mapping, component, keep_port=True):
         """
@@ -179,6 +150,7 @@ class Processor(AProcessor):
         if self._post_select is not None:
             raise RuntimeError("Cannot add any component to a processor with post-process function")
 
+        self._simulator = None  # Invalidate simulator which will have to be recreated later on
         component = component.copy()
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, Processor):
@@ -310,7 +282,7 @@ class Processor(AProcessor):
         if mode < 0:
             return False
         if mode >= self.circuit_size:
-            return True
+            return False
         return not self._closed_photonic_modes[mode]
 
     def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
@@ -355,25 +327,19 @@ class Processor(AProcessor):
     def source(self):
         return self._source
 
-    def compute_unitary(self, use_symbolic=False) -> Matrix:
-        """Computes unitary matrix when containing only linear components,
-        Fails otherwise"""
-        u = None
-        multiplier = 1  # TODO handle polarization
-        for r, c in self._components:
-            cU = c.compute_unitary(use_symbolic=use_symbolic)
-            if len(r) != multiplier * self.circuit_size:
-                nU = Matrix.eye(multiplier * self.circuit_size, use_symbolic)
-                nU[multiplier * r[0]:multiplier * (r[-1] + 1), multiplier * r[0]:multiplier * (r[-1] + 1)] = cU
-                cU = nU
-            if u is None:
-                u = cU
-            else:
-                u = cU @ u
-        return u
+    def linear_circuit(self, flatten: bool = False) -> Circuit:
+        """
+        Creates a linear circuit from internal components.
+        If the processor contains at least one non-linear component, calling linear_circuit will try to convert it to
+        a working linear circuit, or raise an exception
+        """
+        circuit = Circuit(self.circuit_size)
+        for component in self._components:
+            circuit.add(component[0], component[1], merge=flatten)
+        return circuit
 
     def filter_herald(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if not self._heralds or keep_herald:
+        if not self.heralds or keep_herald:
             return s
         new_state = []
         for idx, k in enumerate(s):
@@ -381,14 +347,15 @@ class Processor(AProcessor):
                 new_state.append(k)
         return BasicState(new_state)
 
-    def _run_checks(self, command_name: str):
-        assert self._simulator is not None, "Simulator is missing"
+    def _init_command(self, command_name: str):
         assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         assert self.available_sampling_method == command_name, \
             f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
+        if self._simulator is None:
+            self._setup_simulator()
 
     def samples(self, count: int, progress_callback=None) -> Dict:
-        self._run_checks("samples")
+        self._init_command("samples")
         output = []
         not_selected_physical = 0
         not_selected = 0
@@ -418,7 +385,7 @@ class Processor(AProcessor):
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
     def probs(self, progress_callback: Callable = None) -> Dict:
-        self._run_checks("probs")
+        self._init_command("probs")
         output = SVDistribution()
         idx = 0
         input_length = len(self._inputs_map)
@@ -471,7 +438,7 @@ class Processor(AProcessor):
 
     @property
     def available_sampling_method(self) -> str:
-        preferred_command = self._simulator.preferred_command()
+        preferred_command = BACKEND_LIST[self._backend_name].preferred_command()
         if preferred_command == 'samples':
             return 'samples'
         return 'probs'

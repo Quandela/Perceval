@@ -73,11 +73,14 @@ class QiskitConverter:
                 n_cnot += 1
         cnot_idx = 0
 
-        n_moi = qc.qregs[0].size * 2
-        p = Processor(n_moi, self._source)
+        n_moi = qc.qregs[0].size * 2  # number of modes of interest
+        input_list = [0] * n_moi
+        p = Processor(self._backend_name, n_moi, self._source)
         qubit_names = qc.qregs[0].name
         for i in range(qc.qregs[0].size):
             p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qubit_names}{i}'))
+            input_list[i * 2] = 1
+        default_input_state = BasicState(input_list)
 
         for instruction in qc.data:
             # barrier has no effect
@@ -111,7 +114,7 @@ class QiskitConverter:
 
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction[0].name)
-        p.turn_on()
+        p.with_input(default_input_state)
         return p
 
     def _create_one_mode_gate(self, u):

@@ -52,13 +52,13 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                    .add((4, 5), BS.H())
                    .add((5, 6, 7), PERM([1, 2, 0]))
                    .add((3, 4), BS.H())
-                   .add((2, 3), BS.H(theta=theta1, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-                   .add((4, 5), BS.H(theta=theta1))
+                   .add((2, 3), BS.H(theta=self.theta1, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                   .add((4, 5), BS.H(theta=self.theta1))
                    .add((3, 4), BS.H())
                    .add((5, 6, 7), PERM([2, 1, 0]))
                    .add((1, 2), PERM([1, 0]))
-                   .add((2, 3), BS.H(theta=theta2))
-                   .add((4, 5), BS.H(theta=theta2, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                   .add((2, 3), BS.H(theta=self.theta2))
+                   .add((4, 5), BS.H(theta=self.theta2, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
                    .add((5, 6), PERM([1, 0]))
                    .add((4, 5), BS.H())
                    .add((4, 5), PERM([1, 0]))
@@ -67,9 +67,8 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
         if self._opt('type') == AsType.CIRCUIT:
             return c_hcnot
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor(8)
-            return p.add(0, c_hcnot) \
-                    .add_herald(0, 0) \
+            p = Processor(self._opt('backend'), c_hcnot)
+            return p.add_herald(0, 0) \
                     .add_herald(1, 1) \
                     .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
                     .add_port(4, Port(Encoding.DUAL_RAIL, 'ctrl')) \

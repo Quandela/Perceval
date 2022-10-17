@@ -37,5 +37,4 @@ class Generic2ModeItem(CatalogItem):
         if self._opt('type') == AsType.CIRCUIT:
             return c
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor(2)
-            return p.add(0, c)
+            return Processor(self._opt('backend'), c)

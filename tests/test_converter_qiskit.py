@@ -38,7 +38,7 @@ def test_basic_circuit_h():
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     pc = convertor.convert(qc)
-    c = pc.circuit
+    c = pc.linear_circuit()
     sd = pc.source_distribution
     assert len(sd) == 1
     assert sd[StateVector('|1,0>')] == 1

@@ -49,11 +49,10 @@ class PostProcessedCnotItem(CatalogItem):
         if self._opt('type') == AsType.CIRCUIT:
             return c_cnot
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor(6)
-            p.add(0, c_cnot) \
-                .add_herald(0, 0) \
-                .add_port(1, Port(Encoding.DUAL_RAIL, 'data')) \
-                .add_port(3, Port(Encoding.DUAL_RAIL, 'ctrl')) \
-                .add_herald(5, 0)
+            p = Processor(self._opt('backend'), c_cnot)
+            p.add_herald(0, 0) \
+             .add_port(1, Port(Encoding.DUAL_RAIL, 'data')) \
+             .add_port(3, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+             .add_herald(5, 0)
             p.set_postprocess(_post_process)
             return p

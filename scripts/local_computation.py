@@ -39,7 +39,10 @@ cnot = (pcvl.Circuit(6, name="PostProcessed CNOT")
 # Clifford & Clifford 2017 backend does not support probability computation
 # However, the Sampler algorithm is able to estimate output probabilities, transparently, through sampling
 local_simulator_name = 'CliffordClifford2017'
-my_proc = Processor(local_simulator_name, cnot, source=Source(brightness=0.5), heralds={0: 0, 5: 0})
+my_proc = Processor(local_simulator_name, 6, source=Source(brightness=0.5))
+my_proc.add(0, cnot)
+my_proc.add_herald(0, 0)
+my_proc.add_herald(5, 0)
 assert not my_proc.is_remote
 my_proc.with_input(pcvl.BasicState([1, 0, 1, 0]))
 
@@ -70,7 +73,8 @@ assert len(output['results']) == nsample
 
 # Now, try an async sample_count with SLOS backend
 local_simulator_name = 'SLOS'
-proc_slos = Processor(local_simulator_name, cnot, pcvl.Source(brightness=0.9))
+proc_slos = Processor(local_simulator_name, 6, pcvl.Source(brightness=0.9))
+proc_slos.add(0, cnot)
 proc_slos.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
 
 slos_sampler = Sampler(proc_slos)
