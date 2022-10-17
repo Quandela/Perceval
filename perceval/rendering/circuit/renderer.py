@@ -28,7 +28,7 @@ from typing import Any, Tuple
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas
-from perceval.components import ACircuit, Circuit, PortLocation, PERM
+from perceval.components import ACircuit, Circuit, PortLocation, PERM, Herald
 from perceval.utils.format import format_parameters
 
 
@@ -90,7 +90,7 @@ class ICircuitRenderer(ABC):
                         self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
                         self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
                                             precision=precision, nsimplify=nsimplify)
-                        self.close_subblock(r)
+                        self.close_subblock(shiftr)
                     else:
                         component_vars = c.get_variables(map_param_kid)
                         description = format_parameters(component_vars, precision, nsimplify)
@@ -118,6 +118,12 @@ class ICircuitRenderer(ABC):
     def extend_pos(self, start: int, end: int) -> None:
         """
         Extends horizontal position on the circuit graph, from modes 'start' to 'end'
+        """
+
+    @abstractmethod
+    def open(self) -> None:
+        """
+        Starts the circuit drawing
         """
 
     @abstractmethod
@@ -182,8 +188,6 @@ class TextRenderer(ICircuitRenderer):
         super().__init__(nsize)
         self._hc = hc
         self._h = ['']*(hc*nsize+2)
-        for k in range(nsize):
-            self._h[hc*k+2] = "──"
         self.extend_pos(0, self._nsize-1)
         self._depth = [0]*nsize
         self._offset = 0
@@ -191,6 +195,10 @@ class TextRenderer(ICircuitRenderer):
 
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
         return None  # Don't need circuit size for text rendering
+
+    def open(self):
+        for k in range(self._nsize):
+            self._h[self._hc*k+2] += "──"
 
     def close(self):
         self.extend_pos(0, self._nsize-1)
@@ -317,26 +325,33 @@ class TextRenderer(ICircuitRenderer):
             self._h[nl] = ' '*offset_diff + self._h[nl]
 
     def add_mode_index(self):
-        self._set_offset(2)
+        offset = len(str(self._nsize))+1
+        self._set_offset(offset)
         for k in range(self._nsize):
-            self._h[self._hc*k + 2] = str(k) + ':' + self._h[self._hc*k + 2][2:]
+            self._h[self._hc*k + 2] = f'{k:{offset-1}d}:' + self._h[self._hc*k + 2][offset:]
             self._h[self._hc*k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
-    def add_out_port(self, m, content, **opts):
-        self._h[self._hc*m + 2] += f'[{content})'
-        if 'name' in opts and opts['name']:
-            self._h[self._hc*m + 3] += f"[{opts['name']}]"
+    def add_out_port(self, n_mode, port, **opts):
+        content = ''
+        if isinstance(port, Herald):
+            content = port.expected
+        for i in range(port.m):
+            self._h[self._hc*(n_mode+i) + 2] += f'[{content})'
+            self._h[self._hc*(n_mode+i) + 3] += f"[{port.name}]"
 
-    def add_in_port(self, m, content, **opts):
+    def add_in_port(self, n_mode, port, **opts):
+        content = ''
+        if isinstance(port, Herald):
+            content = str(port.expected)
         shape_size = len(content) + 2
-        name = ''
-        if 'name' in opts and opts['name']:
-            name = '[' + opts['name'] + ']'
+        name = port.name
         name_size = len(name)
         self._set_offset(max(shape_size, name_size))
-        self._h[self._hc*m + 2] = f'({content}]' + '─'*(self._offset-shape_size) \
-                                  + self._h[self._hc*m + 2][self._offset:]
-        self._h[self._hc*m + 3] = name + ' '*(self._offset-name_size) + self._h[self._hc*m + 3][self._offset:]
+        for i in range(port.m):
+            self._h[self._hc*(n_mode+i) + 2] = f'({content}]' + '─'*(self._offset-shape_size) \
+                                      + self._h[self._hc*(n_mode+i) + 2][self._offset:]
+            self._h[self._hc*(n_mode+i) + 3] = name + ' '*(self._offset-name_size) + \
+                                               self._h[self._hc*(n_mode+i) + 3][self._offset:]
 
 
 class CanvasRenderer(ICircuitRenderer):
@@ -351,7 +366,7 @@ class CanvasRenderer(ICircuitRenderer):
         self._skin = skin
         self._canvas.set_offset((0, 0),
                                 CanvasRenderer.affix_all_size, 50 * (nsize + 1))
-        self._n_font_size = min(12, max(6, self._nsize+1))
+        self._n_font_size = min(10, max(6, self._nsize+1))
 
     def open(self):
         for k in range(self._nsize):
@@ -366,12 +381,12 @@ class CanvasRenderer(ICircuitRenderer):
     def add_mode_index(self):
         for k in range(self._nsize):
             if self._mode_style[k] != ModeStyle.HERALD:
-                self._canvas.add_text((CanvasRenderer.affix_all_size, 25 + 50 * k), str(k), self._n_font_size, ta="right")
+                self._canvas.add_text((CanvasRenderer.affix_all_size, 28 + 50 * k), str(k), self._n_font_size, ta="right")
 
         self._canvas.set_offset((0, 0), CanvasRenderer.affix_all_size, 50 * (self._nsize + 1))
         for k in range(self._nsize):
             if self._mode_style[k] != ModeStyle.HERALD:
-                self._canvas.add_text((0, 25 + 50 * k), str(k), self._n_font_size, ta="left")
+                self._canvas.add_text((0, 28 + 50 * k), str(k), self._n_font_size, ta="left")
 
     def add_out_port(self, n_mode, port, **opts):
         max_pos = max(self._chart[0:self._nsize])
@@ -379,12 +394,14 @@ class CanvasRenderer(ICircuitRenderer):
         v_pos = self._out_port_pos[n_mode].y
         self._canvas.set_offset((CanvasRenderer.affix_all_size + 50*(h_pos or max_pos), 50*v_pos),
                                 CanvasRenderer.affix_all_size, 50)
+        opts['starting_mode'] = n_mode
         self._canvas.add_shape(self._skin.get_shape(port, PortLocation.OUTPUT), port, None, None, **opts)
 
     def add_in_port(self, n_mode, port, **opts):
         h_pos = self._in_port_pos[n_mode].x*50
         v_pos = self._in_port_pos[n_mode].y*50
         self._canvas.set_offset((h_pos, v_pos), CanvasRenderer.affix_all_size, 50)
+        opts['starting_mode'] = n_mode
         self._canvas.add_shape(self._skin.get_shape(port, PortLocation.INPUT), port, None, None, **opts)
 
     def open_subblock(self, lines, name, size, color=None):

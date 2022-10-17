@@ -102,12 +102,24 @@ class PhysSkin(ASkin):
         return self.herald_shape_out
 
     def port_shape_in(self, port, canvas, content, mode_style, **opts):
+        m_index = None
+        if 'starting_mode' in opts:
+            m_index = opts['starting_mode']
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
+        if m_index is not None:
+            for i in range(port.m):
+                canvas.add_text((4, 50 * i + 27), text=str(m_index+i), size=7, ta="middle")
         if port.name:
             canvas.add_text((-2, 50*port.m - 9), text='[' + port.name + ']', size=6, ta="left", fontstyle="italic")
 
     def port_shape_out(self, port, canvas, content, mode_style, **opts):
+        m_index = None
+        if 'starting_mode' in opts:
+            m_index = opts['starting_mode']
         canvas.add_rect((15, 15), 12, 50*port.m - 30, fill="lightgray")
+        if m_index is not None:
+            for i in range(port.m):
+                canvas.add_text((21, 50 * i + 27), text=str(m_index+i), size=7, ta="middle")
         if port.name:
             canvas.add_text((27, 50*port.m - 9), text='[' + port.name + ']', size=6, ta="right", fontstyle="italic")
 

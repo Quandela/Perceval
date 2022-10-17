@@ -106,7 +106,6 @@ def pdisplay_processor(processor: Processor,
                                 nsimplify=nsimplify,
                                 shift=shift)
     renderer.close()
-    renderer.add_mode_index()
 
     for port, port_range in processor._in_ports.items():
         renderer.add_in_port(port_range[0], port)
