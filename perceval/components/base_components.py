@@ -21,9 +21,9 @@
 # SOFTWARE.
 from copy import copy
 from enum import Enum
-from math import comb
 
 import numpy as np
+import scipy as sc
 import sympy as sp
 
 from perceval.components.circuit import ACircuit
@@ -497,15 +497,34 @@ class LC(ACircuit):
         r = r[0]
         loss = self.get_variables()["loss"]
 
-        nsv = copy(sv)
-        nsv.clear()
-        nsv.m += 1
-        for state, prob_ampli in sv.items():
-            n = state[r]
-            for i in range(n + 1):
-                nsv[BasicState(state.set_slice(slice(r, r+1), BasicState([i]))) * BasicState([n - i])] += prob_ampli \
-                                                                                    * (loss ** (n - i)
-                                                                                       * (1 - loss) ** i
-                                                                                       * comb(n, i)) ** 0.5
+        n_max = max(state[r] for state in sv)
+        N = np.arange(n_max + 1)
+        k = np.arange(n_max + 1)
+        k = np.tile(k, (n_max+1, 1)).transpose()
 
+        prob = sc.special.comb(np.tile(N, (n_max+1, 1)), k)
+        prob *= loss ** (sc.sparse.diags([(n_max + 1 - i) * [i] for i in range(n_max + 1)],
+                                               list(range(n_max + 1))).toarray())
+        prob *= (1 - loss) ** k
+        prob = np.sqrt(prob)
+
+        nsv = StateVector()
+        nsv.m = sv.m + 1
+        # for state, prob_ampli in sv.items():
+        #     n = state[r]
+        #     for i in range(n + 1):
+        #         nsv[BasicState(state.set_slice(slice(r, r+1), BasicState([i]))) * BasicState([n - i])] += prob_ampli \
+        #                                                                             * (loss ** (n - i)
+        #                                                                                * (1 - loss) ** i
+        #                                                                                * comb(n, i)) ** 0.5
+
+        # Dict comprehension is possible here as two different basic states can't give the same resulting state
+        nsv.update(
+            {
+                BasicState(state.set_slice(slice(r, r + 1), BasicState([i]))) * BasicState([state[r] - i]):
+                    prob_ampli * prob[i, state[r]]
+                for state, prob_ampli in sv.items()
+                for i in range(state[r] + 1)
+            }
+        )
         return nsv
