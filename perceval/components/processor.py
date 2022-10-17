@@ -327,6 +327,11 @@ class Processor(AProcessor):
     def source(self):
         return self._source
 
+    @source.setter
+    def source(self, source):
+        self._source = source
+        self._inputs_map = None
+
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
         Creates a linear circuit from internal components.
