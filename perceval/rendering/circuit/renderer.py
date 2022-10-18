@@ -182,6 +182,13 @@ class ICircuitRenderer(ABC):
         Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
         """
 
+    def set_out_herald_info(self, info):
+        """
+        Handles a very specific need for canvas rendering: moving out heralds as left as possible in the displayed
+        processor. See usage in CanvasRenderer
+        """
+        pass
+
 
 class TextRenderer(ICircuitRenderer):
     def __init__(self, nsize, hc=3, min_box_size=5):
@@ -368,6 +375,8 @@ class CanvasRenderer(ICircuitRenderer):
                                 CanvasRenderer.affix_all_size, 50 * (nsize + 1))
         self._n_font_size = min(10, max(6, self._nsize+1))
 
+        self._out_herald_info = None
+
     def open(self):
         for k in range(self._nsize):
             mode_style = self._skin.style[self._mode_style[k]]
@@ -449,7 +458,18 @@ class CanvasRenderer(ICircuitRenderer):
         modes = self._mode_style[start:(end + 1)]
         self._canvas.add_shape(shape_fn, circuit, content, modes)
 
-    def _update_mode_style(self, lines, circuit, w):
+    def set_out_herald_info(self, hinf):
+        self._out_herald_info = hinf
+
+    def _search_component_in_out_herald_info(self, c):
+        if self._out_herald_info is None:
+            return None, None
+        for k, v in self._out_herald_info.items():
+            if c is v[1]:
+                return k, v[0]
+        return None, None
+
+    def _update_mode_style(self, lines, circuit, w: int, subc_mode: bool = False):
         # BEGIN Mode tracking + herald positionning algo
         m0 = lines[0]
         for i in lines:
@@ -464,13 +484,23 @@ class CanvasRenderer(ICircuitRenderer):
                 if not isinstance(circuit, PERM):
                     ppos.x = self._chart[i]
                     ppos.fixed = True
-                    # I guess this part is wrong, but works in our cases
-                    self._out_port_pos[ppos.initial_mode].x = ppos.x + w
-                    self._out_port_pos[ppos.initial_mode].y = ppos.y
+                    if subc_mode:
+                        self._out_port_pos[ppos.initial_mode].x = ppos.x + w
+                        self._out_port_pos[ppos.initial_mode].y = ppos.y
+                    else:
+                        self._mode_style[i] = ModeStyle.PHOTONIC
 
                 else:
                     ppos.y = circuit.perm_vector[ppos.y - lines[0]] + lines[0]
                     ppos.fixed = None
+
+        # Out heralds
+        if not isinstance(circuit, PERM) and not subc_mode:
+            herald_out_mode, component_out_mode = self._search_component_in_out_herald_info(circuit)
+            if herald_out_mode is not None:
+                self._mode_style[lines[0] + component_out_mode] = ModeStyle.HERALD
+                self._out_port_pos[herald_out_mode].y = lines[0] + component_out_mode
+                self._out_port_pos[herald_out_mode].x = self._chart[lines[0] + component_out_mode] + w
 
         if isinstance(circuit, PERM):
             out_modes = copy.copy(self._mode_style)
@@ -493,7 +523,7 @@ class CanvasRenderer(ICircuitRenderer):
     def append_subcircuit(self, lines, circuit, content):
         w = self._skin.style_subcircuit['width']
         self._add_shape(lines, circuit, content, w, self._skin.subcircuit_shape)
-        self._update_mode_style(lines, circuit, w)
+        self._update_mode_style(lines, circuit, w, True)
         for i in range(lines[0], lines[-1] + 1):
             self._chart[i] += w
 

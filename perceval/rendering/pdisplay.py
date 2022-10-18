@@ -39,6 +39,7 @@ from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import StateVector, SVDistribution
 from .format import Format
+from ._processor_utils import precompute_herald_pos
 
 
 in_notebook = False
@@ -94,6 +95,8 @@ def pdisplay_processor(processor: Processor,
                                total_width=w, total_height=h, compact=compact, **opts)
     for k in processor.heralds.keys():
         renderer.set_mode_style(k, ModeStyle.HERALD)
+    out_herald_info = precompute_herald_pos(processor, recursive)
+    renderer.set_out_herald_info(out_herald_info)
     renderer.open()
     for r, c in processor.components:
         shift = r[0]
