@@ -23,10 +23,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, Tuple
-
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, Processor
+from perceval.components import ACircuit, Processor, PERM
 from perceval.components.abstract_component import AComponent
 from perceval.components.non_linear_components import TD
 
@@ -81,11 +80,23 @@ class ASkin(ABC):
 
     @dispatch(Processor, bool)
     def get_size(self, p: Processor, recursive: bool = False) -> Tuple[int, int]:
-        total_width = 0
-        for modes, comp in p.components:  # TODO rework this: components can be displayed on top of each other
-            w, h = self.get_size(comp, recursive)
-            total_width += w
-        return total_width, p.circuit_size
+        height = p.m
+        # w represents the graph of the circuit.
+        # Each value being the ouput of the rightmost component on the corresponding mode
+        w = [0] * p.circuit_size
+        for modes, comp in p._components:
+            if not isinstance(comp, PERM):
+                height = max(height, comp.m + modes[0])
+
+            r = slice(modes[0], modes[0] + comp.m)
+            start_w = max(w[r])
+            if comp.is_composite() and recursive:
+                comp_width, _ = self.get_size(comp, False)
+            else:
+                comp_width = self.get_width(comp)
+            end_w = start_w + comp_width
+            w[r] = [end_w] * comp.m
+        return max(w), min(p.circuit_size, height+2)
 
     def measure(self, c: AComponent) -> Tuple[int, int]:
         """
