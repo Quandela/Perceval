@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 from perceval.utils.statevector import BasicState
-from typing import Union
 from ast import literal_eval
 
 
