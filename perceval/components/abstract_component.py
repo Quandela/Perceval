@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from abc import ABC
-from typing import Union, List
+from typing import Dict, Union, List
 import sympy as sp
 import copy
 
@@ -53,7 +53,7 @@ class AParametrizedComponent(AComponent):
         self._vars = {}
 
     @property
-    def vars(self) -> dict[str, Parameter]:
+    def vars(self) -> Dict[str, Parameter]:
         return {p.name: p for p in self._params.values() if not p.fixed}
 
     def assign(self,
