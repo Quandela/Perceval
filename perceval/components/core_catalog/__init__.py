@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import heralded_cnot
-from .postprocessed_cnot import postprocessed_cnot
-from .generic_2mode import generic_2mode
+from .heralded_cnot import HeraldedCnotItem
+from .postprocessed_cnot import PostProcessedCnotItem
+from .generic_2mode import Generic2ModeItem
 
-catalog = {"heralded_cnot": heralded_cnot,
-           "post_processed_cnot": postprocessed_cnot,
-           "generic_2mode": generic_2mode}
+catalog = [HeraldedCnotItem, PostProcessedCnotItem, Generic2ModeItem]

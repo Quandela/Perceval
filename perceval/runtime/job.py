@@ -23,7 +23,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Callable
 
-from .job_status import JobStatus
+from .job_status import JobStatus, RunningStatus
 
 
 class Job(ABC):
@@ -43,6 +43,11 @@ class Job(ABC):
         return self._id
 
     def get_results(self) -> Any:
+        if not self.is_completed():
+            raise RuntimeError('The job is still running, results are not available yet.')
+        job_status = self.status
+        if job_status.status != RunningStatus.SUCCESS:
+            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
         return self._results
 
     @property

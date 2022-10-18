@@ -33,7 +33,7 @@ def test_34():
     c = pcvl.Circuit(4, name='phase')
     c.add((2, 3), bs)
     pcvl.pdisplay(c)  # looks good
-    simulator_backend = pcvl.BackendFactory().get_backend("Naive")
+    simulator_backend = pcvl.BackendFactory.get_backend("Naive")
     simu = simulator_backend(c.compute_unitary())
     state = pcvl.BasicState([1, 1, 1, 1])
     pa = simu.probampli(state, pcvl.BasicState([1, 1, 1, 1]))

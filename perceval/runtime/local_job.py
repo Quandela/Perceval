@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import warnings
-from typing import Callable
+from typing import Callable, Optional
 import threading
 
 from .job import Job
@@ -32,6 +32,10 @@ class LocalJob(Job):
         super().__init__(fn)
         self._status = JobStatus()
         self._worker = None
+        self._user_cb = None
+
+    def set_progress_callback(self, callback: Callable):  # Signature must be (float, Optional[str])
+        self._user_cb = callback
 
     @property
     def status(self) -> JobStatus:
@@ -40,11 +44,17 @@ class LocalJob(Job):
             self._status.stop_run()
         return self._status
 
+    def _progress_cb(self, progress: float, phase: Optional[str] = None):
+        self._status.update_progress(progress, phase)
+        if self._user_cb is not None:
+            self._user_cb(progress, phase)
+
     def execute_sync(self, *args, **kwargs):
         assert self._status.waiting, "job as already been executed"
-        kwargs['progress_callback'] = self._status.update_progress
+        if 'progress_callback' not in kwargs:
+            kwargs['progress_callback'] = self._progress_cb
         self._call_fn_safe(*args, **kwargs)
-        return self._results
+        return self.get_results()
 
     def _call_fn_safe(self, *args, **kwargs):
         r"""
@@ -62,7 +72,8 @@ class LocalJob(Job):
     def execute_async(self, *args, **kwargs) -> Job:
         assert self._status.waiting, "job has already been executed"
         # we are launching the function in a separate thread
-        kwargs['progress_callback'] = self._status.update_progress
+        if 'progress_callback' not in kwargs:
+            kwargs['progress_callback'] = self._progress_cb
         self._status.start_run()
         self._worker = threading.Thread(target=self._call_fn_safe, args=args, kwargs=kwargs)
         self._worker.start()

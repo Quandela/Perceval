@@ -20,15 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, tensorproduct, AnnotatedBasicState, Annotation,\
-    allstate_iterator
-from .polarization import Polarization
-from .random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .async_tools import generate_sync_methods
+import time
+
+
+def _sync_wrapper(cls, func):
+    async_func = getattr(cls, func)
+
+    def await_job(*args):
+        job = async_func(*args)
+        while True:
+            if not job.is_completed():
+                time.sleep(3)
+            else:
+                return job.get_results()
+
+    return await_job
+
+
+def generate_sync_methods(cls):
+    for method in dir(cls):
+        if method.startswith('async_'):
+            sync_name = method[6:]
+            setattr(cls, sync_name, _sync_wrapper(cls, method))
+    return cls

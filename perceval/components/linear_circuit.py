@@ -30,6 +30,7 @@ import numpy as np
 import sympy as sp
 import scipy.optimize as so
 
+from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, global_params
 import perceval.utils.algorithms.decomposition as decomposition
 from perceval.utils.algorithms.match import Match
@@ -46,25 +47,15 @@ def _matrix_double_for_polarization(m, u):
     return pu
 
 
-class ACircuit(ABC):
+class ACircuit(AParametrizedComponent, ABC):
     """
-        Abstract circuit class. A circuit is defined by a dimension `m`, and by parameters.
-        Parameters can be fixed (value) or variables.
+    Abstract linear optics circuit class. A circuit is defined by a dimension `m`, and by parameters.
+    Parameters can be fixed (value) or variables.
     """
-
-    delay_circuit = False
     _supports_polarization = False
-    _name = None
 
-    def __init__(self, m: int, params=None):
-        if params is None:
-            params = {}
-        self._m = m
-        self._params = params
-        for name, p in self._params.items():
-            assert type(name) == str and isinstance(p, Parameter), "invalid parameter definition"
-        self._params = {}
-        self._vars = {}
+    def __init__(self, m: int, name: str = None):
+        super().__init__(m, name)
 
     @abstractmethod
     def _compute_unitary(self,
@@ -102,15 +93,6 @@ class ACircuit(ABC):
             return _matrix_double_for_polarization(self._m, u)
         return u
 
-    def assign(self,
-               assign: dict = None):
-        if assign is None:
-            return
-        vs = self.vars
-        if isinstance(assign, dict):
-            for k, v in assign.items():
-                vs[k].set_value(v)
-
     @property
     def requires_polarization(self):
         return self._supports_polarization
@@ -127,74 +109,6 @@ class ACircuit(ABC):
         Returns True if the circuit is composed of subcomponents
         """
         return False
-
-    @property
-    def defined(self):
-        """
-        check if all parameters of the circuit are fully defined
-        """
-        for _, p in self._params.items():
-            if not p.defined:
-                return False
-        return True
-
-    @property
-    def params(self):
-        return self._params.keys()
-
-    def get_parameters(self, all_params: bool = False) -> List[Parameter]:
-        """Return the parameters of the circuit
-
-        :param all_params: if False, only returns the variable parameters
-        :return: the list of parameters
-        """
-        return [v for v in self._params.values() if all_params or not v.fixed]
-
-    def reset_parameters(self):
-        for v in self._params.values():
-            v.reset()
-
-    def _set_parameter(self,
-                       name: str,
-                       p: Union[Parameter, float],
-                       min_v: float,
-                       max_v: float,
-                       periodic: bool = True) -> Parameter:
-        """
-            Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
-            min/max value or a parameter defined by a value that we create on the fly
-        :param name:
-        :param p:
-        :param min_v:
-        :param max_v:
-        :param periodic:
-        :return:
-        """
-        if isinstance(p, Parameter):
-            if min_v is not None:
-                if p.min is None or min_v > p.min:
-                    p.min = float(min_v)
-            if max_v is not None:
-                if p.max is None or max_v < p.max:
-                    p.max = float(max_v)
-            if p.name in self._vars:
-                if p.pid != self._vars[p.name].pid:
-                    raise RuntimeError("two parameters with the same name in the circuit")
-            if periodic is not None:
-                p.set_periodic(periodic)
-            self._vars[p.name] = p
-        else:
-            p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v, periodic=periodic)
-        self._params[name] = p
-        return p
-
-    @property
-    def m(self):
-        return self._m
-
-    @property
-    def name(self):
-        return self._name
 
     def definition(self):
         params = {name: Parameter(name) for name in self._params.keys()}
@@ -240,66 +154,6 @@ class ACircuit(ABC):
 
     def __iter__(self):
         yield tuple(pos for pos in range(self._m)), self
-
-    def variable_def(self, out_parameters: dict, k, pname, default_value, map_param_kid=None):
-        if map_param_kid is None:
-            map_param_kid = {}
-        if self._params[k].defined:
-            if default_value is None or self._params[k]._value != default_value:
-                v = self._params[k]._value
-                if isinstance(v, sp.Expr):
-                    v = str(v)
-                    out_parameters[pname] = v
-                elif default_value is None or abs(v-float(default_value)) > 1e-6:
-                    out_parameters[pname] = v
-        else:
-            out_parameters[pname] = map_param_kid[self._params[k]._pid]
-
-    def get_variables(self, _=None):
-        return {}
-
-    def copy(self, subs: Union[dict, list] = None):
-        nc = copy.deepcopy(self)
-
-        if subs is None:
-            for k, p in nc._params.items():
-                if p.defined:
-                    v = float(p)
-                else:
-                    v = None
-                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
-                nc.__setattr__("_"+k, nc._params[k])
-        else:
-            if isinstance(subs, list):
-                subs = {p.name: p.spv for p in subs}
-            for k, p in nc._params.items():
-                name = p.name
-                min_v = p.min
-                max_v = p.max
-                is_periodic = p.is_periodic
-                if p._value is None:
-                    p = p._symbol.evalf(subs=subs)
-                else:
-                    p = p.evalf(subs=subs)
-                if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
-                    nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
-                else:
-                    nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
-        for k, p in nc._params.items():
-            nc.__setattr__("_" + k, nc._params[k])
-
-        return nc
-
-    @property
-    def vars(self):
-        return {p.name: p for p in self._params.values() if not p.fixed}
-
-    def map_parameters(self):
-        map_param_kid = {}
-        for k, p in self._params.items():
-            if not p.defined:
-                map_param_kid[p._pid] = p.name
-        return map_param_kid
 
     def identify(self, unitary_matrix, phases, precision=None, max_try=10, allow_error=False) -> None:
         r"""Identify an instance of the current circuit (should be parameterized) such as :math:`Q.C=U.P`
@@ -435,14 +289,12 @@ class Circuit(ACircuit):
     :param m: The number of port of the circuit
     :param name: Name of the circuit
     """
-    _name = "CPLX"
+    DEFAULT_NAME = "CPLX"
     _color = None  # A circuit can be given a background color when displayed as a subcircuit
 
     def __init__(self, m: int, name: str = None):
         assert m > 0, "invalid size"
-        if name is not None:
-            self._name = name
-        super().__init__(m)
+        super().__init__(m, name)
         self._components = []
 
     def is_composite(self):
@@ -493,8 +345,8 @@ class Circuit(ACircuit):
         :return: a string describing the circuit that be re-used to define the circuit
         """
         cparams = ["%d" % self._m]
-        if self._name != Circuit._name:
-            cparams.append("name=%s" % self._name)
+        if self.name != Circuit.DEFAULT_NAME:
+            cparams.append(f"name='{self._name}'")
         s = "Circuit(%s)" % (", ".join(cparams))
         if map_param_kid is None:
             map_param_kid = self.map_parameters()
@@ -527,11 +379,12 @@ class Circuit(ACircuit):
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
-        :param component: the component to add, must be a circuit
+        :param component: the component to add, must be a linear component or circuit
         :param merge: if the component is a complex circuit,
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
+        assert isinstance(component, ACircuit), "Only linear components can compose a linear optics circuit"
         if isinstance(port_range, int):
             port_range = list([i for i in range(port_range, port_range+component.m)])
         assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"

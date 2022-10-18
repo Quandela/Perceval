@@ -20,15 +20,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, tensorproduct, AnnotatedBasicState, Annotation,\
-    allstate_iterator
-from .polarization import Polarization
-from .random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .async_tools import generate_sync_methods
+import perceval as pcvl
+from perceval.components.port import *
+from perceval.components.base_components import PS, BS
+import numpy as np
+
+
+def act_on_phi(value, obj):
+    if value:
+        obj.assign({"phi": np.pi/2})
+    else:
+        obj.assign({"phi": np.pi/4})
+
+
+def test_digital_converter():
+    phi = pcvl.P("phi")
+    ps = PS(phi)
+    ps2 = PS(phi)
+    bs = BS()
+    detector = DigitalConverterDetector('I act on phi')
+    detector.connect_to(ps, act_on_phi)
+
+    assert detector.is_connected_to(ps)
+    assert not detector.is_connected_to(bs)
+    assert not detector.is_connected_to(ps2)
+    assert phi.is_symbolic()
+
+    detector.trigger(True)
+    assert not phi.is_symbolic()
+    assert float(phi) == np.pi/2
+
+    detector.trigger(False)
+    assert not phi.is_symbolic()
+    assert float(phi) == np.pi/4

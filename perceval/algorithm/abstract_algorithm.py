@@ -20,15 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, tensorproduct, AnnotatedBasicState, Annotation,\
-    allstate_iterator
-from .polarization import Polarization
-from .random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .async_tools import generate_sync_methods
+from perceval.components.abstract_processor import AProcessor
+
+
+class AAlgorithm:
+    def __init__(self, processor: AProcessor):
+        self._processor = processor
+        if not self._check_compatibility():
+            raise RuntimeError("Processor and algorithm are not compatible")
+
+    def _check_compatibility(self) -> bool:
+        # if self._processor.is_remote:
+        #     # TODO remote compatibility check
+        #     return False
+        return True
