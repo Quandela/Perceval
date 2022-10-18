@@ -30,7 +30,7 @@ except ModuleNotFoundError as e:
 from perceval import BackendFactory, StateVector, Circuit
 from perceval.converters import QiskitConverter
 import perceval.components.base_components as comp
-from perceval.components.core_catalog import catalog
+from perceval.components import catalog
 
 
 def test_basic_circuit_h():
@@ -38,7 +38,7 @@ def test_basic_circuit_h():
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     pc = convertor.convert(qc)
-    c = pc.circuit
+    c = pc.linear_circuit()
     sd = pc.source_distribution
     assert len(sd) == 1
     assert sd[StateVector('|1,0>')] == 1
@@ -55,33 +55,22 @@ def test_basic_circuit_double_h():
     qc.h(0)
     qc.h(0)
     pc = convertor.convert(qc)
-    c = pc.circuit
     assert pc.source_distribution[StateVector('|1,0>')] == 1
-    assert len(c._components) == 2
+    assert len(pc._components) == 2
 
 
-def test_basic_circuit_s_phys():
+def test_basic_circuit_s():
     convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
     pc = convertor.convert(qc)
-    c = pc.circuit
     assert pc.source_distribution[StateVector('|1,0>')] == 1
-    assert len(c._components) == 1
-    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
-    r0 = c._components[0][1]._components[0][0]
-    c0 = c._components[0][1]._components[0][1]
+    assert len(pc._components) == 1
+    assert isinstance(pc._components[0][1], Circuit) and len(pc._components[0][1]._components) == 1
+    r0 = pc._components[0][1]._components[0][0]
+    c0 = pc._components[0][1]._components[0][1]
     assert r0 == (1,)
     assert isinstance(c0, comp.PS)
-
-
-def test_basic_circuit_s_symb():
-    convertor = QiskitConverter(catalog)  # symb
-    qc = qiskit.QuantumCircuit(1)
-    qc.s(0)
-    pc = convertor.convert(qc)
-    c = pc.circuit
-    assert pc.source_distribution[StateVector('|1,0>')] == 1
 
 
 def test_basic_circuit_swap_direct():
@@ -89,10 +78,9 @@ def test_basic_circuit_swap_direct():
     qc = qiskit.QuantumCircuit(2)
     qc.swap(0, 1)
     pc = convertor.convert(qc)
-    c = pc.circuit
     assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
-    assert len(c._components) == 1
-    r0, c0 = c._components[0]
+    assert len(pc._components) == 1
+    r0, c0 = pc._components[0]
     assert r0 == [0, 1, 2, 3]
     assert isinstance(c0, comp.PERM)
     assert c0.perm_vector == [2, 3, 0, 1]
@@ -103,10 +91,9 @@ def test_basic_circuit_swap_indirect():
     qc = qiskit.QuantumCircuit(2)
     qc.swap(1, 0)
     pc = convertor.convert(qc)
-    c = pc.circuit
     assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
-    assert len(c._components) == 1
-    r0, c0 = c._components[0]
+    assert len(pc._components) == 1
+    r0, c0 = pc._components[0]
     assert r0 == [0, 1, 2, 3]
     assert isinstance(c0, comp.PERM)
     assert c0.perm_vector == [2, 3, 0, 1]
@@ -117,15 +104,15 @@ def test_cnot_1_heralded():
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
-    pc = convertor.convert(qc, True)
-    c = pc.circuit
-    assert c.m == 8
+    pc = convertor.convert(qc, use_postselection=False)
+    assert pc.circuit_size == 8
+    assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
-    assert len(c._components) == 4
+    assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
-    perm1 = c._components[1][1]
+    perm1 = pc._components[1][1]
     assert isinstance(perm1, comp.PERM)
-    perm2 = c._components[3][1]
+    perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
     assert perm1.perm_vector == [2, 3, 4, 5, 0, 1, 6, 7]
@@ -137,15 +124,15 @@ def test_cnot_1_inverse_heralded():
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(1, 0)
-    pc = convertor.convert(qc, True)
-    c = pc.circuit
-    assert c.m == 8
+    pc = convertor.convert(qc, use_postselection=False)
+    assert pc.circuit_size == 8
+    assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
-    assert len(c._components) == 4
+    assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
-    perm1 = c._components[1][1]
+    perm1 = pc._components[1][1]
     assert isinstance(perm1, comp.PERM)
-    perm2 = c._components[3][1]
+    perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
     assert perm1.perm_vector == [4, 5, 2, 3, 0, 1, 6, 7]
@@ -157,15 +144,15 @@ def test_cnot_2_heralded():
     qc = qiskit.QuantumCircuit(3)
     qc.h(0)
     qc.cx(0, 2)
-    pc = convertor.convert(qc, True)
-    c = pc.circuit
-    assert c.m == 10
+    pc = convertor.convert(qc, use_postselection=False)
+    assert pc.circuit_size == 10
+    assert pc.m == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,1,0,0,1,0,1>')] == 1
-    assert len(c._components) == 4
+    assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
-    perm1 = c._components[1][1]
+    perm1 = pc._components[1][1]
     assert isinstance(perm1, comp.PERM)
-    perm2 = c._components[3][1]
+    perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
     assert perm1.perm_vector == [2, 3, 8, 9, 4, 5, 0, 1, 6, 7]
@@ -177,22 +164,21 @@ def test_cnot_1_postprocessed():
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
-    pc = convertor.convert(qc, False)
-    c = pc.circuit
-    assert c.m == 6
+    pc = convertor.convert(qc, use_postselection=True)
+    assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
-    assert len(c._components) == 4
+    assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
-    perm1 = c._components[1][1]
+    perm1 = pc._components[1][1]
     assert isinstance(perm1, comp.PERM)
-    perm2 = c._components[3][1]
+    perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
     assert perm1.perm_vector == [1, 2, 3, 4, 0, 5]
     assert perm2.perm_vector == [4, 0, 1, 2, 3, 5]
 
 
-def test_cnot_postprocess_phys():
+def test_cnot_postprocess():
     convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
@@ -202,30 +188,8 @@ def test_cnot_postprocess_phys():
     assert len(sv_out) == 2
 
 
-def test_cnot_postprocess_symb():
-    convertor = QiskitConverter(catalog)  # symb
-    qc = qiskit.QuantumCircuit(2)
-    qc.h(0)
-    qc.cx(0, 1)
-    pc = convertor.convert(qc)
-    sv_out = pc.probs()['results']
-    assert len(sv_out) == 2
-
-
-def test_cnot_herald_phys():
+def test_cnot_herald():
     convertor = QiskitConverter(catalog)
-    qc = qiskit.QuantumCircuit(2)
-    qc.h(0)
-    qc.cx(0, 1)
-    pc = convertor.convert(qc, True)
-    sv_out = pc.probs()['results']
-    assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
-    assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
-    assert len(sv_out) == 4
-
-
-def test_cnot_herald_symb():
-    convertor = QiskitConverter(catalog)  # symb
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)

@@ -20,8 +20,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import HeraldedCnotItem
-from .postprocessed_cnot import PostProcessedCnotItem
-from .generic_2mode import Generic2ModeItem
+import perceval as pcvl
+from perceval.components.port import *
+from perceval.components.base_components import PS, BS
+import numpy as np
 
-catalog = [HeraldedCnotItem, PostProcessedCnotItem, Generic2ModeItem]
+
+def act_on_phi(value, obj):
+    if value:
+        obj.assign({"phi": np.pi/2})
+    else:
+        obj.assign({"phi": np.pi/4})
+
+
+def test_digital_converter():
+    phi = pcvl.P("phi")
+    ps = PS(phi)
+    ps2 = PS(phi)
+    bs = BS()
+    detector = DigitalConverterDetector('I act on phi')
+    detector.connect_to(ps, act_on_phi)
+
+    assert detector.is_connected_to(ps)
+    assert not detector.is_connected_to(bs)
+    assert not detector.is_connected_to(ps2)
+    assert phi.is_symbolic()
+
+    detector.trigger(True)
+    assert not phi.is_symbolic()
+    assert float(phi) == np.pi/2
+
+    detector.trigger(False)
+    assert not phi.is_symbolic()
+    assert float(phi) == np.pi/4
