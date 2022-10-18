@@ -20,21 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Type
-
-from .abstract_skin import ASkin, ModeStyle
-from .phys_skin import PhysSkin
-from .symb_skin import SymbSkin
-from .renderer import create_renderer
+from perceval.components import PERM, Processor
 
 
-class DisplayConfig:
-    _selected_skin = PhysSkin  # Default skin is PhysSkin
-
-    @staticmethod
-    def select_skin(skin: Type[ASkin]) -> None:
-        DisplayConfig._selected_skin = skin
-
-    @staticmethod
-    def get_selected_skin(**kwargs) -> ASkin:
-        return DisplayConfig._selected_skin(**kwargs)
+def precompute_herald_pos(processor: Processor, recursive: bool):
+    flat_c = processor.linear_circuit(flatten=recursive)
+    flat_c._components.reverse()  # iterate in reverse (right to left)
+    result = {}
+    for k in processor.heralds.keys():
+        initial_y = k
+        y = k
+        # search the first component on which the herald is plugged
+        for m_range, cp in flat_c._components:
+            m0 = m_range[0]
+            if y not in m_range:
+                continue
+            if isinstance(cp, PERM):
+                y = cp.perm_vector.index(y-m0) + m0
+            else:
+                result[initial_y] = (y-m0, cp)
+                break
+    return result

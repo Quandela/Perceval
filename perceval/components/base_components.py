@@ -50,7 +50,7 @@ class BS(ACircuit):
 
     @property
     def name(self):
-        return f'{self._name}({self._convention.name})'
+        return f'{self.DEFAULT_NAME}({self._convention.name})'
 
     @property
     def convention(self):

@@ -379,11 +379,12 @@ class Circuit(ACircuit):
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
-        :param component: the component to add, must be a circuit
+        :param component: the component to add, must be a linear component or circuit
         :param merge: if the component is a complex circuit,
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
+        assert isinstance(component, ACircuit), "Only linear components can compose a linear optics circuit"
         if isinstance(port_range, int):
             port_range = list([i for i in range(port_range, port_range+component.m)])
         assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
