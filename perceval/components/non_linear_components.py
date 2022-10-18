@@ -20,8 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import HeraldedCnotItem
-from .postprocessed_cnot import PostProcessedCnotItem
-from .generic_2mode import Generic2ModeItem
+from perceval.components.abstract_component import AParametrizedComponent
 
-catalog = [HeraldedCnotItem, PostProcessedCnotItem, Generic2ModeItem]
+
+class TD(AParametrizedComponent):
+    """Time delay"""
+    DEFAULT_NAME = "TD"
+
+    def __init__(self, dt):
+        super().__init__(1)
+        self._dt = self._set_parameter("t", dt, 0, None, False)
+
+    def is_composite(self):  # TODO this has to go
+        return False
+
+    def get_variables(self, map_param_kid=None):  # is this useful?
+        parameters = {}
+        if map_param_kid is None:
+            map_param_kid = self.map_parameters()
+        self.variable_def(parameters, "t", "t", None, map_param_kid)
+        return parameters
+
+    def describe(self):
+        if self._dt.fixed:
+            value = float(self._dt)
+        else:
+            value = f'P("{self._dt.spv}")'
+        return f"TD(t={value})"

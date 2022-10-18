@@ -27,7 +27,7 @@ from typing import List, Tuple, Union, Iterator, Optional
 
 from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
-from ..components.circuit import ACircuit, _matrix_double_for_polarization
+from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
 
 import quandelibc as qc
 import numpy as np

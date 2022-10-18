@@ -24,26 +24,23 @@ import time
 from tqdm import tqdm
 import perceval as pcvl
 import perceval.components.base_components as cp
+from perceval.components import catalog
 import numpy as np
 from perceval.algorithm import Sampler, Analyzer
 from perceval.components import Processor, Source
 
-theta_13 = cp.BS.r_to_theta(1/3)
-cnot = (pcvl.Circuit(6, name="PostProcessed CNOT")
-        .add((0, 1), cp.BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-        .add((3, 4), cp.BS.H())
-        .add((2, 3), cp.BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-        .add((4, 5), cp.BS.H(theta_13))
-        .add((3, 4), cp.BS.H()))
 
 # Clifford & Clifford 2017 backend does not support probability computation
 # However, the Sampler algorithm is able to estimate output probabilities, transparently, through sampling
 local_simulator_name = 'CliffordClifford2017'
-my_proc = Processor(local_simulator_name, cnot, source=Source(brightness=0.5), heralds={0: 0, 5: 0})
-assert not my_proc.is_remote
-my_proc.with_input(pcvl.BasicState([1, 0, 1, 0]))
+gate_name = "postprocessed cnot"
+cnot_processor = catalog[gate_name].as_processor(local_simulator_name).build()
+assert not cnot_processor.is_remote
+cnot_processor.source = Source(brightness=0.5)
+cnot_processor.set_postprocess(None)  # Remove post-processing function to retrieve more states
+cnot_processor.with_input(pcvl.BasicState([1, 0, 1, 0]))
 
-sampler = Sampler(my_proc)
+sampler = Sampler(cnot_processor)
 output = sampler.probs()
 pcvl.pdisplay(output['results'])
 print(f"Physical performance: {output['physical_perf']}")
@@ -51,12 +48,12 @@ print(f"Performance on post process / heralding: {output['logical_perf']}")
 
 # Let's sample asynchronously
 nsample = 100000
-my_proc.with_input(pcvl.BasicState([0, 1, 0, 1]))  # You can change the input of your processor anytime
+cnot_processor.with_input(pcvl.BasicState([0, 1, 0, 1]))  # You can change the input of your processor anytime
 async_job = sampler.samples.execute_async(nsample)
 
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
-    tq.set_description(f'Get {nsample} samples from {cnot.name} using simulator {local_simulator_name}')
+    tq.set_description(f'Get {nsample} samples from {gate_name} using simulator {local_simulator_name}')
     while not async_job.is_completed():
         tq.update(async_job.status.progress-previous_prog)
         previous_prog = async_job.status.progress
@@ -70,7 +67,9 @@ assert len(output['results']) == nsample
 
 # Now, try an async sample_count with SLOS backend
 local_simulator_name = 'SLOS'
-proc_slos = Processor(local_simulator_name, cnot, pcvl.Source(brightness=0.9))
+cnot_circuit = catalog["postprocessed cnot"].as_circuit().build()
+proc_slos = Processor(local_simulator_name, 6, pcvl.Source(brightness=0.9))
+proc_slos.add(0, cnot_circuit)
 proc_slos.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
 
 slos_sampler = Sampler(proc_slos)
@@ -78,7 +77,7 @@ job2 = slos_sampler.sample_count.execute_async(count=100000)
 
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
-    tq.set_description(f'Count samples from {cnot.name} using simulator {local_simulator_name}')
+    tq.set_description(f'Count samples from {cnot_circuit.name} using simulator {local_simulator_name}')
     while not job2.is_completed():
         tq.update(job2.status.progress-previous_prog)
         previous_prog = job2.status.progress
@@ -132,4 +131,4 @@ with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.close()
 
 pcvl.pdisplay(analyzer)
-print(f"perf = {analyzer.performance}")
+print(f"Performance = {analyzer.performance}")

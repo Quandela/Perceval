@@ -20,8 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import HeraldedCnotItem
-from .postprocessed_cnot import PostProcessedCnotItem
-from .generic_2mode import Generic2ModeItem
+from perceval.components import PERM, Processor
 
-catalog = [HeraldedCnotItem, PostProcessedCnotItem, Generic2ModeItem]
+
+def precompute_herald_pos(processor: Processor, recursive: bool):
+    flat_c = processor.linear_circuit(flatten=recursive)
+    flat_c._components.reverse()  # iterate in reverse (right to left)
+    result = {}
+    for k in processor.heralds.keys():
+        initial_y = k
+        y = k
+        # search the first component on which the herald is plugged
+        for m_range, cp in flat_c._components:
+            m0 = m_range[0]
+            if y not in m_range:
+                continue
+            if isinstance(cp, PERM):
+                y = cp.perm_vector.index(y-m0) + m0
+            else:
+                result[initial_y] = (y-m0, cp)
+                break
+    return result

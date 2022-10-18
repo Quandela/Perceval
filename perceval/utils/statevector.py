@@ -134,7 +134,7 @@ class StateVector(defaultdict):
     """
 
     def __init__(self,
-                 bs: Union[BasicState, List[int], str, BasicState, None] = None,
+                 bs: Union[BasicState, List[int], str, None] = None,
                  photon_annotations: Dict[int, str] = None):
         r"""Init of a StateVector from a BasicState, or from BasicState constructor
         :param bs: a BasicState, or `BasicState` constructor,
@@ -425,6 +425,8 @@ class SVDistribution(defaultdict):
         :param svd:
         :return:
         """
+        if len(self) == 0:
+            return svd
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():
