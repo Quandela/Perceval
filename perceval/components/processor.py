@@ -22,16 +22,17 @@
 
 from .abstract_component import AComponent
 from .abstract_processor import AProcessor, ProcessorType
-from .base_components import PERM
-from .port import APort, PortLocation, Herald, Encoding
+from .unitary_components import PERM
+from .port import APort, PortLocation, Herald, LogicalState
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Matrix, Parameter
+from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Parameter
 from perceval.utils.algorithms.simplification import perm_compose
-from perceval.backends import Backend, BACKEND_LIST
+from perceval.backends import BACKEND_LIST
 
-from typing import Dict, Callable, Type, List, Union
+from multipledispatch import dispatch
+from typing import Dict, Callable, Union
 import copy
 
 
@@ -71,6 +72,10 @@ class Processor(AProcessor):
         self._simulator = None
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
         self._backend_name = backend_name
+        self._thresholded_output: bool = False
+
+    def thresholded_output(self, value: bool):
+        self._thresholded_output = value
 
     def _setup_simulator(self, **kwargs):
         self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
@@ -98,6 +103,26 @@ class Processor(AProcessor):
     def post_select_fn(self):
         return self._post_select
 
+    @dispatch(SVDistribution)
+    def with_input(self, svd: SVDistribution):
+        expected_photons = 1000
+        for sv in svd:
+            for state in sv:
+                expected_photons = min(expected_photons, state.n)
+                if state.m != self.circuit_size:
+                    raise ValueError(
+                        f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
+        self._inputs_map = svd
+        self._min_mode_post_select = expected_photons
+        if 'mode_post_select' in self._parameters:
+            self._min_mode_post_select = self._parameters['mode_post_select']
+
+    @dispatch(LogicalState)
+    def with_input(self, input_state: LogicalState) -> None:
+        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        self.with_input(input_state)
+
+    @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         """
         Simulates plugging the photonic source on certain modes and turning it on.
@@ -343,13 +368,16 @@ class Processor(AProcessor):
             circuit.add(component[0], component[1], merge=flatten)
         return circuit
 
-    def filter_herald(self, s: BasicState, keep_herald: bool = False) -> BasicState:
+    def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
         if not self.heralds or keep_herald:
             return s
         new_state = []
         for idx, k in enumerate(s):
-            if idx not in self.heralds:
-                new_state.append(k)
+            if idx in self.heralds:
+                continue
+            if k > 0 and self._thresholded_output:
+                k = 1
+            new_state.append(k)
         return BasicState(new_state)
 
     def _init_command(self, command_name: str):
@@ -380,7 +408,7 @@ class Processor(AProcessor):
                 not_selected_physical += 1
                 continue
             if self._state_selected(sampled_state):
-                output.append(self.filter_herald(sampled_state))
+                output.append(self.postprocess_output(sampled_state))
             else:
                 not_selected += 1
             if progress_callback:
@@ -406,7 +434,7 @@ class Processor(AProcessor):
                     physical_perf -= output_prob
                     continue
                 if self._state_selected(output_state):
-                    output[self.filter_herald(output_state)] += output_prob
+                    output[self.postprocess_output(output_state)] += output_prob
                 else:
                     p_logic_discard += output_prob
             idx += 1

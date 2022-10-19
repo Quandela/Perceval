@@ -24,7 +24,7 @@ from typing import Dict, List, Union
 import warnings
 
 from .abstract_component import AComponent
-from .base_components import PERM
+from .unitary_components import PERM
 
 
 class UnavailableModeException(Exception):

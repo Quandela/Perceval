@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-from perceval.components.base_components import BS, PS, PERM
+from perceval.components.unitary_components import BS, PS, PERM
 import random
 import time
 

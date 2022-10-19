@@ -25,7 +25,7 @@ import pytest
 import perceval as pcvl
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import fidelity, frobenius
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 
 def _create_circuit():

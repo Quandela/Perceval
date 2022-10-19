@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from perceval.components import Circuit, Processor
-from perceval.components.base_components import *
+from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.port import Herald, Port, Encoding
 

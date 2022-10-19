@@ -24,7 +24,7 @@ from collections import Counter
 
 import pytest
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_statevector
 
 import sympy as sp

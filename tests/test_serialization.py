@@ -26,7 +26,7 @@ import numpy
 from perceval import Matrix, P, ACircuit, Circuit, BasicState, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize_svdistribution, deserialize
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 import json
 
 

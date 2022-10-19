@@ -24,8 +24,8 @@ from multipledispatch import dispatch
 import copy
 
 from perceval.components import ACircuit, Circuit, Port, Herald, PortLocation,\
-    base_components as cp,\
-    non_linear_components as nl
+    unitary_components as cp,\
+    non_unitary_components as nu
 from .abstract_skin import ASkin, ModeStyle
 from .skin_common import bs_convention_color
 
@@ -49,7 +49,7 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return 2
 
-    @dispatch((cp.PS, nl.TD, cp.PERM, cp.WP, cp.PR))
+    @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR))
     def get_width(self, c) -> int:
         return 1
 
@@ -69,7 +69,7 @@ class PhysSkin(ASkin):
     def get_shape(self, c):
         return self.pbs_shape
 
-    @dispatch(nl.TD)
+    @dispatch(nu.TD)
     def get_shape(self, c):
         return self.td_shape
 

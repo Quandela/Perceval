@@ -22,8 +22,10 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import List
 
-from perceval.components.abstract_component import AComponent
+from perceval.utils import BasicState
+from .abstract_component import AComponent
 
 
 class Encoding(Enum):
@@ -82,8 +84,9 @@ class Port(APort):
 
 
 class QuditPort(Port):
-    def __init__(self, n_qubits, name):
-        super(Port, self).__init__(2**n_qubits, name)
+    def __init__(self, n, name):
+        super(Port, self).__init__(2**n, name)
+        self._n = n
         self._encoding = Encoding.QUDIT
 
 
@@ -154,3 +157,31 @@ class DigitalConverterDetector(ADetector):
 
     def is_connected_to(self, component) -> bool:
         return component in self._connections
+
+
+class LogicalState(list):
+    def __init__(self, state: List[int]):
+        assert state.count(0) + state.count(1) == len(state), "A logical state should only contain 0s and 1s"
+        super().__init__(state)
+
+    def to_basic_state(self, port_list: List[APort]) -> BasicState:
+        result = []
+        index = 0
+        for port in port_list:
+            if isinstance(port, Herald):
+                continue
+            if index >= len(self):
+                raise ValueError('Logical state and port list do not match (state too short)')
+            if isinstance(port, Port):
+                if port.encoding == Encoding.RAW or port.encoding == Encoding.TIME \
+                        or port.encoding == Encoding.POLARIZATION:
+                    result += [self[index]]
+                    index += 1
+                elif port.encoding == Encoding.DUAL_RAIL:
+                    result += [1, 0] if self[index] == 0 else [0, 1]
+                    index += 1
+                elif port.encoding == Encoding.QUDIT:
+                    raise NotImplementedError
+        if index != len(self):
+            raise ValueError('Logical state and port list do not match (state too long)')
+        return BasicState(result)

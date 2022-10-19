@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-from perceval.components.base_components import BS, PS
+from perceval.components.unitary_components import BS, PS
 import numpy as np
 
 def get_matrix_n(n):

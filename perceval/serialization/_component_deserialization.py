@@ -23,8 +23,8 @@
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.serialization._parameter_serialization import deserialize_parameter
 from perceval.serialization._matrix_serialization import deserialize_pb_matrix
-import perceval.components.base_components as comp
-import perceval.components.non_linear_components as nl
+import perceval.components.unitary_components as comp
+import perceval.components.non_unitary_components as nu
 
 
 def deserialize_ps(serial_ps: pb.PhaseShifter) -> comp.PS:
@@ -70,7 +70,7 @@ def deserialize_hwp(serial_hwp) -> comp.HWP:
     return comp.HWP(deserialize_parameter(serial_hwp.xsi))
 
 
-def deserialize_dt(serial_dt) -> nl.TD:
+def deserialize_dt(serial_dt) -> nu.TD:
     return comp.TD(deserialize_parameter(serial_dt.dt))
 
 

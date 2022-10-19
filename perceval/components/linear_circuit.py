@@ -384,7 +384,8 @@ class Circuit(ACircuit):
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
-        assert isinstance(component, ACircuit), "Only linear components can compose a linear optics circuit"
+        assert isinstance(component, ACircuit), \
+            "Only unitary components can compose a linear optics circuit, use Processor for non-unitary"
         if isinstance(port_range, int):
             port_range = list([i for i in range(port_range, port_range+component.m)])
         assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
