@@ -23,15 +23,15 @@
 import math
 
 from perceval.utils import SVDistribution, StateVector
-from typing import Dict, Literal
+from typing import Dict
 
 
 class Source:
     def __init__(self, brightness: float = 1,
                  purity: float = 1,
-                 purity_model: Literal["random", "indistinguishable"] = "random",
+                 purity_model: str = "random",  # Literal["random", "indistinguishable"]
                  indistinguishability: float = 1,
-                 indistinguishability_model: Literal["homv", "linear"] = "homv",
+                 indistinguishability_model: str = "homv",  # Literal["homv", "linear"]
                  context: Dict = None) -> None:
         r"""Definition of a source
 

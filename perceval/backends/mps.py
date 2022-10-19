@@ -24,7 +24,8 @@ from typing import Union
 import copy
 
 import numpy as np
-from math import comb, factorial
+from math import factorial
+from scipy.special import comb
 from collections import defaultdict
 
 from .template import Backend

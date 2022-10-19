@@ -1,4 +1,3 @@
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -21,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, Union
+from typing import Dict, List, Union
 import warnings
 
 from .abstract_component import AComponent
@@ -29,7 +28,7 @@ from .base_components import PERM
 
 
 class UnavailableModeException(Exception):
-    def __init__(self, mode: Union[int, list[int]], reason: str = None):
+    def __init__(self, mode: Union[int, List[int]], reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'
@@ -37,7 +36,7 @@ class UnavailableModeException(Exception):
 
 
 class InvalidMappingException(Exception):
-    def __init__(self, mapping: dict, reason: str = None):
+    def __init__(self, mapping: Dict, reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'

@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from abc import ABC
-from typing import Union
+from typing import Dict, Union, List
 import sympy as sp
 import copy
 
@@ -53,7 +53,7 @@ class AParametrizedComponent(AComponent):
         self._vars = {}
 
     @property
-    def vars(self) -> dict[str, Parameter]:
+    def vars(self) -> Dict[str, Parameter]:
         return {p.name: p for p in self._params.values() if not p.fixed}
 
     def assign(self,
@@ -79,7 +79,7 @@ class AParametrizedComponent(AComponent):
     def params(self):
         return self._params.keys()
 
-    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
+    def get_parameters(self, all_params: bool = False) -> List[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters

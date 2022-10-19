@@ -32,6 +32,6 @@ setuptools.setup(
                       'protobuf>=4.21.2', 'drawSvg', 'Deprecated', 'requests'],
     setup_requires=["scmver"],
     extras_require={"test": ["pytest", "pytest-cov", "pytest-benchmark"]},
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     scmver=True
 )

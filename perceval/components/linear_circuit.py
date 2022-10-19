@@ -24,7 +24,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Callable, Literal, Optional, Union, Tuple, Type, List
+from typing import Callable, Optional, Union, Tuple, Type, List
 
 import numpy as np
 import sympy as sp
@@ -476,7 +476,7 @@ class Circuit(ACircuit):
     @staticmethod
     def generic_interferometer(m: int,
                                fun_gen: Callable[[int], ACircuit],
-                               shape: Literal["triangle", "rectangle"] = "rectangle",
+                               shape: str = "rectangle",  # Literal["triangle", "rectangle"]
                                depth: int = None,
                                phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None) -> Circuit:
         r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
@@ -533,7 +533,7 @@ class Circuit(ACircuit):
     def decomposition(U: MatrixN,
                       component: ACircuit,
                       phase_shifter_fn: Callable[[int], ACircuit] = None,
-                      shape: Literal["triangle"] = "triangle",
+                      shape: str = "triangle",  # Literal["triangle"]
                       permutation: Type[ACircuit] = None,
                       inverse_v: bool = False,
                       inverse_h: bool = False,
