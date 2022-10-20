@@ -342,10 +342,12 @@ class StateVector(defaultdict):
             self._normalized = True
 
     def __str__(self):
-        ls = []
         if not self:
             return "|>"
-        for key, value in self.items():
+        self_copy = copy(self)
+        self_copy.normalize()
+        ls = []
+        for key, value in self_copy.items():
             if value == 1:
                 ls.append(str(key))
             else:

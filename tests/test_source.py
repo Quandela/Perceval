@@ -42,11 +42,11 @@ def test_source_pure():
     s = Source()
     svd = s.probability_distribution()
     assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
-            +--------+-------------+
-            | state  | probability |
-            +--------+-------------+
-            |  |1>   |      1      |
-            +--------+-------------+""")
+            +-------+-------------+
+            | state | probability |
+            +-------+-------------+
+            |  |1>  |      1      |
+            +-------+-------------+""")
     _check_svdistribution(svd, {"|1>": 1})
 
 
