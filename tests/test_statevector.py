@@ -137,12 +137,12 @@ def test_svdistribution():
     svd.add(st1, 0.5)
     svd[st2] = 0.5
     assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
-            +--------+-------------+
-            | state  | probability |
-            +--------+-------------+
-            | |0,1>  |     1/2     |
-            | |1,0>  |     1/2     |
-            +--------+-------------+""")
+            +-------+-------------+
+            | state | probability |
+            +-------+-------------+
+            | |0,1> |     1/2     |
+            | |1,0> |     1/2     |
+            +-------+-------------+""")
 
 
 def test_sv_separation_0():
