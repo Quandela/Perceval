@@ -19,11 +19,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import copy
 import os
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
+from typing import Union
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -79,7 +80,6 @@ def pdisplay_circuit(
 
 
 def pdisplay_processor(processor: Processor,
-                       map_param_kid: dict = None,
                        output_format: Format = Format.TEXT,
                        recursive: bool = False,
                        compact: bool = False,
@@ -105,7 +105,6 @@ def pdisplay_processor(processor: Processor,
         if isinstance(c, Circuit):
             c = Circuit(c.m).add(0, c)
         renderer.render_circuit(c,
-                                map_param_kid=map_param_kid,
                                 recursive=recursive,
                                 precision=precision,
                                 nsimplify=nsimplify,
@@ -120,7 +119,7 @@ def pdisplay_processor(processor: Processor,
     return renderer.draw()
 
 
-def pdisplay_matrix(matrix, precision: float = 1e-6, output_format: Format = Format.TEXT) -> str:
+def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Format = Format.TEXT) -> str:
     """
     Generates representation of a matrix
     """
@@ -165,7 +164,8 @@ _TABULATE_FMT_MAPPING = {
 }
 
 
-def pdisplay_analyzer(analyser, output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6):
+def pdisplay_analyzer(analyser: Analyzer, output_format: Format = Format.TEXT, nsimplify: bool = True,
+                      precision: float = 1e-6):
     distribution = analyser.distribution
     d = []
     for iidx, _ in enumerate(analyser.input_states_list):
@@ -176,22 +176,40 @@ def pdisplay_analyzer(analyser, output_format: Format = Format.TEXT, nsimplify=T
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_statevector(sv, output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None,
-                         sort=True):
+def pdisplay_statevector(sv: Union[StateVector, SVDistribution], output_format: Format = Format.TEXT, nsimplify=True,
+                         precision=1e-6, max_v=None, sort=True):
+    """
+    Displays StateVector and SVDistribution as a table of state vs probability (probability amplitude in StateVector's
+    case)
+    """
+    sv = copy.copy(sv)  # Work on a copy, in order to not force normalization simply because of a display call
+    sv.normalize()
     if sort:
-        the_keys = sorted(sv.keys(), key=lambda a: -sv[a])
+        the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
         the_keys = list(sv.keys())
     if max_v is not None:
         the_keys = the_keys[:max_v]
     d = []
     for k in the_keys:
-        if isinstance(sv[k], sp.Expr):
-            d.append([k, str(sv[k])])
+        value = sv[k]
+        if isinstance(value, float):
+            value = simple_float(value, nsimplify=nsimplify, precision=precision)[1]
+        elif isinstance(value, complex):
+            real_part = imag_part = ""
+            if value.real != 0:
+                real_part = simple_float(value.real, nsimplify=nsimplify, precision=precision)[1]
+            if value.imag != 0:
+                imag_part = "I*" + simple_float(value.imag, nsimplify=nsimplify, precision=precision)[1]
+            value = real_part + imag_part
         else:
-            d.append([k, simple_float(sv[k], nsimplify=nsimplify, precision=precision)[1]])
+            value = str(value)
+        d.append([k, value])
 
-    s_states = tabulate(d, headers=["state ", "probability"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
+    headers = ["state", "probability"]
+    if isinstance(sv, StateVector):
+        headers[1] = "prob. ampl."
+    s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
 
