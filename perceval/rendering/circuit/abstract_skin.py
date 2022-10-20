@@ -27,7 +27,7 @@ from multipledispatch import dispatch
 
 from perceval.components import ACircuit, Processor, PERM
 from perceval.components.abstract_component import AComponent
-from perceval.components.non_linear_components import TD
+from perceval.components.non_unitary_components import TD
 
 
 class ModeStyle(Enum):

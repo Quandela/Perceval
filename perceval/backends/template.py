@@ -320,7 +320,7 @@ class Backend(ABC):
         return output_state
 
     def samples(self, input_state: Union[BasicState, StateVector], count: int, progress_callback=None)\
-            -> list[BasicState]:
+            -> List[BasicState]:
         r"""Return samples for the circuit according to the output probability distribution given an input state
 
         :param input_state: a given input state

@@ -23,7 +23,7 @@
 import random
 
 import perceval as pcvl
-from perceval.components.base_components import BS, PS
+from perceval.components.unitary_components import BS, PS
 
 # definition of the circuit
 C = pcvl.Circuit(2)

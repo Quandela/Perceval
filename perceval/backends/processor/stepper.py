@@ -40,8 +40,8 @@ class StepperBackend:
                  backend_name="Naive"):
         self._out = None
         self._C = cu
-        self.backend = BACKEND_LIST[backend_name]
-        self.result_dict = {c.describe(): {'set': set()} for r, c in self._C}
+        self._backend = BACKEND_LIST[backend_name]
+        self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
 
     name = "Stepper"
     supports_symbolic = False
@@ -60,21 +60,21 @@ class StepperBackend:
         # build list of never visited fockstates corresponding to subspace [min_r:max_r]
         sub_input_state = {sliced_state for state in sv
                            for sliced_state in (BasicState(state[min_r:max_r]),)
-                           if sliced_state not in self.result_dict[key]['set']}
+                           if sliced_state not in self._result_dict[key]['_set']}
         # get circuit probability for these input_states
-        if sub_input_state != set():
-            sim_c = self.backend(c.compute_unitary(use_symbolic=False))
+        if sub_input_state:
+            sim_c = self._backend(c.compute_unitary(use_symbolic=False))
             mapping_input_output = {input_state:
                                     {output_state: sim_c.probampli(input_state, output_state)
                                         for output_state in sim_c.allstate_iterator(input_state)}
                                     for input_state in sub_input_state}
-            self.result_dict[key] |= mapping_input_output  # Union of the dictionaries
-            self.result_dict[key]['set'] |= sub_input_state  # Union of sets
+            self._result_dict[key].update(mapping_input_output)  # Union of the dictionaries
+            self._result_dict[key]['_set'] |= sub_input_state  # Union of sets
         # now rebuild the new state vector
         nsv = StateVector()
         # May be faster in c++ (impossible to use comprehension here due to successive additions)
         for state in sv:
-            for output_state, prob_ampli in self.result_dict[key][state[min_r:max_r]].items():
+            for output_state, prob_ampli in self._result_dict[key][state[min_r:max_r]].items():
                 nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli * sv[state]
         return nsv
 
@@ -112,7 +112,8 @@ class StepperBackend:
              input_state: Union[BasicState, StateVector],
              output_state: BasicState,
              n: int = None,
-             skip_compile: bool = False) -> float:
+             skip_compile: bool = False,
+             progress_callback=None) -> float:
         if not skip_compile:
             self.compile(input_state)
         if self._out.m == input_state.m:

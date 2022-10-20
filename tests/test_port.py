@@ -22,7 +22,7 @@
 
 import perceval as pcvl
 from perceval.components.port import *
-from perceval.components.base_components import PS, BS
+from perceval.components.unitary_components import PS, BS
 import numpy as np
 
 

@@ -21,8 +21,7 @@
 # SOFTWARE.
 
 import numpy as np
-
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 def simplify(circuit, m, display: bool = False) -> list:
     r"""

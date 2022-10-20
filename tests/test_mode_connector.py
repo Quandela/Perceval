@@ -59,6 +59,33 @@ def test_connection_int():
         connector.resolve()
 
 
+def test_connection_list_int():
+    p1 = Processor(slos, 8)
+    p2 = Processor(slos, 6)
+    mode_index_list = [1, 2, 3, 4, 5, 6]
+    connector = ModeConnector(p1, p2, mode_index_list)
+    assert connector.resolve() == {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5}
+
+    mode_index_list = [6, 1, 5, 2, 3, 0]
+    connector = ModeConnector(p1, p2, mode_index_list)
+    assert connector.resolve() == {6: 0, 1: 1, 5: 2, 2: 3, 3: 4, 0: 5}
+
+    mode_index_list = [6, 1, 5, 2, 3, 0, 4]  # Too long
+    connector = ModeConnector(p1, p2, mode_index_list)
+    with pytest.raises(InvalidMappingException):
+        connector.resolve()
+
+    mode_index_list = [6, 1, 5, 2]  # Too short
+    connector = ModeConnector(p1, p2, mode_index_list)
+    with pytest.raises(InvalidMappingException):
+        connector.resolve()
+
+    mode_index_list = [6, 6, 5, 2, 3, 0]  # With duplicates
+    connector = ModeConnector(p1, p2, mode_index_list)
+    with pytest.raises(InvalidMappingException):
+        connector.resolve()
+
+
 def test_connection_dict_int():
     p1 = Processor(slos, 8)
     p2 = Processor(slos, 6)

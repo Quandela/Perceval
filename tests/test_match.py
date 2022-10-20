@@ -26,7 +26,7 @@ import numpy as np
 import pytest
 
 import perceval as pcvl
-from perceval.components.base_components import BS, PS, PERM
+from perceval.components.unitary_components import BS, PS, PERM
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms import norm
 from perceval.utils import random_seed

@@ -25,9 +25,10 @@ from .linear_circuit import Circuit, ACircuit
 from .predefined_circuit import PredefinedCircuit
 from .processor import Processor
 from .source import Source
-from .port import Port, Herald, DigitalConverterDetector, CounterDetector, Encoding, PortLocation
-from .base_components import *
-from .non_linear_components import *
+
+from .port import Port, Herald, Encoding, PortLocation, LogicalState
+from .unitary_components import *
+from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException
 

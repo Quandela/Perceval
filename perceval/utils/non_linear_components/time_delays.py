@@ -21,8 +21,8 @@
 # SOFTWARE.
 from enum import Enum
 
-import perceval.components.base_components as comp
-import perceval.components.non_linear_components as ncomp
+import perceval.components.unitary_components as comp
+import perceval.components.non_unitary_components as ncomp
 from perceval.components import Circuit, ACircuit
 
 

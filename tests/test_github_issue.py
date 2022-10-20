@@ -25,7 +25,7 @@ import pytest
 import numpy as np
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 
 def test_34():
