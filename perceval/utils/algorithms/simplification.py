@@ -23,10 +23,8 @@
 import numpy as np
 
 import perceval.components.base_components as comp
-from perceval.components import Circuit
 
-
-def simplify(circuit: Circuit, display: bool = False) -> Circuit:
+def simplify(circuit, m, display: bool = False) -> list:
     r"""
     Tries to simplify a circuit when simplifications are possible
 
@@ -37,14 +35,12 @@ def simplify(circuit: Circuit, display: bool = False) -> Circuit:
     final_circuit_comp = []
 
     for r, c in circuit:
+        if isinstance(r, int):
+            r = tuple(r + i for i in range(c.m))
         final_circuit_comp.append([r, c])
-        final_circuit_comp = _simplify_comp(final_circuit_comp, circuit.m, display)
+        final_circuit_comp = _simplify_comp(final_circuit_comp, m, display)
 
-    circ2 = Circuit(circuit.m)
-    for r, c in final_circuit_comp:
-        circ2.add(r, c)
-
-    return circ2
+    return final_circuit_comp
 
 
 def _simplify_comp(components, m, display):

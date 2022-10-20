@@ -22,17 +22,21 @@
 
 from .abstract_component import AComponent
 from .abstract_processor import AProcessor, ProcessorType
-from .base_components import PERM
+from .base_components import PERM, Unitary
+from .non_linear_components import TD
 from .port import APort, PortLocation, Herald, Encoding
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Matrix, Parameter
-from perceval.utils.algorithms.simplification import perm_compose
+from perceval.utils.algorithms.simplification import perm_compose, simplify
 from perceval.backends import Backend, BACKEND_LIST
+from perceval.backends.processor import StepperBackend
 
 from typing import Dict, Callable, Type, List, Union
 import copy
+
+from perceval.utils.non_linear_components.time_delays import count_TD, count_independant_TD, expand_TD
 
 
 class Processor(AProcessor):
@@ -71,9 +75,14 @@ class Processor(AProcessor):
         self._simulator = None
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
         self._backend_name = backend_name
+        self._is_unitary = True
+        self._has_td = False
 
     def _setup_simulator(self, **kwargs):
-        self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
+        if self._is_unitary:
+            self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
+        else:
+            self._simulator = StepperBackend(self.non_unitary_circuit(), self._backend_name)
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -178,6 +187,8 @@ class Processor(AProcessor):
         return result
 
     def _compose_processor(self, connector, processor, keep_port: bool):
+        self._is_unitary = self._is_unitary and processor._is_unitary
+        self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
         if not keep_port:
             # Remove output ports used to connect the new processor
@@ -235,6 +246,8 @@ class Processor(AProcessor):
 
         sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
+        self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
+        self._has_td = self._has_td or isinstance(component, TD)
 
     def _add_herald(self, mode, expected, name=None):
         """
@@ -343,6 +356,40 @@ class Processor(AProcessor):
             circuit.add(component[0], component[1], merge=flatten)
         return circuit
 
+    def non_unitary_circuit(self, flatten: bool = False) -> list:
+        comp = _flatten(self)
+        if flatten:
+            return comp
+
+        if self._has_td:  # Inherited from the parent processor in this case
+            return self.components
+
+        # Compute the unitaries between the non-unitary components
+        new_comp = []
+        unitary_circuit = Circuit(self.m)
+        min_r = self.m
+        max_r = 0
+        for r, c in comp:
+            if isinstance(c, ACircuit):
+                unitary_circuit.add(r, c)
+                min_r = min(min_r, r[0])
+                max_r = max(max_r, r[-1] + 1)
+            else:
+                if unitary_circuit.ncomponents:
+                    new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
+                                    Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
+                    unitary_circuit = Circuit(self.m)
+                    min_r = self.m
+                    max_r = 0
+                new_comp.append((r, c))
+
+        if unitary_circuit.ncomponents:
+            new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
+                             Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
+
+        return new_comp
+
+
     def filter_herald(self, s: BasicState, keep_herald: bool = False) -> BasicState:
         if not self.heralds or keep_herald:
             return s
@@ -392,26 +439,61 @@ class Processor(AProcessor):
     def probs(self, progress_callback: Callable = None) -> Dict:
         self._init_command("probs")
         output = SVDistribution()
-        idx = 0
-        input_length = len(self._inputs_map)
-        physical_perf = 1
         p_logic_discard = 0
+        if not self._has_td:
+            input_length = len(self._inputs_map)
+            physical_perf = 1
 
-        for input_state, input_prob in self._inputs_map.items():
-            for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
-                if p < global_params['min_p']:
+            for idx, (input_state, input_prob) in enumerate(self._inputs_map.items()):
+                if max(input_state.n) < self._min_mode_post_select:
+                    physical_perf -= input_prob
+                else:
+                    for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
+                        if p < global_params['min_p']:
+                            continue
+                        output_prob = p * input_prob
+                        if not self._state_selected_physical(output_state):
+                            physical_perf -= output_prob
+                            continue
+                        if self._state_selected(output_state):
+                            output[self.filter_herald(output_state)] += output_prob
+                        else:
+                            p_logic_discard += output_prob
+                if progress_callback:
+                    progress_callback(idx/input_length)
+
+        else:
+            # Create a bigger processor with no heralds to represent the time delays
+            p_comp = _flatten(self)
+            TD_number = count_TD(p_comp)
+            depth = count_independant_TD(p_comp, self.m) + 1
+            extend_circ, extend_m = expand_TD(p_comp, depth, self.m, TD_number, True)
+            p_comp = simplify(extend_circ, extend_m)
+            extended_p = _expand_TD_processor(p_comp,
+                                              self._backend_name,
+                                              depth,
+                                              extend_circ.m,
+                                              self._inputs_map,
+                                              self._min_mode_post_select)
+
+            res = extended_p.probs(progress_callback=progress_callback)
+
+            # Now reduce the states.
+            interest_m = [(depth - 1) * self.m, depth * self.m]
+            extended_out = res["results"]
+
+            second_perf = 1
+            for out_state, output_prob in extended_out.items():
+                reduced_out_state = out_state[interest_m[0]: interest_m[1]]
+                if not self._state_selected_physical(reduced_out_state):
+                    second_perf -= output_prob
                     continue
-                output_prob = p * input_prob
-                if not self._state_selected_physical(output_state):
-                    physical_perf -= output_prob
-                    continue
-                if self._state_selected(output_state):
-                    output[self.filter_herald(output_state)] += output_prob
+                if self._state_selected(reduced_out_state):
+                    output[self.filter_herald(reduced_out_state)] += output_prob
                 else:
                     p_logic_discard += output_prob
-            idx += 1
-            if progress_callback:
-                progress_callback(idx/input_length)
+            physical_perf = second_perf * res["physical_perf"]
+
         if physical_perf < global_params['min_p']:
             physical_perf = 0
         all_p = sum(v for v in output.values())
@@ -456,3 +538,27 @@ class Processor(AProcessor):
         for param_name, param_value in params.items():
             if param_name in circuit_params:
                 circuit_params[param_name].set_value(param_value)
+
+
+
+def _flatten(composite, starting_mode=0):
+    component_list = []
+    for m_range, comp in composite._components:
+        if isinstance(comp, Circuit):
+            sub_list = _flatten(comp, starting_mode=m_range[0])
+            component_list += sub_list
+        else:
+            m_range = [m + starting_mode for m in m_range]
+            component_list.append((m_range, comp))
+    return component_list
+
+
+def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int, input_map: SVDistribution, mode_post_select: int):
+    p = Processor(backend_name, m)
+    input = input_map ** depth * SVDistribution(StateVector(BasicState([0] * (m - depth * next(iter(input_map)).m))))
+
+    p.with_input(input)
+    for r, c in components:
+        p.add(r, c)
+    p.mode_post_selection(mode_post_select)
+    return p

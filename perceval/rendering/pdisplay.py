@@ -93,10 +93,11 @@ def pdisplay_processor(processor: Processor,
     w, h = skin.get_size(processor, recursive)
     renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, compact=compact, **opts)
-    for k in processor.heralds.keys():
-        renderer.set_mode_style(k, ModeStyle.HERALD)
-    out_herald_info = precompute_herald_pos(processor, recursive)
-    renderer.set_out_herald_info(out_herald_info)
+    if len(processor.heralds):
+        for k in processor.heralds.keys():
+            renderer.set_mode_style(k, ModeStyle.HERALD)
+        out_herald_info = precompute_herald_pos(processor, recursive)
+        renderer.set_out_herald_info(out_herald_info)
     renderer.open()
     for r, c in processor.components:
         shift = r[0]

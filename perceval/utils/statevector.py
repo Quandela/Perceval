@@ -430,10 +430,23 @@ class SVDistribution(defaultdict):
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():
-                assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
-                new_svd[StateVector(sv1[0]*sv2[0])] = proba1 * proba2
+                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+                new_svd[sv1*sv2] = proba1 * proba2
 
         return new_svd
+
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_svd = self
+        out = SVDistribution()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_svd
+            if i != len(binary) - 1:
+                power_svd *= power_svd
+        return out
 
     def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`

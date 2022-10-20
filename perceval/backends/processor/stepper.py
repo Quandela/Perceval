@@ -23,12 +23,12 @@
 from typing import List, Union
 import copy
 
-from .template import Backend
-from perceval.utils import StateVector, BasicState, Matrix
+from perceval.utils import StateVector, BasicState
 from perceval.components import ACircuit
-from .naive import NaiveBackend
+from perceval.backends import BACKEND_LIST
 
-class StepperBackend(Backend):
+
+class StepperBackend:
     """Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
        on a circuit defined with a unitary matrix.
        - Use Naive backend for actual calculation of each component for non-symbolic resolution.
@@ -36,12 +36,11 @@ class StepperBackend(Backend):
     """
 
     def __init__(self,
-                 cu: Union[ACircuit, Matrix],
-                 use_symbolic: bool = None,
-                 n: int = None,
-                 mask: list = None):
+                 cu: list,
+                 backend_name="Naive"):
         self._out = None
-        super().__init__(cu, use_symbolic, n, mask)
+        self._C = cu
+        self.backend = BACKEND_LIST[backend_name]
         self.result_dict = {c.describe(): {'set': set()} for r, c in self._C}
 
     name = "Stepper"
@@ -64,7 +63,7 @@ class StepperBackend(Backend):
                            if sliced_state not in self.result_dict[key]['set']}
         # get circuit probability for these input_states
         if sub_input_state != set():
-            sim_c = NaiveBackend(c.compute_unitary(use_symbolic=False))
+            sim_c = self.backend(c.compute_unitary(use_symbolic=False))
             mapping_input_output = {input_state:
                                     {output_state: sim_c.probampli(input_state, output_state)
                                         for output_state in sim_c.allstate_iterator(input_state)}

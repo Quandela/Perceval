@@ -24,7 +24,6 @@ from .template import Backend
 from .cliffords2017 import CliffordClifford2017Backend
 from .naive import NaiveBackend
 from .slos import SLOSBackend
-from .stepper import StepperBackend
 from .mps import MPSBackend
 
 
@@ -33,7 +32,6 @@ BACKEND_LIST = {
     MPSBackend.name: MPSBackend,
     NaiveBackend.name: NaiveBackend,
     SLOSBackend.name: SLOSBackend,
-    StepperBackend.name: StepperBackend,
 }
 
 
