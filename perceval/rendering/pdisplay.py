@@ -32,7 +32,7 @@ with warnings.catch_warnings():
     import drawSvg
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.components import ACircuit, Circuit, Herald, Processor, PERM, non_linear_components as nl
+from perceval.components import ACircuit, Circuit, Herald, Processor, PERM, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
@@ -93,10 +93,12 @@ def pdisplay_processor(processor: Processor,
     w, h = skin.get_size(processor, recursive)
     renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, compact=compact, **opts)
-    for k in processor.heralds.keys():
-        renderer.set_mode_style(k, ModeStyle.HERALD)
-    out_herald_info = precompute_herald_pos(processor, recursive)
-    renderer.set_out_herald_info(out_herald_info)
+    if len(processor.heralds):
+        for k in processor.heralds.keys():
+            renderer.set_mode_style(k, ModeStyle.HERALD)
+        if recursive:
+            out_herald_info = precompute_herald_pos(processor)
+            renderer.set_out_herald_info(out_herald_info)
     renderer.open()
     for r, c in processor.components:
         shift = r[0]

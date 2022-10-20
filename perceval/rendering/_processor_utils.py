@@ -20,18 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import PERM, Processor
+from perceval.components import Circuit, PERM, Processor
 
 
-def precompute_herald_pos(processor: Processor, recursive: bool):
-    flat_c = processor.linear_circuit(flatten=recursive)
-    flat_c._components.reverse()  # iterate in reverse (right to left)
+def _flatten(composite, starting_mode=0):
+    component_list = []
+    for m_range, comp in composite._components:
+        if isinstance(comp, Circuit):
+            sub_list = _flatten(comp, starting_mode=m_range[0])
+            component_list += sub_list
+        else:
+            m_range = [m+starting_mode for m in m_range]
+            component_list.append((m_range, comp))
+    return component_list
+
+
+def precompute_herald_pos(processor: Processor):
+    component_list = _flatten(processor)
+    component_list.reverse()  # iterate in reverse (right to left)
     result = {}
     for k in processor.heralds.keys():
         initial_y = k
         y = k
         # search the first component on which the herald is plugged
-        for m_range, cp in flat_c._components:
+        for m_range, cp in component_list:
             m0 = m_range[0]
             if y not in m_range:
                 continue

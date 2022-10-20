@@ -23,7 +23,7 @@
 import time
 from tqdm import tqdm
 import perceval as pcvl
-import perceval.components.base_components as cp
+import perceval.components.unitary_components as cp
 from perceval.components import catalog
 import numpy as np
 from perceval.algorithm import Sampler, Analyzer
@@ -38,7 +38,9 @@ cnot_processor = catalog[gate_name].as_processor(local_simulator_name).build()
 assert not cnot_processor.is_remote
 cnot_processor.source = Source(brightness=0.5)
 cnot_processor.set_postprocess(None)  # Remove post-processing function to retrieve more states
-cnot_processor.with_input(pcvl.BasicState([1, 0, 1, 0]))
+# You may use a logical state as an input, converted into the fock state |1,0,1,0> thanks to dual rail encoding ports
+# defined in cnot_processor
+cnot_processor.with_input(pcvl.LogicalState([0, 0]))
 
 sampler = Sampler(cnot_processor)
 output = sampler.probs()

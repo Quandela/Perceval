@@ -22,7 +22,7 @@
 
 from perceval.utils.parameter import P
 from perceval.components import Circuit, Processor
-from perceval.components.base_components import *
+from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
 
 

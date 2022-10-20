@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from perceval import Circuit, P, Matrix
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 

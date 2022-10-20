@@ -26,8 +26,8 @@ from typing import Type
 import pytest
 
 import perceval as pcvl
-from perceval.components.base_components import *
-from perceval.components.non_linear_components import *
+from perceval.components.unitary_components import *
+from perceval.components.non_unitary_components import *
 from perceval.rendering import pdisplay_to_file, Format
 from pathlib import Path
 import re

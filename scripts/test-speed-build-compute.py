@@ -25,7 +25,7 @@ This script checks overhead when using circuit objects compared to direct buildi
 """
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 import numpy as np
 import time
 from collections import defaultdict

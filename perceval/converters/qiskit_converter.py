@@ -24,7 +24,7 @@ from perceval.components import Port, Encoding, PortLocation, Circuit, Processor
 from perceval.utils import P, BasicState
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 import qiskit
 

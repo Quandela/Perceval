@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components.base_components import BSConvention
+from perceval.components.unitary_components import BSConvention
 
 BS_CONVENTION_COLOR = {
     BSConvention.Rx: 'thistle',
