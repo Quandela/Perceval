@@ -70,13 +70,24 @@ class ModeConnector:
                 assert isinstance(v, int) or isinstance(v, str) or isinstance(v, list), \
                     f"Mapping values supported types are str and int, found {v}"
 
+    def _get_ordered_rmodes(self):
+        """
+        Returns ordered mode of interest index (i.e. ignores heralded modes in case the right object is a Processor)
+        """
+        if self._r_is_component:
+            return list(range(self._n_modes_to_connect))
+        r_list = list(range(self._ro.circuit_size))
+        return [x for x in r_list if x not in self._ro.heralds.keys()]
+
     def resolve(self):
         """
         Resolves mode mapping and checks if the mapping is consistent.
 
-        :param mapping: can be an integer or a dictionnary.
+        :param mapping: can be an integer, a list or a dictionnary.
          Case int:
             Creates a dictionnary { mapping: 0, mapping+1: 1, ..., mapping+n: n }
+         Case list:
+            Creates a dictionnary { mapping[0]: 0, mapping[1]: 1, ..., mapping[n]: n}
          Case dict:
             keys and values can either be integers or strings. If strings, it expects port names of the same size.
 
@@ -92,15 +103,22 @@ class ModeConnector:
         if isinstance(self._map, int):
             map_begin = self._map
             self._map = {}
-            r_list = list(range(self._n_modes_to_connect))
-            if not self._r_is_component:
-                r_list = list(range(self._ro.circuit_size))
-                r_list = [x for x in r_list if x not in list(self._ro.heralds.keys())]
+            r_list = self._get_ordered_rmodes()
             for i in range(self._n_modes_to_connect):
                 self._map[map_begin + i] = r_list[i]
             self._check_consistency()
             return self._map
 
+        # Handle list input case
+        if isinstance(self._map, list):
+            map_keys = self._map
+            map_values = self._get_ordered_rmodes()
+            assert len(map_keys) == len(map_values), f"Inconsistent list size {map_keys}"
+            self._map = {k: v for k, v in zip(map_keys, map_values)}
+            self._check_consistency()
+            return self._map
+
+        # Handle dict input case
         self._mapping_type_checks()
         result = {}
         for k, v in self._map.items():
@@ -128,6 +146,9 @@ class ModeConnector:
         return self._map
 
     def _check_consistency(self):
+        """
+        Checks the mapping consistency
+        """
         if len(self._map) != self._n_modes_to_connect:
             raise InvalidMappingException(self._map)
         min_out = min(self._map.keys())
@@ -141,6 +162,9 @@ class ModeConnector:
             raise InvalidMappingException(self._map)
 
     def _resolve_port_left(self, name: str):
+        """
+        Resolves mode indexes from an output port name of the left processor
+        """
         if self._l_port_names is None:
             self._l_port_names = self._lp.out_port_names
         count = self._l_port_names.count(name)
@@ -154,6 +178,9 @@ class ModeConnector:
         return res
 
     def _resolve_port_right(self, name: str):
+        """
+        Resolves mode indexes from an input port name of the right object (which has to be a processor)
+        """
         assert not self._r_is_component, "Port names are only available on processors"
         if self._r_port_names is None:
             self._r_port_names = self._ro.in_port_names
@@ -168,6 +195,9 @@ class ModeConnector:
         return res
 
     def add_heralded_modes(self, mapping):
+        """
+        Add heralded mode mapping to an existing mapping
+        """
         if self._r_is_component:
             warnings.warn("Right object is not a processor, thus doesn't contain heralded modes")
             return 0

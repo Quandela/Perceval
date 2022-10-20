@@ -173,14 +173,13 @@ class LogicalState(list):
             if index >= len(self):
                 raise ValueError('Logical state and port list do not match (state too short)')
             if isinstance(port, Port):
-                if port.encoding == Encoding.RAW or port.encoding == Encoding.TIME \
-                        or port.encoding == Encoding.POLARIZATION:
+                if port.encoding == Encoding.RAW or port.encoding == Encoding.TIME:
                     result += [self[index]]
                     index += 1
                 elif port.encoding == Encoding.DUAL_RAIL:
                     result += [1, 0] if self[index] == 0 else [0, 1]
                     index += 1
-                elif port.encoding == Encoding.QUDIT:
+                elif port.encoding == Encoding.QUDIT or port.encoding == Encoding.POLARIZATION:
                     raise NotImplementedError
         if index != len(self):
             raise ValueError('Logical state and port list do not match (state too long)')
