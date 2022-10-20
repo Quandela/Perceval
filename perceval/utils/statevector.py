@@ -372,7 +372,7 @@ class StateVector(defaultdict):
         return self.__str__().__hash__()
 
 
-def tensorproduct(states: list[Union[StateVector, BasicState]]):
+def tensorproduct(states: List[Union[StateVector, BasicState]]):
     r""" Computes states[0] * states[1] * ...
     """
     if len(states) == 1:

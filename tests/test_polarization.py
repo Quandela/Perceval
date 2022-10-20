@@ -26,7 +26,7 @@ from perceval.rendering.pdisplay import pdisplay_matrix
 import pytest
 
 import sympy as sp
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 
 def test_polar_parse_error():

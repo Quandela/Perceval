@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-from perceval.components.base_components import BS, PS
+from perceval.components.unitary_components import BS, PS
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import fidelity, frobenius
 import time

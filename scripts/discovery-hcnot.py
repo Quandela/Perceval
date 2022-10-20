@@ -31,7 +31,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_analyzer
 
 

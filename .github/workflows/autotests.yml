@@ -23,10 +23,9 @@ on:
       python_v:
         description: 'python version'
         required: true
-        default: '3.6'
+        default: '3.7'
         type: choice
         options:
-          - '3.6'
           - '3.7'
           - '3.8'
           - '3.9'
@@ -148,7 +147,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-        
+
   perceval-docs-test:
     name: Build docs on ubuntu
     needs:

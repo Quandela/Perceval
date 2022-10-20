@@ -23,8 +23,8 @@
 from multipledispatch import dispatch
 
 from perceval.components import ACircuit, Circuit, Port, PortLocation, Herald,\
-    base_components as cp,\
-    non_linear_components as nl
+    unitary_components as cp,\
+    non_unitary_components as nu
 from .abstract_skin import ASkin, ModeStyle
 from .skin_common import bs_convention_color
 
@@ -50,7 +50,7 @@ class SymbSkin(ASkin):
         w = 1 if self._compact else 2
         return w
 
-    @dispatch((cp.PS, nl.TD, cp.PERM, cp.WP, cp.PR))
+    @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR))
     def get_width(self, c) -> int:
         return 1
 
@@ -70,7 +70,7 @@ class SymbSkin(ASkin):
     def get_shape(self, c):
         return self.pbs_shape
 
-    @dispatch(nl.TD)
+    @dispatch(nu.TD)
     def get_shape(self, c):
         return self.td_shape
 

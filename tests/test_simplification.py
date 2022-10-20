@@ -22,7 +22,7 @@
 
 import perceval as pcvl
 from perceval.utils.algorithms.simplification import *
-from perceval.components import base_components as comp
+from perceval.components import unitary_components as comp
 
 
 def PS_testing(circ, display):

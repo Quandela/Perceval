@@ -27,7 +27,7 @@ from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, P
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 import sympy as sp
 import numpy as np
 

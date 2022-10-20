@@ -23,7 +23,7 @@
 from pathlib import Path
 import pytest
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 import numpy as np
 

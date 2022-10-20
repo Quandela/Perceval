@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.components.base_components as cp
+import perceval.components.unitary_components as cp
 import numpy as np
 from tqdm import tqdm
 import time
