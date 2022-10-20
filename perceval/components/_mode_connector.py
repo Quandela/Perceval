@@ -36,7 +36,7 @@ class UnavailableModeException(Exception):
 
 
 class InvalidMappingException(Exception):
-    def __init__(self, mapping: Dict, reason: str = None):
+    def __init__(self, mapping: Union[Dict, List], reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'
@@ -113,7 +113,8 @@ class ModeConnector:
         if isinstance(self._map, list):
             map_keys = self._map
             map_values = self._get_ordered_rmodes()
-            assert len(map_keys) == len(map_values), f"Inconsistent list size {map_keys}"
+            if len(map_keys) != len(map_values):
+                raise InvalidMappingException(map_keys, f"input list size is expected to be {len(map_values)}")
             self._map = {k: v for k, v in zip(map_keys, map_values)}
             self._check_consistency()
             return self._map
