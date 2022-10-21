@@ -26,7 +26,7 @@ from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
 from ._state_serialization import serialize_state, serialize_statevector
 from perceval.components import ACircuit
-from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, StateVector, simple_float
+from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, StateVector, simple_float
 from base64 import b64encode
 
 
@@ -62,6 +62,13 @@ def serialize(dist) -> str:
 def serialize(dist) -> str:
     return ":PCVL:BSDistribution:{" \
            + ";".join(["%s=%s" % (serialize_state(k), simple_float(v, nsimplify=False)[1]) for k, v in dist.items()]) \
+           + "}"
+
+
+@dispatch(BSCount)
+def serialize(obj) -> str:
+    return ":PCVL:BSCount:{" \
+           + ";".join(["%s=%s" % (serialize_state(k), str(v)) for k, v in obj.items()]) \
            + "}"
 
 

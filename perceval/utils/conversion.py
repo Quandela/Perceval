@@ -20,15 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BasicState, BSDistribution
+from .statevector import BasicState, BSDistribution, BSCount
 
 from typing import Dict, List
 import numpy as np
 
 
 # Conversion functions (samples <=> probs <=> sample_count)
-def samples_to_sample_count(sample_list: List[BasicState]) -> Dict[BasicState, int]:
-    results = {}
+def samples_to_sample_count(sample_list: List[BasicState]) -> BSCount:
+    results = BSCount()
     for s in sample_list:
         if s not in results:
             results[s] = sample_list.count(s)
@@ -39,12 +39,12 @@ def samples_to_probs(sample_list: List[BasicState]) -> BSDistribution:
     return sample_count_to_probs(samples_to_sample_count(sample_list))
 
 
-def probs_to_sample_count(probs: BSDistribution, count: int) -> Dict[BasicState, int]:
+def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
     perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
     fac = 1 / sum(prob for prob in perturbed_dist.values())
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
-    results = dict()
+    results = BSCount()
     for state in perturbed_dist:
         results[state] = int(np.round(perturbed_dist[state] * count))
     return results
@@ -54,7 +54,7 @@ def probs_to_samples(probs: BSDistribution, count: int) -> List[BasicState]:
     return probs.sample(count)
 
 
-def sample_count_to_probs(sample_count: Dict[BasicState, int]):
+def sample_count_to_probs(sample_count: BSCount):
     bsd = BSDistribution()
     for state, count in sample_count.items():
         if count == 0:
@@ -66,5 +66,5 @@ def sample_count_to_probs(sample_count: Dict[BasicState, int]):
     return bsd
 
 
-def sample_count_to_samples(sample_count: Dict[BasicState, int], count: int):
+def sample_count_to_samples(sample_count: BSCount, count: int):
     return sample_count_to_probs(sample_count).sample(count)

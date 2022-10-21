@@ -24,7 +24,7 @@ from os import path
 from typing import Union
 
 from perceval.components import Circuit
-from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState
+from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount
 from perceval.serialization import _matrix_serialization, deserialize_state
 from ._state_serialization import deserialize_statevector
 import perceval.serialization._component_deserialization as _cd
@@ -86,12 +86,21 @@ def deserialize_svdistribution(serial_svd):
 
 
 def deserialize_bsdistribution(serial_bsd):
-    assert serial_bsd[0] == '{' and serial_bsd[-1] == '}', "Invalid serialized SVDistribution"
+    assert serial_bsd[0] == '{' and serial_bsd[-1] == '}', "Invalid serialized BSDistribution"
     bsd = BSDistribution()
     for s in serial_bsd[1:-1].split(";"):
         k, v = s.split("=")
         bsd[deserialize_state(k)] = float(v)
     return bsd
+
+
+def deserialize_bscount(serial_bsc):
+    assert serial_bsc[0] == '{' and serial_bsc[-1] == '}', "Invalid serialized BSCount"
+    bsc = BSCount()
+    for s in serial_bsc[1:-1].split(";"):
+        k, v = s.split("=")
+        bsc[deserialize_state(k)] = int(v)
+    return bsc
 
 
 def deserialize(obj):
@@ -115,6 +124,8 @@ def deserialize(obj):
             r = deserialize_svdistribution(sobj)
         elif cl == "BSDistribution":
             r = deserialize_bsdistribution(sobj)
+        elif cl == "BSCount":
+            r = deserialize_bscount(sobj)
         elif cl == "Matrix":
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":

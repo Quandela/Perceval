@@ -24,7 +24,7 @@ from typing import Dict, List, Callable
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
-from perceval.utils import Parameter, BasicState, SVDistribution, generate_sync_methods
+from perceval.utils import Parameter, BasicState, generate_sync_methods
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -112,7 +112,7 @@ class RemoteProcessor(AProcessor):
             return v
         return None
 
-    def async_samples(self, count):
+    def async_samples(self, count) -> str:
         if self._backend is None:
             self.__build_backend()
 
@@ -124,13 +124,13 @@ class RemoteProcessor(AProcessor):
 
         return self._backend.async_sample_count(self._input_state, count, parameters=self._parameters)
 
-    def async_probs(self) -> SVDistribution:
+    def async_probs(self) -> str:
         if self._backend is None:
             self.__build_backend()
 
         return self._backend.async_probs(self._input_state, parameters=self._parameters)
 
-    def async_execute(self, command: str, **args):
+    def async_execute(self, command: str, **args) -> str:
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)

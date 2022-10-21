@@ -478,6 +478,29 @@ class BSDistribution(ProbabilityDistribution):
         return [BasicState(x) for x in results]
 
 
+class BSCount(defaultdict):
+    def __init__(self):
+        super().__init__(int)
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
+        assert isinstance(value, int) and value >= 0, "Count must be a positive integer"
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
+        return super().__getitem__(key)
+
+    def add(self, obj, count: int):
+        self[obj] += count
+
+    def total(self):
+        return sum(list(self.values()))
+
+    def __str__(self):
+        return "{\n  " + "\n  ".join([f"{k}: {v}" for k, v in self.items()]) + "\n}"
+
+
 def _rec_build_spatial_output_states(lfs: list, output: list):
     if len(lfs) == 0:
         yield BasicState(output)
