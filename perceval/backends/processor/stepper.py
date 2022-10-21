@@ -38,14 +38,15 @@ class StepperBackend:
     """
 
     def __init__(self,
-                 cu: list,
+                 cu: Union[list, ACircuit],
+                 m: int,
                  backend_name="Naive"):
         self._out = None
         self._C = cu
         self._backend = BACKEND_LIST[backend_name]
         self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
         self._compiled_input = None
-        self.m = max(min(r) + c.m for r, c in self._C)
+        self.m = m
 
     name = "Stepper"
     supports_symbolic = False

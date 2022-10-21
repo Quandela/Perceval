@@ -22,49 +22,49 @@
 
 import pytest
 import perceval as pcvl
+from test_simulators import check_output
+
 
 U = pcvl.Matrix.random_unitary(2)
-simulator = pcvl.BackendFactory().get_backend("Stepper")
 loss = .3
 
-cd = (pcvl.Circuit(2)
+cd = (pcvl.Processor("SLOS", 2)
       .add(0, pcvl.Unitary(U))
       .add(0, pcvl.LC(loss))
       .add(1, pcvl.LC(loss)))
+input_state = pcvl.BasicState([1, 1])
 
+cd.with_input(input_state)
+cd.mode_post_selection(0)
 
 def test_minimal():
-    sim = simulator(pcvl.LC(loss))
-    input_state = pcvl.BasicState([2])
-    expected = {
-        pcvl.BasicState([0]): loss ** 2,
-        pcvl.BasicState([1]): 2 * loss * (1 - loss),
-        pcvl.BasicState([2]): (1 - loss) ** 2
-    }
-    res = {state: prob
-           for state, prob in sim.allstateprob_iterator(input_state)
-           }
+    p = pcvl.Processor("SLOS", 1).add(0, pcvl.LC(loss))
+    p.with_input(pcvl.SVDistribution(pcvl.BasicState([2])))
+    p.mode_post_selection(0)
+    expected_svd = pcvl.SVDistribution()
+    expected_svd[pcvl.BasicState([0])] = loss ** 2
+    expected_svd[pcvl.BasicState([1])] = 2 * loss * (1 - loss)
+    expected_svd[pcvl.BasicState([2])] = (1 - loss) ** 2
 
-    assert pytest.approx(res) == expected
+    res = p.probs()["results"]
+
+    assert pytest.approx(res) == expected_svd
 
 
 def test_permutation():
-    input_state = pcvl.BasicState([1, 1])
 
-    cg = (pcvl.Circuit(2)
+    cg = (pcvl.Processor("SLOS", 2)
           .add(0, pcvl.LC(loss))
           .add(1, pcvl.LC(loss))
           .add(0, pcvl.Unitary(U)))
 
-    assert pytest.approx({state: prob
-                          for state, prob in simulator(cg).allstateprob_iterator(input_state)
-                          }) == {state: prob
-                                 for state, prob in simulator(cd).allstateprob_iterator(input_state)
-                                 }
+    cg.with_input(input_state)
+    cg.mode_post_selection(0)
+
+    assert pytest.approx(cg.probs()["results"]) == cd.probs()["results"]
 
 
 def test_brightness_equivalence():
-    input_state = pcvl.BasicState([1, 1])
     source = pcvl.Source(brightness=1 - loss)
     p = pcvl.Processor("SLOS", pcvl.Unitary(U), source)
 
@@ -74,12 +74,4 @@ def test_brightness_equivalence():
     sampler = pcvl.algorithm.Sampler(p)
     real_out = sampler.probs()["results"]
 
-    real_out = {
-        state[0]: prob for state, prob in real_out.items()
-    }
-
-    sim = simulator(cd)
-
-    assert pytest.approx(real_out) == {state: prob
-                                       for state, prob in sim.allstateprob_iterator(input_state)
-                                       }
+    assert pytest.approx(real_out) == cd.probs()["results"]

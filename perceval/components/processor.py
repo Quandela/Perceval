@@ -88,7 +88,7 @@ class Processor(AProcessor):
         if self._is_unitary:
             self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
         else:
-            self._simulator = StepperBackend(self.non_unitary_circuit(), self._backend_name)
+            self._simulator = StepperBackend(self.non_unitary_circuit(), self.circuit_size, self._backend_name)
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -392,8 +392,8 @@ class Processor(AProcessor):
 
         # Compute the unitaries between the non-unitary components
         new_comp = []
-        unitary_circuit = Circuit(self.m)
-        min_r = self.m
+        unitary_circuit = Circuit(self.circuit_size)
+        min_r = self.circuit_size
         max_r = 0
         for r, c in comp:
             if isinstance(c, ACircuit):
@@ -401,15 +401,15 @@ class Processor(AProcessor):
                 min_r = min(min_r, r[0])
                 max_r = max(max_r, r[-1] + 1)
             else:
-                if unitary_circuit.ncomponents:
+                if unitary_circuit.ncomponents():
                     new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
                                     Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
-                    unitary_circuit = Circuit(self.m)
-                    min_r = self.m
+                    unitary_circuit = Circuit(self.circuit_size)
+                    min_r = self.circuit_size
                     max_r = 0
                 new_comp.append((r, c))
 
-        if unitary_circuit.ncomponents:
+        if unitary_circuit.ncomponents():
             new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
                              Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
 
