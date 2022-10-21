@@ -24,7 +24,7 @@ import random
 import sympy as sp
 import numpy
 from perceval import Matrix, P, ACircuit, Circuit, BasicState, SVDistribution, StateVector
-from perceval.serialization import serialize, deserialize_svdistribution, deserialize
+from perceval.serialization import serialize, deserialize
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
 import json
@@ -108,14 +108,8 @@ def test_svdistribution_deserialization():
     svd[StateVector("|0,1>")] = 0.2
     svd[BasicState("|1,0>")] = 0.3
     svd[BasicState("|1,1>")] = 0.5
-    svd2 = deserialize_svdistribution(serialize(svd))
+    svd2 = deserialize(serialize(svd))
     assert svd == svd2
-
-
-def test_sv_txt_serialization():
-    sv = (1+1j) * StateVector("|0,1>") + (1-1j) * StateVector("|1,0>")
-    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>"
-    assert sv.serialize() == "(0.5,0.5)*|0,1>+(0.5,-0.5)*|1,0>"
 
 
 def test_sv_serialization():

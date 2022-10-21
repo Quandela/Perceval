@@ -21,6 +21,7 @@
 # SOFTWARE.
 import json
 from os import path
+import re
 from typing import Union
 
 from perceval.components import Circuit
@@ -75,6 +76,26 @@ def deserialize_sample_count(count: dict) -> dict:
     return count
 
 
+def deserialize_state_vector(s):
+    sv = StateVector()
+    for c in s.split("+"):
+        m = re.match(r"\((.*),(.*)\)\*(.*)$", c)
+        assert m, "invalid state vector serialization: %s" % s
+        sv[BasicState(m.group(3))] = float(m.group(1)) + 1j * float(m.group(2))
+    sv._normalized = True
+    sv._has_symbolic = False
+    return sv
+
+
+def deserialize_svdistribution(serial_svd):
+    assert serial_svd[0] == '{' and serial_svd[-1] == '}', "Invalid serialized SVDistribution"
+    svd = SVDistribution()
+    for s in serial_svd[1:-1].split(";"):
+        k, v = s.split("=")
+        svd[deserialize(k)] = float(v)
+    return svd
+
+
 def deserialize(obj):
     if isinstance(obj, dict):
         r = {}
@@ -91,9 +112,9 @@ def deserialize(obj):
         if cl == "BasicState":
             r = BasicState(sobj)
         elif cl == "StateVector":
-            r = StateVector.deserialize(sobj)
+            r = deserialize_state_vector(sobj)
         elif cl == "SVDistribution":
-            r = SVDistribution(sobj)
+            r = deserialize_svdistribution(sobj)
         elif cl == "Matrix":
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
@@ -101,11 +122,6 @@ def deserialize(obj):
     else:
         r = obj
     return r
-
-
-def deserialize_svdistribution(svd_serial) -> SVDistribution:
-    assert svd_serial.startswith(":PCVL:SVDistribution:")
-    return SVDistribution(svd_serial[21:])
 
 
 def sample_count_from_file(filepath: str) -> dict:

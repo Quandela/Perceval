@@ -50,6 +50,9 @@ class BasicState(FockState):
     def __len__(self):
         return self.m
 
+    def __copy__(self):
+        return BasicState(self)
+
     def __add__(self, o):
         return StateVector(self) + o
 
@@ -151,17 +154,6 @@ class StateVector(defaultdict):
             self[bs] = 1
         self._normalized = True
         self._has_symbolic = False
-
-    @staticmethod
-    def deserialize(s):
-        sv = StateVector()
-        for c in s.split("+"):
-            m=re.match(r"\((.*),(.*)\)\*(.*)$", c)
-            assert m, "invalid state vector serialization: %s" % s
-            sv[BasicState(m.group(3))]=float(m.group(1))+1j*float(m.group(2))
-        sv._normalized = True
-        sv._has_symbolic = False
-        return sv
 
     def __rmul__(self, other):
         r"""Multiply a StateVector by a numeric value, right side
@@ -360,15 +352,6 @@ class StateVector(defaultdict):
                     ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
 
-    def serialize(self):
-        self.normalize()
-        ls = []
-        for key, value in self.items():
-            real = simple_float(value.real, nsimplify=False)[1]
-            imag = simple_float(value.imag, nsimplify=False)[1]
-            ls.append("(%s,%s)*%s" % (real, imag, str(key)))
-        return "+".join(ls)
-
     def __hash__(self):
         return self.__str__().__hash__()
 
@@ -381,30 +364,39 @@ def tensorproduct(states: List[Union[StateVector, BasicState]]):
     return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
 
-class SVDistribution(defaultdict):
-    r"""Time-Independent Probabilistic distribution of StateVectors
+class ProbabilityDistribution(defaultdict):
+    """Time-Independent abstract probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[str,StateVector] = None):
-        super(SVDistribution, self).__init__(float)
-        if isinstance(sv, str):
-            assert sv[0] == '{' and sv[-1] == '}', "invalid serialized svdistribution"
-            for s in sv[1:-1].split(";"):
-                k, v = s.split("=")
-                self[StateVector.deserialize(k)] = float(v)
-        elif sv is not None:
-            self[sv] = 1
+    def __init__(self):
+        super().__init__(float)
 
-    def __copy__(self):
-        svd_copy = SVDistribution()
-        for sv, prob in self.items():
-            svd_copy[copy(sv)] = prob
-        return svd_copy
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        for sv in self.keys():
+            self[sv] /= sum_probs
+
+    def add(self, obj, proba: float):
+        self[obj] += proba
 
     def __str__(self):
-        return "{"+";".join(["%s=%s" % (k.serialize(), simple_float(v, nsimplify=False)[1]) for k, v in self.items()])+"}"
+        return "{\n  "\
+               + "\n  ".join(["%s: %s" % (str(k), simple_float(v, nsimplify=True)[1]) for k, v in self.items()])\
+               + "\n}"
 
-    def add(self, sv: StateVector, proba: float):
-        self[sv] += proba
+    def __copy__(self):
+        distribution_copy = type(self)()
+        for k, prob in self.items():
+            distribution_copy[copy(k)] = prob
+        return distribution_copy
+
+
+class SVDistribution(ProbabilityDistribution):
+    r"""Time-Independent Probabilistic distribution of StateVectors
+    """
+    def __init__(self, sv: Optional[str, StateVector] = None):
+        super().__init__()
+        if sv is not None:
+            self[sv] = 1
 
     def __setitem__(self, key, value):
         if isinstance(key, BasicState):
@@ -435,11 +427,6 @@ class SVDistribution(defaultdict):
 
         return new_svd
 
-    def normalize(self):
-        sum_probs = sum(list(self.values()))
-        for sv in self.keys():
-            self[sv] /= sum_probs
-
     def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
@@ -458,6 +445,21 @@ class SVDistribution(defaultdict):
         if len(results) == 1:
             return results[0]
         return list(results)
+
+
+class BSDistribution(ProbabilityDistribution):
+
+    def __init__(self):
+        super().__init__()
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        return super().__getitem__(key)
+
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

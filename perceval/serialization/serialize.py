@@ -25,7 +25,7 @@ from multipledispatch import dispatch
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
 from perceval.components import ACircuit
-from perceval.utils import Matrix, BasicState, SVDistribution, StateVector
+from perceval.utils import Matrix, BasicState, SVDistribution, StateVector, simple_float
 from base64 import b64encode
 
 
@@ -45,13 +45,21 @@ def serialize(obj) -> str:
 
 
 @dispatch(StateVector)
-def serialize(obj) -> str:
-    return ":PCVL:StateVector:"+obj.serialize()
+def serialize(sv) -> str:
+    sv.normalize()
+    ls = []
+    for key, value in sv.items():
+        real = simple_float(value.real, nsimplify=False)[1]
+        imag = simple_float(value.imag, nsimplify=False)[1]
+        ls.append("(%s,%s)*%s" % (real, imag, str(key)))
+    return ":PCVL:StateVector:" + "+".join(ls)
 
 
 @dispatch(SVDistribution)
 def serialize(obj) -> str:
-    return ":PCVL:SVDistribution:"+str(obj)
+    return ":PCVL:SVDistribution:{" \
+           + ";".join(["%s=%s" % (serialize(k), simple_float(v, nsimplify=False)[1]) for k, v in obj.items()]) \
+           + "}"
 
 
 @dispatch(dict)

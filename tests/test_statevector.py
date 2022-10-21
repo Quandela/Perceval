@@ -39,6 +39,11 @@ def test_state():
     assert st.has_annotations is False
 
 
+def test_str_state_vector():
+    sv = (1+1j) * pcvl.StateVector("|0,1>") + (1-1j) * pcvl.StateVector("|1,0>")
+    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>"
+
+
 def test_tensor_product_0():
     st1 = pcvl.BasicState([0, 1])
     st2 = pcvl.BasicState([1])
