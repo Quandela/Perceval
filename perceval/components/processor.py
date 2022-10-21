@@ -369,7 +369,7 @@ class Processor(AProcessor):
         return circuit
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if not self.heralds or keep_herald:
+        if (not self.heralds or keep_herald) and not self._thresholded_output:
             return s
         new_state = []
         for idx, k in enumerate(s):
