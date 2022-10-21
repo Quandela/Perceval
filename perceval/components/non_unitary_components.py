@@ -34,9 +34,6 @@ class TD(AParametrizedComponent):
         super().__init__(1)
         self._dt = self._set_parameter("t", dt, 0, None, False)
 
-    def is_composite(self):  # TODO this has to go
-        return False
-
     def get_variables(self, map_param_kid=None):  # is this useful?
         parameters = {}
         if map_param_kid is None:

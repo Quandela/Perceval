@@ -56,7 +56,7 @@ def test_with_selection():
 
     res = p.probs()
 
-    assert pytest.approx(res["results"]) == expected, "Time delay with heralds not successful"
+    assert pytest.approx(res["results"]) == expected, "Time delay with selection not successful"
     assert pytest.approx(res["physical_perf"]) == expected_p_perf, "Wrong logical performance with time delays"
 
 
