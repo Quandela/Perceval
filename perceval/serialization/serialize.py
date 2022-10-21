@@ -24,8 +24,9 @@ from multipledispatch import dispatch
 
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
+from ._state_serialization import serialize_state, serialize_statevector
 from perceval.components import ACircuit
-from perceval.utils import Matrix, BasicState, SVDistribution, StateVector, simple_float
+from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, StateVector, simple_float
 from base64 import b64encode
 
 
@@ -41,24 +42,25 @@ def serialize(m: Matrix) -> str:
 
 @dispatch(BasicState)
 def serialize(obj) -> str:
-    return ":PCVL:BasicState:"+str(obj)
+    return ":PCVL:BasicState:" + serialize_state(obj)
 
 
 @dispatch(StateVector)
 def serialize(sv) -> str:
-    sv.normalize()
-    ls = []
-    for key, value in sv.items():
-        real = simple_float(value.real, nsimplify=False)[1]
-        imag = simple_float(value.imag, nsimplify=False)[1]
-        ls.append("(%s,%s)*%s" % (real, imag, str(key)))
-    return ":PCVL:StateVector:" + "+".join(ls)
+    return ":PCVL:StateVector:" + serialize_statevector(sv)
 
 
 @dispatch(SVDistribution)
-def serialize(obj) -> str:
+def serialize(dist) -> str:
     return ":PCVL:SVDistribution:{" \
-           + ";".join(["%s=%s" % (serialize(k), simple_float(v, nsimplify=False)[1]) for k, v in obj.items()]) \
+           + ";".join(["%s=%s" % (serialize_statevector(k), simple_float(v, nsimplify=False)[1]) for k, v in dist.items()]) \
+           + "}"
+
+
+@dispatch(BSDistribution)
+def serialize(dist) -> str:
+    return ":PCVL:BSDistribution:{" \
+           + ";".join(["%s=%s" % (serialize_state(k), simple_float(v, nsimplify=False)[1]) for k, v in dist.items()]) \
            + "}"
 
 

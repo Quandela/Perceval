@@ -20,19 +20,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import BasicState
+from perceval.utils.statevector import BasicState, StateVector
+from perceval.utils import simple_float
 from ast import literal_eval
+import re
 
 
-def serialize_state(state: BasicState):
+def serialize_state(state: BasicState) -> str:
     return str(state)
 
 
-def deserialize_state(pb_fs):
-    assert pb_fs.startswith(":PCVL:BasicState:")
-    return BasicState(pb_fs[17:])
+def deserialize_state(serial_fs) -> BasicState:
+    return BasicState(serial_fs)
 
 
 def deserialize_state_list(states):
     state_list = literal_eval(states)
     return [deserialize_state(s) for s in state_list]
+
+
+def serialize_statevector(sv: StateVector) -> str:
+    sv.normalize()
+    ls = []
+    for key, value in sv.items():
+        real = simple_float(value.real, nsimplify=False)[1]
+        imag = simple_float(value.imag, nsimplify=False)[1]
+        ls.append("(%s,%s)*%s" % (real, imag, str(key)))
+    return "+".join(ls)
+
+
+def deserialize_statevector(s):
+    sv = StateVector()
+    for c in s.split("+"):
+        m = re.match(r"\((.*),(.*)\)\*(.*)$", c)
+        assert m, "invalid state vector serialization: %s" % s
+        sv[BasicState(m.group(3))] = float(m.group(1)) + 1j * float(m.group(2))
+    sv._normalized = True
+    sv._has_symbolic = False
+    return sv

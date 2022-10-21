@@ -23,7 +23,7 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, BasicState, SVDistribution, StateVector
+from perceval import Matrix, P, ACircuit, Circuit, BasicState, BSDistribution, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
@@ -91,7 +91,7 @@ def test_circuit_serialization():
     _check_circuits_eq(c1, deserialized_c1)
 
 
-def test_fockstate_serialization():
+def test_basicstate_serialization():
     states = [
         BasicState("|0,1>"),
         BasicState([0, 1, 0, 0, 1, 0]),
@@ -103,13 +103,22 @@ def test_fockstate_serialization():
         assert s == deserialized
 
 
-def test_svdistribution_deserialization():
+def test_svdistribution_serialization():
     svd = SVDistribution()
     svd[StateVector("|0,1>")] = 0.2
     svd[BasicState("|1,0>")] = 0.3
     svd[BasicState("|1,1>")] = 0.5
     svd2 = deserialize(serialize(svd))
     assert svd == svd2
+
+
+def test_bsdistribution_serialization():
+    bsd = BSDistribution()
+    bsd.add(BasicState([0, 1]), 0.4)
+    bsd.add(BasicState([1, 0]), 0.4)
+    bsd.add(BasicState([1, 1]), 0.2)
+    deserialized_bsd = deserialize(serialize(bsd))
+    assert bsd == deserialized_bsd
 
 
 def test_sv_serialization():

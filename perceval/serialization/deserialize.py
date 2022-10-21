@@ -21,12 +21,12 @@
 # SOFTWARE.
 import json
 from os import path
-import re
 from typing import Union
 
 from perceval.components import Circuit
-from perceval.utils import Matrix, SVDistribution, BasicState, StateVector
+from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState
 from perceval.serialization import _matrix_serialization, deserialize_state
+from ._state_serialization import deserialize_statevector
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
@@ -76,24 +76,22 @@ def deserialize_sample_count(count: dict) -> dict:
     return count
 
 
-def deserialize_state_vector(s):
-    sv = StateVector()
-    for c in s.split("+"):
-        m = re.match(r"\((.*),(.*)\)\*(.*)$", c)
-        assert m, "invalid state vector serialization: %s" % s
-        sv[BasicState(m.group(3))] = float(m.group(1)) + 1j * float(m.group(2))
-    sv._normalized = True
-    sv._has_symbolic = False
-    return sv
-
-
 def deserialize_svdistribution(serial_svd):
     assert serial_svd[0] == '{' and serial_svd[-1] == '}', "Invalid serialized SVDistribution"
     svd = SVDistribution()
     for s in serial_svd[1:-1].split(";"):
         k, v = s.split("=")
-        svd[deserialize(k)] = float(v)
+        svd[deserialize_statevector(k)] = float(v)
     return svd
+
+
+def deserialize_bsdistribution(serial_bsd):
+    assert serial_bsd[0] == '{' and serial_bsd[-1] == '}', "Invalid serialized SVDistribution"
+    bsd = BSDistribution()
+    for s in serial_bsd[1:-1].split(";"):
+        k, v = s.split("=")
+        bsd[deserialize_state(k)] = float(v)
+    return bsd
 
 
 def deserialize(obj):
@@ -112,9 +110,11 @@ def deserialize(obj):
         if cl == "BasicState":
             r = BasicState(sobj)
         elif cl == "StateVector":
-            r = deserialize_state_vector(sobj)
+            r = deserialize_statevector(sobj)
         elif cl == "SVDistribution":
             r = deserialize_svdistribution(sobj)
+        elif cl == "BSDistribution":
+            r = deserialize_bsdistribution(sobj)
         elif cl == "Matrix":
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
