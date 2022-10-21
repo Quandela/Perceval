@@ -19,11 +19,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Union
 
 import numpy as np
 import perceval.components.unitary_components as comp
+from perceval.components import ACircuit
 
-def simplify(circuit, m, display: bool = False) -> list:
+
+def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False) -> list:
     r"""
     Tries to simplify a circuit when simplifications are possible
 
@@ -32,6 +35,11 @@ def simplify(circuit, m, display: bool = False) -> list:
     :return: The simplified circuit
     """
     final_circuit_comp = []
+
+    if isinstance(circuit, ACircuit):
+        m = circuit.m
+    else:
+        assert m is not None, "m must be specified"
 
     for r, c in circuit:
         if isinstance(r, int):

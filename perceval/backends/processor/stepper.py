@@ -39,14 +39,18 @@ class StepperBackend:
 
     def __init__(self,
                  cu: Union[list, ACircuit],
-                 m: int,
+                 m: int = None,
                  backend_name="Naive"):
         self._out = None
         self._C = cu
         self._backend = BACKEND_LIST[backend_name]
         self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
         self._compiled_input = None
-        self.m = m
+        if isinstance(cu, ACircuit):
+            self.m = cu.m
+        else:
+            assert m is not None, "Please specify the number of modes of the circuit"
+            self.m = m
 
     name = "Stepper"
     supports_symbolic = False
@@ -117,23 +121,21 @@ class StepperBackend:
     def prob(self,
              input_state: Union[BasicState, StateVector],
              output_state: BasicState,
-             n: int = None,
              skip_compile: bool = False,
              progress_callback=None) -> float:
         if not skip_compile:
             self.compile(input_state)
         if self._out.m == input_state.m:
-            return self.prob_be(input_state, output_state, n)
+            return self.prob_be(input_state, output_state)
         # Else we need a state reduction
         return sum(self.prob_be(input_state, state) for state in self._out if state[:output_state.m] == output_state)
 
     def probampli(self,
                   input_state: Union[BasicState, StateVector],
-                  output_state: BasicState,
-                  n: int = None) -> complex:
+                  output_state: BasicState) -> complex:
         self.compile(input_state)
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
-        return self.probampli_be(input_state, output_state, n)
+        return self.probampli_be(input_state, output_state)
 
     def allstateprob_iterator(self, input_state):
         self.compile(input_state)

@@ -42,24 +42,6 @@ def test_without_herald():
     assert pytest.approx(p.probs()["results"]) == expected, "Basic time delay test not successful"
 
 
-def test_with_heralds():
-    p.add_herald(1, 0)
-    p.with_input(BasicState([1]))
-    p.mode_post_selection(0)
-
-    expected = SVDistribution()
-    expected[BasicState([0])] = 0.4
-    expected[BasicState([1])] = 0.4
-    expected[BasicState([2])] = 0.2
-
-    expected_l_perf = 5/8
-
-    res = p.probs()
-
-    assert pytest.approx(res["results"]) == expected, "Time delay with heralds not successful"
-    assert pytest.approx(res["logical_perf"]) == expected_l_perf, "Wrong logical performance with time delays"
-
-
 def test_with_selection():
     p.with_input(BasicState([1, 0]))
     p.mode_post_selection(1)
@@ -76,3 +58,21 @@ def test_with_selection():
 
     assert pytest.approx(res["results"]) == expected, "Time delay with heralds not successful"
     assert pytest.approx(res["physical_perf"]) == expected_p_perf, "Wrong logical performance with time delays"
+
+
+def test_with_heralds():
+    p.add_herald(1, 0)
+    p.with_input(BasicState([1]))
+    p.mode_post_selection(0)
+
+    expected = SVDistribution()
+    expected[BasicState([0])] = 0.4
+    expected[BasicState([1])] = 0.4
+    expected[BasicState([2])] = 0.2
+
+    expected_l_perf = 5/8
+
+    res = p.probs()
+
+    assert pytest.approx(res["results"]) == expected, "Time delay with heralds not successful"
+    assert pytest.approx(res["logical_perf"]) == expected_l_perf, "Wrong logical performance with time delays"

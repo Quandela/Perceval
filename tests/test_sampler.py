@@ -37,7 +37,7 @@ def test_sampler():
     cnot.add((3, 4), BS.H())
     imperfect_source = pcvl.Source(brightness=0.9)
 
-    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'Stepper', 'MPS']:
+    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:
         p = pcvl.Processor(backend_name, cnot, imperfect_source)
         p.mode_post_selection(1)
         p.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
