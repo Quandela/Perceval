@@ -21,30 +21,30 @@
 # SOFTWARE.
 
 import pytest
-import perceval as pcvl
-from test_simulators import check_output
+from perceval import Processor, Unitary, LC, Matrix, SVDistribution, BasicState, Source
+from perceval.algorithm import Sampler
 
 
-U = pcvl.Matrix.random_unitary(2)
+U = Matrix.random_unitary(2)
 loss = .3
 
-cd = (pcvl.Processor("SLOS", 2)
-      .add(0, pcvl.Unitary(U))
-      .add(0, pcvl.LC(loss))
-      .add(1, pcvl.LC(loss)))
-input_state = pcvl.BasicState([1, 1])
+cd = (Processor("SLOS", 2)
+      .add(0, Unitary(U))
+      .add(0, LC(loss))
+      .add(1, LC(loss)))
+input_state = BasicState([1, 1])
 
 cd.with_input(input_state)
 cd.mode_post_selection(0)
 
 def test_minimal():
-    p = pcvl.Processor("SLOS", 1).add(0, pcvl.LC(loss))
-    p.with_input(pcvl.SVDistribution(pcvl.BasicState([2])))
+    p = Processor("SLOS", 1).add(0, LC(loss))
+    p.with_input(SVDistribution(BasicState([2])))
     p.mode_post_selection(0)
-    expected_svd = pcvl.SVDistribution()
-    expected_svd[pcvl.BasicState([0])] = loss ** 2
-    expected_svd[pcvl.BasicState([1])] = 2 * loss * (1 - loss)
-    expected_svd[pcvl.BasicState([2])] = (1 - loss) ** 2
+    expected_svd = SVDistribution()
+    expected_svd[BasicState([0])] = loss ** 2
+    expected_svd[BasicState([1])] = 2 * loss * (1 - loss)
+    expected_svd[BasicState([2])] = (1 - loss) ** 2
 
     res = p.probs()["results"]
 
@@ -53,10 +53,10 @@ def test_minimal():
 
 def test_permutation():
 
-    cg = (pcvl.Processor("SLOS", 2)
-          .add(0, pcvl.LC(loss))
-          .add(1, pcvl.LC(loss))
-          .add(0, pcvl.Unitary(U)))
+    cg = (Processor("SLOS", 2)
+          .add(0, LC(loss))
+          .add(1, LC(loss))
+          .add(0, Unitary(U)))
 
     cg.with_input(input_state)
     cg.mode_post_selection(0)
@@ -65,13 +65,13 @@ def test_permutation():
 
 
 def test_brightness_equivalence():
-    source = pcvl.Source(brightness=1 - loss)
-    p = pcvl.Processor("SLOS", pcvl.Unitary(U), source)
+    source = Source(brightness=1 - loss)
+    p = Processor("SLOS", Unitary(U), source)
 
     p.with_input(input_state)
     p.mode_post_selection(0)
 
-    sampler = pcvl.algorithm.Sampler(p)
+    sampler = Sampler(p)
     real_out = sampler.probs()["results"]
 
     assert pytest.approx(real_out) == cd.probs()["results"]
