@@ -20,14 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BasicState, BSDistribution, BSCount
+from .statevector import BSDistribution, BSCount, BSSamples
 
-from typing import Dict, List
 import numpy as np
 
 
 # Conversion functions (samples <=> probs <=> sample_count)
-def samples_to_sample_count(sample_list: List[BasicState]) -> BSCount:
+def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
     results = BSCount()
     for s in sample_list:
         if s not in results:
@@ -35,7 +34,7 @@ def samples_to_sample_count(sample_list: List[BasicState]) -> BSCount:
     return results
 
 
-def samples_to_probs(sample_list: List[BasicState]) -> BSDistribution:
+def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
     return sample_count_to_probs(samples_to_sample_count(sample_list))
 
 
@@ -50,11 +49,11 @@ def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
     return results
 
 
-def probs_to_samples(probs: BSDistribution, count: int) -> List[BasicState]:
-    return probs.sample(count)
+def probs_to_samples(probs: BSDistribution, count: int) -> BSSamples:
+    return probs.samples(count)
 
 
-def sample_count_to_probs(sample_count: BSCount):
+def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
     bsd = BSDistribution()
     for state, count in sample_count.items():
         if count == 0:
@@ -66,5 +65,5 @@ def sample_count_to_probs(sample_count: BSCount):
     return bsd
 
 
-def sample_count_to_samples(sample_count: BSCount, count: int):
-    return sample_count_to_probs(sample_count).sample(count)
+def sample_count_to_samples(sample_count: BSCount, count: int) -> BSSamples:
+    return sample_count_to_probs(sample_count).samples(count)

@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from perceval.utils.conversion import *
-from perceval.utils import StateVector
+from perceval.utils import BasicState
 
 
 b0 = BasicState([0, 0, 0, 1])

@@ -25,7 +25,7 @@ from collections import Counter
 import pytest
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval.rendering.pdisplay import pdisplay_statevector
+from perceval.rendering.pdisplay import pdisplay_state_distrib
 
 import sympy as sp
 
@@ -141,7 +141,7 @@ def test_svdistribution():
     svd = pcvl.SVDistribution()
     svd.add(st1, 0.5)
     svd[st2] = 0.5
-    assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
+    assert strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
             +-------+-------------+
             | state | probability |
             +-------+-------------+

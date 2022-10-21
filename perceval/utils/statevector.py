@@ -460,7 +460,7 @@ class BSDistribution(ProbabilityDistribution):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
         return super().__getitem__(key)
 
-    def sample(self, count: int = 1) -> List[BasicState]:
+    def samples(self, count: int = 1) -> BSSamples:
         r""" Samples basic states from the `BSDistribution`
 
         :param count: number of samples to draw
@@ -473,9 +473,10 @@ class BSDistribution(ProbabilityDistribution):
         results = rng.choice(states, count, p=np.array(probs) / sum(probs))
         # numpy transforms iterables of ints to a nparray in rng.choice call
         # Thus, we need to convert back the results to BasicStates
-        if len(results) == 1:
-            return BasicState(results[0])
-        return [BasicState(x) for x in results]
+        output = BSSamples()
+        for s in results:
+            output.append(BasicState(s))
+        return output
 
 
 class BSCount(defaultdict):
@@ -499,6 +500,12 @@ class BSCount(defaultdict):
 
     def __str__(self):
         return "{\n  " + "\n  ".join([f"{k}: {v}" for k, v in self.items()]) + "\n}"
+
+
+class BSSamples(list):
+    def __setitem__(self, index, item):
+        assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
+        super().__setitem__(index, item)
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

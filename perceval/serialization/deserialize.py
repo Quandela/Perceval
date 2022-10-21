@@ -26,7 +26,7 @@ from typing import Union
 from perceval.components import Circuit
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount
 from perceval.serialization import _matrix_serialization, deserialize_state
-from ._state_serialization import deserialize_statevector
+from ._state_serialization import deserialize_statevector, deserialize_bssamples
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
@@ -46,6 +46,9 @@ def deserialize_matrix(pb_mat: Union[str, pb.Matrix]) -> Matrix:
 
 
 def matrix_from_file(filepath: str) -> Matrix:
+    """
+    Deserialize a matrix from a binary file
+    """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
@@ -65,15 +68,19 @@ def deserialize_circuit(pb_circ: Union[str, pb.Circuit]) -> Circuit:
 
 
 def circuit_from_file(filepath: str) -> Circuit:
+    """
+    Deserialize a circuit from a binary file
+    """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
         return deserialize_circuit(f.read())
 
 
-def deserialize_sample_count(count: dict) -> dict:
-    count = {deserialize_state(state): ct for state, ct in count.items()}
-    return count
+# TODO remove ?
+# def deserialize_sample_count(count: dict) -> dict:
+#     count = {deserialize_state(state): ct for state, ct in count.items()}
+#     return count
 
 
 def deserialize_svdistribution(serial_svd):
@@ -126,6 +133,8 @@ def deserialize(obj):
             r = deserialize_bsdistribution(sobj)
         elif cl == "BSCount":
             r = deserialize_bscount(sobj)
+        elif cl == "BSSamples":
+            r = deserialize_bssamples(sobj)
         elif cl == "Matrix":
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
@@ -135,11 +144,21 @@ def deserialize(obj):
     return r
 
 
-def sample_count_from_file(filepath: str) -> dict:
+def deserialize_file(filepath: str):
+    """
+    Agnosticly deserialize any supported type from a text file.
+    """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
-    with open(filepath, 'rb') as f:
-        return deserialize_sample_count(f.read())
+    with open(filepath, 'r') as f:
+        return deserialize(f.read())
+
+# TODO remove ?
+# def sample_count_from_file(filepath: str) -> dict:
+#     if not path.isfile(filepath):
+#         raise FileNotFoundError(f'No file at path {filepath}')
+#     with open(filepath, 'rb') as f:
+#         return deserialize_sample_count(f.read())
 
 
 class CircuitBuilder:

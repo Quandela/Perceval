@@ -27,7 +27,7 @@ from .port import APort, PortLocation, Herald, LogicalState
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, global_params, Parameter
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params, Parameter
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import BACKEND_LIST
 
@@ -389,7 +389,7 @@ class Processor(AProcessor):
 
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._init_command("samples")
-        output = []
+        output = BSSamples()
         not_selected_physical = 0
         not_selected = 0
         selected_inputs = self._inputs_map.sample(count, non_null=False)

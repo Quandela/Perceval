@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import BasicState, StateVector
+from perceval.utils.statevector import BasicState, StateVector, BSSamples
 from perceval.utils import simple_float
 from ast import literal_eval
 import re
@@ -30,8 +30,8 @@ def serialize_state(state: BasicState) -> str:
     return str(state)
 
 
-def deserialize_state(serial_fs) -> BasicState:
-    return BasicState(serial_fs)
+def deserialize_state(serial_bs) -> BasicState:
+    return BasicState(serial_bs)
 
 
 def deserialize_state_list(states):
@@ -49,7 +49,7 @@ def serialize_statevector(sv: StateVector) -> str:
     return "+".join(ls)
 
 
-def deserialize_statevector(s):
+def deserialize_statevector(s) -> StateVector:
     sv = StateVector()
     for c in s.split("+"):
         m = re.match(r"\((.*),(.*)\)\*(.*)$", c)
@@ -58,3 +58,24 @@ def deserialize_statevector(s):
     sv._normalized = True
     sv._has_symbolic = False
     return sv
+
+
+def serialize_bssamples(bss: BSSamples) -> str:
+    bs_set = []
+    order = []
+    for s in bss:
+        if s not in bs_set:
+            bs_set.append(s)
+        order.append(bs_set.index(s))
+    return ';'.join([serialize_state(bs) for bs in bs_set]) + '/' + ';'.join([str(i) for i in order])
+
+
+def deserialize_bssamples(serialized_bss: str) -> BSSamples:
+    parts = serialized_bss.split('/')
+    assert len(parts) == 2, f"Bad serialized BSSamples: {serialized_bss}"
+    bs_set = [deserialize_state(bs) for bs in parts[0].split(';')]
+    order = [int(x) for x in parts[1].split(';')]
+    output = BSSamples()
+    for index in order:
+        output.append(bs_set[index])
+    return output

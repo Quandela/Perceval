@@ -23,7 +23,8 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, BasicState, BSDistribution, BSCount, SVDistribution, StateVector
+from perceval import Matrix, P, ACircuit, Circuit
+from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
@@ -128,6 +129,19 @@ def test_bscount_serialization():
     bsc.add(BasicState([1, 1]), 10558)
     deserialized_bsc = deserialize(serialize(bsc))
     assert bsc == deserialized_bsc
+
+
+def test_bssamples_serialization():
+    samples = BSSamples()
+    for j in range(50):
+        for i in range(11):
+            samples.append(BasicState([0, 1, 0]))
+        for i in range(13):
+            samples.append(BasicState([1, 0, 0]))
+        for i in range(17):
+            samples.append(BasicState([0, 0, 1]))
+    deserialized_samples = deserialize(serialize(samples))
+    assert deserialized_samples == samples
 
 
 def test_sv_serialization():

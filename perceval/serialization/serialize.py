@@ -24,9 +24,10 @@ from multipledispatch import dispatch
 
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
-from ._state_serialization import serialize_state, serialize_statevector
+from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
 from perceval.components import ACircuit
-from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, StateVector, simple_float
+from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
+    simple_float
 from base64 import b64encode
 
 
@@ -70,6 +71,11 @@ def serialize(obj) -> str:
     return ":PCVL:BSCount:{" \
            + ";".join(["%s=%s" % (serialize_state(k), str(v)) for k, v in obj.items()]) \
            + "}"
+
+
+@dispatch(BSSamples)
+def serialize(obj) -> str:
+    return ":PCVL:BSSamples:" + serialize_bssamples(obj)
 
 
 @dispatch(dict)
