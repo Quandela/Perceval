@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from numpy import Inf
 
 from .abstract_component import AComponent
 from .abstract_processor import AProcessor, ProcessorType
@@ -88,7 +89,10 @@ class Processor(AProcessor):
         if self._is_unitary:
             self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
         else:
-            self._simulator = StepperBackend(self.non_unitary_circuit(), self.circuit_size, self._backend_name)
+            self._simulator = StepperBackend(self.non_unitary_circuit(),
+                                             m=self.circuit_size,
+                                             backend_name=self._backend_name,
+                                             mode_post_selection=self._min_mode_post_select)
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -115,7 +119,7 @@ class Processor(AProcessor):
 
     @dispatch(SVDistribution)
     def with_input(self, svd: SVDistribution):
-        expected_photons = 1000
+        expected_photons = Inf
         for sv in svd:
             for state in sv:
                 expected_photons = min(expected_photons, state.n)
@@ -262,8 +266,8 @@ class Processor(AProcessor):
             else:
                 perm = perm_component.perm_vector
                 c_first = perm_modes[0]
-                self._post_select = lambda s: processor._post_select(BasicState([s[perm.index(ii) + c_first]
-                                                                                 for ii in range(processor.circuit_size)]))
+                self._post_select = lambda s: processor._post_select([s[perm.index(ii) + c_first]
+                                                                      for ii in range(processor.circuit_size)])
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
@@ -512,7 +516,7 @@ class Processor(AProcessor):
 
             second_perf = 1
             for out_state, output_prob in extended_out.items():
-                reduced_out_state = BasicState(out_state[0][interest_m[0]: interest_m[1]])
+                reduced_out_state = out_state[0][interest_m[0]: interest_m[1]]
                 if not self._state_selected_physical(reduced_out_state):
                     second_perf -= output_prob
                     continue
@@ -583,7 +587,7 @@ def _flatten(composite, starting_mode=0):
 
 def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int, input_map: SVDistribution, mode_post_select: int):
     p = Processor(backend_name, m)
-    input = input_map ** depth * SVDistribution(StateVector(BasicState([0] * (m - depth * next(iter(input_map)).m))))
+    input = input_map ** depth * SVDistribution(BasicState([0] * (m - depth * next(iter(input_map)).m)))
 
     p.with_input(input)
     for r, c in components:

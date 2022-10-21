@@ -69,6 +69,15 @@ class BasicState(FockState):
     def __pow__(self, power):
         return BasicState(power * list(self))
 
+    def __getitem__(self, item):
+        it = super().__getitem__(item)
+        if isinstance(it, FockState):
+            it = BasicState(it)
+        return it
+
+    def set_slice(self, slice, state):
+        return BasicState(super().set_slice(slice, state))
+
     def partition(self, distribution_photons: List[int]):
         r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
 
@@ -391,7 +400,7 @@ class SVTimeSequence:
 class SVDistribution(defaultdict):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[str,StateVector] = None):
+    def __init__(self, sv: Optional[str, StateVector, BasicState] = None):
         super(SVDistribution, self).__init__(float)
         if isinstance(sv, str):
             assert sv[0] == '{' and sv[-1]=='}', "invalid serialized svdistribution"

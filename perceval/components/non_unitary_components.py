@@ -54,7 +54,7 @@ class TD(AParametrizedComponent):
 
 class LC(AParametrizedComponent):
     """Loss channel"""
-    _name = "LC"
+    DEFAULT_NAME = "LC"
 
     def __init__(self, loss):
         super().__init__(1)

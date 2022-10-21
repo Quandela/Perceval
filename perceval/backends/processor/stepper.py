@@ -31,21 +31,28 @@ import quandelibc as qc
 
 
 class StepperBackend:
-    """Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
-       on a circuit defined with a unitary matrix.
-       - Use Naive backend for actual calculation of each component for non-symbolic resolution.
-       - TODO: Use SLOS backend for symbolic computation
+    """
+    :param cu: A unitary circuit or a list of components.
+    :param m: The size of the circuit. Needed if a list is given.
+    :param backend_name: The name of the backend that will be used for step by step computation.
+    :param mode_post_selection: The minimal number of modes that will be needed to keep a state.
+     Basically stops computing for states not having enough photons, but do not remove them.
+
+    Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
+    on a list of components [(r, comp)].
     """
 
     def __init__(self,
                  cu: Union[list, ACircuit],
                  m: int = None,
-                 backend_name="Naive"):
+                 backend_name="Naive",
+                 mode_post_selection=0):
         self._out = None
         self._C = cu
         self._backend = BACKEND_LIST[backend_name]
         self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
         self._compiled_input = None
+        self.mode_post_selection = mode_post_selection
         if isinstance(cu, ACircuit):
             self.m = cu.m
         else:
@@ -68,8 +75,9 @@ class StepperBackend:
         key = c.describe()  # Can't use c; two identical pieces aren't considered equal if they aren't at the same place
         # build list of never visited fockstates corresponding to subspace [min_r:max_r]
         sub_input_state = {sliced_state for state in sv
-                           for sliced_state in (BasicState(state[min_r:max_r]),)
-                           if sliced_state not in self._result_dict[key]['_set']}
+                           for sliced_state in (state[min_r:max_r],)
+                           if sliced_state not in self._result_dict[key]['_set']
+                           and state[:self.m].n >= self.mode_post_selection}
         # get circuit probability for these input_states
         if sub_input_state:
             sim_c = self._backend(c.compute_unitary(use_symbolic=False))
@@ -83,8 +91,11 @@ class StepperBackend:
         nsv = StateVector()
         # May be faster in c++ (impossible to use comprehension here due to successive additions)
         for state in sv:
-            for output_state, prob_ampli in self._result_dict[key][state[min_r:max_r]].items():
-                nsv[BasicState(state.set_slice(slice(min_r, max_r), output_state))] += prob_ampli * sv[state]
+            if state[:self.m].n >= self.mode_post_selection:  # Useless to compute if the mode will not be selected
+                for output_state, prob_ampli in self._result_dict[key][state[min_r:max_r]].items():
+                    nsv[state.set_slice(slice(min_r, max_r), output_state)] += prob_ampli * sv[state]
+            else:
+                nsv[state] = sv[state]
         return nsv
 
     def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
@@ -96,7 +107,6 @@ class StepperBackend:
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
-        self.m = input_states.m
         for r, c in self._C:
             if hasattr(c, "apply"):
                 sv = c.apply(r, sv)
