@@ -122,7 +122,7 @@ class Analyzer(AAlgorithm):
         for iidx, i_state in enumerate(self.input_states_list):
             sum_p = 0
             for oidx, o_state in enumerate(self.output_states_list):
-                if o_state in probs_res[i_state] or StateVector(o_state) in probs_res[i_state]:  # TODO cleanup
+                if o_state in probs_res[i_state]:
                     self._distribution[iidx, oidx] = probs_res[i_state][o_state]
                     sum_p += probs_res[i_state][o_state]
             if expected is not None:

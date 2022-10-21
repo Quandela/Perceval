@@ -27,7 +27,7 @@ from .port import APort, PortLocation, Herald, LogicalState
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Parameter
+from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, global_params, Parameter
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import BACKEND_LIST
 
@@ -419,7 +419,7 @@ class Processor(AProcessor):
 
     def probs(self, progress_callback: Callable = None) -> Dict:
         self._init_command("probs")
-        output = SVDistribution()
+        output = BSDistribution()
         idx = 0
         input_length = len(self._inputs_map)
         physical_perf = 1
@@ -446,9 +446,7 @@ class Processor(AProcessor):
         if all_p == 0:
             return {'results': output, 'physical_perf': physical_perf}
         logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
-        # normalize probabilities
-        for k in output.keys():
-            output[k] /= all_p
+        output.normalize()
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
     def _state_preselected_physical(self, input_state: BasicState):

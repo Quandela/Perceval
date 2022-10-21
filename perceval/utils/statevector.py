@@ -460,6 +460,22 @@ class BSDistribution(ProbabilityDistribution):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
         return super().__getitem__(key)
 
+    def sample(self, count: int = 1) -> List[BasicState]:
+        r""" Samples basic states from the `BSDistribution`
+
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
+        """
+        self.normalize()
+        states = list(self.keys())
+        probs = list(self.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        # numpy transforms iterables of ints to a nparray in rng.choice call
+        # Thus, we need to convert back the results to BasicStates
+        if len(results) == 1:
+            return BasicState(results[0])
+        return [BasicState(x) for x in results]
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

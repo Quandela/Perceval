@@ -26,8 +26,6 @@ from perceval.utils import samples_to_sample_count, samples_to_probs, sample_cou
     probs_to_samples, probs_to_sample_count
 from perceval.components.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
-from perceval.serialization import deserialize_state, deserialize_state_list, deserialize_svdistribution,\
-    deserialize_sample_count
 
 
 class Sampler(AAlgorithm):

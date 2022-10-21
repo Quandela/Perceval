@@ -32,12 +32,12 @@ from base64 import b64encode
 
 @dispatch(ACircuit)
 def serialize(circuit: ACircuit) -> str:
-    return ":PCVL:ACircuit:"+b64encode(serialize_circuit(circuit).SerializeToString()).decode('utf-8')
+    return ":PCVL:ACircuit:" + b64encode(serialize_circuit(circuit).SerializeToString()).decode('utf-8')
 
 
 @dispatch(Matrix)
 def serialize(m: Matrix) -> str:
-    return ":PCVL:Matrix:"+b64encode(serialize_matrix(m).SerializeToString()).decode('utf-8')
+    return ":PCVL:Matrix:" + b64encode(serialize_matrix(m).SerializeToString()).decode('utf-8')
 
 
 @dispatch(BasicState)
@@ -53,7 +53,8 @@ def serialize(sv) -> str:
 @dispatch(SVDistribution)
 def serialize(dist) -> str:
     return ":PCVL:SVDistribution:{" \
-           + ";".join(["%s=%s" % (serialize_statevector(k), simple_float(v, nsimplify=False)[1]) for k, v in dist.items()]) \
+           + ";".join(["%s=%s" % (serialize_statevector(k), simple_float(v, nsimplify=False)[1])
+                       for k, v in dist.items()]) \
            + "}"
 
 

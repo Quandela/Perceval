@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BasicState, SVDistribution
+from .statevector import BasicState, BSDistribution
 
 from typing import Dict, List
 import numpy as np
@@ -35,12 +35,12 @@ def samples_to_sample_count(sample_list: List[BasicState]) -> Dict[BasicState, i
     return results
 
 
-def samples_to_probs(sample_list: List[BasicState]) -> SVDistribution:
+def samples_to_probs(sample_list: List[BasicState]) -> BSDistribution:
     return sample_count_to_probs(samples_to_sample_count(sample_list))
 
 
-def probs_to_sample_count(probs: SVDistribution, count: int) -> Dict[BasicState, int]:
-    perturbed_dist = {state[0]: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
+def probs_to_sample_count(probs: BSDistribution, count: int) -> Dict[BasicState, int]:
+    perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
     fac = 1 / sum(prob for prob in perturbed_dist.values())
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
@@ -50,23 +50,20 @@ def probs_to_sample_count(probs: SVDistribution, count: int) -> Dict[BasicState,
     return results
 
 
-def probs_to_samples(probs: SVDistribution, count: int) -> List[BasicState]:
-    return [s[0] for s in probs.sample(count)]
+def probs_to_samples(probs: BSDistribution, count: int) -> List[BasicState]:
+    return probs.sample(count)
 
 
 def sample_count_to_probs(sample_count: Dict[BasicState, int]):
-    svd = SVDistribution()
-    n_samples = 0
+    bsd = BSDistribution()
     for state, count in sample_count.items():
         if count == 0:
             continue
         if count < 0:
             raise RuntimeError(f"A sample count must be positive (got {count})")
-        svd[state] = count
-        n_samples += count
-    for state, value in svd.items():
-        svd[state] = value / n_samples
-    return svd
+        bsd[state] = count
+    bsd.normalize()
+    return bsd
 
 
 def sample_count_to_samples(sample_count: Dict[BasicState, int], count: int):
