@@ -27,6 +27,8 @@ from perceval.utils import StateVector, BasicState
 from perceval.components import ACircuit
 from perceval.backends import BACKEND_LIST
 
+import quandelibc as qc
+
 
 class StepperBackend:
     """Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
@@ -42,6 +44,8 @@ class StepperBackend:
         self._C = cu
         self._backend = BACKEND_LIST[backend_name]
         self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
+        self._compiled_input = None
+        self.m = max(min(r) + c.m for r, c in self._C)
 
     name = "Stepper"
     supports_symbolic = False
@@ -83,10 +87,11 @@ class StepperBackend:
             sv = StateVector(input_states)
         else:
             sv = input_states
-        var = [float(p) for p in self._C.get_parameters()]
+        var = [float(p) for _, c in self._C for p in c.get_parameters()]
         if self._compiled_input == (var, sv):
             return False
         self._compiled_input = copy.copy((var, sv))
+        self.m = input_states.m
         for r, c in self._C:
             if hasattr(c, "apply"):
                 sv = c.apply(r, sv)
@@ -95,10 +100,10 @@ class StepperBackend:
         self._out = sv
         return True
 
-    def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, n, output_idx))**2
+    def prob_be(self, input_state, output_state):
+        return abs(self.probampli_be(input_state, output_state))**2
 
-    def probampli_be(self, _, output_state, n=None, output_idx=None):
+    def probampli_be(self, _, output_state):
         if output_state not in self._out:
             return 0
         return self._out[output_state]
@@ -137,6 +142,25 @@ class StepperBackend:
         for output_state in self.allstate_iterator(out):
             yield output_state, self.prob(input_state, output_state, skip_compile=True)
 
+    def allstate_iterator(self, input_state: Union[BasicState, StateVector]) -> BasicState:
+        """Iterator on all possible output states compatible with mask generating StateVector
+
+        :param input_state: a given input state vector
+        :return: list of output_state
+        """
+        m = self.m
+        ns = input_state.n
+        if not isinstance(ns, list):
+            ns = [ns]
+        for n in ns:
+            output_array = qc.FSArray(m, n)
+            for output_idx, output_state in enumerate(output_array):
+                yield BasicState(output_state)
+
     @staticmethod
     def preferred_command() -> str:
         return 'evolve'
+
+    @staticmethod
+    def available_commands() -> List[str]:
+        return ['prob', 'prob_be', 'probampli', 'probampli_be', 'evolve']

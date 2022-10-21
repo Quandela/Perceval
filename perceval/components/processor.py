@@ -28,6 +28,7 @@ from .port import APort, PortLocation, Herald, LogicalState
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
+from .computation import count_TD, count_independant_TD, expand_TD
 from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Parameter
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import BACKEND_LIST
@@ -37,7 +38,6 @@ from multipledispatch import dispatch
 from typing import Dict, Callable, Union
 import copy
 
-from perceval.utils.non_linear_components.time_delays import count_TD, count_independant_TD, expand_TD
 
 
 class Processor(AProcessor):
@@ -62,6 +62,8 @@ class Processor(AProcessor):
 
         self._post_select = None
         self._n_heralds = 0
+        self._is_unitary = True
+        self._has_td = False
         if isinstance(m_circuit, int):
             self._n_moi = m_circuit  # number of modes of interest (MOI)
         else:
@@ -76,8 +78,6 @@ class Processor(AProcessor):
         self._simulator = None
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
         self._backend_name = backend_name
-        self._is_unitary = True
-        self._has_td = False
 
         self._thresholded_output: bool = False
 
@@ -383,12 +383,12 @@ class Processor(AProcessor):
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> list:
+        if self._has_td:  # Inherited from the parent processor in this case
+            return self.components
+
         comp = _flatten(self)
         if flatten:
             return comp
-
-        if self._has_td:  # Inherited from the parent processor in this case
-            return self.components
 
         # Compute the unitaries between the non-unitary components
         new_comp = []
@@ -431,7 +431,7 @@ class Processor(AProcessor):
         assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         assert self.available_sampling_method == command_name, \
             f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
-        if self._simulator is None:
+        if self._simulator is None and not self._has_td:
             self._setup_simulator()
 
     def samples(self, count: int, progress_callback=None) -> Dict:
@@ -494,25 +494,25 @@ class Processor(AProcessor):
             # Create a bigger processor with no heralds to represent the time delays
             p_comp = _flatten(self)
             TD_number = count_TD(p_comp)
-            depth = count_independant_TD(p_comp, self.m) + 1
-            extend_circ, extend_m = expand_TD(p_comp, depth, self.m, TD_number, True)
-            # p_comp = simplify(extend_circ, extend_m)
+            depth = count_independant_TD(p_comp, self.circuit_size) + 1
+            p_comp, extend_m = expand_TD(p_comp, depth, self.circuit_size, TD_number, True)
+            # p_comp = simplify(p_comp, extend_m)
             extended_p = _expand_TD_processor(p_comp,
                                               self._backend_name,
                                               depth,
-                                              extend_circ.m,
+                                              extend_m,
                                               self._inputs_map,
                                               self._min_mode_post_select)
 
             res = extended_p.probs(progress_callback=progress_callback)
 
             # Now reduce the states.
-            interest_m = [(depth - 1) * self.m, depth * self.m]
+            interest_m = [(depth - 1) * self.circuit_size, depth * self.circuit_size]
             extended_out = res["results"]
 
             second_perf = 1
             for out_state, output_prob in extended_out.items():
-                reduced_out_state = out_state[interest_m[0]: interest_m[1]]
+                reduced_out_state = BasicState(out_state[0][interest_m[0]: interest_m[1]])
                 if not self._state_selected_physical(reduced_out_state):
                     second_perf -= output_prob
                     continue
