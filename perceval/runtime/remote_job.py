@@ -21,7 +21,7 @@
 # SOFTWARE.
 import json
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
@@ -48,7 +48,7 @@ class RemoteJob(Job):
         assert self._job_status.waiting, "job as already been executed"
         job = self.execute_async(*args, **kwargs)
         while not job.is_completed():
-            time.sleep(3)
+            time.sleep(1)
         return self.get_results()
 
     def execute_async(self, *args, **kwargs):
@@ -63,4 +63,9 @@ class RemoteJob(Job):
     def get_results(self) -> Any:
         response = self._rpc_handler.get_job_results(self._id)
         results = deserialize(json.loads(response['results']))
+        if "job_context" in results and 'result_mapping' in results["job_context"]:
+            path_parts = results["job_context"]["result_mapping"]
+            module = __import__(path_parts[0], fromlist=path_parts[1])
+            result_mapping_function = getattr(module, path_parts[1])
+            results["results"] = result_mapping_function(results["results"])
         return results

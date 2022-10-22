@@ -28,7 +28,6 @@ import time
 
 from perceval import RemoteProcessor
 from perceval.algorithm import Sampler
-from perceval.serialization import jsonstring_to_bytes, deserialize_circuit
 
 theta_r13 = cp.BS.r_to_theta(1/3)
 cnot = pcvl.Circuit(6, name="Ralph CNOT")

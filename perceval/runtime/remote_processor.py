@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, List, Callable
+from typing import Dict, Callable
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
@@ -75,6 +75,14 @@ class RemoteProcessor(AProcessor):
     def is_remote(self):
         return True
 
+    @property
+    def job_context(self):
+        return self._job_context
+
+    @job_context.setter
+    def job_context(self, job_context):
+        self._job_context = job_context
+
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
         plugins_specs = platform_details['specs']
@@ -115,24 +123,29 @@ class RemoteProcessor(AProcessor):
     def async_samples(self, count):
         if self._backend is None:
             self.__build_backend()
+        self._backend.job_context = self._job_context
 
         return self._backend.async_samples(self._input_state, count, parameters=self._parameters)
 
     def async_sample_count(self, count) -> str:
         if self._backend is None:
             self.__build_backend()
+        self._backend.job_context = self._job_context
 
         return self._backend.async_sample_count(self._input_state, count, parameters=self._parameters)
 
     def async_probs(self) -> SVDistribution:
         if self._backend is None:
             self.__build_backend()
+        self._backend.job_context = self._job_context
 
         return self._backend.async_probs(self._input_state, parameters=self._parameters)
 
     def async_execute(self, command: str, **args):
         if self._backend is None:
             self.__build_backend()
+        self._backend.job_context = self._job_context
+
         return self._backend.async_execute(command, parameters=self._parameters, **args)
 
     def get_circuit_parameters(self) -> Dict[str, Parameter]:

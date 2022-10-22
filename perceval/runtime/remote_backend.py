@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Union
+from typing import Union, Optional
 
 from perceval.backends import Backend
 from perceval.components import ACircuit
@@ -47,10 +47,19 @@ class RemoteBackend(Backend):
             self.__cu_key = 'unitary'
         self.__cu_data = serialize(cu)
         super(RemoteBackend, self).__init__(cu, use_symbolic, n, mask)
+        self._job_context = None
 
     @staticmethod
     def preferred_command() -> str:
         return 'sample_count'
+
+    @property
+    def job_context(self):
+        return self._job_context
+
+    @job_context.setter
+    def job_context(self, job_context: dict):
+        self._job_context = job_context
 
     def __defaults_job_params(self, command: str):
         return {
@@ -84,11 +93,7 @@ class RemoteBackend(Backend):
         if parameters:
             job_params['payload']['parameters'] = parameters
 
+        if self.job_context:
+            job_params['payload']['job_context'] = self.job_context
+
         return self.__rpc_handler.create_job(job_params)
-
-
-    def probampli_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
-
-    def prob_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
