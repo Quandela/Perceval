@@ -35,10 +35,9 @@ pcvl_version = get_distribution("perceval-quandela").version
 
 ################################
 @generate_sync_methods
-class RemoteBackend(Backend):
+class RemoteBackend():
 
-    def __init__(self, rpc: RPCHandler, backend_name, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None,
-                 mask=None):
+    def __init__(self, rpc: RPCHandler, backend_name, cu: Union[ACircuit, Matrix]):
         self.name = backend_name
         self.__rpc_handler = rpc
         if isinstance(cu, ACircuit):
@@ -46,7 +45,6 @@ class RemoteBackend(Backend):
         else:
             self.__cu_key = 'unitary'
         self.__cu_data = serialize(cu)
-        super(RemoteBackend, self).__init__(cu, use_symbolic, n, mask)
         self._job_context = None
 
     @staticmethod
@@ -81,6 +79,18 @@ class RemoteBackend(Backend):
     def async_probs(self, input_state: BasicState, parameters=None):
         return self.async_execute('probs', parameters,
                                   input_state=serialize(input_state))
+
+    def async_probampli(self, input_state, output_state, n=None, parameters=None):
+        return self.async_execute('probampli', parameters,
+                                  input_state=serialize(input_state),
+                                  output_state=serialize(output_state),
+                                  n=n)
+
+    def async_prob(self, input_state, output_state, n=None, parameters=None):
+        return self.async_execute('prob', parameters,
+                                  input_state=serialize(input_state),
+                                  output_state=serialize(output_state),
+                                  n=n)
 
     def async_execute(self, command: str, parameters=None, **args):
         job_params = self.__defaults_job_params(command)

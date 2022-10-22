@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, Callable
+from typing import Dict, List, Callable
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
@@ -30,14 +30,6 @@ from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.dev'
-
-
-def _extract_commands(specs):
-    for v in specs.values():
-        if 'available_commands' in v:
-            for c in v['available_commands']:
-                yield c
-
 
 def _get_first_spec(specs, name):
     for v in specs.values():
@@ -115,10 +107,8 @@ class RemoteProcessor(AProcessor):
         self._input_state = input_state
 
     @property
-    def available_sampling_method(self) -> str:
-        for k, v in _extract_commands(self._specs):
-            return v
-        return None
+    def available_commands(self) -> List[str]:
+        return self._specs.get("available_commands", [])
 
     def async_samples(self, count):
         if self._backend is None:
@@ -138,7 +128,6 @@ class RemoteProcessor(AProcessor):
         if self._backend is None:
             self.__build_backend()
         self._backend.job_context = self._job_context
-
         return self._backend.async_probs(self._input_state, parameters=self._parameters)
 
     def async_execute(self, command: str, **args):

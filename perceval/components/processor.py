@@ -382,8 +382,6 @@ class Processor(AProcessor):
 
     def _init_command(self, command_name: str):
         assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
-        assert self.available_sampling_method == command_name, \
-            f"Cannot call {command_name}(). Available method is {self.available_sampling_method} "
         if self._simulator is None:
             self._setup_simulator()
 
@@ -470,11 +468,8 @@ class Processor(AProcessor):
         return True
 
     @property
-    def available_sampling_method(self) -> str:
-        preferred_command = BACKEND_LIST[self._backend_name].preferred_command()
-        if preferred_command == 'samples':
-            return 'samples'
-        return 'probs'
+    def available_commands(self) -> str:
+        return [BACKEND_LIST[self._backend_name].preferred_command()=="samples" and "samples" or "probs"]
 
     def get_circuit_parameters(self) -> Dict[str, Parameter]:
         return {p.name: p for p in self._circuit.get_parameters()}

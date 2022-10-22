@@ -25,15 +25,22 @@ from typing import Any, Callable, Optional
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
-from .rpc_handler import RPCHandler
 from perceval.serialization import deserialize
 
 
 class RemoteJob(Job):
-    def __init__(self, fn: Callable, rpc_handler: RPCHandler):
-        super().__init__(fn)
-        self._rpc_handler = rpc_handler
+    def __init__(self, fn: Callable, remote_processor, delta_parameters=None, job_context=None):
+        r"""
+        :param fn: the remote processor function to call
+        :param remote_processor: the remote processor (will be used to set the job context
+        :param rpc_handler: the RPC handler
+        :param delta_parameters: parameters to add/remove dynamically
+        """
+        super().__init__(fn, delta_parameters=delta_parameters)
+        self._remote_processor = remote_processor
+        self._rpc_handler = remote_processor.get_rpc_handler()
         self._job_status = JobStatus()
+        self._job_context = job_context
 
     @property
     def status(self) -> JobStatus:
@@ -54,6 +61,12 @@ class RemoteJob(Job):
     def execute_async(self, *args, **kwargs):
         assert self._job_status.waiting, "job as already been executed"
         try:
+            args, kwargs = self._adapt_parameters(args, kwargs)
+            if self._delta_parameters:
+                if self._job_context is None:
+                    self._job_context = {}
+                self._job_context["mapping_delta_parameters"] = self._delta_parameters
+            self._remote_processor.job_context = self._job_context
             self._id = self._fn(*args, **kwargs)
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))
@@ -67,5 +80,7 @@ class RemoteJob(Job):
             path_parts = results["job_context"]["result_mapping"]
             module = __import__(path_parts[0], fromlist=path_parts[1])
             result_mapping_function = getattr(module, path_parts[1])
-            results["results"] = result_mapping_function(results["results"])
+            # retrieve delta parameters from the response
+            self._delta_parameters = results["job_context"].get("mapping_delta_parameters", {})
+            results["results"] = result_mapping_function(results["results"], **self._delta_parameters)
         return results

@@ -22,7 +22,7 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 from perceval.utils import BasicState, Parameter
 
@@ -69,17 +69,17 @@ class AProcessor(ABC):
 
     @property
     @abstractmethod
-    def available_sampling_method(self) -> str:
+    def available_commands(self) -> List[str]:
         pass
 
     def samples(self, count: int, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call samples(). Available method is {self.available_sampling_method}")
+        raise RuntimeError(f"Cannot call samples(). Available method are {self.available_commands}")
 
     def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call sample_count(). Available method is {self.available_sampling_method}")
+        raise RuntimeError(f"Cannot call sample_count(). Available method are {self.available_commands}")
 
     def probs(self, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call probs(). Available method is {self.available_sampling_method}")
+        raise RuntimeError(f"Cannot call probs(). Available method are {self.available_commands}")
 
     @abstractmethod
     def get_circuit_parameters(self) -> Dict[str, Parameter]:

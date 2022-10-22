@@ -69,5 +69,7 @@ def sample_count_to_probs(sample_count: Dict[BasicState, int]):
     return svd
 
 
-def sample_count_to_samples(sample_count: Dict[BasicState, int], count: int):
+def sample_count_to_samples(sample_count: Dict[BasicState, int], count: int=None):
+    if count is None:
+        count = sum([v for v in sample_count.values()])
     return sample_count_to_probs(sample_count).sample(count)
