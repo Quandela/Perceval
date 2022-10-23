@@ -29,18 +29,21 @@ from perceval.serialization import deserialize
 
 
 class RemoteJob(Job):
-    def __init__(self, fn: Callable, remote_processor, delta_parameters=None, job_context=None):
+    def __init__(self, fn: Callable, remote_processor,
+                 delta_parameters=None, job_context=None, refresh_progress_delay: int=3):
         r"""
         :param fn: the remote processor function to call
         :param remote_processor: the remote processor (will be used to set the job context
         :param rpc_handler: the RPC handler
         :param delta_parameters: parameters to add/remove dynamically
+        :param refresh_progress_delay: wait time when running in sync mode between each refresh
         """
         super().__init__(fn, delta_parameters=delta_parameters)
         self._remote_processor = remote_processor
         self._rpc_handler = remote_processor.get_rpc_handler()
         self._job_status = JobStatus()
         self._job_context = job_context
+        self._refresh_progress_delay = refresh_progress_delay
 
     @property
     def status(self) -> JobStatus:
@@ -55,7 +58,7 @@ class RemoteJob(Job):
         assert self._job_status.waiting, "job as already been executed"
         job = self.execute_async(*args, **kwargs)
         while not job.is_completed():
-            time.sleep(1)
+            time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
     def execute_async(self, *args, **kwargs):
