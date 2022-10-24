@@ -72,6 +72,14 @@ class LC(AParametrizedComponent):
         return f"LC(loss={value})"
 
     def apply(self, r, sv):
+        """
+        Applies a channel loss to r-th mode on an input StateVector sv
+        Channel loss is treated as a beam splitter with a reflectivity equal to the loss. This beam splitter
+        being connected to a "virtual" mode containing lost photons
+
+        The output state vector contains BasicStates which are 1 mode bigger than the ones in input:
+        (input modes count + the virtual mode)
+        """
         # Assumes r of size 1
         # Returns a stateVector of size m + 1. Stepper backend should support this
         if isinstance(sv, BasicState):
@@ -87,12 +95,13 @@ class LC(AParametrizedComponent):
 
         prob = sc.special.comb(np.tile(N, (n_max+1, 1)), k)
         prob *= loss ** (sc.sparse.diags([(n_max + 1 - i) * [i] for i in range(n_max + 1)],
-                                               list(range(n_max + 1))).toarray())
+                                         list(range(n_max + 1))).toarray())
         prob *= (1 - loss) ** k
         prob = np.sqrt(prob)
 
         nsv = StateVector()
         nsv.m = sv.m + 1
+        # Equivalent to the nsv.update below:
         # for state, prob_ampli in sv.items():
         #     n = state[r]
         #     for i in range(n + 1):
