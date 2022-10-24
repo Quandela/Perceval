@@ -45,6 +45,12 @@ class AComponent(ABC):
             return self.DEFAULT_NAME
         return self._name
 
+    def is_composite(self):
+        """
+        Returns True if the component is itself composed of subcomponents
+        """
+        return False
+
 
 class AParametrizedComponent(AComponent):
     def __init__(self, m: int, name: str = None):

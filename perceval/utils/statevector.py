@@ -69,6 +69,15 @@ class BasicState(FockState):
     def __pow__(self, power):
         return BasicState(power * list(self))
 
+    def __getitem__(self, item):
+        it = super().__getitem__(item)
+        if isinstance(it, FockState):
+            it = BasicState(it)
+        return it
+
+    def set_slice(self, slice, state):
+        return BasicState(super().set_slice(slice, state))
+
     def partition(self, distribution_photons: List[int]):
         r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
 
@@ -182,7 +191,7 @@ class StateVector(defaultdict):
         return super().__setitem__(key, value)
 
     def __iter__(self):
-        self._normalize()
+        self.normalize()
         return super().__iter__()
 
     def __mul__(self, other):
@@ -271,7 +280,7 @@ class StateVector(defaultdict):
         p = random.random()
         idx = 0
         keys = list(self.keys())
-        self._normalize()
+        self.normalize()
         while idx < len(keys)-1:
             p = p - abs(self[keys[idx]])**2
             if p < 0:
@@ -287,7 +296,7 @@ class StateVector(defaultdict):
         :param shots: the number of samples
         :return: a list of BasicState
         """
-        self._normalize()
+        self.normalize()
         weight = [abs(self[key])**2 for key in self.keys()]
         rng = np.random.default_rng()
         return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
@@ -298,7 +307,7 @@ class StateVector(defaultdict):
         :param modes: the mode to measure
         :return: a dictionary - key is the possible measures, values are pairs (probability, BasicState vector)
         """
-        self._normalize()
+        self.normalize()
         if isinstance(modes, int):
             modes = [modes]
         map_measure_sv = defaultdict(lambda: [0, StateVector()])
@@ -320,7 +329,7 @@ class StateVector(defaultdict):
         r"""list the possible values of n in the different states"""
         return list(set([st.n for st in self.keys()]))
 
-    def _normalize(self):
+    def normalize(self):
         r"""Normalize a non-normalized BasicState"""
         if not self._normalized:
             norm = 0
@@ -342,11 +351,12 @@ class StateVector(defaultdict):
             self._normalized = True
 
     def __str__(self):
-        self._normalize()
-        ls = []
         if not self:
             return "|>"
-        for key, value in self.items():
+        self_copy = copy(self)
+        self_copy.normalize()
+        ls = []
+        for key, value in self_copy.items():
             if value == 1:
                 ls.append(str(key))
             else:
@@ -360,7 +370,7 @@ class StateVector(defaultdict):
         return "+".join(ls).replace("+-", "-")
 
     def serialize(self):
-        self._normalize()
+        self.normalize()
         ls = []
         for key, value in self.items():
             real = simple_float(value.real, nsimplify=False)[1]
@@ -380,26 +390,24 @@ def tensorproduct(states: List[Union[StateVector, BasicState]]):
     return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
 
-class SVTimeSequence:
-    r"""Sequence in time of BasicState-vector
-    """
-
-    def __init__(self):
-        pass
-
-
 class SVDistribution(defaultdict):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[str,StateVector] = None):
+    def __init__(self, sv: Optional[str, StateVector, BasicState] = None):
         super(SVDistribution, self).__init__(float)
         if isinstance(sv, str):
-            assert sv[0] == '{' and sv[-1]=='}', "invalid serialized svdistribution"
+            assert sv[0] == '{' and sv[-1] == '}', "invalid serialized svdistribution"
             for s in sv[1:-1].split(";"):
-                k, v=s.split("=")
+                k, v = s.split("=")
                 self[StateVector.deserialize(k)] = float(v)
         elif sv is not None:
             self[sv] = 1
+
+    def __copy__(self):
+        svd_copy = SVDistribution()
+        for sv, prob in self.items():
+            svd_copy[copy(sv)] = prob
+        return svd_copy
 
     def __str__(self):
         return "{"+";".join(["%s=%s" % (k.serialize(), simple_float(v, nsimplify=False)[1]) for k, v in self.items()])+"}"
@@ -411,6 +419,7 @@ class SVDistribution(defaultdict):
         if isinstance(key, BasicState):
             key = StateVector(key)
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
+        key.normalize()
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
@@ -430,10 +439,28 @@ class SVDistribution(defaultdict):
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():
-                assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
-                new_svd[StateVector(sv1[0]*sv2[0])] = proba1 * proba2
+                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+                new_svd[sv1*sv2] = proba1 * proba2
 
         return new_svd
+
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_svd = self
+        out = SVDistribution()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_svd
+            if i != len(binary) - 1:
+                power_svd *= power_svd
+        return out
+
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        for sv in self.keys():
+            self[sv] /= sum_probs
 
     def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
@@ -442,6 +469,7 @@ class SVDistribution(defaultdict):
         :param count: number of samples to draw
         :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
         """
+        self.normalize()
         d = self
         if non_null:
             d = {sv: p for sv, p in self.items() if max(sv.n) != 0}

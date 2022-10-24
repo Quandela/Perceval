@@ -104,12 +104,6 @@ class ACircuit(AParametrizedComponent, ABC):
         """
         return self.compute_unitary(use_symbolic=True).simp()
 
-    def is_composite(self):
-        """
-        Returns True if the circuit is composed of subcomponents
-        """
-        return False
-
     def definition(self):
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
