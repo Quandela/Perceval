@@ -89,6 +89,8 @@ class Processor(AProcessor):
         if self._is_unitary:
             self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
         else:
+            if "probampli" not in BACKEND_LIST[self._backend_name].available_commands():
+                raise RuntimeError(f"{self._backend_name} backend cannot be used on a non-unitary processor")
             self._simulator = StepperBackend(self.non_unitary_circuit(),
                                              m=self.circuit_size,
                                              backend_name=self._backend_name,
@@ -190,7 +192,6 @@ class Processor(AProcessor):
             raise RuntimeError("Cannot add any component to a processor with post-process function")
 
         self._simulator = None  # Invalidate simulator which will have to be recreated later on
-        component = component.copy()
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, Processor):
             self._compose_processor(connector, component, keep_port)
@@ -381,6 +382,8 @@ class Processor(AProcessor):
         If the processor contains at least one non-linear component, calling linear_circuit will try to convert it to
         a working linear circuit, or raise an exception
         """
+        if not self._is_unitary:
+            raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
         for component in self._components:
             circuit.add(component[0], component[1], merge=flatten)
@@ -420,7 +423,7 @@ class Processor(AProcessor):
         return new_comp
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if not self.heralds or keep_herald:
+        if (not self.heralds or keep_herald) and not self._thresholded_output:
             return s
         new_state = []
         for idx, k in enumerate(s):
@@ -563,7 +566,7 @@ class Processor(AProcessor):
         return 'probs'
 
     def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        return {p.name: p for p in self._circuit.get_parameters()}
+        return {p.name: p for _, c in self._components for p in c.get_parameters()}
 
     def set_circuit_parameters(self, params: Dict[str, float]) -> None:
         circuit_params = self.get_circuit_parameters()
@@ -571,6 +574,11 @@ class Processor(AProcessor):
             if param_name in circuit_params:
                 circuit_params[param_name].set_value(param_value)
 
+    def flatten(self):
+        """
+        Return a component list where recursive circuits have been flattened
+        """
+        return _flatten(self)
 
 
 def _flatten(composite, starting_mode=0):
