@@ -21,6 +21,7 @@
 # SOFTWARE.
 from copy import copy
 from enum import Enum
+
 import numpy as np
 import sympy as sp
 

@@ -225,6 +225,6 @@ class ModeConnector:
             mode_mapping[mm] = max(mode_mapping.values()) + 1
         perm_modes = list(range(min_m, min_m + len(mode_mapping)))
         perm_vect = [mode_mapping[i] for i in sorted(mode_mapping.keys())]
-        if perm_vect == perm_modes:
+        if perm_vect == list(range(len(perm_modes))):
             return perm_modes, None  # No need for a permutation, modes are already sorted
         return perm_modes, PERM(perm_vect)

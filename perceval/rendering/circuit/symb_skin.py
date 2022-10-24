@@ -22,7 +22,7 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, Circuit, Port, PortLocation, Herald,\
+from perceval.components import AComponent, Circuit, Port, PortLocation, Herald,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeStyle
@@ -37,6 +37,11 @@ class SymbSkin(ASkin):
                           "stroke_style": {"stroke": "black", "stroke_width": 1}},
                          compact_display)
 
+    @dispatch(AComponent)
+    def get_width(self, c) -> int:
+        """Absolute fallback"""
+        return 1
+
     @dispatch(cp.Unitary)
     def get_width(self, c) -> int:
         return c.m
@@ -50,11 +55,11 @@ class SymbSkin(ASkin):
         w = 1 if self._compact else 2
         return w
 
-    @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR))
+    @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR, nu.LC))
     def get_width(self, c) -> int:
         return 1
 
-    @dispatch(ACircuit)
+    @dispatch(AComponent)
     def get_shape(self, c):
         return self.default_shape
 
@@ -97,6 +102,10 @@ class SymbSkin(ASkin):
     @dispatch(cp.PR)
     def get_shape(self, c):
         return self.pr_shape
+
+    @dispatch(nu.LC)
+    def get_shape(self, c):
+        return self.lc_shape
 
     @dispatch(Port, PortLocation)
     def get_shape(self, port, location):
@@ -147,6 +156,17 @@ class SymbSkin(ASkin):
                          stroke="black", stroke_width=1, fill="lightgray")
         canvas.add_text((25, 44), text=content.replace("phi=", "Φ="), size=7, ta="middle")
 
+    def lc_shape(self, circuit, canvas, content, mode_style, **opts):
+        style = {'stroke': 'black', 'stroke_width': 1}
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([25, 25, 25, 32], **style)
+        canvas.add_mline([15, 32, 35, 32], **style)
+        canvas.add_mline([18, 34, 32, 34], **style)
+        canvas.add_mline([21, 36, 29, 36], **style)
+        canvas.add_mline([24, 38, 26, 38], **style)
+        canvas.add_rect((22, 22), 6, 6, fill="white")
+        canvas.add_text((6, 20), text=content, size=7, ta="left")
+
     def pbs_shape(self, circuit, canvas, content, mode_style, **opts):
         if self._compact:
             path_data1 = ["M", 0, 25.1, "h", 11.049, "m", -11.049, 50, "h", 10.9375, "m", 27.9029, -50, "h",
@@ -186,13 +206,13 @@ class SymbSkin(ASkin):
     def unitary_shape(self, circuit, canvas, content, mode_style, **opts):
         w = circuit.m
         for i in range(circuit.m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.stroke_style)
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[ModeStyle.PHOTONIC])
         radius = 6.25 * w  # Radius of the rounded corners
         canvas.add_mpath(
             ["M", 0, radius, "c", 0, 0, 0, -radius, radius, -radius, "l", 6 * radius, 0, "c", radius, 0, radius, radius,
              radius, radius, "l", 0, 6 * radius, "c", 0, 0, 0, radius, -radius, radius, "l", -6 * radius, 0, "c",
              -radius, 0, -radius, -radius, -radius, -radius, "l", 0, -6 * radius],
-            **self.stroke_style, fill="lightyellow")
+            **self.style[ModeStyle.PHOTONIC], fill="lightyellow")
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
 
     def perm_shape(self, circuit, canvas, content, mode_style, **opts):
