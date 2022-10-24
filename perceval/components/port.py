@@ -184,3 +184,6 @@ class LogicalState(list):
         if index != len(self):
             raise ValueError('Logical state and port list do not match (state too long)')
         return BasicState(result)
+
+    def __str__(self):
+        return '|' + ','.join([str(x) for x in self]) + '>>'

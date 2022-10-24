@@ -393,10 +393,16 @@ class ProbabilityDistribution(defaultdict):
 class SVDistribution(ProbabilityDistribution):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[str, StateVector] = None):
+    def __init__(self, sv: Optional[StateVector, Dict] = None):
         super().__init__()
         if sv is not None:
-            self[sv] = 1
+            if isinstance(sv, StateVector):
+                self[sv] = 1
+            elif isinstance(sv, dict):
+                for k, v in sv.items():
+                    self[k] = v
+            else:
+                raise TypeError(f"Unexpected type initializing SVDistribution {type(sv)}")
 
     def __setitem__(self, key, value):
         if isinstance(key, BasicState):
@@ -449,8 +455,11 @@ class SVDistribution(ProbabilityDistribution):
 
 class BSDistribution(ProbabilityDistribution):
 
-    def __init__(self):
+    def __init__(self, d: Optional[Dict] = None):
         super().__init__()
+        if d is not None:
+            for k, v in d.items():
+                self[BasicState(k)] = v
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
@@ -480,8 +489,11 @@ class BSDistribution(ProbabilityDistribution):
 
 
 class BSCount(defaultdict):
-    def __init__(self):
+    def __init__(self, d: Optional[Dict] = None):
         super().__init__(int)
+        if d is not None:
+            for k, v in d.items():
+                self[BasicState(k)] = v
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSCount key must be a BasicState"
