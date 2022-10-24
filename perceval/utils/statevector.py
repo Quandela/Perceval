@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import random
+import warnings
 from collections import defaultdict
 from copy import copy
 import itertools
@@ -381,6 +382,9 @@ class ProbabilityDistribution(defaultdict):
 
     def normalize(self):
         sum_probs = sum(list(self.values()))
+        if sum_probs == 0:
+            warnings.warn("Unable to normalize a distribution with only null probabilities")
+            return
         for sv in self.keys():
             self[sv] /= sum_probs
 
