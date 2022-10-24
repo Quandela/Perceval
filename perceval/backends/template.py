@@ -297,6 +297,7 @@ class Backend(ABC):
                     output_state[basic_output_state] += self.probampli(inp_state, basic_output_state) * sv[inp_state]
             else:
                 output_state[basic_output_state] += self.probampli(input_state, basic_output_state)
+        output_state.normalize()
         return output_state
 
     def compile(self,
