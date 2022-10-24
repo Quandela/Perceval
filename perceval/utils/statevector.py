@@ -72,6 +72,15 @@ class BasicState(FockState):
     def __pow__(self, power):
         return BasicState(power * list(self))
 
+    def __getitem__(self, item):
+        it = super().__getitem__(item)
+        if isinstance(it, FockState):
+            it = BasicState(it)
+        return it
+
+    def set_slice(self, slice, state):
+        return BasicState(super().set_slice(slice, state))
+
     def partition(self, distribution_photons: List[int]):
         r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
 
@@ -393,10 +402,10 @@ class ProbabilityDistribution(defaultdict):
 class SVDistribution(ProbabilityDistribution):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[StateVector, Dict] = None):
+    def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
         super().__init__()
         if sv is not None:
-            if isinstance(sv, StateVector):
+            if isinstance(sv, (BasicState, StateVector)):
                 self[sv] = 1
             elif isinstance(sv, dict):
                 for k, v in sv.items():
@@ -428,10 +437,28 @@ class SVDistribution(ProbabilityDistribution):
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():
-                assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
-                new_svd[StateVector(sv1[0]*sv2[0])] = proba1 * proba2
+                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+                new_svd[sv1*sv2] = proba1 * proba2
 
         return new_svd
+
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_svd = self
+        out = SVDistribution()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_svd
+            if i != len(binary) - 1:
+                power_svd *= power_svd
+        return out
+
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        for sv in self.keys():
+            self[sv] /= sum_probs
 
     def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`

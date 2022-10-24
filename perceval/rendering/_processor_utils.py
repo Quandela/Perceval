@@ -20,23 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, PERM, Processor
-
-
-def _flatten(composite, starting_mode=0):
-    component_list = []
-    for m_range, comp in composite._components:
-        if isinstance(comp, Circuit):
-            sub_list = _flatten(comp, starting_mode=m_range[0])
-            component_list += sub_list
-        else:
-            m_range = [m+starting_mode for m in m_range]
-            component_list.append((m_range, comp))
-    return component_list
+from perceval.components import PERM, Processor
 
 
 def precompute_herald_pos(processor: Processor):
-    component_list = _flatten(processor)
+    """
+    Precompute output herald position, following modes until it finds the first non-PERM component
+    Works in recursive display mode (which is the worst case scenario)
+    """
+    component_list = processor.flatten()
     component_list.reverse()  # iterate in reverse (right to left)
     result = {}
     for k in processor.heralds.keys():

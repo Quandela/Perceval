@@ -23,7 +23,7 @@
 from multipledispatch import dispatch
 import copy
 
-from perceval.components import ACircuit, Circuit, Port, Herald, PortLocation,\
+from perceval.components import AComponent, Circuit, Port, Herald, PortLocation,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeStyle
@@ -41,6 +41,11 @@ class PhysSkin(ASkin):
                           "stroke_style": {"stroke": "darkred", "stroke_width": 1}},
                          compact_display)
 
+    @dispatch(AComponent)
+    def get_width(self, c) -> int:
+        """Absolute fallback"""
+        return 1
+
     @dispatch(cp.Unitary)
     def get_width(self, c) -> int:
         return c.m
@@ -49,11 +54,11 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return 2
 
-    @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR))
+    @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR, nu.LC))
     def get_width(self, c) -> int:
         return 1
 
-    @dispatch(ACircuit)
+    @dispatch(AComponent)
     def get_shape(self, c):
         return self.default_shape
 
@@ -88,6 +93,10 @@ class PhysSkin(ASkin):
     @dispatch(cp.PR)
     def get_shape(self, c):
         return self.pr_shape
+
+    @dispatch(nu.LC)
+    def get_shape(self, c):
+        return self.lc_shape
 
     @dispatch(Port, PortLocation)
     def get_shape(self, port, location):
@@ -184,6 +193,13 @@ class PhysSkin(ASkin):
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
                            stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
         canvas.add_text((22, 38), text=content.replace("phi=", "Φ="), size=7, ta="left")
+
+    def lc_shape(self, circuit, canvas, content, mode_style, **opts):
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([15, 25, 35, 5], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([35, 5, 34, 10], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([35, 5, 30, 6], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_text((10, 32), text=content, size=7, ta="left")
 
     def pbs_shape(self, circuit, canvas, content, mode_style, **opts):
         style = self.style[ModeStyle.PHOTONIC]
