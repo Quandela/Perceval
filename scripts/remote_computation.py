@@ -66,9 +66,7 @@ platform_url = "https://api.cloud.quandela.dev"
 
 
 remote_simulator = RemoteProcessor("qpu", token_qcloud, platform_url)
-specific_circuit_serialized = remote_simulator.specs['specific_circuit']
-specific_circuit_bytes = jsonstring_to_bytes(specific_circuit_serialized)
-specific_circuit = deserialize_circuit(specific_circuit_bytes)
+specific_circuit = remote_simulator.specs['specific_circuit']
 
 remote_simulator.set_circuit(U)
 remote_simulator.with_input(pcvl.BasicState([1, 0, 1, 0]))
