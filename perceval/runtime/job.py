@@ -30,12 +30,9 @@ class Job(ABC):
     def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters = None):
         # create an id or check existence of current id
         self._fn = fn
-        # id will be assigned by remote job - not implemented for local class
-        self._id = None
         self._results = None
         self._result_mapping_function = result_mapping_function
         self._delta_parameters = delta_parameters or {}
-        pass
 
     def _adapt_parameters(self, args, kwargs):
         r"""adapt the parameters according to delta_parameters map passed to the LocalJob
@@ -57,20 +54,9 @@ class Job(ABC):
     def __call__(self, *args, **kwargs) -> Any:
         return self.execute_sync(*args, **kwargs)
 
-    @property
-    def id(self):
-        return self._id
-
+    @abstractmethod
     def get_results(self) -> Any:
-        if not self.is_completed():
-            raise RuntimeError('The job is still running, results are not available yet.')
-        job_status = self.status
-        if job_status.status != RunningStatus.SUCCESS:
-            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
-        if self._result_mapping_function:
-            self._results['results'] = self._result_mapping_function(self._results['results'],
-                                                                     **self._delta_parameters)
-        return self._results
+        pass
 
     @property
     @abstractmethod

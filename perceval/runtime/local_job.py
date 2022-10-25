@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import warnings
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 import threading
 
 from .job import Job
@@ -80,3 +80,14 @@ class LocalJob(Job):
         self._worker = threading.Thread(target=self._call_fn_safe, args=args, kwargs=kwargs)
         self._worker.start()
         return self
+
+    def get_results(self) -> Any:
+        if not self.is_completed():
+            raise RuntimeError('The job is still running, results are not available yet.')
+        job_status = self.status
+        if job_status.status != RunningStatus.SUCCESS:
+            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
+        if self._result_mapping_function:
+            self._results['results'] = self._result_mapping_function(self._results['results'],
+                                                                     **self._delta_parameters)
+        return self._results

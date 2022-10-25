@@ -42,6 +42,18 @@ class RemoteJob(Job):
         self._job_status = JobStatus()
         self._job_context = job_context
         self._refresh_progress_delay = refresh_progress_delay
+        self._id = None
+
+    @property
+    def id(self):
+        return self._id
+
+    @staticmethod
+    def from_id(job_id: str, rpc_handler):
+        j = RemoteJob(None, rpc_handler)
+        j._id = job_id
+        j.status()
+        return j
 
     @property
     def status(self) -> JobStatus:
@@ -75,6 +87,11 @@ class RemoteJob(Job):
         return self
 
     def get_results(self) -> Any:
+        job_status = self.status
+        if not job_status.completed:
+            raise RuntimeError('The job is still running, results are not available yet.')
+        if job_status.status != RunningStatus.SUCCESS:
+            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
         response = self._rpc_handler.get_job_results(self._id)
         results = deserialize(json.loads(response['results']))
         if "job_context" in results and 'result_mapping' in results["job_context"]:

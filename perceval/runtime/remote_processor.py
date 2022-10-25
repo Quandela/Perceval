@@ -122,10 +122,8 @@ class RemoteProcessor(AProcessor):
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)
 
-    def resume_job(self, job_id:str, deserializer: Callable = None):
-        job = RemoteJob(rpc_handler=self._rpc_handler, deserializer=deserializer)
-        job.status()
-        return job
+    def resume_job(self, job_id: str):
+        return RemoteJob.from_id(job_id, self._rpc_handler)
 
     @property
     def m(self) -> int:
