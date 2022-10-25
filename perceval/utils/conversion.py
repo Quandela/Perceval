@@ -65,5 +65,7 @@ def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
     return bsd
 
 
-def sample_count_to_samples(sample_count: BSCount, count: int) -> BSSamples:
-    return sample_count_to_probs(sample_count).samples(count)
+def sample_count_to_samples(sample_count: BSCount, count: int=None) -> BSSamples:
+    if count is None:
+        count = sum([v for v in sample_count.values()])
+    return sample_count_to_probs(sample_count).sample(count)

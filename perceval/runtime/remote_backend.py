@@ -22,11 +22,10 @@
 
 from typing import Union
 
-from perceval.backends import Backend
 from perceval.components import ACircuit
 from .rpc_handler import RPCHandler
 from perceval.serialization import serialize
-from perceval.utils import Matrix, BasicState, generate_sync_methods
+from perceval.utils import Matrix, BasicState
 
 from pkg_resources import get_distribution
 
@@ -34,11 +33,9 @@ pcvl_version = get_distribution("perceval-quandela").version
 
 
 ################################
-@generate_sync_methods
-class RemoteBackend(Backend):
+class RemoteBackend:
 
-    def __init__(self, rpc: RPCHandler, backend_name, cu: Union[ACircuit, Matrix], use_symbolic=None, n=None,
-                 mask=None):
+    def __init__(self, rpc: RPCHandler, backend_name, cu: Union[ACircuit, Matrix]):
         self.name = backend_name
         self.__rpc_handler = rpc
         if isinstance(cu, ACircuit):
@@ -46,11 +43,6 @@ class RemoteBackend(Backend):
         else:
             self.__cu_key = 'unitary'
         self.__cu_data = serialize(cu)
-        super(RemoteBackend, self).__init__(cu, use_symbolic, n, mask)
-
-    @staticmethod
-    def preferred_command() -> str:
-        return 'sample_count'
 
     def __defaults_job_params(self, command: str):
         return {
@@ -58,20 +50,6 @@ class RemoteBackend(Backend):
             'job_name': command,
             'pcvl_version': pcvl_version
         }
-
-    def async_samples(self, input_state, count, parameters=None):
-        return self.async_execute('samples', parameters,
-                                  input_state=serialize(input_state),
-                                  count=count)
-
-    def async_sample_count(self, input_state, count, parameters=None):
-        return self.async_execute('sample_count', parameters,
-                                  input_state=serialize(input_state),
-                                  count=count)
-
-    def async_probs(self, input_state: BasicState, parameters=None):
-        return self.async_execute('probs', parameters,
-                                  input_state=serialize(input_state))
 
     def async_execute(self, command: str, parameters=None, **args):
         job_params = self.__defaults_job_params(command)
@@ -84,11 +62,4 @@ class RemoteBackend(Backend):
         if parameters:
             job_params['payload']['parameters'] = parameters
 
-        return self.__rpc_handler.create_job(job_params)
-
-
-    def probampli_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
-
-    def prob_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
+        return self.__rpc_handler.create_job(serialize(job_params))

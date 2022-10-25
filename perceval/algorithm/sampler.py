@@ -22,8 +22,8 @@
 from typing import Callable, Dict
 
 from .abstract_algorithm import AAlgorithm
-from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
+from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples,\
+                           sample_count_to_probs, probs_to_samples, probs_to_sample_count
 from perceval.components.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
 
@@ -43,86 +43,55 @@ class Sampler(AAlgorithm):
 
     def __init__(self, processor: AProcessor):
         super().__init__(processor)
-        self._sample_count_mapping = {
-            'probs': self._sample_count_from_probs,
-            'sample_count': self._processor.sample_count,
-            'samples': self._sample_count_from_samples
-        }
-        self._samples_mapping = {
-            'probs': self._samples_from_probs,
-            'sample_count': self._samples_from_sample_count,
-            'samples': self._processor.samples
-        }
-        self._probs_mapping = {
-            'probs': self._processor.probs,
-            'sample_count': self._probs_from_sample_count,
-            'samples': self._probs_from_samples
+        self._method_mapping = {
+            'probs': { 'sample_count': sample_count_to_probs, 'samples': samples_to_probs},
+            'sample_count': { 'probs': probs_to_sample_count, 'samples': samples_to_sample_count},
+            'samples': {'probs': probs_to_samples, 'sample_count': sample_count_to_samples}
         }
 
-    def _sample_count_from_samples(self, count: int, progress_callback: Callable = None) -> Dict:
-        output = self._processor.samples(count, progress_callback)
-        output['results'] = samples_to_sample_count(output['results'])
-        return output
+    def _get_primitive_converter(self, method: str):
+        available_primitives = self._processor.available_commands
+        if method in available_primitives:
+            return method, None
+        if method in self._method_mapping:
+            pmap = self._method_mapping[method]
+            for k, converter in pmap.items():
+                if k in available_primitives:
+                    return k, converter
+        return None, None
 
-    def _sample_count_from_probs(self, count: int, progress_callback: Callable = None) -> Dict:
-        output = self._processor.probs(progress_callback)
-        output['results'] = probs_to_sample_count(output['results'], count)
-        return output
+    def _generic(self, method: str):
+        primitive, converter = self._get_primitive_converter(method)
+        delta_parameters = {}
+        # adapt the parameters list
+        if method.find('sample') != -1 and primitive.find('sample') == -1:
+            delta_parameters['count'] = None
+        elif method.find('sample') == -1 and primitive.find('sample') != -1:
+            delta_parameters['count'] = self.PROBS_SIMU_SAMPLE_COUNT
+        if primitive is None:
+            raise NotImplementedError(f"cannot find primitive to execute {method} in {self._processor.available_commands}")
+        if self._processor.is_remote:
+            job_context = None
+            if converter:
+                job_context = {"result_mapping": ['perceval.utils', converter.__name__]}
+            rj = RemoteJob(getattr(self._processor, "async_"+primitive),
+                           self._processor.get_rpc_handler(), delta_parameters=delta_parameters,
+                           job_context=job_context)
+            return rj
+        else:
+            return LocalJob(getattr(self._processor, primitive),
+                            result_mapping_function=converter,
+                            delta_parameters=delta_parameters)
 
-    def _probs_from_samples(self, progress_callback: Callable = None) -> Dict:
-        count = self.PROBS_SIMU_SAMPLE_COUNT
-        output = self._processor.samples(count, progress_callback)
-        output['results'] = samples_to_probs(output['results'])
-        return output
-
-    def _probs_from_sample_count(self, progress_callback: Callable = None) -> Dict:
-        count = self.PROBS_SIMU_SAMPLE_COUNT
-        output = self._processor.sample_count(count, progress_callback)
-        output['results'] = sample_count_to_probs(output['results'])
-        return output
-
-    def _samples_from_sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
-        output = self._processor.sample_count(count, progress_callback)
-        output['results'] = sample_count_to_samples(output['results'], count)
-        return output
-
-    def _samples_from_probs(self, count: int, progress_callback: Callable = None) -> Dict:
-        output = self._processor.probs(progress_callback)
-        output['results'] = probs_to_samples(output['results'], count)
-        return output
 
     @property
     def samples(self) -> Job:
-        if self._processor.is_remote:
-            return RemoteJob(self._processor.async_samples, self._processor.get_rpc_handler())
-        else:
-            try:
-                method = self._samples_mapping[self._processor.available_sampling_method]
-            except KeyError:
-                raise NotImplementedError(
-                    f"Method to retrieve samples from {self._processor.available_sampling_method} not implemented")
-            return LocalJob(method)
+        return self._generic("samples")
 
     @property
     def sample_count(self) -> Job:
-        if self._processor.is_remote:
-            return RemoteJob(self._processor.async_sample_count, self._processor.get_rpc_handler())
-        else:
-            try:
-                method = self._sample_count_mapping[self._processor.available_sampling_method]
-            except KeyError:
-                raise NotImplementedError(
-                    f"Method to retrieve sample_count from {self._processor.available_sampling_method} not implemented")
-            return LocalJob(method)
+        return self._generic("sample_count")
 
     @property
     def probs(self) -> Job:
-        if self._processor.is_remote:
-            return RemoteJob(self._processor.async_probs, self._processor.get_rpc_handler())
-        else:
-            try:
-                method = self._probs_mapping[self._processor.available_sampling_method]
-            except KeyError:
-                raise NotImplementedError(
-                    f"Method to retrieve probs from {self._processor.available_sampling_method} not implemented")
-            return LocalJob(method)
+        return self._generic("probs")

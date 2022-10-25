@@ -20,23 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, List, Callable
+from typing import List, Callable
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
-from perceval.utils import Parameter, BasicState, generate_sync_methods
+from perceval.utils import BasicState
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.dev'
-
-
-def _extract_commands(specs):
-    for v in specs.values():
-        if 'available_commands' in v:
-            for c in v['available_commands']:
-                yield c
 
 
 def _get_first_spec(specs, name):
@@ -56,7 +49,6 @@ def _split_platform_and_backend_name(name: str):
     return platform_name, backend_name
 
 
-@generate_sync_methods
 class RemoteProcessor(AProcessor):
     def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL):
         super().__init__()
@@ -107,44 +99,31 @@ class RemoteProcessor(AProcessor):
         self._input_state = input_state
 
     @property
-    def available_sampling_method(self) -> str:
-        for k, v in _extract_commands(self._specs):
-            return v
-        return None
+    def available_commands(self) -> List[str]:
+        return self._specs.get("available_commands", [])
 
-    def async_samples(self, count) -> str:
+    def async_samples(self, count, **args) -> str:
         if self._backend is None:
             self.__build_backend()
+        return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
 
-        return self._backend.async_samples(self._input_state, count, parameters=self._parameters)
-
-    def async_sample_count(self, count) -> str:
+    def async_sample_count(self, count, **args) -> str:
         if self._backend is None:
             self.__build_backend()
+        return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
 
-        return self._backend.async_sample_count(self._input_state, count, parameters=self._parameters)
-
-    def async_probs(self) -> str:
+    def async_probs(self, **args) -> str:
         if self._backend is None:
             self.__build_backend()
-
-        return self._backend.async_probs(self._input_state, parameters=self._parameters)
+        return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
 
     def async_execute(self, command: str, **args) -> str:
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)
 
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        pass
-
-    def set_circuit_parameters(self, params: Dict[str, Parameter]) -> None:
-        pass
-
-    def resume_job(self, job_id:str, deserializer: Callable = None):
-        job = RemoteJob(rpc_handler=self._rpc_handler, deserializer=deserializer)
-        job.status()
-        return job
+    def resume_job(self, job_id: str):
+        return RemoteJob.from_id(job_id, self._rpc_handler)
 
     @property
     def m(self) -> int:

@@ -27,28 +27,36 @@ from .job_status import JobStatus, RunningStatus
 
 
 class Job(ABC):
-    def __init__(self, fn: Callable):
+    def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters = None):
         # create an id or check existence of current id
         self._fn = fn
-        # id will be assigned by remote job - not implemented for local class
-        self._id = None
         self._results = None
-        pass
+        self._result_mapping_function = result_mapping_function
+        self._delta_parameters = delta_parameters or {}
+
+    def _adapt_parameters(self, args, kwargs):
+        r"""adapt the parameters according to delta_parameters map passed to the LocalJob
+            change delta parameters to reintegrate the missing parameters"""
+        new_delta_parameters = {}
+        args = list(args)
+        for k, v in self._delta_parameters.items():
+            if v is None:
+                if k in kwargs:
+                    new_delta_parameters[k] = kwargs[k]
+                    del kwargs[k]
+                else:
+                    new_delta_parameters[k] = args.pop(0)
+            else:
+                kwargs[k] = v
+        self._delta_parameters = new_delta_parameters
+        return tuple(args), kwargs
 
     def __call__(self, *args, **kwargs) -> Any:
         return self.execute_sync(*args, **kwargs)
 
-    @property
-    def id(self):
-        return self._id
-
+    @abstractmethod
     def get_results(self) -> Any:
-        if not self.is_completed():
-            raise RuntimeError('The job is still running, results are not available yet.')
-        job_status = self.status
-        if job_status.status != RunningStatus.SUCCESS:
-            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
-        return self._results
+        pass
 
     @property
     @abstractmethod
