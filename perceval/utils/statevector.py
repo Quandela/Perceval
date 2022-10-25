@@ -555,6 +555,15 @@ class BSSamples(list):
         assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
         super().__setitem__(index, item)
 
+    def __str__(self):
+        sz = len(self)
+        n_to_display = min(sz, 10)
+        s = '[' + ', '.join([str(bs) for bs in self[:n_to_display]])
+        if sz > n_to_display:
+            s += f', ... (size={sz})'
+        s += ']'
+        return s
+
 
 def _rec_build_spatial_output_states(lfs: list, output: list):
     if len(lfs) == 0:
