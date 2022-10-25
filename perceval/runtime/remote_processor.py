@@ -78,7 +78,11 @@ class RemoteProcessor(AProcessor):
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
         plugins_specs = platform_details['specs']
-        self._specs.update(platform_details['specs'][next(iter(plugins_specs.keys()))])
+        # TODO cleanup once all pcvl workers load 1 plugin only
+        if len(plugins_specs) == 1:
+            self._specs.update(platform_details['specs'][next(iter(plugins_specs.keys()))])
+        else:
+            self._specs.update(platform_details['specs'])
         if platform_details['type'] != 'simulator':
             self._type = ProcessorType.PHYSICAL
 
