@@ -30,7 +30,7 @@ from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .computation import count_TD, count_independant_TD, expand_TD
-from perceval.utils import SVDistribution, BasicState, StateVector, global_params, Parameter
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params, Parameter
 from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import BACKEND_LIST
 from perceval.backends.processor import StepperBackend
@@ -38,7 +38,6 @@ from perceval.backends.processor import StepperBackend
 from multipledispatch import dispatch
 from typing import Dict, Callable, Union
 import copy
-
 
 
 class Processor(AProcessor):
@@ -443,7 +442,7 @@ class Processor(AProcessor):
 
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._init_command("samples")
-        output = []
+        output = BSSamples()
         not_selected_physical = 0
         not_selected = 0
         selected_inputs = self._inputs_map.sample(count, non_null=False)
@@ -473,7 +472,7 @@ class Processor(AProcessor):
 
     def probs(self, progress_callback: Callable = None) -> Dict:
         self._init_command("probs")
-        output = SVDistribution()
+        output = BSDistribution()
         p_logic_discard = 0
         if not self._has_td:
             input_length = len(self._inputs_map)
@@ -519,7 +518,7 @@ class Processor(AProcessor):
 
             second_perf = 1
             for out_state, output_prob in extended_out.items():
-                reduced_out_state = out_state[0][interest_m[0]: interest_m[1]]
+                reduced_out_state = out_state[interest_m[0]: interest_m[1]]
                 if not self._state_selected_physical(reduced_out_state):
                     second_perf -= output_prob
                     continue
@@ -535,9 +534,7 @@ class Processor(AProcessor):
         if all_p == 0:
             return {'results': output, 'physical_perf': physical_perf}
         logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
-        # normalize probabilities
-        for k in output.keys():
-            output[k] /= all_p
+        output.normalize()
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
     def _state_preselected_physical(self, input_state: BasicState):

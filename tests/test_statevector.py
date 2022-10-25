@@ -25,7 +25,7 @@ from collections import Counter
 import pytest
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval.rendering.pdisplay import pdisplay_statevector
+from perceval.rendering.pdisplay import pdisplay_state_distrib
 
 import sympy as sp
 
@@ -37,6 +37,11 @@ def test_state():
     assert str(st) == "|1,0>"
     assert st.n == 1
     assert st.has_annotations is False
+
+
+def test_str_state_vector():
+    sv = (1+1j) * pcvl.StateVector("|0,1>") + (1-1j) * pcvl.StateVector("|1,0>")
+    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>"
 
 
 def test_tensor_product_0():
@@ -136,7 +141,7 @@ def test_svdistribution():
     svd = pcvl.SVDistribution()
     svd.add(st1, 0.5)
     svd[st2] = 0.5
-    assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
+    assert strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
             +-------+-------------+
             | state | probability |
             +-------+-------------+

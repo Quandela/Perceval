@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
-from perceval import BackendFactory, StateVector, Circuit
+from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
 import perceval.components.unitary_components as comp
 from perceval.components import catalog
@@ -184,8 +184,8 @@ def test_cnot_postprocess():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc)
-    sv_out = pc.probs()['results']
-    assert len(sv_out) == 2
+    bsd_out = pc.probs()['results']
+    assert len(bsd_out) == 2
 
 
 def test_cnot_herald():
@@ -194,7 +194,7 @@ def test_cnot_herald():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, True)
-    sv_out = pc.probs()['results']
-    assert sv_out[StateVector("|1,0,0,1>")]+sv_out[StateVector("|0,1,1,0>")] < 2e-5
-    assert sv_out[StateVector("|1,0,1,0>")]+sv_out[StateVector("|0,1,0,1>")] > 0.99
-    assert len(sv_out) == 4
+    bsd_out = pc.probs()['results']
+    assert bsd_out[BasicState("|1,0,0,1>")] + bsd_out[BasicState("|0,1,1,0>")] < 2e-5
+    assert bsd_out[BasicState("|1,0,1,0>")] + bsd_out[BasicState("|0,1,0,1>")] > 0.99
+    assert len(bsd_out) == 4

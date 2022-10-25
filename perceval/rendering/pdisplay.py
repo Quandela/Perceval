@@ -33,12 +33,12 @@ with warnings.catch_warnings():
     import drawSvg
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.components import ACircuit, Circuit, Herald, Processor, PERM, non_unitary_components as nl
+from perceval.components import ACircuit, Circuit, Processor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
-from perceval.utils.statevector import StateVector, SVDistribution
+from perceval.utils.statevector import ProbabilityDistribution, StateVector, SVDistribution
 from .format import Format
 from ._processor_utils import precompute_herald_pos
 
@@ -176,11 +176,11 @@ def pdisplay_analyzer(analyser: Analyzer, output_format: Format = Format.TEXT, n
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_statevector(sv: Union[StateVector, SVDistribution], output_format: Format = Format.TEXT, nsimplify=True,
-                         precision=1e-6, max_v=None, sort=True):
+def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution], output_format: Format = Format.TEXT,
+                           nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
-    Displays StateVector and SVDistribution as a table of state vs probability (probability amplitude in StateVector's
-    case)
+    Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
+    StateVector's case)
     """
     sv = copy.copy(sv)  # Work on a copy, in order to not force normalization simply because of a display call
     sv.normalize()
@@ -238,9 +238,9 @@ def _pdisplay(analyzer, **kwargs):
     return pdisplay_analyzer(analyzer, **kwargs)
 
 
-@dispatch((StateVector, SVDistribution))
+@dispatch((StateVector, ProbabilityDistribution))
 def _pdisplay(statevector, **kwargs):
-    return pdisplay_statevector(statevector, **kwargs)
+    return pdisplay_state_distrib(statevector, **kwargs)
 
 
 def _default_output_format(o):
