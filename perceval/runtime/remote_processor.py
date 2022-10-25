@@ -24,7 +24,7 @@ from typing import List, Callable
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
-from perceval.utils import BasicState, SVDistribution
+from perceval.utils import BasicState
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -102,7 +102,7 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> List[str]:
         return self._specs.get("available_commands", [])
 
-    def async_samples(self, count, **args):
+    def async_samples(self, count, **args) -> str:
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
@@ -112,12 +112,12 @@ class RemoteProcessor(AProcessor):
             self.__build_backend()
         return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
 
-    def async_probs(self, **args) -> SVDistribution:
+    def async_probs(self, **args) -> str:
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
 
-    def async_execute(self, command: str, **args):
+    def async_execute(self, command: str, **args) -> str:
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)

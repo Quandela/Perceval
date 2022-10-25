@@ -24,7 +24,7 @@ import pytest
 import math
 
 from perceval import Source, StateVector
-from perceval.rendering.pdisplay import pdisplay_statevector
+from perceval.rendering.pdisplay import pdisplay_state_distrib
 from test_circuit import strip_line_12
 
 
@@ -33,7 +33,7 @@ def _check_svdistribution(output, expected):
     for k, v in expected.items():
         svo = StateVector(k)
         if pytest.approx(v) != output[svo]:
-            print(pdisplay_statevector(output))
+            print(pdisplay_state_distrib(output))
             print("==> different value than expected for %s: %f (expected %f)" % (k, output[svo], v))
             assert False
 
@@ -41,7 +41,7 @@ def _check_svdistribution(output, expected):
 def test_source_pure():
     s = Source()
     svd = s.probability_distribution()
-    assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
+    assert strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
             +-------+-------------+
             | state | probability |
             +-------+-------------+

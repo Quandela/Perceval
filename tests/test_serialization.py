@@ -23,8 +23,9 @@
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, BasicState, SVDistribution, StateVector
-from perceval.serialization import serialize, deserialize_svdistribution, deserialize
+from perceval import Matrix, P, ACircuit, Circuit
+from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
+from perceval.serialization import serialize, deserialize
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
 import json
@@ -91,7 +92,7 @@ def test_circuit_serialization():
     _check_circuits_eq(c1, deserialized_c1)
 
 
-def test_fockstate_serialization():
+def test_basicstate_serialization():
     states = [
         BasicState("|0,1>"),
         BasicState([0, 1, 0, 0, 1, 0]),
@@ -103,19 +104,44 @@ def test_fockstate_serialization():
         assert s == deserialized
 
 
-def test_svdistribution_deserialization():
+def test_svdistribution_serialization():
     svd = SVDistribution()
     svd[StateVector("|0,1>")] = 0.2
     svd[BasicState("|1,0>")] = 0.3
     svd[BasicState("|1,1>")] = 0.5
-    svd2 = deserialize_svdistribution(serialize(svd))
+    svd2 = deserialize(serialize(svd))
     assert svd == svd2
 
 
-def test_sv_txt_serialization():
-    sv = (1+1j) * StateVector("|0,1>") + (1-1j) * StateVector("|1,0>")
-    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>"
-    assert sv.serialize() == "(0.5,0.5)*|0,1>+(0.5,-0.5)*|1,0>"
+def test_bsdistribution_serialization():
+    bsd = BSDistribution()
+    bsd.add(BasicState([0, 1]), 0.4)
+    bsd.add(BasicState([1, 0]), 0.4)
+    bsd.add(BasicState([1, 1]), 0.2)
+    deserialized_bsd = deserialize(serialize(bsd))
+    assert bsd == deserialized_bsd
+
+
+def test_bscount_serialization():
+    bsc = BSCount()
+    bsc.add(BasicState([0, 1]), 95811)
+    bsc.add(BasicState([1, 0]), 56598)
+    bsc.add(BasicState([1, 1]), 10558)
+    deserialized_bsc = deserialize(serialize(bsc))
+    assert bsc == deserialized_bsc
+
+
+def test_bssamples_serialization():
+    samples = BSSamples()
+    for j in range(50):
+        for i in range(11):
+            samples.append(BasicState([0, 1, 0]))
+        for i in range(13):
+            samples.append(BasicState([1, 0, 0]))
+        for i in range(17):
+            samples.append(BasicState([0, 0, 1]))
+    deserialized_samples = deserialize(serialize(samples))
+    assert deserialized_samples == samples
 
 
 def test_sv_serialization():

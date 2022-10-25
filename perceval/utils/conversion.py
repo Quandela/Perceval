@@ -20,56 +20,52 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BasicState, SVDistribution
+from .statevector import BSDistribution, BSCount, BSSamples
 
-from typing import Dict, List
 import numpy as np
 
 
 # Conversion functions (samples <=> probs <=> sample_count)
-def samples_to_sample_count(sample_list: List[BasicState]) -> Dict[BasicState, int]:
-    results = {}
+def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
+    results = BSCount()
     for s in sample_list:
         if s not in results:
             results[s] = sample_list.count(s)
     return results
 
 
-def samples_to_probs(sample_list: List[BasicState]) -> SVDistribution:
+def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
     return sample_count_to_probs(samples_to_sample_count(sample_list))
 
 
-def probs_to_sample_count(probs: SVDistribution, count: int) -> Dict[BasicState, int]:
-    perturbed_dist = {state[0]: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
+def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
+    perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
     fac = 1 / sum(prob for prob in perturbed_dist.values())
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
-    results = dict()
+    results = BSCount()
     for state in perturbed_dist:
         results[state] = int(np.round(perturbed_dist[state] * count))
     return results
 
 
-def probs_to_samples(probs: SVDistribution, count: int) -> List[BasicState]:
-    return [s[0] for s in probs.sample(count)]
+def probs_to_samples(probs: BSDistribution, count: int) -> BSSamples:
+    return probs.samples(count)
 
 
-def sample_count_to_probs(sample_count: Dict[BasicState, int]):
-    svd = SVDistribution()
-    n_samples = 0
+def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
+    bsd = BSDistribution()
     for state, count in sample_count.items():
         if count == 0:
             continue
         if count < 0:
             raise RuntimeError(f"A sample count must be positive (got {count})")
-        svd[state] = count
-        n_samples += count
-    for state, value in svd.items():
-        svd[state] = value / n_samples
-    return svd
+        bsd[state] = count
+    bsd.normalize()
+    return bsd
 
 
-def sample_count_to_samples(sample_count: Dict[BasicState, int], count: int=None):
+def sample_count_to_samples(sample_count: BSCount, count: int=None) -> BSSamples:
     if count is None:
         count = sum([v for v in sample_count.values()])
     return sample_count_to_probs(sample_count).sample(count)

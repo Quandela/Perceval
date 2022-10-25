@@ -24,8 +24,9 @@ from os import path
 from typing import Union
 
 from perceval.components import Circuit
-from perceval.utils import Matrix, SVDistribution, BasicState, StateVector
+from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount
 from perceval.serialization import _matrix_serialization, deserialize_state
+from ._state_serialization import deserialize_statevector, deserialize_bssamples
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
@@ -45,6 +46,9 @@ def deserialize_matrix(pb_mat: Union[str, pb.Matrix]) -> Matrix:
 
 
 def matrix_from_file(filepath: str) -> Matrix:
+    """
+    Deserialize a matrix from a binary file
+    """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
@@ -64,15 +68,46 @@ def deserialize_circuit(pb_circ: Union[str, pb.Circuit]) -> Circuit:
 
 
 def circuit_from_file(filepath: str) -> Circuit:
+    """
+    Deserialize a circuit from a binary file
+    """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
         return deserialize_circuit(f.read())
 
 
-def deserialize_sample_count(count: dict) -> dict:
-    count = {deserialize_state(state): ct for state, ct in count.items()}
-    return count
+# TODO remove ?
+# def deserialize_sample_count(count: dict) -> dict:
+#     count = {deserialize_state(state): ct for state, ct in count.items()}
+#     return count
+
+
+def deserialize_svdistribution(serial_svd):
+    assert serial_svd[0] == '{' and serial_svd[-1] == '}', "Invalid serialized SVDistribution"
+    svd = SVDistribution()
+    for s in serial_svd[1:-1].split(";"):
+        k, v = s.split("=")
+        svd[deserialize_statevector(k)] = float(v)
+    return svd
+
+
+def deserialize_bsdistribution(serial_bsd):
+    assert serial_bsd[0] == '{' and serial_bsd[-1] == '}', "Invalid serialized BSDistribution"
+    bsd = BSDistribution()
+    for s in serial_bsd[1:-1].split(";"):
+        k, v = s.split("=")
+        bsd[deserialize_state(k)] = float(v)
+    return bsd
+
+
+def deserialize_bscount(serial_bsc):
+    assert serial_bsc[0] == '{' and serial_bsc[-1] == '}', "Invalid serialized BSCount"
+    bsc = BSCount()
+    for s in serial_bsc[1:-1].split(";"):
+        k, v = s.split("=")
+        bsc[deserialize_state(k)] = int(v)
+    return bsc
 
 
 def deserialize(obj):
@@ -91,28 +126,41 @@ def deserialize(obj):
         if cl == "BasicState":
             r = BasicState(sobj)
         elif cl == "StateVector":
-            r = StateVector.deserialize(sobj)
+            r = deserialize_statevector(sobj)
         elif cl == "SVDistribution":
-            r = SVDistribution(sobj)
+            r = deserialize_svdistribution(sobj)
+        elif cl == "BSDistribution":
+            r = deserialize_bsdistribution(sobj)
+        elif cl == "BSCount":
+            r = deserialize_bscount(sobj)
+        elif cl == "BSSamples":
+            r = deserialize_bssamples(sobj)
         elif cl == "Matrix":
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
             r = deserialize_circuit(obj)
+        else:
+            raise NotImplementedError(f"No deserializer found for {cl}")
     else:
         r = obj
     return r
 
 
-def deserialize_svdistribution(svd_serial) -> SVDistribution:
-    assert svd_serial.startswith(":PCVL:SVDistribution:")
-    return SVDistribution(svd_serial[21:])
-
-
-def sample_count_from_file(filepath: str) -> dict:
+def deserialize_file(filepath: str):
+    """
+    Agnosticly deserialize any supported type from a text file.
+    """
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
-    with open(filepath, 'rb') as f:
-        return deserialize_sample_count(f.read())
+    with open(filepath, 'r') as f:
+        return deserialize(f.read())
+
+# TODO remove ?
+# def sample_count_from_file(filepath: str) -> dict:
+#     if not path.isfile(filepath):
+#         raise FileNotFoundError(f'No file at path {filepath}')
+#     with open(filepath, 'rb') as f:
+#         return deserialize_sample_count(f.read())
 
 
 class CircuitBuilder:
