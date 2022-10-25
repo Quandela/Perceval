@@ -44,10 +44,6 @@ class RemoteBackend:
             self.__cu_key = 'unitary'
         self.__cu_data = serialize(cu)
 
-    @staticmethod
-    def preferred_command() -> str:
-        return 'sample_count'
-
     def __defaults_job_params(self, command: str):
         return {
             'platform_name': self.__rpc_handler.name,

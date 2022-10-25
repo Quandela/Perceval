@@ -54,7 +54,6 @@ class Job(ABC):
         self._delta_parameters = new_delta_parameters
         return tuple(args), kwargs
 
-
     def __call__(self, *args, **kwargs) -> Any:
         return self.execute_sync(*args, **kwargs)
 

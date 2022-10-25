@@ -71,20 +71,3 @@ class AProcessor(ABC):
     @abstractmethod
     def available_commands(self) -> List[str]:
         pass
-
-    def samples(self, count: int, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call samples(). Available method are {self.available_commands}")
-
-    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call sample_count(). Available method are {self.available_commands}")
-
-    def probs(self, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call probs(). Available method are {self.available_commands}")
-
-    @abstractmethod
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        pass
-
-    @abstractmethod
-    def set_circuit_parameters(self, params: Dict[str, Parameter]) -> None:
-        pass

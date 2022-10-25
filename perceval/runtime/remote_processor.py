@@ -20,16 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, List, Callable
+from typing import List, Callable
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
-from perceval.utils import Parameter, BasicState, SVDistribution, generate_sync_methods
+from perceval.utils import BasicState, SVDistribution
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.dev'
+
 
 def _get_first_spec(specs, name):
     for v in specs.values():
@@ -48,7 +49,6 @@ def _split_platform_and_backend_name(name: str):
     return platform_name, backend_name
 
 
-@generate_sync_methods
 class RemoteProcessor(AProcessor):
     def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL):
         super().__init__()
@@ -121,12 +121,6 @@ class RemoteProcessor(AProcessor):
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)
-
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        pass
-
-    def set_circuit_parameters(self, params: Dict[str, Parameter]) -> None:
-        pass
 
     def resume_job(self, job_id:str, deserializer: Callable = None):
         job = RemoteJob(rpc_handler=self._rpc_handler, deserializer=deserializer)
