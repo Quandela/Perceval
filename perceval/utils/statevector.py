@@ -486,11 +486,16 @@ class SVDistribution(ProbabilityDistribution):
 
 class BSDistribution(ProbabilityDistribution):
 
-    def __init__(self, d: Optional[Dict] = None):
+    def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()
         if d is not None:
-            for k, v in d.items():
-                self[BasicState(k)] = v
+            if isinstance(d, BasicState):
+                self[d] = 1
+            elif isinstance(d, dict):
+                for k, v in d.items():
+                    self[BasicState(k)] = v
+            else:
+                raise TypeError(f"Unexpected type initializing BSDistribution {type(d)}")
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
@@ -510,7 +515,7 @@ class BSDistribution(ProbabilityDistribution):
         states = list(self.keys())
         probs = list(self.values())
         rng = np.random.default_rng()
-        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        results = rng.choice(states, count, p=probs)
         # numpy transforms iterables of ints to a nparray in rng.choice call
         # Thus, we need to convert back the results to BasicStates
         output = BSSamples()

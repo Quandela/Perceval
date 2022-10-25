@@ -139,6 +139,8 @@ def deserialize(obj):
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
             r = deserialize_circuit(obj)
+        else:
+            raise NotImplementedError(f"No deserializer found for {cl}")
     else:
         r = obj
     return r
