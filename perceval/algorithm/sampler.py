@@ -75,7 +75,7 @@ class Sampler(AAlgorithm):
             if converter:
                 job_context = {"result_mapping": ['perceval.utils', converter.__name__]}
             rj = RemoteJob(getattr(self._processor, "async_"+primitive),
-                           self._processor, delta_parameters=delta_parameters,
+                           self._processor.get_rpc_handler(), delta_parameters=delta_parameters,
                            job_context=job_context)
             return rj
         else:

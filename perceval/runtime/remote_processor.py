@@ -67,14 +67,6 @@ class RemoteProcessor(AProcessor):
     def is_remote(self):
         return True
 
-    @property
-    def job_context(self):
-        return self._job_context
-
-    @job_context.setter
-    def job_context(self, job_context):
-        self._job_context = job_context
-
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
         plugins_specs = platform_details['specs']
@@ -110,31 +102,24 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> List[str]:
         return self._specs.get("available_commands", [])
 
-    def async_samples(self, count):
+    def async_samples(self, count, **args):
         if self._backend is None:
             self.__build_backend()
-        self._backend.job_context = self._job_context
+        return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
 
-        return self._backend.async_samples(self._input_state, count, parameters=self._parameters)
-
-    def async_sample_count(self, count) -> str:
+    def async_sample_count(self, count, **args) -> str:
         if self._backend is None:
             self.__build_backend()
-        self._backend.job_context = self._job_context
+        return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
 
-        return self._backend.async_sample_count(self._input_state, count, parameters=self._parameters)
-
-    def async_probs(self) -> SVDistribution:
+    def async_probs(self, **args) -> SVDistribution:
         if self._backend is None:
             self.__build_backend()
-        self._backend.job_context = self._job_context
-        return self._backend.async_probs(self._input_state, parameters=self._parameters)
+        return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
 
     def async_execute(self, command: str, **args):
         if self._backend is None:
             self.__build_backend()
-        self._backend.job_context = self._job_context
-
         return self._backend.async_execute(command, parameters=self._parameters, **args)
 
     def get_circuit_parameters(self) -> Dict[str, Parameter]:
