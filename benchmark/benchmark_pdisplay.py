@@ -33,9 +33,9 @@ trials = 2
 def generate_circuit(n_mode):
     u = pcvl.Matrix.random_unitary(n_mode)
     mzi = (pcvl.Circuit(2)
-           // comp.SimpleBS()
+           // comp.BS()
            // (0, comp.PS(phi=pcvl.P("φ_a")))
-           // comp.SimpleBS()
+           // comp.BS()
            // (0, comp.PS(phi=pcvl.P("φ_b"))))
     return pcvl.Circuit.decomposition(u, mzi, shape="triangle")
 

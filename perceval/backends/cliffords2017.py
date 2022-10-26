@@ -41,9 +41,9 @@ class CliffordClifford2017Backend(Backend):
     supports_circuit_computing = False
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        raise NotImplementedError
+        raise NotImplementedError(f'Cannot use prob_be on {self.name}')
 
-    def sample(self, input_state):
+    def sample(self, input_state, progress_callback=None):
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
@@ -74,3 +74,13 @@ class CliffordClifford2017Backend(Backend):
             mode_seq.append(next_mode)
             fs[next_mode] += 1
         return BasicState(fs)
+
+    def samples(self, input_state, count, progress_callback=None):
+        if progress_callback:
+            progress_callback(0)
+        results = []
+        for i in range(count):
+            results.append(self.sample(input_state))
+            if progress_callback:
+                progress_callback((i+1) / count)
+        return results

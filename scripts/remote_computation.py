@@ -21,53 +21,84 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.lib.phys as phys
-import sympy as sp
+import perceval.components.base_components as cp
 import numpy as np
+from tqdm import tqdm
 import time
 
-cnot = phys.Circuit(6, name="Ralph CNOT")
-cnot.add((0, 1), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
-cnot.add((3, 4), phys.BS(R=1 / 2))
-cnot.add((2, 3), phys.BS(R=1 / 3, phi_b=sp.pi, phi_d=0))
-cnot.add((4, 5), phys.BS(R=1 / 3))
-cnot.add((3, 4), phys.BS(R=1 / 2))
-# pcvl.pdisplay(cnot)
+from perceval.algorithm import Sampler
+
+theta_r13 = cp.BS.r_to_theta(1/3)
+cnot = pcvl.Circuit(6, name="Ralph CNOT")
+cnot.add((0, 1), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+cnot.add((3, 4), cp.BS.H())
+cnot.add((2, 3), cp.BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+cnot.add((4, 5), cp.BS.H(theta=theta_r13))
+cnot.add((3, 4), cp.BS.H())
 
 
-# local_simulator_backend = pcvl.get_platform('local').get_backend("Naive")
-# local_s_cnot = local_simulator_backend(cnot.U)
-# results = local_s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 10000)
-# for s in results:
-#     print(str(s))
+[phi_0, phi_1, phi_2, phi_3] = [pcvl.P("p_{0}".format(i)) for i in range(4)]
+
+c = (pcvl.Circuit(4, name="Q4R")
+     .add(0, cp.BS())
+     .add(2, cp.BS())
+     .add(1, cp.PERM([1, 0]))
+     .add(0, cp.PS(phi_0))
+     .add(0, cp.BS())
+     .add(0, cp.PS(phi_1))
+     .add(0, cp.BS())
+     .add(2, cp.PS(phi_2))
+     .add(2, cp.BS())
+     .add(2, cp.PS(phi_3))
+     .add(2, cp.BS()))
+
+phi_0.set_value(0)
+phi_1.set_value(1)
+phi_2.set_value(2)
+phi_3.set_value(3)
+
+U = c.compute_unitary(use_symbolic=False)
+
 
 token_qcloud = 'YOUR_TOKEN'
-credentials = pcvl.RemoteCredentials(url="https://api.cloud.quandela.dev", token=token_qcloud)
+platform_url = "https://api.cloud.quandela.dev"
 
-simulator_backend = pcvl.get_platform(credentials).get_backend("Naive")
-s_cnot = simulator_backend(cnot.U)
+naive_remote_platform = pcvl.get_platform("al3", token_qcloud, platform_url)
 
-job = s_cnot.async_samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+sampler = Sampler(naive_remote_platform, U)
 
-job_status = 'created'
-while job_status not in ['completed', 'error', 'canceled']:
-    print(f'job status : {job_status}')
-    time.sleep(2)
-    job_status = job.get_status()
+nsample = 10000
+async_job = sampler.sample_count.execute_async(pcvl.BasicState([1, 0, 1, 0]), nsample)
 
-results = job.get_results()
+previous_prog = 0
+with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
+    tq.set_description(f'Get {nsample} samples from {c.name} using simulator backend {naive_remote_platform.name}')
+    while not async_job.is_completed():
+        tq.update(async_job.status.progress-previous_prog)
+        previous_prog = async_job.status.progress
+        time.sleep(.2)
+    tq.update(1-previous_prog)
+    tq.close()
 
-results2 = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+print(f"Job status = {async_job.status()}")
+results = async_job.get_results()
+print(results)
+#assert len(results) == nsample
 
-
-states = {
-    pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
-    pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
-    pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
-    pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
-}
-
-ca = pcvl.CircuitAnalyser(s_cnot, states)
-ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-pcvl.pdisplay(ca)
-print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))
+#
+# results = job.get_results()
+#
+# results2 = s_cnot.samples(pcvl.BasicState([0, 1, 0, 1, 0, 0]), 1000)
+#
+#
+# states = {
+#     pcvl.BasicState([0, 1, 0, 1, 0, 0]): "00",
+#     pcvl.BasicState([0, 1, 0, 0, 1, 0]): "01",
+#     pcvl.BasicState([0, 0, 1, 1, 0, 0]): "10",
+#     pcvl.BasicState([0, 0, 1, 0, 1, 0]): "11"
+# }
+#
+# ca = pcvl.CircuitAnalyser(s_cnot, states)
+# ca.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+# pcvl.pdisplay(ca)
+# print("performance=%s, error rate=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.error_rate))

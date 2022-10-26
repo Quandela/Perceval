@@ -23,13 +23,13 @@
 import random
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+from perceval.components.base_components import BS, PS
 
 # definition of the circuit
 C = pcvl.Circuit(2)
-C.add((0, 1), comp.SimpleBS())
-C.add(1, comp.PS(1))
-C.add((0, 1), comp.SimpleBS())
+C.add((0, 1), BS())
+C.add(1, PS(1))
+C.add((0, 1), BS())
 
 N = 100
 

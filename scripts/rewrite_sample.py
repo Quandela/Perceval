@@ -21,28 +21,28 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.components.base_components as comp
-from perceval.algorithm.optimize import optimize
-from perceval.algorithm.norm import fidelity, frobenius
+from perceval.components.base_components import BS, PS
+from perceval.utils.algorithms.optimize import optimize
+from perceval.utils.algorithms.norm import fidelity, frobenius
 import time
 import random
 
-pattern1 = pcvl.Circuit(2, name="pattern1") // (0, comp.PS(pcvl.P("phi1"))) // (0, comp.GenericBS(R=0.5)) //\
-           (0, comp.PS(pcvl.P("phi2"))) // (0, comp.GenericBS(R=0.5))
-rewrite1 = pcvl.Circuit(2, name="rewrite1") // (0, comp.PS(pcvl.P("phi1"))) // (0, comp.GenericBS(R=0.42)) //\
-           (0, comp.PS(pcvl.P("phi2"))) // (0, comp.GenericBS(R=0.42)) // (0, comp.PS(pcvl.P("phi3"))) //\
-           (1, comp.PS(pcvl.P("phi4")))
+pattern1 = pcvl.Circuit(2, name="pattern1") // (0, PS(pcvl.P("phi1"))) // (0, BS.H()) //\
+           (0, PS(pcvl.P("phi2"))) // (0, BS.H())
+rewrite1 = pcvl.Circuit(2, name="rewrite1") // (0, PS(pcvl.P("phi1"))) // (0, BS.H(theta=BS.r_to_theta(0.42))) //\
+           (0, PS(pcvl.P("phi2"))) // (0, BS.H(theta=BS.r_to_theta(0.42))) // (0, PS(pcvl.P("phi3"))) //\
+           (1, PS(pcvl.P("phi4")))
 
-pattern2 = pcvl.Circuit(1, name="pattern2") // comp.PS(pcvl.P("phi1")) // comp.PS(pcvl.P("phi2"))
-rewrite2 = pcvl.Circuit(1, name="rewrite2") // comp.PS(pcvl.P("phi"))
+pattern2 = pcvl.Circuit(1, name="pattern2") // PS(pcvl.P("phi1")) // PS(pcvl.P("phi2"))
+rewrite2 = pcvl.Circuit(1, name="rewrite2") // PS(pcvl.P("phi"))
 
-pattern3 = pcvl.Circuit(2, name="pattern3") // (1, comp.PS(pcvl.P("phip"))) // (0, comp.GenericBS(R=0.42))
-rewrite3 = pcvl.Circuit(2, name="rewrite3") // (0, comp.PS(pcvl.P("phi1"))) // (0, comp.GenericBS(R=0.42)) //\
-           (0, comp.PS(pcvl.P("phi2"))) // (1, comp.PS(pcvl.P("phi3")))
+pattern3 = pcvl.Circuit(2, name="pattern3") // (1, PS(pcvl.P("phip"))) // (0, BS.H(theta=BS.r_to_theta(0.42)))
+rewrite3 = pcvl.Circuit(2, name="rewrite3") // (0, PS(pcvl.P("phi1"))) // (0, BS.H(theta=BS.r_to_theta(0.42))) //\
+           (0, PS(pcvl.P("phi2"))) // (1, PS(pcvl.P("phi3")))
 
 a = pcvl.Circuit.generic_interferometer(8,
-                                        lambda idx: pcvl.Circuit(2) // comp.PS(phi=random.random()) // comp.GenericBS(
-                                            R=0.5) // comp.PS(phi=random.random()) // comp.GenericBS(R=0.5),
+                                        lambda idx: pcvl.Circuit(2) // PS(phi=random.random()) // BS.H()
+                                                    // PS(phi=random.random()) // BS.H(),
                                         shape="rectangle")
 u = a.compute_unitary(use_symbolic=False)
 
@@ -68,7 +68,7 @@ while True:
         found_match = True
         idx = a.isolate(list(matched.pos_map.keys()), color=color)
         for k, v in matched.v_map.items():
-            pattern[k].set_value(v)
+            pattern.param(k).set_value(v)
         v = pattern.compute_unitary(False)
         res = optimize(rewrite, v, frobenius, sign=-1)
         subc = rewrite.copy()

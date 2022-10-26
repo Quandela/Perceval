@@ -20,12 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
-warnings.warn("perceval.lib.symb module is deprecated, use perceval.components.base_components instead",
-              DeprecationWarning,
-              stacklevel=2)
-
-from perceval.components.base_components import \
-    SimpleBS as BS,\
-    PS, PBS, TD, Unitary, PERM, WP, HWP, QWP, PR
-from perceval.components.circuit import Circuit
+from .job_status import JobStatus, RunningStatus
+from .local_job import LocalJob
+from .remote_job import RemoteJob
+from .platform import Platform, LocalPlatform, RemotePlatform, PlatformType, get_platform
