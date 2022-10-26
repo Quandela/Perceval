@@ -466,7 +466,10 @@ class Processor(AProcessor):
             else:
                 not_selected += 1
             if progress_callback:
-                progress_callback(len(output)/count, "sampling")
+                exec_request = progress_callback(len(output)/count, "sampling")
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    break
+
         physical_perf = (count + not_selected) / (count + not_selected + not_selected_physical)
         logical_perf = count / (count + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
@@ -495,7 +498,9 @@ class Processor(AProcessor):
                         else:
                             p_logic_discard += output_prob
                 if progress_callback:
-                    progress_callback(idx/input_length)
+                    exec_request = progress_callback(idx/input_length, 'probs')
+                    if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                        raise RuntimeError("Cancel requested")
 
         else:
             # Create a bigger processor with no heralds to represent the time delays
