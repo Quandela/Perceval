@@ -25,6 +25,7 @@ import requests
 _ENDPOINT_PLATFORM_DETAILS = '/api/platform/'
 _ENDPOINT_JOB_CREATE = '/api/job'
 _ENDPOINT_JOB_STATUS = '/api/job/status/'
+_ENDPOINT_JOB_CANCEL = '/api/job/cancel/'
 _ENDPOINT_JOB_RESULT = '/api/job/result/'
 
 
@@ -56,6 +57,12 @@ class RPCHandler:
 
         json = request.json()
         return json['job_id']
+
+    def cancel_job(self, job_id: str):
+        endpoint = f"{self.url}{_ENDPOINT_JOB_CANCEL}{str(job_id)}"
+        request = requests.post(endpoint,
+                                headers=self.headers)
+        request.raise_for_status()
 
     def get_job_status(self, job_id: str):
         endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS) + str(job_id)

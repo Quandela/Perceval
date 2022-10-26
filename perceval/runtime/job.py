@@ -73,3 +73,7 @@ class Job(ABC):
     @abstractmethod
     def execute_async(self, *args, **kwargs):
         pass
+
+    @abstractmethod
+    def cancel(self):
+        pass
