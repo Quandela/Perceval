@@ -89,6 +89,8 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
         if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
             raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
+        if self._input_state is not None and self._input_state.m != circuit.m:
+            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
         self._circuit = circuit
         self.__build_backend()
 
@@ -112,6 +114,8 @@ class RemoteProcessor(AProcessor):
         if 'min_photon_count' in self.constraints and input_state.n < self.constraints['min_photon_count']:
             raise RuntimeError(
                 f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
+        if self._circuit is not None and input_state.m != self._circuit.m:
+            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._circuit.m})")
         self._input_state = input_state
 
     @property
