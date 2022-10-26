@@ -33,6 +33,7 @@ class LocalJob(Job):
         self._status = JobStatus()
         self._worker = None
         self._user_cb = None
+        self._cancel_requested = False
 
     def set_progress_callback(self, callback: Callable):  # Signature must be (float, Optional[str])
         self._user_cb = callback
@@ -46,8 +47,13 @@ class LocalJob(Job):
 
     def _progress_cb(self, progress: float, phase: Optional[str] = None):
         self._status.update_progress(progress, phase)
+
+        if self._cancel_requested:
+            return {'cancel_requested': True}
         if self._user_cb is not None:
-            self._user_cb(progress, phase)
+            return self._user_cb(progress, phase)
+        else:
+            return None
 
     def execute_sync(self, *args, **kwargs):
         assert self._status.waiting, "job as already been executed"
@@ -80,6 +86,9 @@ class LocalJob(Job):
         self._worker = threading.Thread(target=self._call_fn_safe, args=args, kwargs=kwargs)
         self._worker.start()
         return self
+
+    def cancel(self):
+        self._cancel_requested = True
 
     def get_results(self) -> Any:
         if not self.is_completed():
