@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import List, Callable
+from typing import Dict, List
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
@@ -64,7 +64,7 @@ class RemoteProcessor(AProcessor):
         self.fetch_data()
 
     @property
-    def is_remote(self):
+    def is_remote(self) -> bool:
         return True
 
     def fetch_data(self):
@@ -78,7 +78,17 @@ class RemoteProcessor(AProcessor):
     def specs(self):
         return self._specs
 
+    @property
+    def constraints(self) -> Dict:
+        if 'constraints' in self._specs:
+            return self._specs['constraints']
+        return {}
+
     def set_circuit(self, circuit: Circuit):
+        if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
+            raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
+        if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
+            raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
         self._circuit = circuit
         self.__build_backend()
 
@@ -96,6 +106,12 @@ class RemoteProcessor(AProcessor):
         return self._type
 
     def with_input(self, input_state: BasicState) -> None:
+        if 'max_photon_count' in self.constraints and input_state.n > self.constraints['max_photon_count']:
+            raise RuntimeError(
+                f"Too many photons in input state ({input_state.n} > {self.constraints['max_photon_count']})")
+        if 'min_photon_count' in self.constraints and input_state.n < self.constraints['min_photon_count']:
+            raise RuntimeError(
+                f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
         self._input_state = input_state
 
     @property
@@ -122,7 +138,7 @@ class RemoteProcessor(AProcessor):
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)
 
-    def resume_job(self, job_id: str):
+    def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
 
     @property
