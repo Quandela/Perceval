@@ -95,7 +95,7 @@ jobs:
 
       - name: test get ref branch
         run: |
-            echo ${{ steps.extract_branch.outputs.branch }}
+            echo 
 
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
@@ -170,7 +170,7 @@ jobs:
           alert-threshold: '120%'
           comment-on-alert: true
 
-      - name: checkout gh-pages
+      - name: checkout in current branch
         uses: actions/checkout@v2
         with:
           ref: ${{ steps.extract_branch.outputs.branch }}
@@ -196,7 +196,7 @@ jobs:
         with:
           name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
 
-      - name: Save benchmark report in gh-pages branch
+      - name: Save benchmark report in current branch
         if: inputs.save
         run: |
           git pull
