@@ -126,21 +126,21 @@ jobs:
         name: Initialize config linux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
+          echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
           echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
           echo "folder_file_json=.benchmarks/log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
       - if: runner.os != 'Linux'
         name: Initialize config notLinux
         run: |
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
+          echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
           echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
           echo "folder_file_json=.benchmarks/log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: Run benchmark
         run: |
-          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }}  >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/log/${{ env.folder_env }}  >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
