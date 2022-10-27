@@ -93,10 +93,6 @@ jobs:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
-      - name: test get ref branch
-        run: |
-            echo 
-
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
         uses: actions/setup-python@v2
@@ -116,12 +112,12 @@ jobs:
       - if: inputs.quandelibc_ref != ''
         name: Install previously compiled Quandelibc
         run: |
-          python -m pip uninstall -r requirements.txt -y
+          python -m pip uninstall quandelibc
           bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
 
       - name: Install dependencies
         run: |
-            python -m pip uninstall -r requirements.txt -y
+            python -m pip uninstall quandelibc
             python -m pip install --upgrade pip
             python -m pip install -r requirements.txt pytest pytest-benchmark
             python -m pip install .
@@ -148,7 +144,7 @@ jobs:
           python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} 
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
       # >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
-      
+
       # upload the result on action GitHub
       - name: upload the result Log
         uses: actions/upload-artifact@v3
