@@ -381,8 +381,10 @@ class Circuit(ACircuit):
         assert isinstance(component, ACircuit), \
             "Only unitary components can compose a linear optics circuit, use Processor for non-unitary"
         if isinstance(port_range, int):
-            port_range = list([i for i in range(port_range, port_range+component.m)])
-        assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
+            port_range = tuple([i for i in range(port_range, port_range+component.m)])
+        if isinstance(port_range, list):
+            port_range = tuple(port_range)
+        assert isinstance(port_range, tuple), "range (%s) must be a tuple"
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
                 "range must a consecutive valid set of ports"
