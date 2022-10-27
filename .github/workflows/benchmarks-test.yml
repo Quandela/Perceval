@@ -163,7 +163,7 @@ jobs:
           auto-push: ${{ inputs.save }}
           benchmark-data-dir-path: .benchmarks/${{ env.folder_env }}
           alert-threshold: '120%'
-          gh-pages-branch: '${{ steps.extract_branch.outputs.branch }} -u'
+          gh-pages-branch: ''
           comment-on-alert: true
 
       - name: checkout in current branch
