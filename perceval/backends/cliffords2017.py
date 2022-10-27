@@ -43,7 +43,7 @@ class CliffordClifford2017Backend(Backend):
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
         raise NotImplementedError(f'Cannot use prob_be on {self.name}')
 
-    def sample(self, input_state, progress_callback=None):
+    def sample(self, input_state):
         if isinstance(input_state, StateVector):
             input_state = input_state.sample()
         # prepare Us that is a m*n matrix
@@ -79,16 +79,12 @@ class CliffordClifford2017Backend(Backend):
             fs[next_mode] += 1
         return BasicState(fs)
 
-    def samples(self, input_state, count, progress_callback=None):
+    def samples(self, input_state, count):
         if isinstance(input_state, StateVector) and len(input_state) == 1:
             input_state = input_state[0]
-        if progress_callback:
-            progress_callback(0)
         results = []
         for i in range(count):
             results.append(self.sample(input_state))
-            if progress_callback:
-                progress_callback((i+1) / count)
         return results
 
     @staticmethod

@@ -20,23 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, List, Callable
+from typing import Dict, List
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
-from perceval.utils import Parameter, BasicState, SVDistribution, generate_sync_methods
+from perceval.utils import BasicState
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.dev'
-
-
-def _extract_commands(specs):
-    for v in specs.values():
-        if 'available_commands' in v:
-            for c in v['available_commands']:
-                yield c
 
 
 def _get_first_spec(specs, name):
@@ -56,7 +49,6 @@ def _split_platform_and_backend_name(name: str):
     return platform_name, backend_name
 
 
-@generate_sync_methods
 class RemoteProcessor(AProcessor):
     def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL):
         super().__init__()
@@ -72,13 +64,17 @@ class RemoteProcessor(AProcessor):
         self.fetch_data()
 
     @property
-    def is_remote(self):
+    def is_remote(self) -> bool:
         return True
 
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
         plugins_specs = platform_details['specs']
-        self._specs.update(platform_details['specs'][next(iter(plugins_specs.keys()))])
+        # TODO cleanup once all pcvl workers load 1 plugin only
+        if len(plugins_specs) == 1:
+            self._specs.update(platform_details['specs'][next(iter(plugins_specs.keys()))])
+        else:
+            self._specs.update(platform_details['specs'])
         if platform_details['type'] != 'simulator':
             self._type = ProcessorType.PHYSICAL
 
@@ -86,7 +82,19 @@ class RemoteProcessor(AProcessor):
     def specs(self):
         return self._specs
 
+    @property
+    def constraints(self) -> Dict:
+        if 'constraints' in self._specs:
+            return self._specs['constraints']
+        return {}
+
     def set_circuit(self, circuit: Circuit):
+        if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
+            raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
+        if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
+            raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
+        if self._input_state is not None and self._input_state.m != circuit.m:
+            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
         self._circuit = circuit
         self.__build_backend()
 
@@ -104,47 +112,42 @@ class RemoteProcessor(AProcessor):
         return self._type
 
     def with_input(self, input_state: BasicState) -> None:
+        if 'max_photon_count' in self.constraints and input_state.n > self.constraints['max_photon_count']:
+            raise RuntimeError(
+                f"Too many photons in input state ({input_state.n} > {self.constraints['max_photon_count']})")
+        if 'min_photon_count' in self.constraints and input_state.n < self.constraints['min_photon_count']:
+            raise RuntimeError(
+                f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
+        if self._circuit is not None and input_state.m != self._circuit.m:
+            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._circuit.m})")
         self._input_state = input_state
 
     @property
-    def available_sampling_method(self) -> str:
-        for k, v in _extract_commands(self._specs):
-            return v
-        return None
+    def available_commands(self) -> List[str]:
+        return self._specs.get("available_commands", [])
 
-    def async_samples(self, count):
+    def async_samples(self, count, **args) -> str:
         if self._backend is None:
             self.__build_backend()
+        return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
 
-        return self._backend.async_samples(self._input_state, count, parameters=self._parameters)
-
-    def async_sample_count(self, count) -> str:
+    def async_sample_count(self, count, **args) -> str:
         if self._backend is None:
             self.__build_backend()
+        return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
 
-        return self._backend.async_sample_count(self._input_state, count, parameters=self._parameters)
-
-    def async_probs(self) -> SVDistribution:
+    def async_probs(self, **args) -> str:
         if self._backend is None:
             self.__build_backend()
+        return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
 
-        return self._backend.async_probs(self._input_state, parameters=self._parameters)
-
-    def async_execute(self, command: str, **args):
+    def async_execute(self, command: str, **args) -> str:
         if self._backend is None:
             self.__build_backend()
         return self._backend.async_execute(command, parameters=self._parameters, **args)
 
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        pass
-
-    def set_circuit_parameters(self, params: Dict[str, Parameter]) -> None:
-        pass
-
-    def resume_job(self, job_id:str, deserializer: Callable = None):
-        job = RemoteJob(rpc_handler=self._rpc_handler, deserializer=deserializer)
-        job.status()
-        return job
+    def resume_job(self, job_id: str) -> RemoteJob:
+        return RemoteJob.from_id(job_id, self._rpc_handler)
 
     @property
     def m(self) -> int:

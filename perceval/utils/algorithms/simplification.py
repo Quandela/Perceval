@@ -23,10 +23,10 @@ from typing import Union
 
 import numpy as np
 import perceval.components.unitary_components as comp
-from perceval.components import ACircuit
+from perceval.components import ACircuit, Circuit
 
 
-def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False) -> list:
+def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False) -> Union[list, Circuit]:
     r"""
     Tries to simplify a circuit when simplifications are possible
 
@@ -46,6 +46,12 @@ def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False)
             r = tuple(r + i for i in range(c.m))
         final_circuit_comp.append([r, c])
         final_circuit_comp = _simplify_comp(final_circuit_comp, m, display)
+
+    if isinstance(circuit, Circuit):
+        res = Circuit(m)
+        for r, c in final_circuit_comp:
+            res.add(r, c)
+        return res
 
     return final_circuit_comp
 

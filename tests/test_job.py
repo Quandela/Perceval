@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Optional
 import perceval as pcvl
 import time
 
@@ -47,7 +46,7 @@ def test_run_sync_1():
     assert job.status.success
     assert job.get_results() == [0, 1, 4, 9, 16]
     # should be ~ 0.5 s
-    assert job.status.running_time < 0.8
+    assert job.status.running_time < 1
 
 
 def test_run_async():

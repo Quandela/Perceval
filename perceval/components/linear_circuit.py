@@ -381,8 +381,10 @@ class Circuit(ACircuit):
         assert isinstance(component, ACircuit), \
             "Only unitary components can compose a linear optics circuit, use Processor for non-unitary"
         if isinstance(port_range, int):
-            port_range = list([i for i in range(port_range, port_range+component.m)])
-        assert isinstance(port_range, list) or isinstance(port_range, tuple), "range (%s) must be a list"
+            port_range = tuple([i for i in range(port_range, port_range+component.m)])
+        if isinstance(port_range, list):
+            port_range = tuple(port_range)
+        assert isinstance(port_range, tuple), "range (%s) must be a tuple"
         for i, x in enumerate(port_range):
             assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
                 "range must a consecutive valid set of ports"
@@ -699,7 +701,7 @@ class Circuit(ACircuit):
     def match(self, pattern: ACircuit, pos: int = None,
               pattern_pos: int = 0, browse: bool = False,
               match: Match = None,
-              actual_pos: int = None, actual_pattern_pos: int = None) -> Optional[Match]:
+              actual_pos: int = None, actual_pattern_pos: int = None, reverse: bool = False) -> Optional[Match]:
         r"""match a sub-circuit at a given position
 
         :param match: the partial match
@@ -710,6 +712,7 @@ class Circuit(ACircuit):
         :param pattern_pos: the start position in the pattern
         :param actual_pos: unused, parameter only used by parent class
         :param actual_pattern_pos: unused, parameter only used by parent class
+        :param reverse: true if we want to search the pattern from the end of the circuit to pos (or the 0 if browse)
         :return:
         """
         assert actual_pos is None and actual_pattern_pos is None, "invalid use of actual_*_pos parameters for Circuit"
@@ -717,6 +720,8 @@ class Circuit(ACircuit):
             if pos is None:
                 pos = 0
             l = list(range(pos, len(self._components)))
+            if reverse:
+                l.reverse()
             for pos in l:
                 match = self.match(pattern, pos, pattern_pos)
                 if match is not None:

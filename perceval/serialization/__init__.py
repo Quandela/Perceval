@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from .serialize import serialize, serialize_to_file
-from ._fockstate_serialization import deserialize_state, deserialize_state_list
-from .deserialize import deserialize_circuit, circuit_from_file, deserialize_matrix, matrix_from_file, \
-      deserialize_float, deserialize_sample_count, deserialize_svdistribution, sample_count_from_file, \
-      deserialize
+from ._state_serialization import deserialize_state, deserialize_state_list
+from .deserialize import deserialize, deserialize_circuit, circuit_from_file, deserialize_matrix, matrix_from_file, \
+      deserialize_float
+      # , deserialize_sample_count, sample_count_from_file

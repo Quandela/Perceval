@@ -157,11 +157,15 @@ class SymbSkin(ASkin):
         canvas.add_text((25, 44), text=content.replace("phi=", "Φ="), size=7, ta="middle")
 
     def lc_shape(self, circuit, canvas, content, mode_style, **opts):
+        style = {'stroke': 'black', 'stroke_width': 1}
         canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
-        canvas.add_mline([15, 25, 35, 5], **self.style[ModeStyle.PHOTONIC])
-        canvas.add_mline([35, 5, 34, 10], **self.style[ModeStyle.PHOTONIC])
-        canvas.add_mline([35, 5, 30, 6], **self.style[ModeStyle.PHOTONIC])
-        canvas.add_text((10, 32), text=content, size=7, ta="left")
+        canvas.add_mline([25, 25, 25, 32], **style)
+        canvas.add_mline([15, 32, 35, 32], **style)
+        canvas.add_mline([18, 34, 32, 34], **style)
+        canvas.add_mline([21, 36, 29, 36], **style)
+        canvas.add_mline([24, 38, 26, 38], **style)
+        canvas.add_rect((22, 22), 6, 6, fill="white")
+        canvas.add_text((6, 20), text=content, size=7, ta="left")
 
     def pbs_shape(self, circuit, canvas, content, mode_style, **opts):
         if self._compact:

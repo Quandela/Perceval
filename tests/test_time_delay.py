@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
-from perceval import Processor, Source, BS, TD, BasicState, SVDistribution
+from perceval import Processor, Source, BS, TD, BasicState, BSDistribution
 
 p = Processor("SLOS", 2, source=Source(1))
 
@@ -32,7 +32,7 @@ def test_without_herald():
     p.with_input(BasicState([1, 0]))
     p.mode_post_selection(0)
 
-    expected = SVDistribution()
+    expected = BSDistribution()
     expected[BasicState([0, 0])] = 0.25
     expected[BasicState([1, 0])] = 0.25
     expected[BasicState([0, 1])] = 0.25
@@ -46,7 +46,7 @@ def test_with_selection():
     p.with_input(BasicState([1, 0]))
     p.mode_post_selection(1)
 
-    expected = SVDistribution()
+    expected = BSDistribution()
     expected[BasicState([1, 0])] = 1/3
     expected[BasicState([0, 1])] = 1/3
     expected[BasicState([2, 0])] = 1/6
@@ -65,7 +65,7 @@ def test_with_heralds():
     p.with_input(BasicState([1]))
     p.mode_post_selection(0)
 
-    expected = SVDistribution()
+    expected = BSDistribution()
     expected[BasicState([0])] = 0.4
     expected[BasicState([1])] = 0.4
     expected[BasicState([2])] = 0.2

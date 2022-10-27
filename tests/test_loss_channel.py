@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import Processor, Unitary, LC, Matrix, SVDistribution, BasicState, Source
+from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, Source, SVDistribution
 from perceval.algorithm import Sampler
 
 
@@ -41,7 +41,7 @@ def test_minimal():
     p = Processor("SLOS", 1).add(0, LC(loss))
     p.with_input(SVDistribution(BasicState([2])))
     p.mode_post_selection(0)
-    expected_svd = SVDistribution()
+    expected_svd = BSDistribution()
     expected_svd[BasicState([0])] = loss ** 2
     expected_svd[BasicState([1])] = 2 * loss * (1 - loss)
     expected_svd[BasicState([2])] = (1 - loss) ** 2

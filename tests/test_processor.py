@@ -82,6 +82,6 @@ def test_processor_probs():
 
     qpu.mode_post_selection(1)  # Lower mode_post_selection to 1 (default was 2 = expected input photon count)
     probs = qpu.probs()
-    sv_out = probs['results']
-    assert pytest.approx(sv_out[pcvl.StateVector("|2,0>")]) == 0.5
-    assert pytest.approx(sv_out[pcvl.StateVector("|0,2>")]) == 0.5
+    bsd_out = probs['results']
+    assert pytest.approx(bsd_out[pcvl.BasicState("|2,0>")]) == 0.5
+    assert pytest.approx(bsd_out[pcvl.BasicState("|0,2>")]) == 0.5
