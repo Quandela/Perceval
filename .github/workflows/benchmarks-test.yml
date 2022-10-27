@@ -152,6 +152,16 @@ jobs:
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
 
+      - name: checkout in gh-pages branch
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+      
+      - name: Download the result Log on github action
+        uses: actions/download-artifact@v3
+        with:
+          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+
       # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
         uses: benchmark-action/github-action-benchmark@v1
@@ -163,7 +173,7 @@ jobs:
           auto-push: ${{ inputs.save }}
           benchmark-data-dir-path: .benchmarks/${{ env.folder_env }}
           alert-threshold: '120%'
-          gh-pages-branch: ''
+          gh-pages-branch: ${{ steps.extract_branch.outputs.branch }}
           comment-on-alert: true
 
       - name: checkout in current branch
