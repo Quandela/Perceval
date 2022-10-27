@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import warnings
 
 from .template import Backend
 from .cliffords2017 import CliffordClifford2017Backend
@@ -42,4 +43,5 @@ class BackendFactory:
         name = backend_name
         if name in BACKEND_LIST:
             return BACKEND_LIST[name]
+        warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
         return BACKEND_LIST['SLOS']
