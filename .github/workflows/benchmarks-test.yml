@@ -69,7 +69,7 @@ jobs:
           cd quandelibc
           python -m pip install cibuildwheel
           python -m cibuildwheel --output-dir precompiled-quandelibc
-          
+
       - name: Store wheel
         uses: actions/upload-artifact@v2
         with:
@@ -83,11 +83,19 @@ jobs:
       - build-quandelibc
     runs-on: ${{ github.event.inputs.os }}
     steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
       - uses: actions/checkout@v2
         with:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
+      - name: test get ref branch
+        run: |
+            echo ${{ steps.extract_branch.outputs.branch }}
 
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
@@ -110,6 +118,7 @@ jobs:
         run: |
           python -m pip uninstall -r requirements.txt -y
           bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
+
       - name: Install dependencies
         run: |
             python -m pip uninstall -r requirements.txt -y
@@ -124,7 +133,7 @@ jobs:
           echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
           echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
           echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
       - if: runner.os != 'Linux'
         name: Initialize config notLinux
         run: |
@@ -138,6 +147,7 @@ jobs:
         run: |
           python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/${{ env.folder_env }} >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
+
       # upload the result on action GitHub
       - name: upload the result Log
         uses: actions/upload-artifact@v3
@@ -146,6 +156,7 @@ jobs:
           path: |
             pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
+
       # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
         uses: benchmark-action/github-action-benchmark@v1
@@ -155,14 +166,14 @@ jobs:
           output-file-path: ${{ env.folder_file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{ inputs.save }}
-          benchmark-data-dir-path: benchmarks/${{ env.folder_env }}
+          benchmark-data-dir-path: .benchmarks/${{ env.folder_env }}
           alert-threshold: '120%'
           comment-on-alert: true
 
       - name: checkout gh-pages
         uses: actions/checkout@v2
         with:
-          ref: gh-pages
+          ref: ${{ steps.extract_branch.outputs.branch }}
 
       - name: Download the result Log on github action
         uses: actions/download-artifact@v3
@@ -172,12 +183,14 @@ jobs:
       - name: compare benchmark
         run: |
           pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+      
       - name: upload the result compare
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
           path: |
             compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+      
       - name: Download the result compare
         uses: actions/download-artifact@v3
         with:

@@ -22,7 +22,7 @@
 import random
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.lib.symb as comp
 import numpy as np
 from math import comb
 from scipy.optimize import minimize
