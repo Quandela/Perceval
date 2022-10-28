@@ -104,7 +104,7 @@ class RemoteJob(Job):
         if not job_status.completed:
             raise RuntimeError('The job is still running, results are not available yet.')
         if job_status.status != RunningStatus.SUCCESS:
-            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
+            raise RuntimeError(f'The job failed: {job_status.stop_message}')
         response = self._rpc_handler.get_job_results(self._id)
         results = deserialize(json.loads(response['results']))
         if "job_context" in results and 'result_mapping' in results["job_context"]:

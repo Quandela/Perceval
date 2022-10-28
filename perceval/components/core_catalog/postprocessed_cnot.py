@@ -32,6 +32,14 @@ def _post_process(s):
 
 class PostProcessedCnotItem(CatalogItem):
     article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
+    description = r"""CNOT gate with 2 heralded modes and a post-processing function"""
+    str_repr = r"""                      ╭─────╮
+data (dual rail) ─────┤     ├───── data (dual rail)
+                 ─────┤     ├─────
+                      │     │
+ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
+                 ─────┤     ├─────
+                      ╰─────╯"""
 
     def __init__(self):
         super().__init__("postprocessed cnot")

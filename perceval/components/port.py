@@ -186,4 +186,4 @@ class LogicalState(list):
         return BasicState(result)
 
     def __str__(self):
-        return '|' + ','.join([str(x) for x in self]) + '>>'
+        return '|' + ','.join([str(x) for x in self]) + '>_L'
