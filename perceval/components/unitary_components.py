@@ -172,6 +172,10 @@ class BS(ACircuit):
             if self._convention == BSConvention.Rx or self._convention == BSConvention.Ry:
                 self._theta.set_value(- float(self._theta), force=True)
 
+    def definition(self):
+        return BS(Parameter('theta'), Parameter('phi_tl'), Parameter('phi_bl'), Parameter('phi_tr'),
+                  Parameter("phi_br"), self._convention).U
+
 
 class PS(ACircuit):
     """Phase shifter"""

@@ -35,7 +35,6 @@ BACKEND_LIST = {
 }
 
 
-
 class BackendFactory:
     @staticmethod
     def get_backend(backend_name="SLOS"):
@@ -43,3 +42,7 @@ class BackendFactory:
         if name in BACKEND_LIST:
             return BACKEND_LIST[name]
         return BACKEND_LIST['SLOS']
+
+    @staticmethod
+    def list():
+        return list(BACKEND_LIST.keys())
