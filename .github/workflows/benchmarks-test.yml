@@ -136,7 +136,7 @@ jobs:
         name: Initialize config notLinux
         run: |
           echo "folder_env=${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/log/${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: Run benchmark
