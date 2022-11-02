@@ -49,7 +49,7 @@ In Perceval a *circuit* represents a setup of optical components, used
 to guide and act on photons.
 
 A circuit has a fixed number of *spatial modes* (sometimes also called
-*pathes* or *ports*) :math:`m`, which is the same for input as for output
+*paths* or *ports*) :math:`m`, which is the same for input as for output
 spatial modes.
 
 Simple examples of circuits are common optical devices such as beam
@@ -102,7 +102,7 @@ Building a Circuit
 ------------------
 
 Each circuit corresponds to a ``Circuit`` object.
-To instantiate a circuit, simply pass the number of pathes as an argument:
+To instantiate a circuit, simply pass the number of modes as an argument:
 
 >>> # create a new circuit with 3 spatial modes
 >>> my_circuit = pcvl.Circuit(3)
@@ -115,24 +115,17 @@ To instantiate a circuit, simply pass the number of pathes as an argument:
   corresponding to the first line, ... port :math:`(m-1)` is corresponding to the :math:`m`-th line.
 
 
-Predefined Circuits
-^^^^^^^^^^^^^^^^^^^
+Circuit library
+^^^^^^^^^^^^^^^
 
-Perceval provides two libraries of predefined circuits, named
-``perceval.lib.phys`` and ``perceval.lib.symb`` (or shortly ``phys``
-and ``symb``):
+Perceval provides a library of predefined components, located in ``perceval.components``:
 
->>> import perceval.lib.phys as phys
->>> import perceval.lib.symb as symb
+>>> import perceval.components as comp
 
-These libraries contain simple circuits, which differ by their visual
-identities and specific mathematical definitions.
+This library contain simple circuits stored in a few sub-packages. For instance:
 
-* ``symb`` provides circuits with generally less parameters. This is
-  useful to build generic optical circuits which implement quantum
-  circuits, and perform symbolic computation.
-* ``phys`` provides circuits with more parameters, which allow a
-  sharper modelisation of the components in a physical experiment.
+* ``unitary_components`` provides circuits which can be represented by a unitary matrix.
+* ``non_unitary_components`` provides other types of circuit, such as time delays.
 
 For instance, the following table shows the respective definition of the unitary matrix of a beam splitter in the
 ``phys`` and the ``symb`` library:
@@ -162,22 +155,7 @@ Also following figure shows the same Mach Zehnder Interferometer circuit represe
   :width: 75%
 
 See :ref:`Components` for an overview of the circuits provided by
-``symb`` and ``phys``.
-
-
-.. tip::
-
-   You can play with the python import namespace ``as`` to define a circuit without explicit reference to one or the
-   other library. For instance, the following code defines a Mach Zehnder interferometer
-
-   >>> import perceval.lib.phys as plib
-   >>> mzi = (pcvl.Circuit(m=2, name="mzi")
-   ...        .add((0, 1), plib.BS())
-   ...        .add(0, plib.PS(pcvl.Parameter("phi1")))
-   ...        .add((0, 1), plib.BS())
-   ...        .add(0, plib.PS(pcvl.Parameter("phi2"))))
-
-   You would only need to change the first line to switch from one library to the other.
+Perceval.
 
 .. Elementary Circuits
 
