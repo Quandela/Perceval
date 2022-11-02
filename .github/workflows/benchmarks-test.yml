@@ -28,6 +28,11 @@ on:
         type: string
         required: false
       save:
+        description: 'Save data'
+        default: false
+        required: false
+        type: boolean
+      save_log:
         description: 'Save log'
         default: false
         required: false
@@ -165,7 +170,7 @@ jobs:
       - name: compare result with last version and save on gh-page branch
         uses: benchmark-action/github-action-benchmark@v1
         with:
-          name: Python Benchmark with pytest-benchmark
+          name: Automated report
           tool: 'pytest'
           output-file-path: ${{ env.folder_file_json }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -203,11 +208,11 @@ jobs:
           name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
 
       - name: Save benchmark report in current branch
-        if: inputs.save
+        if: inputs.save_log
         run: |
           git pull
           git config --global user.name 'github-action-benchmark'
           git config --global user.email 'github@users.noreply.github.com'
           git add ${{ env.folder_file_json }}
-          git commit -am "Automated benchmark report"
+          git commit -am "Automated benchmark log report"
           git push
