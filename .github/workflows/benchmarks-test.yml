@@ -140,7 +140,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/log/${{ env.folder_env }}  >> pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
+          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/log/${{ env.folder_env }} 
           mv ${{ env.file_json }} ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
@@ -149,7 +149,6 @@ jobs:
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
           path: |
-            pytest_result_${{ env.folder_env }}_${{ env.tag_version }}
             ${{ env.folder_file_json }}
 
       - name: checkout in gh-pages branch
@@ -188,7 +187,7 @@ jobs:
 
       - name: compare benchmark
         run: |
-          pytest-benchmark compare .benchmarks/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+          pytest-benchmark compare .benchmarks/log/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
       
       - name: upload the result compare
         uses: actions/upload-artifact@v3
