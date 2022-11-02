@@ -446,14 +446,14 @@ class Processor(AProcessor):
         output = BSSamples()
         not_selected_physical = 0
         not_selected = 0
-        selected_inputs = self._inputs_map.sample(count, non_null=False)
+        selected_inputs = self._inputs_map.sample(max(count, 2), non_null=False)
         idx = 0
         while len(output) < count:
-            selected_input = selected_inputs[idx][0]
+            selected_input = selected_inputs[idx]
             idx += 1
-            if idx == count:
+            if idx == len(selected_inputs):
                 idx = 0
-                selected_inputs = self._inputs_map.sample(count, non_null=False)
+                selected_inputs = self._inputs_map.sample(max(count, 2), non_null=False)
             if not self._state_preselected_physical(selected_input):
                 not_selected_physical += 1
                 continue
@@ -543,8 +543,8 @@ class Processor(AProcessor):
         output.normalize()
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def _state_preselected_physical(self, input_state: BasicState):
-        return input_state.n >= self._min_mode_post_select
+    def _state_preselected_physical(self, input_state: StateVector):
+        return max(input_state.n) >= self._min_mode_post_select
 
     def _state_selected_physical(self, output_state: BasicState) -> bool:
         modes_with_photons = len([n for n in output_state if n > 0])
