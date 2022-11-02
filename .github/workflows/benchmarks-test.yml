@@ -184,6 +184,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          path: .benchmarks/log/${{ env.folder_env }}
 
       - name: compare benchmark
         run: |
