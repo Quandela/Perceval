@@ -148,8 +148,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
-          path: |
-            ${{ env.folder_file_json }}
+          path: ${{ env.folder_file_json }}
 
       - name: checkout in gh-pages branch
         uses: actions/checkout@v2
@@ -160,6 +159,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          path: .benchmarks/log/${{ env.folder_env }}
 
       # use github-action-benchmark for graph
       - name: compare result with last version and save on gh-page branch
