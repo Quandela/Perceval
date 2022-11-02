@@ -255,11 +255,14 @@ class ACircuit(AParametrizedComponent, ABC):
         r"""transfer parameters from a Circuit to another - should be the same circuit"""
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
-            assert p in self._params, "missing parameter %s when transfering component" % p.name
+            assert p in self._params, "missing parameter %s when transfering component" % p
             param = c.param(p)
             if param.defined:
                 try:
                     self._params[p].set_value(float(param), force=force)
+                except RuntimeError:  # Error in case force = False and param is fixed
+                    assert abs(float(param) - float(self._params[p])) < global_params["min_complex_component"],\
+                        f"components don't have the same fixed value for parameter {p}"
                 except Exception:
                     pass
 
