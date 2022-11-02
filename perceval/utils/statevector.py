@@ -23,11 +23,13 @@
 from __future__ import annotations
 
 import random
+import warnings
 from collections import defaultdict
 from copy import copy
 import itertools
 import re
 from typing import Dict, List, Union, Tuple, Optional
+from deprecated import deprecated
 
 from .matrix import Matrix
 from .format import simple_complex, simple_float
@@ -36,18 +38,21 @@ from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
-from quandelibc import FockState
+from quandelibc import FockState, Annotation, FSArray
 
 
 class BasicState(FockState):
     r"""Basic states
     """
+
     def __init__(self, *args, **kwargs):
         super(BasicState, self).__init__(*args, **kwargs)
 
-    @property
-    def has_polarization(self):
-        return False
+    def __len__(self):
+        return self.m
+
+    def __copy__(self):
+        return BasicState(self)
 
     def __add__(self, o):
         return StateVector(self) + o
@@ -57,242 +62,28 @@ class BasicState(FockState):
             o = StateVector(o)
         return StateVector(self) - o
 
+    def separate_state(self):
+        return [BasicState(s) for s in super(BasicState, self).separate_state()]
 
-class Annotations(dict):
-    r"""Photon annotations
-    """
+    def __mul__(self, s):
+        if isinstance(s, StateVector):
+            return StateVector(self) * s
+        return BasicState(super(BasicState, self).__mul__(s))
 
-    def __init__(self, annots: Union[Dict, Annotations]):
-        super().__init__()
-        for k, v in annots.items():
-            self[k] = copy(v)
+    def __pow__(self, power):
+        return BasicState(power * list(self))
 
-    @staticmethod
-    def parse_annotation(s):
-        l_s = s.split(",")
-        annots = {}
-        for lk in l_s:
-            split_lk = lk.split(":")
-            if len(split_lk) != 2:
-                raise ValueError("invalid annotation format: %s" % s)
-            k = split_lk[0]
-            v = split_lk[1].replace("،", ",")
-            if k == "P":
-                v = Polarization.parse(v)
-            else:
-                try:
-                    v = int(split_lk[1])
-                except ValueError:
-                    try:
-                        v = float(split_lk[1])
-                    except ValueError:
-                        try:
-                            v = sp.S(split_lk[1])
-                            if v.free_symbols:
-                                v = split_lk[1]
-                        except ValueError:
-                            pass
-            if split_lk[0] in annots:
-                raise ValueError("same annotation is declared twice `%s` in %s", split_lk[0], s)
-            annots[split_lk[0]] = v
-        return annots
+    def __getitem__(self, item):
+        it = super().__getitem__(item)
+        if isinstance(it, FockState):
+            it = BasicState(it)
+        return it
 
-    def check_special_annotations(self):
-        for k, v in self.items():
-            if k == "P":
-                if isinstance(v, str):
-                    self[k] = float(v)
-
-    def __str__(self):
-        """compact string representation"""
-        represented = []
-        for k, v in self.items():
-            if isinstance(v, tuple):
-                v = str(v).replace(" ", "")
-            represented.append("{0}:{1}".format(k, v))
-        return "{" + ",".join(represented) + "}"
-
-
-class AnnotatedBasicState(BasicState):
-    r"""Extends `BasicState` with annotations"""
-
-    def __init__(self,
-                 bs: Union[BasicState, List[int], str],
-                 photon_annotations: Dict[int, Union[Dict, Annotations]] = None):
-        r"""Definition of a State element
-
-        :param bs: a `BasicState` initializer: string, list, or a Basic State
-        :param photon_annotations: for each photon in the state, indexed by left-to-right position in `BasicState`
-            provides an annotation dictionary. Photon index is 1-based.
-        """
-        if isinstance(bs, str) and bs.find("{") != -1:
-            assert not photon_annotations, "cannot use photon annotations together with serialized annotations %s" % bs
-            # parse annotated states
-            if bs[0] != "|" or bs[-1] != ">":
-                raise ValueError("incorrect syntax for annotated state: %s" % bs)
-            v = bs[1:-1]
-            # protect all commas inside annotations, pair separator is internally '،'
-            v = re.sub(r"(\([^)]*),(.*?\))", r"\1،\2", v)
-            photon_index = 1
-            mode_index = 0
-            states = []
-            photon_annotations = {}
-            # in general (\d?{})*\d,...
-            while v:
-                if v[0] == ",":
-                    raise ValueError("mode cannot be empty: %s" % bs)
-                m = re.match(r"(\d+)(.*)", v)
-                if m:
-                    counter = int(m.group(1))
-                    v = m.group(2)
-                else:
-                    if not len(v) or v[0] != "{":
-                        raise ValueError("invalid annotation: " % bs)
-                    counter = 1
-                if v and v[0] == "{":
-                    if counter == 0:
-                        raise ValueError("annotations can not be on 0 photons: %s" % bs)
-                    m = re.match(r"{(.*?)}(.*)", v)
-                    if m is None:
-                        raise ValueError("non-closed annotation: %s" % bs)
-                    annotation = Annotations.parse_annotation(m.group(1))
-                    v = m.group(2)
-                else:
-                    annotation = {}
-                for _ in range(counter):
-                    if annotation:
-                        photon_annotations[photon_index] = annotation
-                    photon_index += 1
-                if len(states) <= mode_index:
-                    states.append(0)
-                states[mode_index] += counter
-                if v and v[0] == ",":
-                    mode_index += 1
-                    v = v[1:]
-                    if not v:
-                        raise ValueError("mode cannot be empty: %s" % bs)
-            bs = states
-
-        super().__init__(bs)
-        self._annotations = None
-        if photon_annotations is not None:
-            self._annotations = []
-            for _ in range(self.n):
-                self._annotations.append(Annotations({}))
-            for k, v in photon_annotations.items():
-                self._annotations[k-1] = Annotations(v)
-
-    @property
-    def has_annotations(self) -> bool:
-        r"""True is the BasicState uses annotations
-        """
-        return self._annotations is not None
-
-    @property
-    def has_polarization(self) -> bool:
-        if self._annotations is None:
-            return False
-        for annot in self._annotations:
-            if "P" in annot:
-                return True
-        return False
-
-    def clear(self) -> AnnotatedBasicState:
-        r"""Clear all annotations on current Basic States
-
-        :return: returns the current cleared object
-        """
-        self._annotations = None
-        return self
-
-    def get_mode_annotations(self, k: int) -> Tuple[Annotations]:
-        r"""Retrieve annotations of the photons in the given mode
-
-        :param k: the mode
-        :return: tuple annotation list
-        """
-        annots = []
-        if self[k] != 0:
-            photon_idx = self.mode2photon(k)
-            while len(annots) < self[k]:
-                annots.append(self._annotations is not None and self._annotations[photon_idx] or Annotations({}))
-                photon_idx += 1
-        return tuple(annots)
-
-    def get_photon_annotations(self, pk: int) -> Annotations:
-        r"""Retrieve annotations of the k-th photon
-
-        :param pk: the photon 1-based index
-        :return: tuple annotation list
-        """
-        if self._annotations is None:
-            return Annotations({})
-        return self._annotations[pk-1]
-
-    def set_photon_annotations(self, pk: int, annots: Union[Dict, Annotations]) -> None:
-        r"""Set annotations of the k-th photon (1-based index)
-
-        :param pk: the photon 1-based index
-        :param annots: the annotations
-        """
-        if self._annotations is None:
-            self._annotations = []
-            for _ in range(self.n):
-                self._annotations.append(Annotations({}))
-        else:
-            for k, v in annots.items():
-                self._annotations[pk-1][k] = copy(v)
-
-    def separate_state(self) -> List[AnnotatedBasicState]:
-        r"""Separate an `AnnotatedBasicState` on states with indistinguishable photons
-
-        :return: list of `AnnotatedBasicState` - might be the current state.
-        """
-
-        if self.n == 0:
-            return [BasicState([0]*self.m)]
-
-        def _annot_compatible(annot_ref, annot_add):
-            new_annot = copy(annot_ref)
-            for a_k, a_v in annot_add.items():
-                if a_k == "P":
-                    continue
-                if a_k not in annot_ref:
-                    new_annot[a_k] = a_v
-                else:
-                    if annot_ref[a_k] != a_v:
-                        return False
-            return new_annot
-
-        # check which photon needs to be distinguished - if we have n photons, we might end-up with n partitions
-        photon_groups = []
-        for k in range(self.n):
-            annot_k = self.get_photon_annotations(k+1)
-            merged_photon = False
-            for annot_photon in photon_groups:
-                merge_annot = _annot_compatible(annot_photon[0], annot_k)
-                if merge_annot is not False:
-                    annot_photon[0] = merge_annot
-                    annot_photon[1].append(k)
-                    merged_photon = True
-                    break
-            if not merged_photon:
-                photon_groups.append([annot_k, [k]])
-
-        if len(photon_groups) == 1:
-            return [self]
-        # now iterate through photon_groups and generate corresponding states
-        states = []
-        for annot_photon in photon_groups:
-            state = [0] * self.m
-            for photon_id in annot_photon[1]:
-                state[self.photon2mode(photon_id)] += 1
-            states.append(BasicState(state))
-
-        return states
+    def set_slice(self, slice, state):
+        return BasicState(super().set_slice(slice, state))
 
     def partition(self, distribution_photons: List[int]):
-        r"""Given a distribution of photon, find all possible partition of the state
+        r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
 
         :param distribution_photons:
         :return:
@@ -320,83 +111,56 @@ class AnnotatedBasicState(BasicState):
             partitions_states.add(tuple(o_state))
         return list(partitions_states)
 
-    def __str__(self):
-        """Textual Representation of a BasicState
 
-        :return: string representation of BasicState
-        """
-        if self._annotations:
-            ls = []
-            for k in range(self.m):
-                m = self.get_mode_annotations(k)
-                if len(m) == 0:
-                    ls.append("0")
-                else:
-                    ms = []
-                    photons_annots = sorted([str(annot) for annot in m])
-                    k = 0
-                    while k < len(photons_annots):
-                        m = k + 1
-                        while m < len(photons_annots) and photons_annots[k] == photons_annots[m]:
-                            m += 1
-                        n = m-k
-                        if photons_annots[k] == "{}":
-                            ms.append(str(n))
-                        else:
-                            s = photons_annots[k]
-                            if n > 1:
-                                s = str(n)+s
-                            ms.append(s)
-                        k = m
-                    ls.append("".join(ms))
-            s = "|"+",".join(ls)+">"
+def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
+    """Iterator on all possible output states compatible with mask generating StateVector
+
+    :param input_state: a given input state vector
+    :param mask: an optional mask
+    :return: list of output_state
+    """
+    m = input_state.m
+    ns = input_state.n
+    if not isinstance(ns, list):
+        ns = [ns]
+    for n in ns:
+        if mask is not None:
+            output_array = FSArray(m, n, mask)
         else:
-            s = super(AnnotatedBasicState, self).__str__()
-        return s
+            output_array = FSArray(m, n)
+        for output_idx, output_state in enumerate(output_array):
+            yield BasicState(output_state)
 
-    def __mul__(self, a_bs):
-        new_a_bs = AnnotatedBasicState(super(AnnotatedBasicState, self).__mul__(a_bs))
-        if self.has_annotations or a_bs.has_annotations:
-            new_a_bs._annotations = []
-            for k in range(self.n):
-                if self.has_annotations:
-                    new_a_bs._annotations.append(self.get_photon_annotations(k+1))
-                else:
-                    new_a_bs._annotations.append(Annotations({}))
-            for k in range(a_bs.n):
-                if a_bs.has_annotations:
-                    new_a_bs._annotations.append(a_bs.get_photon_annotations(k+1))
-                else:
-                    new_a_bs._annotations.append(Annotations({}))
-        return new_a_bs
 
-    def __hash__(self):
-        if self.has_annotations:
-            return self.__str__().__hash__()
-        else:
-            return super(AnnotatedBasicState, self).__hash__()
+class AnnotatedBasicState(FockState):
+    r"""Extends `BasicState` with annotations
+    """
+
+    @deprecated(version="0.7", reason="use BasicState instead")
+    def __init__(self, *args, **kwargs):
+        super(AnnotatedBasicState, self).__init__(*args, **kwargs)
 
 
 class StateVector(defaultdict):
     """
-    A StateVector is a (complex) linear combination of annotated Basic States
+    A StateVector is a (complex) linear combination of Basic States
     """
 
     def __init__(self,
-                 bs: Union[BasicState, List[int], str, AnnotatedBasicState, None] = None,
-                 photon_annotations: Dict[int, Union[Dict, Annotations]] = None):
+                 bs: Union[BasicState, List[int], str, None] = None,
+                 photon_annotations: Dict[int, str] = None):
         r"""Init of a StateVector from a BasicState, or from BasicState constructor
-        :param bs: an annotated basic state, a basic state, or a `BasicState` constructors,
+        :param bs: a BasicState, or `BasicState` constructor,
                     None used for internal purpose
         :param photon_annotations: photon annotation dictionary
         """
         super(StateVector, self).__init__(float)
         self.m = None
         if bs is not None:
-            if not isinstance(bs, AnnotatedBasicState):
-                bs = AnnotatedBasicState(bs, photon_annotations)
+            if not isinstance(bs, BasicState):
+                bs = BasicState(bs, photon_annotations or {})
             else:
-                assert photon_annotations is None, "cannot add photon annotations to AnnotatedBasicState"
+                assert photon_annotations is None, "cannot add photon annotations to BasicState"
             self[bs] = 1
         self._normalized = True
         self._has_symbolic = False
@@ -409,23 +173,38 @@ class StateVector(defaultdict):
     def __getitem__(self, key):
         if isinstance(key, int):
             return list(self.keys())[key]
-        assert isinstance(key, BasicState), "SVState keys should be (annotated) basic states"
+        assert isinstance(key, BasicState), "SVState keys should be Basic States"
         return super().__getitem__(key)
 
     def __setitem__(self, key, value):
-        assert isinstance(key, BasicState), "SVState keys should be (annotated) basic states"
+        assert isinstance(key, BasicState), "SVState keys should be Basic States"
         self._normalized = False
         if self.m is None:
             self.m = key.m
         return super().__setitem__(key, value)
 
     def __iter__(self):
-        self._normalize()
+        self.normalize()
         return super().__iter__()
 
     def __mul__(self, other):
-        r"""Multiply a StateVector by a numeric value prior in a linear combination
+        r"""Multiply a StateVector by a numeric value prior in a linear combination,
+        or computes the tensor product between two StateVectors
         """
+        if isinstance(other, (StateVector, BasicState)):
+            if isinstance(other, BasicState):
+                other = StateVector(other)
+            sv = StateVector()
+            if not other:
+                return self
+            if not self:
+                return other
+            sv.update({l_state * r_state: self[l_state] * other[r_state] for r_state in other for l_state in self})
+            sv.m = self.m + other.m
+            sv._has_symbolic = (other._has_symbolic or self._has_symbolic)
+            sv._normalized = (other._normalized and self._normalized)
+            return sv
+
         assert isinstance(other, (int, float, complex, np.number, sp.Expr)), "normalization factor has to be numeric"
         copy_state = StateVector(None)
         # multiplying - the outcome is a non-normalized StateVector
@@ -438,6 +217,19 @@ class StateVector(defaultdict):
             self._has_symbolic = True
         return copy_state
 
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_state = self
+        out = StateVector()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_state
+            if i != len(binary) - 1:
+                power_state *= power_state
+        return out
+
     def __copy__(self):
         sv_copy = StateVector(None)
         for k, v in self.items():
@@ -449,7 +241,9 @@ class StateVector(defaultdict):
 
     def __add__(self, other):
         r"""Add two StateVectors"""
-        assert isinstance(other, (StateVector, AnnotatedBasicState, BasicState)), "addition requires states"
+        assert isinstance(other, (StateVector, BasicState)), "addition requires states"
+        if self.m is None:
+            self.m = other.m
         assert other.m == self.m, "invalid mix of different modes"
         copy_state = copy(self)
         if not isinstance(other, StateVector):
@@ -470,13 +264,66 @@ class StateVector(defaultdict):
         r"""Sub two StateVectors"""
         return self + -1 * other
 
+    def sample(self) -> BasicState:
+        r"""Sample a single BasicState from the statevector.
+        It does not perform a measure - so do not change the value of the statevector
+
+        :return: a BasicState
+        """
+        p = random.random()
+        idx = 0
+        keys = list(self.keys())
+        self.normalize()
+        while idx < len(keys)-1:
+            p = p - abs(self[keys[idx]])**2
+            if p < 0:
+                break
+            idx += 1
+        return BasicState(keys[idx])
+
+    def samples(self, shots: int) -> List[BasicState]:
+        r"""Generate a list of samples.
+        It does not perform a measure - so do not change the value of statevector.
+        This function is more efficient than run :math:$shots$ times :method:sample
+
+        :param shots: the number of samples
+        :return: a list of BasicState
+        """
+        self.normalize()
+        weight = [abs(self[key])**2 for key in self.keys()]
+        rng = np.random.default_rng()
+        return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
+
+    def measure(self, modes: Union[int, List[int]]) -> Dict[BasicState, Tuple[float, StateVector]]:
+        r"""perform a measure on one or multiple modes and collapse the remaining statevector
+
+        :param modes: the mode to measure
+        :return: a dictionary - key is the possible measures, values are pairs (probability, BasicState vector)
+        """
+        self.normalize()
+        if isinstance(modes, int):
+            modes = [modes]
+        map_measure_sv = defaultdict(lambda: [0, StateVector()])
+        for s, pa in self.items():
+            out = []
+            remaining_state = []
+            p = abs(pa)**2
+            for i in range(self.m):
+                if i in modes:
+                    out.append(s[i])
+                else:
+                    remaining_state.append(s[i])
+            map_measure_sv[BasicState(out)][0] += p
+            map_measure_sv[BasicState(out)][1] += pa*StateVector(remaining_state)
+        return {k: tuple(v) for k, v in map_measure_sv.items()}
+
     @property
     def n(self):
         r"""list the possible values of n in the different states"""
         return list(set([st.n for st in self.keys()]))
 
-    def _normalize(self):
-        r"""Normalize a non-normalized state"""
+    def normalize(self):
+        r"""Normalize a non-normalized BasicState"""
         if not self._normalized:
             norm = 0
             to_remove = []
@@ -497,47 +344,90 @@ class StateVector(defaultdict):
             self._normalized = True
 
     def __str__(self):
-        self._normalize()
+        if not self:
+            return "|>"
+        self_copy = copy(self)
+        self_copy.normalize()
         ls = []
-        for key, value in self.items():
+        for key, value in self_copy.items():
             if value == 1:
                 ls.append(str(key))
             else:
                 if isinstance(value, sp.Expr):
                     ls.append(str(value) + "*" + str(key))
                 else:
-                    ls.append(simple_complex(value)[1] + "*" + str(key))
+                    value = simple_complex(value)[1]
+                    if value[1:].find("-") != -1 or value.find("+") != -1:
+                        value = "("+value+")"
+                    ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
 
     def __hash__(self):
         return self.__str__().__hash__()
 
 
-class SVTimeSequence:
-    r"""Sequence in time of state-vector
+def tensorproduct(states: List[Union[StateVector, BasicState]]):
+    r""" Computes states[0] * states[1] * ...
     """
+    if len(states) == 1:
+        return states[0]
+    return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
+
+class ProbabilityDistribution(defaultdict):
+    """Time-Independent abstract probabilistic distribution of StateVectors
+    """
     def __init__(self):
-        pass
+        super().__init__(float)
+
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        if sum_probs == 0:
+            warnings.warn("Unable to normalize a distribution with only null probabilities")
+            return
+        for sv in self.keys():
+            self[sv] /= sum_probs
+
+    def add(self, obj, proba: float):
+        self[obj] += proba
+
+    def __str__(self):
+        return "{\n  "\
+               + "\n  ".join(["%s: %s" % (str(k), simple_float(v, nsimplify=True)[1]) for k, v in self.items()])\
+               + "\n}"
+
+    def __copy__(self):
+        distribution_copy = type(self)()
+        for k, prob in self.items():
+            distribution_copy[copy(k)] = prob
+        return distribution_copy
 
 
-class SVDistribution(defaultdict):
+class SVDistribution(ProbabilityDistribution):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[StateVector] = None):
-        super(SVDistribution, self).__init__(float)
+    def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
+        super().__init__()
         if sv is not None:
-            self[sv] = 1
-
-    def add(self, sv: StateVector, proba: float):
-        self[sv] += proba
+            if isinstance(sv, (BasicState, StateVector)):
+                self[sv] = 1
+            elif isinstance(sv, dict):
+                for k, v in sv.items():
+                    self[k] = v
+            else:
+                raise TypeError(f"Unexpected type initializing SVDistribution {type(sv)}")
 
     def __setitem__(self, key, value):
-        assert isinstance(key, StateVector), "SVDistribution keys are state vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
+        key.normalize()
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
-        assert isinstance(key, StateVector), "SVDistribution keys are state vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
     def __mul__(self, svd):
@@ -546,36 +436,133 @@ class SVDistribution(defaultdict):
         :param svd:
         :return:
         """
+        if len(self) == 0:
+            return svd
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():
-                assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
-                new_svd[StateVector(sv1[0]*sv2[0])] = proba1 * proba2
+                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+                new_svd[sv1*sv2] = proba1 * proba2
 
         return new_svd
 
-    def sample(self, k: int = 1, non_null: bool = True) -> List[StateVector]:
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_svd = self
+        out = SVDistribution()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_svd
+            if i != len(binary) - 1:
+                power_svd *= power_svd
+        return out
+
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        for sv in self.keys():
+            self[sv] /= sum_probs
+
+    def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
-        :param k: number of samples to draw
-        :return: if :math:`k=1` a single sample, if :math:`k>1` a list of :math:`k` samples
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
         """
-        sample = []
-        for _ in range(k):
-            prob = random.random()
-            if non_null:
-                prob -= sum(v for sv, v in self.items() if sv.n == 0)
-            for sv, v in self.items():
-                if non_null and sv.n == 0:
-                    continue
-                if prob < v:
-                    if k == 1:
-                        return sv
-                    sample.append(sv)
-                    break
-                prob -= v
-        return sample
+        self.normalize()
+        d = self
+        if non_null:
+            d = {sv: p for sv, p in self.items() if max(sv.n) != 0}
+        states = list(d.keys())
+        probs = list(d.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        if len(results) == 1:
+            return results[0]
+        return list(results)
+
+
+class BSDistribution(ProbabilityDistribution):
+
+    def __init__(self, d: Optional[BasicState, Dict] = None):
+        super().__init__()
+        if d is not None:
+            if isinstance(d, BasicState):
+                self[d] = 1
+            elif isinstance(d, dict):
+                for k, v in d.items():
+                    self[BasicState(k)] = v
+            else:
+                raise TypeError(f"Unexpected type initializing BSDistribution {type(d)}")
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        return super().__getitem__(key)
+
+    def samples(self, count: int = 1) -> BSSamples:
+        r""" Samples basic states from the `BSDistribution`
+
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
+        """
+        self.normalize()
+        states = list(self.keys())
+        probs = list(self.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=probs)
+        # numpy transforms iterables of ints to a nparray in rng.choice call
+        # Thus, we need to convert back the results to BasicStates
+        output = BSSamples()
+        for s in results:
+            output.append(BasicState(s))
+        return output
+
+
+class BSCount(defaultdict):
+    def __init__(self, d: Optional[Dict] = None):
+        super().__init__(int)
+        if d is not None:
+            for k, v in d.items():
+                self[BasicState(k)] = v
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
+        assert isinstance(value, int) and value >= 0, "Count must be a positive integer"
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
+        return super().__getitem__(key)
+
+    def add(self, obj, count: int):
+        self[obj] += count
+
+    def total(self):
+        return sum(list(self.values()))
+
+    def __str__(self):
+        return "{\n  " + "\n  ".join([f"{k}: {v}" for k, v in self.items()]) + "\n}"
+
+
+class BSSamples(list):
+    def __setitem__(self, index, item):
+        assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
+        super().__setitem__(index, item)
+
+    def __str__(self):
+        sz = len(self)
+        n_to_display = min(sz, 10)
+        s = '[' + ', '.join([str(bs) for bs in self[:n_to_display]])
+        if sz > n_to_display:
+            s += f', ... (size={sz})'
+        s += ']'
+        return s
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):
@@ -601,10 +588,10 @@ def _is_orthogonal(v1, v2, use_symbolic):
     return abs(orth) < 1e-6
 
 
-def convert_polarized_state(state: AnnotatedBasicState,
+def convert_polarized_state(state: BasicState,
                             use_symbolic: bool = False,
                             inverse: bool = False) -> Tuple[BasicState, Matrix]:
-    r"""Convert a polarized basic state into an expanded state vector
+    r"""Convert a polarized BasicState into an expanded BasicState vector
 
     :param inverse:
     :param use_symbolic:
@@ -620,9 +607,9 @@ def convert_polarized_state(state: AnnotatedBasicState,
             vectors = []
             for k_n in range(state[k_m]):
                 # for each state we can handle up to two orthogonal vectors
-                annot = state.get_photon_annotations(idx + 1)
+                annot = state.get_photon_annotation(idx)
                 idx += 1
-                v_hv = annot.get("P", Polarization(0)).project_eh_ev(use_symbolic)
+                v_hv = Polarization(annot.get("P", complex(Polarization(0)))).project_eh_ev(use_symbolic)
                 v_idx = None
                 for i, v in enumerate(vectors):
                     if v == v_hv:

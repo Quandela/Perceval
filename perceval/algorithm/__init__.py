@@ -20,5 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .match import Match
-import perceval.algorithm.norm as norm
+from .sampler import Sampler
+from .analyzer import Analyzer
+from .qrng import QRNG

@@ -25,7 +25,7 @@ This script times the execution of pdisplay for circuits.
 """
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 import time
 
 m = 16
@@ -38,9 +38,9 @@ modes = [4, 8, 16, 24]
 def generate_circuit(n_mode):
     u = pcvl.Matrix.random_unitary(n_mode)
     mzi = (pcvl.Circuit(2)
-           // comp.SimpleBS()
+           // comp.BS()
            // (0, comp.PS(phi=pcvl.P("φ_a")))
-           // comp.SimpleBS()
+           // comp.BS()
            // (0, comp.PS(phi=pcvl.P("φ_b"))))
     return pcvl.Circuit.decomposition(u, mzi, shape="triangle")
 

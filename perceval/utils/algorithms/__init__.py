@@ -20,12 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
-warnings.warn("perceval.lib.phys module is deprecated, use perceval.components.base_components instead",
-              DeprecationWarning,
-              stacklevel=2)
-
-from perceval.components.base_components import \
-    GenericBS as BS,\
-    PS, PBS, TD, Unitary, PERM, WP, HWP, QWP, PR
-from perceval.components.circuit import Circuit
+from .match import Match
+import perceval.utils.algorithms.norm as norm

@@ -24,14 +24,16 @@ from .template import Backend
 
 import numpy as np
 import quandelibc as qc
-from perceval.utils import BasicState
+from perceval.utils import BasicState, StateVector
 
 
 def _square(x):
     return abs(x**2).real
 
+
 def _get_scale(w):
     return max([max(abs(x.real), abs(x.imag)) for x in w])
+
 
 class CliffordClifford2017Backend(Backend):
     name = "CliffordClifford2017"
@@ -39,12 +41,16 @@ class CliffordClifford2017Backend(Backend):
     supports_circuit_computing = False
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        raise NotImplementedError
+        raise NotImplementedError(f'Cannot use prob_be on {self.name}')
 
     def sample(self, input_state):
+        if isinstance(input_state, StateVector):
+            input_state = input_state.sample()
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
+        if n == 0:
+            return input_state
         fs = [0]*m
         Us = np.zeros((n, m), dtype=np.complex128)
         # build Us while transposing it
@@ -72,3 +78,19 @@ class CliffordClifford2017Backend(Backend):
             mode_seq.append(next_mode)
             fs[next_mode] += 1
         return BasicState(fs)
+
+    def samples(self, input_state, count):
+        if isinstance(input_state, StateVector) and len(input_state) == 1:
+            input_state = input_state[0]
+        results = []
+        for i in range(count):
+            results.append(self.sample(input_state))
+        return results
+
+    @staticmethod
+    def preferred_command() -> str:
+        return 'samples'
+
+    @staticmethod
+    def available_commands():
+        return ['sample', 'samples']

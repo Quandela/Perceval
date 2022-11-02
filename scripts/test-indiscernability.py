@@ -23,7 +23,7 @@
 import perceval as pcvl
 import numpy as np
 import matplotlib.pyplot as plt
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_statevector
 
 
@@ -34,7 +34,7 @@ simulator_backend = pcvl.BackendFactory().get_backend('Naive')
 
 for i in range(N):
     source = pcvl.Source(brightness=1, purity=1, indistinguishability=ind[i])
-    qpu = pcvl.Processor({0: source, 1: source}, comp.SimpleBS())
+    qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
     all_p, sv_out = qpu.run(simulator_backend)
     o[i] = sv_out[pcvl.StateVector("|1,1>")]
 
@@ -42,7 +42,7 @@ plt.plot(ind, o)
 plt.ylabel("$p(|1,1>)$")
 plt.xlabel("indistinguishability")
 source = pcvl.Source(brightness=1, purity=1, indistinguishability=0.5)
-qpu = pcvl.Processor({0: source, 1: source}, comp.SimpleBS())
+qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
 
 all_p, sv_out = qpu.run(simulator_backend)
 print("INPUT\n", pdisplay_statevector(qpu.source_distribution))

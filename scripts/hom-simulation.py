@@ -21,16 +21,16 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 import quandelibc as qc
 
 
 dt = pcvl.Parameter("Δt")
 
 c = pcvl.Circuit(2)
-c //= comp.SimpleBS()
+c //= comp.BS()
 c //= (1, comp.TD(dt))
-c //= comp.SimpleBS()
+c //= comp.BS()
 
 pcvl.pdisplay(c)
 
@@ -43,7 +43,7 @@ def photon_length_fn(t):
     return length, 1-(length-t)*h*(length-t)/2/length, 0
 
 
-st0 = pcvl.AnnotatedBasicState([1, 0])
+st0 = pcvl.BasicState([1, 0])
 backend = pcvl.BackendFactory().get_backend("Stepper")
 
 sim = backend(c)
