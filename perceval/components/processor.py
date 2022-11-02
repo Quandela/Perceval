@@ -435,6 +435,9 @@ class Processor(AProcessor):
 
     def _init_command(self, command_name: str):
         assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
+        if self._backend_name == "CliffordClifford2017" and self._has_td:
+            raise NotImplementedError(
+                "Time delay are not implemented within CliffordClifford2017 backed. Please use another one.")
         if self._simulator is None and not self._has_td:
             self._setup_simulator()
 
