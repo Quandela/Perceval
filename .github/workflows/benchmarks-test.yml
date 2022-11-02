@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       os:
-        description: 'Choose OS'
+        description: 'Choose Runner'
         required: true
         default: 'MiniMac_arm64'
         type: choice
@@ -114,7 +114,7 @@ jobs:
           name: python-package-distributions
           path: precompiled-quandelibc
 
-      - if: inputs.quandelibc_ref != ''
+      - if: inputs.quandelibc_ref != '' 
         name: Install previously compiled Quandelibc
         run: |
           python -m pip uninstall -y quandelibc
@@ -130,29 +130,25 @@ jobs:
       - if: runner.os == 'Linux'
         name: Initialize config linux
         run: |
-          echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
-          echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/log/${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
       - if: runner.os != 'Linux'
         name: Initialize config notLinux
         run: |
-          echo "tag_version=$( git describe --tags )" >> $GITHUB_ENV
-          echo "folder_env=${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
-          echo "file_json=$( git describe --tags )_${{ github.ref_name }}_${{ github.run_attempt }}_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_env=${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
           echo "folder_file_json=.benchmarks/log/${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.ref_name }}_$( git describe --tags )_${{ github.run_number }}_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: Run benchmark
         run: |
-          python -m pytest benchmark/benchmark_*.py --benchmark-json ${{ env.file_json }} --benchmark-storage file://./.benchmarks/log/${{ env.folder_env }} 
-          mv ${{ env.file_json }} ${{ env.folder_file_json }}
+          python -m pytest benchmark/benchmark_*.py --benchmark-json out.json --benchmark-storage file://./.benchmarks/log/${{ env.folder_env }} 
+          mv out.json ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
       - name: upload the result Log
         uses: actions/upload-artifact@v3
         with:
-          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: ${{ env.folder_file_json }}
 
       - name: checkout in gh-pages branch
@@ -163,7 +159,7 @@ jobs:
       - name: Download the result Log on github action
         uses: actions/download-artifact@v3
         with:
-          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: .benchmarks/log/${{ env.folder_env }}
 
       # use github-action-benchmark for graph
@@ -188,24 +184,24 @@ jobs:
       - name: Download the result Log on github action
         uses: actions/download-artifact@v3
         with:
-          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: .benchmarks/log/${{ env.folder_env }}
 
       - name: compare benchmark
         run: |
-          pytest-benchmark compare .benchmarks/log/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+          pytest-benchmark compare .benchmarks/log/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}
       
       - name: upload the result compare
         uses: actions/upload-artifact@v3
         with:
-          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}
           path: |
-            compare_result_${{ env.folder_env }}_${{ env.tag_version }}
+            compare_result_${{ env.folder_env }}
       
       - name: Download the result compare
         uses: actions/download-artifact@v3
         with:
-          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}_${{ env.tag_version }}
+          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}
 
       - name: Save benchmark report in current branch
         if: inputs.save_log
