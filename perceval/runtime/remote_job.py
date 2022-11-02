@@ -29,6 +29,8 @@ from perceval.serialization import deserialize
 
 
 class RemoteJob(Job):
+    STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
+
     def __init__(self, fn: Callable, rpc_handler, delta_parameters=None, job_context=None,
                  refresh_progress_delay: int=3):
         r"""
@@ -41,7 +43,8 @@ class RemoteJob(Job):
         self._rpc_handler = rpc_handler
         self._job_status = JobStatus()
         self._job_context = job_context
-        self._refresh_progress_delay = refresh_progress_delay
+        self._refresh_progress_delay = refresh_progress_delay  # When syncing an async job (in s)
+        self._previous_status_refresh = time.time()
         self._id = None
 
     @property
@@ -57,11 +60,14 @@ class RemoteJob(Job):
 
     @property
     def status(self) -> JobStatus:
-        response = self._rpc_handler.get_job_status(self._id)
-        self._job_status.status = RunningStatus.from_server_response(response['status'])
-        if self._job_status.status == RunningStatus.RUNNING:
-            self._job_status.update_progress(float(response['progress']))
-        # TODO get _init_time_start and _completed_time from server response
+        now = time.time()
+        if now - self._previous_status_refresh > RemoteJob.STATUS_REFRESH_DELAY:
+            self._previous_status_refresh = now
+            response = self._rpc_handler.get_job_status(self._id)
+            self._job_status.status = RunningStatus.from_server_response(response['status'])
+            if self._job_status.status == RunningStatus.RUNNING:
+                self._job_status.update_progress(float(response['progress']))
+            # TODO get _init_time_start and _completed_time from server response
         return self._job_status
 
     def execute_sync(self, *args, **kwargs) -> Any:
@@ -98,7 +104,7 @@ class RemoteJob(Job):
         if not job_status.completed:
             raise RuntimeError('The job is still running, results are not available yet.')
         if job_status.status != RunningStatus.SUCCESS:
-            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
+            raise RuntimeError(f'The job failed: {job_status.stop_message}')
         response = self._rpc_handler.get_job_results(self._id)
         results = deserialize(json.loads(response['results']))
         if "job_context" in results and 'result_mapping' in results["job_context"]:
