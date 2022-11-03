@@ -133,7 +133,7 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
 
 
 class AnnotatedBasicState(FockState):
-    r"""Extends `BasicState` with annotations
+    r"""Deprecated in version 0.7.0. Use BasicState instead.
     """
 
     @deprecated(version="0.7", reason="use BasicState instead")
