@@ -22,10 +22,11 @@
 
 import perceval as pcvl
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
+from perceval.rendering.pdisplay import pdisplay_matrix
 import pytest
 
 import sympy as sp
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 
 
 def test_polar_parse_error():
@@ -71,15 +72,15 @@ def test_polar_init():
 
 def test_polar_circuit1():
     c = pcvl.Circuit(2)
-    c.add(0, phys.PS(phi=sp.pi/2))
+    c.add(0, comp.PS(phi=sp.pi/2))
     assert not c.requires_polarization
     c = pcvl.Circuit(2)
-    c.add(0, phys.WP(sp.pi/3, sp.pi/2))
+    c.add(0, comp.WP(sp.pi/3, sp.pi/2))
     assert c.requires_polarization
 
 
 def test_polar_nmode():
-    c = phys.BS()
+    c = comp.BS.H()
     u = c.compute_unitary()
     pu = c.compute_unitary(use_polarization=True)
     assert u.shape == (2, 2)
@@ -90,8 +91,8 @@ def test_polar_nmode():
 
 def test_polar_circuit2():
     c = pcvl.Circuit(2)
-    c //= phys.BS()
-    c //= (1, phys.WP(sp.pi/4, sp.pi/2))
+    c //= comp.BS.H()
+    c //= (1, comp.WP(sp.pi/4, sp.pi/2))
     u = c.compute_unitary(use_symbolic=True, use_polarization=True)
     assert u.shape == (4, 4)
     assert u[0, 0] == sp.sqrt(2)/2
@@ -99,9 +100,9 @@ def test_polar_circuit2():
 
 
 def test_prep_state():
-    s, m = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H},{P:V},0,{P:A}>"))
+    s, m = convert_polarized_state(pcvl.BasicState("|{P:H},{P:V},0,{P:A}>"))
     assert str(s) == "|1,0,1,0,0,0,1,0>"
-    assert m.pdisplay() == """
+    assert pdisplay_matrix(m) == """
             ⎡1  0  0  0   0  0  0           0        ⎤
             ⎢0  1  0  0   0  0  0           0        ⎥
             ⎢0  0  0  -1  0  0  0           0        ⎥
@@ -111,23 +112,23 @@ def test_prep_state():
             ⎢0  0  0  0   0  0  sqrt(2)/2   sqrt(2)/2⎥
             ⎣0  0  0  0   0  0  -sqrt(2)/2  sqrt(2)/2⎦
     """.strip().replace("            ", "")
-    s2, m2 = convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:H},{P:V},0,{P:A}>"))
+    s2, m2 = convert_polarized_state(pcvl.BasicState("|{P:H}{P:H},{P:V},0,{P:A}>"))
     assert str(s2) == "|2,0,1,0,0,0,1,0>"
     assert (m2-m).all() == 0
 
 
 def test_prep_multi_state():
-    convert_polarized_state(pcvl.AnnotatedBasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
+    convert_polarized_state(pcvl.BasicState("|{P:H}{P:V},{P:V},0,{P:A}>"))
 
 
 def test_convert_multistate():
-    input_state, prep_matrix = convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:V}>"))
+    input_state, prep_matrix = convert_polarized_state(pcvl.BasicState("|2{P:H}3{P:V}>"))
     assert str(input_state) == "|2,3>"
 
 
 def test_convert_multistate_nonorthogonal():
     with pytest.raises(ValueError):
-        convert_polarized_state(pcvl.AnnotatedBasicState("|2{P:H}3{P:D}>"))
+        convert_polarized_state(pcvl.BasicState("|2{P:H}3{P:D}>"))
 
 
 def test_build_spatial_output():
@@ -142,7 +143,7 @@ def test_build_spatial_output():
 
 
 def test_subcircuit_polarization():
-    a = pcvl.Circuit(2) // phys.PBS() // phys.PBS()
+    a = pcvl.Circuit(2) // comp.PBS() // comp.PBS()
     assert a.requires_polarization, "subcircuit does not propagate polarization state"
-    b = phys.BS() // a // a // phys.BS()
+    b = comp.BS.H() // a // a // comp.BS.H()
     assert b.requires_polarization, "subcircuit does not propagate polarization state"

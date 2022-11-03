@@ -24,7 +24,7 @@ import pytest
 import math
 
 from perceval import Source, StateVector
-
+from perceval.rendering.pdisplay import pdisplay_state_distrib
 from test_circuit import strip_line_12
 
 
@@ -33,7 +33,7 @@ def _check_svdistribution(output, expected):
     for k, v in expected.items():
         svo = StateVector(k)
         if pytest.approx(v) != output[svo]:
-            print(output.pdisplay())
+            print(pdisplay_state_distrib(output))
             print("==> different value than expected for %s: %f (expected %f)" % (k, output[svo], v))
             assert False
 
@@ -41,12 +41,12 @@ def _check_svdistribution(output, expected):
 def test_source_pure():
     s = Source()
     svd = s.probability_distribution()
-    assert strip_line_12(svd.pdisplay()) == strip_line_12("""
-            +--------+-------------+
-            | state  | probability |
-            +--------+-------------+
-            |  |1>   |      1      |
-            +--------+-------------+""")
+    assert strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
+            +-------+-------------+
+            | state | probability |
+            +-------+-------------+
+            |  |1>  |      1      |
+            +-------+-------------+""")
     _check_svdistribution(svd, {"|1>": 1})
 
 
@@ -76,7 +76,7 @@ def test_source_indistinguishability():
         assert len(k) == 1
         state = k[0]
         assert state.n == 1
-        annot = state.get_photon_annotations(1)
+        annot = state.get_photon_annotation(0)
         assert "_" in annot, "missing distinguishability feature _"
         if annot["_"] != 0:
             assert pytest.approx(v) == 0.1
@@ -92,7 +92,7 @@ def test_source_indistinguishability_homv():
         assert len(k) == 1
         state = k[0]
         assert state.n == 1
-        annot = state.get_photon_annotations(1)
+        annot = state.get_photon_annotation(0)
         assert "_" in annot, "missing distinguishability feature _"
         if annot["_"] != 0:
             assert pytest.approx(1-math.sqrt(0.5)) == v

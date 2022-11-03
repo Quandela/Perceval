@@ -20,8 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+This script checks overhead when using circuit objects compared to direct building of unitary matrix
+"""
+
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 import numpy as np
 import time
 from collections import defaultdict
@@ -40,12 +44,13 @@ for _ in range(args.iter):
     U_2 = pcvl.Matrix.random_unitary(args.m)
     px = pcvl.P("x")
     top0 = time.time_ns()
-    c = pcvl.Circuit(args.m, U_2) // (0, phys.PS(px)) // pcvl.Circuit(args.m, U_1)
+    c = comp.Unitary(U_2) // (0, comp.PS(px)) // comp.Unitary(U_1)
 
     top1 = time.time_ns()
     px.set_value(0.5)
     U = c.compute_unitary(use_symbolic=False)
     top2 = time.time_ns()
+
     def phase_shift(m, theta):
         # phase shift in m x m unitary in mode 1 of angle theta
         PS = np.eye(m, dtype=complex)

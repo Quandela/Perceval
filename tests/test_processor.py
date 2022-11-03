@@ -22,16 +22,18 @@
 
 import pytest
 import perceval as pcvl
-import perceval.lib.symb as symb
+import perceval.components.unitary_components as comp
 
 
 def test_processor_generator_0():
-    p = pcvl.Processor({1: pcvl.Source(), 2: pcvl.Source()}, pcvl.Circuit(4))
+    p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
+    p.with_input(pcvl.BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {pcvl.StateVector([0, 1, 1, 0]): 1}
 
 
 def test_processor_generator_1():
-    p = pcvl.Processor({1: pcvl.Source(brightness=0.2), 2: pcvl.Source(brightness=0.2)}, pcvl.Circuit(4))
+    p = pcvl.Processor("Naive", pcvl.Circuit(4), pcvl.Source(brightness=0.2))
+    p.with_input(pcvl.BasicState([0, 1, 1, 0]))
     expected = {
                 pcvl.StateVector([0, 1, 1, 0]): 0.04,
                 pcvl.StateVector([0, 1, 0, 0]): 0.16,
@@ -45,7 +47,8 @@ def test_processor_generator_2():
     source = pcvl.Source(brightness=0.2,
                          purity=0.9, purity_model="indistinguishable",
                          indistinguishability=0.9, indistinguishability_model="linear")
-    p = pcvl.Processor({1: source, 2: source}, pcvl.Circuit(4))
+    p = pcvl.Processor("Naive", pcvl.Circuit(4), source)
+    p.with_input(pcvl.BasicState([0, 1, 1, 0]))
     expected = {
         "|0,0,0,0>": 16/25,
         "|0,0,2{_:0},0>":  0.016,
@@ -69,11 +72,16 @@ def test_processor_generator_2():
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
 
 
-def test_processor_run():
-    simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+def test_processor_probs():
     source = pcvl.Source(brightness=1, purity=1, indistinguishability=1)
-    qpu = pcvl.Processor({0: source, 1: source}, symb.BS())
-    all_p, sv_out = qpu.run(simulator_backend)
-    assert pytest.approx(all_p) == 1
-    assert pytest.approx(sv_out[pcvl.StateVector("|2,0>")]) == 0.5
-    assert pytest.approx(sv_out[pcvl.StateVector("|0,2>")]) == 0.5
+    qpu = pcvl.Processor("Naive", comp.BS(), source)
+    qpu.with_input(pcvl.BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
+    probs = qpu.probs()
+    # By default, all states are filtered and physical performance drops to 0
+    assert pytest.approx(probs['physical_perf']) == 0
+
+    qpu.mode_post_selection(1)  # Lower mode_post_selection to 1 (default was 2 = expected input photon count)
+    probs = qpu.probs()
+    bsd_out = probs['results']
+    assert pytest.approx(bsd_out[pcvl.BasicState("|2,0>")]) == 0.5
+    assert pytest.approx(bsd_out[pcvl.BasicState("|0,2>")]) == 0.5

@@ -21,12 +21,12 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.lib.symb as symb
+from perceval.components.unitary_components import BS, PS
 import numpy as np
 
 def get_matrix_n(n):
     def _gen_mzi(i: int):
-        return symb.BS(R=0.42) // symb.PS(np.pi+i*0.1) // symb.BS(R=0.42) // symb.PS(np.pi/2)
+        return BS(BS.r_to_theta(0.42)) // PS(np.pi+i*0.1) // BS(BS.r_to_theta(0.42)) // PS(np.pi/2)
     return pcvl.Circuit.generic_interferometer(n, _gen_mzi)
 
 
@@ -65,6 +65,3 @@ def test_bosonsampling_slos_8(benchmark):
 def test_bosonsampling_naive_8(benchmark):
     benchmark(run_backend, backend="Naive", shots=20,
               U=get_matrix_n(8), input_state=pcvl.BasicState([1]*8))
-
-# run_backend(backend="SLOS", shots=100,
-#               U=get_matrix_n(6), input_state=pcvl.BasicState([1]*6))

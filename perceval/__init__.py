@@ -1,4 +1,3 @@
-
 # MIT License
 #
 # Copyright (c) 2022 Quandela
@@ -21,6 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+Through a simple object-oriented Python API, Perceval provides tools for composing photonic circuits from linear
+optical components like beamsplitters and phase shifters, defining single-photon sources, manipulating Fock states,
+and running simulations."""
+
 from pkg_resources import get_distribution
 import importlib
 
@@ -29,6 +33,8 @@ __version__ = get_distribution("perceval-quandela").version
 from .components import *
 from .backends import *
 from .utils import *
+from .rendering import *
+from .runtime import *
 
 
 def register_plugin(name, silent=False):

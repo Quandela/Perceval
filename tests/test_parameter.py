@@ -23,7 +23,8 @@
 import pytest
 
 from perceval import Parameter
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
+from perceval.rendering.pdisplay import pdisplay_matrix
 
 import sympy as sp
 import numpy as np
@@ -96,6 +97,6 @@ def test_periodic_values():
 
 def test_multiple_parameter_use():
     phi = Parameter("phi")
-    c = phys.BS(phi_a=phi) // phys.BS(phi_b=phi)
-    assert str(c.U.simp()) == 'Matrix([[(I*exp(I*phi) + 1)*exp(I*phi)/2, -I*exp(I*phi)/2 + 1/2],' + \
-                              ' [-exp(I*phi)/2 - I/2, 1/2 - I*exp(-I*phi)/2]])'
+    c = comp.BS.H(phi_bl=phi) // comp.BS.H(phi_tl=phi)
+    assert pdisplay_matrix(c.U.simp()) == '''⎡exp(I*phi)/2 + 1/2  (exp(I*phi) - 1)*exp(I*phi)/2⎤
+⎣exp(I*phi)/2 - 1/2  (exp(I*phi) + 1)*exp(I*phi)/2⎦'''

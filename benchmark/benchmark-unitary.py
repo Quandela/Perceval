@@ -25,23 +25,25 @@ This script compares building of unitary when using Circuit or directly by build
 """
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 import time
 import numpy as np
 
 m = 8
 
-def phase_shift(m, theta):
-    # phase shift in m x m unitary in mode 1 of angle theta
-    PS = np.eye(m, dtype=complex)
-    PS[0, 0] = np.cos(theta) + 1j * np.sin(theta)
-    return PS
 
-U_1 = pcvl.Matrix.random_unitary(m)
-U_2 = pcvl.Matrix.random_unitary(m)
+def phase_shift(n_mode, theta):
+    # phase shift in m x m unitary in mode 1 of angle theta
+    ps_matrix = np.eye(n_mode, dtype=complex)
+    ps_matrix[0, 0] = np.cos(theta) + 1j * np.sin(theta)
+    return ps_matrix
+
+
+u1 = pcvl.Matrix.random_unitary(m)
+u2 = pcvl.Matrix.random_unitary(m)
 
 px = pcvl.P("x")
-c = pcvl.Circuit(m, U_2) // (0, phys.PS(px)) // pcvl.Circuit(m, U_1)
+c = comp.Unitary(u2) // (0, comp.PS(px)) // comp.Unitary(u1)
 
 dt_circuit = 0
 dt_raw = 0
@@ -54,7 +56,7 @@ for _ in range(1000):
     dt_circuit += top1-top0
 
     top0 = time.time_ns()
-    U = U_1 @ phase_shift(m, 1) @ U_2
+    U = u1 @ phase_shift(m, 1) @ u2
     top1 = time.time_ns()
     dt_raw += top1-top0
 

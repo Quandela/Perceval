@@ -19,35 +19,32 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from typing import Type, Union
+import warnings
 
 from .template import Backend
 from .cliffords2017 import CliffordClifford2017Backend
 from .naive import NaiveBackend
 from .slos import SLOSBackend
-from .stepper import StepperBackend
-from .strawberryfields import SFBackend
+from .mps import MPSBackend
+
+
+BACKEND_LIST = {
+    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
+    MPSBackend.name: MPSBackend,
+    NaiveBackend.name: NaiveBackend,
+    SLOSBackend.name: SLOSBackend,
+}
 
 
 class BackendFactory:
-    _backends = (NaiveBackend, CliffordClifford2017Backend, SFBackend, SLOSBackend, StepperBackend)
+    @staticmethod
+    def get_backend(backend_name="SLOS"):
+        name = backend_name
+        if name in BACKEND_LIST:
+            return BACKEND_LIST[name]
+        warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
+        return BACKEND_LIST['SLOS']
 
-    def get_backend(self,
-                    name: Union[str, None] = None) \
-            -> Type[Backend]:
-        """Returns a simulator backend
-
-        :param name: The name of the simulator
-        :return: the backend
-        """
-        if name is None:
-            name = "SLOS"
-        for backend in self._backends:
-            if backend.name == name:
-                return backend
-        # TODO: check this exception
-        raise ValueError("Unknown backend: %s" % name)
-
-    def list_backend(self):
-        return [backend.name for backend in self._backends]
+    @staticmethod
+    def list():
+        return list(BACKEND_LIST.keys())

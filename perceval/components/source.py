@@ -23,15 +23,15 @@
 import math
 
 from perceval.utils import SVDistribution, StateVector
-from typing import Dict, Literal
+from typing import Dict
 
 
 class Source:
     def __init__(self, brightness: float = 1,
                  purity: float = 1,
-                 purity_model: Literal["random", "indistinguishable"] = "random",
+                 purity_model: str = "random",  # Literal["random", "indistinguishable"]
                  indistinguishability: float = 1,
-                 indistinguishability_model: Literal["homv", "linear"] = "homv",
+                 indistinguishability_model: str = "homv",  # Literal["homv", "linear"]
                  context: Dict = None) -> None:
         r"""Definition of a source
 
@@ -68,17 +68,17 @@ class Source:
             if distinguishability:
                 if self._purity_model == "random":
                     random_feat = self._context["discernability_tag"]
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": random_feat}})] = self.brightness * (1 - self.purity)
+                    svd[StateVector([2], {0: ["_:0", "_:%s" % random_feat]})] = self.brightness * (1 - self.purity)
                     self._context["discernability_tag"] += 1
                 else:
-                    svd[StateVector([2], {1: {"_": 0}, 2: {"_": 0}})] = self.brightness * (1 - self.purity)
+                    svd[StateVector([2], {0: ["_:0", "_:0"]})] = self.brightness * (1 - self.purity)
             else:
                 svd[StateVector([2])] = self.brightness*(1-self.purity)
         if distinguishability:
             random_feat = self._context["discernability_tag"]
             self._context["discernability_tag"] += 1
-            svd[StateVector([1], {1: {"_": random_feat}})] = distinguishability*self.brightness*self.purity
-            svd[StateVector([1], {1: {"_": 0}})] = (1-distinguishability)*self.brightness*self.purity
+            svd[StateVector([1], {0: ["_:%s" % random_feat]})] = distinguishability*self.brightness*self.purity
+            svd[StateVector([1], {0: ["_:0"]})] = (1-distinguishability)*self.brightness*self.purity
         else:
             svd[StateVector([1])] = (1-distinguishability)*self.brightness*self.purity
 

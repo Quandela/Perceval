@@ -41,16 +41,14 @@ for circuit with polarization support, etc.
 Strongest Simulation
 ^^^^^^^^^^^^^^^^^^^^
 
-Beyond simulation of perfect circuit describes by unitary matrix, goal of Perceval is also to model non linear phenomenon
+Beyond simulation of perfect circuit describes by unitary matrix, goal of Perceval is also to model non unitary phenomenon
 like loss of photons, noise, time delays, and more. Ideal simulators should take these phenomenon into accounts.
 
 The Backends
 ------------
 
-Perceval has built-in 4 different backends with the support of optimized C-library documented
+Perceval has built-in 5 different backends with the support of optimized C-library documented
 `here <https://perceval.quandela.net/docs-quandelibc>`_.
-
-Perceval also integrates some connectors with 3rd-Party framework for compatibility purpose.
 
 Comparison Table
 ^^^^^^^^^^^^^^^^
@@ -67,9 +65,11 @@ Comparison Table
      - :ref:`SLOS`
      - :ref:`Naive`
      - :ref:`Stepper`
+     - :ref:`MPS`
    * - Sampling Efficiency
      - :math:`\mathrm{O}(n2^n+poly(m,n))`
      - :math:`\mathrm{O}(mC_n^{n+m-1})`
+     - *N/A* [1]_
      - *N/A* [1]_
      - *N/A* [1]_
    * - Single output Efficiency
@@ -77,13 +77,16 @@ Comparison Table
      - *N/A*
      - :math:`\mathrm{O}(n2^n)`
      - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
    * - Full Distribution Efficiency
      - *N/A*
      - :math:`\mathrm{O}(nC_n^{n+m-1})`
      - :math:`\mathrm{O}(n2^nC_n^{n+m-1})`
      - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
    * - Probability Amplitude
      - **No**
+     - **Yes**
      - **Yes**
      - **Yes**
      - **Yes**
@@ -92,15 +95,18 @@ Comparison Table
      - **Yes**
      - **No**
      - **Yes**
+     - **No**
    * - Support of Time-Circuit
      - **No**
      - **No**
      - **No**
      - **Yes**
+     - **No**
    * - Practical Limits
      - :math:`n\approx30`
      - :math:`n,m<20`
      - :math:`n\approx30`
+     -
      -
 
 where:
@@ -172,11 +178,20 @@ it applies the unitary matrix associated with the components in each layer of th
 simulating the evolution of the statevector. The complexity of this backend is therefore proportional to the
 number of components. It has the nice features that:
 
-* it supports non linear optical components like :ref:`Time Delay`;
+* it supports non unitary components like :ref:`Time Delay`, or :ref:`Loss Channel`;
 * it is very flexible with simulating noise in the circuit, like photon loss;
 * it enables simpler debugging of circuits by exposing intermediate states.
 
+Since Perceval 0.7, the Stepper is integrated to the Processor.
 
+MPS
+^^^
+
+Matrix Product State (MPS)  is based on a type of tensor network simulation, which gives an approximation of the output
+states :cite:p:`schollwock2011density`, :cite:p:`oh2021classical`.
+As the Stepper, MPS backend does the computation on each component of the circuits one-by-one, and not on the whole unitary, but has the unique feature of performing approximate state evolution.
+The states are represented by tensors, which are then updated at each component.
+These tensors can be seen as a big set of matrices, and the approximation is done by choosing the dimension of these matrices, called the *bond* dimension.
 
 .. rubric:: Footnotes
 

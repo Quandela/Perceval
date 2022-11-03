@@ -194,3 +194,7 @@ class SLOSBackend(Backend):
         self.fsas[input_state.n].norm_coefs(c)
         c /= input_state.prodnfact()
         return abs(c)**2
+
+    @staticmethod
+    def preferred_command() -> str:
+        return 'probampli'

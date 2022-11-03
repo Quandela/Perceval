@@ -20,10 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .circuit import Circuit, ACircuit
+from .abstract_component import AComponent
+from .abstract_processor import AProcessor
+from .linear_circuit import Circuit, ACircuit
 from .predefined_circuit import PredefinedCircuit
-from .analyser import CircuitAnalyser
 from .processor import Processor
 from .source import Source
-from .detector import Detector
-from .port import PortArray, InBinaryPort, InOpticalPort, InQBitPort, OutQBitPort, OutOpticalPort, OutCounterPort
+
+from .port import Port, Herald, Encoding, PortLocation, LogicalState
+from .unitary_components import *
+from .non_unitary_components import TD, LC
+from .component_catalog import Catalog
+from ._mode_connector import ModeConnector, UnavailableModeException
+
+catalog = Catalog('perceval.components.core_catalog')

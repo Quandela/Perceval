@@ -23,13 +23,13 @@
 
 """
 @Author: Mathias Pont
-
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 import perceval as pcvl
-import perceval.lib.symb as symb
+import perceval.components.unitary_components as comp
+import perceval.algorithm as algo
 
 
 def outputstate_to_outcome(state_ket):
@@ -54,13 +54,13 @@ def outputstate_to_outcome(state_ket):
         return '|1,1>'
 
 
-def mzi_AnnotatedBasicState_pcvl(input_state):
+def mzi_BasicState_pcvl(input_state):
     """
     :param input_state: a ket in string. For example '|1,1>'
     :return: plot
     """
     # Set up Perceval
-    simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+    naive_backend = pcvl.BackendFactory.get_backend('Naive')
 
     # Create a MZI interferometer
     mzi_chip = pcvl.Circuit(m=2, name="mzi")
@@ -68,11 +68,10 @@ def mzi_AnnotatedBasicState_pcvl(input_state):
     phases = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
 
     (mzi_chip
-     .add(0, symb.PS(phases[0]))
-     .add((0, 1), symb.BS())
-     .add(0, symb.PS(phases[1]))
-     .add((0, 1), symb.BS())
-
+     .add(0, comp.PS(phases[0]))
+     .add((0, 1), comp.BS())
+     .add(0, comp.PS(phases[1]))
+     .add((0, 1), comp.BS())
      )
     pcvl.pdisplay(mzi_chip)
 
@@ -83,11 +82,9 @@ def mzi_AnnotatedBasicState_pcvl(input_state):
     phases[1].set_value(np.pi)
 
     # We run the simulator once with any phase (here pi) to get all the possible outputs.
-    sim = simulator_backend(mzi_chip.U)
-
-    ca = pcvl.CircuitAnalyser(sim,
-                              [pcvl.AnnotatedBasicState(input_state)],
-                              "*")
+    ca = algo.Analyzer(naive_backend, mzi_chip,
+                       [pcvl.BasicState(input_state)],
+                       "*")
     ca.compute()
     nb_of_outputs = len(ca.output_states_list)
 
@@ -102,16 +99,15 @@ def mzi_AnnotatedBasicState_pcvl(input_state):
         phases[1].set_value(theta)
 
         # Run the analyser
-        sim = simulator_backend(mzi_chip.U)
-        ca = pcvl.CircuitAnalyser(sim,
-                                  [pcvl.AnnotatedBasicState(input_state)],
-                                  "*")
+        ca = algo.Analyzer(naive_backend, mzi_chip,
+                           [pcvl.BasicState(input_state)],
+                           "*")
 
         ca.compute()
 
         # Append the result to the ouput to plot
         for i in range(len(output)):
-            output[i].append(ca._distribution[0][i])
+            output[i].append(ca.distribution[0][i])
 
     plt.figure()
     for i, out in enumerate(output):
@@ -137,7 +133,7 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
     """
 
     # Set up Perceval
-    simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+    naive_backend = pcvl.BackendFactory.get_backend('Naive')
 
     # Create a MZI interferometer
     mzi_chip = pcvl.Circuit(m=2, name="mzi")
@@ -145,11 +141,10 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
     phases = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2")]
 
     (mzi_chip
-     .add(0, symb.PS(phases[0]))
-     .add((0, 1), symb.BS())
-     .add(0, symb.PS(phases[1]))
-     .add((0, 1), symb.BS())
-
+     .add(0, comp.PS(phases[0]))
+     .add((0, 1), comp.BS())
+     .add(0, comp.PS(phases[1]))
+     .add((0, 1), comp.BS())
      )
 
     # Initial phase set to zero
@@ -183,11 +178,9 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
         for input_n in input_states_dict:
 
             phases[1].set_value(theta)
-            sim = simulator_backend(mzi_chip.U)
-            ca = pcvl.CircuitAnalyser(sim,
-                                      [pcvl.AnnotatedBasicState(input_n)],
-                                      "*")
-
+            ca = algo.Analyzer(naive_backend, mzi_chip,
+                               [pcvl.BasicState(input_n)],
+                               "*")
             ca.compute()
 
             for idx1, output_state in enumerate(ca.output_states_list):
@@ -195,7 +188,7 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
                 result = outputstate_to_outcome(str(output_state))
                 # The probability of an outcome is added, weighted by the probability of this input
                 if result:
-                    outcome[result] += input_states_dict[input_n] * ca._distribution[0][idx1]
+                    outcome[result] += input_states_dict[input_n] * ca.distribution[0][idx1]
 
         to_plot[0].append(outcome['|1,0>'])
         to_plot[1].append(outcome['|1,1>'])
@@ -219,10 +212,9 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
     for input_n in input_states_dict:
         print(input_n, input_states_dict[input_n])
         phases[1].set_value(np.pi / 2)
-        sim = simulator_backend(mzi_chip.U)
-        ca = pcvl.CircuitAnalyser(sim,
-                                  [pcvl.AnnotatedBasicState(input_n)],
-                                  "*")
+        ca = algo.Analyzer(naive_backend, mzi_chip,
+                           [pcvl.BasicState(input_n)],
+                           "*")
 
         ca.compute()
         pcvl.pdisplay(ca)
@@ -244,4 +236,3 @@ def mzi_ImperfectSource_pcvl(beta, g2, V):
 
 if __name__ == '__main__':
     mzi_ImperfectSource_pcvl(1, 0, 0.9)
-    pass

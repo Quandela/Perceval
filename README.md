@@ -4,7 +4,7 @@
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml)
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/build-and-deploy-docs.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/build-and-deploy-docs.ym)
 
-# Perceval <img src="https://perceval.quandela.net/img/Perceval_logo_white_320X320.png" width="50" height="50"> 
+# Perceval <img src="https://perceval.quandela.net/img/Perceval_logo_white_320X320.png" width="50" height="50">
 
 
 Through a simple object-oriented python API, Perceval provides tools for building a circuit with linear optics components,
@@ -29,7 +29,7 @@ practitioners.
 
 Perceval requires:
 
-* Python 3.6 or above
+* Python 3.7 or above
 
 We recommend installing it with `pip`:
 
@@ -45,13 +45,29 @@ git clone https://github.com/quandela/Perceval
 python setup.py install # [or 'develop' for developpers]
 ```
 
+# Running tests and benchmarks
+
+Unit tests files are part of the repository in `tests/` and can be run with:
+
+```
+pytest tests/
+```
+
+Benchmark tests for computing-intensive functions are in `benchmark/` and can be run with:
+
+```
+pytest benchmark/benchmark_*.py
+```
+
+Comparison benchmarks for different platforms are also commit in `.benchmarks/` - see [pytest-benchmark documentation](https://pytest-benchmark.readthedocs.io/en/stable/usage.html) for more information.
+
 # Documentation and Forum
 
 * The [documentation](https://perceval.quandela.net/docs)
 * The [Community Forum](https://perceval.quandela.net/forum)
 
-# 
+#
 [<img src="https://www.quandela.com/wp-content/themes/quandela/img/logo-QUANDELA.svg" width="300" height=auto>](https://www.quandela.com/)
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/Quandela_SAS?style=social)](https://twitter.com/Quandela_SAS) 
+[![Twitter Follow](https://img.shields.io/twitter/follow/Quandela_SAS?style=social)](https://twitter.com/Quandela_SAS)
 [![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UCl5YMpSqknJ1n-IT-XWfLsQ?style=social)](https://www.youtube.com/channel/UCl5YMpSqknJ1n-IT-XWfLsQ)

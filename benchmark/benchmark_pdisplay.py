@@ -25,7 +25,7 @@ This script times the execution of pdisplay for circuits.
 """
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 
 trials = 2
 
@@ -33,10 +33,10 @@ trials = 2
 def generate_circuit(n_mode):
     u = pcvl.Matrix.random_unitary(n_mode)
     mzi = (pcvl.Circuit(2)
-           // phys.BS()
-           // (0, phys.PS(phi=pcvl.P("φ_a")))
-           // phys.BS()
-           // (0, phys.PS(phi=pcvl.P("φ_b"))))
+           // comp.BS()
+           // (0, comp.PS(phi=pcvl.P("φ_a")))
+           // comp.BS()
+           // (0, comp.PS(phi=pcvl.P("φ_b"))))
     return pcvl.Circuit.decomposition(u, mzi, shape="triangle")
 
 
@@ -50,19 +50,19 @@ def run_pdisplay(c, t, f):
 
 
 def _run_pdisplay_mplot_6():
-    run_pdisplay(c6, trials, "mplot")
+    run_pdisplay(c6, trials, pcvl.Format.MPLOT)
 
 
 def _run_pdisplay_mplot_12():
-    run_pdisplay(c12, trials, "mplot")
+    run_pdisplay(c12, trials, pcvl.Format.MPLOT)
 
 
 def _run_pdisplay_svg_6():
-    run_pdisplay(c6, trials, "html")
+    run_pdisplay(c6, trials, pcvl.Format.HTML)
 
 
 def _run_pdisplay_svg_12():
-    run_pdisplay(c12, trials, "html")
+    run_pdisplay(c12, trials, pcvl.Format.HTML)
 
 
 def test_pdisplay_mplot_6(benchmark):

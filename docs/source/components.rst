@@ -10,14 +10,14 @@ Overview
 
    * - Name
      - Object Name
-     - Representation ``phys`` library
-     - Representation ``symb`` library
+     - ``PhysSkin`` display style
+     - ``SymbSkin`` display stryle
      - Unitary Matrix
    * - :ref:`Beam Splitter`
      - ``BS``
      - .. image:: _static/library/phys/bs.png
      - .. image:: _static/library/symb/bs.png
-     - :math:`\left[\begin{matrix}e^{i \phi_{a}} \cos{\left(\theta \right)} & i e^{i \phi_{b}} \sin{\left(\theta \right)}\\i e^{i \left(\phi_{a} - \phi_{b} + \phi_{d}\right)} \sin{\left(\theta \right)} & e^{i \phi_{d}} \cos{\left(\theta \right)}\end{matrix}\right]`
+     - Depends on the convention, see :ref:`Beam Splitter`
    * - :ref:`Phase Shifter`
      - ``PS``
      - .. image:: _static/library/phys/ps.png
@@ -27,7 +27,7 @@ Overview
      - ``PERM``
      - .. image:: _static/library/phys/perm.png
      - .. image:: _static/library/symb/perm.png
-     - :math:`\left[\begin{matrix}0 & 1\\1 & 0\end{matrix}\right]`
+     - Example of a two mode permutation: :math:`\left[\begin{matrix}0 & 1\\1 & 0\end{matrix}\right]`
    * - :ref:`Waveplate`
      - ``WP``
      - .. image:: _static/library/phys/wp.png
@@ -44,9 +44,14 @@ Overview
      - .. image:: _static/library/symb/pr.png
      - :math:`\left[\begin{matrix}\cos{\left(\delta \right)} & \sin{\left(\delta \right)}\\- \sin{\left(\delta \right)} & \cos{\left(\delta \right)}\end{matrix}\right]`
    * - :ref:`Time Delay`
-     - ``DT``
+     - ``TD``
      - .. image:: _static/library/phys/dt.png
      - .. image:: _static/library/symb/dt.png
+     - `N/A`
+   * - :ref:`Loss Channel`
+     - ``LC``
+     - .. image:: _static/library/phys/lc.png
+     - .. image:: _static/library/symb/lc.png
      - `N/A`
 
 Description
@@ -55,41 +60,66 @@ Description
 Beam Splitter
 ^^^^^^^^^^^^^
 
-Beam splitters couple two spatial modes together, implementing the following unitary acting on :math:`\ket{1,0}` and :math:`\ket{0,1}`:
+Beam splitters couple two spatial modes together, acting on :math:`\ket{1,0}` and :math:`\ket{0,1}`. Three specialized
+conventions are defined, with a single :math:`\theta` parameter, as follow:
 
-:math:`\left[\begin{matrix} \cos{\left(\theta \right)} & i e^{i \phi} \sin{\left(\theta \right)}\\i e^{-i \phi} \sin{\left(\theta \right)} &  \cos{\left(\theta \right)}\end{matrix}\right]`
+.. list-table::
+   :header-rows: 1
+   :width: 100%
 
-and are parametrized usually by angles :math:`\theta` and :math:`\phi`, where :math:`\theta`
-relates to the reflectivity and :math:`\phi` corresponds to a relative phase between the modes.
+   * - Convention
+     - Unitary matrix
+     - Default value (:math:`\theta=\pi/4`)
+     - Comment
+   * - ``Rx``
+     - :math:`\left[\begin{matrix}\cos{(\theta/2)} & i \sin{(\theta/2)}\\i \sin{(\theta/2)} & \cos{(\theta/2)}\end{matrix}\right]`
+     - :math:`\left[\begin{matrix}1 & i\\i & 1\end{matrix}\right]`
+     - Symmetrical, default convention
+   * - ``Ry``
+     - :math:`\left[\begin{matrix}\cos{(\theta/2)} & -\sin{(\theta/2)}\\ \sin{(\theta/2)} & \cos{(\theta/2)}\end{matrix}\right]`
+     - :math:`\left[\begin{matrix}1 & -1\\1 & 1\end{matrix}\right]`
+     - Real, non symmetrical
+   * - ``H``
+     - :math:`\left[\begin{matrix}\cos{(\theta/2)} & \sin{(\theta/2)}\\ \sin{(\theta/2)} & -\cos{(\theta/2)}\end{matrix}\right]`
+     - :math:`\left[\begin{matrix}1 & 1\\1 & -1\end{matrix}\right]`
+     - Hadamard gate, ``HH=I``, non symmetrical
+
+Each convention also accepts up to four additional phases, mimicing a phase shifter on each mode connected to the beam
+splitter. For instance, with the ``Rx`` convention, the unitary matrix is defined by:
+
+:math:`\left[\begin{matrix}e^{i(\phi_{tl}+\phi_{tr})} \cos{\left(\theta/2 \right)} & i e^{i (\phi_{tr}+\phi_{bl})} \sin{\left(\theta/2 \right)}\\i e^{i \left(\phi_{tl} + \phi_{br}\right)} \sin{\left(\theta/2 \right)} & e^{i (\phi_{br}+\phi_{bl})} \cos{\left(\theta/2 \right)}\end{matrix}\right]`
+
+It is thus parametrized by :math:`\theta`, :math:`\phi_{tl}`, :math:`\phi_{bl}`, :math:`\phi_{tr}` and
+:math:`\phi_{br}` angles, making this beam splitter equivalent to:
+
+.. image:: _static/img/bs_rx_4_phases.png
+
+:math:`\theta` relates to the reflectivity and :math:`\phi` angles correspond to relative phases between modes.
 Beam splitters exist as bulk, fibered and on-chip components.
 
-It is also possible to use :math:`R` parameter with the following relationship: :math:`cos \theta= \sqrt{1-R}`.
+The relationship between the reflectivity :math:`R` and :math:`\theta` is: :math:`cos {\left( \theta/2 \right)} = \sqrt{R}`.
 
-In the ``phys`` library the beam splitters are described by four parameters: :math:`\theta, \phi_a, \phi_b, \phi_c`,
-where :math:`\theta` and :math:`\phi_b` correspond to the above :math:`\theta` and :math:`\phi`. :math:`\phi_a`
-and :math:`\phi_c` are additional phases that can be observed in actual devices.
-These can that can be achieved in practice with the simplified unitary (present in the ``symb`` library) by using phase
-shifters at the input and output of the beamsplitter and thus are included for compactness directly into the component.
+To create a beam splitter object with a given reflectivity value:
 
-To create a beam splitter object from the ``phys`` library:
-
->>> import perceval.lib.phys as phys
->>> beam_splitter = phys.BS()
+>>> from perceval.components import BS
+>>> R = 0.45
+>>> beam_splitter = BS(BS.r_to_theta(R))
 
 By default
 ``theta`` is :math:`\pi/4`,
-``phi_a`` is :math:`0`,
-``phi_b`` is :math:`3\pi/2`,
-``phi_d`` is :math:`\pi`.
+``phi_tl`` is :math:`0`,
+``phi_bl`` is :math:`0`,
+``phi_tr`` is :math:`0`,
+``phi_br`` is :math:`0`.
 These values can be modified by using optional parameters when creating a ``BS`` object.
 
-In the ``symb`` library:
+Loss Channel
+^^^^^^^^^^^^
 
->>> import perceval.lib.symb as symb
->>> beam_splitter = symb.BS()
+Loss channels are non unitary components applying a fixed loss on a given mode. It can seen as a beam splitter with
+a reflectivity equal to the loss. This beam splitter being connected to a "virtual mode" containing lost photons.
 
-Only parameters ``theta`` and ``phi`` can be specified when using the ``symb`` library.
-
+A loss channel is not expressed as a unitary matrix and can only be used in processors.
 
 Phase Shifter
 ^^^^^^^^^^^^^
@@ -99,29 +129,18 @@ A phase shifter adds a phase :math:`\phi` on a spatial mode, which corresponds t
 The definition of a phase shifter uses the same (non-optional) parameter ``phi`` in both libraries ``symb`` and ``phys``.
 To create a phase shifter ``PS`` object:
 
->>> import perceval.lib.phys as phys
->>> phase_shifter = phys.PS(sp.pi/2) # phi = pi/2
-
-or:
-
->>> import perceval.lib.symb as symb
->>> phase_shifter = symb.PS(sp.pi/2)
-
+>>> import perceval.components.unitary_components as comp
+>>> phase_shifter = comp.PS(sp.pi/2) # phi = pi/2
 
 Permutation
 ^^^^^^^^^^^
 
-A permutation exchanges two spatial modes, sending :math:`\ket{0,1}` to :math:`\ket{1,0}` and vice-versa.
+A permutation exchanges multiple consecutive spatial modes.
 
-To create a permutation ``PERM`` object corresponding to the above example:
+To create a permutation ``PERM`` sending :math:`\ket{0,1}` to :math:`\ket{1,0}` and vice-versa:
 
->>> import perceval.lib.symb as symb
->>> permutation = symb.PERM([1,0])
-
-or:
-
->>> import perceval.lib.phys as phys
->>> permutation = phys.PERM([1,0])
+>>> import perceval.components.unitary_components as comp
+>>> permutation = comp.PERM([1, 0])
 
 More generally one can define Permutation on an arbitrary number of modes.
 The permutation should be described by a list of integers from 0 to :math:`l-1`, where :math:`l` is the length of the list.
@@ -130,26 +149,15 @@ The :math:`k` th spatial input mode is sent to the spatial output mode correspon
 For instance the following defines
 a 4-mode permutation. It matches the first input path (index 0) with the third output path (value 2), the second input path with the fourth output path, the third input path, with the first output path, and the fourth input path with the second output path.
 
->>> c=phys.PERM([2,3,0,1])
+>>> import perceval as pcvl
+>>> import perceval.components.unitary_components as comp
+>>> c = comp.PERM([2, 3, 0, 1])
 >>> pcvl.pdisplay(c)
->>> pcvl.pdisplay(c.compute_unitary(), output_format="latex")
+>>> pcvl.pdisplay(c.compute_unitary(), output_format=pcvl.Format.LATEX)
 
 .. list-table::
 
    * - .. image:: _static/library/phys/perm-2310.png
-           :width: 180
-     - .. math::
-            \left[\begin{matrix}0 & 0 & 1 & 0\\0 & 0 & 0 & 1\\0 & 1 & 0 & 0\\1 & 0 & 0 & 0\end{matrix}\right]
-
-We can do exactly the same with the symb library.
-
->>> c=symb.PERM([2,3,0,1])
->>> pcvl.pdisplay(c)
->>> pcvl.pdisplay(c.compute_unitary(), output_format="latex")
-
-.. list-table::
-
-   * - .. image:: _static/library/symb/perm-2310.png
            :width: 180
      - .. math::
             \left[\begin{matrix}0 & 0 & 1 & 0\\0 & 0 & 0 & 1\\0 & 1 & 0 & 0\\1 & 0 & 0 & 0\end{matrix}\right]
@@ -185,6 +193,8 @@ Time Delay
 ^^^^^^^^^^
 
 Time Delay is a special component corresponding to a roll of optical fiber making as an effect to delay a photon.
-Parameter of the Time Delay is the fraction of a period the delay should be.
 
-For instance ``DT(0.5)`` will make a delay on the line corresponding to half of a period.
+Parameter of the Time Delay is the fraction of a period the delay should be.
+For instance ``TD(2)`` will make a delay on the line corresponding to two periods.
+
+A time delay is not expressed as a unitary matrix and can only be used in processors.

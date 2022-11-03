@@ -24,13 +24,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import io
 import re
-from typing import Literal, Iterator, Optional, Union
-
+from typing import Iterator, Optional, Union, Tuple
 import numpy as np
 import sympy as sp
-
-from perceval.utils.format import simple_complex
-from .mlstr import mlstr
 
 
 class Matrix(ABC):
@@ -98,7 +94,7 @@ class Matrix(ABC):
         return MatrixN(np.eye(n, dtype=complex))
 
     @staticmethod
-    def zeros(shape: tuple[int, int], use_symbolic: bool = False) -> Matrix:
+    def zeros(shape: Tuple[int, int], use_symbolic: bool = False) -> Matrix:
         """Generate an empty matrix
 
         :param shape: 2D shape of the matrix
@@ -159,43 +155,6 @@ class Matrix(ABC):
     def simp(self):
         """Simplify the matrix - only implemented for symbolic matrix"""
         return self
-
-    def pdisplay(self, precision: float = None, output_format: Literal["text", "mplot", "html", "latex"] = "text") -> str:
-        """Generates representation of the matrix
-
-        :param precision:
-        :param output_format:
-        :return:
-        """
-        def simp(v):
-            if isinstance(v, complex) or isinstance(v, int) or isinstance(v, float) or\
-               isinstance(v, sp.Number) or (isinstance(v, sp.Expr) and len(v.free_symbols) == 0):
-                return simple_complex(complex(v))[1]
-            else:
-                return v.__repr__()
-        if output_format != "text":
-            marker = output_format == "html" and "$" or ""
-            if isinstance(self, sp.Matrix):
-                return marker+sp.latex(self)+marker
-            rows = []
-            for j in range(self.shape[0]):
-                row = []
-                for v in self[j, :]:
-                    row.append(sp.S(simp(v)))
-                rows.append(row)
-            return marker+sp.latex(Matrix(rows, use_symbolic=True))+marker
-        if self.shape[0] == 1:
-            return (mlstr("[")+mlstr("  ").join([simp(v) for v in self[0, :]])+"]")._s
-        else:
-            s = mlstr("")
-            for j in range(self.shape[1]):
-                if j:
-                    s += "  "
-                s += "\n".join([simp(v) for v in self[:, j]])
-            h = s.height
-            left_bracket = "⎡\n"+"⎢\n"*(h-2)+"⎣"
-            right_bracket = "⎤\n"+"⎥\n"*(h-2)+"⎦"
-            return (mlstr(left_bracket)+s+right_bracket)._s
 
     def _read(seqline: Iterator[str]) -> Matrix:
         """read a matrix from file or a string sequence"""
@@ -276,7 +235,7 @@ class MatrixS(Matrix, sp.Matrix):
         if not self.is_square():
             return False
         if self.free_symbols:
-            # use sympi only if we really have to...
+            # use sympy only if we really have to...
             p_trans = self * self.T.conj()-sp.eye(self.shape[0])
             if p_trans.free_symbols:
                 # cannot decide

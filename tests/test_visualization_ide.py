@@ -25,10 +25,10 @@ import os
 os.environ["PYCHARM_HOSTED"] = "1"
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 
 
 def test_ide_visualization(capfd):
-    pcvl.pdisplay(phys.PS(0).definition())
+    pcvl.pdisplay(comp.PS(0).definition())
     out, err = capfd.readouterr()
     assert out.find("matrix") == -1

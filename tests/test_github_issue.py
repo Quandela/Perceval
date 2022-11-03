@@ -25,17 +25,17 @@ import pytest
 import numpy as np
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 
 
 def test_34():
-    bs = phys.BS(theta=0, phi_a=0, phi_b=np.pi/2, phi_d=np.pi)
-    C = phys.Circuit(4, name='phase')
-    C.add((2,3), bs)
-    pcvl.pdisplay(C)  # looks good
-    simulator_backend = pcvl.BackendFactory().get_backend("Naive")
-    simu = simulator_backend(C.compute_unitary())
-    state = pcvl.BasicState([1,1,1,1])
-    pa = simu.probampli(state, pcvl.BasicState([1,1,1,1]))
+    bs = comp.BS.H(theta=0)
+    c = pcvl.Circuit(4, name='phase')
+    c.add((2, 3), bs)
+    pcvl.pdisplay(c)  # looks good
+    simulator_backend = pcvl.BackendFactory.get_backend("Naive")
+    simu = simulator_backend(c.compute_unitary())
+    state = pcvl.BasicState([1, 1, 1, 1])
+    pa = simu.probampli(state, pcvl.BasicState([1, 1, 1, 1]))
     assert pytest.approx(-1) == pa.real
     assert pytest.approx(1) == abs(pa)

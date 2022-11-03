@@ -23,6 +23,7 @@
 from pathlib import Path
 
 import perceval as pcvl
+from perceval.rendering.pdisplay import pdisplay_matrix
 
 import numpy as np
 import sympy as sp
@@ -62,12 +63,12 @@ def test_eye_n():
     M = pcvl.Matrix.eye(3)
     assert isinstance(M, np.ndarray)
     assert M.shape == (3, 3)
-    assert M.pdisplay() == "⎡1  0  0⎤\n⎢0  1  0⎥\n⎣0  0  1⎦"
+    assert pdisplay_matrix(M) == "⎡1  0  0⎤\n⎢0  1  0⎥\n⎣0  0  1⎦"
 
 
 def test_eye_s():
     M = pcvl.Matrix.eye(3, use_symbolic=True)
-    assert M.pdisplay() == "⎡1  0  0⎤\n⎢0  1  0⎥\n⎣0  0  1⎦"
+    assert pdisplay_matrix(M) == "⎡1  0  0⎤\n⎢0  1  0⎥\n⎣0  0  1⎦"
     assert isinstance(M, sp.Matrix)
     assert M.shape == (3, 3)
 
@@ -76,12 +77,12 @@ def test_zero_n():
     M = pcvl.Matrix.zeros((3, 3))
     assert isinstance(M, np.ndarray)
     assert M.shape == (3, 3)
-    assert M.pdisplay() == "⎡0  0  0⎤\n⎢0  0  0⎥\n⎣0  0  0⎦"
+    assert pdisplay_matrix(M) == "⎡0  0  0⎤\n⎢0  0  0⎥\n⎣0  0  0⎦"
 
 
 def test_zero_s():
     M = pcvl.Matrix.zeros((3, 3), use_symbolic=True)
-    assert M.pdisplay() == "⎡0  0  0⎤\n⎢0  0  0⎥\n⎣0  0  0⎦"
+    assert pdisplay_matrix(M) == "⎡0  0  0⎤\n⎢0  0  0⎥\n⎣0  0  0⎦"
     assert isinstance(M, sp.Matrix)
     assert M.shape == (3, 3)
     assert M.is_symbolic()
@@ -131,12 +132,12 @@ def atest_repr_1():
 
 def atest_repr_2():
     M = pcvl.Matrix([[1, "2*x", 3]])
-    assert M.pdisplay() == "[1  2*x  3]"
+    assert pdisplay_matrix(M) == "[1  2*x  3]"
 
 
 def test_repr_3():
     M = pcvl.Matrix([[1, 0], [0, 1]])
-    assert M.pdisplay() == "⎡1  0⎤\n⎣0  1⎦"
+    assert pdisplay_matrix(M) == "⎡1  0⎤\n⎣0  1⎦"
 
 
 def atest_str_2():

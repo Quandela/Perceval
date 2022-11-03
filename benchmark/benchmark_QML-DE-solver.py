@@ -22,7 +22,7 @@
 import random
 
 import perceval as pcvl
-import perceval.lib.phys as phys
+import perceval.components.unitary_components as comp
 import numpy as np
 from math import comb
 from scipy.optimize import minimize
@@ -90,9 +90,9 @@ def computation(params):
 
     # Circuit creation
     px = pcvl.P("px")
-    c = (phys.Unitary(U_2)
-         // (0, phys.PS(px))
-         // phys.Unitary(U_1))
+    c = (comp.Unitary(U_2)
+         // (0, comp.PS(px))
+         // comp.Unitary(U_1))
 
     px.set_value(x_0)
     f_theta_0 = calc(c, input_state, coefs)

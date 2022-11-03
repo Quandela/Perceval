@@ -1,7 +1,7 @@
 Polarization
 ============
 
-Polarization encoding is stored in :ref:`Annotated Basic State` objects as a special ``P`` annotation.
+Polarization encoding is stored in :ref:`Basic State` objects as a special ``P`` :ref:`Annotation`.
 
 Their value follows `Jones calculus <https://en.wikipedia.org/wiki/Jones_calculus>`_. Annotations values are represented
 by two angles :math:`(\theta, \phi)`.
@@ -58,18 +58,18 @@ Defining states with polarization is then simply to use the :ref:`Annotation` ``
 
 .. code-block:: python
 
-    >>> st2 = pcvl.AnnotatedBasicState("|{P:H},{P:V}>")
-    >>> st2 = pcvl.AnnotatedBasicState("|{P:(sp.pi/2,sp.pi/3)>")
+    >>> st2 = pcvl.BasicState("|{P:H},{P:V}>")
+    >>> st2 = pcvl.BasicState("|{P:(sp.pi/2,sp.pi/3)>")
 
 If polarization is used for any photon in the state, the state is considered as using polarization:
 
 .. code-block:: python
 
-    >>> pcvl.AnnotatedBasicState("|{P:H},0,{P:V}>").has_polarization
+    >>> pcvl.BasicState("|{P:H},0,{P:V}>").has_polarization
     True
-    >>> pcvl.AnnotatedBasicState("|{P:V},0,1>").has_polarization
+    >>> pcvl.BasicState("|{P:V},0,1>").has_polarization
     True
-    >>> pcvl.AnnotatedBasicState("|1,0,1>").has_polarization
+    >>> pcvl.BasicState("|1,0,1>").has_polarization
     False
 
 .. note::
@@ -78,10 +78,5 @@ If polarization is used for any photon in the state, the state is considered as 
    * linear polarization can be defined with a single parameter: ``{P:sp.pi/2}`` is equivalent to ``{P:(sp.pi/2,0}``
 
    * if the polarization annotation is omitted for some photons, these photons will be considered as having a horizontal polarization.
-
-
-.. code-block: python
-
-   >>> st3 = pcvl
 
 See :ref:`Polarization Object` code documentation.
