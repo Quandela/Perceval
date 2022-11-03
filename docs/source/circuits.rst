@@ -146,6 +146,9 @@ and the ``PhysSkin`` on the right:
   :align: center
   :width: 75%
 
+>>> from perceval.rendering.circuit import SymbSkin, PhysSkin
+>>> perceval.pdisplay(circuit, skin=SymbSkin())
+
 See :ref:`Components` for an overview of the circuits provided by
 Perceval.
 
