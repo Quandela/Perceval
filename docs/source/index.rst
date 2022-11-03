@@ -66,6 +66,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    components
    convertors
    tools
+   legacy
 
 .. toctree::
    :caption: Examples

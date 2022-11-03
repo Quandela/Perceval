@@ -27,9 +27,7 @@ Example code:
 Annotated Basic State
 ---------------------
 
-``AnnotatedBasicState`` extends ``BasicState`` and describes state of :math:`n` **annotated** photons over :math:`m` modes.
-
-See reference :class:`perceval.utils.AnnotatedBasicState` for detailed information.
+A ``BasicState`` can also describe state of :math:`n` **annotated** photons over :math:`m` modes.
 
 Annotation
 ^^^^^^^^^^
@@ -62,10 +60,9 @@ Note that a photon can have a set of annotation keys, representing different deg
   :math:`p_1` and :math:`p_3` are distinguishable because their a1 annotation keys have different values (1 for p_1 as opposed to 2 for p_3). :math:`p_2` and :math:`p_3` are also distinguishable because the values of their annotation key a2 do not agree. However, :math:`p_1` and :math:`p_2` are
   indistinguishable, because they share no common annotation keys.
 
-Use of Annotation in AnnotatedBasicState
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use of Annotation in BasicState
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``AnnotatedBasicState`` notation extends the ``BasicState`` notation as following:
 
 ``|AP_(1:1)...AP_(1:n_1),...,AP_(m:1)...AP_(m:n_m)>`` where ``AP_(k:i)`` is the representation of the ``i``-th photon in mode ``k``, ``n_i`` is the number of photons in mode ``i``.
 
@@ -83,9 +80,9 @@ limited to ``H``/``V``:
 
 Example code:
 
->>> print(pcvl.AnnotatedBasicState("|0,1>"))
+>>> print(pcvl.BasicState("|0,1>"))
 |0,1>
->>> a_bs = pcvl.AnnotatedBasicState("|{P:H}{P:V},0>")   # Creates an annotated state |2,0> , with two photons in the first mode, one having a horizontal polarization, and the other a vertical polarization.
+>>> a_bs = pcvl.BasicState("|{P:H}{P:V},0>")   # Creates an annotated state |2,0> , with two photons in the first mode, one having a horizontal polarization, and the other a vertical polarization.
 >>> print(a_bs)
 |{P:H}{P:V},0>
 >>> a_bs[0]                      # prints the photons in the first mode
@@ -96,7 +93,7 @@ Example code:
 State Vector
 ------------
 
-``StateVector`` extends ``AnnotatedBasicState`` to represents state superpositions.
+``StateVector`` extends ``BasicState`` to represents state superpositions.
 
 See reference :class:`perceval.utils.StateVector` for detailed information.
 
@@ -118,6 +115,20 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 .. WARNING::
   ``StateVector`` will normalize themselves so normalization terms will be added to any combination.
 
+``StateVector`` can also be multiplied through a tensor product - and exponentation is also built-in.
+
+>>> import perceval as pcvl
+
+>>> sv0 = pcvl.StateVector([1,0]) + pcvl.StateVector([0,1])
+>>> sv1 = ...
+>>> bs = pcvl.BasicState([0])
+
+>>> new_state = pcvl.tensorproduct([sv0, sv1, bs])
+>>> # or:
+>>> # new_state = sv0 * sv1 * bs
+
+>>> new_state = sv0 ** 3 # equivalent to sv0 * sv0 * sv0
+
 Sampling
 ^^^^^^^^
 
@@ -133,6 +144,8 @@ Sampling
 
 .. INFO::
   These methods do not modify the state vector
+
+
 
 Measurement
 ^^^^^^^^^^^
@@ -165,8 +178,3 @@ For example, The following ``SVDistribution``
 +-------------------------------------+------------------+
 
 results in the mixed state ``1/2|0,1><0,1|+1/4(1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1>)(1/sqrt(2)*<1,0|+1/sqrt(2)*<0,1|)+1/4|1,0><1,0|``
-
-TimeSVDistribution
-------------------
-
-``TimedSVDistribution`` is representing a time sequence distribution of ``StateVector``.
