@@ -44,9 +44,14 @@ Overview
      - .. image:: _static/library/symb/pr.png
      - :math:`\left[\begin{matrix}\cos{\left(\delta \right)} & \sin{\left(\delta \right)}\\- \sin{\left(\delta \right)} & \cos{\left(\delta \right)}\end{matrix}\right]`
    * - :ref:`Time Delay`
-     - ``DT``
+     - ``TD``
      - .. image:: _static/library/phys/dt.png
      - .. image:: _static/library/symb/dt.png
+     - `N/A`
+   * - :ref:`Loss Channel`
+     - ``LC``
+     - .. image:: _static/library/phys/lc.png
+     - .. image:: _static/library/symb/lc.png
      - `N/A`
 
 Description
@@ -107,6 +112,14 @@ By default
 ``phi_tr`` is :math:`0`,
 ``phi_br`` is :math:`0`.
 These values can be modified by using optional parameters when creating a ``BS`` object.
+
+Loss Channel
+^^^^^^^^^^^^
+
+Loss channels are non unitary components applying a fixed loss on a given mode. It can seen as a beam splitter with
+a reflectivity equal to the loss. This beam splitter being connected to a "virtual mode" containing lost photons.
+
+A loss channel is not expressed as a unitary matrix and can only be used in processors.
 
 Phase Shifter
 ^^^^^^^^^^^^^
@@ -182,6 +195,6 @@ Time Delay
 Time Delay is a special component corresponding to a roll of optical fiber making as an effect to delay a photon.
 
 Parameter of the Time Delay is the fraction of a period the delay should be.
-For instance ``DT(2)`` will make a delay on the line corresponding to two periods.
+For instance ``TD(2)`` will make a delay on the line corresponding to two periods.
 
-The time Delay is not representable with a unitary matrix.
+A time delay is not expressed as a unitary matrix and can only be used in processors.
