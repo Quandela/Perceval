@@ -191,7 +191,7 @@ Matrix Product State (MPS)  is based on a type of tensor network simulation, whi
 states :cite:p:`schollwock2011density`, :cite:p:`oh2021classical`.
 As the Stepper, MPS backend does the computation on each component of the circuits one-by-one, and not on the whole unitary, but has the unique feature of performing approximate state evolution.
 The states are represented by tensors, which are then updated at each component.
-These tensors can be seen as a big set of matrices, and the approximation is done by chosing the dimension of these matrices, called the *bond* dimension.
+These tensors can be seen as a big set of matrices, and the approximation is done by choosing the dimension of these matrices, called the *bond* dimension.
 
 .. rubric:: Footnotes
 
