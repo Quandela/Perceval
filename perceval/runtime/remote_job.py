@@ -71,7 +71,15 @@ class RemoteJob(Job):
             elif self._job_status.failed:
                 self._job_status._stop_message = response['failure_code']
 
-            self._job_status.update_times(response['start_time'], response['duration'])
+            start_time = None
+            duration = None
+            try:
+                start_time = float(response['start_time'])
+                duration = int(response['duration'])
+            except:
+                pass
+
+            self._job_status.update_times(start_time, duration)
 
         return self._job_status
 

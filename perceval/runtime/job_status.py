@@ -85,13 +85,13 @@ class JobStatus:
             sleep(0.001)
         self._last_progress_time = now
 
-    def update_times(self, start_time: str, duration: str):
-        if start_time is None or start_time == '':
+    def update_times(self, start_time: float, duration: int):
+        if start_time is None:
             return
 
-        self._init_time_start = float(start_time)
-        if duration is not None and duration != '':
-            self._completed_time = start_time + int(duration)
+        self._init_time_start = start_time
+        if duration is not None:
+            self._completed_time = start_time + duration
 
     @property
     def waiting(self):
