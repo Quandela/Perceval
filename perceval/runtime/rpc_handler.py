@@ -19,8 +19,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import urllib
 
 import requests
+from requests import HTTPError
 
 _ENDPOINT_PLATFORM_DETAILS = '/api/platform/'
 _ENDPOINT_JOB_CREATE = '/api/job'
@@ -42,7 +44,7 @@ class RPCHandler:
         return f"{self.url}{endpoint}"
 
     def fetch_platform_details(self):
-        endpoint = f"{self.url}{_ENDPOINT_PLATFORM_DETAILS}{self.name}"
+        endpoint = f"{self.url}{_ENDPOINT_PLATFORM_DETAILS}{urllib.parse.quote_plus(self.name)}"
         resp = requests.get(endpoint,
                             headers=self.headers)
         resp.raise_for_status()
@@ -53,10 +55,17 @@ class RPCHandler:
         request = requests.post(endpoint,
                                 headers=self.headers,
                                 json=payload)
-        request.raise_for_status()
 
-        json = request.json()
-        return json['job_id']
+        json = {}
+        try:
+            jsonres = request.json()
+        except:
+            pass
+
+        if request.status_code != 200:
+            raise HTTPError(jsonres['error'])
+
+        return jsonres['job_id']
 
     def cancel_job(self, job_id: str):
         endpoint = f"{self.url}{_ENDPOINT_JOB_CANCEL}{str(job_id)}"
