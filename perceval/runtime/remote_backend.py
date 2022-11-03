@@ -35,8 +35,7 @@ pcvl_version = get_distribution("perceval-quandela").version
 ################################
 class RemoteBackend:
 
-    def __init__(self, rpc: RPCHandler, backend_name, cu: Union[ACircuit, Matrix]):
-        self.name = backend_name
+    def __init__(self, rpc: RPCHandler, cu: Union[ACircuit, Matrix]):
         self.__rpc_handler = rpc
         if isinstance(cu, ACircuit):
             self.__cu_key = 'circuit'
@@ -54,7 +53,7 @@ class RemoteBackend:
     def async_execute(self, command: str, parameters=None, **args):
         job_params = self.__defaults_job_params(command)
         job_params['payload'] = {
-            'backend_name': self.name,
+            'command': command,
             self.__cu_key: self.__cu_data,
             **args
         }

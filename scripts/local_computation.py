@@ -56,7 +56,7 @@ async_job = sampler.samples.execute_async(nsample)
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.set_description(f'Get {nsample} samples from {gate_name} using simulator {local_simulator_name}')
-    while not async_job.is_completed():
+    while not async_job.is_complete:
         tq.update(async_job.status.progress-previous_prog)
         previous_prog = async_job.status.progress
         time.sleep(.2)
@@ -80,7 +80,7 @@ job2 = slos_sampler.sample_count.execute_async(count=100000)
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
     tq.set_description(f'Count samples from {cnot_circuit.name} using simulator {local_simulator_name}')
-    while not job2.is_completed():
+    while not job2.is_complete:
         tq.update(job2.status.progress-previous_prog)
         previous_prog = job2.status.progress
         time.sleep(.2)

@@ -78,6 +78,8 @@ AnnotatedBasicState was deprecated
 Please use BasicState instead which holds every feature previously held by AnnotatedBasicState
 
 Processor definition and composition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Perceval is getting more and more Processor-centric as we implement more features. The Processor class has got some serious refactoring.
 You may find examples of Processor created from scratch in perceval.components.core_catalog content
 You may use several processors / circuits and compose them : a good example is the QiskitConvert convert method implementation

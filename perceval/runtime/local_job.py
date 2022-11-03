@@ -91,7 +91,7 @@ class LocalJob(Job):
         self._cancel_requested = True
 
     def get_results(self) -> Any:
-        if not self.is_completed():
+        if not self.is_complete:
             raise RuntimeError('The job is still running, results are not available yet.')
         job_status = self.status
         if job_status.status != RunningStatus.SUCCESS:
