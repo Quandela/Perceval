@@ -29,7 +29,7 @@ from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
-QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.dev'
+QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
 
 def _get_first_spec(specs, name):
@@ -39,20 +39,10 @@ def _get_first_spec(specs, name):
     return None
 
 
-def _split_platform_and_backend_name(name: str):
-    backend_name = 'Naive'
-    platform_name = name
-    names = name.split(":")
-    if len(names) == 2:
-        platform_name = names[0]
-        backend_name = names[1]
-    return platform_name, backend_name
-
-
 class RemoteProcessor(AProcessor):
     def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL):
         super().__init__()
-        (self.name, self._backend_name) = _split_platform_and_backend_name(name)
+        self.name = name
 
         self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}
@@ -102,7 +92,7 @@ class RemoteProcessor(AProcessor):
         if self._circuit is None:
             raise RuntimeError("No circuit set in RemoteProcessor")
 
-        self._backend = RemoteBackend(self._rpc_handler, self._backend_name, self._circuit)
+        self._backend = RemoteBackend(self._rpc_handler, self._circuit)
 
     def get_rpc_handler(self):
         return self._rpc_handler

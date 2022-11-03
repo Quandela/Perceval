@@ -64,16 +64,29 @@ class RemoteJob(Job):
         if now - self._previous_status_refresh > RemoteJob.STATUS_REFRESH_DELAY:
             self._previous_status_refresh = now
             response = self._rpc_handler.get_job_status(self._id)
+
             self._job_status.status = RunningStatus.from_server_response(response['status'])
-            if self._job_status.status == RunningStatus.RUNNING:
-                self._job_status.update_progress(float(response['progress']))
-            # TODO get _init_time_start and _completed_time from server response
+            if self._job_status.running:
+                self._job_status.update_progress(float(response['progress']), response['progress_message'])
+            elif self._job_status.failed:
+                self._job_status._stop_message = response['failure_code']
+
+            start_time = None
+            duration = None
+            try:
+                start_time = float(response['start_time'])
+                duration = int(response['duration'])
+            except:
+                pass
+
+            self._job_status.update_times(start_time, duration)
+
         return self._job_status
 
     def execute_sync(self, *args, **kwargs) -> Any:
         assert self._job_status.waiting, "job as already been executed"
         job = self.execute_async(*args, **kwargs)
-        while not job.is_completed():
+        while not job.is_complete:
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
@@ -89,6 +102,7 @@ class RemoteJob(Job):
             self._id = self._fn(*args, **kwargs)
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))
+            raise e
 
         return self
 

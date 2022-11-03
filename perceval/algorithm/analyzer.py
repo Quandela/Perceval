@@ -101,8 +101,7 @@ class Analyzer(AAlgorithm):
         provided)
         """
         probs_res = {}
-        phys_perf = []
-        perf_res = []
+        logical_perf = []
         if expected is not None:
             normalize = True
             self.error_rate = 0
@@ -113,7 +112,7 @@ class Analyzer(AAlgorithm):
             probs_output = self._sampler.probs()
             probs = probs_output['results']
             probs_res[i_state] = probs
-            phys_perf.append(probs_output['physical_perf'])
+            logical_perf.append(probs_output['logical_perf'])
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self.input_states_list))
 
@@ -139,14 +138,12 @@ class Analyzer(AAlgorithm):
                     self.error_rate += 1 - self._distribution[iidx, self.output_states_list.index(expected_o)]/sum_p
             if normalize and sum_p != 0:
                 self._distribution[iidx, :] /= sum_p
-            perf_res.append(sum_p)
-        self.performance = min(perf_res)
+        self.performance = min(logical_perf)
         output = {'results': self._distribution, 'input_states': self.input_states_list,
-                  'output_states': self.output_states_list}
+                  'output_states': self.output_states_list, 'performance': self.performance}
         if expected is not None:
             self.error_rate /= len(self.input_states_list)
             output['error_rate'] = self.error_rate
-            output['performance'] = self.performance
         return output
 
     @property
