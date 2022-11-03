@@ -142,7 +142,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          python -m pytest benchmark/benchmark_*.py --benchmark-json out.json --benchmark-storage file://./.benchmarks/log/${{ env.folder_env }} 
+          python -m pytest benchmark/benchmark_*.py --benchmark-json out.json --benchmark-storage file://./.benchmarks/${{ env.folder_env }}/log/ 
           mv out.json ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
