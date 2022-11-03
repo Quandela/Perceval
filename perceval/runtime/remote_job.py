@@ -66,9 +66,9 @@ class RemoteJob(Job):
             response = self._rpc_handler.get_job_status(self._id)
 
             self._job_status.status = RunningStatus.from_server_response(response['status'])
-            if self._job_status.status == RunningStatus.RUNNING:
+            if self._job_status.running:
                 self._job_status.update_progress(float(response['progress']), response['progress_message'])
-            elif self._job_status.status in [RunningStatus.CANCELED, RunningStatus.ERROR]:
+            elif self._job_status.failed:
                 self._job_status._stop_message = response['failure_code']
 
             self._job_status.update_times(response['start_time'], response['duration'])
