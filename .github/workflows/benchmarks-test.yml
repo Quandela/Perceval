@@ -161,7 +161,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
-          path: .benchmarks/log/${{ env.folder_env }}
+          path: .benchmarks/${{ env.folder_env }}/log
 
       # use github-action-benchmark for graph
       - name: compare result with last version and save on current branch
@@ -187,7 +187,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
-          path: .benchmarks/log/${{ env.folder_env }}
+          path: .benchmarks/${{ env.folder_env }}/log
 
       - if: inputs.save_log
         name: Save benchmark report in current branch
