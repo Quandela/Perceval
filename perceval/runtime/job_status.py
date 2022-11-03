@@ -31,6 +31,7 @@ class RunningStatus(Enum):
     SUCCESS = 2
     ERROR = 3
     CANCELED = 4
+    SUSPENDED = 5
 
     @staticmethod
     def from_server_response(res):
@@ -84,6 +85,14 @@ class JobStatus:
             sleep(0.001)
         self._last_progress_time = now
 
+    def update_times(self, start_time: str, duration: str):
+        if start_time is None or start_time == '':
+            return
+
+        self._init_time_start = float(start_time)
+        if duration is not None and duration != '':
+            self._completed_time = start_time + int(duration)
+
     @property
     def waiting(self):
         return self._status == RunningStatus.WAITING
@@ -94,11 +103,15 @@ class JobStatus:
 
     @property
     def completed(self):
-        return self._status != RunningStatus.WAITING and self._status != RunningStatus.RUNNING
+        return self._status in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED]
 
     @property
     def success(self):
         return self._status == RunningStatus.SUCCESS
+
+    @property
+    def failed(self):
+        return self._status in [RunningStatus.CANCELED, RunningStatus.ERROR]
 
     @property
     def stop_message(self):

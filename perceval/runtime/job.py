@@ -63,8 +63,25 @@ class Job(ABC):
     def status(self) -> JobStatus:
         pass
 
-    def is_completed(self) -> bool:
+    @property
+    def is_complete(self) -> bool:
         return self.status.completed
+
+    @property
+    def is_failed(self) -> bool:
+        return self.status.failed
+
+    @property
+    def is_success(self) -> bool:
+        return self.status.success
+
+    @property
+    def is_waiting(self) -> bool:
+        return self.status.waiting
+
+    @property
+    def is_running(self) -> bool:
+        return self.status.running
 
     @abstractmethod
     def execute_sync(self, *args, **kwargs) -> Any:
