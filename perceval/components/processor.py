@@ -444,19 +444,25 @@ class Processor(AProcessor):
     def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
         raise RuntimeError(f"Cannot call sample_count(). Available method are {self.available_commands}")
 
+    def _sample_inputs(self, count, non_null=False) -> List[StateVector]:
+        sampled = self._inputs_map.sample(count, non_null=non_null)
+        if count == 1:
+            return [sampled]
+        return sampled
+
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._init_command("samples")
         output = BSSamples()
         not_selected_physical = 0
         not_selected = 0
-        selected_inputs = self._inputs_map.sample(max(count, 2), non_null=False)
+        selected_inputs = self._sample_inputs(count)
         idx = 0
         while len(output) < count:
             selected_input = selected_inputs[idx]
             idx += 1
             if idx == len(selected_inputs):
                 idx = 0
-                selected_inputs = self._inputs_map.sample(max(count, 2), non_null=False)
+                selected_inputs = self._sample_inputs(count)
             if not self._state_preselected_physical(selected_input):
                 not_selected_physical += 1
                 continue
@@ -486,7 +492,7 @@ class Processor(AProcessor):
             physical_perf = 1
 
             for idx, (input_state, input_prob) in enumerate(self._inputs_map.items()):
-                if max(input_state.n) < self._min_mode_post_select:
+                if not self._state_preselected_physical(input_state):
                     physical_perf -= input_prob
                 else:
                     for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
