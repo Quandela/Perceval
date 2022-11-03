@@ -1,8 +1,7 @@
-#this is a manual workflow that compare benchmarks with the same runner and the same version of python
+# this is a manual workflow that compare benchmarks with the same runner and the same version of python
+# choose runner, perceval ref, quandelibc ref, save data and log 
 # runs benchmarks at benchmarks/benchmark_*.py
-# compare the result on the gh-page branch
-# save the log on (.benchmark/<runner>_CPython-<PyVersion>/<branch>_<tag_version>_<nb_runner>_<commit>.json)
-# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/) 
+# save data and log on the branch launched on github (.benchmarks/<branch>_<runner>_CPython-<PyVersion>/<nb_runner>_<branch>_<tag_version>__<commit>.json)
 
 name: Benchmarks
 
@@ -37,7 +36,6 @@ on:
         default: false
         required: false
         type: boolean
-
 
 env:
   python_v: '3.9'
@@ -88,23 +86,26 @@ jobs:
       - build-quandelibc
     runs-on: ${{ github.event.inputs.os }}
     steps:
-      - name: Extract branch name
+      - name: Extract current branch name
         shell: bash
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: extract_branch
 
-      - uses: actions/checkout@v2
+      - name: chekout on perceval's ref
+        uses: actions/checkout@v2
         with:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
 
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
+        name: setup python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.python_v }}
 
-      - uses: syphar/restore-virtualenv@v1
+      - name: setup virtual env
+        uses: syphar/restore-virtualenv@v1
         id: cache-virtualenv
 
       - if: inputs.quandelibc_ref != ''
@@ -128,15 +129,15 @@ jobs:
 
       # save var env use bash shell for notLinux
       - if: runner.os == 'Linux'
-        name: Initialize config linux
+        name: setup var_env on linux
         run: |
           echo "folder_env=${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/log/${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.run_number }}_${{ github.ref_name }}_$( git describe --tags )_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/log/${{ github.run_number }}_${{ github.ref_name }}_$( git describe --tags )_${{ github.sha }}.json" >> $GITHUB_ENV
       - if: runner.os != 'Linux'
-        name: Initialize config notLinux
+        name: setup var_env on notLinux
         run: |
           echo "folder_env=${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}" >> $GITHUB_ENV
-          echo "folder_file_json=.benchmarks/log/${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/${{ github.run_number }}_${{ github.ref_name }}_$( git describe --tags )_${{ github.sha }}.json" >> $GITHUB_ENV
+          echo "folder_file_json=.benchmarks/${{ github.ref_name }}_${{ github.event.inputs.os }}-CPython-${{ env.python_v }}/log/${{ github.run_number }}_${{ github.ref_name }}_$( git describe --tags )_${{ github.sha }}.json" >> $GITHUB_ENV
         shell: Bash
 
       - name: Run benchmark
@@ -145,25 +146,25 @@ jobs:
           mv out.json ${{ env.folder_file_json }}
 
       # upload the result on action GitHub
-      - name: upload the result Log
+      - name: upload the log result
         uses: actions/upload-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: ${{ env.folder_file_json }}
 
-      - name: checkout in gh-pages branch
+      - name: checkout to avoid bug
         uses: actions/checkout@v2
         with:
           ref: gh-pages
       
-      - name: Download the result Log on github action
+      - name: Download the log result
         uses: actions/download-artifact@v3
         with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: .benchmarks/log/${{ env.folder_env }}
 
       # use github-action-benchmark for graph
-      - name: compare result with last version and save on gh-page branch
+      - name: compare result with last version and save on current branch
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Automated report
@@ -181,30 +182,15 @@ jobs:
         with:
           ref: ${{ steps.extract_branch.outputs.branch }}
 
-      - name: Download the result Log on github action
+      - if: inputs.save_log
+        name: Download the Log result
         uses: actions/download-artifact@v3
-        with:
+        with:+
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: .benchmarks/log/${{ env.folder_env }}
 
-      - name: compare benchmark
-        run: |
-          pytest-benchmark compare .benchmarks/log/${{ env.folder_env }}/* >> compare_result_${{ env.folder_env }}
-      
-      - name: upload the result compare
-        uses: actions/upload-artifact@v3
-        with:
-          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}
-          path: |
-            compare_result_${{ env.folder_env }}
-      
-      - name: Download the result compare
-        uses: actions/download-artifact@v3
-        with:
-          name: pytest_benchmarks_compare_${{ env.folder_env }}_${{ github.run_number }}
-
-      - name: Save benchmark report in current branch
-        if: inputs.save_log
+      - if: inputs.save_log
+        name: Save benchmark report in current branch
         run: |
           git pull
           git config --global user.name 'github-action-benchmark'
