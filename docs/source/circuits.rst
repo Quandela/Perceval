@@ -252,6 +252,34 @@ Some additional parameters can simplifiy the decomposition:
 * finally, you can also pass simpler unitary blocks - for instance a simple beamsplitter without phase, however in these
   cases, you might not obtain any solution in the decomposition
 
+Accessing components in a circuit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is possible to access directly a component from a circuit using `row` and `column` indices - note that a same
+component may have different column indices for the different rows it spans over:
+
+>>> c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.Rx() // comp.PS(P("phi2"))
+>>> print (c[1, 1].describe())
+BS(convention=BSConvention.Rx)
+>>> print (c[0, 2].describe())
+BS(convention=BSConvention.Rx)
+
+Circuit simplification
+^^^^^^^^^^^^^^^^^^^^^^
+
+The syntax is the following:
+
+>>> from perceval.utils.algorithms.simplification import simplify
+>>>
+>>> c = Circuit() // ...
+>>> simplified_c = simplify(c, display = False)
+
+Circuit simplification takes a circuit and does the following:
+
+* For phase shifters, add their phase if they are not parameters and combine them into a single phase shifters (work through permutations). If :code:`display == False`, removes them if their added phase is :math:`0` or :math:`2\pi`.
+* For Permutations, if two permutations are consecutive, they are combined into a single permutation. For single permutations, fixed modes at the extremities are removed. If they are not just consecutive, try to compute a "better" permutation, then if it is better, moves the components accordingly to this new permutation. Display changes how a permutation is evaluated.
+
+
 Complex Circuits
 ^^^^^^^^^^^^^^^^
 

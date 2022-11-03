@@ -24,6 +24,11 @@ Simple code example with indistinguishable photons:
 >>> print(pcvl.BasicState([0,1])*pcvl.BasicState([2,3]))  # Tensors the |0,1> and |2,3> Fock states, and prints out the result (the Fock state |0,1,2,3>)
 |0,1,2,3>
 
+Annotated Basic State
+---------------------
+
+A ``BasicState`` can also describe state of :math:`n` **annotated** photons over :math:`m` modes.
+
 Annotation
 ----------
 
@@ -111,6 +116,20 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 .. WARNING::
   ``StateVector`` will normalize themselves at usage so normalization terms will be added to any combination.
 
+``StateVector`` can also be multiplied through a tensor product - and exponentation is also built-in.
+
+>>> import perceval as pcvl
+
+>>> sv0 = pcvl.StateVector([1,0]) + pcvl.StateVector([0,1])
+>>> sv1 = ...
+>>> bs = pcvl.BasicState([0])
+
+>>> new_state = pcvl.tensorproduct([sv0, sv1, bs])
+>>> # or:
+>>> # new_state = sv0 * sv1 * bs
+
+>>> new_state = sv0 ** 3 # equivalent to sv0 * sv0 * sv0
+
 Sampling
 ^^^^^^^^
 
@@ -126,6 +145,8 @@ Sampling
 
 .. INFO::
   These methods do not modify the state vector
+
+
 
 Measurement
 ^^^^^^^^^^^
