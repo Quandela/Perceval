@@ -185,7 +185,7 @@ jobs:
       - if: inputs.save_log
         name: Download the Log result
         uses: actions/download-artifact@v3
-        with:+
+        with:
           name: pytest_benchmarks_log_${{ env.folder_env }}_${{ github.run_number }}
           path: .benchmarks/log/${{ env.folder_env }}
 
