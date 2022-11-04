@@ -44,7 +44,7 @@ class RemoteJob(Job):
         self._job_status = JobStatus()
         self._job_context = job_context
         self._refresh_progress_delay = refresh_progress_delay  # When syncing an async job (in s)
-        self._previous_status_refresh = time.time()
+        self._previous_status_refresh = 0.
         self._id = None
 
     @property
@@ -117,7 +117,7 @@ class RemoteJob(Job):
         job_status = self.status
         if not job_status.completed:
             raise RuntimeError('The job is still running, results are not available yet.')
-        if job_status.status != RunningStatus.SUCCESS:
+        if job_status.status == RunningStatus.ERROR:
             raise RuntimeError(f'The job failed: {job_status.stop_message}')
         response = self._rpc_handler.get_job_results(self._id)
         results = deserialize(json.loads(response['results']))
