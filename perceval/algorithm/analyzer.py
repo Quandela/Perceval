@@ -103,7 +103,10 @@ class Analyzer(AAlgorithm):
             probs_output = self._sampler.probs()
             probs = probs_output['results']
             probs_res[i_state] = probs
-            logical_perf.append(probs_output['logical_perf'])
+            if 'logical_perf' in probs_output:
+                logical_perf.append(probs_output['logical_perf'])
+            else:
+                logical_perf.append(1)
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self.input_states_list))
 
