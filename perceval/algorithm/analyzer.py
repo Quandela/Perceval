@@ -80,10 +80,13 @@ class Analyzer(AAlgorithm):
                     out_set.add(os)
             self.output_states_list = list(out_set)  # All states will be used in compute()
         # Setup output state selection on clicks
-        min_output_photon_count = processor.m
-        for ostate in self.output_states_list:
-            modes_with_photons = len([n for n in ostate if n > 0])
-            min_output_photon_count = min(modes_with_photons, min_output_photon_count)
+        if output_states == '*':
+            min_output_photon_count = 1
+        else:
+            min_output_photon_count = processor.m
+            for ostate in self.output_states_list:
+                modes_with_photons = len([n for n in ostate if n > 0])
+                min_output_photon_count = min(modes_with_photons, min_output_photon_count)
         processor.mode_post_selection(min_output_photon_count)
 
     def compute(self, normalize=False, expected=None, progress_callback=None):
