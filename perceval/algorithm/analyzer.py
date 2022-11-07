@@ -20,14 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import copy
-from typing import List
-
 import numpy as np
 
 from .abstract_algorithm import AAlgorithm
 from .sampler import Sampler
-from perceval.utils import BasicState, StateVector, allstate_iterator
+from perceval.utils import BasicState, allstate_iterator
 from perceval.components import AProcessor
 
 
@@ -44,7 +41,6 @@ class Analyzer(AAlgorithm):
         """
         if mapping is None:
             mapping = {}
-        processor.mode_post_selection(0)  # Do not preselect / postselect on number of modes with photon(s) in it
         super().__init__(processor)
         self._sampler = Sampler(processor)
         self._mapping = mapping
@@ -83,17 +79,15 @@ class Analyzer(AAlgorithm):
                 for os in allstate_iterator(input_state):
                     out_set.add(os)
             self.output_states_list = list(out_set)  # All states will be used in compute()
-
-    # def _add_expected_to_output_states(self, expected) -> None:
-    #     """
-    #     Generate a list of output states to consider.
-    #     Merges the output states from self.output_states_list and expected if they exist
-    #     """
-    #     if expected is None:
-    #         return
-    #     for s in expected.values():
-    #         if s not in self.output_states_list:
-    #             self.output_states_list.append(s)
+        # Setup output state selection on clicks
+        if output_states == '*':
+            min_output_photon_count = 1
+        else:
+            min_output_photon_count = processor.m
+            for ostate in self.output_states_list:
+                modes_with_photons = len([n for n in ostate if n > 0])
+                min_output_photon_count = min(modes_with_photons, min_output_photon_count)
+        processor.mode_post_selection(min_output_photon_count)
 
     def compute(self, normalize=False, expected=None, progress_callback=None):
         """
@@ -112,7 +106,10 @@ class Analyzer(AAlgorithm):
             probs_output = self._sampler.probs()
             probs = probs_output['results']
             probs_res[i_state] = probs
-            logical_perf.append(probs_output['logical_perf'])
+            if 'logical_perf' in probs_output:
+                logical_perf.append(probs_output['logical_perf'])
+            else:
+                logical_perf.append(1)
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self.input_states_list))
 
