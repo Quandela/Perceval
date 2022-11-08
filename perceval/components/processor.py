@@ -42,18 +42,21 @@ import copy
 
 class Processor(AProcessor):
     """
-    Generic definition of processor as a source + components (both linear and non-linear) + ports
+    Generic definition of processor as a source + components (both unitary and non-unitary) + ports
     + optional post-processing logic
+
+    :param backend_name: Name of the simulator backend to run
+    :param m_circuit: can either be:
+
+        - an int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
+        >>> p = Processor("SLOS", 5)
+
+        - a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
+        >>> p = Processor("SLOS", BS() // PS() // BS())
+
+    :param source: the Source used by the processor (defaults to perfect source)
     """
     def __init__(self, backend_name: str, m_circuit: Union[int, ACircuit], source: Source = Source()):
-        r"""Define a processor with sources connected to the circuit and possible post_selection
-
-        :param backend_name: Name of the simulator backend to run
-        :param m_circuit: can either be:
-            - a int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
-            - a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
-        :param source: the Source used by the processor (defaults to perfect source)
-        """
         super().__init__()
         self._source = source
         self._components = []  # Any type of components, not only linear ones
@@ -82,6 +85,12 @@ class Processor(AProcessor):
         self._thresholded_output: bool = False
 
     def thresholded_output(self, value: bool):
+        r"""
+        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
+        changed to 1.
+
+        :param value: enables threshold detection when True, otherwise disables it.
+        """
         self._thresholded_output = value
 
     def _setup_simulator(self, **kwargs):
@@ -103,45 +112,44 @@ class Processor(AProcessor):
         return False
 
     def mode_post_selection(self, n: int):
+        r"""
+        Sets-up a state post-selection on the number of "clicks" (number of modes with a thresholded detection)
+
+        :param n: Minimum expected "click" count
+
+        This post-selection has an impact on the output physical performance
+        """
         super().mode_post_selection(n)
         self._min_mode_post_select = n
 
     @property
     def m(self) -> int:
+        r"""
+        :return: Number of modes of interest (MOI) defined in the processor
+        """
         return self._n_moi
 
     @property
     def circuit_size(self) -> int:
+        r"""
+        :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
+        """
         return self._n_moi + self._n_heralds
 
     @property
     def post_select_fn(self):
         return self._post_select
 
-    @dispatch(SVDistribution)
-    def with_input(self, svd: SVDistribution):
-        expected_photons = Inf
-        for sv in svd:
-            for state in sv:
-                expected_photons = min(expected_photons, state.n)
-                if state.m != self.circuit_size:
-                    raise ValueError(
-                        f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
-        self._inputs_map = svd
-        self._min_mode_post_select = expected_photons
-        if 'mode_post_select' in self._parameters:
-            self._min_mode_post_select = self._parameters['mode_post_select']
-
-    @dispatch(LogicalState)
-    def with_input(self, input_state: LogicalState) -> None:
-        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
-        self.with_input(input_state)
-
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         """
         Simulates plugging the photonic source on certain modes and turning it on.
-        Computes the probability distribution of the processor input
+        Computes the input probability distribution
+
+        :param input_state: Expected input BasicState of length `self.m` (heralded modes are managed
+        automatically)
+        The properties of the source will alter the input state. A perfect source always delivers the expected state as
+        an input. Imperfect ones won't.
         """
         self._inputs_map = SVDistribution()
         expected_input_length = self.m
@@ -166,6 +174,37 @@ class Processor(AProcessor):
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
 
+    @dispatch(LogicalState)
+    def with_input(self, input_state: LogicalState) -> None:
+        r"""
+        Set up the processor input with a LogicalState. Computes the input probability distribution.
+
+        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
+        encoding.
+        """
+        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        self.with_input(input_state)
+
+    @dispatch(SVDistribution)
+    def with_input(self, svd: SVDistribution):
+        r"""
+        Processor input can be set 100% manually via a state vector distribution, bypassing the source.
+
+        :param svd: The input SVDistribution which won't be changed in any way by the source.
+        Every state vector size has to be equal to `self.circuit_size`
+        """
+        expected_photons = Inf
+        for sv in svd:
+            for state in sv:
+                expected_photons = min(expected_photons, state.n)
+                if state.m != self.circuit_size:
+                    raise ValueError(
+                        f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
+        self._inputs_map = svd
+        self._min_mode_post_select = expected_photons
+        if 'mode_post_select' in self._parameters:
+            self._min_mode_post_select = self._parameters['mode_post_select']
+
     @property
     def components(self):
         return self._components
@@ -178,14 +217,40 @@ class Processor(AProcessor):
         return new_proc
 
     def set_postprocess(self, postprocess_func):
+        r"""
+        Set or remove a logical post-selection function. Along with the heralded modes, this function has an impact
+        on the logical performance of the processor
+        :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`
+        If None is passed as parameter, removes the previously defined post-selection function.
+        """
         self._post_select = postprocess_func
 
     def add(self, mode_mapping, component, keep_port=True):
         """
-        Add a component (linear or non linear)
-        Checks if it's possible:
-        - No output is set on used modes
-        - Should fail if lock_inputs has been called and the component uses new modes or defines new inputs
+        Add a component to the processor (unitary or non-unitary).
+
+        :param mode_mapping: Describe how the new component is connected to the existing processor. Can be:
+
+         * an int: composition uses consecutive modes starting from `mode_mapping`
+         * a list or a dict: describes the full mapping of length the input mode count of `component`
+
+        :param component: The component to append to the processor. Can be:
+
+         * A unitary circuit
+         * A non-unitary component
+         * A processor
+
+        :param keep_port: if True, saves `self`'s output ports on modes impacted by the new component, otherwise removes them.
+
+        Adding a component on non-ordered, non-consecutive modes computes the right permutation (PERM component) which
+        fits into the existing processor and the new component.
+
+        Example:
+
+        >>> p = Processor("SLOS", 6)
+        >>> p.add(0, BS())  # Modes (0, 1) connected to (0, 1) of the added beam splitter
+        >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
+        >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
         if self._post_select is not None:
             raise RuntimeError("Cannot add any component to a processor with post-process function")
@@ -202,6 +267,9 @@ class Processor(AProcessor):
 
     @property
     def out_port_names(self):
+        r"""
+        :return: A list of the output port names. Names are repeated for ports connected to more than one mode
+        """
         result = [''] * self.circuit_size
         for port, m_range in self._out_ports.items():
             for m in m_range:
@@ -210,6 +278,9 @@ class Processor(AProcessor):
 
     @property
     def in_port_names(self):
+        r"""
+        :return: A list of the input port names. Names are repeated for ports connected to more than one mode
+        """
         result = [''] * self.circuit_size
         for port, m_range in self._in_ports.items():
             for m in m_range:
@@ -291,10 +362,18 @@ class Processor(AProcessor):
         self._in_ports[Herald(expected, name)] = [mode]
         self._out_ports[Herald(expected, name)] = [mode]
 
-    def add_herald(self, mode, expected, name=None):
+    def add_herald(self, mode: int, expected: int, name: str = None):
+        r"""
+        Add a heralded mode
+
+        :param mode: Mode index of the herald
+        :param expected: number of expected photon as input AND output on the given mode (must be 0 or 1)
+        :param name: Herald port name. If none is passed, the name is auto-generated
+        """
+        assert expected == 0 or expected == 1, "expected must be 0 or 1"
+        self._add_herald(mode, expected, name)
         self._n_moi -= 1
         self._n_heralds += 1
-        self._add_herald(mode, expected, name)
         return self
 
     def add_port(self, m, port: APort, location: PortLocation = PortLocation.IN_OUT):
@@ -330,7 +409,7 @@ class Processor(AProcessor):
 
     def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
         """
-        Returns True if all modes in mode_range are free of ports, for a given location (input, output or both)
+        :return: True if all modes in mode_range are free of ports, for a given location (input, output or both)
         """
         if location == PortLocation.IN_OUT or location == PortLocation.INPUT:
             for m in mode_range:
@@ -363,23 +442,33 @@ class Processor(AProcessor):
         return pos
 
     @property
-    def source_distribution(self):
+    def source_distribution(self) -> Union[SVDistribution, None]:
+        r"""
+        Retrieve the computed input distribution.
+        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
+        """
         return self._inputs_map
 
     @property
     def source(self):
+        r"""
+        :return: The photonic source
+        """
         return self._source
 
     @source.setter
-    def source(self, source):
+    def source(self, source: Source):
+        r"""
+        :param source: A Source instance to use as the new source for this processor.
+        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
+        """
         self._source = source
         self._inputs_map = None
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
-        Creates a linear circuit from internal components.
-        If the processor contains at least one non-linear component, calling linear_circuit will try to convert it to
-        a working linear circuit, or raise an exception
+        Creates a linear circuit from internal components, if all internal components are unitary.
+        :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
         """
         if not self._is_unitary:
             raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
@@ -388,7 +477,7 @@ class Processor(AProcessor):
             circuit.add(component[0], component[1], merge=flatten)
         return circuit
 
-    def non_unitary_circuit(self, flatten: bool = False) -> list:
+    def non_unitary_circuit(self, flatten: bool = False) -> List:
         if self._has_td:  # Inherited from the parent processor in this case
             return self.components
 
@@ -579,7 +668,7 @@ class Processor(AProcessor):
 
     def flatten(self) -> List:
         """
-        Return a component list where recursive circuits have been flattened
+        :return: a component list where recursive circuits have been flattened
         """
         return _flatten(self)
 
