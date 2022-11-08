@@ -27,22 +27,23 @@ from typing import Dict
 
 
 class Source:
+    r"""Definition of a single photon source. The default source is a perfect source (emits exactly 1 indistinguishable
+    photon each period).
+
+    :param brightness: the brightness of the source defined as the percentage of unique photon generation
+    :param purity: the ratio of time when photon is emitted alone
+    :param purity_model: `"random"` if additional photons are distinguishable, `"indistinguishable"` otherwise
+    :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
+    :param indistinguishability_model: `"homv"` defines indistinguishability as HOM visibility, `"linear"` defines
+        indistinguishability as ratio of indistinguishable photons
+    :param context: gives a local context for source specific features, like `"discernability_tag"`
+    """
     def __init__(self, brightness: float = 1,
                  purity: float = 1,
                  purity_model: str = "random",  # Literal["random", "indistinguishable"]
                  indistinguishability: float = 1,
                  indistinguishability_model: str = "homv",  # Literal["homv", "linear"]
                  context: Dict = None) -> None:
-        r"""Definition of a source
-
-        :param brightness: the brightness of the source defined as the percentage of unique photon generation
-        :param purity: the ratio of time when photon is emitted alone
-        :param purity_model: `random` if additional photons are distinguishable, `indistinguishable` otherwise
-        :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
-        :param indistinguishability_model: `homv` defines indistinguishability as HOM visibility, `linear` defines
-            indistinguishability as ratio of indistinguishable photons
-        :param context: gives a local context for source specific features, like `discernability_tag`
-        """
         self.brightness = brightness
         self.purity = purity
         self._purity_model = purity_model
@@ -53,8 +54,8 @@ class Source:
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 1
 
-    def probability_distribution(self):
-        r"""returns SVDistribution on 1 mode associated to the source
+    def probability_distribution(self) -> SVDistribution:
+        r""":return: SVDistribution on 1 mode associated to the source
         """
         svd = SVDistribution()
         if self.brightness != 1:

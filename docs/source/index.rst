@@ -66,6 +66,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    components
    convertors
    tools
+   algorithms
    legacy
 
 .. toctree::
@@ -95,6 +96,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/polarization
    reference/circuit
    reference/utils
+   reference/source
    reference/processor
 
 .. toctree::
