@@ -82,15 +82,8 @@ When creating a RemoteProcessor, you can query its capabilities
 This means, `sim:ascella` is only able to answer to `probs` commands (i.e. compute the probability of all output states
 given an input state).
 
-Provided algorithms
--------------------
-
-Algorithms provided with Perceval are available in the Python package `perceval.algorithm`. They can be as simple as
-a `sampler` algorithm, as specific as `QRNG` (certified random number generator), which would work only on some
-certified QPUs.
-
-Algorithm interface
-^^^^^^^^^^^^^^^^^^^
+Work with algorithms
+--------------------
 
 All algorithms take either a local or a remote processor as parameter, in order to work on it. A `Processor` runs
 simulations on the local computer while a `RemoteProcessor` turns Perceval into a client of the Quandela Cloud server,
@@ -114,3 +107,66 @@ Here, the computation has not started yet, but it's been prepared in `local_job`
 >>> remote_job = sampler.sample_count(10000)
 
 Here, the computation was set-up to run on `sim:clifford` platform when `remote_job` is executed.
+
+Handle a Job object
+^^^^^^^^^^^^^^^^^^^
+
+Both `LocalJob` and `RemoteJob` share the same interface.
+
+* Execute a job synchronously
+
+>>> results = job.execute_sync(*args)  # Executes the job synchronously (blocks the execution until results are ready)
+>>> results = job(*args)  # Same as above
+
+* Execute a job asynchronously
+
+>>> job.execute_async(*args)
+
+This call is non-blocking, however results are not available right when this line has finished executing. The job object
+provides information on the progress.
+
+>>> while not job.is_complete:  # Check if the job has finished running
+...     print(job.status.progress)  # Progress is a float value between 0. and 1. representing a progress from 0 to 100%
+...     time.sleep(1)
+>>> if job.is_failed:  # Check if the job has failed
+...     print(job.status.stop_message)  # If so, print the reason
+>>> results = job.get_results()  # Retrieve the results if any
+
+Typically, the results returned by an algorithm is a Python dictionary with a 'results' key, plus additional data.
+
+* An job cancelation can be request programmatically by the user
+
+>>> job.cancel()  # Ask for job cancelation. The actual end of the execution may take some time
+
+When a job is canceled, it may contain partial results. To retrieve them, call `get_results()`.
+
+* A remote job can be resumed.
+
+>>> token_qcloud = "YOUR_API_KEY"  # A valid token is required
+>>> remote_processor = pcvl.RemoteProcessor("any:worker", token_qcloud)
+>>> job = remote_processor.resume_job("job_id")  # You can find job IDs on Quandela Cloud's website
+
+Provided algorithms
+-------------------
+
+Algorithms provided with Perceval are available in the Python package `perceval.algorithm`. They can be as simple as
+a `sampler` algorithm, as specific as `QRNG` (certified random number generator), which would work only on some
+certified QPUs.
+
+Sampler
+^^^^^^^
+
+The `Sampler` is the simplest algorithm provided, yet an important gateway to using processors.
+
+All processors do not share the same capabilities. For instance, a QPU is able to sample, but not to sample output
+probabilities given an input. The `Sampler` algorithm allows the user to call any of the three main `primitives` on any
+processor:
+
+>>> sampler = pcvl.algorithm.Sampler(processor)
+>>> samples = sampler.samples(10000)  # Sampler exposes 'samples' primitive returning a list of ordered samples
+>>> print(samples['results'])
+[|0,1,0,1,0,0>, |0,1,0,0,1,0>, |0,2,0,0,0,0>, |0,0,0,1,0,0>, |0,1,0,1,0,0>, |0,1,0,1,0,0>, |0,1,1,0,0,0>, |0,1,0,1,0,0>, |0,1,1,0,0,0>, |0,1,0,1,0,0>, ... (size=10000)]
+>>> sample_count = sampler.sample_count(10000)  # Sampler exposes 'sample_count' returning a dictionary {state: count}
+>>> prob_dist = sampler.probs()  # Sampler exposes 'probs' returning a probability distribution of all possible output states
+
+When a `primitive` is not available on a processor, a conversion occurs automatically after the computation is complete.
