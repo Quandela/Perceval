@@ -85,19 +85,19 @@ given an input state).
 Work with algorithms
 --------------------
 
-All algorithms take either a local or a remote processor as parameter, in order to work on it. A `Processor` runs
-simulations on the local computer while a `RemoteProcessor` turns Perceval into a client of the Quandela Cloud server,
+All algorithms take either a local or a remote processor as parameter, in order to work on it. A ``Processor`` runs
+simulations on the local computer while a ``RemoteProcessor`` turns Perceval into a client of the Quandela Cloud server,
 and the computation is performed on the selected platform.
 
 However, for user experience, an algorithm has the same behavior be it run locally or remotely: every call to an
-algorithm command returns a `Job` hiding this complexity.
+algorithm command returns a ``Job`` hiding this complexity.
 
 >>> local_p = pcvl.Processor("CliffordClifford2017", pcvl.BS())
 >>> local_p.with_input(pcvl.BasicState('|1,1>'))
 >>> sampler = pcvl.algorithm.Sampler(local_p)
 >>> local_job = sampler.sample_count(10000)
 
-Here, the computation has not started yet, but it's been prepared in `local_job` to run locally.
+Here, the computation has not started yet, but it's been prepared in ``local_job`` to run locally.
 
 >>> token_qcloud = 'YOUR_API_KEY'
 >>> remote_p = pcvl.RemoteProcessor("sim:clifford", token_qcloud)
@@ -106,12 +106,12 @@ Here, the computation has not started yet, but it's been prepared in `local_job`
 >>> sampler = pcvl.algorithm.Sampler(remote_p)
 >>> remote_job = sampler.sample_count(10000)
 
-Here, the computation was set-up to run on `sim:clifford` platform when `remote_job` is executed.
+Here, the computation was set-up to run on `sim:clifford` platform when ``remote_job`` is executed.
 
 Handle a Job object
 ^^^^^^^^^^^^^^^^^^^
 
-Both `LocalJob` and `RemoteJob` share the same interface.
+Both ``LocalJob`` and ``RemoteJob`` share the same interface.
 
 * Execute a job synchronously
 
@@ -138,7 +138,7 @@ Typically, the results returned by an algorithm is a Python dictionary with a 'r
 
 >>> job.cancel()  # Ask for job cancelation. The actual end of the execution may take some time
 
-When a job is canceled, it may contain partial results. To retrieve them, call `get_results()`.
+When a job is canceled, it may contain partial results. To retrieve them, call :meth:`get_results()`.
 
 * A remote job can be resumed.
 
@@ -149,17 +149,17 @@ When a job is canceled, it may contain partial results. To retrieve them, call `
 Provided algorithms
 -------------------
 
-Algorithms provided with Perceval are available in the Python package `perceval.algorithm`. They can be as simple as
+Algorithms provided with Perceval are available in the Python package ``perceval.algorithm``. They can be as simple as
 a `sampler` algorithm, as specific as `QRNG` (certified random number generator), which would work only on some
 certified QPUs.
 
 Sampler
 ^^^^^^^
 
-The `Sampler` is the simplest algorithm provided, yet an important gateway to using processors.
+The ``Sampler`` is the simplest algorithm provided, yet an important gateway to using processors.
 
 All processors do not share the same capabilities. For instance, a QPU is able to sample, but not to sample output
-probabilities given an input. The `Sampler` algorithm allows the user to call any of the three main `primitives` on any
+probabilities given an input. The ``Sampler`` algorithm allows the user to call any of the three main `primitives` on any
 processor:
 
 >>> sampler = pcvl.algorithm.Sampler(processor)
@@ -170,3 +170,11 @@ processor:
 >>> prob_dist = sampler.probs()  # Sampler exposes 'probs' returning a probability distribution of all possible output states
 
 When a `primitive` is not available on a processor, a conversion occurs automatically after the computation is complete.
+
+Analyzer
+^^^^^^^^
+
+The ``Analyzer`` algorithm aims at testing a processor, computing a probability table between input states and expected
+outputs, a performance score and an error rate.
+
+See usage in :ref:`Ralph CNOT Gate`
