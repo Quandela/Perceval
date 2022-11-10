@@ -445,10 +445,7 @@ class Processor(AProcessor):
         raise RuntimeError(f"Cannot call sample_count(). Available method are {self.available_commands}")
 
     def _sample_inputs(self, count, non_null=False) -> List[StateVector]:
-        sampled = self._inputs_map.sample(count, non_null=non_null)
-        if count == 1:
-            return [sampled]
-        return sampled
+        return self._inputs_map.sample(count, non_null=non_null)
 
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._init_command("samples")
