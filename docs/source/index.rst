@@ -73,6 +73,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :hidden:
 
    notebooks/walkthrough-cnot
+   notebooks/Tuto_LOQCathon
    notebooks/Differential equation solving
    notebooks/Shor Implementation
    notebooks/Boson Sampling
