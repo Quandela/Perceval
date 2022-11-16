@@ -145,7 +145,7 @@ class Processor(AProcessor):
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the probability distribution of the processor input
         """
-        self._input = input_state
+        input_list = [0] * self.circuit_size
         self._inputs_map = SVDistribution()
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
@@ -157,14 +157,17 @@ class Processor(AProcessor):
             if k in self.heralds:
                 if self.heralds[k] == 1:
                     distribution = self._source.probability_distribution()
+                    input_list[k] = 1
                     expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
                     distribution = self._source.probability_distribution()
+                    input_list[k] = input_state[input_idx]
                     expected_photons += 1
                 input_idx += 1
             self._inputs_map *= distribution  # combine distributions
 
+        self._input = BasicState(input_list)
         self._min_mode_post_select = expected_photons
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
