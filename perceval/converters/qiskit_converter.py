@@ -33,21 +33,14 @@ import qiskit
 min_precision_gate = 1e-4
 
 
-def _swap(perm, port_a, port_b):
-    if port_a != port_b:
-        c = perm[port_a]
-        perm[port_a] = perm[port_b]
-        perm[port_b] = c
-
-
 class QiskitConverter:
+    r"""Qiskit quantum circuit to perceval processor converter.
 
-    def __init__(self, catalog, backend_name: str = "Naive", source: Source = Source()):
-        r"""Initialize qiskit to perceval circuit converter.
-
-        :param library: a component library to use for the conversion
-        :param source: the source used as input. Default is a perfect source.
-        """
+    :param catalog: a component library to use for the conversion. It must contain CNOT gates.
+    :param backend_name: backend name used in the converted processor
+    :param source: the source used as input for the converted processor (default perfect source).
+    """
+    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
         self._source = source
         self._heralded_cnot_builder = catalog["heralded cnot"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
@@ -58,12 +51,13 @@ class QiskitConverter:
         self._backend_name = backend_name
 
     def convert(self, qc, use_postselection: bool = True) -> Processor:
-        r"""Convert a qiskit circuit into a perceval.Processor.
+        r"""Convert a qiskit quantum circuit into a `Processor`.
 
         :param qc: quantum-based qiskit circuit
-        :type qc:  qiskit.QuantumCircuit
-        :param use_postselection: do we use `heralded_cnot` or `post_processed_cnot` as the last cnot gate
-        :return: a processor
+        :type qc: qiskit.QuantumCircuit
+        :param use_postselection: when True, uses a `postprocessed CNOT` as the last gate. Otherwise, uses only
+            `heralded CNOT`
+        :return: the converted processor
         """
 
         # count the number of cnot to use during the conversion, will give us the number of herald to handle

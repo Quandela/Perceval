@@ -127,10 +127,10 @@ With Perceval, you can also display the matrix associated to your circuit.
   :width: 40%
 
 
-CircuitAnalyser
-^^^^^^^^^^^^^^^
+Analyzer algorithm
+^^^^^^^^^^^^^^^^^^
 
-With Perceval, we can use ``CircuitAnalyser`` to analyse the circuit and compute the associated output probabilities.
+With Perceval, we can use ``Analyzer`` to analyse the circuit and compute the associated output probabilities.
 
 For example, we call the Naive backend that we store in simulator_backend:
 
@@ -143,12 +143,12 @@ from the Perceval library.
 
 let's simulate the distribution obtained when we input two photons in a beam-splitter. We will use the Naive backend already stored in simulator_backend.
 
-We will simulate the behaviour of the circuit using the class `Circuit Analyser` which has three arguments:
+We will simulate the behaviour of the circuit using the `Circuit Analyser` which has three arguments:
 
-- The first one is an instance of the simulator applied to the transfer matrix of the circuit.
+- The first one is an instance of a processor containing the circuit to analyse.
 - The second one is the input state (we will use `input_state`).
 - The third one is the desired output states. To compute all possible output states, one just input `"*"`.
->>> p = Processor("Naive", comp.BS())        # create a processor running on Naive backend
+>>> p = Processor("SLOS", comp.BS())        # create a processor running on SLOS backend
 >>> ca = pcvl.algorithm.Analyzer(p,
 ...                              [input_state],
 ...                              "*")
@@ -183,3 +183,24 @@ Let's do a small example to understand:
 
 Since the seeds of the 2 cells are identical, the randomly generated numbers are also equal.
 It works the same way with notebook results.
+
+Converters
+----------
+
+The ``perceval.converters`` package contains useful tools to convert to and from Perceval objects. They act as bridges
+to other libraries.
+
+ * :ref:`Qiskit converter`
+
+Serialization
+-------------
+
+Perceval provides generic functions to serialize / deserialize data. A lot of Perceval data classes come with their
+optimized serializer (matrixes, circuits, basic states, state vectors and some other specific containers).
+
+>>> import perceval as pcvl
+>>> from perceval.serialization import serialize, deserialize
+>>> c = pcvl.Circuit(4, "My circuit") // pcvl.Unitary(pcvl.Matrix.random_unitary(4))
+...     // PS(phi=pcvl.P("phi_0")) // pcvl.Unitary(pcvl.Matrix.random_unitary(4))
+>>> text_repr = serialize(c)
+>>> c2 = deserialize(text_repr)  # c and c2 are two instances of the same circuit

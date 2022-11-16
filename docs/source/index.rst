@@ -64,7 +64,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    polarization
    backends
    components
-   convertors
    tools
    legacy
 
@@ -74,6 +73,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :hidden:
 
    notebooks/walkthrough-cnot
+   notebooks/Tuto_LOQCathon
    notebooks/Differential equation solving
    notebooks/Shor Implementation
    notebooks/Boson Sampling
@@ -95,6 +95,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/polarization
    reference/circuit
    reference/utils
+   reference/qiskit_converter
 
 .. toctree::
    :caption: Community
