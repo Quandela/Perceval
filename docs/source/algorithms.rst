@@ -12,12 +12,20 @@ A :ref:`Processor` is a composite element aiming at simulating an actual QPU, in
 * It is a composition of unitary circuits and non-unitary components
 * Input and output ports can be defined, with encoding semantics
 * Logical post-processing can be set-up through heralded modes (ancillas) and a final post-selection function
-* It contains the means of simulating the setup it describes with one of :ref:`The Backends` which are provided
+* It contains the means of simulating the setup it describes with one of the provided :ref:`Computing Backends`
 
-Create a processor from scratch
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Create a local processor
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-As an example, let's create locally a heralded CNOT gate from its circuit:
+To create a local processor, you just need to start with a :ref:`Circuit`, provide a backend name, and an optional
+:ref:`Source` with the following syntax:
+
+>>> processor = pcvl.Processor("MY_BACKEND", my_circuit, my_source)
+
+If omitted, the source is a perfect single photon source.
+
+The processor definition is then fine-tuned with ports (``add_port``) and herald (``add_herald``) definition as in the
+following heralded CNOT gate example:
 
 >>> import perceval as pcvl
 >>> from perceval.components import BS, PERM, Port, Encoding
@@ -44,7 +52,7 @@ As an example, let's create locally a heralded CNOT gate from its circuit:
 ...                .add_port(4, Port(Encoding.DUAL_RAIL, 'ctrl'))
 ...                .add_herald(6, 0)
 ...                .add_herald(7, 1)
->>> pcvl.pdisplay(processor_hcnot, recursive=False)
+>>> pcvl.pdisplay(processor_hcnot, recursive=True)
 
 .. figure:: _static/img/heralded-cnot-processor.png
     :align: center
@@ -54,8 +62,8 @@ As an example, let's create locally a heralded CNOT gate from its circuit:
 Processor composition
 ^^^^^^^^^^^^^^^^^^^^^
 
-Processors can also be composed with one another. That's for example, how :ref:`Qiskit converter` outputs a complex
-preconfigured processor from a gate-based circuit.
+Processors can be composed with another processor. That is, for example, how the :ref:`Qiskit converter` outputs a
+complex preconfigured processor from a gate-based circuit.
 
 .. figure:: _static/img/complex-processor.png
     :align: center
@@ -65,29 +73,32 @@ preconfigured processor from a gate-based circuit.
 Remote processors
 ^^^^^^^^^^^^^^^^^
 
-RemoteProcessor class is the entry point for sending a computation on a remote platform (that can be a simulator or a
-QPU). An access token on Quandela Cloud with rights to run on any existing platform is required to follow this tutorial:
-:ref:`Remote computing with Perceval`
+``RemoteProcessor`` class is the entry point for sending a computation on a remote platform (a simulator or a QPU).
+`Quandela Cloud <https://cloud.quandela.com>`_ is a publicly available cloud service with available QPUs and simulators.
+An access token on the selected service is required to connect to a remote platform (e.g an access token to Quandela
+Cloud with rights is required to follow this tutorial: :ref:`Remote computing with Perceval`).
 
-No processor is able to execute all types of command. For instance, a real QPU is natively able to sample output
-detections, but not to compute probabilities of output states versus an input state.
+A given processor is only able to support some specific types of commands related to its hardware implementation. For
+instance, a real QPU is natively able to sample output detections, but not to compute probabilities of output states
+versus an input state. Hardware constraints might also enforce the coincidence counting type, or the type of detection
+(threshold detection or photon number resolving).
 
-When creating a RemoteProcessor, you can query its capabilities
+When creating a ``RemoteProcessor``, you can query its capabilities
 
 >>> token_qcloud = 'YOUR_API_KEY'
 >>> remote_simulator = RemoteProcessor("sim:ascella", token_qcloud)
 >>> print(remote_simulator.available_commands)
 ['probs']
 
-This means, `sim:ascella` is only able to answer to `probs` commands (i.e. compute the probability of all output states
-given an input state).
+This means `sim:ascella` is only able to natively answer to `probs` commands (i.e. compute the probability of all output
+states given an input state).
 
 Work with algorithms
 --------------------
 
-All algorithms take either a local or a remote processor as parameter, in order to work on it. A ``Processor`` runs
-simulations on the local computer while a ``RemoteProcessor`` turns Perceval into a client of the Quandela Cloud server,
-and the computation is performed on the selected platform.
+All algorithms take either a local or a remote processor as parameter, in order to perform a task. A ``Processor`` runs
+simulations on the local computer while a ``RemoteProcessor`` turns Perceval into the client of a remote service like
+Quandela Cloud, and the computation is performed on the selected platform.
 
 However, for user experience, an algorithm has the same behavior be it run locally or remotely: every call to an
 algorithm command returns a ``Job`` hiding this complexity.
@@ -122,7 +133,7 @@ Both ``LocalJob`` and ``RemoteJob`` share the same interface.
 
 >>> job.execute_async(*args)
 
-This call is non-blocking, however results are not available right when this line has finished executing. The job object
+This call is non-blocking, however results are not available when this line has finished executing. The job object
 provides information on the progress.
 
 >>> while not job.is_complete:  # Check if the job has finished running
@@ -132,15 +143,16 @@ provides information on the progress.
 ...     print(job.status.stop_message)  # If so, print the reason
 >>> results = job.get_results()  # Retrieve the results if any
 
-Typically, the results returned by an algorithm is a Python dictionary with a 'results' key, plus additional data.
+Typically, the results returned by an algorithm is a Python dictionary containing a ``'results'`` key, plus additional
+data.
 
-* An job cancelation can be request programmatically by the user
+* A job cancelation can be requested programmatically by the user
 
 >>> job.cancel()  # Ask for job cancelation. The actual end of the execution may take some time
 
 When a job is canceled, it may contain partial results. To retrieve them, call :meth:`get_results()`.
 
-* A remote job can be resumed.
+* A remote job can be resumed as following:
 
 >>> token_qcloud = "YOUR_API_KEY"  # A valid token is required
 >>> remote_processor = pcvl.RemoteProcessor("any:worker", token_qcloud)
@@ -150,8 +162,8 @@ Provided algorithms
 -------------------
 
 Algorithms provided with Perceval are available in the Python package ``perceval.algorithm``. They can be as simple as
-a `sampler` algorithm, as specific as `QRNG` (certified random number generator), which would work only on some
-certified QPUs.
+a ``Sampler`` algorithm, as specific as ``QRNG`` (certified random number generator), which would work only on some
+dedicated QPUs.
 
 Sampler
 ^^^^^^^
