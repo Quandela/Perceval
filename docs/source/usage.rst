@@ -134,4 +134,4 @@ Get the full probability distribution for multiple input states:
 
 Congratulations, you have achieved this first tutorial! You can now continue with the documentation through
 :ref:`Circuits`, :ref:`Computing Backends`, :ref:`States`, :ref:`Polarization` or you will go through more advanced
-examples in the Examples section starting with :ref:`Perceval Detailed Walkthrough`.
+examples in the `Examples` section starting with :ref:`Getting started with Perceval`.
