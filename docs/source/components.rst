@@ -11,7 +11,7 @@ Overview
    * - Name
      - Object Name
      - ``PhysSkin`` display style
-     - ``SymbSkin`` display stryle
+     - ``SymbSkin`` display style
      - Unitary Matrix
    * - :ref:`Beam Splitter`
      - ``BS``
@@ -69,7 +69,7 @@ conventions are defined, with a single :math:`\theta` parameter, as follow:
 
    * - Convention
      - Unitary matrix
-     - Default value (:math:`\theta=\pi/4`)
+     - Default value (:math:`\theta=\pi/2`)
      - Comment
    * - ``Rx``
      - :math:`\left[\begin{matrix}\cos{(\theta/2)} & i \sin{(\theta/2)}\\i \sin{(\theta/2)} & \cos{(\theta/2)}\end{matrix}\right]`

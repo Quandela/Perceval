@@ -376,7 +376,7 @@ def tensorproduct(states: List[Union[StateVector, BasicState]]):
 
 
 class ProbabilityDistribution(defaultdict, ABC):
-    """Time-Independent abstract probabilistic distribution of StateVectors
+    """Time-Independent abstract probabilistic distribution of states
     """
     def __init__(self):
         super().__init__(float)
