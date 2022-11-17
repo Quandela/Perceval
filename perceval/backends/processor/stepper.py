@@ -19,7 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from collections import defaultdict
 from typing import List, Union
 import copy
 
@@ -50,7 +50,8 @@ class StepperBackend:
         self._out = None
         self._C = cu
         self._backend = BACKEND_LIST[backend_name]
-        self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
+        self._result_dict = defaultdict(lambda :{'_set': set()})
+        # self._result_dict = {c.describe(): {'_set': set()} for r, c in self._C}
         self._compiled_input = None
         self.mode_post_selection = mode_post_selection
         if isinstance(cu, ACircuit):
@@ -149,9 +150,9 @@ class StepperBackend:
 
     def allstateprob_iterator(self, input_state):
         self.compile(input_state)
-        n = max(input_state.n) if isinstance(input_state, StateVector) else input_state.n
+        n = set(state[:self.m].n for state in self._out)
         out = StateVector()
-        out.update({BasicState([i]): 1 for i in range(n + 1)})  # Give it all useful n
+        out.update({BasicState([i]): 1 for i in n})  # Give it all useful n
         for output_state in self.allstate_iterator(out):
             yield output_state, self.prob(input_state, output_state, skip_compile=True)
 
@@ -169,6 +170,9 @@ class StepperBackend:
             output_array = qc.FSArray(m, n)
             for output_idx, output_state in enumerate(output_array):
                 yield BasicState(output_state)
+
+    def all_prob(self, input_state: Union[BasicState, StateVector]) -> List[float]:
+        return [prob for state, prob in self.allstateprob_iterator(input_state)]
 
     @staticmethod
     def preferred_command() -> str:

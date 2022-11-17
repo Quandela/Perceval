@@ -84,14 +84,13 @@ class RemoteJob(Job):
         return self._job_status
 
     def execute_sync(self, *args, **kwargs) -> Any:
-        assert self._job_status.waiting, "job as already been executed"
         job = self.execute_async(*args, **kwargs)
         while not job.is_complete:
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
     def execute_async(self, *args, **kwargs):
-        assert self._job_status.waiting, "job as already been executed"
+        assert self._job_status.waiting, "job has already been executed"
         try:
             args, kwargs = self._adapt_parameters(args, kwargs)
             if self._delta_parameters:
@@ -109,7 +108,7 @@ class RemoteJob(Job):
     def cancel(self):
         if self.status == RunningStatus.RUNNING:
             self._rpc_handler.cancel_job(self._id)
-            self._job_status.stop_run(RunningStatus.CANCELED, 'Cancelation requested by user')
+            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancelation requested by user')
         else:
             raise RuntimeError('Job is not running, cannot cancel it')
 

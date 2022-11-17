@@ -52,7 +52,7 @@ class AProcessor(ABC):
         pass
 
     def set_parameters(self, params: Dict):
-        self._parameters = params
+        self._parameters.update(params)
 
     def set_parameter(self, key: str, value: Any):
         self._parameters[key] = value
