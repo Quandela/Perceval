@@ -78,6 +78,7 @@ class Processor(AProcessor):
 
         self._anon_herald_num = 0  # This is not a herald count!
         self._inputs_map: Union[SVDistribution, None] = None
+        self._input = None
         self._simulator = None
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
         self._backend_name = backend_name
@@ -151,6 +152,7 @@ class Processor(AProcessor):
         The properties of the source will alter the input state. A perfect source always delivers the expected state as
         an input. Imperfect ones won't.
         """
+        input_list = [0] * self.circuit_size
         self._inputs_map = SVDistribution()
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
@@ -162,14 +164,17 @@ class Processor(AProcessor):
             if k in self.heralds:
                 if self.heralds[k] == 1:
                     distribution = self._source.probability_distribution()
+                    input_list[k] = 1
                     expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
                     distribution = self._source.probability_distribution()
+                    input_list[k] = input_state[input_idx]
                     expected_photons += 1
                 input_idx += 1
             self._inputs_map *= distribution  # combine distributions
 
+        self._input = BasicState(input_list)
         self._min_mode_post_select = expected_photons
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
@@ -193,6 +198,7 @@ class Processor(AProcessor):
         :param svd: The input SVDistribution which won't be changed in any way by the source.
         Every state vector size has to be equal to `self.circuit_size`
         """
+        self._input = svd
         expected_photons = Inf
         for sv in svd:
             for state in sv:
@@ -612,8 +618,9 @@ class Processor(AProcessor):
                                               self._backend_name,
                                               depth,
                                               extend_m,
-                                              self._inputs_map,
-                                              self._min_mode_post_select)
+                                              self._input,
+                                              self._min_mode_post_select,
+                                              self.source)
 
             res = extended_p.probs(progress_callback=progress_callback)
 
@@ -686,11 +693,16 @@ def _flatten(composite, starting_mode=0) -> List:
     return component_list
 
 
-def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int, input_map: SVDistribution, mode_post_select: int):
-    p = Processor(backend_name, m)
-    input = input_map ** depth * SVDistribution(BasicState([0] * (m - depth * next(iter(input_map)).m)))
+def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int,
+                         input_states: Union[SVDistribution, BasicState], mode_post_select: int,
+                         source: Source):
+    p = Processor(backend_name, m, source)
+    if isinstance(input_states, SVDistribution):
+        input_states = input_states ** depth * SVDistribution(BasicState([0] * (m - depth * next(iter(input_states)).m)))
+    else:  # BasicState
+        input_states = input_states ** depth * BasicState([0] * (m - depth * input_states.m))
 
-    p.with_input(input)
+    p.with_input(input_states)
     for r, c in components:
         p.add(r, c)
     p.mode_post_selection(mode_post_select)
