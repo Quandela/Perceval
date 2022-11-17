@@ -31,13 +31,15 @@ b3 = BasicState([1, 0, 0, 0])
 
 
 def test_samples_to_sample_count():
-    sample_list = [b0, b1, b2, b3]
+    sample_list = BSSamples()
+    sample_list.extend([b0, b1, b2, b3])
     output = samples_to_sample_count(sample_list)
     assert len(output) == 4
     for s in sample_list:
         assert output[s] == 1
 
-    sample_list = [b0, b0, b1, b3, b0, b1, b3, b1, b2, b0, b0, b3, b0]
+    sample_list = BSSamples()
+    sample_list.extend([b0, b0, b1, b3, b0, b1, b3, b1, b2, b0, b0, b3, b0])
     output = samples_to_sample_count(sample_list)
     assert len(output) == 4
     assert output[b0] == 6
@@ -45,16 +47,16 @@ def test_samples_to_sample_count():
     assert output[b2] == 1
     assert output[b3] == 3
 
-    assert len(samples_to_sample_count([])) == 0
+    assert len(samples_to_sample_count(BSSamples())) == 0
 
 
 def test_sample_count_to_probs():
-    sample_count = {
+    sample_count = BSCount({
         b0: 280,
         b1: 120,
         b2: 400,
         b3: 200
-    }
+    })
     output = sample_count_to_probs(sample_count)
     assert sum(output.values()) == 1
     assert output[b0] == 0.28
@@ -76,3 +78,35 @@ def test_probs_to_sample_count():
     assert output[b0] < output[b2]
     assert output[b2] < output[b1]
     assert output[b1] < output[b3]
+
+
+def test_sample_count_to_samples():
+    sample_count = BSCount({
+        b0: 280,
+        b1: 120,
+        b2: 400,
+        b3: 200
+    })
+    samples = sample_count_to_samples(sample_count)
+    for state, count in sample_count.items():
+        assert count * 0.7 < samples.count(state) < count * 1.3
+
+
+def test_probs_to_samples():
+    bsd = BSDistribution()
+    bsd[b0] = 0.1
+    bsd[b1] = 0.25
+    bsd[b2] = 0.15
+    bsd[b3] = 0.5
+    output = probs_to_samples(bsd, 1000)
+    assert len(output) == 1000
+
+
+def test_samples_to_probs():
+    sample_list = BSSamples()
+    sample_list.extend([b0, b0, b1, b0, b1, b1, b2, b0, b0, b0])
+    output = samples_to_probs(sample_list)
+    assert len(output) == 3
+    assert output[b0] == .6
+    assert output[b1] == .3
+    assert output[b2] == .1

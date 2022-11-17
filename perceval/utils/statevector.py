@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import random
 import warnings
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 import itertools
@@ -374,7 +375,7 @@ def tensorproduct(states: List[Union[StateVector, BasicState]]):
     return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
 
-class ProbabilityDistribution(defaultdict):
+class ProbabilityDistribution(defaultdict, ABC):
     """Time-Independent abstract probabilistic distribution of states
     """
     def __init__(self):
@@ -401,6 +402,10 @@ class ProbabilityDistribution(defaultdict):
         for k, prob in self.items():
             distribution_copy[copy(k)] = prob
         return distribution_copy
+
+    @abstractmethod
+    def sample(self, count: int, non_null: bool = True):
+        pass
 
 
 class SVDistribution(ProbabilityDistribution):
@@ -464,12 +469,12 @@ class SVDistribution(ProbabilityDistribution):
         for sv in self.keys():
             self[sv] /= sum_probs
 
-    def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
+    def sample(self, count: int, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
         :param count: number of samples to draw
-        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
+        :return: a list of :math:`count` samples
         """
         self.normalize()
         d = self
@@ -479,8 +484,6 @@ class SVDistribution(ProbabilityDistribution):
         probs = list(d.values())
         rng = np.random.default_rng()
         results = rng.choice(states, count, p=np.array(probs) / sum(probs))
-        if len(results) == 1:
-            return results[0]
         return list(results)
 
 
@@ -505,15 +508,18 @@ class BSDistribution(ProbabilityDistribution):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
         return super().__getitem__(key)
 
-    def samples(self, count: int = 1) -> BSSamples:
+    def sample(self, count: int, non_null: bool = True) -> BSSamples:
         r""" Samples basic states from the `BSDistribution`
 
         :param count: number of samples to draw
-        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
+        :return: a list of :math:`count` samples
         """
         self.normalize()
-        states = list(self.keys())
-        probs = list(self.values())
+        d = self
+        if non_null:
+            d = {bs: p for bs, p in self.items() if bs.n != 0}
+        states = list(d.keys())
+        probs = list(d.values())
         rng = np.random.default_rng()
         results = rng.choice(states, count, p=probs)
         # numpy transforms iterables of ints to a nparray in rng.choice call

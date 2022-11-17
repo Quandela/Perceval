@@ -50,7 +50,7 @@ def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
 
 
 def probs_to_samples(probs: BSDistribution, count: int) -> BSSamples:
-    return probs.samples(count)
+    return probs.sample(count)
 
 
 def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:

@@ -215,12 +215,14 @@ def test_sv_parse_tuple_annot():
     #assert str(st1) == "|{P:(pi/2,0.3)}>"
 
 
-def test_sv_sample():
+def test_svd_sample():
     source = pcvl.Source(brightness=1, purity=0.9, indistinguishability=0.9)
     qpu = pcvl.Processor("Naive", comp.BS(), source)
     qpu.with_input(pcvl.BasicState([1, 0]))
     sample = qpu.source_distribution.sample(1)
-    assert isinstance(sample, pcvl.StateVector)
+    assert isinstance(sample, list)
+    assert isinstance(sample[0], pcvl.StateVector)
+    assert sample[0] in qpu.source_distribution
     sample = qpu.source_distribution.sample(2)
     assert len(sample) == 2
     assert isinstance(sample[0], pcvl.StateVector)
