@@ -22,6 +22,7 @@
 import json
 from os import path
 from typing import Union
+import json
 
 from perceval.components import Circuit
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount
@@ -75,12 +76,6 @@ def circuit_from_file(filepath: str) -> Circuit:
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
         return deserialize_circuit(f.read())
-
-
-# TODO remove ?
-# def deserialize_sample_count(count: dict) -> dict:
-#     count = {deserialize_state(state): ct for state, ct in count.items()}
-#     return count
 
 
 def deserialize_svdistribution(serial_svd):
@@ -153,14 +148,7 @@ def deserialize_file(filepath: str):
     if not path.isfile(filepath):
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'r') as f:
-        return deserialize(f.read())
-
-# TODO remove ?
-# def sample_count_from_file(filepath: str) -> dict:
-#     if not path.isfile(filepath):
-#         raise FileNotFoundError(f'No file at path {filepath}')
-#     with open(filepath, 'rb') as f:
-#         return deserialize_sample_count(f.read())
+        return deserialize(json.loads(f.read()))
 
 
 class CircuitBuilder:

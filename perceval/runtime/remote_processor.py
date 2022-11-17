@@ -25,6 +25,7 @@ from typing import Dict, List
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import Circuit
 from perceval.utils import BasicState
+from perceval.serialization import deserialize
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -59,12 +60,8 @@ class RemoteProcessor(AProcessor):
 
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
-        plugins_specs = platform_details['specs']
-        # TODO cleanup once all pcvl workers load 1 plugin only
-        if len(plugins_specs) == 1:
-            self._specs.update(platform_details['specs'][next(iter(plugins_specs.keys()))])
-        else:
-            self._specs.update(platform_details['specs'])
+        platform_specs = deserialize(platform_details['specs'])
+        self._specs.update(platform_specs)
         if platform_details['type'] != 'simulator':
             self._type = ProcessorType.PHYSICAL
 

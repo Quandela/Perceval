@@ -29,6 +29,7 @@ from perceval.components import ACircuit
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
     simple_float
 from base64 import b64encode
+import json
 
 
 @dispatch(ACircuit)
@@ -100,5 +101,5 @@ def serialize(obj) -> object:
 
 def serialize_to_file(obj, filepath: str) -> None:
     serial_repr = serialize(obj)
-    with open(filepath, mode="wb") as f:
-        f.write(serial_repr)
+    with open(filepath, mode="w") as f:
+        f.write(json.dumps(serial_repr))
