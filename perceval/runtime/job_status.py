@@ -23,6 +23,7 @@
 from time import time, sleep
 from typing import Optional
 from enum import Enum
+import warnings
 
 
 class RunningStatus(Enum):
@@ -36,13 +37,14 @@ class RunningStatus(Enum):
     UNKNOWN = 7
 
     @staticmethod
-    def from_server_response(res):
+    def from_server_response(res: str):
         if res == 'completed':
             return RunningStatus.SUCCESS
         else:
             try:
                 return RunningStatus[res.upper()]
             except KeyError:
+                warnings.warn(f"Unknown job running status: {res}")
                 return RunningStatus.UNKNOWN
 
 
