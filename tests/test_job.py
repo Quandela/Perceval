@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
+from perceval.runtime.job_status import RunningStatus
 import time
 
 
@@ -47,6 +48,7 @@ def test_run_sync_1():
     assert job.get_results() == [0, 1, 4, 9, 16]
     # should be ~ 0.5 s
     assert job.status.running_time < 1
+    assert job.status.status == RunningStatus.SUCCESS
 
 
 def test_run_async():
@@ -64,6 +66,7 @@ def test_run_async():
     assert job.status.progress == 1
     # should be at least 1.5s
     assert job.status.running_time > 1
+    assert job.status.status == RunningStatus.SUCCESS
 
 def test_run_async_fail():
     job = pcvl.LocalJob(quadratic_count_down)
@@ -74,6 +77,16 @@ def test_run_async_fail():
         time.sleep(1)
     assert not job.status.success
     assert job.status.progress == 0.8
+    assert job.status.status == RunningStatus.ERROR
     assert "AssertionError" in job.status.stop_message
     # should be ~0.05 s
     assert job.status.running_time < 0.5
+
+
+def test_run_async_cancel():
+    job = pcvl.LocalJob(quadratic_count_down)
+    assert job.execute_async(5, speed=0.3) is job
+    job.cancel()
+    while job.is_running:
+        time.sleep(0.1)
+    assert job.status.status == RunningStatus.CANCELED

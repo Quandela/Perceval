@@ -32,13 +32,18 @@ class RunningStatus(Enum):
     ERROR = 3
     CANCELED = 4
     SUSPENDED = 5
+    CANCEL_REQUESTED = 6
+    UNKNOWN = 7
 
     @staticmethod
     def from_server_response(res):
         if res == 'completed':
             return RunningStatus.SUCCESS
         else:
-            return RunningStatus[res.upper()]
+            try:
+                return RunningStatus[res.upper()]
+            except KeyError:
+                return RunningStatus.UNKNOWN
 
 
 class JobStatus:
@@ -99,7 +104,7 @@ class JobStatus:
 
     @property
     def running(self):
-        return self._status == RunningStatus.RUNNING
+        return self._status in [RunningStatus.RUNNING, RunningStatus.CANCEL_REQUESTED]
 
     @property
     def completed(self):
@@ -124,4 +129,4 @@ class JobStatus:
     @property
     def running_time(self):
         assert self.completed
-        return self._completed_time-self._running_time_start
+        return self._completed_time - self._running_time_start

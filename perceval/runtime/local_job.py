@@ -71,7 +71,10 @@ class LocalJob(Job):
             # it has already been called, calling it again to get more precise running time
             self._status.start_run()
             self._results = self._fn(*args, **kwargs)
-            self._status.stop_run()
+            if self._cancel_requested:
+                self._status.stop_run(RunningStatus.CANCELED, "User has canceled the job")
+            else:
+                self._status.stop_run()
         except Exception as e:
             warnings.warn(f"An exception was raised during job execution.\n{type(e)}: {e}")
             self._status.stop_run(RunningStatus.ERROR, str(type(e))+": "+str(e))
