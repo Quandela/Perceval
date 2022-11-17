@@ -46,6 +46,7 @@ class Analyzer(AAlgorithm):
         self._mapping = mapping
         self.performance = None
         self.error_rate = None
+        self.fidelity = None
         self._distribution = None
 
         # Enrich mapping and create self.input_state_list
@@ -141,6 +142,8 @@ class Analyzer(AAlgorithm):
         if expected is not None:
             self.error_rate /= len(self.input_states_list)
             output['error_rate'] = self.error_rate
+            self.fidelity = 1 - self.error_rate
+            output['fidelity'] = self.fidelity
         return output
 
     @property
