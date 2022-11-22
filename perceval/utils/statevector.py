@@ -401,6 +401,21 @@ class StateVector(defaultdict):
         self._normalized = True
         self._has_symbolic = False
 
+    def __eq__(self, other):
+        if not isinstance(other, StateVector):
+            return False
+        self._normalize()
+        other._normalize()
+        if len(self) != len(other):
+            return False
+        for k, v in self.items():
+            if other.get(k) != v:
+                return False
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __rmul__(self, other):
         r"""Multiply a StateVector by a numeric value, right side
         """

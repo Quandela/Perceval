@@ -27,6 +27,7 @@ import perceval as pcvl
 import perceval.components.base_components as comp
 from perceval.rendering.pdisplay import pdisplay_statevector
 
+import numpy as np
 import sympy as sp
 
 from test_circuit import strip_line_12
@@ -268,3 +269,10 @@ def test_statevector_measure_2():
            pcvl.AnnotatedBasicState("|1>") in map_measure_sv
     assert pytest.approx(1) == map_measure_sv[pcvl.AnnotatedBasicState("|1>")][0]
     assert str(map_measure_sv[pcvl.AnnotatedBasicState("|1>")][1]) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
+
+def test_statevector_equality():
+    gamma = np.pi / 2
+    st1 = pcvl.StateVector("|{P:H},{P:H}>")
+    st2 = pcvl.StateVector("|{P:H},{P:V}>")
+    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+    assert input_state == st2
