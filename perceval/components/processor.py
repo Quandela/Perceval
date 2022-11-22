@@ -19,96 +19,685 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from numpy import Inf
 
+from .abstract_component import AComponent
+from .abstract_processor import AProcessor, ProcessorType
+from .unitary_components import PERM, Unitary
+from .non_unitary_components import TD
+from .port import APort, PortLocation, Herald, LogicalState
 from .source import Source
-from .circuit import ACircuit, Circuit
-from perceval.utils import SVDistribution, StateVector, AnnotatedBasicState, global_params
-from perceval.backends import Backend
-from typing import Dict, Callable, Type, Literal
+from .linear_circuit import ACircuit, Circuit
+from ._mode_connector import ModeConnector, UnavailableModeException
+from .computation import count_TD, count_independant_TD, expand_TD
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params, Parameter
+from perceval.utils.algorithms.simplification import perm_compose
+from perceval.backends import BACKEND_LIST
+from perceval.backends.processor import StepperBackend
+
+from multipledispatch import dispatch
+from typing import Dict, Callable, Union, List
+import copy
 
 
-class Processor:
+class Processor(AProcessor):
     """
-        Generic definition of processor as sources + circuit
-    """
-    def __init__(self, sources: Dict[int, Source], circuit: ACircuit, post_select_fn: Callable = None,
-                 heralds: Dict[int, int] = {}):
-        r"""Define a processor with sources connected to the circuit and possible post_selection
+    Generic definition of processor as a source + components (both unitary and non-unitary) + ports
+    + optional post-processing logic
 
-        :param sources: a list of Source used by the processor
-        :param circuit: a circuit define the processor internal logic
-        :param post_select_fn: a post-selection function
+    :param backend_name: Name of the simulator backend to run
+    :param m_circuit: can either be:
+
+        - an int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
+        >>> p = Processor("SLOS", 5)
+
+        - a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
+        >>> p = Processor("SLOS", BS() // PS() // BS())
+
+    :param source: the Source used by the processor (defaults to perfect source)
+    """
+    def __init__(self, backend_name: str, m_circuit: Union[int, ACircuit], source: Source = Source()):
+        super().__init__()
+        self._source = source
+        self._components = []  # Any type of components, not only linear ones
+        self._in_ports = {}
+        self._out_ports = {}
+
+        self._post_select = None
+        self._n_heralds = 0
+        self._is_unitary = True
+        self._has_td = False
+        if isinstance(m_circuit, int):
+            self._n_moi = m_circuit  # number of modes of interest (MOI)
+        else:
+            self._n_moi = m_circuit.m
+            self.add(0, m_circuit)
+
+        # Mode post selection: expect at least # modes with photons in output
+        self._min_mode_post_select = None
+
+        self._anon_herald_num = 0  # This is not a herald count!
+        self._inputs_map: Union[SVDistribution, None] = None
+        self._input = None
+        self._simulator = None
+        assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
+        self._backend_name = backend_name
+
+        self._thresholded_output: bool = False
+
+    def thresholded_output(self, value: bool):
+        r"""
+        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
+        changed to 1.
+
+        :param value: enables threshold detection when True, otherwise disables it.
         """
-        self._sources = sources
-        self._circuit = circuit
-        self._post_select = post_select_fn
-        self._heralds = heralds
-        self._inputs_map = None
-        for k in range(circuit.m):
-            if k in sources:
-                distribution = sources[k].probability_distribution()
-            else:
-                distribution = SVDistribution(StateVector("|0>"))
-            # combine distributions
-            if self._inputs_map is None:
-                self._inputs_map = distribution
-            else:
-                self._inputs_map *= distribution
-        self._in_port_names = {}
-        self._out_port_names = {}
+        self._thresholded_output = value
 
-    def set_port_names(self, in_port_names: Dict[int, str], out_port_names: Dict[int, str] = {}):
-        self._in_port_names = in_port_names
-        self._out_port_names = out_port_names
+    def _setup_simulator(self, **kwargs):
+        if self._is_unitary:
+            self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
+        else:
+            if "probampli" not in BACKEND_LIST[self._backend_name].available_commands():
+                raise RuntimeError(f"{self._backend_name} backend cannot be used on a non-unitary processor")
+            self._simulator = StepperBackend(self.non_unitary_circuit(),
+                                             m=self.circuit_size,
+                                             backend_name=self._backend_name,
+                                             mode_post_selection=self._min_mode_post_select)
+
+    def type(self) -> ProcessorType:
+        return ProcessorType.SIMULATOR
 
     @property
-    def source_distribution(self):
+    def is_remote(self) -> bool:
+        return False
+
+    def mode_post_selection(self, n: int):
+        r"""
+        Sets-up a state post-selection on the number of "clicks" (number of modes with a thresholded detection)
+
+        :param n: Minimum expected "click" count
+
+        This post-selection has an impact on the output physical performance
+        """
+        super().mode_post_selection(n)
+        self._min_mode_post_select = n
+
+    @property
+    def m(self) -> int:
+        r"""
+        :return: Number of modes of interest (MOI) defined in the processor
+        """
+        return self._n_moi
+
+    @property
+    def circuit_size(self) -> int:
+        r"""
+        :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
+        """
+        return self._n_moi + self._n_heralds
+
+    @property
+    def post_select_fn(self):
+        return self._post_select
+
+    @dispatch(BasicState)
+    def with_input(self, input_state: BasicState) -> None:
+        """
+        Simulates plugging the photonic source on certain modes and turning it on.
+        Computes the input probability distribution
+
+        :param input_state: Expected input BasicState of length `self.m` (heralded modes are managed
+        automatically)
+        The properties of the source will alter the input state. A perfect source always delivers the expected state as
+        an input. Imperfect ones won't.
+        """
+        input_list = [0] * self.circuit_size
+        self._inputs_map = SVDistribution()
+        expected_input_length = self.m
+        assert len(input_state) == expected_input_length, \
+            f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
+        input_idx = 0
+        expected_photons = 0
+        for k in range(self.circuit_size):
+            distribution = SVDistribution(StateVector("|0>"))
+            if k in self.heralds:
+                if self.heralds[k] == 1:
+                    distribution = self._source.probability_distribution()
+                    input_list[k] = 1
+                    expected_photons += 1
+            else:
+                if input_state[input_idx] > 0:
+                    distribution = self._source.probability_distribution()
+                    input_list[k] = input_state[input_idx]
+                    expected_photons += 1
+                input_idx += 1
+            self._inputs_map *= distribution  # combine distributions
+
+        self._input = BasicState(input_list)
+        self._min_mode_post_select = expected_photons
+        if 'mode_post_select' in self._parameters:
+            self._min_mode_post_select = self._parameters['mode_post_select']
+
+    @dispatch(LogicalState)
+    def with_input(self, input_state: LogicalState) -> None:
+        r"""
+        Set up the processor input with a LogicalState. Computes the input probability distribution.
+
+        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
+        encoding.
+        """
+        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        self.with_input(input_state)
+
+    @dispatch(SVDistribution)
+    def with_input(self, svd: SVDistribution):
+        r"""
+        Processor input can be set 100% manually via a state vector distribution, bypassing the source.
+
+        :param svd: The input SVDistribution which won't be changed in any way by the source.
+        Every state vector size has to be equal to `self.circuit_size`
+        """
+        self._input = svd
+        expected_photons = Inf
+        for sv in svd:
+            for state in sv:
+                expected_photons = min(expected_photons, state.n)
+                if state.m != self.circuit_size:
+                    raise ValueError(
+                        f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
+        self._inputs_map = svd
+        self._min_mode_post_select = expected_photons
+        if 'mode_post_select' in self._parameters:
+            self._min_mode_post_select = self._parameters['mode_post_select']
+
+    @property
+    def components(self):
+        return self._components
+
+    def copy(self, subs: Union[dict, list] = None):
+        new_proc = copy.deepcopy(self)
+        new_proc._components = []
+        for r, c in self._components:
+            new_proc._components.append((r, c.copy(subs=subs)))
+        return new_proc
+
+    def set_postprocess(self, postprocess_func):
+        r"""
+        Set or remove a logical post-selection function. Along with the heralded modes, this function has an impact
+        on the logical performance of the processor
+
+        :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
+            If None is passed as parameter, removes the previously defined post-selection function.
+        """
+        self._post_select = postprocess_func
+
+    def add(self, mode_mapping, component, keep_port=True):
+        """
+        Add a component to the processor (unitary or non-unitary).
+
+        :param mode_mapping: Describe how the new component is connected to the existing processor. Can be:
+
+         * an int: composition uses consecutive modes starting from `mode_mapping`
+         * a list or a dict: describes the full mapping of length the input mode count of `component`
+
+        :param component: The component to append to the processor. Can be:
+
+         * A unitary circuit
+         * A non-unitary component
+         * A processor
+
+        :param keep_port: if True, saves `self`'s output ports on modes impacted by the new component, otherwise removes them.
+
+        Adding a component on non-ordered, non-consecutive modes computes the right permutation (PERM component) which
+        fits into the existing processor and the new component.
+
+        Example:
+
+        >>> p = Processor("SLOS", 6)
+        >>> p.add(0, BS())  # Modes (0, 1) connected to (0, 1) of the added beam splitter
+        >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
+        >>> p.add({2:0, 5:1}, BS())  # Same as above
+        """
+        if self._post_select is not None:
+            raise RuntimeError("Cannot add any component to a processor with post-process function")
+
+        self._simulator = None  # Invalidate simulator which will have to be recreated later on
+        connector = ModeConnector(self, component, mode_mapping)
+        if isinstance(component, Processor):
+            self._compose_processor(connector, component, keep_port)
+        elif isinstance(component, AComponent):
+            self._add_component(connector.resolve(), component)
+        else:
+            raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
+        return self
+
+    @property
+    def out_port_names(self):
+        r"""
+        :return: A list of the output port names. Names are repeated for ports connected to more than one mode
+        """
+        result = [''] * self.circuit_size
+        for port, m_range in self._out_ports.items():
+            for m in m_range:
+                result[m] = port.name
+        return result
+
+    @property
+    def in_port_names(self):
+        r"""
+        :return: A list of the input port names. Names are repeated for ports connected to more than one mode
+        """
+        result = [''] * self.circuit_size
+        for port, m_range in self._in_ports.items():
+            for m in m_range:
+                result[m] = port.name
+        return result
+
+    def _compose_processor(self, connector, processor, keep_port: bool):
+        self._is_unitary = self._is_unitary and processor._is_unitary
+        self._has_td = self._has_td or processor._has_td
+        mode_mapping = connector.resolve()
+        if not keep_port:
+            # Remove output ports used to connect the new processor
+            for i in mode_mapping:
+                port = self.get_output_port(i)
+                if port is not None:
+                    del self._out_ports[port]
+
+        # Compute new herald positions
+        n_new_heralds = connector.add_heralded_modes(mode_mapping)
+        self._n_heralds += n_new_heralds
+
+        # Add PERM, component, PERM^-1
+        perm_modes, perm_component = connector.generate_permutation(mode_mapping)
+        if perm_component is not None:
+            if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
+                # Simplify composition by merging two consecutive PERM components
+                l_perm_r = self._components[-1][0]
+                l_perm_vect = self._components[-1][1].perm_vector
+                new_range, new_perm_vect = perm_compose(l_perm_r, l_perm_vect, perm_modes, perm_component.perm_vector)
+                self._components[-1] = (new_range, PERM(new_perm_vect))
+            else:
+                self._components.append((perm_modes, perm_component))
+        for pos, c in processor.components:
+            pos = [x + min(mode_mapping) for x in pos]
+            self._components.append((pos, c))
+        if perm_component is not None:
+            perm_inv = perm_component.copy()
+            perm_inv.inverse(h=True)
+            self._components.append((perm_modes, perm_inv))
+
+        # Retrieve ports from the other processor
+        for port, port_range in processor._out_ports.items():
+            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            if isinstance(port, Herald):
+                self._add_herald(port_mode, port.expected, port.user_given_name)
+            else:
+                if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                    self.add_port(port_mode, port, PortLocation.OUTPUT)
+
+        # Retrieve post process function from the other processor
+        if processor._post_select is not None:
+            if perm_component is None:
+                self._post_select = processor._post_select
+            else:
+                perm = perm_component.perm_vector
+                c_first = perm_modes[0]
+                self._post_select = lambda s: processor._post_select([s[perm.index(ii) + c_first]
+                                                                      for ii in range(processor.circuit_size)])
+
+    def _add_component(self, mode_mapping, component):
+        perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
+        if perm_component is not None:
+            self._components.append((perm_modes, perm_component))
+
+        sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
+        self._components.append((sorted_modes, component))
+        self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
+        self._has_td = self._has_td or isinstance(component, TD)
+
+    def _add_herald(self, mode, expected, name=None):
+        """
+        This internal implementation neither increases the herald count nor decreases the mode of interest count
+        """
+        if not self.are_modes_free([mode], PortLocation.IN_OUT):
+            raise UnavailableModeException(mode, "Another port overlaps")
+        if name is None:
+            name = self._anon_herald_num
+            self._anon_herald_num += 1
+        self._in_ports[Herald(expected, name)] = [mode]
+        self._out_ports[Herald(expected, name)] = [mode]
+
+    def add_herald(self, mode: int, expected: int, name: str = None):
+        r"""
+        Add a heralded mode
+
+        :param mode: Mode index of the herald
+        :param expected: number of expected photon as input AND output on the given mode (must be 0 or 1)
+        :param name: Herald port name. If none is passed, the name is auto-generated
+        """
+        assert expected == 0 or expected == 1, "expected must be 0 or 1"
+        self._add_herald(mode, expected, name)
+        self._n_moi -= 1
+        self._n_heralds += 1
+        return self
+
+    def add_port(self, m, port: APort, location: PortLocation = PortLocation.IN_OUT):
+        port_range = list(range(m, m + port.m))
+        assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
+
+        if location == PortLocation.IN_OUT or location == PortLocation.INPUT:
+            if not self.are_modes_free(port_range, PortLocation.INPUT):
+                raise UnavailableModeException(port_range, "Another port overlaps")
+            self._in_ports[port] = port_range
+
+        if location == PortLocation.IN_OUT or location == PortLocation.OUTPUT:
+            if not self.are_modes_free(port_range, PortLocation.OUTPUT):
+                raise UnavailableModeException(port_range, "Another port overlaps")
+            self._out_ports[port] = port_range
+        return self
+
+    @property
+    def _closed_photonic_modes(self):
+        output = [False] * self.circuit_size
+        for port, m_range in self._out_ports.items():
+            if port.is_output_photonic_mode_closed():
+                for i in m_range:
+                    output[i] = True
+        return output
+
+    def is_mode_connectible(self, mode: int) -> bool:
+        if mode < 0:
+            return False
+        if mode >= self.circuit_size:
+            return False
+        return not self._closed_photonic_modes[mode]
+
+    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
+        """
+        :return: True if all modes in mode_range are free of ports, for a given location (input, output or both)
+        """
+        if location == PortLocation.IN_OUT or location == PortLocation.INPUT:
+            for m in mode_range:
+                if self.get_input_port(m) is not None:
+                    return False
+        if location == PortLocation.IN_OUT or location == PortLocation.OUTPUT:
+            for m in mode_range:
+                if self.get_output_port(m) is not None:
+                    return False
+        return True
+
+    def get_input_port(self, mode):
+        for port, mode_range in self._in_ports.items():
+            if mode in mode_range:
+                return port
+        return None
+
+    def get_output_port(self, mode):
+        for port, mode_range in self._out_ports.items():
+            if mode in mode_range:
+                return port
+        return None
+
+    @property
+    def heralds(self):
+        pos = {}
+        for port, port_range in self._out_ports.items():
+            if isinstance(port, Herald):
+                pos[port_range[0]] = port.expected
+        return pos
+
+    @property
+    def source_distribution(self) -> Union[SVDistribution, None]:
+        r"""
+        Retrieve the computed input distribution.
+        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
+        """
         return self._inputs_map
 
     @property
-    def circuit(self):
-        return self._circuit
+    def source(self):
+        r"""
+        :return: The photonic source
+        """
+        return self._source
 
-    @property
-    def sources(self):
-        return self._sources
+    @source.setter
+    def source(self, source: Source):
+        r"""
+        :param source: A Source instance to use as the new source for this processor.
+        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
+        """
+        self._source = source
+        self._inputs_map = None
 
-    def filter_herald(self, s: AnnotatedBasicState, keep_herald: bool) -> StateVector:
-        if not self._heralds or keep_herald:
-            return StateVector(s)
+    def linear_circuit(self, flatten: bool = False) -> Circuit:
+        """
+        Creates a linear circuit from internal components, if all internal components are unitary.
+        :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
+        """
+        if not self._is_unitary:
+            raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
+        circuit = Circuit(self.circuit_size)
+        for component in self._components:
+            circuit.add(component[0], component[1], merge=flatten)
+        return circuit
+
+    def non_unitary_circuit(self, flatten: bool = False) -> List:
+        if self._has_td:  # Inherited from the parent processor in this case
+            return self.components
+
+        comp = _flatten(self)
+        if flatten:
+            return comp
+
+        # Compute the unitaries between the non-unitary components
+        new_comp = []
+        unitary_circuit = Circuit(self.circuit_size)
+        min_r = self.circuit_size
+        max_r = 0
+        for r, c in comp:
+            if isinstance(c, ACircuit):
+                unitary_circuit.add(r, c)
+                min_r = min(min_r, r[0])
+                max_r = max(max_r, r[-1] + 1)
+            else:
+                if unitary_circuit.ncomponents():
+                    new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
+                                    Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
+                    unitary_circuit = Circuit(self.circuit_size)
+                    min_r = self.circuit_size
+                    max_r = 0
+                new_comp.append((r, c))
+
+        if unitary_circuit.ncomponents():
+            new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
+                             Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
+
+        return new_comp
+
+    def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
+        if (not self.heralds or keep_herald) and not self._thresholded_output:
+            return s
         new_state = []
         for idx, k in enumerate(s):
-            if idx not in self._heralds:
-                new_state.append(k)
-        return StateVector(new_state)
+            if idx in self.heralds:
+                continue
+            if k > 0 and self._thresholded_output:
+                k = 1
+            new_state.append(k)
+        return BasicState(new_state)
 
-    def run(self, simulator_backend: Type[Backend], keep_herald: bool=False):
-        """
-            calculate the output probabilities - returns performance, and output_maps
-        """
-        # first generate all possible outputs
-        sim = simulator_backend(self._circuit.compute_unitary(use_symbolic=False))
-        # now generate all possible outputs
-        outputs = SVDistribution()
-        for input_state, input_prob in self._inputs_map.items():
-            for (output_state, p) in sim.allstateprob_iterator(input_state):
-                if p > global_params['min_p'] and self._state_selected(output_state):
-                    outputs[self.filter_herald(output_state, keep_herald)] += p*input_prob
-        all_p = sum(v for v in outputs.values())
+    def _init_command(self, command_name: str):
+        assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
+        if self._backend_name == "CliffordClifford2017" and self._has_td:
+            raise NotImplementedError(
+                "Time delay are not implemented within CliffordClifford2017 backed. Please use another one.")
+        if self._simulator is None and not self._has_td:
+            self._setup_simulator()
+
+    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
+        raise RuntimeError(f"Cannot call sample_count(). Available method are {self.available_commands}")
+
+    def samples(self, count: int, progress_callback=None) -> Dict:
+        self._init_command("samples")
+        output = BSSamples()
+        not_selected_physical = 0
+        not_selected = 0
+        selected_inputs = self._inputs_map.sample(count)
+        idx = 0
+        while len(output) < count:
+            selected_input = selected_inputs[idx]
+            idx += 1
+            if idx == len(selected_inputs):
+                idx = 0
+                selected_inputs = self._inputs_map.sample(count)
+            if not self._state_preselected_physical(selected_input):
+                not_selected_physical += 1
+                continue
+            sampled_state = self._simulator.sample(selected_input)
+            if not self._state_selected_physical(sampled_state):
+                not_selected_physical += 1
+                continue
+            if self._state_selected(sampled_state):
+                output.append(self.postprocess_output(sampled_state))
+            else:
+                not_selected += 1
+            if progress_callback:
+                exec_request = progress_callback(len(output)/count, "sampling")
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    break
+
+        physical_perf = (count + not_selected) / (count + not_selected + not_selected_physical)
+        logical_perf = count / (count + not_selected)
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+
+    def probs(self, progress_callback: Callable = None) -> Dict:
+        self._init_command("probs")
+        output = BSDistribution()
+        p_logic_discard = 0
+        if not self._has_td:
+            input_length = len(self._inputs_map)
+            physical_perf = 1
+
+            for idx, (input_state, input_prob) in enumerate(self._inputs_map.items()):
+                if not self._state_preselected_physical(input_state):
+                    physical_perf -= input_prob
+                else:
+                    for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
+                        if p < global_params['min_p']:
+                            continue
+                        output_prob = p * input_prob
+                        if not self._state_selected_physical(output_state):
+                            physical_perf -= output_prob
+                            continue
+                        if self._state_selected(output_state):
+                            output[self.postprocess_output(output_state)] += output_prob
+                        else:
+                            p_logic_discard += output_prob
+                if progress_callback:
+                    exec_request = progress_callback(idx/input_length, 'probs')
+                    if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                        raise RuntimeError("Cancel requested")
+
+        else:
+            # Create a bigger processor with no heralds to represent the time delays
+            p_comp = _flatten(self)
+            TD_number = count_TD(p_comp)
+            depth = count_independant_TD(p_comp, self.circuit_size) + 1
+            p_comp, extend_m = expand_TD(p_comp, depth, self.circuit_size, TD_number, True)
+            # p_comp = simplify(p_comp, extend_m)
+            extended_p = _expand_TD_processor(p_comp,
+                                              self._backend_name,
+                                              depth,
+                                              extend_m,
+                                              self._input,
+                                              self._min_mode_post_select,
+                                              self.source)
+
+            res = extended_p.probs(progress_callback=progress_callback)
+
+            # Now reduce the states.
+            interest_m = [(depth - 1) * self.circuit_size, depth * self.circuit_size]
+            extended_out = res["results"]
+
+            second_perf = 1
+            for out_state, output_prob in extended_out.items():
+                reduced_out_state = out_state[interest_m[0]: interest_m[1]]
+                if not self._state_selected_physical(reduced_out_state):
+                    second_perf -= output_prob
+                    continue
+                if self._state_selected(reduced_out_state):
+                    output[self.postprocess_output(reduced_out_state)] += output_prob
+                else:
+                    p_logic_discard += output_prob
+            physical_perf = second_perf * res["physical_perf"]
+
+        if physical_perf < global_params['min_p']:
+            physical_perf = 0
+        all_p = sum(v for v in output.values())
         if all_p == 0:
-            return 0, outputs
-        # normalize probabilities
-        for k in outputs.keys():
-            outputs[k] /= all_p
-        return all_p, outputs
+            return {'results': output, 'physical_perf': physical_perf}
+        logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
+        output.normalize()
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def _state_selected(self, state: AnnotatedBasicState) -> bool:
+    def _state_preselected_physical(self, input_state: StateVector):
+        return max(input_state.n) >= self._min_mode_post_select
+
+    def _state_selected_physical(self, output_state: BasicState) -> bool:
+        modes_with_photons = len([n for n in output_state if n > 0])
+        return modes_with_photons >= self._min_mode_post_select
+
+    def _state_selected(self, state: BasicState) -> bool:
         """
         Computes if the state is selected given heralds and post selection function
         """
-        for m, v in self._heralds.items():
+        for m, v in self.heralds.items():
             if state[m] != v:
                 return False
         if self._post_select is not None:
             return self._post_select(state)
         return True
+
+    @property
+    def available_commands(self) -> List[str]:
+        return [BACKEND_LIST[self._backend_name].preferred_command()=="samples" and "samples" or "probs"]
+
+    def get_circuit_parameters(self) -> Dict[str, Parameter]:
+        return {p.name: p for _, c in self._components for p in c.get_parameters()}
+
+    def flatten(self) -> List:
+        """
+        :return: a component list where recursive circuits have been flattened
+        """
+        return _flatten(self)
+
+
+def _flatten(composite, starting_mode=0) -> List:
+    component_list = []
+    for m_range, comp in composite._components:
+        if isinstance(comp, Circuit):
+            sub_list = _flatten(comp, starting_mode=m_range[0])
+            component_list += sub_list
+        else:
+            m_range = [m + starting_mode for m in m_range]
+            component_list.append((m_range, comp))
+    return component_list
+
+
+def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int,
+                         input_states: Union[SVDistribution, BasicState], mode_post_select: int,
+                         source: Source):
+    p = Processor(backend_name, m, source)
+    if isinstance(input_states, SVDistribution):
+        input_states = input_states ** depth * SVDistribution(BasicState([0] * (m - depth * next(iter(input_states)).m)))
+    else:  # BasicState
+        input_states = input_states ** depth * BasicState([0] * (m - depth * input_states.m))
+
+    p.with_input(input_states)
+    for r, c in components:
+        p.add(r, c)
+    p.mode_post_selection(mode_post_select)
+    return p

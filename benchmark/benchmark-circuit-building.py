@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+from perceval.components.unitary_components import BS, PS, PERM
 import random
 import time
 
@@ -38,43 +38,43 @@ for _ in range(1000):
     # VQE is a 6 optical mode circuit
     VQE = pcvl.Circuit(6)
 
-    VQE.add((1,2), comp.GenericBS(R=1/2))
-    VQE.add((3,4), comp.GenericBS(R=1/2))
+    VQE.add((1, 2), BS.H())
+    VQE.add((3, 4), BS.H())
     List_Parameters.append(pcvl.Parameter("φ1"))
-    VQE.add((2,), comp.PS(phi=List_Parameters[-1]))
+    VQE.add((2,), PS(phi=List_Parameters[-1]))
     List_Parameters.append(pcvl.Parameter("φ3"))
-    VQE.add((4,), comp.PS(phi=List_Parameters[-1]))
-    VQE.add((1,2), comp.GenericBS(R=1/2))
-    VQE.add((3,4), comp.GenericBS(R=1/2))
+    VQE.add((4,), PS(phi=List_Parameters[-1]))
+    VQE.add((1, 2), BS.H())
+    VQE.add((3, 4), BS.H())
     List_Parameters.append(pcvl.Parameter("φ2"))
-    VQE.add((2,), comp.PS(phi=List_Parameters[-1]))
+    VQE.add((2,), PS(phi=List_Parameters[-1]))
     List_Parameters.append(pcvl.Parameter("φ4"))
-    VQE.add((4,), comp.PS(phi=List_Parameters[-1]))
+    VQE.add((4,), PS(phi=List_Parameters[-1]))
 
 
     # CNOT ( Post-selected with a success probability of 1/9)
-    VQE.add([0,1,2,3,4,5], comp.PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the purpose of drawing a nice circuit
-    VQE.add((3,4), comp.GenericBS(R=1/2))
-    VQE.add([0,1,2,3,4,5], comp.PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
-    VQE.add((0,1), comp.GenericBS(R=1/3))
-    VQE.add((2,3), comp.GenericBS(R=1/3))
-    VQE.add((4,5), comp.GenericBS(R=1/3))
-    VQE.add([0,1,2,3,4,5], comp.PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
-    VQE.add((3,4), comp.GenericBS(R=1/2))
-    VQE.add([0,1,2,3,4,5], comp.PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
+    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the purpose of drawing a nice circuit
+    VQE.add((3, 4), BS.H())
+    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
+    VQE.add((0, 1), BS.H(theta=BS.r_to_theta(1/3)))
+    VQE.add((2, 3), BS.H(theta=BS.r_to_theta(1/3)))
+    VQE.add((4, 5), BS.H(theta=BS.r_to_theta(1/3)))
+    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
+    VQE.add((3, 4), BS.H())
+    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
 
     List_Parameters.append(pcvl.Parameter("φ5"))
-    VQE.add((2,), comp.PS(phi=List_Parameters[-1]))
+    VQE.add((2,), PS(phi=List_Parameters[-1]))
     List_Parameters.append(pcvl.Parameter("φ7"))
-    VQE.add((4,), comp.PS(phi=List_Parameters[-1]))
-    VQE.add((1,2), comp.GenericBS(R=1/2))
-    VQE.add((3,4), comp.GenericBS(R=1/2))
+    VQE.add((4,), PS(phi=List_Parameters[-1]))
+    VQE.add((1, 2), BS.H())
+    VQE.add((3, 4), BS.H())
     List_Parameters.append(pcvl.Parameter("φ6"))
-    VQE.add((2,), comp.PS(phi=List_Parameters[-1]))
+    VQE.add((2,), PS(phi=List_Parameters[-1]))
     List_Parameters.append(pcvl.Parameter("φ8"))
-    VQE.add((4,), comp.PS(phi=List_Parameters[-1]))
-    VQE.add((1,2), comp.GenericBS(R=1/2))
-    VQE.add((3,4), comp.GenericBS(R=1/2))
+    VQE.add((4,), PS(phi=List_Parameters[-1]))
+    VQE.add((1, 2), BS.H())
+    VQE.add((3, 4), BS.H())
 
     t_build += time.time()-start
     start = time.time()

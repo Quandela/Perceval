@@ -1,6 +1,15 @@
 numpy
-quandelibc
+quandelibc~=0.6.0
 tabulate
 pytest
 setuptools
 multipledispatch
+
+sympy
+matplotlib
+scipy
+tqdm
+Deprecated
+requests
+drawSvg
+protobuf>=4.21.2

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="500.0" height="187.5" viewBox="-28.0 0 400 150">
+<defs>
+</defs>
+<path d="M10,25 L25,25" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<path d="M10,75 L25,75" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<path d="M37.9442,25.0002 C51.653800000000004,25.0002,51.5923,50.0,65.3019,50.0 M65.3038,50.0 C51.59219999999999,50.0,51.6538,74.9998,37.94409999999999,74.9998 M65.3038,49.99999999999999 L87.1884,49.99999999999999 M87.1884,49.99999999999999 C100.9,49.99999999999999,100.83840000000001,25.000199999999992,114.5481,25.000199999999992 M87.1884,49.99999999999999 C100.9,49.99999999999999,100.83840000000001,74.9998,114.5481,74.9998 M25.0,24.999999999999993 L38.0,24.999999999999993 M38.0019,74.9998 L25.0,74.9998 M112.6453,74.9998 L125.0,74.9998 M112.1944,24.999799999999993 L125.0,24.999799999999993" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<text x="75" y="38" font-size="7" text-anchor="middle" dy="0em"></text>
+<path d="M97,53 L107,53 L107,63 L97,63 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="102" y="60" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M125,75 L145,75 M155,75 L175,75" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<path d="M140,85 L160,85 L160,65 L140,65 L140,85" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="lightgray" />
+<text x="150" y="94" font-size="7" text-anchor="middle" dy="0em">Φ=phi</text>
+<path d="M125,25 L175,25" stroke="black" stroke-width="1" fill="none" />
+<path d="M187.9442,25.0002 C201.6538,25.0002,201.5923,50.0,215.3019,50.0 M215.3038,50.0 C201.5922,50.0,201.6538,74.9998,187.9441,74.9998 M215.3038,49.99999999999999 L237.1884,49.99999999999999 M237.1884,49.99999999999999 C250.9,49.99999999999999,250.8384,25.000199999999992,264.5481,25.000199999999992 M237.18839999999997,49.99999999999999 C250.89999999999998,49.99999999999999,250.83839999999998,74.9998,264.5481,74.9998 M174.99999999999997,24.999999999999993 L187.99999999999997,24.999999999999993 M188.00189999999998,74.9998 L174.99999999999997,74.9998 M262.64529999999996,74.9998 L274.99999999999994,74.9998 M262.1944,24.999799999999993 L275.0,24.999799999999993" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<text x="225" y="38" font-size="7" text-anchor="middle" dy="0em"></text>
+<path d="M247,53 L257,53 L257,63 L247,63 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="252" y="60" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M275,25 L290,25" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<path d="M275,75 L290,75" stroke-width="1" stroke="black" stroke-linejoin="miter" fill="none" />
+<text x="300" y="28" font-size="6" text-anchor="end" dy="0em">0</text>
+<text x="300" y="78" font-size="6" text-anchor="end" dy="0em">1</text>
+<text x="0" y="28" font-size="6" text-anchor="start" dy="0em">0</text>
+<text x="0" y="78" font-size="6" text-anchor="start" dy="0em">1</text>
+</svg>

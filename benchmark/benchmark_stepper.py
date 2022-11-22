@@ -23,13 +23,14 @@
 import random
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+from perceval.backends.processor import StepperBackend
+from perceval.components.unitary_components import BS, PS
 
 # definition of the circuit
 C = pcvl.Circuit(2)
-C.add((0, 1), comp.SimpleBS())
-C.add(1, comp.PS(1))
-C.add((0, 1), comp.SimpleBS())
+C.add((0, 1), BS())
+C.add(1, PS(1))
+C.add((0, 1), BS())
 
 N = 100
 
@@ -48,7 +49,7 @@ def get_sample_from_statevector(sv):
 
 def run_stepper():
     samples = []
-    stepper = pcvl.BackendFactory().get_backend("Stepper")(C)
+    stepper = StepperBackend(C)
     for i in range(N):
         sv = pcvl.StateVector(pcvl.BasicState([1, 0]))
         for r, c in C:

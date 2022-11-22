@@ -24,7 +24,8 @@ from multipledispatch import dispatch
 
 from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
+import perceval.components.non_unitary_components as nu
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter
 
@@ -40,26 +41,22 @@ class ComponentSerializer:
         self._serialize(c)
         return self._pb
 
-    @dispatch(comp.GenericBS)
-    def _serialize(self, bs: comp.GenericBS):
-        pb_bs = pb.BeamSplitterComplex()
-        if 'theta' in bs.params:
-            pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
-        if 'R' in bs.params:
-            pb_bs.R.CopyFrom(serialize_parameter(bs._R))
-        pb_bs.phi_a.CopyFrom(serialize_parameter(bs._phi_a))
-        pb_bs.phi_b.CopyFrom(serialize_parameter(bs._phi_b))
-        pb_bs.phi_d.CopyFrom(serialize_parameter(bs._phi_d))
-        self._pb.beam_splitter_complex.CopyFrom(pb_bs)
+    def _convert_bs_convention(self, convention):
+        if convention == comp.BSConvention.H:
+            return pb.BeamSplitter.H
+        elif convention == comp.BSConvention.Ry:
+            return pb.BeamSplitter.Ry
+        return pb.BeamSplitter.Rx
 
-    @dispatch(comp.SimpleBS)
-    def _serialize(self, bs: comp.SimpleBS):
+    @dispatch(comp.BS)
+    def _serialize(self, bs: comp.BS):
         pb_bs = pb.BeamSplitter()
-        if 'theta' in bs.params:
-            pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
-        if 'R' in bs.params:
-            pb_bs.R.CopyFrom(serialize_parameter(bs._R))
-        pb_bs.phi.CopyFrom(serialize_parameter(bs._phi))
+        pb_bs.convention = self._convert_bs_convention(bs.convention)
+        pb_bs.theta.CopyFrom(serialize_parameter(bs._theta))
+        pb_bs.phi_tl.CopyFrom(serialize_parameter(bs._phi_tl))
+        pb_bs.phi_bl.CopyFrom(serialize_parameter(bs._phi_bl))
+        pb_bs.phi_tr.CopyFrom(serialize_parameter(bs._phi_tr))
+        pb_bs.phi_br.CopyFrom(serialize_parameter(bs._phi_br))
         self._pb.beam_splitter.CopyFrom(pb_bs)
 
     @dispatch(comp.PS)
@@ -79,7 +76,7 @@ class ComponentSerializer:
         pb_umat = serialize_matrix(unitary.U)
         pb_unitary = pb.Unitary()
         pb_unitary.mat.CopyFrom(pb_umat)
-        if unitary.name != comp.Unitary._name:
+        if unitary.name != comp.Unitary.DEFAULT_NAME:
             pb_unitary.name = unitary.name
         pb_unitary.use_polarization = unitary.requires_polarization
         self._pb.unitary.CopyFrom(pb_unitary)
@@ -108,8 +105,8 @@ class ComponentSerializer:
         pb_wp.xsi.CopyFrom(serialize_parameter(wp._xsi))
         self._pb.wave_plate.CopyFrom(pb_wp)
 
-    @dispatch(comp.TD)
-    def _serialize(self, td: comp.TD):
+    @dispatch(nu.TD)
+    def _serialize(self, td: nu.TD):
         pb_td = pb.TimeDelay()
         pb_td.dt.CopyFrom(serialize_parameter(td._dt))
         self._pb.time_delay.CopyFrom(pb_td)
@@ -131,7 +128,7 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
         circuit = Circuit(circuit.m).add(0, circuit)
 
     pb_circuit = pb.Circuit()
-    if circuit.name != Circuit._name:
+    if circuit.name != Circuit.DEFAULT_NAME:
         pb_circuit.name = circuit.name
     pb_circuit.n_mode = circuit.m
     comp_serializer = ComponentSerializer()

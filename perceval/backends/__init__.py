@@ -19,25 +19,32 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import warnings
 
-
-from deprecated import deprecated
-from .platforms import LocalPlatform, RemotePlatform
 from .template import Backend
-from .remote import RemoteBackend, RemoteCredentials, Job
+from .cliffords2017 import CliffordClifford2017Backend
+from .naive import NaiveBackend
+from .slos import SLOSBackend
+from .mps import MPSBackend
 
 
-@deprecated(reason='Please use get_platform("local") instead')
-class BackendFactory(LocalPlatform):
-    pass
+BACKEND_LIST = {
+    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
+    MPSBackend.name: MPSBackend,
+    NaiveBackend.name: NaiveBackend,
+    SLOSBackend.name: SLOSBackend,
+}
 
 
-def get_platform(name: str, credentials: RemoteCredentials = None):
-    if isinstance(name, RemoteCredentials):
-        credentials = name
-        name = '1bf73239-192e-4b23-809f-007b323826f5'  # 'simulator'
+class BackendFactory:
+    @staticmethod
+    def get_backend(backend_name="SLOS"):
+        name = backend_name
+        if name in BACKEND_LIST:
+            return BACKEND_LIST[name]
+        warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
+        return BACKEND_LIST['SLOS']
 
-    if name is None or name == "local":
-        return LocalPlatform()
-    else:
-        return RemotePlatform(name, credentials)
+    @staticmethod
+    def list():
+        return list(BACKEND_LIST.keys())
