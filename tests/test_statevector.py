@@ -287,3 +287,13 @@ def test_statevector_equality():
     st2 = pcvl.StateVector("|{P:H},{P:V}>")
     input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
     assert input_state == st2
+
+
+def test_statevector_polar_evolve1():
+    simulator = pcvl.BackendFactory.get_backend("SLOS")(comp.BS())
+    st2 = pcvl.StateVector("|{P:H},{P:V}>")
+    sum_p = 0
+    for o, p in simulator.allstateprob_iterator(st2):
+        sum_p += p
+
+    assert pytest.approx(1) == sum_p
