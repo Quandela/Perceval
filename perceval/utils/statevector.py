@@ -169,14 +169,9 @@ class StateVector(defaultdict):
     def __eq__(self, other):
         if not isinstance(other, StateVector):
             return False
-        self._normalize()
-        other._normalize()
-        if len(self) != len(other):
-            return False
-        for k, v in self.items():
-            if other.get(k) != v:
-                return False
-        return True
+        self.normalize()
+        other.normalize()
+        return super().__eq__(other)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -198,6 +193,10 @@ class StateVector(defaultdict):
         if self.m is None:
             self.m = key.m
         return super().__setitem__(key, value)
+
+    def __len__(self):
+        self.normalize()
+        return super().__len__()
 
     def __iter__(self):
         self.normalize()
@@ -352,8 +351,9 @@ class StateVector(defaultdict):
             for key in to_remove:
                 del self[key]
             norm = norm**0.5
+            nkey = len(self.keys())
             for key in self.keys():
-                if len(self) == 1:
+                if nkey == 1:
                     self[key] = 1
                 else:
                     self[key] /= norm
