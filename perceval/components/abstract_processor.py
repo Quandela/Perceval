@@ -34,6 +34,8 @@ class ProcessorType(Enum):
 
 class AProcessor(ABC):
     def __init__(self):
+        self._input_state = None
+        self.name = "Local Processor"
         self._parameters = {}
 
     @property
@@ -57,6 +59,10 @@ class AProcessor(ABC):
     def set_parameter(self, key: str, value: Any):
         self._parameters[key] = value
 
+    @property
+    def parameters(self):
+        return self._parameters
+
     def clear_parameters(self):
         self._parameters = {}
 
@@ -68,6 +74,13 @@ class AProcessor(ABC):
         pass
 
     @property
+    def input_state(self):
+        return self._input_state
+
+    @property
     @abstractmethod
     def available_commands(self) -> List[str]:
+        pass
+
+    def postprocess_output(self, s: BasicState) -> BasicState:
         pass

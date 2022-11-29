@@ -78,7 +78,6 @@ class Processor(AProcessor):
 
         self._anon_herald_num = 0  # This is not a herald count!
         self._inputs_map: Union[SVDistribution, None] = None
-        self._input = None
         self._simulator = None
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
         self._backend_name = backend_name
@@ -93,6 +92,10 @@ class Processor(AProcessor):
         :param value: enables threshold detection when True, otherwise disables it.
         """
         self._thresholded_output = value
+
+    @property
+    def is_threshold(self) -> bool:
+        return self._thresholded_output
 
     def _setup_simulator(self, **kwargs):
         if self._is_unitary:
@@ -174,7 +177,7 @@ class Processor(AProcessor):
                 input_idx += 1
             self._inputs_map *= distribution  # combine distributions
 
-        self._input = BasicState(input_list)
+        self._input_state = BasicState(input_list)
         self._min_mode_post_select = expected_photons
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
@@ -198,7 +201,7 @@ class Processor(AProcessor):
         :param svd: The input SVDistribution which won't be changed in any way by the source.
         Every state vector size has to be equal to `self.circuit_size`
         """
-        self._input = svd
+        self._input_state = svd
         expected_photons = Inf
         for sv in svd:
             for state in sv:
@@ -518,13 +521,13 @@ class Processor(AProcessor):
         return new_comp
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if (not self.heralds or keep_herald) and not self._thresholded_output:
+        if (not self.heralds or keep_herald) and not self.thresholded:
             return s
         new_state = []
         for idx, k in enumerate(s):
             if idx in self.heralds:
                 continue
-            if k > 0 and self._thresholded_output:
+            if k > 0 and self.thresholded:
                 k = 1
             new_state.append(k)
         return BasicState(new_state)
@@ -612,7 +615,7 @@ class Processor(AProcessor):
                                               self._backend_name,
                                               depth,
                                               extend_m,
-                                              self._input,
+                                              self._input_state,
                                               self._min_mode_post_select,
                                               self.source)
 

@@ -29,6 +29,7 @@ from perceval.serialization import deserialize
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
+from .. import Processor, Parameter
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
@@ -53,10 +54,16 @@ class RemoteProcessor(AProcessor):
         self._available_circuit_parameters = {}
         self._input_state = None
         self.fetch_data()
+        # Just to avoid rewriting of some functions that should not belong to the AbstractProcessor
+        self._local_processor: Processor = None
 
     @property
     def is_remote(self) -> bool:
         return True
+
+    @property
+    def is_threshold(self) -> bool:  # Supposes that unspecified means no threshold
+        return "detector" in self._specs and self._specs["detector"] == "threshold"
 
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
@@ -84,6 +91,7 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
         self._circuit = circuit
         self.__build_backend()
+        self._create_local_processor()
 
     def __build_backend(self):
         if self._circuit is None:
@@ -108,6 +116,16 @@ class RemoteProcessor(AProcessor):
         if self._circuit is not None and input_state.m != self._circuit.m:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._circuit.m})")
         self._input_state = input_state
+        if self._local_processor is not None:
+            self._local_processor.with_input(input_state)
+            self._local_processor.mode_post_selection(self.parameters["mode_post_select"]
+                                                      if "mode_post_select" in self.parameters
+                                                      else input_state.n)
+
+    def mode_post_selection(self, n: int):
+        super().mode_post_selection(n)
+        if self._local_processor is not None:
+            self._local_processor.mode_post_selection(n)
 
     @property
     def available_commands(self) -> List[str]:
@@ -141,3 +159,35 @@ class RemoteProcessor(AProcessor):
         if self._circuit is None:
             return 0
         return self._circuit.m
+
+    @property
+    def post_select_fn(self):
+        return self._local_processor.post_select_fn
+
+    def _create_local_processor(self):
+        proc = Processor("SLOS", self._circuit)
+        if self._input_state is not None:
+            proc.with_input(self._input_state)
+            proc.mode_post_selection(self.parameters["mode_post_select"] if "mode_post_select" in self.parameters
+                                     else self._input_state.n)
+        proc.thresholded_output(self.thresholded)
+        self._local_processor = proc
+
+    def set_postprocess(self, postprocess_func):
+        r"""
+        Set or remove a logical post-selection function. Unused for now.
+
+        :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
+            If None is passed as parameter, removes the previously defined post-selection function.
+        """
+        self._local_processor.set_postprocess(postprocess_func)
+
+    def postprocess_output(self, s: BasicState) -> BasicState:
+        # Apply threshold if exists
+        return self._local_processor.postprocess_output(s)
+
+    def _state_selected_physical(self, output_state: BasicState) -> bool:
+        return self._local_processor._state_selected_physical(output_state)
+
+    def get_circuit_parameters(self) -> Dict[str, Parameter]:
+        return self._local_processor.get_circuit_parameters()
