@@ -24,6 +24,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Callable, Dict, List
 
+from perceval import Circuit
 from perceval.utils import BasicState, Parameter
 
 
@@ -84,3 +85,6 @@ class AProcessor(ABC):
 
     def postprocess_output(self, s: BasicState) -> BasicState:
         pass
+
+    def set_circuit(self, circuit: Circuit):
+        raise NotImplementedError("set_circuit is only defined for RemoteProcessors")
