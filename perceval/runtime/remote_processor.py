@@ -23,13 +23,13 @@
 from typing import Dict, List
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import Circuit
-from perceval.utils import BasicState
+from perceval.components.linear_circuit import Circuit
+from perceval.components.processor import Processor
+from perceval.utils import BasicState, Parameter
 from perceval.serialization import deserialize
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
-from .. import Processor, Parameter
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
