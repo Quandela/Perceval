@@ -170,7 +170,7 @@ class RemoteProcessor(AProcessor):
             proc.with_input(self._input_state)
             proc.mode_post_selection(self.parameters["mode_post_select"] if "mode_post_select" in self.parameters
                                      else self._input_state.n)
-        proc.thresholded_output(self.thresholded)
+        proc.thresholded_output(self.is_threshold)
         self._local_processor = proc
 
     def set_postprocess(self, postprocess_func):

@@ -521,13 +521,13 @@ class Processor(AProcessor):
         return new_comp
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if (not self.heralds or keep_herald) and not self.thresholded:
+        if (not self.heralds or keep_herald) and not self.is_threshold:
             return s
         new_state = []
         for idx, k in enumerate(s):
             if idx in self.heralds:
                 continue
-            if k > 0 and self.thresholded:
+            if k > 0 and self.is_threshold:
                 k = 1
             new_state.append(k)
         return BasicState(new_state)
@@ -537,7 +537,7 @@ class Processor(AProcessor):
         if self._backend_name == "CliffordClifford2017" and self._has_td:
             raise NotImplementedError(
                 "Time delay are not implemented within CliffordClifford2017 backed. Please use another one.")
-        if not self._has_td:
+        if not self._has_td:  # TODO: remove quickfix by something clever :  self._simulator is None and
             self._setup_simulator()
 
     def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
