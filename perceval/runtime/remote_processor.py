@@ -22,10 +22,12 @@
 
 from typing import Dict, List
 
+from multipledispatch import dispatch
+
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.components.source import Source
-from perceval.components.port import PortLocation, APort
+from perceval.components.port import PortLocation, APort, LogicalState
 from perceval.utils import BasicState
 from perceval.serialization import deserialize
 from .remote_backend import RemoteBackend
@@ -124,6 +126,18 @@ class RemoteProcessor(AProcessor):
     def type(self) -> ProcessorType:
         return self._type
 
+    @dispatch(LogicalState)
+    def with_input(self, input_state: LogicalState) -> None:
+        r"""
+        Set up the processor input with a LogicalState. Computes the input probability distribution.
+
+        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
+        encoding.
+        """
+        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        self.with_input(input_state)
+
+    @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         if 'max_photon_count' in self.constraints and input_state.n > self.constraints['max_photon_count']:
             raise RuntimeError(

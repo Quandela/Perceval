@@ -21,17 +21,12 @@
 # SOFTWARE.
 from numpy import Inf
 
-from .abstract_component import AComponent
 from .abstract_processor import AProcessor, ProcessorType
-from .unitary_components import PERM, Unitary
-from .non_unitary_components import TD
-from .port import APort, PortLocation, Herald, LogicalState
+from .port import LogicalState
 from .source import Source
-from .linear_circuit import ACircuit, Circuit
-from ._mode_connector import ModeConnector, UnavailableModeException
+from .linear_circuit import ACircuit
 from .computation import count_TD, count_independant_TD, expand_TD
 from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params, Parameter
-from perceval.utils.algorithms.simplification import perm_compose
 from perceval.backends import BACKEND_LIST
 from perceval.backends.processor import StepperBackend
 
@@ -88,6 +83,17 @@ class Processor(AProcessor):
     @property
     def is_remote(self) -> bool:
         return False
+
+    @dispatch(LogicalState)
+    def with_input(self, input_state: LogicalState) -> None:
+        r"""
+        Set up the processor input with a LogicalState. Computes the input probability distribution.
+
+        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
+        encoding.
+        """
+        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        self.with_input(input_state)
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:

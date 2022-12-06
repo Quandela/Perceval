@@ -24,8 +24,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Union
 
-from multipledispatch import dispatch
-
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, StateVector, SVDistribution
@@ -461,17 +459,6 @@ class AProcessor(ABC):
     @property
     def is_threshold(self) -> bool:
         return self._thresholded_output
-
-    @dispatch(LogicalState)
-    def with_input(self, input_state: LogicalState) -> None:
-        r"""
-        Set up the processor input with a LogicalState. Computes the input probability distribution.
-
-        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
-        encoding.
-        """
-        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
-        self.with_input(input_state)
 
     @property
     def heralds(self):
