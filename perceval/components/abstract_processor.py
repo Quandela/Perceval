@@ -34,7 +34,7 @@ from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
-from perceval.utils.algorithms.simplification import perm_compose
+from perceval.utils.algorithms.simplification import perm_compose, simplify
 
 
 class ProcessorType(Enum):
@@ -231,23 +231,26 @@ class AProcessor(ABC):
 
         # Add PERM, component, PERM^-1
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
-        components = processor.components.copy()  # Needed here as components will be added to it
+        new_components = []
         if perm_component is not None:
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
                 # Simplify composition by merging two consecutive PERM components
                 l_perm_r = self._components[-1][0]
                 l_perm_vect = self._components[-1][1].perm_vector
                 new_range, new_perm_vect = perm_compose(l_perm_r, l_perm_vect, perm_modes, perm_component.perm_vector)
-                self._components[-1] = (new_range, PERM(new_perm_vect))
+                new_components.append((new_range, PERM(new_perm_vect)))
+                self._components.pop(-1)
             else:
-                self._components.append((perm_modes, perm_component))
-        for pos, c in components:
+                new_components.append((perm_modes, perm_component))
+        for pos, c in processor.components:
             pos = [x + min(mode_mapping) for x in pos]
-            self._components.append((pos, c))
+            new_components.append((pos, c))
         if perm_component is not None:
             perm_inv = perm_component.copy()
             perm_inv.inverse(h=True)
-            self._components.append((perm_modes, perm_inv))
+            new_components.append((perm_modes, perm_inv))
+        new_components = simplify(new_components, self.circuit_size)
+        self._components += new_components
 
         # Retrieve ports from the other processor
         for port, port_range in processor._out_ports.items():
