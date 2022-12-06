@@ -23,9 +23,9 @@
 from typing import Dict, List
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components.linear_circuit import Circuit
-from perceval.components.processor import Processor
-from perceval.utils import BasicState, Parameter
+from perceval.components.linear_circuit import Circuit, ACircuit
+from perceval.components.source import Source
+from perceval.utils import BasicState
 from perceval.serialization import deserialize
 from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
@@ -42,28 +42,38 @@ def _get_first_spec(specs, name):
 
 
 class RemoteProcessor(AProcessor):
-    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL):
+    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL, m = None):
         super().__init__()
         self.name = name
 
         self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}
         self._type = ProcessorType.SIMULATOR
-        self._circuit = None
         self._backend: RemoteBackend = None
         self._available_circuit_parameters = {}
         self._input_state = None
         self.fetch_data()
-        # Just to avoid rewriting of some functions that should not belong to the AbstractProcessor
-        self._local_processor: Processor = None
+        if m is not None:
+            self._n_moi = m
+
+        self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
     @property
     def is_remote(self) -> bool:
         return True
 
-    @property
-    def is_threshold(self) -> bool:  # Supposes that unspecified means no threshold
-        return "detector" in self._specs and self._specs["detector"] == "threshold"
+    def thresholded_output(self, value: bool):
+        r"""
+        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
+        changed to 1. Some QPU and simulators can only perform threshold detection.
+
+        :param value: enables threshold detection when True, otherwise disables it.
+        """
+        if value is False:
+            assert not ("detector" in self._specs and self._specs["detector"] == "threshold"), \
+                "given processor can only perform threshold detection"
+        self.set_parameter("thresholded", value)
+        super().thresholded_output(value)
 
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
@@ -89,15 +99,14 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
         if self._input_state is not None and self._input_state.m != circuit.m:
             raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
-        self._circuit = circuit
-        self.__build_backend()
-        self._create_local_processor()
+        super().set_circuit(circuit)
+        return self
 
     def __build_backend(self):
-        if self._circuit is None:
+        # TODO: allow no circuit
+        if self._n_moi is None:
             raise RuntimeError("No circuit set in RemoteProcessor")
-
-        self._backend = RemoteBackend(self._rpc_handler, self._circuit)
+        self._backend = RemoteBackend(self._rpc_handler, self.linear_circuit())
 
     def get_rpc_handler(self):
         return self._rpc_handler
@@ -113,19 +122,9 @@ class RemoteProcessor(AProcessor):
         if 'min_photon_count' in self.constraints and input_state.n < self.constraints['min_photon_count']:
             raise RuntimeError(
                 f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
-        if self._circuit is not None and input_state.m != self._circuit.m:
-            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._circuit.m})")
+        if self._n_moi is not None and input_state.m != self._n_moi:
+            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
         self._input_state = input_state
-        if self._local_processor is not None:
-            self._local_processor.with_input(input_state)
-            self._local_processor.mode_post_selection(self.parameters["mode_post_select"]
-                                                      if "mode_post_select" in self.parameters
-                                                      else input_state.n)
-
-    def mode_post_selection(self, n: int):
-        super().mode_post_selection(n)
-        if self._local_processor is not None:
-            self._local_processor.mode_post_selection(n)
 
     @property
     def available_commands(self) -> List[str]:
@@ -156,38 +155,29 @@ class RemoteProcessor(AProcessor):
 
     @property
     def m(self) -> int:
-        if self._circuit is None:
+        if self._n_moi is None:
             return 0
-        return self._circuit.m
+        return self._n_moi
+
+    def add(self, mode_mapping, component, keep_port=True):
+        if not isinstance(component, ACircuit):
+            raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
+        self._backend = None
+        super().add(mode_mapping, component, keep_port)
+
+    def _compose_processor(self, connector, processor, keep_port: bool):
+        assert isinstance(processor, RemoteProcessor), "can not mix types of processors"
+        assert self.name == processor.name, "can not compose processors with different targets"
+        assert self._rpc_handler.token == processor.get_rpc_handler().token, "can not compose processors with different tokens"
+        assert self._rpc_handler.url == processor.get_rpc_handler().url, "can not compose processors with different url"
+        super()._compose_processor(connector, processor, keep_port)
 
     @property
-    def post_select_fn(self):
-        return self._local_processor.post_select_fn
+    def source(self):
+        return None
 
-    def _create_local_processor(self):
-        proc = Processor("SLOS", self._circuit)
-        if self._input_state is not None:
-            proc.with_input(self._input_state)
-            proc.mode_post_selection(self.parameters["mode_post_select"] if "mode_post_select" in self.parameters
-                                     else self._input_state.n)
-        proc.thresholded_output(self.is_threshold)
-        self._local_processor = proc
+    @source.setter
+    def source(self, source: Source):
+        # TODO: Implement source setter, setting parameters to be sent remotely
+        raise NotImplementedError("Source setting not implemented for remote processors")
 
-    def set_postprocess(self, postprocess_func):
-        r"""
-        Set or remove a logical post-selection function. Unused for now.
-
-        :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
-            If None is passed as parameter, removes the previously defined post-selection function.
-        """
-        self._local_processor.set_postprocess(postprocess_func)
-
-    def postprocess_output(self, s: BasicState) -> BasicState:
-        # Apply threshold if exists
-        return self._local_processor.postprocess_output(s)
-
-    def _state_selected_physical(self, output_state: BasicState) -> bool:
-        return self._local_processor._state_selected_physical(output_state)
-
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        return self._local_processor.get_circuit_parameters()
