@@ -25,6 +25,7 @@ from typing import Dict, List
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.components.source import Source
+from perceval.components.port import PortLocation, APort
 from perceval.utils import BasicState
 from perceval.serialization import deserialize
 from .remote_backend import RemoteBackend
@@ -101,6 +102,14 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
         super().set_circuit(circuit)
         return self
+
+    def add_port(self, m, port: APort, location: PortLocation = PortLocation.IN_OUT):
+        # TODO: Remove this
+        raise NotImplementedError("Ports not implemented for now with RemoteProcessors")
+
+    def add_herald(self, mode: int, expected: int, name: str = None):
+        # TODO: Remove this
+        raise NotImplementedError("Heralds not implemented for now with RemoteProcessors")
 
     def __build_backend(self):
         # TODO: allow no circuit
