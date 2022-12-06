@@ -25,7 +25,7 @@ from enum import Enum
 from typing import Callable, Tuple
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, Processor, PERM
+from perceval.components import ACircuit, AProcessor, PERM
 from perceval.components.abstract_component import AComponent
 from perceval.components.non_unitary_components import TD
 
@@ -78,8 +78,8 @@ class ASkin(ABC):
             w[r] = [end_w] * comp.m
         return max(w), c.m
 
-    @dispatch(Processor, bool)
-    def get_size(self, p: Processor, recursive: bool = False) -> Tuple[int, int]:
+    @dispatch(AProcessor, bool)
+    def get_size(self, p: AProcessor, recursive: bool = False) -> Tuple[int, int]:
         height = p.m
         # w represents the graph of the circuit.
         # Each value being the ouput of the rightmost component on the corresponding mode
