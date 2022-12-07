@@ -468,6 +468,10 @@ class AProcessor(ABC):
                 pos[port_range[0]] = port.expected
         return pos
 
+    def _with_logical_input(self, input_state: LogicalState):
+        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        self.with_input(input_state)
+
     @property
     def source_distribution(self) -> Union[SVDistribution, None]:
         r"""
