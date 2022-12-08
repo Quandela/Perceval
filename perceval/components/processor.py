@@ -32,7 +32,6 @@ from perceval.backends.processor import StepperBackend
 
 from multipledispatch import dispatch
 from typing import Dict, Callable, Union, List
-import copy
 
 
 class Processor(AProcessor):
@@ -51,9 +50,11 @@ class Processor(AProcessor):
 
     :param source: the Source used by the processor (defaults to perfect source)
     """
-    def __init__(self, backend_name: str, m_circuit: Union[int, ACircuit] = None, source: Source = Source()):
+    def __init__(self, backend_name: str, m_circuit: Union[int, ACircuit] = None, source: Source = Source(),
+                 name: str = None):
         super().__init__()
         self._source = source
+        self.name = "Local processor" if name is None else name
 
         if isinstance(m_circuit, ACircuit):
             self._n_moi = m_circuit.m
@@ -152,13 +153,6 @@ class Processor(AProcessor):
         self._min_mode_post_select = expected_photons
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
-
-    def copy(self, subs: Union[dict, list] = None):
-        new_proc = copy.deepcopy(self)
-        new_proc._components = []
-        for r, c in self._components:
-            new_proc._components.append((r, c.copy(subs=subs)))
-        return new_proc
 
     def _compose_processor(self, connector, processor, keep_port: bool):
         assert isinstance(processor, Processor), "can not mix types of processors"

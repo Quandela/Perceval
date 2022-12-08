@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
+import copy
 from enum import Enum
 from typing import Any, Dict, List, Union
 
@@ -43,25 +44,24 @@ class ProcessorType(Enum):
 class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
-        self.name = "Local Processor"
-        self._parameters = {}
+        self.name: str = ""
+        self._parameters: Dict = {}
 
-        self._in_ports = {}
-        self._out_ports = {}
+        self._in_ports: Dict = {}
+        self._out_ports: Dict = {}
         self._thresholded_output: bool = False
         # Mode post selection: expect at least # modes with photons in output
         self._min_mode_post_select = None
         self._post_select = None
 
-        self._is_unitary = True
-        self._has_td = False
+        self._is_unitary: bool = True
+        self._has_td: bool = False
 
-        self._n_heralds = 0
-        self._anon_herald_num = 0  # This is not a herald count!
-        self._components = []  # Any type of components, not only linear ones
+        self._n_heralds: int = 0
+        self._anon_herald_num: int = 0  # This is not a herald count!
+        self._components: List = []  # Any type of components, not only linear ones
 
         self._n_moi = None
-
 
     @property
     @abstractmethod
@@ -153,6 +153,13 @@ class AProcessor(ABC):
         if self._post_select is not None:
             return self._post_select(state)
         return True
+
+    def copy(self, subs: Union[dict, list] = None):
+        new_proc = copy.deepcopy(self)
+        new_proc._components = []
+        for r, c in self._components:
+            new_proc._components.append((r, c.copy(subs=subs)))
+        return new_proc
 
     def set_circuit(self, circuit: Circuit):
         r"""

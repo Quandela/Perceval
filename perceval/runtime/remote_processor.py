@@ -45,7 +45,7 @@ def _get_first_spec(specs, name):
 
 
 class RemoteProcessor(AProcessor):
-    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL, m = None):
+    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL, m: int = None):
         super().__init__()
         self.name = name
 
@@ -54,7 +54,6 @@ class RemoteProcessor(AProcessor):
         self._type = ProcessorType.SIMULATOR
         self._backend: RemoteBackend = None
         self._available_circuit_parameters = {}
-        self._input_state = None
         self.fetch_data()
         if m is not None:
             self._n_moi = m
@@ -202,4 +201,3 @@ class RemoteProcessor(AProcessor):
     def source(self, source: Source):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
-
