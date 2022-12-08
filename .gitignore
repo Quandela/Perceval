@@ -5,3 +5,5 @@ build
 .eggs/
 .idea/
 venv/
+*.whl
+.ipynb_checkpoints/
