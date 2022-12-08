@@ -28,28 +28,47 @@ sv1 = StateVector([2, 3]) + StateVector([4, 5])
 bs = BasicState([6, 7])
 
 
+def _assert_sv_approx_eq(sv1: StateVector, sv2: StateVector, error_msg="Assertion error"):
+    sv1.normalize()
+    sv2.normalize()
+    for state in sv1:
+        assert state in sv2, error_msg
+        assert sv1[state] == pytest.approx(sv2[state]), error_msg
+
+
 def test_mul():
-    assert sv0 * sv1 == pytest.approx(0.5 * StateVector([0, 1, 2, 3])
-                                      + 0.5j * StateVector([1, 1, 2, 3])
-                                      + 0.5 * StateVector([0, 1, 4, 5])
-                                      + 0.5j * StateVector([1, 1, 4, 5])), "SV multiplication's wrong"
+    result = sv0 * sv1
+    expected = (0.5 * StateVector([0, 1, 2, 3])
+                + 0.5j * StateVector([1, 1, 2, 3])
+                + 0.5 * StateVector([0, 1, 4, 5])
+                + 0.5j * StateVector([1, 1, 4, 5]))
+    _assert_sv_approx_eq(result, expected, "SV multiplication is wrong")
 
-    assert sv0 * bs == pytest.approx(0.5 * 2 ** 0.5 * StateVector([0, 1, 6, 7])
-                                     + 0.5 * 2 ** 0.5 * 1j * StateVector(
-        [1, 1, 6, 7])), "SV with BS multiplication's wrong"
+    result = sv0 * bs
+    expected = (0.5 * 2 ** 0.5 * StateVector([0, 1, 6, 7])
+                + 0.5 * 2 ** 0.5 * 1j * StateVector([1, 1, 6, 7]))
+    _assert_sv_approx_eq(result, expected, "SV with BS multiplication is wrong")
 
-    assert bs * sv0 == pytest.approx(0.5 * 2 ** 0.5 * StateVector([6, 7, 0, 1])
-                                     + 0.5 * 2 ** 0.5 * 1j * StateVector(
-        [6, 7, 1, 1])), "BS with SV multiplication's wrong"
+    result = bs * sv0
+    expected = (0.5 * 2 ** 0.5 * StateVector([6, 7, 0, 1])
+                + 0.5 * 2 ** 0.5 * 1j * StateVector([6, 7, 1, 1]))
+    _assert_sv_approx_eq(result, expected, "BS with SV multiplication is wrong")
 
 
 def test_tensorproduct():
-    assert tensorproduct([sv0, sv1, bs]) == pytest.approx(sv0 * sv1 * bs), "tensor product's wrong"
+    result = tensorproduct([sv0, sv1, bs])
+    expected = sv0 * sv1 * bs
+    _assert_sv_approx_eq(result, expected, "tensor product is wrong")
 
 
 def test_power():
     power = 5
     sv_list = power * [sv0]
 
-    assert sv0 ** power == pytest.approx(tensorproduct(sv_list)), "SV pow is wrong"
-    assert bs ** power == pytest.approx(BasicState([6, 7] * power)), "BS pow is wrong"
+    result = sv0 ** power
+    expected = tensorproduct(sv_list)
+    _assert_sv_approx_eq(result, expected, "SV pow is wrong")
+
+    result = bs ** power
+    expected = BasicState([6, 7] * power)
+    assert result == expected, "BS pow is wrong"
