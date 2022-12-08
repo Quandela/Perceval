@@ -33,7 +33,7 @@ with warnings.catch_warnings():
     import drawSvg
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.components import ACircuit, Circuit, Processor, non_unitary_components as nl
+from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
@@ -79,7 +79,7 @@ def pdisplay_circuit(
     return renderer.draw()
 
 
-def pdisplay_processor(processor: Processor,
+def pdisplay_processor(processor: AProcessor,
                        output_format: Format = Format.TEXT,
                        recursive: bool = False,
                        compact: bool = False,
@@ -223,7 +223,7 @@ def _pdisplay(circuit, **kwargs):
     return pdisplay_circuit(circuit, **kwargs)
 
 
-@dispatch(Processor)
+@dispatch(AProcessor)
 def _pdisplay(processor, **kwargs):
     return pdisplay_processor(processor, **kwargs)
 
@@ -249,7 +249,7 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_pycharm_or_spyder and (isinstance(o, ACircuit) or isinstance(o, Processor)):
+    elif in_pycharm_or_spyder and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
         return Format.MPLOT
     return Format.TEXT
 

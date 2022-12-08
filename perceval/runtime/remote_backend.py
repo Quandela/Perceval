@@ -41,7 +41,7 @@ class RemoteBackend:
             self.__cu_key = 'circuit'
         else:
             self.__cu_key = 'unitary'
-        self.__cu_data = serialize(cu)
+        self.__cu = cu
 
     def __defaults_job_params(self, command: str):
         return {
@@ -52,9 +52,10 @@ class RemoteBackend:
 
     def async_execute(self, command: str, parameters=None, **args):
         job_params = self.__defaults_job_params(command)
+        cu_data = serialize(self.__cu)  # On the fly to use circuit parameter's changes
         job_params['payload'] = {
             'command': command,
-            self.__cu_key: self.__cu_data,
+            self.__cu_key: cu_data,
             **args
         }
 
