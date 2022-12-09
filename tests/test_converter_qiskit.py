@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
-from perceval import BasicState, StateVector, Circuit
+from perceval import BasicState, StateVector, Circuit, pdisplay
 from perceval.converters import QiskitConverter
 import perceval.components.unitary_components as comp
 from perceval.components import catalog
@@ -115,8 +115,8 @@ def test_cnot_1_heralded():
     perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [2, 3, 4, 5, 0, 1, 6, 7]
-    assert perm2.perm_vector == [4, 5, 0, 1, 2, 3, 6, 7]
+    assert perm1.perm_vector == [2, 3, 4, 5, 0, 1]
+    assert perm2.perm_vector == [4, 5, 0, 1, 2, 3]
 
 
 def test_cnot_1_inverse_heralded():
@@ -135,8 +135,8 @@ def test_cnot_1_inverse_heralded():
     perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [4, 5, 2, 3, 0, 1, 6, 7]
-    assert perm2.perm_vector == [4, 5, 2, 3, 0, 1, 6, 7]
+    assert perm1.perm_vector == [4, 5, 2, 3, 0, 1]
+    assert perm2.perm_vector == [4, 5, 2, 3, 0, 1]
 
 
 def test_cnot_2_heralded():
@@ -174,8 +174,8 @@ def test_cnot_1_postprocessed():
     perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [1, 2, 3, 4, 0, 5]
-    assert perm2.perm_vector == [4, 0, 1, 2, 3, 5]
+    assert perm1.perm_vector == [1, 2, 3, 4, 0]
+    assert perm2.perm_vector == [4, 0, 1, 2, 3]
 
 
 def test_cnot_postprocess():

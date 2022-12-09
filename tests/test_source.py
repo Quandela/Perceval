@@ -57,15 +57,16 @@ def test_source_brightness():
 
 
 def test_source_brightness_purity():
-    s = Source(brightness=0.4, purity=0.9)
+    s = Source(brightness=0.4, purity=0.9, multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
     _check_svdistribution(svd, {"|0>": 0.6, "|2>": 0.04, "|1>": 0.36})
 
 
 def test_source_brightess_purity_indistinguishable():
-    s = Source(brightness=0.4, purity=0.9, indistinguishability=0.9)
+    s = Source(brightness=0.4, purity=0.9, indistinguishability=0.9, multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
-    _check_svdistribution(svd, {"|0>": 0.6, "|{_:0}{_:1}>": 0.04, "|{_:0}>": 0.341526, "|{_:2}>": 0.018474})
+    _check_svdistribution(svd, {"|0>": 0.6, "|2{_:0}>": 0.0379473, "|{_:0}{_:1}>": 0.00205267,
+                                "|{_:0}>": 0.341526, "|{_:1}>": 0.018474})
 
 
 def test_source_indistinguishability():
