@@ -35,7 +35,7 @@ class Job(ABC):
         self._delta_parameters = delta_parameters or {}
 
     def _adapt_parameters(self, args, kwargs):
-        r"""adapt the parameters according to delta_parameters map passed to the LocalJob
+        r"""adapt the parameters according to delta_parameters map passed to the Job
             change delta parameters to reintegrate the missing parameters"""
         new_delta_parameters = {}
         args = list(args)

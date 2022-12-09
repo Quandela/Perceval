@@ -21,16 +21,16 @@
 # SOFTWARE.
 
 from typing import Dict, List
-
 from multipledispatch import dispatch
+from pkg_resources import get_distribution
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.components.source import Source
 from perceval.components.port import PortLocation, APort, LogicalState
 from perceval.utils import BasicState
-from perceval.serialization import deserialize
-from .remote_backend import RemoteBackend
+from perceval.serialization import deserialize, serialize
+# from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
@@ -112,11 +112,11 @@ class RemoteProcessor(AProcessor):
         # TODO: Remove this
         raise NotImplementedError("Heralds not implemented for now with RemoteProcessors")
 
-    def __build_backend(self):
-        # TODO: allow no circuit
-        if self._n_moi is None:
-            raise RuntimeError("No circuit set in RemoteProcessor")
-        self._backend = RemoteBackend(self._rpc_handler, self.linear_circuit())
+    # def __build_backend(self):
+    #     # TODO: allow no circuit
+    #     if self._n_moi is None:
+    #         raise RuntimeError("No circuit set in RemoteProcessor")
+    #     self._backend = RemoteBackend(self._rpc_handler, self.linear_circuit())
 
     def get_rpc_handler(self):
         return self._rpc_handler
@@ -151,25 +151,43 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> List[str]:
         return self._specs.get("available_commands", [])
 
-    def async_samples(self, count, **args) -> str:
-        if self._backend is None:
-            self.__build_backend()
-        return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
+    # def async_samples(self, count, **args) -> str:
+    #     if self._backend is None:
+    #         self.__build_backend()
+    #     return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
+    #
+    # def async_sample_count(self, count, **args) -> str:
+    #     if self._backend is None:
+    #         self.__build_backend()
+    #     return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
+    #
+    # def async_probs(self, **args) -> str:
+    #     if self._backend is None:
+    #         self.__build_backend()
+    #     return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
+    #
+    # def async_execute(self, command: str, **args) -> str:
+    #     if self._backend is None:
+    #         self.__build_backend()
+    #     return self._backend.async_execute(command, parameters=self._parameters, **args)
 
-    def async_sample_count(self, count, **args) -> str:
-        if self._backend is None:
-            self.__build_backend()
-        return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
-
-    def async_probs(self, **args) -> str:
-        if self._backend is None:
-            self.__build_backend()
-        return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
-
-    def async_execute(self, command: str, **args) -> str:
-        if self._backend is None:
-            self.__build_backend()
-        return self._backend.async_execute(command, parameters=self._parameters, **args)
+    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
+        j = {
+            'platform_name': self.name,
+            'pcvl_version': get_distribution("perceval-quandela").version
+        }
+        payload = {
+            'command': command,
+            **kwargs
+        }
+        if self._components and not circuitless:
+            payload['circuit'] = serialize(self.linear_circuit())
+        if self._input_state and not inputless:
+            payload['input_state'] = serialize(self._input_state)
+        if self._parameters:
+            payload['parameters'] = self._parameters
+        j['payload'] = payload
+        return j
 
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
