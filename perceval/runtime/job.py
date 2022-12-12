@@ -27,12 +27,25 @@ from .job_status import JobStatus, RunningStatus
 
 
 class Job(ABC):
-    def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters = None):
+    def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters=None):
         # create an id or check existence of current id
         self._fn = fn
         self._results = None
         self._result_mapping_function = result_mapping_function
         self._delta_parameters = delta_parameters or {}
+        self._name = "Job"
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, new_name: str):
+        if not isinstance(new_name, str):
+            raise TypeError("A job name must be a string")
+        if len(new_name) == 0:
+            raise ValueError("A job name must not be empty")
+        self._name = new_name
 
     def _adapt_parameters(self, args, kwargs):
         r"""adapt the parameters according to delta_parameters map passed to the Job

@@ -54,18 +54,6 @@ class RemoteJob(Job):
     def id(self):
         return self._id
 
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, new_name: str):
-        if not isinstance(new_name, str):
-            raise TypeError("A job name must be a string")
-        if len(new_name) == 0:
-            raise ValueError("A job name must not be empty")
-        self._name = new_name
-
     @staticmethod
     def from_id(job_id: str, rpc_handler):
         j = RemoteJob(None, rpc_handler)
@@ -100,7 +88,7 @@ class RemoteJob(Job):
 
     def _handle_unnamed_params(self, args, kwargs):
         if len(args) > len(self._param_names):
-            raise RuntimeError(f'Too many unnamed parameter: {args}, expected {self._param_names}')
+            raise RuntimeError(f'Too many unnamed parameter: {len(args)}, expected {len(self._param_names)}')
         for idx, unnamed_arg in enumerate(args):
             param_name = self._param_names[idx]
             if param_name in kwargs:  # Parameter exists twice
