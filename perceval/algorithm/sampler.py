@@ -64,12 +64,11 @@ class Sampler(AAlgorithm):
         primitive, converter = self._get_primitive_converter(method)
         delta_parameters = {}
         # adapt the parameters list
-        command_param_names = ['count']
+        command_param_names = [] if method == 'probs' else ['count']
         if method.find('sample') != -1 and primitive.find('sample') == -1:
             delta_parameters['count'] = None
         elif method.find('sample') == -1 and primitive.find('sample') != -1:
             delta_parameters['count'] = self.PROBS_SIMU_SAMPLE_COUNT
-            command_param_names = []
         if primitive is None:
             raise NotImplementedError(f"cannot find primitive to execute {method} in {self._processor.available_commands}")
         if self._processor.is_remote:
@@ -77,7 +76,7 @@ class Sampler(AAlgorithm):
             if converter:
                 job_context = {"result_mapping": ['perceval.utils', converter.__name__]}
             payload = self._processor.prepare_job_payload(primitive)
-            job_name = self.default_job_name if self.default_job_name is not None else primitive
+            job_name = self.default_job_name if self.default_job_name is not None else method
             rj = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
                            command_param_names=command_param_names,
                            delta_parameters=delta_parameters, job_context=job_context)
