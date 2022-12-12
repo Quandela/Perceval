@@ -83,7 +83,7 @@ class Source:
         """
 
         g2 = self.multiphoton_component
-        eta = self.overall_transmission*self.brightness
+        eta = self.overall_transmission*self.brightness/self.occupation_factor
         px = self.occupation_factor
 
         # g2 = 2p2/(p1+2p2)**2
