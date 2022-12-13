@@ -32,12 +32,17 @@ class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
 
     def __init__(self, payload, rpc_handler, job_name, delta_parameters=None, job_context=None,
-                 command_param_names=[], refresh_progress_delay: int = 3):
+                 command_param_names=None, refresh_progress_delay: int = 3):
         r"""
         :param payload: a prepared payload for the job. This payload is extended by an async_execute() call before being
             sent.
         :param rpc_handler: a valid RPC handler to connect to the cloud
+        :param job_name: the job name (visible cloud-side)
         :param delta_parameters: parameters to add/remove dynamically
+        :param job_context: Data on the job execution context (conversion required on results, etc.)
+        :param command_param_names: List of parameter names for the command call (in order to resolve *args in
+            async_execute() call). This parameter is optional (default = empty list). However, without it, only **kwargs
+            are available in the async_execute() call
         :param refresh_progress_delay: wait time when running in sync mode between each refresh
         """
         super().__init__(delta_parameters=delta_parameters)
@@ -49,7 +54,7 @@ class RemoteJob(Job):
         self._id = None
         self._name = job_name
         self._payload = payload
-        self._param_names = command_param_names
+        self._param_names = command_param_names or []
 
     @property
     def id(self):
