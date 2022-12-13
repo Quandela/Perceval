@@ -29,7 +29,8 @@ from .job_status import JobStatus, RunningStatus
 
 class LocalJob(Job):
     def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters = None):
-        super().__init__(fn, result_mapping_function=result_mapping_function, delta_parameters=delta_parameters)
+        super().__init__(result_mapping_function=result_mapping_function, delta_parameters=delta_parameters)
+        self._fn = fn
         self._status = JobStatus()
         self._worker = None
         self._user_cb = None

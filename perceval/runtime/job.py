@@ -27,9 +27,7 @@ from .job_status import JobStatus, RunningStatus
 
 
 class Job(ABC):
-    def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters=None):
-        # create an id or check existence of current id
-        self._fn = fn
+    def __init__(self, result_mapping_function: Callable = None, delta_parameters=None):
         self._results = None
         self._result_mapping_function = result_mapping_function
         self._delta_parameters = delta_parameters or {}

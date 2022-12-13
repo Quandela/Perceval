@@ -34,12 +34,13 @@ class RemoteJob(Job):
     def __init__(self, payload, rpc_handler, job_name, delta_parameters=None, job_context=None,
                  command_param_names=[], refresh_progress_delay: int = 3):
         r"""
-        :param fn: the remote processor function to call
-        :param rpc_handler: the RPC handler
+        :param payload: a prepared payload for the job. This payload is extended by an async_execute() call before being
+            sent.
+        :param rpc_handler: a valid RPC handler to connect to the cloud
         :param delta_parameters: parameters to add/remove dynamically
         :param refresh_progress_delay: wait time when running in sync mode between each refresh
         """
-        super().__init__(None, delta_parameters=delta_parameters)
+        super().__init__(delta_parameters=delta_parameters)
         self._rpc_handler = rpc_handler
         self._job_status = JobStatus()
         self._job_context = job_context
@@ -91,7 +92,7 @@ class RemoteJob(Job):
             raise RuntimeError(f'Too many unnamed parameter: {len(args)}, expected {len(self._param_names)}')
         for idx, unnamed_arg in enumerate(args):
             param_name = self._param_names[idx]
-            if param_name in kwargs:  # Parameter exists twice
+            if param_name in kwargs:  # Parameter exists twice (in args and in kwargs)
                 raise RuntimeError(f'Parameter named {param_name} was passed twice (in *args and **kwargs)')
             kwargs[param_name] = unnamed_arg
         return kwargs
