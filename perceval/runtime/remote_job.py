@@ -112,9 +112,6 @@ class RemoteJob(Job):
                 self._job_context["mapping_delta_parameters"] = self._delta_parameters
             kwargs = self._handle_unnamed_params(args, kwargs)
             kwargs['job_context'] = self._job_context
-            # TODO EBE
-            # payload = self._fn(*args, **kwargs)
-
             self._payload['job_name'] = self._name
             self._payload['payload'].update(kwargs)
             self._id = self._rpc_handler.create_job(serialize(self._payload))

@@ -30,18 +30,10 @@ from perceval.components.source import Source
 from perceval.components.port import PortLocation, APort, LogicalState
 from perceval.utils import BasicState
 from perceval.serialization import deserialize, serialize
-# from .remote_backend import RemoteBackend
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
-
-
-def _get_first_spec(specs, name):
-    for v in specs.values():
-        if name in v:
-            return v[name]
-    return None
 
 
 class RemoteProcessor(AProcessor):
@@ -52,7 +44,6 @@ class RemoteProcessor(AProcessor):
         self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}
         self._type = ProcessorType.SIMULATOR
-        self._backend: RemoteBackend = None
         self._available_circuit_parameters = {}
         self.fetch_data()
         if m is not None:
@@ -112,12 +103,6 @@ class RemoteProcessor(AProcessor):
         # TODO: Remove this
         raise NotImplementedError("Heralds not implemented for now with RemoteProcessors")
 
-    # def __build_backend(self):
-    #     # TODO: allow no circuit
-    #     if self._n_moi is None:
-    #         raise RuntimeError("No circuit set in RemoteProcessor")
-    #     self._backend = RemoteBackend(self._rpc_handler, self.linear_circuit())
-
     def get_rpc_handler(self):
         return self._rpc_handler
 
@@ -151,26 +136,6 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> List[str]:
         return self._specs.get("available_commands", [])
 
-    # def async_samples(self, count, **args) -> str:
-    #     if self._backend is None:
-    #         self.__build_backend()
-    #     return self._backend.async_execute("samples", self._parameters, input_state=self._input_state, count=count, **args)
-    #
-    # def async_sample_count(self, count, **args) -> str:
-    #     if self._backend is None:
-    #         self.__build_backend()
-    #     return self._backend.async_execute("sample_count", self._parameters, input_state=self._input_state, count=count, **args)
-    #
-    # def async_probs(self, **args) -> str:
-    #     if self._backend is None:
-    #         self.__build_backend()
-    #     return self._backend.async_execute("probs", self._parameters, input_state=self._input_state, **args)
-    #
-    # def async_execute(self, command: str, **args) -> str:
-    #     if self._backend is None:
-    #         self.__build_backend()
-    #     return self._backend.async_execute(command, parameters=self._parameters, **args)
-
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
         j = {
             'platform_name': self.name,
@@ -201,7 +166,6 @@ class RemoteProcessor(AProcessor):
     def add(self, mode_mapping, component, keep_port=True):
         if not isinstance(component, ACircuit):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
-        self._backend = None
         super().add(mode_mapping, component, keep_port)
 
     def _compose_processor(self, connector, processor, keep_port: bool):
