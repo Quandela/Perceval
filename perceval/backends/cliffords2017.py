@@ -45,7 +45,9 @@ class CliffordClifford2017Backend(Backend):
 
     def sample(self, input_state):
         if isinstance(input_state, StateVector):
-            input_state = input_state.sample()
+            if len(input_state) != 1:
+                raise RuntimeError(f"{self.name} cannot sample with a mixed state input")
+            input_state = next(iter(input_state))  # Get the first and only BasicState in the dict
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
