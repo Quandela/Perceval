@@ -35,7 +35,18 @@ class RemoteJob(Job):
                  command_param_names=None, refresh_progress_delay: int = 3):
         r"""
         :param payload: a prepared payload for the job. This payload is extended by an async_execute() call before being
-            sent.
+            sent. The payload is expected to be prepared by a RemoteProcessor. It must have the following structure:
+            {
+              'platform_name': '...',
+              'pcvl_version': 'M.m.p',
+              'payload': {
+                'command': '...',
+                'circuit': <optional serialized circuit>,
+                'input_state': <optional serialized input state>
+                ...
+                other parameters
+              }
+            }
         :param rpc_handler: a valid RPC handler to connect to the cloud
         :param job_name: the job name (visible cloud-side)
         :param delta_parameters: parameters to add/remove dynamically
