@@ -23,6 +23,7 @@
 from .template import Backend
 
 import numpy as np
+from typing import List, Union
 import quandelibc as qc
 from perceval.utils import BasicState, StateVector
 
@@ -43,7 +44,7 @@ class CliffordClifford2017Backend(Backend):
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
         raise NotImplementedError(f'Cannot use prob_be on {self.name}')
 
-    def sample(self, input_state):
+    def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         if isinstance(input_state, StateVector):
             if len(input_state) != 1:
                 raise RuntimeError(f"{self.name} cannot sample with a mixed state input")
@@ -81,7 +82,7 @@ class CliffordClifford2017Backend(Backend):
             fs[next_mode] += 1
         return BasicState(fs)
 
-    def samples(self, input_state, count):
+    def samples(self, input_state: Union[BasicState, StateVector], count: int) -> List[BasicState]:
         if isinstance(input_state, StateVector) and len(input_state) == 1:
             input_state = input_state[0]
         results = []
@@ -94,5 +95,5 @@ class CliffordClifford2017Backend(Backend):
         return 'samples'
 
     @staticmethod
-    def available_commands():
+    def available_commands() -> List[str]:
         return ['sample', 'samples']
