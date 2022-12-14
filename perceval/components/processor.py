@@ -108,6 +108,7 @@ class Processor(AProcessor):
         """
         input_list = [0] * self.circuit_size
         self._inputs_map = SVDistribution()
+        assert self.m is not None, "A circuit has to be set before the input state"
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
@@ -141,6 +142,7 @@ class Processor(AProcessor):
         :param svd: The input SVDistribution which won't be changed in any way by the source.
         Every state vector size has to be equal to `self.circuit_size`
         """
+        assert self.m is not None, "A circuit has to be set before the input disctribution"
         self._input_state = svd
         expected_photons = Inf
         for sv in svd:
@@ -154,6 +156,11 @@ class Processor(AProcessor):
         if 'mode_post_select' in self._parameters:
             self._min_mode_post_select = self._parameters['mode_post_select']
 
+    def clear_input_and_circuit(self):
+        super().clear_input_and_circuit()
+        self._inputs_map = None
+        self._simulator = None
+
     def _compose_processor(self, connector, processor, keep_port: bool):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
@@ -162,12 +169,9 @@ class Processor(AProcessor):
         assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._backend_name == "CliffordClifford2017" and self._has_td:
             raise NotImplementedError(
-                "Time delay are not implemented within CliffordClifford2017 backed. Please use another one.")
+                "Time delays are not implemented within CliffordClifford2017 backend. Please use another one.")
         if not self._has_td:  # TODO: remove quickfix by something clever :  self._simulator is None and
             self._setup_simulator()
-
-    def sample_count(self, count: int, progress_callback: Callable = None) -> Dict:
-        raise RuntimeError(f"Cannot call sample_count(). Available method are {self.available_commands}")
 
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._init_command("samples")

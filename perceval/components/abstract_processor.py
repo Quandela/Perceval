@@ -47,21 +47,25 @@ class AProcessor(ABC):
         self.name: str = ""
         self._parameters: Dict = {}
 
-        self._in_ports: Dict = {}
-        self._out_ports: Dict = {}
         self._thresholded_output: bool = False
         # Mode post selection: expect at least # modes with photons in output
         self._min_mode_post_select = None
-        self._post_select = None
+
+        self._reset_circuit()
+
+    def _reset_circuit(self):
+        self._in_ports: Dict = {}
+        self._out_ports: Dict = {}
+        self._postprocess = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: List = []  # Any type of components, not only linear ones
+        self._components: List[AComponent] = []  # Any type of components, not only unitary ones
 
-        self._n_moi = None
+        self._n_moi = None  # Number of modes of interest (moi)
 
     @property
     @abstractmethod
@@ -89,6 +93,10 @@ class AProcessor(ABC):
 
     def clear_parameters(self):
         self._parameters = {}
+
+    def clear_input_and_circuit(self):
+        self._reset_circuit()
+        self._input_state = None
 
     def mode_post_selection(self, n: int):
         r"""
@@ -124,17 +132,20 @@ class AProcessor(ABC):
 
     @property
     def post_select_fn(self):
-        return self._post_select
+        return self._postprocess
 
     def set_postprocess(self, postprocess_func):
         r"""
-        Set or remove a logical post-selection function. Along with the heralded modes, this function has an impact
+        Set a logical post-selection function. Along with the heralded modes, this function has an impact
         on the logical performance of the processor
 
         :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
         """
-        self._post_select = postprocess_func
+        self._postprocess = postprocess_func
+
+    def clear_postprocess(self):
+        self._postprocess = None
 
     def _state_preselected_physical(self, input_state: StateVector):
         return max(input_state.n) >= self._min_mode_post_select
@@ -150,8 +161,8 @@ class AProcessor(ABC):
         for m, v in self.heralds.items():
             if state[m] != v:
                 return False
-        if self._post_select is not None:
-            return self._post_select(state)
+        if self._postprocess is not None:
+            return self._postprocess(state)
         return True
 
     def copy(self, subs: Union[dict, list] = None):
@@ -161,14 +172,14 @@ class AProcessor(ABC):
             new_proc._components.append((r, c.copy(subs=subs)))
         return new_proc
 
-    def set_circuit(self, circuit: Circuit):
+    def set_circuit(self, circuit: ACircuit):
         r"""
         Removes all components and replace them by the given circuit's components.
         :return: self. Allows to directly chain this with .add
         """
         if self._n_moi is None:
             self._n_moi = circuit.m
-        assert circuit.m == self.circuit_size, "circuit doesn't have the right number of modes"
+        assert circuit.m == self.circuit_size, "Circuit doesn't have the right number of modes"
         self._components = []
         for r, c in circuit:
             self._components.append((r, c))
@@ -201,8 +212,8 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._post_select is not None:
-            raise RuntimeError("Cannot add any component to a processor with post-process function")
+        if self._postprocess is not None:
+            raise RuntimeError("Cannot add any component to a processor with a post-process function. You may remove the post-process function by calling clear_postprocess()")
 
         self._simulator = None  # Invalidate simulator which will have to be recreated later on
         if self._n_moi is None:
@@ -267,13 +278,13 @@ class AProcessor(ABC):
                     self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         # Retrieve post process function from the other processor
-        if processor._post_select is not None:
+        if processor._postprocess is not None:
             if perm_component is None:
-                self._post_select = processor._post_select
+                self._postprocess = processor._postprocess
             else:
                 perm = perm_component.perm_vector
                 c_first = perm_modes[0]
-                self._post_select = lambda s: processor._post_select([s[perm.index(ii) + c_first]
+                self._postprocess = lambda s: processor._postprocess([s[perm.index(ii) + c_first]
                                                                       for ii in range(processor.circuit_size)])
 
     def _add_component(self, mode_mapping, component):
