@@ -57,14 +57,6 @@ class Source:
         else:
             assert purity is None, "cannot set both purity and multiphoton_component"
             
-        if occupation_factor is None:
-            if brightness is None:
-                ocupation_factor = 1
-        else:
-            occupation_factor = brightness
-        else:
-            assert brightness is None, "cannot set both brightness and occupation_factor"
-            
         self.brightness = brightness
         self.occupation_factor = occupation_factor
         self.overall_transmission = overall_transmission
