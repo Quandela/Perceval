@@ -38,7 +38,7 @@ from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
-from perceval.utils.statevector import ProbabilityDistribution, StateVector, SVDistribution
+from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
 from ._processor_utils import precompute_herald_pos
 
@@ -176,14 +176,12 @@ def pdisplay_analyzer(analyser: Analyzer, output_format: Format = Format.TEXT, n
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution], output_format: Format = Format.TEXT,
-                           nsimplify=True, precision=1e-6, max_v=None, sort=True):
+def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCount],
+                           output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
     Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
     StateVector's case)
     """
-    sv = copy.copy(sv)  # Work on a copy, in order to not force normalization simply because of a display call
-    sv.normalize()
     if sort:
         the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
@@ -209,6 +207,8 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution], outp
     headers = ["state", "probability"]
     if isinstance(sv, StateVector):
         headers[1] = "prob. ampl."
+    elif isinstance(sv, BSCount):
+        headers[1] = "count"
     s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
@@ -239,8 +239,16 @@ def _pdisplay(analyzer, **kwargs):
 
 
 @dispatch((StateVector, ProbabilityDistribution))
-def _pdisplay(statevector, **kwargs):
-    return pdisplay_state_distrib(statevector, **kwargs)
+def _pdisplay(distrib, **kwargs):
+    # Work on a copy, in order to not force normalization simply because of a display call
+    normalized_dist = copy.copy(distrib)
+    normalized_dist.normalize()
+    return pdisplay_state_distrib(normalized_dist, **kwargs)
+
+
+@dispatch(BSCount)
+def _pdisplay(bsc, **kwargs):
+    return pdisplay_state_distrib(bsc, **kwargs)
 
 
 def _default_output_format(o):
