@@ -47,6 +47,16 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      - if: runner.os == 'Linux'
+        name: Initialize python_v_cp linux
+        run: |
+          echo "python_v_cp=cp$( echo '${{env.python_v}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+      - if: runner.os != 'Linux'
+        name: Initialize python_v_cp notLinux
+        run: |
+          echo "python_v_cp=cp$( echo '${{env.python_v}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+        shell: Bash
+
       - uses: actions/checkout@v3
         with:
           repository: Quandela/QuandeLibC
@@ -55,14 +65,14 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Set up Python 3.9
+      - name: Set up Python ${{ env.python_v }}
         uses: actions/setup-python@v3
         with:
-          python-version: 3.9
+          python-version: ${{ env.python_v }}
 
-      - name: Build wheels for cp39
+      - name: Build wheels for ${{ env.PYTHON_V_CP }}
         env:
-          CIBW_BUILD: 'cp39-*'
+          CIBW_BUILD: '${{ env.PYTHON_V_CP }}-*'
           CIBW_SKIP: '*-musllinux_*'
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_MACOS: arm64

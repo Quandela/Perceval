@@ -63,7 +63,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Set up Python  ${{ env.PYTHON_V }}
+      - name: Set up Python ${{ env.PYTHON_V }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ env.PYTHON_V }}
