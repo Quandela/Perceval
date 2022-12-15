@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from perceval import Circuit, P, Matrix
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
@@ -43,9 +43,9 @@ def test_basic_transfer_fix():
     a = comp.BS(phi_tr=0.1)
     theta = P("theta")
     b = comp.BS(theta=theta)
-    b.transfer_from(a)
-    assert pytest.approx(3*np.pi/2) != float(b.param("phi_tr"))
-    b.transfer_from(a, force=True)
+    with pytest.raises(AssertionError):
+        b.transfer_from(a)  # By default, you cannot transfer parameter values when other parameter value differ
+    b.transfer_from(a, force=True)  # Unless you force it
     assert pytest.approx(0.1) == float(b.param("phi_tr"))
 
 

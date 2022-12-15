@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import random
+import warnings
 from collections import defaultdict
 from copy import copy
 import itertools
@@ -37,7 +38,7 @@ from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
-from quandelibc import FockState, Annotation
+from quandelibc import FockState, Annotation, FSArray
 
 
 class BasicState(FockState):
@@ -46,6 +47,12 @@ class BasicState(FockState):
 
     def __init__(self, *args, **kwargs):
         super(BasicState, self).__init__(*args, **kwargs)
+
+    def __len__(self):
+        return self.m
+
+    def __copy__(self):
+        return BasicState(self)
 
     def __add__(self, o):
         return StateVector(self) + o
@@ -65,6 +72,15 @@ class BasicState(FockState):
 
     def __pow__(self, power):
         return BasicState(power * list(self))
+
+    def __getitem__(self, item):
+        it = super().__getitem__(item)
+        if isinstance(it, FockState):
+            it = BasicState(it)
+        return it
+
+    def set_slice(self, slice, state):
+        return BasicState(super().set_slice(slice, state))
 
     def partition(self, distribution_photons: List[int]):
         r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
@@ -96,8 +112,28 @@ class BasicState(FockState):
         return list(partitions_states)
 
 
+def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
+    """Iterator on all possible output states compatible with mask generating StateVector
+
+    :param input_state: a given input state vector
+    :param mask: an optional mask
+    :return: list of output_state
+    """
+    m = input_state.m
+    ns = input_state.n
+    if not isinstance(ns, list):
+        ns = [ns]
+    for n in ns:
+        if mask is not None:
+            output_array = FSArray(m, n, mask)
+        else:
+            output_array = FSArray(m, n)
+        for output_idx, output_state in enumerate(output_array):
+            yield BasicState(output_state)
+
+
 class AnnotatedBasicState(FockState):
-    r"""Extends `BasicState` with annotations
+    r"""Deprecated in version 0.7.0. Use BasicState instead.
     """
 
     @deprecated(version="0.7", reason="use BasicState instead")
@@ -111,7 +147,7 @@ class StateVector(defaultdict):
     """
 
     def __init__(self,
-                 bs: Union[BasicState, List[int], str, BasicState, None] = None,
+                 bs: Union[BasicState, List[int], str, None] = None,
                  photon_annotations: Dict[int, str] = None):
         r"""Init of a StateVector from a BasicState, or from BasicState constructor
         :param bs: a BasicState, or `BasicState` constructor,
@@ -148,7 +184,7 @@ class StateVector(defaultdict):
         return super().__setitem__(key, value)
 
     def __iter__(self):
-        self._normalize()
+        self.normalize()
         return super().__iter__()
 
     def __mul__(self, other):
@@ -237,7 +273,7 @@ class StateVector(defaultdict):
         p = random.random()
         idx = 0
         keys = list(self.keys())
-        self._normalize()
+        self.normalize()
         while idx < len(keys)-1:
             p = p - abs(self[keys[idx]])**2
             if p < 0:
@@ -253,12 +289,10 @@ class StateVector(defaultdict):
         :param shots: the number of samples
         :return: a list of BasicState
         """
-        self._normalize()
-        p = random.random()
-        keys = [BasicState(key) for key in self.keys()]
+        self.normalize()
         weight = [abs(self[key])**2 for key in self.keys()]
         rng = np.random.default_rng()
-        return rng.choice(keys, shots, p=weight)
+        return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
 
     def measure(self, modes: Union[int, List[int]]) -> Dict[BasicState, Tuple[float, StateVector]]:
         r"""perform a measure on one or multiple modes and collapse the remaining statevector
@@ -266,7 +300,7 @@ class StateVector(defaultdict):
         :param modes: the mode to measure
         :return: a dictionary - key is the possible measures, values are pairs (probability, BasicState vector)
         """
-        self._normalize()
+        self.normalize()
         if isinstance(modes, int):
             modes = [modes]
         map_measure_sv = defaultdict(lambda: [0, StateVector()])
@@ -288,7 +322,7 @@ class StateVector(defaultdict):
         r"""list the possible values of n in the different states"""
         return list(set([st.n for st in self.keys()]))
 
-    def _normalize(self):
+    def normalize(self):
         r"""Normalize a non-normalized BasicState"""
         if not self._normalized:
             norm = 0
@@ -310,25 +344,29 @@ class StateVector(defaultdict):
             self._normalized = True
 
     def __str__(self):
-        self._normalize()
-        ls = []
         if not self:
             return "|>"
-        for key, value in self.items():
+        self_copy = copy(self)
+        self_copy.normalize()
+        ls = []
+        for key, value in self_copy.items():
             if value == 1:
                 ls.append(str(key))
             else:
                 if isinstance(value, sp.Expr):
                     ls.append(str(value) + "*" + str(key))
                 else:
-                    ls.append(simple_complex(value)[1] + "*" + str(key))
+                    value = simple_complex(value)[1]
+                    if value[1:].find("-") != -1 or value.find("+") != -1:
+                        value = "("+value+")"
+                    ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
 
     def __hash__(self):
         return self.__str__().__hash__()
 
 
-def tensorproduct(states: list[Union[StateVector, BasicState]]):
+def tensorproduct(states: List[Union[StateVector, BasicState]]):
     r""" Computes states[0] * states[1] * ...
     """
     if len(states) == 1:
@@ -336,31 +374,60 @@ def tensorproduct(states: list[Union[StateVector, BasicState]]):
     return tensorproduct(states[:-2] + [states[-2] * states[-1]])
 
 
-class SVTimeSequence:
-    r"""Sequence in time of BasicState-vector
+class ProbabilityDistribution(defaultdict):
+    """Time-Independent abstract probabilistic distribution of StateVectors
     """
-
     def __init__(self):
-        pass
+        super().__init__(float)
+
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        if sum_probs == 0:
+            warnings.warn("Unable to normalize a distribution with only null probabilities")
+            return
+        for sv in self.keys():
+            self[sv] /= sum_probs
+
+    def add(self, obj, proba: float):
+        self[obj] += proba
+
+    def __str__(self):
+        return "{\n  "\
+               + "\n  ".join(["%s: %s" % (str(k), simple_float(v, nsimplify=True)[1]) for k, v in self.items()])\
+               + "\n}"
+
+    def __copy__(self):
+        distribution_copy = type(self)()
+        for k, prob in self.items():
+            distribution_copy[copy(k)] = prob
+        return distribution_copy
 
 
-class SVDistribution(defaultdict):
+class SVDistribution(ProbabilityDistribution):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[StateVector] = None):
-        super(SVDistribution, self).__init__(float)
+    def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
+        super().__init__()
         if sv is not None:
-            self[sv] = 1
-
-    def add(self, sv: StateVector, proba: float):
-        self[sv] += proba
+            if isinstance(sv, (BasicState, StateVector)):
+                self[sv] = 1
+            elif isinstance(sv, dict):
+                for k, v in sv.items():
+                    self[k] = v
+            else:
+                raise TypeError(f"Unexpected type initializing SVDistribution {type(sv)}")
 
     def __setitem__(self, key, value):
-        assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
+        key.normalize()
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
-        assert isinstance(key, StateVector), "SVDistribution keys are BasicState vectors"
+        if isinstance(key, BasicState):
+            key = StateVector(key)
+        assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
     def __mul__(self, svd):
@@ -369,36 +436,133 @@ class SVDistribution(defaultdict):
         :param svd:
         :return:
         """
+        if len(self) == 0:
+            return svd
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
             for sv2, proba2 in svd.items():
-                assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
-                new_svd[StateVector(sv1[0]*sv2[0])] = proba1 * proba2
+                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+                new_svd[sv1*sv2] = proba1 * proba2
 
         return new_svd
 
-    def sample(self, k: int = 1, non_null: bool = True) -> List[StateVector]:
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_svd = self
+        out = SVDistribution()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_svd
+            if i != len(binary) - 1:
+                power_svd *= power_svd
+        return out
+
+    def normalize(self):
+        sum_probs = sum(list(self.values()))
+        for sv in self.keys():
+            self[sv] /= sum_probs
+
+    def sample(self, count: int = 1, non_null: bool = True) -> List[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
-        :param k: number of samples to draw
-        :return: if :math:`k=1` a single sample, if :math:`k>1` a list of :math:`k` samples
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
         """
-        sample = []
-        for _ in range(k):
-            prob = random.random()
-            if non_null:
-                prob -= sum(v for sv, v in self.items() if sv.n == 0)
-            for sv, v in self.items():
-                if non_null and sv.n == 0:
-                    continue
-                if prob < v:
-                    if k == 1:
-                        return sv
-                    sample.append(sv)
-                    break
-                prob -= v
-        return sample
+        self.normalize()
+        d = self
+        if non_null:
+            d = {sv: p for sv, p in self.items() if max(sv.n) != 0}
+        states = list(d.keys())
+        probs = list(d.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        if len(results) == 1:
+            return results[0]
+        return list(results)
+
+
+class BSDistribution(ProbabilityDistribution):
+
+    def __init__(self, d: Optional[BasicState, Dict] = None):
+        super().__init__()
+        if d is not None:
+            if isinstance(d, BasicState):
+                self[d] = 1
+            elif isinstance(d, dict):
+                for k, v in d.items():
+                    self[BasicState(k)] = v
+            else:
+                raise TypeError(f"Unexpected type initializing BSDistribution {type(d)}")
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        return super().__getitem__(key)
+
+    def samples(self, count: int = 1) -> BSSamples:
+        r""" Samples basic states from the `BSDistribution`
+
+        :param count: number of samples to draw
+        :return: if :math:`count=1` a single sample, if :math:`count>1` a list of :math:`count` samples
+        """
+        self.normalize()
+        states = list(self.keys())
+        probs = list(self.values())
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=probs)
+        # numpy transforms iterables of ints to a nparray in rng.choice call
+        # Thus, we need to convert back the results to BasicStates
+        output = BSSamples()
+        for s in results:
+            output.append(BasicState(s))
+        return output
+
+
+class BSCount(defaultdict):
+    def __init__(self, d: Optional[Dict] = None):
+        super().__init__(int)
+        if d is not None:
+            for k, v in d.items():
+                self[BasicState(k)] = v
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
+        assert isinstance(value, int) and value >= 0, "Count must be a positive integer"
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
+        return super().__getitem__(key)
+
+    def add(self, obj, count: int):
+        self[obj] += count
+
+    def total(self):
+        return sum(list(self.values()))
+
+    def __str__(self):
+        return "{\n  " + "\n  ".join([f"{k}: {v}" for k, v in self.items()]) + "\n}"
+
+
+class BSSamples(list):
+    def __setitem__(self, index, item):
+        assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
+        super().__setitem__(index, item)
+
+    def __str__(self):
+        sz = len(self)
+        n_to_display = min(sz, 10)
+        s = '[' + ', '.join([str(bs) for bs in self[:n_to_display]])
+        if sz > n_to_display:
+            s += f', ... (size={sz})'
+        s += ']'
+        return s
 
 
 def _rec_build_spatial_output_states(lfs: list, output: list):

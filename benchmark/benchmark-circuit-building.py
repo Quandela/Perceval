@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-from perceval.components.base_components import BS, PS, PERM
+from perceval.components.unitary_components import BS, PS, PERM
 import random
 import time
 
@@ -32,7 +32,7 @@ t_get = 0
 
 for _ in range(1000):
     start = time.time()
-    #List of the parameters φ1,φ2,...,φ8
+    # List of the parameters φ1,φ2,...,φ8
     List_Parameters = []
 
     # VQE is a 6 optical mode circuit
@@ -51,17 +51,17 @@ for _ in range(1000):
     List_Parameters.append(pcvl.Parameter("φ4"))
     VQE.add((4,), PS(phi=List_Parameters[-1]))
 
-
     # CNOT ( Post-selected with a success probability of 1/9)
-    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the purpose of drawing a nice circuit
+    VQE.add([0, 1, 2, 3, 4, 5],
+            PERM([0, 1, 2, 3, 4, 5]))  # Identity PERM (permutation) for the purpose of drawing a nice circuit
     VQE.add((3, 4), BS.H())
-    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
-    VQE.add((0, 1), BS.H(theta=BS.r_to_theta(1/3)))
-    VQE.add((2, 3), BS.H(theta=BS.r_to_theta(1/3)))
-    VQE.add((4, 5), BS.H(theta=BS.r_to_theta(1/3)))
-    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
+    VQE.add([0, 1, 2, 3, 4, 5], PERM([0, 1, 2, 3, 4, 5]))  # Identity PERM (permutation) for the same purpose
+    VQE.add((0, 1), BS.H(theta=BS.r_to_theta(1 / 3)))
+    VQE.add((2, 3), BS.H(theta=BS.r_to_theta(1 / 3)))
+    VQE.add((4, 5), BS.H(theta=BS.r_to_theta(1 / 3)))
+    VQE.add([0, 1, 2, 3, 4, 5], PERM([0, 1, 2, 3, 4, 5]))  # Identity PERM (permutation) for the same purpose
     VQE.add((3, 4), BS.H())
-    VQE.add([0,1,2,3,4,5], PERM([0,1,2,3,4,5]))#Identity PERM (permutation) for the same purpose
+    VQE.add([0, 1, 2, 3, 4, 5], PERM([0, 1, 2, 3, 4, 5]))  # Identity PERM (permutation) for the same purpose
 
     List_Parameters.append(pcvl.Parameter("φ5"))
     VQE.add((2,), PS(phi=List_Parameters[-1]))
@@ -76,24 +76,24 @@ for _ in range(1000):
     VQE.add((1, 2), BS.H())
     VQE.add((3, 4), BS.H())
 
-    t_build += time.time()-start
+    t_build += time.time() - start
     start = time.time()
     init_param = [random.random() for _ in List_Parameters]
 
     for idx, p in enumerate(List_Parameters):
         p.set_value(init_param[idx])
 
-    t_set += time.time()-start
+    t_set += time.time() - start
     start = time.time()
 
-    VQE.compute_unitary(use_symbolic = False)
+    VQE.compute_unitary(use_symbolic=False)
 
-    t_compute += time.time()-start
+    t_compute += time.time() - start
     start = time.time()
 
     for i in range(len(List_Parameters)):
         init_param[i] = VQE.get_parameters()[i]._value
 
-    t_get += time.time()-start
+    t_get += time.time() - start
 
-print("TOTAL=", t_build+t_set+t_compute+t_get, "DETAIL=", t_build, t_set, t_compute, t_get)
+print("TOTAL=", t_build + t_set + t_compute + t_get, "DETAIL=", t_build, t_set, t_compute, t_get)

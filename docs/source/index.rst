@@ -66,6 +66,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    components
    convertors
    tools
+   legacy
 
 .. toctree::
    :caption: Examples
@@ -76,11 +77,14 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Differential equation solving
    notebooks/Shor Implementation
    notebooks/Boson Sampling
+   notebooks/Boson Sampling with MPS
    notebooks/Variational Quantum Eigensolver
    notebooks/2-mode Grover algorithm
    notebooks/BS-based implementation notebook
    notebooks/Rewriting rules in Perceval
+   notebooks/Non-unitary components
    notebooks/Qiskit conversion
+   notebooks/Remote computing
 
 .. toctree::
    :caption: Code Reference

@@ -23,7 +23,7 @@
 import pytest
 
 from perceval import Parameter
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_matrix
 
 import sympy as sp

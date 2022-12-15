@@ -26,14 +26,14 @@ terminal python console.
 First Circuit
 -------------
 
-Import the library and the components from `symb` library:
+Import the library and the components from the unitary components library:
 
 >>> import perceval as pcvl
->>> import perceval.lib.symb as symb
+>>> import perceval.components.unitary_components as comp
 
 Defines a circuit as a simple beam-splitter, it is a 2-mode circuit
 
->>> c = symb.BS()
+>>> c = comp.BS()
 >>> c.m
 2
 >>> pcvl.pdisplay(c)
@@ -56,10 +56,10 @@ Defines a circuit as a simple beam-splitter, it is a 2-mode circuit
 Check the definition of the circuit, and the values of these parameters:
 
 >>> pcvl.pdisplay(c.definition())
-⎡cos(theta)               I*exp(-I*phi)*sin(theta)⎤
-⎣I*exp(I*phi)*sin(theta)  cos(theta)              ⎦
+⎡exp(I*(phi_tl + phi_tr))*cos(theta/2)    I*exp(I*(phi_bl + phi_tr))*sin(theta/2)⎤
+⎣I*exp(I*(phi_br + phi_tl))*sin(theta/2)  exp(I*(phi_bl + phi_br))*cos(theta/2)  ⎦
 >>> c.get_parameters(all_params=True)
-[Parameter(name='phi', value=0, min=0, max=2*pi), Parameter(name='theta', value=pi/4, min=0, max=2*pi)]
+[Parameter(name='theta', value=pi/2, min_v=0.0, max_v=12.566370614359172), Parameter(name='phi_tl', value=0, min_v=0.0, max_v=6.283185307179586), Parameter(name='phi_bl', value=0, min_v=0.0, max_v=6.283185307179586), Parameter(name='phi_tr', value=0, min_v=0.0, max_v=6.283185307179586), Parameter(name='phi_br', value=0, min_v=0.0, max_v=6.283185307179586)]
 
 Display the unitary matrix for these fixed parameters, and check it is unitary:
 
@@ -88,8 +88,12 @@ sqrt(2)*I/2*|1,0>+sqrt(2)/2*|0,1>
 
 Sample some output states:
 
->>> for _ in range(10):
-...    print(simulator.sample(pcvl.BasicState("|0,1>")))
+>>> p = pcvl.Processor("Naive", c)
+>>> p.with_input(input_state)
+>>> sampler = pcvl.algorithm.Sampler(p)
+>>> samples = sampler.samples(10)
+>>> for state in samples['results']:
+...    print(state)
 ...
 |0,1>
 |0,1>
@@ -104,16 +108,18 @@ Sample some output states:
 
 Get the actual probability associated to each output state:
 
->>> pcvl.pdisplay(simulator.prob(input_state, pcvl.BasicState("|0,1>")))
-1/2
->>> pcvl.pdisplay(simulator.prob(input_state, pcvl.BasicState("|1,0>")))
-1/2
->>> pcvl.pdisplay(simulator.prob(input_state, pcvl.BasicState("|1,1>")))
-0
+>>> probs = sampler.probs()
+>>> pcvl.pdisplay(probs['results'])
++-------+-------------+
+| state | probability |
++-------+-------------+
+| |1,0> |     1/2     |
+| |0,1> |     1/2     |
++-------+-------------+
 
-Get the full probability distribution:
+Get the full probability distribution for multiple input states:
 
->>> ca = pcvl.CircuitAnalyser(simulator,
+>>> ca = pcvl.algorithm.Analyzer(p,
 ...                           [pcvl.BasicState([0, 1]), pcvl.BasicState([1, 0]), pcvl.BasicState([1, 1])], # the input states
 ...                           "*" # all possible output states that can be generated with 1 or 2 photons
 ...                          )

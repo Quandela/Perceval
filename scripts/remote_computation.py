@@ -21,11 +21,12 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.components.base_components as cp
+import perceval.components.unitary_components as cp
 import numpy as np
 from tqdm import tqdm
 import time
 
+from perceval import RemoteProcessor
 from perceval.algorithm import Sampler
 
 theta_r13 = cp.BS.r_to_theta(1/3)
@@ -60,23 +61,28 @@ phi_3.set_value(3)
 U = c.compute_unitary(use_symbolic=False)
 
 
-token_qcloud = 'YOUR_TOKEN'
+token_qcloud = 'YOUR_API_KEY'
 platform_url = "https://api.cloud.quandela.dev"
 
-naive_remote_platform = pcvl.get_platform("al3", token_qcloud, platform_url)
 
-sampler = Sampler(naive_remote_platform, U)
+remote_simulator = RemoteProcessor("qpu", token_qcloud, platform_url)
+specific_circuit = remote_simulator.specs['specific_circuit']
+
+remote_simulator.set_circuit(U)
+remote_simulator.with_input(pcvl.BasicState([1, 0, 1, 0]))
+
+sampler = Sampler(remote_simulator)
 
 nsample = 10000
-async_job = sampler.sample_count.execute_async(pcvl.BasicState([1, 0, 1, 0]), nsample)
+async_job = sampler.sample_count.execute_async(nsample)
 
 previous_prog = 0
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:
-    tq.set_description(f'Get {nsample} samples from {c.name} using simulator backend {naive_remote_platform.name}')
+    tq.set_description(f'Get {nsample} samples from {remote_simulator.name}')
     while not async_job.is_completed():
-        tq.update(async_job.status.progress-previous_prog)
-        previous_prog = async_job.status.progress
-        time.sleep(.2)
+        tq.update(async_job.status.progress/100-previous_prog)
+        previous_prog = async_job.status.progress/100
+        time.sleep(1)
     tq.update(1-previous_prog)
     tq.close()
 

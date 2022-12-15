@@ -17,7 +17,7 @@ converted to an equivalent photonic circuit using Perceval ``QiskitConverter``.
 
 >>> import qiskit
 >>> from perceval.converters import QiskitConverter
->>> import perceval.lib.phys as phys
+>>> from perceval.components import catalog
 
 Create a Quantum Circuit (the following is pure Qiskit syntax):
 
@@ -33,7 +33,7 @@ q_1: ─────┤ X ├
 
 Then convert the Quantum Circuit with Perceval QiskitConvertor:
 
->>> qiskit_convertor = QiskitConverter(phys)
+>>> qiskit_convertor = QiskitConverter(catalog)
 >>> perceval_processor = qiskit_convertor.convert(qc)
 
 See also:
@@ -47,24 +47,24 @@ Parameters
 
 ``QiskitConverter`` constructor usage:
 
->>> converter = QiskitConverter(library, source=None)
+>>> converter = QiskitConverter(catalog, backend_name, source=Source())
 
 With:
 
-* ``library``: any Perceval component library such as ``phys`` or ``symb``
+* ``catalog``: a component catalog containing CNOT gates
+* ``backend_name``: any known backend name
 * ``source``: a Perceval Source object representing a photonic source (default is a perfect source)
 
 ``convert`` method usage:
 
->>> processor = qiskit_convertor.convert(qc: qiskit.QuantumCircuit, heralded: bool = None)
+>>> processor = qiskit_convertor.convert(qc: qiskit.QuantumCircuit, use_postselection: bool = True)
 
 With:
 
 * ``qc``: the qiskit.QuantumCircuit to be converted
-* ``heralded``: bool (default = None)
+* ``use_postselection``: bool (default = True)
 
-  * True => use only heralded CNOT
-  * False => use only post-processed CNOT
-  * None (not set) => use heralded CNOT for all gates except the last one (which is post-processed)
+  * False => use only heralded CNOT
+  * True => use heralded CNOT for all gates except the last one (which is post-processed)
 
 * **Returns**: a ``Processor`` containing the ``qiskit.QuantumCircuit`` equivalent, heralds and post selection function.

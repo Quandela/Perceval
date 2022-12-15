@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 from abc import ABC
-from typing import List, Union, Literal, Tuple
+from typing import List, Union, Tuple
 
 
 class Canvas(ABC):
@@ -226,8 +226,10 @@ class Canvas(ABC):
         return (self.position[0], self._inverse_Y * self.position[1])
 
     def add_text(self, points: Tuple[float, float],
-                 text: str, size: float, ta: Literal["left", "middle", "right"] = "left",
-                 fontstyle: Literal["normal", "bold", "italic"] = "normal"):
+                 text: str, size: float,
+                 ta: str = "left",  # Literal["left", "middle", "right"]
+                 fontstyle: str = "normal"  # Literal["normal", "bold", "italic"]
+                 ):
         self.position = points
         f_points = self.position
         if ta == "left":
@@ -239,8 +241,8 @@ class Canvas(ABC):
             self.position = (points[0]+size*len(text)/2, points[1]+size)
         return (f_points[0], self._inverse_Y * f_points[1])
 
-    def add_shape(self, shape_fn, circuit, content, **opt):
-        shape_fn(circuit, self, content, **opt)
+    def add_shape(self, shape_fn, circuit, content, mode_style, **opt):
+        shape_fn(circuit, self, content, mode_style, **opt)
 
     def draw(self):
         assert not self._drawn, "calling draw on drawn canvas"

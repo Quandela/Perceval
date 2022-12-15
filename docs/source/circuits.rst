@@ -49,7 +49,7 @@ In Perceval a *circuit* represents a setup of optical components, used
 to guide and act on photons.
 
 A circuit has a fixed number of *spatial modes* (sometimes also called
-*pathes* or *ports*) :math:`m`, which is the same for input as for output
+*paths* or *ports*) :math:`m`, which is the same for input as for output
 spatial modes.
 
 Simple examples of circuits are common optical devices such as beam
@@ -102,7 +102,7 @@ Building a Circuit
 ------------------
 
 Each circuit corresponds to a ``Circuit`` object.
-To instantiate a circuit, simply pass the number of pathes as an argument:
+To instantiate a circuit, simply pass the number of modes as an argument:
 
 >>> # create a new circuit with 3 spatial modes
 >>> my_circuit = pcvl.Circuit(3)
@@ -115,69 +115,42 @@ To instantiate a circuit, simply pass the number of pathes as an argument:
   corresponding to the first line, ... port :math:`(m-1)` is corresponding to the :math:`m`-th line.
 
 
-Predefined Circuits
-^^^^^^^^^^^^^^^^^^^
+Circuit library
+^^^^^^^^^^^^^^^
 
-Perceval provides two libraries of predefined circuits, named
-``perceval.lib.phys`` and ``perceval.lib.symb`` (or shortly ``phys``
-and ``symb``):
+Perceval provides a library of predefined components, located in ``perceval.components``:
 
->>> import perceval.lib.phys as phys
->>> import perceval.lib.symb as symb
+>>> import perceval.components as comp
 
-These libraries contain simple circuits, which differ by their visual
-identities and specific mathematical definitions.
+This library contain simple circuits stored in a few sub-packages. For instance:
 
-* ``symb`` provides circuits with generally less parameters. This is
-  useful to build generic optical circuits which implement quantum
-  circuits, and perform symbolic computation.
-* ``phys`` provides circuits with more parameters, which allow a
-  sharper modelisation of the components in a physical experiment.
+* ``unitary_components`` provides circuits which can be represented by a unitary matrix.
+* ``non_unitary_components`` provides other types of circuit, such as time delays.
 
-For instance, the following table shows the respective definition of the unitary matrix of a beam splitter in the
-``phys`` and the ``symb`` library:
+Circuit Rendering
+^^^^^^^^^^^^^^^^^
 
-.. list-table::
- :header-rows: 1
- :width: 50%
- :align: center
+Perceval provides ``pdisplay`` function as an easy and ergonomic way to display a lot of Perceval objects, given the
+execution context (Jupyter notebook, IDE, command line script). Circuit rendering is built upon a skin system allowing
+to style your output image.
 
- * - Library
-   - Definition
-   - Representation
+Perceval comes with two built-in skins:
 
- * - ``symb``
-   - :math:`\left[\begin{matrix}\cos{\left(\theta \right)} & i e^{- i \phi} \sin{\left(\theta \right)}\\i e^{i \phi} \sin{\left(\theta \right)} & \cos{\left(\theta \right)}\end{matrix}\right]`
-   - .. image:: _static/library/symb/bs.png
+* ``SymbSkin``: a sober black and white skin
+* ``PhysSkin``: a more colorful "real-life" skin
 
- * - ``phys``
-   - :math:`\left[\begin{matrix}e^{i \phi_{a}} \cos{\left(\theta \right)} & i e^{i \phi_{b}} \sin{\left(\theta \right)}\\i e^{i \left(\phi_{a} - \phi_{b} + \phi_{d}\right)} \sin{\left(\theta \right)} & e^{i \phi_{d}} \cos{\left(\theta \right)}\end{matrix}\right]`
-   - .. image:: _static/library/phys/bs.png
-
-Also following figure shows the same Mach Zehnder Interferometer circuit represented with the ``symb`` and the
-``phys`` library:
+The following figure shows the same Mach Zehnder Interferometer circuit represented with the ``SymbSkin`` on the left
+and the ``PhysSkin`` on the right:
 
 .. figure:: _static/img/comparing-symb-and-phys.png
   :align: center
   :width: 75%
 
+>>> from perceval.rendering.circuit import SymbSkin, PhysSkin
+>>> perceval.pdisplay(circuit, skin=SymbSkin())
+
 See :ref:`Components` for an overview of the circuits provided by
-``symb`` and ``phys``.
-
-
-.. tip::
-
-   You can play with the python import namespace ``as`` to define a circuit without explicit reference to one or the
-   other library. For instance, the following code defines a Mach Zehnder interferometer
-
-   >>> import perceval.lib.phys as plib
-   >>> mzi = (pcvl.Circuit(m=2, name="mzi")
-   ...        .add((0, 1), plib.BS())
-   ...        .add(0, plib.PS(pcvl.Parameter("phi1")))
-   ...        .add((0, 1), plib.BS())
-   ...        .add(0, plib.PS(pcvl.Parameter("phi2"))))
-
-   You would only need to change the first line to switch from one library to the other.
+Perceval.
 
 .. Elementary Circuits
 
@@ -185,25 +158,25 @@ See :ref:`Components` for an overview of the circuits provided by
 
    To define a circuit, you simply need to instantiate the corresponding object:
 
-   >>> bs = phys.BS()
+   >>> bs = comp.BS()
 
 .. And you can use it the same way you will use a complex circuit as described in :ref:`Complex Circuits`.
 
 In addition to the generic properties of complex circuits, elementary
-circuits defined in ``phys`` and ``symb`` also have the following
+circuits also have the following
 features:
 
 * **Definition**: ``definition()`` method gives the definition of the circuit - allowing to know in particular, the parameters to use
   and the way the unitary matrix is computed.
 
-  >>> pcvl.pdisplay(phys.BS().definition())
+  >>> pcvl.pdisplay(comp.BS().definition())
   ⎡cos(theta)               I*exp(-I*phi)*sin(theta)⎤
   ⎣I*exp(I*phi)*sin(theta)  cos(theta)              ⎦
 
 * **Parameterization**: most of the elementary circuits are defined by parameters. For instance a phase shifter will take
   the phase :math:`\phi` as a parameter. You can either initialize these parameters with a fixed numeric value:
-  ``phys.PS(1.57)``, with a symbolic value ``phys.PS(sp.pi/2)`` or with a non fixed parameter:
-  ``phys.PS(pcvl.P("alpha"))``. See :ref:`Parameters` for more information.
+  ``comp.PS(1.57)``, with a symbolic value ``comp.PS(sp.pi/2)`` or with a non fixed parameter:
+  ``comp.PS(pcvl.P("alpha"))``. See :ref:`Parameters` for more information.
 
 Defining circuits from a unitary matrix
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -222,13 +195,13 @@ corresponds to the unitary matrix: :math:`\left[\begin{matrix}0 & 0 &
 
 The following then defines a circuit corresponding to this matrix:
 
->>> c1 = symb.Unitary(U=M)
+>>> c1 = comp.Unitary(U=M)
 
 
 You might also want to decompose the unitary matrix into a physical circuit using decomposition elements.
 Let us define for instance:
 
->>> ub = Circuit(2, name="ub") // symb.BS() // (0, symb.PS(phi=pcvl.Parameter("φ_a"))) // symb.BS() // (1, symb.PS(phi=pcvl.Parameter("φ_b")))
+>>> ub = Circuit(2, name="ub") // comp.BS() // (0, comp.PS(phi=pcvl.Parameter("φ_a"))) // comp.BS() // (1, comp.PS(phi=pcvl.Parameter("φ_b")))
 
 Then you can build a circuit using the method :meth:`perceval.components.circuit.Circuit.decomposition`:
 
@@ -244,10 +217,10 @@ Some additional parameters can simplifiy the decomposition:
 * `permutation`: if set to a permutation component, permutations will be used when possible instead of a unitary block
 
 >>> import perceval as pcvl
->>> import perceval.lib.symb as symb
->>> C1 = pcvl.Circuit.decomposition(symb.PERM([3, 2, 1, 0]).compute_unitary(False),
->>>                                 symb.BS(theta=pcvl.Parameter("theta")),
->>>                                 permutation=symb.PERM,
+>>> import perceval.components.unitary_components as comp
+>>> C1 = pcvl.Circuit.decomposition(comp.PERM([3, 2, 1, 0]).compute_unitary(False),
+>>>                                 comp.BS(theta=pcvl.Parameter("theta")),
+>>>                                 permutation=comp.PERM,
 >>>                                 shape="triangle")
 >>>pcvl.pdisplay(C1)
 
@@ -266,7 +239,7 @@ Some additional parameters can simplifiy the decomposition:
 >>>                 [0,0,-np.sqrt(3)*1j,np.sqrt(3),0,np.sqrt(3)],
 >>>                 [0,0,-np.sqrt(3)*1j,0,np.sqrt(3),-np.sqrt(3)],
 >>>                 [0,0,0,np.sqrt(3),-np.sqrt(3),-np.sqrt(3)]])
->>> ub = symb.BS(theta=pcvl.P("theta"))//symb.PS(phi=pcvl.P("phi"))
+>>> ub = comp.BS(theta=pcvl.P("theta")) // comp.PS(phi=pcvl.P("phi"))
 >>> C1 = pcvl.Circuit.decomposition(U,
 >>>                                 ub,
 >>>                                 shape="triangle", constraints=[(None,0),(None,np.pi/2),
@@ -282,6 +255,34 @@ Some additional parameters can simplifiy the decomposition:
 * finally, you can also pass simpler unitary blocks - for instance a simple beamsplitter without phase, however in these
   cases, you might not obtain any solution in the decomposition
 
+Accessing components in a circuit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is possible to access directly a component from a circuit using `row` and `column` indices - note that a same
+component may have different column indices for the different rows it spans over:
+
+>>> c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.Rx() // comp.PS(P("phi2"))
+>>> print (c[1, 1].describe())
+BS(convention=BSConvention.Rx)
+>>> print (c[0, 2].describe())
+BS(convention=BSConvention.Rx)
+
+Circuit simplification
+^^^^^^^^^^^^^^^^^^^^^^
+
+The syntax is the following:
+
+>>> from perceval.utils.algorithms.simplification import simplify
+>>>
+>>> c = Circuit() // ...
+>>> simplified_c = simplify(c, display = False)
+
+Circuit simplification takes a circuit and does the following:
+
+* For phase shifters, add their phase if they are not parameters and combine them into a single phase shifters (work through permutations). If :code:`display == False`, removes them if their added phase is :math:`0` or :math:`2\pi`.
+* For Permutations, if two permutations are consecutive, they are combined into a single permutation. For single permutations, fixed modes at the extremities are removed. If they are not just consecutive, try to compute a "better" permutation, then if it is better, moves the components accordingly to this new permutation. Display changes how a permutation is evaluated.
+
+
 Complex Circuits
 ^^^^^^^^^^^^^^^^
 
@@ -296,14 +297,14 @@ Where ``m`` is the number of modes of the circuit. See :ref:`Circuit` for additi
 
 Then components of the circuit are added with the ``add`` primitive:
 
->>> c.add((0, 1), phys.BS())
+>>> c.add((0, 1), comp.BS())
 
 Where:
 
 * The first parameter is either the *port range* (here ports 0 and 1), or the upper where the component should be added.
   The previous declaration is equivalent to:
 
-  >>> c.add(0, phys.BS())
+  >>> c.add(0, comp.BS())
 
 * The second parameter is a circuit, it can be an elementary circuit as in our example, or another complex circuit.
 
@@ -311,12 +312,12 @@ Where:
 
   It is possible to add multiple components in a single statement allowing for simpler circuit declaration:
 
-  >>> mzi = pcvl.Circuit(2).add(0, plib.BS()).add(0, plib.PS(pcvl.Parameter("phi1")))\
-  ...                      .add(0, plib.BS()).add(0, plib.PS(pcvl.Parameter("phi2"))))
+  >>> mzi = pcvl.Circuit(2).add(0, comp.BS()).add(0, comp.PS(pcvl.Parameter("phi1")))\
+  ...                      .add(0, comp.BS()).add(0, comp.PS(pcvl.Parameter("phi2"))))
 
   alternatively, you can also use ``//`` notation for more compact definition, and start from unitary circuit:
 
-  >>> mzi = plib.BS() // (0, plib.PS(pcvl.Parameter("phi1"))) // plib.BS() // (0, plib.PS(pcvl.Parameter("phi2")))
+  >>> mzi = comp.BS() // (0, comp.PS(pcvl.Parameter("phi1"))) // comp.BS() // (0, comp.PS(pcvl.Parameter("phi2")))
 
 Generic Interferometer
 """"""""""""""""""""""
@@ -328,7 +329,7 @@ For instance the following defines a triangular interferometer on 8 modes using 
 and a phase shifter as base components:
 
 >>> c = pcvl.Circuit.generic_interferometer(8,
-...                                         lambda i: symb.BS() // symb.PS(pcvl.P("φ%d" % i)),
+...                                         lambda i: comp.BS() // comp.PS(pcvl.P("φ%d" % i)),
 ...                                         shape="triangle")
 >>> pcvl.pdisplay(c)
 
@@ -341,7 +342,7 @@ Sub-circuits
 
 When you assemble to build a circuit, you can naturally include a complex circuit into another one:
 
->>> bsps = phys.BS().add(0, phys.PS(sp.pi/2))
+>>> bsps = comp.BS().add(0, comp.PS(sp.pi/2))
 >>> c = pcvl.Circuit(3).add(0, bsps).add(1, bsps)
 >>> pcvl.pdisplay(c)
 
@@ -368,10 +369,10 @@ circuit is using :ref:`Parameters` or not, the unitary matrix will be symbolic o
 >>> phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
 ...         pcvl.Parameter("phi3"), pcvl.Parameter("phi4")]
 >>> (chip4mode
-...  .add((0, 1), symb.BS()).add((2, 3), symb.BS()).add((1, 2), symb.PERM([1, 0]))
-...  .add(0, symb.PS(phis[0])).add(2, symb.PS(phis[2])).add((0, 1), symb.BS())
-...  .add((2, 3), symb.BS()).add(0, symb.PS(phis[1])).add(2, symb.PS(phis[3]))
-...  .add((0, 1), symb.BS()).add((2, 3), symb.BS()))
+...  .add((0, 1), comp.BS()).add((2, 3), comp.BS()).add((1, 2), comp.PERM([1, 0]))
+...  .add(0, comp.PS(phis[0])).add(2, comp.PS(phis[2])).add((0, 1), comp.BS())
+...  .add((2, 3), comp.BS()).add(0, comp.PS(phis[1])).add(2, comp.PS(phis[3]))
+...  .add((0, 1), comp.BS()).add((2, 3), comp.BS()))
 >>> pcvl.pdisplay(chip4mode.U)
 
 :math:`\left[\begin{matrix}\frac{\sqrt{2} \left(- e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} i \left(- e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{2}} + 1\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{2}} + 1\right)}{4}\\\frac{\sqrt{2} i \left(e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} \left(1 - e^{i \phi_{2}}\right)}{4} & \frac{\sqrt{2} i \left(1 - e^{i \phi_{2}}\right)}{4}\\\frac{\sqrt{2} i \left(- e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} \left(- e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{4}} + 1\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{4}} + 1\right)}{4}\\- \frac{\sqrt{2} \left(e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} i \left(1 - e^{i \phi_{4}}\right)}{4} & \frac{\sqrt{2} \left(1 - e^{i \phi_{4}}\right)}{4}\end{matrix}\right]`

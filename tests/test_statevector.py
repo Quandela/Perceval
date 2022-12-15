@@ -24,8 +24,8 @@ from collections import Counter
 
 import pytest
 import perceval as pcvl
-import perceval.components.base_components as comp
-from perceval.rendering.pdisplay import pdisplay_statevector
+import perceval.components.unitary_components as comp
+from perceval.rendering.pdisplay import pdisplay_state_distrib
 
 import sympy as sp
 
@@ -37,6 +37,11 @@ def test_state():
     assert str(st) == "|1,0>"
     assert st.n == 1
     assert st.has_annotations is False
+
+
+def test_str_state_vector():
+    sv = (1+1j) * pcvl.StateVector("|0,1>") + (1-1j) * pcvl.StateVector("|1,0>")
+    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>"
 
 
 def test_tensor_product_0():
@@ -136,13 +141,13 @@ def test_svdistribution():
     svd = pcvl.SVDistribution()
     svd.add(st1, 0.5)
     svd[st2] = 0.5
-    assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
-            +--------+-------------+
-            | state  | probability |
-            +--------+-------------+
-            | |0,1>  |     1/2     |
-            | |1,0>  |     1/2     |
-            +--------+-------------+""")
+    assert strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
+            +-------+-------------+
+            | state | probability |
+            +-------+-------------+
+            | |0,1> |     1/2     |
+            | |1,0> |     1/2     |
+            +-------+-------------+""")
 
 
 def test_sv_separation_0():
@@ -212,7 +217,8 @@ def test_sv_parse_tuple_annot():
 
 def test_sv_sample():
     source = pcvl.Source(brightness=1, purity=0.9, indistinguishability=0.9)
-    qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
+    qpu = pcvl.Processor("Naive", comp.BS(), source)
+    qpu.with_input(pcvl.BasicState([1, 0]))
     sample = qpu.source_distribution.sample(1)
     assert isinstance(sample, pcvl.StateVector)
     sample = qpu.source_distribution.sample(2)
@@ -231,7 +237,7 @@ def test_statevector_sample():
 
 
 def test_statevector_samples():
-    sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
+    sv = pcvl.StateVector("|0,1>") + pcvl.StateVector("|1,0>")
     counter = Counter()
     for s in sv.samples(20):
         counter[s] += 1

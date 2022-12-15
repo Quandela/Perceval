@@ -23,7 +23,7 @@
 from collections import defaultdict
 import pytest
 import perceval as pcvl
-from perceval.components.base_components import BS, PS, Unitary, HWP, WP, PBS
+from perceval.components.unitary_components import BS, PS, Unitary, HWP, WP, PBS
 import sympy as sp
 import numpy as np
 

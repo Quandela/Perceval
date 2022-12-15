@@ -23,7 +23,7 @@
 from pathlib import Path
 import pytest
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 
 import numpy as np
 
@@ -43,11 +43,11 @@ def test_perm_0():
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), _mzi_triangle(), phase_shifter_fn=comp.PS, shape="triangle",
                                     permutation=comp.PERM)
     assert c1.describe().replace("\n", "").replace(" ", "") == """
-        Circuit(4).add([0, 1], PERM([1, 0]))
-                  .add([1, 2], PERM([1, 0]))
-                  .add([2, 3], PERM([1, 0]))
-                  .add([1, 2], PERM([1, 0]))
-                  .add([0, 1], PERM([1, 0]))""".replace("\n", "").replace(" ", "")
+        Circuit(4).add((0, 1), PERM([1, 0]))
+                  .add((1, 2), PERM([1, 0]))
+                  .add((2, 3), PERM([1, 0]))
+                  .add((1, 2), PERM([1, 0]))
+                  .add((0, 1), PERM([1, 0]))""".replace("\n", "").replace(" ", "")
 
 
 def test_basic_perm_triangle():

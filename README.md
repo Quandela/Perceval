@@ -31,7 +31,7 @@ practitioners.
 
 Perceval requires:
 
-* Python 3.6 or above
+* Python 3.7 or above
 
 We recommend installing it with `pip`:
 
@@ -73,5 +73,3 @@ Comparison benchmarks for different platforms are also commit in `.benchmarks/` 
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/Quandela_SAS?style=social)](https://twitter.com/Quandela_SAS) 
 [![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UCl5YMpSqknJ1n-IT-XWfLsQ?style=social)](https://www.youtube.com/channel/UCl5YMpSqknJ1n-IT-XWfLsQ)
-
-

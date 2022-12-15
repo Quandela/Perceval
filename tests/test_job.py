@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Optional
 import perceval as pcvl
 import time
 
@@ -43,19 +42,19 @@ def test_run_sync_0():
 def test_run_sync_1():
     job = pcvl.LocalJob(quadratic_count_down)
     assert job.execute_sync(5) == [0, 1, 4, 9, 16]
-    assert job.is_completed()
+    assert job.is_complete
     assert job.status.success
     assert job.get_results() == [0, 1, 4, 9, 16]
     # should be ~ 0.5 s
-    assert job.status.running_time < 0.8
+    assert job.status.running_time < 1
 
 
 def test_run_async():
     job = pcvl.LocalJob(quadratic_count_down)
     assert job.execute_async(5, speed=0.3) is job
-    assert not job.is_completed()
+    assert not job.is_complete
     counter = 0
-    while not job.is_completed():
+    while not job.is_complete:
         counter += 1
         time.sleep(0.5)
     assert counter > 1
@@ -70,7 +69,7 @@ def test_run_async_fail():
     job = pcvl.LocalJob(quadratic_count_down)
     assert job.execute_async(5, speed=0.01) is job
     counter = 0
-    while not job.is_completed():
+    while not job.is_complete:
         counter += 1
         time.sleep(1)
     assert not job.status.success

@@ -21,9 +21,19 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Callable, Tuple
+from multipledispatch import dispatch
 
-from perceval.components import ACircuit
+from perceval.components import ACircuit, Processor, PERM
+from perceval.components.abstract_component import AComponent
+from perceval.components.non_unitary_components import TD
+
+
+class ModeStyle(Enum):
+    PHOTONIC = 0
+    HERALD = 1
+    DIGITAL = 2
 
 
 class ASkin(ABC):
@@ -40,10 +50,15 @@ class ASkin(ABC):
     - exposing style data (stroke style, colors, etc.)
     """
 
-    def __init__(self, stroke_style, compact_display: bool = False):
+    def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
         self._compact = compact_display
-        self.stroke_style = stroke_style
+        self.style = {ModeStyle.PHOTONIC: stroke_style,
+                      ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
+                      # ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}  # Use this for debug
+                      }
+        self.style_subcircuit = style_subcircuit
 
+    @dispatch((ACircuit, TD), bool)
     def get_size(self, c: ACircuit, recursive: bool = False) -> Tuple[int, int]:
         """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():
@@ -56,15 +71,36 @@ class ASkin(ABC):
             r = slice(modes[0], modes[0]+comp.m)
             start_w = max(w[r])
             if comp.is_composite() and recursive:
-                comp_width, _ = self.get_size(comp)
+                comp_width, _ = self.get_size(comp, False)
             else:
                 comp_width = self.get_width(comp)
             end_w = start_w + comp_width
             w[r] = [end_w] * comp.m
-
         return max(w), c.m
 
-    def measure(self, c: ACircuit) -> Tuple[int, int]:
+    @dispatch(Processor, bool)
+    def get_size(self, p: Processor, recursive: bool = False) -> Tuple[int, int]:
+        height = p.m
+        # w represents the graph of the circuit.
+        # Each value being the ouput of the rightmost component on the corresponding mode
+        w = [0] * p.circuit_size
+        for modes, comp in p._components:
+            if not isinstance(comp, PERM):
+                height = max(height, comp.m + modes[0])
+
+            r = slice(modes[0], modes[0] + comp.m)
+            start_w = max(w[r])
+            if comp.is_composite() and recursive:
+                comp_width, _ = self.get_size(comp, False)
+            else:
+                comp_width = self.get_width(comp)
+            end_w = start_w + comp_width
+            w[r] = [end_w] * comp.m
+        # For now, return the whole circuit height as processor height, even if some heralded modes are not shown.
+        # TODO fix this
+        return max(w), p.circuit_size  # min(p.circuit_size, height+2)
+
+    def measure(self, c: AComponent) -> Tuple[int, int]:
         """
         Returns the measure (in arbitrary unit (AU) where the space between two modes = 1 AU)
         of a single component treated as a block (meaning that a composite circuit will not be

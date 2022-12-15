@@ -26,7 +26,8 @@ from typing import Type
 import pytest
 
 import perceval as pcvl
-from perceval.components.base_components import *
+from perceval.components.unitary_components import *
+from perceval.components.non_unitary_components import *
 from perceval.rendering import pdisplay_to_file, Format
 from pathlib import Path
 import re
@@ -301,3 +302,12 @@ def test_svg_decomposition_symb_compact(tmp_path, save_figs):
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(PERM([3, 1, 0, 2]).U), BS(theta=pcvl.P("theta")))
     _save_or_check(c1, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, compact=True,
                    skin_type=SymbSkin)
+
+
+def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
+    p = pcvl.components.catalog['heralded cnot'].build()
+    c = pcvl.Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(1, 0)
+    p.add(2, pc)
+    _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)

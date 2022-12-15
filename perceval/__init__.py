@@ -34,7 +34,7 @@ from .components import *
 from .backends import *
 from .utils import *
 from .rendering import *
-from .platforms import *
+from .runtime import *
 
 
 def register_plugin(name, silent=False):

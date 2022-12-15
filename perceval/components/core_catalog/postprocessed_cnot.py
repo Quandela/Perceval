@@ -20,26 +20,47 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, PredefinedCircuit
-from perceval.components.base_components import BS
-import numpy as np
-
-
-theta_13 = BS.r_to_theta(1/3)
-c_cnot = (Circuit(6, name="PostProcessed CNOT")
-          .add((0, 1), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-          .add((3, 4), BS.H())
-          .add((2, 3), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-          .add((4, 5), BS.H(theta_13))
-          .add((3, 4), BS.H()))
+from perceval.components import Circuit, Processor
+from perceval.components.unitary_components import *
+from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.port import Herald, Port, Encoding
 
 
 def _post_process(s):
     return (s[1] or s[2]) and (s[3] or s[4])
 
 
-postprocessed_cnot = PredefinedCircuit(c_cnot,
-                                       "postprocessed cnot",
-                                       description="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324",
-                                       heralds={0: 0, 5: 0},
-                                       post_select_fn=_post_process)
+class PostProcessedCnotItem(CatalogItem):
+    article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
+    description = r"""CNOT gate with 2 heralded modes and a post-processing function"""
+    str_repr = r"""                      ╭─────╮
+data (dual rail) ─────┤     ├───── data (dual rail)
+                 ─────┤     ├─────
+                      │     │
+ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
+                 ─────┤     ├─────
+                      ╰─────╯"""
+
+    def __init__(self):
+        super().__init__("postprocessed cnot")
+        self._default_opts['type'] = AsType.PROCESSOR
+
+    def build(self):
+        theta_13 = BS.r_to_theta(1/3)
+        c_cnot = (Circuit(6, name="PostProcessed CNOT")
+                  .add((0, 1), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                  .add((3, 4), BS.H())
+                  .add((2, 3), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                  .add((4, 5), BS.H(theta_13))
+                  .add((3, 4), BS.H()))
+
+        if self._opt('type') == AsType.CIRCUIT:
+            return c_cnot
+        elif self._opt('type') == AsType.PROCESSOR:
+            p = Processor(self._opt('backend'), c_cnot)
+            p.add_herald(0, 0) \
+             .add_port(1, Port(Encoding.DUAL_RAIL, 'data')) \
+             .add_port(3, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+             .add_herald(5, 0)
+            p.set_postprocess(_post_process)
+            return p
