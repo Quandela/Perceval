@@ -47,7 +47,7 @@ class CliffordClifford2017Backend(Backend):
     def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         if isinstance(input_state, StateVector):
             if len(input_state) != 1:
-                raise RuntimeError(f"{self.name} cannot sample with a mixed state input")
+                raise RuntimeError(f"{self.name} cannot sample with a superposed states input ({input_state})")
             input_state = next(iter(input_state))  # Get the first and only BasicState in the dict
         # prepare Us that is a m*n matrix
         m = self._m

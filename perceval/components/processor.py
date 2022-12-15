@@ -142,7 +142,7 @@ class Processor(AProcessor):
         :param svd: The input SVDistribution which won't be changed in any way by the source.
         Every state vector size has to be equal to `self.circuit_size`
         """
-        assert self.m is not None, "A circuit has to be set before the input disctribution"
+        assert self.m is not None, "A circuit has to be set before the input distribution"
         self._input_state = svd
         expected_photons = Inf
         for sv in svd:
