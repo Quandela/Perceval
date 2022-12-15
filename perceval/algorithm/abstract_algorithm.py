@@ -28,6 +28,7 @@ class AAlgorithm:
         self._processor = processor
         if not self._check_compatibility():
             raise RuntimeError("Processor and algorithm are not compatible")
+        self.default_job_name = None
 
     def _check_compatibility(self) -> bool:
         # if self._processor.is_remote:

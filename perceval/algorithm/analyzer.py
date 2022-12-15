@@ -48,6 +48,7 @@ class Analyzer(AAlgorithm):
         self.error_rate = None
         self.fidelity = None
         self._distribution = None
+        self.default_job_name = 'analyzer'
 
         # Enrich mapping and create self.input_state_list
         if isinstance(input_states, dict):
@@ -104,7 +105,9 @@ class Analyzer(AAlgorithm):
         # Compute probabilities for all input states
         for idx, i_state in enumerate(self.input_states_list):
             self._processor.with_input(i_state)
-            probs_output = self._sampler.probs()
+            job = self._sampler.probs
+            job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
+            probs_output = job.execute_sync()
             probs = probs_output['results']
             probs_res[i_state] = probs
             if 'logical_perf' in probs_output:
