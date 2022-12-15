@@ -48,6 +48,7 @@ class Analyzer(AAlgorithm):
         self.error_rate = None
         self.fidelity = None
         self._distribution = None
+        self.default_job_name = 'analyzer'
 
         # Enrich mapping and create self.input_state_list
         if isinstance(input_states, dict):
@@ -105,7 +106,7 @@ class Analyzer(AAlgorithm):
         for idx, i_state in enumerate(self.input_states_list):
             self._processor.with_input(i_state)
             job = self._sampler.probs
-            job.name = self.default_job_name or f'analyzer ({idx+1}/{len(self.input_states_list)})'
+            job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()
             probs = probs_output['results']
             probs_res[i_state] = probs

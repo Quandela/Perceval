@@ -31,11 +31,11 @@ from perceval.serialization import deserialize, serialize
 class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
 
-    def __init__(self, payload, rpc_handler, job_name, delta_parameters=None, job_context=None,
+    def __init__(self, request_data, rpc_handler, job_name, delta_parameters=None, job_context=None,
                  command_param_names=None, refresh_progress_delay: int = 3):
         r"""
-        :param payload: a prepared payload for the job. This payload is extended by an async_execute() call before being
-            sent. The payload is expected to be prepared by a RemoteProcessor. It must have the following structure:
+        :param request_data: prepared data for the job. It is extended by an async_execute() call before being sent.
+            It is expected to be prepared by a RemoteProcessor. It must have the following structure:
             {
               'platform_name': '...',
               'pcvl_version': 'M.m.p',
@@ -64,7 +64,7 @@ class RemoteJob(Job):
         self._previous_status_refresh = 0.
         self._id = None
         self._name = job_name
-        self._payload = payload
+        self._request_data = request_data
         self._param_names = command_param_names or []
 
     @property
@@ -129,9 +129,9 @@ class RemoteJob(Job):
                 self._job_context["mapping_delta_parameters"] = self._delta_parameters
             kwargs = self._handle_unnamed_params(args, kwargs)
             kwargs['job_context'] = self._job_context
-            self._payload['job_name'] = self._name
-            self._payload['payload'].update(kwargs)
-            self._id = self._rpc_handler.create_job(serialize(self._payload))
+            self._request_data['job_name'] = self._name
+            self._request_data['payload'].update(kwargs)
+            self._id = self._rpc_handler.create_job(serialize(self._request_data))
 
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))
