@@ -23,9 +23,10 @@ on:
       python_v:
         description: 'python version'
         required: true
-        default: '3.7'
+        default: '3.6'
         type: choice
         options:
+          - '3.6'
           - '3.7'
           - '3.8'
           - '3.9'
@@ -62,7 +63,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Set up Python  ${{ env.PYTHON_V }}
+      - name: Set up Python ${{ env.PYTHON_V }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ env.PYTHON_V }}
@@ -147,7 +148,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-
+        
   perceval-docs-test:
     name: Build docs on ubuntu
     needs:

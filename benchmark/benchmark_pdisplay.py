@@ -25,7 +25,7 @@ This script times the execution of pdisplay for circuits.
 """
 
 import perceval as pcvl
-import perceval.components.unitary_components as comp
+import perceval.components.base_components as comp
 
 trials = 2
 
