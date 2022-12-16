@@ -120,7 +120,7 @@ class Source:
         p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)
         svd[StateVector([0])] = p0
 
-        if distinguishability or self._multiphoton_model == "distinguishable":
+        if distinguishability or (self._multiphoton_model == "distinguishable" and p2to2):
             svd[StateVector([2], {0: ["_: 0", "_:%s" % second_photon]})] = (1 - distinguishability) * p2to2
             svd[StateVector([2], {0: ["_:%s" % distinguishable_photon,
                                       "_:%s" % second_photon]})] = distinguishability * p2to2
