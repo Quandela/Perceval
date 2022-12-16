@@ -28,6 +28,20 @@ from typing import Dict, Literal
 
 
 class Source:
+    r"""Definition of a source
+
+            :param brightness: the probability per laser pulse to emmit at least one photon. Independent of all losses.
+            :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
+            :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable`
+              otherwise
+            :param purity: preserved for back-compatibility if multiphoton_model is not set.`
+            :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
+            :param indistinguishability_model: `homv` defines indistinguishability as 2-photon wavepacket overlap,
+                `linear` defines indistinguishability as ratio of indistinguishable photons
+            :param overall_transmission: transmission of the optical system.
+            :param context: gives a local context for source specific features, like `discernability_tag`
+            """
+
     def __init__(self, brightness: float = 1,
                  multiphoton_component: float = None,
                  multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
@@ -36,19 +50,7 @@ class Source:
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
                  overall_transmission: float = 1,
                  context: Dict = None) -> None:
-        r"""Definition of a source
 
-        :param brightness: the probability per laser pulse to emmit at least one photon. Indenpendent of all losses.
-        :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
-        :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable`
-          otherwise
-        :param purity: preserved for back-compatibility if multiphoton_model is not set.`
-        :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
-        :param indistinguishability_model: `homv` defines indistinguishability as 2-photon wavepacket overlap,
-            `linear` defines indistinguishability as ratio of indistinguishable photons
-        :param overall_transmission: transmission of the optical system.
-        :param context: gives a local context for source specific features, like `discernability_tag`
-        """
         if multiphoton_component is None:
             if purity is None:
                 multiphoton_component = 0
@@ -69,16 +71,19 @@ class Source:
         assert self._indistinguishability_model in ["homv", "linear"], "invalid value for indistinguishability_model"
         self._context = context or {}
         if "discernability_tag" not in self._context:
-            self._context["discernability_tag"] = 1
+            self._context["discernability_tag"] = 0
 
-    def probability_distribution(self):
-        r"""returns SVDistribution on 1 mode associated to the source
-        """
+    def get_tag(self, tag, add=False):
+        if add:
+            self._context[tag] += 1
+        return self._context[tag]
 
+    def _get_probs(self):
         g2 = self.multiphoton_component
         eta = self.overall_transmission
         beta = self.brightness
 
+        # Starting formulas
         # g2 = 2p2/(p1+2p2)**2
         # p1 + p2 = beta
 
@@ -86,11 +91,16 @@ class Source:
         p2 = (- beta * g2 - math.sqrt(1 - 2 * beta * g2) + 1) / g2 if g2 else 0
         p1 = beta - p2
 
-        svd = SVDistribution()
+        p1to1 = eta * p1
+        p2to2 = eta ** 2 * p2
+        p2to1 = eta * (1 - eta) * p2
 
-        p0 = 1-(eta*p1+(eta**2+2*eta*(1-eta))*p2)
-        if p0:
-            svd[StateVector([0])] = p0
+        return p1to1, p2to1, p2to2
+
+    def probability_distribution(self):
+        r"""returns SVDistribution on 1 mode associated to the source
+        """
+        # states with probability 0 will be removed by processor
 
         if self._indistinguishability_model == "homv":
             distinguishability = 1-math.sqrt(self.indistinguishability)
@@ -98,52 +108,28 @@ class Source:
             distinguishability = 1-self.indistinguishability
 
         # Approximation distinguishable photons are pure
-        distinguishable_photon = self._context["discernability_tag"]
-        self._context["discernability_tag"] += 1
-        noise_photon = self._context["discernability_tag"]
-        self._context["discernability_tag"] += 1
+        distinguishable_photon = self.get_tag("discernability_tag", add=True)
+        second_photon = self.get_tag("discernability_tag", add=True) \
+            if self._multiphoton_model == "distinguishable" else 0  # Noise photon or signal
 
-        if p2 != 0:
-            if distinguishability != 0:
-                if self._multiphoton_model == "distinguishable":
-                    # Both would lead to the same computation
-                    svd[StateVector([2], {0: ["_: 0", "_:%s" % noise_photon]})] = eta ** 2 * (
-                                1 - distinguishability) * p2
-                    svd[StateVector([2], {0: ["_:%s" % distinguishable_photon,
-                                              "_:%s" % noise_photon]})] = eta ** 2 * distinguishability * p2
+        (p1to1, p2to1, p2to2) = self._get_probs()
 
-                else:
-                    svd[StateVector([2], {0: ["_:0", "_:0"]})] = eta ** 2 * (1 - distinguishability) * p2
-                    svd[StateVector([2], {
-                        0: ["_:%s" % distinguishable_photon, "_: 0"]})] = eta ** 2 * distinguishability * p2
-            else:
-                if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([2], {0: ["_:0", "_:%s" % noise_photon]})] = eta ** 2 * p2
-                else:
-                    svd[StateVector([2])] = eta ** 2 * p2
+        svd = SVDistribution()
 
-        if distinguishability != 0:
-            if self._multiphoton_model == "distinguishable":
-                svd[StateVector([1], {0: ["_:%s" % distinguishable_photon]})] = eta * distinguishability * p1 + eta * (
-                            1 - eta) * distinguishability * p2
-                svd[StateVector([1], {0: ["_:0"]})] = eta * (1 - distinguishability) * p1 + eta * (1 - eta) * (
-                            1 - distinguishability) * p2
-                if eta != 1 and eta and p2:
-                    svd[StateVector([1], {0: ["_:%s" % noise_photon]})] = eta * (1 - eta) * p2
-            else:
-                svd[StateVector([1], {0: ["_:%s" % distinguishable_photon]})] = eta * distinguishability * p1 + eta * (
-                            1 - eta) * distinguishability * p2
-                svd[StateVector([1], {0: ["_:0"]})] = eta * (1 - distinguishability) * p1 + eta * (1 - eta) * (
-                            1 - distinguishability) * p2 + eta * (1 - eta) * p2
+        # 2 * p2to1 because of symmetry
+        p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)
+        svd[StateVector([0])] = p0
 
+        if distinguishability or self._multiphoton_model == "distinguishable":
+            svd[StateVector([2], {0: ["_: 0", "_:%s" % second_photon]})] = (1 - distinguishability) * p2to2
+            svd[StateVector([2], {0: ["_:%s" % distinguishable_photon,
+                                      "_:%s" % second_photon]})] = distinguishability * p2to2
+            svd[StateVector([1], {0: ["_:%s" % distinguishable_photon]})] = distinguishability * (p1to1 + p2to1)
+            svd[StateVector([1], {0: ["_:0"]})] = (1 - distinguishability) * (p1to1 + p2to1)
+            svd[StateVector([1], {0: ["_:%s" % second_photon]})] += p2to1
         else:
-            if p2 != 0:
-                if self._multiphoton_model == "distinguishable":
-                    svd[StateVector([1], {0: ["_:0"]})] = eta * p1 + eta * (1 - eta) * p2
-                    svd[StateVector([1], {0: ["_:%s" % noise_photon]})] = eta * (1 - eta) * p2
-                else:
-                    svd[StateVector([1])] = eta * p1 + 2 * eta * (1 - eta) * p2
-            else:
-                svd[StateVector([1])] = eta * p1
+            # Just avoids annotations
+            svd[StateVector([2])] = p2to2
+            svd[StateVector([1])] = p1to1 + 2 * p2to1
 
         return svd
