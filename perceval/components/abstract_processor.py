@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Union
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, StateVector, SVDistribution
+from perceval.utils import BasicState, StateVector, SVDistribution, Parameter
 from .port import LogicalState, Herald, PortLocation, APort
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
@@ -385,6 +385,9 @@ class AProcessor(ABC):
                              Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
 
         return new_comp
+
+    def get_circuit_parameters(self) -> Dict[str, Parameter]:
+        return {p.name: p for _, c in self._components for p in c.get_parameters()}
 
     @property
     def out_port_names(self):
