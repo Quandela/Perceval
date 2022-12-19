@@ -46,7 +46,7 @@ class Source:
     """
 
     def __init__(self, occupation_factor: float = 1,
-                 multiphoton_component: float = None,
+                 multiphoton_component: float = 0,
                  multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
                  indistinguishability: float = 1,
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
