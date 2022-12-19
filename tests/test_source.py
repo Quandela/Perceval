@@ -38,6 +38,23 @@ def _check_svdistribution(output, expected):
             assert False
 
 
+def test_tag():
+    s = Source()
+    assert s.get_tag("discernability_tag", False) == 0
+    assert s.get_tag("discernability_tag", True) == 1
+    assert s.get_tag("discernability_tag", False) == 1
+
+
+def test_intermediate_probs():
+    assert pytest.approx((1, 0, 0)) == Source()._get_probs()
+    p1 = .8
+    p2 = .01
+    beta = p1 + p2
+    g2 = 2 * p2 / (p1 + 2 * p2) ** 2
+    s = Source(brightness=beta, multiphoton_component=g2, overall_transmission=.9)
+    assert pytest.approx((.72, .0009, .0081)) == s._get_probs()
+
+
 def test_source_pure():
     s = Source()
     svd = s.probability_distribution()

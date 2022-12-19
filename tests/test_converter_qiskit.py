@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
-from perceval import BasicState, StateVector, Circuit, pdisplay
+from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
 import perceval.components.unitary_components as comp
 from perceval.components import catalog
