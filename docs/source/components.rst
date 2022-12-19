@@ -106,7 +106,7 @@ To create a beam splitter object with a given reflectivity value:
 >>> beam_splitter = BS(BS.r_to_theta(R))
 
 By default
-``theta`` is :math:`\pi/4`,
+``theta`` is :math:`\pi/2`,
 ``phi_tl`` is :math:`0`,
 ``phi_bl`` is :math:`0`,
 ``phi_tr`` is :math:`0`,
