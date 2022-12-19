@@ -4,5 +4,4 @@ perceval_quandela.egg-info
 build
 .eggs/
 .idea/
-.benchmark/
 venv/
