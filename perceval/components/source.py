@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 import math
-import numpy as np
 
 from perceval.utils import SVDistribution, StateVector
 from typing import Dict, Literal
@@ -29,43 +28,42 @@ from typing import Dict, Literal
 
 class Source:
     r"""Definition of a source
+    We build on a phenomenological model first introduced in ref. [1] where an imperfect quantum-dot based single-photon
+    source is modeled by a statistical mixture of Fock states. The model developed here, first introduced in ref. [2],
+    constructs the input multi-photon state using features specific to Perceval.
+    [1] Pont, Mathias, et al. Physical Review X 12, 031033 (2022). https://doi.org/10.1103/PhysRevX.12.031033
+    [2] Pont, Mathias, et al. arXiv preprint arXiv:2211.15626 (2022). https://doi.org/10.48550/arXiv.2211.15626
 
-            :param brightness: the probability per laser pulse to emmit at least one photon. Independent of all losses.
-            :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
-            :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable`
-              otherwise
-            :param purity: preserved for back-compatibility if multiphoton_model is not set.`
-            :param indistinguishability: indistinguishability parameter as defined by `indistinguishability_model`
-            :param indistinguishability_model: `homv` defines indistinguishability as 2-photon wavepacket overlap,
-                `linear` defines indistinguishability as ratio of indistinguishable photons
-            :param overall_transmission: transmission of the optical system.
-            :param context: gives a local context for source specific features, like `discernability_tag`
-            """
+    :param occupation_factor: occupation factor of the QD state.
+    :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
+    :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
+    :param indistinguishability: indistinguishability parameter as defined by 'indistinguishability_model'
+    :param indistinguishability_model: `homv` defines indistinguishability as 2-photon mean wavepacket overlap,
+        `linear` defines indistinguishability as ratio of indistinguishable photons
+    :param brightness: Number of photons collected per excitation pulse into the first lens.
+    :param overall_transmission: Total transmission of the optical system. Can take into account the brightness.
+    :param context: gives a local context for source specific features, like `discernability_tag`
+    """
 
-    def __init__(self, brightness: float = 1,
+    def __init__(self, occupation_factor: float = 1,
                  multiphoton_component: float = None,
                  multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
-                 purity: float = None,
                  indistinguishability: float = 1,
                  indistinguishability_model: Literal["homv", "linear"] = "homv",
+                 brightness: float = 1,
                  overall_transmission: float = 1,
                  context: Dict = None) -> None:
 
-        if multiphoton_component is None:
-            if purity is None:
-                multiphoton_component = 0
-            else:
-                p2 = brightness * (1 - purity)
-                p1 = brightness - p2
-                multiphoton_component = 2 * p2 / (p1 + 2 * p2) ** 2
-        else:
-            assert purity is None, "cannot set both purity and multiphoton_component"
         assert brightness * multiphoton_component <= 0.5, "brightness * g2 higher than 0.5 can not be computed for now"
         self.brightness = brightness
+        self.occupation_factor = occupation_factor
         self.overall_transmission = overall_transmission
+        # By definition brightness=beta*eta_out*px where beta is the fraction of emission into the mode and eta_out is
+        # the out-coupling efficiency
+        assert brightness * overall_transmission < occupation_factor, "Set of parameters is not physically acceptable"
         self.multiphoton_component = multiphoton_component
         self._multiphoton_model = multiphoton_model
-        assert self._multiphoton_model in ["distinguishable", "indistinguishable"], "invalid value for purity_model"
+        assert self._multiphoton_model in ["distinguishable", "indistinguishable"], "invalid value for multiphoton_model"
         self.indistinguishability = indistinguishability
         self._indistinguishability_model = indistinguishability_model
         assert self._indistinguishability_model in ["homv", "linear"], "invalid value for indistinguishability_model"
@@ -79,17 +77,16 @@ class Source:
         return self._context[tag]
 
     def _get_probs(self):
+        px = self.occupation_factor
         g2 = self.multiphoton_component
-        eta = self.overall_transmission
-        beta = self.brightness
+        eta = self.overall_transmission*self.brightness/self.occupation_factor
 
         # Starting formulas
         # g2 = 2p2/(p1+2p2)**2
-        # p1 + p2 = beta
+        # p1 + p2 + ... = px & pn<<p2 for n>2
 
-        # p2 = min(np.poly1d([g2, -2 * (1 - g2 * beta), g2 * beta ** 2]).r)
-        p2 = (- beta * g2 - math.sqrt(1 - 2 * beta * g2) + 1) / g2 if g2 else 0
-        p1 = beta - p2
+        p2 = (- px * g2 - math.sqrt(1 - 2 * px * g2) + 1) / g2 if g2 else 0
+        p1 = px - p2
 
         p1to1 = eta * p1
         p2to2 = eta ** 2 * p2
