@@ -86,7 +86,7 @@ def test_simulator_basics():
 def test_simulator_wrong_size():
     circuit = pcvl.Circuit(2)
     state = pcvl.BasicState([1, 1, 1])
-    for backend in ["SLOS", "Naive"]:
+    for backend in ["SLOS", "Naive", "MPS"]:
         simulator_backend = pcvl.BackendFactory.get_backend(backend)
 
         with pytest.raises(ValueError):
@@ -130,7 +130,7 @@ def test_simulator_indistinct_asym():
 
 
 def test_simulator_indistinct_sym11():
-    for backend in ["SLOS", "Naive"]:
+    for backend in ["SLOS", "Naive", "MPS"]:
         simulator_backend = pcvl.BackendFactory.get_backend(backend)
         c = BS.H()
         s = simulator_backend(c, use_symbolic=False)
@@ -164,7 +164,7 @@ def test_symbolic_prob():
 
 
 def test_cnot_no_mask():
-    for backend in ["SLOS", "Naive"]:
+    for backend in ["SLOS", "Naive", "MPS"]:
         simulator_backend = pcvl.BackendFactory.get_backend(backend)
         cnot = cnot_circuit()
         s_cnot = simulator_backend(cnot, use_symbolic=False)
@@ -223,7 +223,7 @@ def test_non_symmetrical():
 
 def test_evolve_indistinguishable():
     c = BS.H()
-    for backend_name in ["SLOS", "Naive"]:
+    for backend_name in ["SLOS", "Naive", "MPS"]:
         simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         sv1 = pcvl.StateVector([1, 1])
         check_output(simulator, sv1, {pcvl.BasicState("|0,2>"): 0.5, pcvl.BasicState("|2,0>"): 0.5})
@@ -237,7 +237,7 @@ def test_evolve_indistinguishable():
 
 def test_hybrid_state():
     c = BS.H()
-    for backend_name in ["SLOS", "Naive"]:
+    for backend_name in ["SLOS", "Naive", "MPS"]:
         simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         sv1 = pcvl.StateVector([1, 1], {0: ["_:1"], 1: ["_:2"]})
         check_output(simulator, sv1, {pcvl.BasicState("|0,2>"): 0.25,
@@ -250,7 +250,7 @@ def test_state_entanglement():
     st2 = pcvl.StateVector("|1,0>")
     st3 = st1+st2
     c = BS.H()
-    for backend_name in ["SLOS", "Naive"]:
+    for backend_name in ["SLOS", "Naive", "MPS"]:
         simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         st3_out = simulator.evolve(st3)
         assert str(st3_out) == "|1,0>"
@@ -287,7 +287,7 @@ def test_clifford_27():
 def test_polarization_circuit_0():
     c = pcvl.Circuit(1)
     c //= HWP(sp.pi/4)
-    for backend_name in ["Naive", "SLOS"]:
+    for backend_name in ["Naive", "SLOS"]:  # MPS does not support polarization
         simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         check_output(simulator,
                      pcvl.BasicState("|{P:H}>"),
