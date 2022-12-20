@@ -566,7 +566,7 @@ class Circuit(ACircuit):
         if inverse_h:
             U = U.inv()
         if inverse_v:
-            U = np.flipud(np.fliplr(U))
+            U = np.flip(U)
         N = U.shape[0]
         count = 0
         if constraints is not None:

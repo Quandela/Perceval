@@ -26,7 +26,7 @@ from .port import LogicalState
 from .source import Source
 from .linear_circuit import ACircuit
 from .computation import count_TD, count_independant_TD, expand_TD
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params, Parameter
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params
 from perceval.backends import BACKEND_LIST
 from perceval.backends.processor import StepperBackend
 
@@ -279,9 +279,6 @@ class Processor(AProcessor):
     @property
     def available_commands(self) -> List[str]:
         return [BACKEND_LIST[self._backend_name].preferred_command()=="samples" and "samples" or "probs"]
-
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        return {p.name: p for _, c in self._components for p in c.get_parameters()}
 
 
 def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int,

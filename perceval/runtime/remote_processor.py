@@ -85,7 +85,7 @@ class RemoteProcessor(AProcessor):
             return self._specs['constraints']
         return {}
 
-    def set_circuit(self, circuit: Circuit):
+    def set_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
         if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:

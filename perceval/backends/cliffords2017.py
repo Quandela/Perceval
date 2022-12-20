@@ -42,13 +42,17 @@ class CliffordClifford2017Backend(Backend):
     supports_circuit_computing = False
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        raise NotImplementedError(f'Cannot use prob_be on {self.name}')
+        raise NotImplementedError(f'Cannot call prob_be on {self.name}')
+
+    def probampli_be(self, input_state, output_state, n=None):
+        raise NotImplementedError(f'Cannot call probampli_be on {self.name}')
 
     def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         if isinstance(input_state, StateVector):
             if len(input_state) != 1:
                 raise RuntimeError(f"{self.name} cannot sample with a superposed states input ({input_state})")
             input_state = next(iter(input_state))  # Get the first and only BasicState in the dict
+        self._check_state_size(input_state)
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
