@@ -60,6 +60,7 @@ class Source:
         self.overall_transmission = overall_transmission
         # By definition brightness=beta*eta_out*px where beta is the fraction of emission into the mode and eta_out is
         # the out-coupling efficiency
+        assert occupation_factor > 0, "Occupation factor of the QD state must be non-zero"
         assert brightness * overall_transmission <= occupation_factor, "Set of parameters is not physically acceptable"
         self.multiphoton_component = multiphoton_component
         self._multiphoton_model = multiphoton_model
