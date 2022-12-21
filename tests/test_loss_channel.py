@@ -64,8 +64,9 @@ def test_permutation():
     assert pytest.approx(cg.probs()["results"]) == cd.probs()["results"]
 
 
-def test_brightness_equivalence():
-    source = Source(brightness=1 - loss)
+def test_source_losses_equivalence():
+    # When the losses are balanced
+    source = Source(losses=loss)
     p = Processor("SLOS", Unitary(U), source)
 
     p.with_input(input_state)

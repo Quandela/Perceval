@@ -149,7 +149,7 @@ class StateVector(defaultdict):
 
     def __init__(self,
                  bs: Union[BasicState, List[int], str, None] = None,
-                 photon_annotations: Dict[int, str] = None):
+                 photon_annotations: Dict[int, List] = None):
         r"""Init of a StateVector from a BasicState, or from BasicState constructor
         :param bs: a BasicState, or `BasicState` constructor,
                     None used for internal purpose
@@ -405,7 +405,8 @@ class ProbabilityDistribution(defaultdict, ABC):
             self[sv] /= sum_probs
 
     def add(self, obj, proba: float):
-        self[obj] += proba
+        if proba != 0:
+            self[obj] += proba
 
     def __str__(self):
         return "{\n  "\

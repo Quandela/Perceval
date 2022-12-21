@@ -34,28 +34,34 @@ class Source:
     [1] Pont, Mathias, et al. Physical Review X 12, 031033 (2022). https://doi.org/10.1103/PhysRevX.12.031033
     [2] Pont, Mathias, et al. arXiv preprint arXiv:2211.15626 (2022). https://doi.org/10.48550/arXiv.2211.15626
 
+    :param emission_probability: probability that the source emits at least one photon
     :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
     :param indistinguishability: 2-photon mean wavepacket overlap
-    :param emission_probability: probability that the QD emits at least one photon
     :param losses: optical losses
     :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
     :param context: gives a local context for source specific features, like `discernability_tag`
     """
 
-    def __init__(self, multiphoton_component: float = 0,
+    def __init__(self, emission_probability: float = 1,
+                 multiphoton_component: float = 0,
                  indistinguishability: float = 1,
-                 emission_probability: float = 1,
                  losses: float = 0,
                  multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
                  context: Dict = None) -> None:
 
-        assert emission_probability * multiphoton_component <= 0.5, "brightness * g2 higher than 0.5 can not be computed for now"
-        self.emission_probability = emission_probability
-        self.losses = losses
-        self.multiphoton_component = multiphoton_component
+        assert 0 < emission_probability <= 1, "emission_probability must be in ]0;1]"
+        assert 0 <= losses <= 1, "losses must be in [0;1]"
+        assert 0 <= multiphoton_component <= 1, "multiphoton_component must be in [0;1]"
+        assert emission_probability * multiphoton_component <= 0.5,\
+            "brightness * g2 higher than 0.5 can not be computed for now"
+        assert multiphoton_model in ["distinguishable", "indistinguishable"], \
+            "invalid value for multiphoton_model"
+
+        self._emission_probability = emission_probability
+        self._losses = losses
+        self._multiphoton_component = multiphoton_component
         self._multiphoton_model = multiphoton_model
-        assert self._multiphoton_model in ["distinguishable", "indistinguishable"], "invalid value for multiphoton_model"
-        self.indistinguishability = indistinguishability
+        self._indistinguishability = indistinguishability
         self._context = context or {}
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 0
@@ -66,9 +72,9 @@ class Source:
         return self._context[tag]
 
     def _get_probs(self):
-        px = self.emission_probability
-        g2 = self.multiphoton_component
-        eta = 1-self.losses
+        px = self._emission_probability
+        g2 = self._multiphoton_component
+        eta = 1 - self._losses
 
         # Starting formulas
         # g2 = 2p2/(p1+2p2)**2
@@ -86,9 +92,7 @@ class Source:
     def probability_distribution(self):
         r"""returns SVDistribution on 1 mode associated to the source
         """
-        # states with probability 0 will be removed by processor
-
-        distinguishability = 1-math.sqrt(self.indistinguishability)
+        distinguishability = 1 - math.sqrt(self._indistinguishability)
 
         # Approximation distinguishable photons are pure
         distinguishable_photon = self.get_tag("discernability_tag", add=True)
@@ -101,18 +105,22 @@ class Source:
 
         # 2 * p2to1 because of symmetry
         p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)
-        svd[StateVector([0])] = p0
+        svd.add(StateVector([0]), p0)
 
         if distinguishability or (self._multiphoton_model == "distinguishable" and p2to2):
-            svd[StateVector([2], {0: ["_: 0", "_:%s" % second_photon]})] = (1 - distinguishability) * p2to2
-            svd[StateVector([2], {0: ["_:%s" % distinguishable_photon,
-                                      "_:%s" % second_photon]})] = distinguishability * p2to2
-            svd[StateVector([1], {0: ["_:%s" % distinguishable_photon]})] = distinguishability * (p1to1 + p2to1)
-            svd[StateVector([1], {0: ["_:0"]})] = (1 - distinguishability) * (p1to1 + p2to1)
-            svd[StateVector([1], {0: ["_:%s" % second_photon]})] += p2to1
+            svd.add(StateVector([2], {0: ["_: 0", "_:%s" % second_photon]}),
+                    (1 - distinguishability) * p2to2)
+            svd.add(StateVector([2], {0: ["_:%s" % distinguishable_photon, "_:%s" % second_photon]}),
+                    distinguishability * p2to2)
+            svd.add(StateVector([1], {0: ["_:%s" % distinguishable_photon]}),
+                    distinguishability * (p1to1 + p2to1))
+            svd.add(StateVector([1], {0: ["_:0"]}),
+                    (1 - distinguishability) * (p1to1 + p2to1))
+            svd.add(StateVector([1], {0: ["_:%s" % second_photon]}),
+                    p2to1)
         else:
             # Just avoids annotations
-            svd[StateVector([2])] = p2to2
-            svd[StateVector([1])] = p1to1 + 2 * p2to1
+            svd.add(StateVector([2]), p2to2)
+            svd.add(StateVector([1]), p1to1 + 2 * p2to1)
 
         return svd
