@@ -53,7 +53,7 @@ class Source:
         assert 0 <= losses <= 1, "losses must be in [0;1]"
         assert 0 <= multiphoton_component <= 1, "multiphoton_component must be in [0;1]"
         assert emission_probability * multiphoton_component <= 0.5,\
-            "brightness * g2 higher than 0.5 can not be computed for now"
+            "emission_probability * g2 higher than 0.5 can not be computed for now"
         assert multiphoton_model in ["distinguishable", "indistinguishable"], \
             "invalid value for multiphoton_model"
 
