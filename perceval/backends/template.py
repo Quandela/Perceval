@@ -34,6 +34,7 @@ import numpy as np
 
 
 class Backend(ABC):
+    name = None
     supports_symbolic = None
     supports_circuit_computing = None
 
@@ -72,7 +73,7 @@ class Backend(ABC):
             self._C = None
             if not self.supports_symbolic:
                 if not u.defined or use_symbolic:
-                    assert not u.is_symbolic, "%s backend does not support symbolic calculation" % self._name
+                    assert not u.is_symbolic, "%s backend does not support symbolic calculation" % self.name
                 if not use_symbolic:
                     self._U = u.tonp()
             else:
@@ -90,21 +91,19 @@ class Backend(ABC):
             assert isinstance(cu, ACircuit), \
                 "Component Based simulation works on circuit"
             assert not use_symbolic or self.supports_symbolic, \
-                "%s backend does not support symbolic calculation" % self._name
+                "%s backend does not support symbolic calculation" % self.name
             # component based simulation - we keep the circuit
             self._U = None
             self._C = cu
             self._m = self._realm = cu.m
 
         self._use_symbolic = use_symbolic
-        self._n: int = n
-        "number of photons - is required when using a mask"
+        self._n: int = n  # number of photons - is required when using a mask
 
+        self._mask = None
         if mask is not None:
             assert n is not None, "number of photons required when using a mask"
             self._mask = qc.FSMask(self._m, n, mask)
-        else:
-            self._mask = None
 
         self._compiled_input = None
 
@@ -131,19 +130,24 @@ class Backend(ABC):
         self._U = u
         self._changed_unitary(prev_u)
 
+    def _check_state_size(self, state: BasicState):
+        if self.m != state.m:
+            raise ValueError(
+                f'State/circuit size mismatch: circuit({self._m}) and state({state.m}) should be the same size')
+
     @abstractmethod
     def prob_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def probampli_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
+        pass
 
     def prob(self,
              input_state: BasicState,
              output_state: BasicState,
              n: int = None,
-             skip_compile: bool = False,
-             progress_callback=None) -> float:
+             skip_compile: bool = False) -> float:
         r"""
         gives the probability of an output state given an input state
         :param input_state: the input state
@@ -151,8 +155,10 @@ class Backend(ABC):
         :param n:
         :return: float probability
         """
+        self._check_state_size(input_state)
+        self._check_state_size(output_state)
         if input_state.n == 0:
-            return output_state.n == 0
+            return 1 if output_state.n == 0 else 0
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
             if input_state.has_annotations:
                 input_states = input_state.separate_state()
@@ -213,8 +219,10 @@ class Backend(ABC):
         :param n:
         :return: complex probability amplitude
         """
+        self._check_state_size(input_state)
+        self._check_state_size(output_state)
         if input_state.n == 0:
-            return output_state.n == 0
+            return complex(1) if output_state.n == 0 else complex(0)
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
             self.compile(input_state)
             return self.probampli_be(input_state, output_state, n)
@@ -268,8 +276,8 @@ class Backend(ABC):
     def allstate_iterator(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         """Iterator on all possible output states compatible with mask generating StateVector
 
-        :param input_state: a given input state vector
-        :return: list of output_state
+        :param input_state: a given input state (basic or superposed)
+        :return: the next output state
         """
         m = self.m
         ns = input_state.n
@@ -300,8 +308,7 @@ class Backend(ABC):
         output_state.normalize()
         return output_state
 
-    def compile(self,
-                input_states: Union[StateVector, List[StateVector]]) -> bool:
+    def compile(self, input_states: Union[StateVector, List[StateVector]]) -> bool:
         """
         Compile a simulator to work with one or specific input_states - might do nothing for some backends
         :param input_states: list of input states

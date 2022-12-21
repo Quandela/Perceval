@@ -30,10 +30,10 @@ class HeraldedCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
     description = r"""CNOT gate with 4 heralded modes"""
     str_repr = r"""                      ╭─────╮
-data (dual rail) ─────┤     ├───── data (dual rail)
+ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
                       │     │
-ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
+data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
 
@@ -70,7 +70,7 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
             p = Processor(self._opt('backend'), c_hcnot)
             return p.add_herald(0, 0) \
                     .add_herald(1, 1) \
-                    .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
-                    .add_port(4, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+                    .add_port(2, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+                    .add_port(4, Port(Encoding.DUAL_RAIL, 'data')) \
                     .add_herald(6, 0) \
                     .add_herald(7, 1)

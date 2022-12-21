@@ -34,10 +34,10 @@ class PostProcessedCnotItem(CatalogItem):
     article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
     description = r"""CNOT gate with 2 heralded modes and a post-processing function"""
     str_repr = r"""                      ╭─────╮
-data (dual rail) ─────┤     ├───── data (dual rail)
+ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
                       │     │
-ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
+data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
 
@@ -59,8 +59,8 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
         elif self._opt('type') == AsType.PROCESSOR:
             p = Processor(self._opt('backend'), c_cnot)
             p.add_herald(0, 0) \
-             .add_port(1, Port(Encoding.DUAL_RAIL, 'data')) \
-             .add_port(3, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+             .add_port(1, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+             .add_port(3, Port(Encoding.DUAL_RAIL, 'data')) \
              .add_herald(5, 0)
             p.set_postprocess(_post_process)
             return p

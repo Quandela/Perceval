@@ -21,31 +21,51 @@
 # SOFTWARE.
 import json
 import time
-from typing import Any, Callable, Optional
+from typing import Any
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
-from perceval.serialization import deserialize
+from perceval.serialization import deserialize, serialize
 
 
 class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
 
-    def __init__(self, fn: Callable, rpc_handler, delta_parameters=None, job_context=None,
-                 refresh_progress_delay: int=3):
+    def __init__(self, request_data, rpc_handler, job_name, delta_parameters=None, job_context=None,
+                 command_param_names=None, refresh_progress_delay: int = 3):
         r"""
-        :param fn: the remote processor function to call
-        :param rpc_handler: the RPC handler
+        :param request_data: prepared data for the job. It is extended by an async_execute() call before being sent.
+            It is expected to be prepared by a RemoteProcessor. It must have the following structure:
+            {
+              'platform_name': '...',
+              'pcvl_version': 'M.m.p',
+              'payload': {
+                'command': '...',
+                'circuit': <optional serialized circuit>,
+                'input_state': <optional serialized input state>
+                ...
+                other parameters
+              }
+            }
+        :param rpc_handler: a valid RPC handler to connect to the cloud
+        :param job_name: the job name (visible cloud-side)
         :param delta_parameters: parameters to add/remove dynamically
+        :param job_context: Data on the job execution context (conversion required on results, etc.)
+        :param command_param_names: List of parameter names for the command call (in order to resolve *args in
+            async_execute() call). This parameter is optional (default = empty list). However, without it, only **kwargs
+            are available in the async_execute() call
         :param refresh_progress_delay: wait time when running in sync mode between each refresh
         """
-        super().__init__(fn, delta_parameters=delta_parameters)
+        super().__init__(delta_parameters=delta_parameters)
         self._rpc_handler = rpc_handler
         self._job_status = JobStatus()
         self._job_context = job_context
         self._refresh_progress_delay = refresh_progress_delay  # When syncing an async job (in s)
         self._previous_status_refresh = 0.
         self._id = None
+        self._name = job_name
+        self._request_data = request_data
+        self._param_names = command_param_names or []
 
     @property
     def id(self):
@@ -83,6 +103,16 @@ class RemoteJob(Job):
 
         return self._job_status
 
+    def _handle_unnamed_params(self, args, kwargs):
+        if len(args) > len(self._param_names):
+            raise RuntimeError(f'Too many unnamed parameter: {len(args)}, expected {len(self._param_names)}')
+        for idx, unnamed_arg in enumerate(args):
+            param_name = self._param_names[idx]
+            if param_name in kwargs:  # Parameter exists twice (in args and in kwargs)
+                raise RuntimeError(f'Parameter named {param_name} was passed twice (in *args and **kwargs)')
+            kwargs[param_name] = unnamed_arg
+        return kwargs
+
     def execute_sync(self, *args, **kwargs) -> Any:
         job = self.execute_async(*args, **kwargs)
         while not job.is_complete:
@@ -97,8 +127,12 @@ class RemoteJob(Job):
                 if self._job_context is None:
                     self._job_context = {}
                 self._job_context["mapping_delta_parameters"] = self._delta_parameters
+            kwargs = self._handle_unnamed_params(args, kwargs)
             kwargs['job_context'] = self._job_context
-            self._id = self._fn(*args, **kwargs)
+            self._request_data['job_name'] = self._name
+            self._request_data['payload'].update(kwargs)
+            self._id = self._rpc_handler.create_job(serialize(self._request_data))
+
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))
             raise e
