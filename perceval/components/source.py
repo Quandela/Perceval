@@ -34,40 +34,28 @@ class Source:
     [1] Pont, Mathias, et al. Physical Review X 12, 031033 (2022). https://doi.org/10.1103/PhysRevX.12.031033
     [2] Pont, Mathias, et al. arXiv preprint arXiv:2211.15626 (2022). https://doi.org/10.48550/arXiv.2211.15626
 
-    :param occupation_factor: occupation factor of the QD state.
     :param multiphoton_component: second order intensity autocorrelation at zero time delay :math:`g^{(2)}(0)`
+    :param indistinguishability: 2-photon mean wavepacket overlap
+    :param emission_probability: probability that the QD emits at least one photon
+    :param losses: optical losses
     :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
-    :param indistinguishability: indistinguishability parameter as defined by 'indistinguishability_model'
-    :param indistinguishability_model: `homv` defines indistinguishability as 2-photon mean wavepacket overlap,
-        `linear` defines indistinguishability as ratio of indistinguishable photons
-    :param brightness: Number of photons collected per excitation pulse into the first lens.
-    :param overall_transmission: Total transmission of the optical system. Can take into account the brightness.
     :param context: gives a local context for source specific features, like `discernability_tag`
     """
 
-    def __init__(self, occupation_factor: float = 1,
-                 multiphoton_component: float = 0,
-                 multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
+    def __init__(self, multiphoton_component: float = 0,
                  indistinguishability: float = 1,
-                 indistinguishability_model: Literal["homv", "linear"] = "homv",
-                 brightness: float = 1,
-                 overall_transmission: float = 1,
+                 emission_probability: float = 1,
+                 losses: float = 0,
+                 multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
                  context: Dict = None) -> None:
 
-        assert brightness * multiphoton_component <= 0.5, "brightness * g2 higher than 0.5 can not be computed for now"
-        self.brightness = brightness
-        self.occupation_factor = occupation_factor
-        self.overall_transmission = overall_transmission
-        # By definition brightness=beta*eta_out*px where beta is the fraction of emission into the mode and eta_out is
-        # the out-coupling efficiency
-        assert occupation_factor > 0, "Occupation factor of the QD state must be non-zero"
-        assert brightness * overall_transmission <= occupation_factor, "Set of parameters is not physically acceptable"
+        assert emission_probability * multiphoton_component <= 0.5, "brightness * g2 higher than 0.5 can not be computed for now"
+        self.emission_probability = emission_probability
+        self.losses = losses
         self.multiphoton_component = multiphoton_component
         self._multiphoton_model = multiphoton_model
         assert self._multiphoton_model in ["distinguishable", "indistinguishable"], "invalid value for multiphoton_model"
         self.indistinguishability = indistinguishability
-        self._indistinguishability_model = indistinguishability_model
-        assert self._indistinguishability_model in ["homv", "linear"], "invalid value for indistinguishability_model"
         self._context = context or {}
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 0
@@ -78,9 +66,9 @@ class Source:
         return self._context[tag]
 
     def _get_probs(self):
-        px = self.occupation_factor
+        px = self.emission_probability
         g2 = self.multiphoton_component
-        eta = self.overall_transmission*self.brightness/self.occupation_factor
+        eta = 1-self.losses
 
         # Starting formulas
         # g2 = 2p2/(p1+2p2)**2
@@ -100,10 +88,7 @@ class Source:
         """
         # states with probability 0 will be removed by processor
 
-        if self._indistinguishability_model == "homv":
-            distinguishability = 1-math.sqrt(self.indistinguishability)
-        else:
-            distinguishability = 1-self.indistinguishability
+        distinguishability = 1-math.sqrt(self.indistinguishability)
 
         # Approximation distinguishable photons are pure
         distinguishable_photon = self.get_tag("discernability_tag", add=True)
