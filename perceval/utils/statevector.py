@@ -149,7 +149,7 @@ class StateVector(defaultdict):
 
     def __init__(self,
                  bs: Union[BasicState, List[int], str, None] = None,
-                 photon_annotations: Dict[int, str] = None):
+                 photon_annotations: Dict[int, List] = None):
         r"""Init of a StateVector from a BasicState, or from BasicState constructor
         :param bs: a BasicState, or `BasicState` constructor,
                     None used for internal purpose
@@ -165,6 +165,16 @@ class StateVector(defaultdict):
             self[bs] = 1
         self._normalized = True
         self._has_symbolic = False
+
+    def __eq__(self, other):
+        if not isinstance(other, StateVector):
+            return False
+        self.normalize()
+        other.normalize()
+        return super().__eq__(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __rmul__(self, other):
         r"""Multiply a StateVector by a numeric value, right side
@@ -183,6 +193,10 @@ class StateVector(defaultdict):
         if self.m is None:
             self.m = key.m
         return super().__setitem__(key, value)
+
+    def __len__(self):
+        self.normalize()
+        return super().__len__()
 
     def __iter__(self):
         self.normalize()
@@ -337,8 +351,9 @@ class StateVector(defaultdict):
             for key in to_remove:
                 del self[key]
             norm = norm**0.5
+            nkey = len(self.keys())
             for key in self.keys():
-                if len(self) == 1:
+                if nkey == 1:
                     self[key] = 1
                 else:
                     self[key] /= norm
@@ -390,7 +405,8 @@ class ProbabilityDistribution(defaultdict, ABC):
             self[sv] /= sum_probs
 
     def add(self, obj, proba: float):
-        self[obj] += proba
+        if proba != 0:
+            self[obj] += proba
 
     def __str__(self):
         return "{\n  "\

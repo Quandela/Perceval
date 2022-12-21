@@ -20,10 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import PERM, Processor
+from perceval.components import PERM, AProcessor
 
 
-def precompute_herald_pos(processor: Processor):
+def precompute_herald_pos(processor: AProcessor):
     """
     Precompute output herald position, following modes until it finds the first non-PERM component
     Works in recursive display mode (which is the worst case scenario)

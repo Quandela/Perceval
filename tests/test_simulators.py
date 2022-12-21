@@ -64,18 +64,18 @@ def check_output(simulator, input_state, expected):
     assert pytest.approx(all_prob) == 1
 
 
-def test_minimal():
+def test_simulator_default():
     # default simulator backend
-    simulator_backend = pcvl.BackendFactory().get_backend()
+    simulator_backend = pcvl.BackendFactory.get_backend()
     # simulator directly initialized on circuit
     s = simulator_backend(BS.H())
     check_output(s, pcvl.BasicState([1, 0]), {pcvl.BasicState("|1,0>"): 0.50,
                                               pcvl.BasicState("|0,1>"): 0.50})
 
 
-def test_building_sim():
+def test_simulator_basics():
     for backend in ["SLOS", "Naive"]:
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         u = [[1, 0], [0, 1]]
         s = simulator_backend(pcvl.Matrix(u))
         check_output(s, pcvl.BasicState([0, 0]), {pcvl.BasicState("|0,0>"): 1})
@@ -83,21 +83,43 @@ def test_building_sim():
         check_output(s, pcvl.BasicState([1, 1]), {pcvl.BasicState("|1,1>"): 1})
 
 
-def test_sim_indistinct_sym():
+def test_simulator_wrong_size():
+    circuit = pcvl.Circuit(2)
+    state = pcvl.BasicState([1, 1, 1])
+    for backend in ["SLOS", "Naive", "MPS"]:
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
+
+        with pytest.raises(ValueError):
+            simulator = simulator_backend(circuit)
+            simulator.prob(state, state)
+
+        with pytest.raises(ValueError):
+            simulator = simulator_backend(circuit)
+            simulator.probampli(state, state)
+
+    clifford_backend = pcvl.BackendFactory.get_backend("CliffordClifford2017")
+    clifford_simulator = clifford_backend(circuit)
+    with pytest.raises(ValueError):
+        clifford_simulator.sample(state)
+
+
+def test_simulator_indistinct_sym():
     for backend in ["SLOS", "Naive"]:
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         c = BS.H()
         s = simulator_backend(c.U, use_symbolic=False)
-        check_output(s, pcvl.BasicState([2, 0]), {pcvl.BasicState("|2,0>"): 0.25,
-                                                  pcvl.BasicState("|1,1>"): 0.50,
-                                                  pcvl.BasicState("|0,2>"): 0.25})
-        check_output(s, pcvl.BasicState([1, 0]), {pcvl.BasicState("|1,0>"): 0.50,
-                                                  pcvl.BasicState("|0,1>"): 0.50})
+        check_output(s, pcvl.BasicState("|2,0>"), {pcvl.BasicState("|2,0>"): 0.25,
+                                                   pcvl.BasicState("|1,1>"): 0.50,
+                                                   pcvl.BasicState("|0,2>"): 0.25})
+        check_output(s, pcvl.BasicState("|1,0>"), {pcvl.BasicState("|1,0>"): 0.50,
+                                                   pcvl.BasicState("|0,1>"): 0.50})
+        # Test all_prob call
+        assert pytest.approx(np.asarray([0.5, 0, 0.5])) == s.all_prob(pcvl.BasicState("|1,1>"))
 
 
-def test_sim_indistinct_asym():
+def test_simulator_indistinct_asym():
     for backend in ["SLOS", "Naive"]:
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         c = BS.H(theta=2*sp.pi/3)
         s = simulator_backend(c.U, use_symbolic=False)
         check_output(s, pcvl.BasicState([2, 0]), {pcvl.BasicState("|2,0>"): 0.0625,
@@ -107,9 +129,9 @@ def test_sim_indistinct_asym():
                                                   pcvl.BasicState("|0,1>"): 0.750})
 
 
-def test_sim_indistinct_sym11():
-    for backend in ["SLOS", "Naive"]:
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+def test_simulator_indistinct_sym11():
+    for backend in ["SLOS", "Naive", "MPS"]:
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         c = BS.H()
         s = simulator_backend(c, use_symbolic=False)
         check_output(s, pcvl.BasicState([1, 1]), {pcvl.BasicState("|2,0>"): 0.5000,
@@ -119,7 +141,7 @@ def test_sim_indistinct_sym11():
 def test_check_precompute():
     """ Check if the SLOS backend is keeping internal structure
     """
-    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
+    simulator_backend = pcvl.BackendFactory.get_backend("SLOS")
     u = [[1, 0], [0, 1]]
     simulator = simulator_backend(pcvl.Matrix(u))
     simulator.sample(pcvl.BasicState([0, 1]))
@@ -134,7 +156,7 @@ def test_check_precompute():
 
 
 def test_symbolic_prob():
-    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
+    simulator_backend = pcvl.BackendFactory.get_backend("SLOS")
     c = BS.H(theta=pcvl.Parameter("theta"))
     s = simulator_backend(c.U)
     assert str(s.prob(pcvl.BasicState([0, 1]), pcvl.BasicState([0, 1]))) == "cos(theta/2)**2"
@@ -142,8 +164,8 @@ def test_symbolic_prob():
 
 
 def test_cnot_no_mask():
-    for backend in ["SLOS", "Naive"]:
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+    for backend in ["SLOS", "Naive", "MPS"]:
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         cnot = cnot_circuit()
         s_cnot = simulator_backend(cnot, use_symbolic=False)
         assert_cnot(s_cnot)
@@ -156,7 +178,7 @@ def test_cnot_no_mask():
 
 def test_cnot_with_mask():
     for backend in ["SLOS", "Naive"]:
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         cnot = cnot_circuit()
         s_cnot = simulator_backend(cnot.U, use_symbolic=False, n=2, mask=["0    0"])
         assert_cnot(s_cnot)
@@ -168,7 +190,7 @@ def test_cnot_with_mask():
 
 
 def test_compile():
-    simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
+    simulator_backend = pcvl.BackendFactory.get_backend("SLOS")
     cnot = cnot_circuit()
     s_cnot = simulator_backend(cnot.U, use_symbolic=False, n=2, mask=["0    0"])
     assert s_cnot.compile([pcvl.BasicState([0, 1, 0, 1, 0, 0]),
@@ -182,7 +204,7 @@ def test_compile():
 def test_non_symmetrical():
     for backend in ["Naive", "SLOS"]:
         # default simulator backend
-        simulator_backend = pcvl.BackendFactory().get_backend(backend)
+        simulator_backend = pcvl.BackendFactory.get_backend(backend)
         # simulator directly initialized on circuit
         circuit = pcvl.Circuit(3)
         circuit.add((0, 1), BS.H())
@@ -201,8 +223,8 @@ def test_non_symmetrical():
 
 def test_evolve_indistinguishable():
     c = BS.H()
-    for backend_name in ["SLOS", "Naive"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+    for backend_name in ["SLOS", "Naive", "MPS"]:
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         sv1 = pcvl.StateVector([1, 1])
         check_output(simulator, sv1, {pcvl.BasicState("|0,2>"): 0.5, pcvl.BasicState("|2,0>"): 0.5})
         sv1_out = simulator.evolve(sv1)
@@ -215,8 +237,8 @@ def test_evolve_indistinguishable():
 
 def test_hybrid_state():
     c = BS.H()
-    for backend_name in ["SLOS", "Naive"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+    for backend_name in ["SLOS", "Naive", "MPS"]:
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         sv1 = pcvl.StateVector([1, 1], {0: ["_:1"], 1: ["_:2"]})
         check_output(simulator, sv1, {pcvl.BasicState("|0,2>"): 0.25,
                                       pcvl.BasicState("|2,0>"): 0.25,
@@ -228,15 +250,15 @@ def test_state_entanglement():
     st2 = pcvl.StateVector("|1,0>")
     st3 = st1+st2
     c = BS.H()
-    for backend_name in ["SLOS", "Naive"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+    for backend_name in ["SLOS", "Naive", "MPS"]:
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         st3_out = simulator.evolve(st3)
         assert str(st3_out) == "|1,0>"
         check_output(simulator, st3, {pcvl.BasicState("|1,0>"): 1})
 
 
 def test_clifford_bs():
-    bs_backend = pcvl.BackendFactory().get_backend("CliffordClifford2017")
+    bs_backend = pcvl.BackendFactory.get_backend("CliffordClifford2017")
     sim = bs_backend(BS.H())
     counts = defaultdict(int)
     for _ in range(10000):
@@ -247,7 +269,7 @@ def test_clifford_bs():
 
 def _run_clifford(n: int, m: int):
     state = pcvl.BasicState([1] * n + [0] * (m - n))
-    bs_backend = pcvl.BackendFactory().get_backend("CliffordClifford2017")
+    bs_backend = pcvl.BackendFactory.get_backend("CliffordClifford2017")
     u = pcvl.Matrix.random_unitary(m)
     experiment = bs_backend(Unitary(U=u))
     experiment.sample(state)
@@ -265,8 +287,8 @@ def test_clifford_27():
 def test_polarization_circuit_0():
     c = pcvl.Circuit(1)
     c //= HWP(sp.pi/4)
-    for backend_name in ["Naive", "SLOS"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+    for backend_name in ["Naive", "SLOS"]:  # MPS does not support polarization
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         check_output(simulator,
                      pcvl.BasicState("|{P:H}>"),
                      {pcvl.BasicState("|1>"): 1})
@@ -286,7 +308,7 @@ def test_polarization_circuit_1():
     c = pcvl.Circuit(1)
     c //= WP(sp.pi/2, sp.pi/8)
     for backend_name in ["SLOS", "Naive"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         check_output(simulator,
                      pcvl.BasicState("|{P:H}>"),
                      {pcvl.BasicState("|1>"): 1})
@@ -298,7 +320,7 @@ def test_polarization_circuit_2():
     c = pcvl.Circuit(1)
     c //= WP(sp.pi/4, sp.pi/4)
     for backend_name in ["SLOS", "Naive"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         # check_output(simulator,
         #              pcvl.BasicState("|{P:H}>"),
         #              {pcvl.BasicState("|1>"): 1})
@@ -309,7 +331,7 @@ def test_polarization_circuit_2():
 def test_polarization_circuit_3():
     c = pcvl.Circuit(2) // PBS()
     for backend_name in ["Naive", "SLOS"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         check_output(simulator,
                      pcvl.BasicState("|1,0>"),
                      {pcvl.BasicState("|0,1>"): 1})
@@ -321,7 +343,7 @@ def test_polarization_circuit_3():
 def test_polarization_circuit_4():
     c = pcvl.Circuit(2) // PBS()
     for backend_name in ["Naive", "SLOS"]:
-        simulator = pcvl.BackendFactory().get_backend(backend_name)(c)
+        simulator = pcvl.BackendFactory.get_backend(backend_name)(c)
         check_output(simulator,
                      pcvl.BasicState("|1,0>"),
                      {pcvl.BasicState("|0,1>"): 1})
@@ -331,7 +353,7 @@ def test_polarization_circuit_4():
 
 def test_bs_polarization():
     c = BS.H()
-    sim = pcvl.BackendFactory().get_backend("Naive")(c)
+    sim = pcvl.BackendFactory.get_backend("Naive")(c)
 
     input_state = pcvl.BasicState("|{P:V},0>")
 
@@ -343,9 +365,3 @@ def test_bs_polarization():
 
     for output_state, prob in states:
         assert pytest.approx(sim.prob(input_state, output_state)) == prob
-
-
-def test_all_prob():
-    c = BS.H()
-    sim = pcvl.BackendFactory().get_backend("Naive")(c)
-    assert pytest.approx(np.asarray([0.5, 0, 0.5])) == sim.all_prob(pcvl.BasicState("|1,1>"))

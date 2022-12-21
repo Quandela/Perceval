@@ -36,7 +36,7 @@ local_simulator_name = 'CliffordClifford2017'
 gate_name = "postprocessed cnot"
 cnot_processor = catalog[gate_name].as_processor(local_simulator_name).build()
 assert not cnot_processor.is_remote
-cnot_processor.source = Source(brightness=0.5)
+cnot_processor.source = Source(emission_probability=0.5)
 cnot_processor.set_postprocess(None)  # Remove post-processing function to retrieve more states
 # You may use a logical state as an input, converted into the fock state |1,0,1,0> thanks to dual rail encoding ports
 # defined in cnot_processor
@@ -70,7 +70,7 @@ assert len(output['results']) == nsample
 # Now, try an async sample_count with SLOS backend
 local_simulator_name = 'SLOS'
 cnot_circuit = catalog["postprocessed cnot"].as_circuit().build()
-proc_slos = Processor(local_simulator_name, 6, pcvl.Source(brightness=0.9))
+proc_slos = Processor(local_simulator_name, 6, pcvl.Source(emission_probability=0.9))
 proc_slos.add(0, cnot_circuit)
 proc_slos.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
 
@@ -119,7 +119,7 @@ phis[2].set_value(0)
 phis[3].set_value(0.4)
 
 print("Use analyzer algorithm")
-qrng_processor = Processor("SLOS", chip_QRNG, Source(brightness=0.8))
+qrng_processor = Processor("SLOS", chip_QRNG, Source(emission_probability=0.8))
 
 analyzer = Analyzer(qrng_processor, {pcvl.BasicState([1, 0, 1, 0]): '00', pcvl.BasicState([0, 1, 1, 0]): '10'}, '*')
 with tqdm(total=1, bar_format='{desc}{percentage:3.0f}%|{bar}|') as tq:

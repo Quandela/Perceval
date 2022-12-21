@@ -397,14 +397,6 @@ L 2037.409091 526.031197
     <path d="M 1519.227273 655.343732
 L 2037.409091 655.343732
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
-    <path d="M 2045.181818 526.031197
-L 2159.181818 526.031197
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
-    <path d="M 2037.409091 526.031197
-L 2045.181818 526.031197
-L 2159.181818 526.031197
-L 2166.954545 526.031197
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2045.181818 655.343732
 L 2159.181818 784.656268
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
@@ -428,6 +420,9 @@ L 2159.181818 1043.281338
 L 2045.181818 913.968803
 L 2159.181818 1043.281338
 L 2166.954545 1043.281338
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 2037.409091 526.031197
+L 2166.954545 526.031197
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2172.136364 466.547431
 L 2809.5 466.547431
@@ -526,14 +521,6 @@ L 2814.681818 913.968803
     <path d="M 2166.954545 1043.281338
 L 2814.681818 1043.281338
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
-    <path d="M 2822.454545 526.031197
-L 2936.454545 526.031197
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
-    <path d="M 2814.681818 526.031197
-L 2822.454545 526.031197
-L 2936.454545 526.031197
-L 2944.227273 526.031197
-" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2822.454545 784.656268
 L 2936.454545 655.343732
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #ffffff; stroke-width: 6"/>
@@ -557,6 +544,9 @@ L 2936.454545 913.968803
 L 2822.454545 1043.281338
 L 2936.454545 913.968803
 L 2944.227273 913.968803
+" clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
+    <path d="M 2814.681818 526.031197
+L 2944.227273 526.031197
 " clip-path="url(#staticClipPath)" style="fill: none; stroke: #8b0000; stroke-width: 3"/>
     <path d="M 2944.227273 526.031197
 L 2983.090909 526.031197

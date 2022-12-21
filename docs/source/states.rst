@@ -143,8 +143,7 @@ Sampling
 |0,1>: 3
 |1,0>: 7
 
-.. INFO::
-  These methods do not modify the state vector
+.. note:: These methods do not modify the state vector
 
 
 

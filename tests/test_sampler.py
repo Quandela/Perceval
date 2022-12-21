@@ -35,7 +35,7 @@ def test_sampler():
     cnot.add((2, 3), BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi / 2, phi_tl=-np.pi / 2))
     cnot.add((4, 5), BS.H(theta=theta_r13))
     cnot.add((3, 4), BS.H())
-    imperfect_source = pcvl.Source(brightness=0.9)
+    imperfect_source = pcvl.Source(emission_probability=0.9)
 
     for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:
         p = pcvl.Processor(backend_name, cnot, imperfect_source)

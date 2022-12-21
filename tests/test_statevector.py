@@ -27,6 +27,7 @@ import perceval as pcvl
 import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 
+import numpy as np
 import sympy as sp
 
 from test_circuit import strip_line_12
@@ -216,7 +217,7 @@ def test_sv_parse_tuple_annot():
 
 
 def test_svd_sample():
-    source = pcvl.Source(brightness=1, purity=0.9, indistinguishability=0.9)
+    source = pcvl.Source(emission_probability=1, multiphoton_component=0.1, indistinguishability=0.9)
     qpu = pcvl.Processor("Naive", comp.BS(), source)
     qpu.with_input(pcvl.BasicState([1, 0]))
     sample = qpu.source_distribution.sample(1)
@@ -259,7 +260,7 @@ def test_statevector_measure_1():
     assert str(map_measure_sv[pcvl.BasicState("|1>")][1]) == "|0>"
 
 
-def test_statevector_measure_1():
+def test_statevector_measure_2():
     sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
     map_measure_sv = sv.measure([0, 1])
     assert len(map_measure_sv) == 2 and\
@@ -271,10 +272,36 @@ def test_statevector_measure_1():
     assert str(map_measure_sv[pcvl.BasicState("|1,0>")][1]) == "|>"
 
 
-def test_statevector_measure_2():
+def test_statevector_measure_3():
     sv = pcvl.StateVector("|0,1,1>")+pcvl.StateVector("|1,1,0>")
     map_measure_sv = sv.measure(1)
     assert len(map_measure_sv) == 1 and\
            pcvl.BasicState("|1>") in map_measure_sv
     assert pytest.approx(1) == map_measure_sv[pcvl.BasicState("|1>")][0]
     assert str(map_measure_sv[pcvl.BasicState("|1>")][1]) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
+
+
+def test_statevector_equality():
+    gamma = np.pi / 2
+    st1 = pcvl.StateVector("|{P:H},{P:H}>")
+    st2 = pcvl.StateVector("|{P:H},{P:V}>")
+    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+    assert input_state == st2
+
+
+def test_statevector_polar_evolve1():
+    simulator = pcvl.BackendFactory.get_backend("SLOS")(comp.BS())
+    st1 = pcvl.StateVector("|{P:H},{P:H}>")
+    st2 = pcvl.StateVector("|{P:H},{P:V}>")
+    gamma = np.pi / 2
+    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+
+    sum_p = 0
+    for o, p in simulator.allstateprob_iterator(input_state):
+        sum_p += p
+    assert pytest.approx(1) == sum_p
+
+    sum_p = 0
+    for o, p in simulator.allstateprob_iterator(st2):
+        sum_p += p
+    assert pytest.approx(1) == sum_p
