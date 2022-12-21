@@ -22,7 +22,6 @@ One direct benefit of this change is that the beam splitter definition is now th
 >>>
 >>> c = pcvl.Circuit(2) // PS(np.pi) // BS() // PERM([1, 0]) // (1, PS(np.pi))
 
-
 Display components
 ^^^^^^^^^^^^^^^^^^
 
@@ -69,7 +68,7 @@ Originally, you would call
 >>> simu_backend = backend_type(circuit)
 
 While this is still functional, this can also be misleading. Indeed, simulation backends can provide features that you
-can measure with actual QPU - typically the probability amplitude. This is good for developing theoretical algorithms
+cannot measure with actual QPU - typically the probability amplitude. This is good for developing theoretical algorithms
 but using these will not port to actual QPUs. We recommend using the class :class:`Processor` by default.
 
 AnnotatedBasicState was deprecated
@@ -96,3 +95,29 @@ This has been replaced by explicit use of `params` accessor:
 >>> c.param('phi')
 
 The `__getitem__` notation is now used to access components in a circuit (see :ref:`Accessing components in a circuit`).
+
+New Source in Perceval 0.7.3
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A new source model has been introduced in Perceval 0.7.3. The `Source` class initialization parameters have changed
+and imperfect simulated sources will return results closer to the actual photonic sources which are used in the QPUs.
+Backward compatibility with pre-0.7.3 sources is broken.
+
+* :code:`brightness` was replaced by :code:`emission_probability`. Balanced losses from the source output to the circuit
+  output can be modelled with :code:`losses` paramater.
+
+* :code:`purity` and :code:`purity_model` were respectively replaced by :code:`multiphoton_component` and
+  :code:`multiphoton_model`.
+  :code:`purity` represented the ratio of time when photon is emitted alone whereas :code:`multiphoton_component` is
+  the :math:`g^{(2)}`. There is no direct conversion from the former purity to :math:`g^{(2)}`, note however that the
+  greater the purity, the lower the :math:`g^{(2)}`.
+
+* The default distinguishability of multiple emitted photons changed from `indistinguishable` to `distinguishable`.
+
+>>> source = pcvl.Source(brightness=0.3, purity=0.95, purity_model="distinguishable")
+
+can be changed to (without returning the same results):
+
+>>> source = pcvl.Source(emission_probability=0.3, multiphoton_component=0.05)
+
+See :ref:`Source` class reference for more information.
