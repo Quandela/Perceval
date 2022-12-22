@@ -163,10 +163,10 @@ class RemoteProcessor(AProcessor):
             return 0
         return self._n_moi
 
-    def add(self, mode_mapping, component, keep_port=True):
+    def _add_component(self, mode_mapping, component):
         if not isinstance(component, ACircuit):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
-        super().add(mode_mapping, component, keep_port)
+        super()._add_component(mode_mapping, component)
 
     def _compose_processor(self, connector, processor, keep_port: bool):
         assert isinstance(processor, RemoteProcessor), "can not mix types of processors"
