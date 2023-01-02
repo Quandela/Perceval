@@ -140,11 +140,11 @@ class RemoteJob(Job):
         return self
 
     def cancel(self):
-        if self.status.status == RunningStatus.RUNNING:
+        if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
             self._rpc_handler.cancel_job(self._id)
             self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancelation requested by user')
         else:
-            raise RuntimeError('Job is not running, cannot cancel it')
+            raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
     def get_results(self) -> Any:
         job_status = self.status
