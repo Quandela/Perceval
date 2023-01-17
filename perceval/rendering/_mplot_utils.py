@@ -44,16 +44,16 @@ def autoselect_backend():
         except (ImportError, AttributeError):
             pass
 
-        if in_pycharm_or_spyder:
-            matplotlib.use("module://backend_interagg")
-        elif in_notebook:
-            matplotlib.use("module://matplotlib_inline.backend_inline")
-        elif platform.system() == "Darwin":
-            matplotlib.use("MacOSX")
-        else:
-            try:
+        try:
+            if in_pycharm_or_spyder:
+                matplotlib.use("module://backend_interagg")
+            elif in_notebook:
+                matplotlib.use("module://matplotlib_inline.backend_inline")
+            elif platform.system() == "Darwin":
+                matplotlib.use("MacOSX")
+            else:
                 import tkinter
                 matplotlib.use("TkAgg")
-            except (ModuleNotFoundError, ImportError):
-                # Last chance: use "agg" non-interactive backend (which should work "anywhere").
-                matplotlib.use("agg")
+        except Exception:  # We want to catch anything that can happen above
+            # Last chance: use "agg" non-interactive backend (which should work "anywhere").
+            matplotlib.use("agg")

@@ -25,7 +25,7 @@ This script compares building of unitary when using Circuit or directly by build
 """
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+import perceval.components.unitary_components as comp
 import time
 import numpy as np
 

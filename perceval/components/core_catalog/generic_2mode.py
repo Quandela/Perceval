@@ -21,12 +21,20 @@
 # SOFTWARE.
 
 from perceval.utils.parameter import P
-from perceval.components import Circuit, PredefinedCircuit
-from perceval.components.base_components import *
+from perceval.components import Circuit, Processor
+from perceval.components.unitary_components import *
+from perceval.components.component_catalog import CatalogItem, AsType
 
-c = Circuit(2) // GenericBS(theta=P("theta"), phi_a=P("phi_a"), phi_b=P("phi_b"), phi_d=P("phi_d"))
 
-# With simple BS convention:
-# c = SimpleBS(theta=P("theta"), phi=P("phi")) // PS(phi=P("phi_a")) // (1, PS(phi=P("phi_b")))
+class Generic2ModeItem(CatalogItem):
+    def __init__(self):
+        super().__init__("generic 2 mode circuit")
+        self._default_opts['type'] = AsType.CIRCUIT
+        self._reset_opts()
 
-generic_2mode = PredefinedCircuit(c, "generic 2 mode circuit")
+    def build(self):
+        c = Circuit(2) // BS.H(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
+        if self._opt('type') == AsType.CIRCUIT:
+            return c
+        elif self._opt('type') == AsType.PROCESSOR:
+            return Processor(self._opt('backend'), c)

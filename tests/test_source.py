@@ -24,7 +24,7 @@ import pytest
 import math
 
 from perceval import Source, StateVector
-from perceval.rendering.pdisplay import pdisplay_statevector
+from perceval.rendering.pdisplay import pdisplay_state_distrib
 from test_circuit import strip_line_12
 
 
@@ -33,58 +33,61 @@ def _check_svdistribution(output, expected):
     for k, v in expected.items():
         svo = StateVector(k)
         if pytest.approx(v) != output[svo]:
-            print(pdisplay_statevector(output))
+            print(pdisplay_state_distrib(output))
             print("==> different value than expected for %s: %f (expected %f)" % (k, output[svo], v))
             assert False
+
+
+def test_tag():
+    s = Source()
+    assert s.get_tag("discernability_tag", False) == 0
+    assert s.get_tag("discernability_tag", True) == 1
+    assert s.get_tag("discernability_tag", False) == 1
+
+
+def test_intermediate_probs():
+    assert pytest.approx((1, 0, 0)) == Source()._get_probs()
+    p1 = .8
+    p2 = .01
+    beta = p1 + p2
+    g2 = 2 * p2 / (p1 + 2 * p2) ** 2
+    s = Source(emission_probability=beta, multiphoton_component=g2, losses=.1)
+    assert pytest.approx((.72, .0009, .0081)) == s._get_probs()
 
 
 def test_source_pure():
     s = Source()
     svd = s.probability_distribution()
-    assert strip_line_12(pdisplay_statevector(svd)) == strip_line_12("""
-            +--------+-------------+
-            | state  | probability |
-            +--------+-------------+
-            |  |1>   |      1      |
-            +--------+-------------+""")
+    assert strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
+            +-------+-------------+
+            | state | probability |
+            +-------+-------------+
+            |  |1>  |      1      |
+            +-------+-------------+""")
     _check_svdistribution(svd, {"|1>": 1})
 
 
-def test_source_brightness():
-    s = Source(brightness=0.4)
+def test_source_emission():
+    s = Source(emission_probability=0.4)
     svd = s.probability_distribution()
     _check_svdistribution(svd, {"|0>": 0.6, "|1>": 0.4})
 
 
-def test_source_brightness_purity():
-    s = Source(brightness=0.4, purity=0.9)
+def test_source_emission_g2():
+    s = Source(emission_probability=0.4, multiphoton_component=0.1, multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
-    _check_svdistribution(svd, {"|0>": 0.6, "|2>": 0.04, "|1>": 0.36})
+    _check_svdistribution(svd, {"|0>": 3/5, "|2>": 0.008336953374561418, "|1>": 0.391663})
 
 
-def test_source_brightess_purity_indistinguishable():
-    s = Source(brightness=0.4, purity=0.9, indistinguishability=0.9)
+def test_source_emission_g2_losses_indistinguishable():
+    s = Source(emission_probability=0.4, multiphoton_component=0.1, losses=0.08, indistinguishability=0.9,
+               multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
-    _check_svdistribution(svd, {"|0>": 0.6, "|{_:0}{_:1}>": 0.04, "|{_:0}>": 0.341526, "|{_:2}>": 0.018474})
+    _check_svdistribution(svd, {"|0>": 0.631386, "|2{_:0}>": 0.006694286297288383, "|{_:0}{_:1}>": 3.62111e-4,
+                                "|{_:0}>": 0.343035, "|{_:1}>": 0.01852243527847053})
 
 
 def test_source_indistinguishability():
-    s = Source(indistinguishability=0.9, indistinguishability_model="linear")
-    svd = s.probability_distribution()
-    assert len(svd) == 2
-    for k, v in svd.items():
-        assert len(k) == 1
-        state = k[0]
-        assert state.n == 1
-        annot = state.get_photon_annotations(1)
-        assert "_" in annot, "missing distinguishability feature _"
-        if annot["_"] != 0:
-            assert pytest.approx(v) == 0.1
-        else:
-            assert pytest.approx(v) == 0.9
-
-
-def test_source_indistinguishability_homv():
     s = Source(indistinguishability=0.5)
     svd = s.probability_distribution()
     assert len(svd) == 2
@@ -92,7 +95,7 @@ def test_source_indistinguishability_homv():
         assert len(k) == 1
         state = k[0]
         assert state.n == 1
-        annot = state.get_photon_annotations(1)
+        annot = state.get_photon_annotation(0)
         assert "_" in annot, "missing distinguishability feature _"
         if annot["_"] != 0:
             assert pytest.approx(1-math.sqrt(0.5)) == v

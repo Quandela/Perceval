@@ -20,51 +20,57 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, PredefinedCircuit
-from perceval.components.base_components import *
+from perceval.components import Circuit, Processor
+from perceval.components.unitary_components import *
+from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.port import Herald, Port, Encoding
 
 
-R1 = 0.228
-R2 = 0.758
+class HeraldedCnotItem(CatalogItem):
+    article_ref = "https://doi.org/10.1073/pnas.1018839108"
+    description = r"""CNOT gate with 4 heralded modes"""
+    str_repr = r"""                      ╭─────╮
+ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
+                 ─────┤     ├─────
+                      │     │
+data (dual rail) ─────┤     ├───── data (dual rail)
+                 ─────┤     ├─────
+                      ╰─────╯"""
 
+    R1 = 0.228
+    R2 = 0.758
+    theta1 = BS.r_to_theta(R1)
+    theta2 = BS.r_to_theta(R2)
 
-c_hcnot = (Circuit(8, name="Heralded CNOT")
-           .add((0, 1, 2), PERM([1, 2, 0]))
-           .add((4, 5), GenericBS())
-           .add((5, 6, 7), PERM([1, 2, 0]))
-           .add((3, 4), GenericBS())
-           .add((2, 3), GenericBS(R=R1, phi_b=np.pi, phi_d=0))
-           .add((4, 5), GenericBS(R=R1))
-           .add((3, 4), GenericBS())
-           .add((5, 6, 7), PERM([2, 1, 0]))
-           .add((1, 2), PERM([1, 0]))
-           .add((2, 3), GenericBS(R=R2))
-           .add((4, 5), GenericBS(R=R2, phi_b=np.pi, phi_d=0))
-           .add((5, 6), PERM([1, 0]))
-           .add((4, 5), GenericBS())
-           .add((4, 5), PERM([1, 0]))
-           .add((0, 1, 2), PERM([2, 1, 0])))
+    def __init__(self):
+        super().__init__("heralded cnot")
+        self._default_opts['type'] = AsType.PROCESSOR
 
-# With simple BS convention:
-# c_hcnot = (Circuit(8, name="Heralded CNOT")
-#            .add((0, 1, 2), PERM([1, 2, 0]))
-#            .add((4, 5), SimpleBS())
-#            .add((5, 6, 7), PERM([1, 2, 0]))
-#            .add((3, 4), SimpleBS())
-#            .add((2, 3), SimpleBS(R=R1, phi=np.pi))
-#            .add(3, PS(np.pi))
-#            .add((4, 5), SimpleBS(R=R1))
-#            .add((3, 4), SimpleBS())
-#            .add((5, 6, 7), PERM([2, 1, 0]))
-#            .add((1, 2), PERM([1, 0]))
-#            .add((2, 3), SimpleBS(R=R2))
-#            .add((4, 5), SimpleBS(R=R2, phi=np.pi))
-#            .add(5, PS(np.pi))
-#            .add((5, 6), PERM([1, 0]))
-#            .add((4, 5), SimpleBS())
-#            .add((0, 1, 2), PERM([2, 1, 0])))
+    def build(self):
+        c_hcnot = (Circuit(8, name="Heralded CNOT")
+                   .add((0, 1, 2), PERM([1, 2, 0]))
+                   .add((4, 5), BS.H())
+                   .add((5, 6, 7), PERM([1, 2, 0]))
+                   .add((3, 4), BS.H())
+                   .add((2, 3), BS.H(theta=self.theta1, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                   .add((4, 5), BS.H(theta=self.theta1))
+                   .add((3, 4), BS.H())
+                   .add((5, 6, 7), PERM([2, 1, 0]))
+                   .add((1, 2), PERM([1, 0]))
+                   .add((2, 3), BS.H(theta=self.theta2))
+                   .add((4, 5), BS.H(theta=self.theta2, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                   .add((5, 6), PERM([1, 0]))
+                   .add((4, 5), BS.H())
+                   .add((4, 5), PERM([1, 0]))
+                   .add((0, 1, 2), PERM([2, 1, 0])))
 
-heralded_cnot = PredefinedCircuit(c_hcnot,
-                                  "heralded cnot",
-                                  description="https://doi.org/10.1073/pnas.1018839108",
-                                  heralds={0: 0, 1: 1, 6: 0, 7: 1})
+        if self._opt('type') == AsType.CIRCUIT:
+            return c_hcnot
+        elif self._opt('type') == AsType.PROCESSOR:
+            p = Processor(self._opt('backend'), c_hcnot)
+            return p.add_herald(0, 0) \
+                    .add_herald(1, 1) \
+                    .add_port(2, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+                    .add_port(4, Port(Encoding.DUAL_RAIL, 'data')) \
+                    .add_herald(6, 0) \
+                    .add_herald(7, 1)

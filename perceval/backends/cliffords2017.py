@@ -23,8 +23,9 @@
 from .template import Backend
 
 import numpy as np
+from typing import List, Union
 import quandelibc as qc
-from perceval.utils import BasicState
+from perceval.utils import BasicState, StateVector
 
 
 def _square(x):
@@ -41,12 +42,22 @@ class CliffordClifford2017Backend(Backend):
     supports_circuit_computing = False
 
     def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        raise NotImplementedError
+        raise NotImplementedError(f'Cannot call prob_be on {self.name}')
 
-    def sample(self, input_state):
+    def probampli_be(self, input_state, output_state, n=None):
+        raise NotImplementedError(f'Cannot call probampli_be on {self.name}')
+
+    def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
+        if isinstance(input_state, StateVector):
+            if len(input_state) != 1:
+                raise RuntimeError(f"{self.name} cannot sample with a superposed states input ({input_state})")
+            input_state = next(iter(input_state))  # Get the first and only BasicState in the dict
+        self._check_state_size(input_state)
         # prepare Us that is a m*n matrix
         m = self._m
         n = input_state.n
+        if n == 0:
+            return input_state
         fs = [0]*m
         Us = np.zeros((n, m), dtype=np.complex128)
         # build Us while transposing it
@@ -74,3 +85,19 @@ class CliffordClifford2017Backend(Backend):
             mode_seq.append(next_mode)
             fs[next_mode] += 1
         return BasicState(fs)
+
+    def samples(self, input_state: Union[BasicState, StateVector], count: int) -> List[BasicState]:
+        if isinstance(input_state, StateVector) and len(input_state) == 1:
+            input_state = input_state[0]
+        results = []
+        for i in range(count):
+            results.append(self.sample(input_state))
+        return results
+
+    @staticmethod
+    def preferred_command() -> str:
+        return 'samples'
+
+    @staticmethod
+    def available_commands() -> List[str]:
+        return ['sample', 'samples']

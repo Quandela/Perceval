@@ -21,12 +21,12 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import perceval.components.base_components as comp
+from perceval.components.unitary_components import BS, PS
 import numpy as np
 
 def get_matrix_n(n):
     def _gen_mzi(i: int):
-        return comp.SimpleBS(R=0.42) // comp.PS(np.pi+i*0.1) // comp.SimpleBS(R=0.42) // comp.PS(np.pi/2)
+        return BS(BS.r_to_theta(0.42)) // PS(np.pi+i*0.1) // BS(BS.r_to_theta(0.42)) // PS(np.pi/2)
     return pcvl.Circuit.generic_interferometer(n, _gen_mzi)
 
 

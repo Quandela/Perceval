@@ -4,13 +4,13 @@ States
 Basic State
 -----------
 
-Describes the Fock state of  :math:`n` indistinguishable photons over  :math:`m` modes.
+Describes the Fock state of :math:`n` photons over :math:`m` modes where photons can be annotated. If none is annotated, then all photons in the state are indistinguishable.
 
 See reference :class:`perceval.utils.BasicState` for detailed information.
 
-A Fock state, called BasicState in Perceval coding language,  is represented by ``|n_1,n_2,...,n_m>`` notation where ``n_k`` is the number of photons in mode ``k``.
+A Fock state, called BasicState in Perceval coding language, is represented by ``|n_1,n_2,...,n_m>`` notation where ``n_k`` is the number of photons in mode ``k``.
 
-Example code:
+Simple code example with indistinguishable photons:
 
 >>> bs = pcvl.BasicState("|0,1>")      # Creates a two-mode Fock state with 0 photons in first mode, and 1 photon in second mode.
 >>> print(bs)                          # Prints out the created Fock state
@@ -27,12 +27,10 @@ Example code:
 Annotated Basic State
 ---------------------
 
-``AnnotatedBasicState`` extends ``BasicState`` and describes state of :math:`n` **annotated** photons over :math:`m` modes.
-
-See reference :class:`perceval.utils.AnnotatedBasicState` for detailed information.
+A ``BasicState`` can also describe state of :math:`n` **annotated** photons over :math:`m` modes.
 
 Annotation
-^^^^^^^^^^
+----------
 
 ``Annotation`` distinguishes individual photons and is represented generically as a map of key :math:`\rightarrow` values - where key are
 user-defined labels, and values can be string or complex numbers.
@@ -62,16 +60,16 @@ Note that a photon can have a set of annotation keys, representing different deg
   :math:`p_1` and :math:`p_3` are distinguishable because their a1 annotation keys have different values (1 for p_1 as opposed to 2 for p_3). :math:`p_2` and :math:`p_3` are also distinguishable because the values of their annotation key a2 do not agree. However, :math:`p_1` and :math:`p_2` are
   indistinguishable, because they share no common annotation keys.
 
-Use of Annotation in AnnotatedBasicState
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use of Annotation in BasicState
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``AnnotatedBasicState`` notation extends the ``BasicState`` notation as following:
+Photon ``Annotations`` extend the ``BasicState`` notation as following:
 
 ``|AP_(1:1)...AP_(1:n_1),...,AP_(m:1)...AP_(m:n_m)>`` where ``AP_(k:i)`` is the representation of the ``i``-th photon in mode ``k``, ``n_i`` is the number of photons in mode ``i``.
 
 To simplify the notation, for each mode, annotated photons with same annotations can be grouped and represented prefixed by
 their count: e.g. ``2{...}``. Absence of photons is represented by ``0``, and non annotated photons are just represented by
-their count as for ``BasicState``.
+their count.
 
 For instance the following are representing different BasicStates with 2 photons having polarization annotations (here
 limited to ``H``/``V``:
@@ -79,24 +77,24 @@ limited to ``H``/``V``:
 * ``|{P:H},{P:V}>`` corresponding to an annotated ``|1,1>`` ``BasicState``.
 * ``|2{P:H},0>`` corresponding to an annotated ``|2,0>`` ``BasicState`` where the 2 photons in the first mode are annotated with the same annotation.
 * ``|{P:H}{P:V},0>`` corresponding also to an annotated``|2,0>`` ``BasicState`` where the two photons in the first mode have different annotations.
-* ``|1,{t:-1}>`` corresponding to an annotated ``|1,1>`` ``BasicState``, the degree of freedom being time,   with the photon in mode 2 coming from previous period, and the photon in mode 1 is not annotated.
+* ``|1,{t:-1}>`` corresponding to an annotated ``|1,1>`` ``BasicState``, the degree of freedom being time, with the photon in the second mode coming from previous period, and the photon in the first mode is not annotated.
 
 Example code:
 
->>> print(pcvl.AnnotatedBasicState("|0,1>"))
+>>> print(pcvl.BasicState("|0,1>"))
 |0,1>
->>> a_bs = pcvl.AnnotatedBasicState("|{P:H}{P:V},0>")   # Creates an annotated state |2,0> , with two photons in the first mode, one having a horizontal polarization, and the other a vertical polarization.
+>>> a_bs = pcvl.BasicState("|{P:H}{P:V},0>")  # Creates an annotated state |2,0>, with two photons in the first mode, one having a horizontal polarization, and the other a vertical polarization.
 >>> print(a_bs)
 |{P:H}{P:V},0>
->>> a_bs[0]                      # prints the photons in the first mode
+>>> a_bs[0]  # prints the photons in the first mode
 ({"P":"H"},{"P":"V"})
->>> print(a_bs.clear())     #prints the non-annotated Basic state corresponding to a_bs
+>>> print(a_bs.clear())  # prints the non-annotated Basic state corresponding to a_bs
 |2,0>
 
 State Vector
 ------------
 
-``StateVector`` extends ``AnnotatedBasicState`` to represents state superpositions.
+``StateVector`` is a (complex) linear combination of ``BasicState`` to represent state superposition.
 
 See reference :class:`perceval.utils.StateVector` for detailed information.
 
@@ -104,7 +102,7 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 
 >>> st1 = pcvl.StateVector("|1,0>")   # write basic states or annotated basic states with the 'StateVector' command in order to enable creating a superposition using the '+' command
 >>> st2 = pcvl.StateVector("|0,1>")
->>> st3= st1 + st2
+>>> st3 = st1 + st2
 >> print(len(st3))
 2
 >>> print(st3)
@@ -116,7 +114,21 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 >>> st4 = alpha*st1 + beta*st2
 
 .. WARNING::
-  ``StateVector`` will normalize themselves so normalization terms will be added to any combination.
+  ``StateVector`` will normalize themselves at usage so normalization terms will be added to any combination.
+
+``StateVector`` can also be multiplied through a tensor product - and exponentation is also built-in.
+
+>>> import perceval as pcvl
+
+>>> sv0 = pcvl.StateVector([1,0]) + pcvl.StateVector([0,1])
+>>> sv1 = ...
+>>> bs = pcvl.BasicState([0])
+
+>>> new_state = pcvl.tensorproduct([sv0, sv1, bs])
+>>> # or:
+>>> # new_state = sv0 * sv1 * bs
+
+>>> new_state = sv0 ** 3 # equivalent to sv0 * sv0 * sv0
 
 Sampling
 ^^^^^^^^
@@ -131,8 +143,9 @@ Sampling
 |0,1>: 3
 |1,0>: 7
 
-.. INFO::
-  These methods do not modify the state vector
+.. note:: These methods do not modify the state vector
+
+
 
 Measurement
 ^^^^^^^^^^^
@@ -149,13 +162,13 @@ possible fock state value of the selected modes, its probability and the collaps
 State Vector Distribution
 -------------------------
 
-``SVDistribution`` is a recipe for constructing a mixed state using BasicState and/or
+``SVDistribution`` is a recipe for constructing a mixed state using ``BasicState`` and/or
 ``StateVector`` commands (which themselves produce pure states).
 
 For example, The following ``SVDistribution``
 
 +-------------------------------------+------------------+
-|      ``state``                      | ``probability``  |
+| ``state``                           | ``probability``  |
 +=====================================+==================+
 | ``|0,1>``                           |     ``1/2``      |
 +-------------------------------------+------------------+
@@ -165,8 +178,3 @@ For example, The following ``SVDistribution``
 +-------------------------------------+------------------+
 
 results in the mixed state ``1/2|0,1><0,1|+1/4(1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1>)(1/sqrt(2)*<1,0|+1/sqrt(2)*<0,1|)+1/4|1,0><1,0|``
-
-TimeSVDistribution
-------------------
-
-``TimedSVDistribution`` is representing a time sequence distribution of ``StateVector``.

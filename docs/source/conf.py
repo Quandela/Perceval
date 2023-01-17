@@ -44,7 +44,7 @@ copyright = '2022, Quandela'
 author = 'Jean Senellart'
 
 # The full version, including alpha/beta/rc tags
-release = '0.3.0a2'
+release = '0.7.3'
 
 
 # -- General configuration ---------------------------------------------------

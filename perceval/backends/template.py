@@ -25,15 +25,16 @@ import logging
 import random
 from typing import List, Tuple, Union, Iterator, Optional
 
-from perceval.utils import Matrix, StateVector, AnnotatedBasicState, BasicState
+from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
-from ..components.circuit import ACircuit, _matrix_double_for_polarization
+from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
 
 import quandelibc as qc
 import numpy as np
 
 
 class Backend(ABC):
+    name = None
     supports_symbolic = None
     supports_circuit_computing = None
 
@@ -72,7 +73,7 @@ class Backend(ABC):
             self._C = None
             if not self.supports_symbolic:
                 if not u.defined or use_symbolic:
-                    assert not u.is_symbolic, "%s backend does not support symbolic calculation" % self._name
+                    assert not u.is_symbolic, "%s backend does not support symbolic calculation" % self.name
                 if not use_symbolic:
                     self._U = u.tonp()
             else:
@@ -90,21 +91,19 @@ class Backend(ABC):
             assert isinstance(cu, ACircuit), \
                 "Component Based simulation works on circuit"
             assert not use_symbolic or self.supports_symbolic, \
-                "%s backend does not support symbolic calculation" % self._name
+                "%s backend does not support symbolic calculation" % self.name
             # component based simulation - we keep the circuit
             self._U = None
             self._C = cu
             self._m = self._realm = cu.m
 
         self._use_symbolic = use_symbolic
-        self._n: int = n
-        "number of photons - is required when using a mask"
+        self._n: int = n  # number of photons - is required when using a mask
 
+        self._mask = None
         if mask is not None:
             assert n is not None, "number of photons required when using a mask"
             self._mask = qc.FSMask(self._m, n, mask)
-        else:
-            self._mask = None
 
         self._compiled_input = None
 
@@ -131,16 +130,22 @@ class Backend(ABC):
         self._U = u
         self._changed_unitary(prev_u)
 
+    def _check_state_size(self, state: BasicState):
+        if self.m != state.m:
+            raise ValueError(
+                f'State/circuit size mismatch: circuit({self._m}) and state({state.m}) should be the same size')
+
     @abstractmethod
     def prob_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def probampli_be(self, input_state, output_state, n=None):
-        raise NotImplementedError
+        pass
 
     def prob(self,
-             input_state: AnnotatedBasicState,
-             output_state: AnnotatedBasicState,
+             input_state: BasicState,
+             output_state: BasicState,
              n: int = None,
              skip_compile: bool = False) -> float:
         r"""
@@ -150,13 +155,15 @@ class Backend(ABC):
         :param n:
         :return: float probability
         """
+        self._check_state_size(input_state)
+        self._check_state_size(output_state)
         if input_state.n == 0:
-            return output_state.n == 0
+            return 1 if output_state.n == 0 else 0
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
-            if hasattr(input_state, "separate_state"):
-                input_states = hasattr(input_state, "separate_state") and input_state.separate_state() or [input_state]
+            if input_state.has_annotations:
+                input_states = input_state.separate_state()
                 all_prob = 0
-                for p_output_state in AnnotatedBasicState(output_state).partition(
+                for p_output_state in BasicState(output_state).partition(
                         [input_state.n for input_state in input_states]):
                     prob = 1
                     for i_state, o_state in zip(input_states, p_output_state):
@@ -177,7 +184,7 @@ class Backend(ABC):
         else:
             _U_new = self._U
         _U_new = _U_new @ prep_matrix_input
-        if isinstance(output_state, AnnotatedBasicState) and output_state.has_polarization:
+        if isinstance(output_state, BasicState) and output_state.has_polarization:
             # if output state is polarized, we will directly calculating probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
             self.U = un_prep_matrix_output @ _U_new
@@ -202,8 +209,8 @@ class Backend(ABC):
         return np.asarray(allprobs)
 
     def probampli(self,
-                  input_state: AnnotatedBasicState,
-                  output_state: AnnotatedBasicState,
+                  input_state: BasicState,
+                  output_state: BasicState,
                   n: int = None) -> complex:
         """Gives the probability amplitude of an output state given an input state
 
@@ -212,8 +219,10 @@ class Backend(ABC):
         :param n:
         :return: complex probability amplitude
         """
+        self._check_state_size(input_state)
+        self._check_state_size(output_state)
         if input_state.n == 0:
-            return output_state.n == 0
+            return complex(1) if output_state.n == 0 else complex(0)
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
             self.compile(input_state)
             return self.probampli_be(input_state, output_state, n)
@@ -225,7 +234,7 @@ class Backend(ABC):
             self._realm = 2 * self._realm
         self.compile(spatial_mode_input_state)
         self._U = self._U @ prep_matrix_input
-        if isinstance(output_state, AnnotatedBasicState) and output_state.has_polarization:
+        if output_state.has_polarization:
             # if output state is polarized, we will directly calculate probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
             self._U = un_prep_matrix_output @ self._U
@@ -241,8 +250,8 @@ class Backend(ABC):
         return prob_ampli
 
     def allstateprob_iterator(self,
-                              input_state: Union[AnnotatedBasicState, StateVector]) \
-            -> Iterator[Tuple[AnnotatedBasicState, float]]:
+                              input_state: Union[BasicState, StateVector]) \
+            -> Iterator[Tuple[BasicState, float]]:
         """Iterator on all possible output states compatibles with mask generating (`StateVector`, probability)
 
         :param input_state: a given input state
@@ -264,11 +273,11 @@ class Backend(ABC):
                 yield output_state, self.prob(input_state, output_state, skip_compile=skip_compile)
                 skip_compile = True
 
-    def allstate_iterator(self, input_state: Union[AnnotatedBasicState, StateVector]) -> AnnotatedBasicState:
+    def allstate_iterator(self, input_state: Union[BasicState, StateVector]) -> BasicState:
         """Iterator on all possible output states compatible with mask generating StateVector
 
-        :param input_state: a given input state vector
-        :return: list of output_state
+        :param input_state: a given input state (basic or superposed)
+        :return: the next output state
         """
         m = self.m
         ns = input_state.n
@@ -280,9 +289,9 @@ class Backend(ABC):
             else:
                 output_array = qc.FSArray(m, n)
             for output_idx, output_state in enumerate(output_array):
-                yield AnnotatedBasicState(output_state)
+                yield BasicState(output_state)
 
-    def evolve(self, input_state: [AnnotatedBasicState, StateVector]) -> StateVector:
+    def evolve(self, input_state: [BasicState, StateVector]) -> StateVector:
         r"""StateVector evolution through a circuit
 
         :param input_state: the input_state
@@ -296,10 +305,10 @@ class Backend(ABC):
                     output_state[basic_output_state] += self.probampli(inp_state, basic_output_state) * sv[inp_state]
             else:
                 output_state[basic_output_state] += self.probampli(input_state, basic_output_state)
+        output_state.normalize()
         return output_state
 
-    def compile(self,
-                input_states: Union[StateVector, List[StateVector]]) -> bool:
+    def compile(self, input_states: Union[StateVector, List[StateVector]]) -> bool:
         """
         Compile a simulator to work with one or specific input_states - might do nothing for some backends
         :param input_states: list of input states
@@ -307,7 +316,9 @@ class Backend(ABC):
         """
         return False
 
-    def sample(self, input_state):
+    def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
+        r"""Return one sample for the circuit according to the output probability distribution given an input state
+        """
         prob = random.random()
         output_state = None
         for (output_state, state_prob) in self.allstateprob_iterator(input_state):
@@ -316,8 +327,30 @@ class Backend(ABC):
             prob -= state_prob
         return output_state
 
-    def samples(self, input_state, count):
-        results = []
-        for i in range(count):
-            results.append(self.sample(input_state))
-        return results
+    def samples(self, input_state: Union[BasicState, StateVector], count: int) -> List[BasicState]:
+        r"""Return samples for the circuit according to the output probability distribution given an input state
+
+        :param input_state: a given input state
+        :param count: the number of returned samples
+        """
+        if count == 1:  # Faster in this case
+            return [self.sample(input_state)]
+        states, p = zip(*self.allstateprob_iterator(input_state))
+        rng = np.random.default_rng()
+        results = rng.choice(states, count, p=np.array(p) / sum(p))
+        return list(results)
+
+    def set_cutoff(self, cutoff: int):
+        r"""
+        Set the cutoff dimension for the MPS simulator.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def preferred_command() -> str:
+        pass
+
+    @staticmethod
+    def available_commands() -> List[str]:
+        return ['prob', 'prob_be', 'probampli', 'probampli_be', 'sample', 'samples', 'evolve']
