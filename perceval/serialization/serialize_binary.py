@@ -20,8 +20,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .serialize import serialize, serialize_to_file
-from ._state_serialization import deserialize_state, deserialize_state_list
-from .deserialize import deserialize, deserialize_circuit, circuit_from_file, deserialize_matrix, matrix_from_file, \
-      deserialize_float, deserialize_file
-from .serialize_binary import serialize_binary
+"""
+Functions which output the binary representation of objects having a protobuf serializer
+This binary representation loses all knowledge about the type of the input object and have to be deserialized using
+specialized deserialize functions (e.g. deserialize_circuit)
+"""
+
+from multipledispatch import dispatch
+
+from ._circuit_serialization import serialize_circuit
+from ._matrix_serialization import serialize_matrix
+from perceval.components.linear_circuit import ACircuit
+from perceval.utils.matrix import Matrix
+
+
+@dispatch(ACircuit)
+def serialize_binary(circuit: ACircuit):
+    return serialize_circuit(circuit).SerializeToString()
+
+
+@dispatch(Matrix)
+def serialize_binary(matrix: Matrix):
+    return serialize_matrix(matrix).SerializeToString()

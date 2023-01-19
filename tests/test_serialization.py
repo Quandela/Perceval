@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
 import random
 import sympy as sp
 import numpy
 from perceval import Matrix, P, ACircuit, Circuit
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
-from perceval.serialization import serialize, deserialize
+from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
 import json
@@ -90,6 +91,18 @@ def test_circuit_serialization():
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
+
+
+def test_circuit_serialization_backward_compat():
+    serial_circuits = {
+        # Perceval version (key) that generated the serialized representation of a given circuit (value)
+        "0.7": ":PCVL:ACircuit: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"
+    }
+    for perceval_verion, serial_c in serial_circuits.items():
+        try:
+            deserialize(serial_c)
+        except Exception as e:
+            pytest.fail(f"Circuit serial representation generated with Perceval {perceval_verion} failed: {e}")
 
 
 def test_basicstate_serialization():
@@ -167,3 +180,19 @@ def test_json():
     assert isinstance(d["b"], ACircuit)
     assert isinstance(d["c"], Matrix)
     assert isinstance(d["d"], SVDistribution)
+
+
+def test_binary_serialization():
+    c_before = _build_test_circuit()
+    bin_serialization = serialize_binary(c_before)
+    assert isinstance(bin_serialization, bytes)
+    c_after = deserialize_circuit(bin_serialization)
+    _check_circuits_eq(c_before, c_after)
+    with pytest.raises(TypeError):
+        deserialize(bin_serialization)
+
+    m_before = Matrix([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
+    bin_serialization = serialize_binary(m_before)
+    assert isinstance(bin_serialization, bytes)
+    m_after = deserialize_matrix(bin_serialization)
+    assert numpy.allclose(m_before, m_after)
