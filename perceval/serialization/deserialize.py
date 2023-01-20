@@ -33,6 +33,10 @@ from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
 
 
+_MATRIX_PREFIX = ":PCVL:Matrix:"
+_CIRCUIT_PREFIX = ":PCVL:ACircuit:"
+
+
 def deserialize_float(floatstring):
     return float(floatstring)
 
@@ -44,8 +48,8 @@ def deserialize_matrix(pb_mat: Union[str, pb.Matrix]) -> Matrix:
         if isinstance(pb_binary_repr, bytes):
             pb_mat.ParseFromString(pb_binary_repr)
         else:
-            assert pb_binary_repr.startswith(":PCVL:Matrix:")
-            pb_mat.ParseFromString(b64decode(pb_binary_repr[13:]))
+            assert pb_binary_repr.startswith(_MATRIX_PREFIX)
+            pb_mat.ParseFromString(b64decode(pb_binary_repr[len(_MATRIX_PREFIX):]))
     return _matrix_serialization.deserialize_pb_matrix(pb_mat)
 
 
@@ -66,8 +70,8 @@ def deserialize_circuit(pb_circ: Union[str, bytes, pb.Circuit]) -> Circuit:
         if isinstance(pb_binary_repr, bytes):
             pb_circ.ParseFromString(pb_binary_repr)
         else:
-            assert pb_binary_repr.startswith(":PCVL:ACircuit:")
-            pb_circ.ParseFromString(b64decode(pb_binary_repr[15:]))
+            assert pb_binary_repr.startswith(_CIRCUIT_PREFIX)
+            pb_circ.ParseFromString(b64decode(pb_binary_repr[len(_CIRCUIT_PREFIX):]))
     builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name)
     for pb_c in pb_circ.components:
         builder.add(pb_c)
