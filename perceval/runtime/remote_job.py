@@ -31,7 +31,7 @@ from perceval.serialization import deserialize, serialize
 
 class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
-    _MAX_REFRESH_ERROR = 5
+    _MAX_ERROR = 5
 
     def __init__(self, request_data, rpc_handler, job_name, delta_parameters=None, job_context=None,
                  command_param_names=None, refresh_progress_delay: int = 3):
@@ -81,6 +81,26 @@ class RemoteJob(Job):
         j.status()
         return j
 
+    def _handle_status_error(self, error):
+        """
+        Handle a potentially non-blocking error
+        After _MAX_ERROR errors in a row, the exception is raised
+        """
+        self._status_refresh_error += 1
+        if self._status_refresh_error == self._MAX_ERROR:
+            raise error
+        if isinstance(error, HTTPError):
+            error_code = error.response.status_code
+            if error_code not in [
+                408,  # Time-out
+                409,  # Conflict in the current state of the resource
+                421,  # Misdirected request
+                423,  # Resource locked
+                429   # Too many requests
+            ]:  # If the status code is any other error, it is considered unrecoverable
+                raise error
+        return self._job_status
+
     @property
     def status(self) -> JobStatus:
         now = time.time()
@@ -90,11 +110,7 @@ class RemoteJob(Job):
                 response = self._rpc_handler.get_job_status(self._id)
                 self._status_refresh_error = 0
             except (HTTPError, ConnectionError) as error:
-                self._status_refresh_error += 1
-                if self._status_refresh_error == self._MAX_REFRESH_ERROR:
-                    raise error
-                else:
-                    return self._job_status
+                return self._handle_status_error(error)
 
             self._job_status.status = RunningStatus.from_server_response(response['status'])
             if self._job_status.running:
