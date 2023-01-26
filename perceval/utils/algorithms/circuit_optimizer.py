@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Tuple, Union
+from typing import Callable, Tuple, Union
 
 import exqalibur as xq
-from perceval.components import ACircuit
-from perceval.utils import Matrix
+from perceval.components import ACircuit, Circuit, PS
+from perceval.utils import Matrix, P
 from perceval.serialization import serialize_binary, deserialize_circuit
 
 
@@ -63,3 +63,22 @@ class CircuitOptimizer:
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
         return optimizer.fidelity, optimized_circuit
+
+    def optimize_rectangle(self,
+                           target: Matrix,
+                           template_component_generator_func: Callable[[int],ACircuit],
+                           phase_at_output: bool = False,
+                           allow_error: bool = False,
+                           ):
+        def _gen_ps(i: int):
+            return PS(P(f"phL_{i}"))
+
+        template = Circuit.generic_interferometer(
+            target.shape[0],
+            template_component_generator_func,
+            phase_shifter_fun_gen=_gen_ps,
+            phase_at_output=phase_at_output)
+        fidelity, result_circuit = self.optimize(target, template)
+        if not allow_error and fidelity < 1 - self._threshold:
+            raise RuntimeError(f"Optimization did not convergence to expected threshold ({self._threshold})")
+        return result_circuit

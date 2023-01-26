@@ -508,7 +508,7 @@ class Circuit(ACircuit):
                 for j in range(0+i % 2, m-1, 2):
                     if depth is not None and (depths[j] == depth or depths[j+1] == depth):
                         continue
-                    generated.add((j, j+1), fun_gen(idx))
+                    generated.add((j, j+1), fun_gen(idx), merge=True)
                     depths[j] += 1
                     depths[j+1] += 1
                     idx += 1
@@ -517,7 +517,7 @@ class Circuit(ACircuit):
                 for j in range(i, 0, -1):
                     if depth is not None and (depths[j-1] == depth or depths[j] == depth):
                         continue
-                    generated.add((j-1, j), fun_gen(idx))
+                    generated.add((j-1, j), fun_gen(idx), merge=True)
                     depths[j-1] += 1
                     depths[j] += 1
                     idx += 1
