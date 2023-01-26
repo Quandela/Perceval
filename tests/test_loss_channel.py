@@ -35,44 +35,38 @@ cd = (Processor("SLOS", 2)
 input_state = BasicState([1, 1])
 
 cd.with_input(input_state)
-cd.mode_post_selection(0)
+cd.min_detected_photons_filter(0)
 
-def test_minimal():
+def test_lc_minimal():
     p = Processor("SLOS", 1).add(0, LC(loss))
     p.with_input(SVDistribution(BasicState([2])))
-    p.mode_post_selection(0)
+    p.min_detected_photons_filter(0)
     expected_svd = BSDistribution()
     expected_svd[BasicState([0])] = loss ** 2
     expected_svd[BasicState([1])] = 2 * loss * (1 - loss)
     expected_svd[BasicState([2])] = (1 - loss) ** 2
-
     res = p.probs()["results"]
-
     assert pytest.approx(res) == expected_svd
 
 
-def test_permutation():
-
+def test_lc_commutative():
+    # All LC on the input or on the output of the processor yield the same results
     cg = (Processor("SLOS", 2)
           .add(0, LC(loss))
           .add(1, LC(loss))
           .add(0, Unitary(U)))
-
     cg.with_input(input_state)
-    cg.mode_post_selection(0)
-
+    cg.min_detected_photons_filter(0)
     assert pytest.approx(cg.probs()["results"]) == cd.probs()["results"]
 
 
-def test_source_losses_equivalence():
+def test_lc_source_losses_equivalence():
     # When the losses are balanced
     source = Source(losses=loss)
     p = Processor("SLOS", Unitary(U), source)
-
     p.with_input(input_state)
-    p.mode_post_selection(0)
+    p.min_detected_photons_filter(0)
 
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]
-
     assert pytest.approx(real_out) == cd.probs()["results"]

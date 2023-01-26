@@ -81,15 +81,14 @@ class Analyzer(AAlgorithm):
                 for os in allstate_iterator(input_state):
                     out_set.add(os)
             self.output_states_list = list(out_set)  # All states will be used in compute()
-        # Setup output state selection on clicks
+        # Setup output state selection on detected photons
         if output_states == '*':
-            min_output_photon_count = 1
+            min_output_photon_count = 1  # To retrieve all non-empty states on a QPU, set filter to 1
         else:
             min_output_photon_count = processor.m
             for ostate in self.output_states_list:
-                modes_with_photons = len([n for n in ostate if n > 0])
-                min_output_photon_count = min(modes_with_photons, min_output_photon_count)
-        processor.mode_post_selection(min_output_photon_count)
+                min_output_photon_count = min(ostate.n, min_output_photon_count)
+        processor.min_detected_photons_filter(min_output_photon_count)
 
     def compute(self, normalize=False, expected=None, progress_callback=None):
         """
@@ -107,7 +106,11 @@ class Analyzer(AAlgorithm):
             self._processor.with_input(i_state)
             job = self._sampler.probs
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
+            import time
+            t_begin = time.time()
             probs_output = job.execute_sync()
+            t_end = time.time()
+            print("in Analyzer : probs.execute_sync()", t_end-t_begin)
             probs = probs_output['results']
             probs_res[i_state] = probs
             if 'logical_perf' in probs_output:

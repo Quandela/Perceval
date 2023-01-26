@@ -210,7 +210,6 @@ def test_non_symmetrical():
         circuit.add((0, 1), BS.H())
         circuit.add((1,), PS(sp.pi/4))
         circuit.add((1, 2), BS.H())
-        pcvl.pdisplay(circuit.U)
         s = simulator_backend(circuit.U)
         check_output(s, pcvl.BasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
                                                      pcvl.BasicState("|1,1,0>"): 0.25,
