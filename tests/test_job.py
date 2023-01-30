@@ -90,3 +90,106 @@ def test_run_async_cancel():
     while job.is_running:
         time.sleep(0.1)
     assert job.status.status == RunningStatus.CANCELED
+
+
+# ============ Remote jobs ============ #
+from perceval.runtime import RemoteJob
+from perceval.serialization import serialize
+import json
+import pytest
+import time
+
+class MockRPCHandler:
+    _ARBITRARY_JOB_ID = "ebb1f8ec-0125-474f-9ffc-5178afef4d1a"
+    _SLEEP_SEC = 0.2
+
+    def fetch_platform_details(self):
+        time.sleep(self._SLEEP_SEC)
+        return json.dumps({
+            'created_date': 'Mon, 31 Oct 2022 16:54:45 GMT',
+            'description': 'Mocked Simulator',
+            'id': 'e576e49c-7b1a-470b-5910-c04e406d40f6',
+            'jobs': 6687,
+            'name': 'mocked:platform',
+            'perfs': {},
+            'specs': {
+                'available_commands': ['probs'], 'connected_input_modes': [0, 2, 4, 6, 8],
+                'constraints': {
+                    'max_mode_count': 12,
+                    'max_photon_count': 5,
+                    'min_mode_count': 1,
+                    'min_photon_count': 1
+                },
+                'description': 'Simulator of sim:ascella qpu',
+                'detector': 'threshold',
+                'parameters': {
+                    'HOM': 'indistinguishability value, using HOM model (default 1)',
+                    'backend_name': 'name of the backend that will be used for computation (default "SLOS")',
+                    'final_mode_number': 'number of modes of the output states. states having a photon on unused modes will be ignored. Useful when using computed circuits (default input_state.m)',
+                    'g2': 'g2 value (default 0)',
+                    'mode_post_select': 'number of required detected modes to keep a state. (default input_state.n)',
+                    'phase_imprecision': 'imprecision on the phase shifter phases (default 0)',
+                    'transmittance': 'probability at each pulse that a photon is sent to the system and is detected (default 1)'
+                },
+            },
+            'status': 'available',
+            'svg': '',
+            'type': 'simulator',
+            'waiting_jobs': 0
+        })
+
+    def create_job(self, payload):
+        time.sleep(self._SLEEP_SEC)
+        return self._ARBITRARY_JOB_ID
+
+    def cancel_job(self, job_id: str):
+        time.sleep(self._SLEEP_SEC)
+
+    def get_job_status(self, job_id: str):
+        time.sleep(self._SLEEP_SEC)
+        return {
+            'duration': 10,
+            'failure_code': None,
+            'msg': 'ok',
+            'progress': 1.0,
+            'progress_message': 'Computing phases to apply (step 3)',
+            'start_time': 1674230323.462364,
+            'status': 'completed',
+            'status_message': None
+        }
+
+    def get_job_results(self, job_id: str):
+        time.sleep(self._SLEEP_SEC)
+        return json.dumps(serialize({
+            'results': pcvl.BSDistribution({
+                pcvl.BasicState([1, 0, 0, 0]): 0.200266,
+                pcvl.BasicState([0, 1, 0, 0]): 0.09734,
+                pcvl.BasicState([0, 0, 1, 0]): 0.089365,
+                pcvl.BasicState([0, 0, 0, 1]): 0.223731,
+                pcvl.BasicState([1, 0, 1, 0]): 0.308951
+            }),
+            'physical_perf': 0.7988443869134395,
+            'job_context': {
+                'mapping_delta_parameters': {'count': 10000},
+                'result_mapping': ['perceval.utils', 'probs_to_sample_count']
+            }
+        }))
+
+def test_remote_job():
+    _FIRST_JOB_NAME = "job name"
+    _SECOND_JOB_NAME = "another name"
+    rj = RemoteJob({}, MockRPCHandler(), _FIRST_JOB_NAME)
+    assert rj.name == _FIRST_JOB_NAME
+    rj.name = _SECOND_JOB_NAME
+    assert rj.name == _SECOND_JOB_NAME
+    with pytest.raises(TypeError):
+        rj.name = None
+    with pytest.raises(TypeError):
+        rj.name = 28
+    job_status = rj.status
+    assert rj.is_complete == job_status.completed
+
+    _TEST_JOB_ID = "any"
+    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
+    assert resumed_rj.id == _TEST_JOB_ID
+    assert rj.is_complete == job_status.completed

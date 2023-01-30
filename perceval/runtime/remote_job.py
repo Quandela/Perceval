@@ -66,7 +66,7 @@ class RemoteJob(Job):
         self._previous_status_refresh = 0.
         self._status_refresh_error = 0
         self._id = None
-        self._name = job_name
+        self.name = job_name
         self._request_data = request_data
         self._param_names = command_param_names or []
 
@@ -76,7 +76,7 @@ class RemoteJob(Job):
 
     @staticmethod
     def from_id(job_id: str, rpc_handler):
-        j = RemoteJob(None, rpc_handler)
+        j = RemoteJob(None, rpc_handler, "resumed")  # There is no access to the job name, let's call it "resumed"
         j._id = job_id
         j.status()
         return j
