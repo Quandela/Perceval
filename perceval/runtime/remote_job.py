@@ -73,7 +73,7 @@ class RemoteJob(Job):
 
     @staticmethod
     def from_id(job_id: str, rpc_handler):
-        j = RemoteJob(None, rpc_handler)
+        j = RemoteJob(None, rpc_handler, None)
         j._id = job_id
         j.status()
         return j
