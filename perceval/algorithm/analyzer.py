@@ -106,11 +106,7 @@ class Analyzer(AAlgorithm):
             self._processor.with_input(i_state)
             job = self._sampler.probs
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
-            import time
-            t_begin = time.time()
             probs_output = job.execute_sync()
-            t_end = time.time()
-            print("in Analyzer : probs.execute_sync()", t_end-t_begin)
             probs = probs_output['results']
             probs_res[i_state] = probs
             if 'logical_perf' in probs_output:
