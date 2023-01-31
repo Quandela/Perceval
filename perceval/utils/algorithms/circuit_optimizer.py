@@ -40,7 +40,7 @@ class CircuitOptimizer:
 
     @threshold.setter
     def threshold(self, value):
-        if value < 0 or value > 1:
+        if not (0 < value < 1):
             raise ValueError("Fitness threshold should be between 0 and 1")
         self._threshold = value
 
@@ -52,7 +52,10 @@ class CircuitOptimizer:
     def trials(self, value):
         self._trials = value
 
-    def optimize(self, target: Union[ACircuit, Matrix], template: ACircuit) -> Tuple[float, ACircuit]:
+    def optimize(self,
+                 target: Union[ACircuit, Matrix],
+                 template: ACircuit
+                 ) -> Tuple[float, ACircuit]:
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
         assert template.m == target.shape[0], \
