@@ -51,7 +51,6 @@ def test_c3():
         circuit.add((0, 1), comp.BS())
         circuit.add((1,), comp.PS(np.pi/4))
         circuit.add((1, 2), comp.BS())
-        pcvl.pdisplay(circuit.U)
         s = simulator_backend(circuit)
         if backend == "MPS":
             s.set_cutoff(3)

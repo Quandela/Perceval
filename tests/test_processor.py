@@ -80,12 +80,14 @@ def test_processor_probs():
     source = pcvl.Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
     qpu = pcvl.Processor("Naive", comp.BS(), source)
     qpu.with_input(pcvl.BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
+    qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
     probs = qpu.probs()
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
 
-    qpu.mode_post_selection(1)  # Lower mode_post_selection to 1 (default was 2 = expected input photon count)
+    qpu.thresholded_output(False) # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[pcvl.BasicState("|2,0>")]) == 0.5
     assert pytest.approx(bsd_out[pcvl.BasicState("|0,2>")]) == 0.5
+    assert pytest.approx(probs['physical_perf']) == 1
