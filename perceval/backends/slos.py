@@ -169,23 +169,21 @@ class SLOSBackend(Backend):
         self._calculation()
         return True
 
-    def probampli_be(self, input_state, output_state, output_idx=None, norm=True):
+    def probampli_be(self, input_state, output_state, norm=True):
         if input_state.n != output_state.n:
             return 0
-        if output_idx is None:
-            output_idx = self.fsas[output_state.n].find(output_state)
-            assert output_idx != qc.npos
+        output_idx = self.fsas[output_state.n].find(output_state)
+        assert output_idx != qc.npos
+        non_normalized_result = self.state_mapping[input_state].coefs[output_idx, 0]
         if not norm:
-            return self.state_mapping[input_state].coefs[output_idx, 0]
+            return non_normalized_result
         if self._use_symbolic:
-            return self.state_mapping[input_state].coefs[output_idx, 0]\
-                   * sp.sqrt(output_state.prodnfact()/input_state.prodnfact())
+            return non_normalized_result * sp.sqrt(output_state.prodnfact()/input_state.prodnfact())
         else:
-            return self.state_mapping[input_state].coefs[output_idx, 0]\
-                   * np.sqrt(output_state.prodnfact()/input_state.prodnfact())
+            return non_normalized_result * np.sqrt(output_state.prodnfact()/input_state.prodnfact())
 
-    def prob_be(self, input_state, output_state, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, output_idx, False))**2\
+    def prob_be(self, input_state, output_state):
+        return abs(self.probampli_be(input_state, output_state, False))**2\
                * output_state.prodnfact()/input_state.prodnfact()
 
     def all_prob(self, input_state):

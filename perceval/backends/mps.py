@@ -94,10 +94,10 @@ class MPSBackend(Backend):
         self.res[tuple(input_state)]["sv"] = self.sv.copy()
         return True
 
-    def prob_be(self, input_state, output_state, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, output_idx))**2
+    def prob_be(self, input_state, output_state):
+        return abs(self.probampli_be(input_state, output_state))**2
 
-    def probampli_be(self, input_state, output_state, output_idx=None):
+    def probampli_be(self, input_state, output_state):
         # TODO: put in quandelibc
         mps_in_list = []
         self.current_input = tuple(input_state)

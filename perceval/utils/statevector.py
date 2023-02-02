@@ -129,7 +129,7 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
             output_array = FSArray(m, n, mask)
         else:
             output_array = FSArray(m, n)
-        for output_idx, output_state in enumerate(output_array):
+        for output_state in output_array:
             yield BasicState(output_state)
 
 
