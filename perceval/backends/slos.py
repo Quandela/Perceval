@@ -169,7 +169,7 @@ class SLOSBackend(Backend):
         self._calculation()
         return True
 
-    def probampli_be(self, input_state, output_state, n=None, output_idx=None, norm=True):
+    def probampli_be(self, input_state, output_state, output_idx=None, norm=True):
         if input_state.n != output_state.n:
             return 0
         if output_idx is None:
@@ -184,8 +184,8 @@ class SLOSBackend(Backend):
             return self.state_mapping[input_state].coefs[output_idx, 0]\
                    * np.sqrt(output_state.prodnfact()/input_state.prodnfact())
 
-    def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, n, output_idx, False))**2\
+    def prob_be(self, input_state, output_state, output_idx=None):
+        return abs(self.probampli_be(input_state, output_state, output_idx, False))**2\
                * output_state.prodnfact()/input_state.prodnfact()
 
     def all_prob(self, input_state):

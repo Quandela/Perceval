@@ -41,10 +41,10 @@ class CliffordClifford2017Backend(Backend):
     supports_symbolic = False
     supports_circuit_computing = False
 
-    def prob_be(self, input_state, output_state, n=None, output_idx=None):
+    def prob_be(self, input_state, output_state, output_idx=None):
         raise NotImplementedError(f'Cannot call prob_be on {self.name}')
 
-    def probampli_be(self, input_state, output_state, n=None):
+    def probampli_be(self, input_state, output_state):
         raise NotImplementedError(f'Cannot call probampli_be on {self.name}')
 
     def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
