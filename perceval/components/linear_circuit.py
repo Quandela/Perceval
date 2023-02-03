@@ -541,25 +541,27 @@ class Circuit(ACircuit):
                       merge: bool = True,
                       precision: float = 1e-6,
                       max_try: int = 10,
-                      allow_error: bool = False):
-        r"""Decompose a given unitary matrix U into a circuit with specified component type
+                      allow_error: bool = False,
+                      ignore_identity_block: bool = True):
+        r"""Decompose a given unitary matrix U into a circuit with a specified component type
 
         :param U: the matrix to decompose
-        :param allow_error: allow decomposition error - when the actual solution is not locally reachable
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
-        :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
-                            Each constraint should have the numbers of free parameters of the system.
+        :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
+               ignored
+        :param shape: shape of the decomposition (`triangle` is natively supported in Perceval)
+        :param permutation: if provided, type of permutation operator to avoid unnecessary operators
         :param inverse_v: inverse the decomposition vertically
         :param inverse_h: inverse the decomposition horizontally
-        :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
-                            ignored
-        :param shape: `triangle`
-        :param permutation: if provided, type of permutation operator to avoid unnecessary operators
+        :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
+                            Each constraint should have the numbers of free parameters of the system.
         :param merge: don't use sub-circuits
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :param max_try: number of times to try the decomposition
+        :param allow_error: allow decomposition error - when the actual solution is not locally reachable
+        :param ignore_identity_block: If true, do not insert a component when it's not needed (component is an identity)
+                                      Otherwise, insert a component everytime (default True).
         :return: a circuit
-
         """
         if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
             raise(ValueError("decomposed matrix should be non symbolic unitary"))
@@ -577,10 +579,12 @@ class Circuit(ACircuit):
         while count < max_try:
             if shape == "triangle":
                 lc = decomposition.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
-                                                      constraints, allow_error=allow_error)
+                                                      constraints, allow_error=allow_error,
+                                                      ignore_identity_block=ignore_identity_block)
             else:
                 lc = decomposition.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
-                                                       constraints, allow_error=allow_error)
+                                                       constraints, allow_error=allow_error,
+                                                       ignore_identity_block=ignore_identity_block)
             if lc is not None:
                 C = Circuit(N)
                 for range, component in lc:

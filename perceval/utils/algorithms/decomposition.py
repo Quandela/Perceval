@@ -59,7 +59,8 @@ def decompose_triangle(u,
                        permutation,
                        precision,
                        constraints,
-                       allow_error):
+                       allow_error,
+                       ignore_identity_block):
     m = u.shape[0]
     params = component.get_parameters()
     params_symbols = [x.spv for x in params]
@@ -80,23 +81,22 @@ def decompose_triangle(u,
         for n in range(j):
             # goal is to null M[n,m]
             solve_cell = False
-            if abs(u[n, j]) <= precision:
+            if abs(u[n, j]) <= precision and ignore_identity_block:
                 solve_cell = True
-            else:
-                if permutation is not None:
-                    p = [0]
-                    for k in range(n + 1, j + 1):
-                        p.append(k - n)
-                        if abs(u[k, j]) <= precision:
-                            p[0] = k - n
-                            p[-1] = 0
-                            list_components = [(list(range(n, k + 1)), permutation(p))] + list_components
-                            RI = Matrix.eye(m, use_symbolic=False)
-                            RI[n, n] = RI[k, k] = 0
-                            RI[k, n] = RI[n, k] = 1
-                            u = RI @ u
-                            solve_cell = True
-                            break
+            elif permutation is not None:
+                p = [0]
+                for k in range(n + 1, j + 1):
+                    p.append(k - n)
+                    if abs(u[k, j]) <= precision and ignore_identity_block:
+                        p[0] = k - n
+                        p[-1] = 0
+                        list_components = [(list(range(n, k + 1)), permutation(p))] + list_components
+                        RI = Matrix.eye(m, use_symbolic=False)
+                        RI[n, n] = RI[k, k] = 0
+                        RI[k, n] = RI[n, k] = 1
+                        u = RI @ u
+                        solve_cell = True
+                        break
             if not solve_cell:
                 equation = cU_inv[0, 0] * u[n, j] + cU_inv[0, 1] * u[n + 1, j]
                 f = sp.lambdify([params_symbols], [equation], modules=[np, scp])
@@ -140,5 +140,6 @@ def decompose_rectangle(u,
                         permutation,
                         precision,
                         constraints,
-                        allow_error):
+                        allow_error,
+                        ignore_identity_block):
     raise NotImplementedError("rectangular decomposition not implemented yet")
