@@ -25,7 +25,7 @@ import sympy as sp
 
 from .template import Backend
 from perceval.utils import Matrix, BasicState
-import quandelibc as qc
+import exqalibur as xq
 
 
 class ComputePath:
@@ -88,7 +88,7 @@ class ComputePath:
                 for parent_idx, coef_parent in enumerate(parent_coefs):
                     for j in range(self._backend._realm):
                         idx = self._backend.fsms[self._n].get(parent_idx, j)
-                        if idx != qc.npos:
+                        if idx != xq.npos:
                             self.coefs[idx] += coef_parent * u[j, mk]
             else:
                 self._backend.fsms[self._n].compute_slos_layer(u, self._backend._realm, mk, self.coefs, parent_coefs)
@@ -123,22 +123,22 @@ class SLOSBackend(Backend):
         # after calculation, we only need to keep fsa for input_state n
         # during calculation we need to keep current fsa and previous fsa
         if not self.fsas:
-            current_fsa = qc.FSArray(self._realm, 0)
+            current_fsa = xq.FSArray(self._realm, 0)
         else:
             current_fsa = self.fsas[max(self.fsas.keys())]
         for input_state in input_states:
             if input_state.n < len(self.fsms) and input_state.n not in self.fsas:
                 # we are missing the intermediate states - let us retrieve/load it back
-                current_fsa = (self._mask and qc.FSArray(self._realm, input_state.n, self._mask)
-                               or qc.FSArray(self._realm, input_state.n))
+                current_fsa = (self._mask and xq.FSArray(self._realm, input_state.n, self._mask)
+                               or xq.FSArray(self._realm, input_state.n))
             for k in range(len(self.fsms), input_state.n+1):
                 fsa_n_m1 = current_fsa
                 if self._mask:
-                    current_fsa = qc.FSArray(self._realm, k, self._mask)
+                    current_fsa = xq.FSArray(self._realm, k, self._mask)
                 else:
-                    current_fsa = qc.FSArray(self._realm, k)
+                    current_fsa = xq.FSArray(self._realm, k)
                 self.mk_l.append(current_fsa.count())
-                self.fsms.append(qc.FSMap(current_fsa, fsa_n_m1, True))
+                self.fsms.append(xq.FSMap(current_fsa, fsa_n_m1, True))
             if input_state.n not in self.fsas:
                 self.fsas[input_state.n] = current_fsa
 
@@ -173,7 +173,7 @@ class SLOSBackend(Backend):
         if input_state.n != output_state.n:
             return 0
         output_idx = self.fsas[output_state.n].find(output_state)
-        assert output_idx != qc.npos
+        assert output_idx != xq.npos
         non_normalized_result = self.state_mapping[input_state].coefs[output_idx, 0]
         if not norm:
             return non_normalized_result

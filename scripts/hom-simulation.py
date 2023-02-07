@@ -22,7 +22,7 @@
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-import quandelibc as qc
+import exqalibur as xq
 
 
 dt = pcvl.Parameter("Δt")
@@ -51,7 +51,7 @@ sim = backend(c)
 
 def f(x):
     dt.set_value(x)
-    return sim.prob(st0, qc.FockState([2, 0]))+sim.prob(st0, qc.FockState([0, 2]))
+    return sim.prob(st0, xq.FockState([2, 0]))+sim.prob(st0, xq.FockState([0, 2]))
 
 
 for i in range(100):
