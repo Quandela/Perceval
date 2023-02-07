@@ -184,11 +184,11 @@ class StateVector(defaultdict):
     def __getitem__(self, key):
         if isinstance(key, int):
             return list(self.keys())[key]
-        assert isinstance(key, BasicState), "SVState keys should be Basic States"
+        assert isinstance(key, BasicState), "StateVector keys should be Basic States"
         return super().__getitem__(key)
 
     def __setitem__(self, key, value):
-        assert isinstance(key, BasicState), "SVState keys should be Basic States"
+        assert isinstance(key, BasicState), "StateVector keys should be Basic States"
         self._normalized = False
         if self.m is None:
             self.m = key.m

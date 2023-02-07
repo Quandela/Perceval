@@ -51,7 +51,7 @@ def assert_cnot(s_cnot):
 
 
 def check_output(simulator, input_state, expected):
-    all_prob = 0
+    prob_list = []
     for (output_state, prob) in simulator.allstateprob_iterator(input_state):
         prob_expected = expected.get(output_state)
         if prob_expected is None:
@@ -60,8 +60,18 @@ def check_output(simulator, input_state, expected):
             assert pytest.approx(prob_expected) == prob, "incorrect value for %s: %f/%f" % (str(output_state),
                                                                                             prob,
                                                                                             prob_expected)
-        all_prob += prob
-    assert pytest.approx(all_prob) == 1
+        prob_list.append(prob)
+    assert pytest.approx(sum(prob_list)) == 1
+
+    # When possible, test simulator.all_prob call and compare results
+    if isinstance(input_state, pcvl.StateVector) and len(input_state) == 1:
+        input_state = input_state[0]
+    if isinstance(input_state, pcvl.BasicState):
+        all_prob = simulator.all_prob(input_state)
+        assert pytest.approx(sum(all_prob)) == 1
+        assert len(all_prob) == len(prob_list)
+        for p1, p2 in zip(prob_list, all_prob):
+            assert pytest.approx(p1) == p2
 
 
 def test_simulator_default():
