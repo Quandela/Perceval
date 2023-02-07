@@ -188,12 +188,12 @@ class SLOSBackend(Backend):
         return abs(self.probampli_be(input_state, output_state, n, output_idx, False))**2\
                * output_state.prodnfact()/input_state.prodnfact()
 
-    def all_prob(self, input_state):
-        self.compile(input_state)
-        c = np.copy(self.state_mapping[input_state].coefs).reshape(self.fsas[input_state.n].count())
-        self.fsas[input_state.n].norm_coefs(c)
-        c /= input_state.prodnfact()
-        return abs(c)**2
+    # The following SLOS-specific optimization is broken for polarized states/circuits
+    # def all_prob(self, input_state):
+    #     self.compile(input_state)
+    #     c = np.copy(self.state_mapping[input_state].coefs).reshape(self.fsas[input_state.n].count())
+    #     self.fsas[input_state.n].norm_coefs(c)
+    #     return abs(c)**2 / input_state.prodnfact()
 
     @staticmethod
     def preferred_command() -> str:
