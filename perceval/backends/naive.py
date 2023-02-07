@@ -34,12 +34,10 @@ class NaiveBackend(Backend):
     supports_symbolic = False
     supports_circuit_computing = False
 
-    def probampli_be(self, input_state, output_state, n=None, output_idx=None):
+    def probampli_be(self, input_state, output_state):
         if input_state.n != output_state.n:
             return 0
-        if n is None:
-            n = input_state.n
-        Ust = np.empty((n, n), dtype=complex)
+        Ust = np.empty((input_state.n, input_state.n), dtype=complex)
         colidx = 0
         p = 1
         for ok in range(self._realm):
@@ -55,8 +53,8 @@ class NaiveBackend(Backend):
                 colidx += 1
         return qc.permanent_cx(Ust, n_threads=1)/math.sqrt(p)
 
-    def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, n, output_idx))**2
+    def prob_be(self, input_state, output_state):
+        return abs(self.probampli_be(input_state, output_state))**2
 
     @staticmethod
     def preferred_command() -> str:
