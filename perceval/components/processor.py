@@ -142,6 +142,15 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
 
+    @dispatch(StateVector)
+    def with_input(self, sv: StateVector):
+        r"""
+        Setting directly state vector as input of a processor, use SVDistribution input
+
+        :param sv: the state vector
+        """
+        return self.with_input(SVDistribution(sv))
+
     @dispatch(SVDistribution)
     def with_input(self, svd: SVDistribution):
         r"""
