@@ -28,7 +28,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'quandelibc~=0.6.0', 'multipledispatch',
+    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.1.0', 'multipledispatch',
                       'protobuf>=4.21.2', 'drawSvg', 'Deprecated', 'requests'],
     setup_requires=["scmver"],
     extras_require={"test": ["pytest", "pytest-cov", "pytest-benchmark"]},
