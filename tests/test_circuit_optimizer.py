@@ -33,14 +33,19 @@ def test_circuit_optimizer():
 
     for size in range(4, 17):
         circuit_optimizer = CircuitOptimizer()
+        perfect_theta = BS.r_to_theta(perfect_R)
+
         def mzi(i):
-            return Circuit(2) // PS(P(f"phi_1_{i}")) // BS(BS.r_to_theta(perfect_R)) \
-                // PS(P(f"phi_2_{i}")) // BS(BS.r_to_theta(perfect_R))
+            return Circuit(2) // PS(P(f"phi_1_{i}")) // BS(perfect_theta) \
+                // PS(P(f"phi_2_{i}")) // BS(perfect_theta)
+
         def ps(i):
             return PS(P(f"phi_3_{i}"))
-        template_interferometer = Circuit.generic_interferometer(size, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
 
+        template_interferometer = Circuit.generic_interferometer(size, mzi,
+                                                                 phase_shifter_fun_gen=ps,
+                                                                 phase_at_output=True)
         random_unitary = Matrix.random_unitary(size)
-        fidelity, result_circuit = circuit_optimizer.optimize(random_unitary, template_interferometer)
+        result_circuit, fidelity = circuit_optimizer.optimize(random_unitary, template_interferometer)
         assert 1 - fidelity < circuit_optimizer.threshold
         assert norm.fidelity(result_circuit.compute_unitary(), random_unitary) == pytest.approx(fidelity)

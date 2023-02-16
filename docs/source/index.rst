@@ -95,6 +95,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/statevector
    reference/polarization
    reference/circuit
+   reference/circuit_optimizer
    reference/utils
    reference/source
    reference/processor
