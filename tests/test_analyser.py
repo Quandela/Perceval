@@ -25,6 +25,7 @@ import perceval.components.unitary_components as comp
 import perceval.algorithm as algo
 from perceval.rendering.pdisplay import pdisplay_analyzer
 import sympy as sp
+import pytest
 
 from test_circuit import strip_line_12
 
@@ -73,6 +74,6 @@ def test_analyser_bs():
     ca = algo.Analyzer(p, [pcvl.BasicState([2,0])],
                        [pcvl.BasicState([1,1]), pcvl.BasicState([2,0]), pcvl.BasicState([0,2])])
     ca.compute()
-    assert ca.distribution[0, 0] == 1/2  # |1,1>
-    assert ca.distribution[0, 1] == 1/4  # |2,0>
-    assert ca.distribution[0, 2] == 1/4  # |0,2>
+    assert ca.distribution[0, 0] == pytest.approx(1/2)  # |1,1>
+    assert ca.distribution[0, 1] == pytest.approx(1/4)  # |2,0>
+    assert ca.distribution[0, 2] == pytest.approx(1/4)  # |0,2>
