@@ -123,7 +123,7 @@ class Processor(AProcessor):
                     expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
-                    distribution = self._source.probability_distribution()
+                    distribution = self._source.probability_distribution(input_state[input_idx])
                     input_list[k] = input_state[input_idx]
                     expected_photons += 1
                 input_idx += 1
