@@ -563,7 +563,8 @@ class BSCount(defaultdict):
         return super().__getitem__(key)
 
     def add(self, obj, count: int):
-        self[obj] += count
+        if count != 0:
+            self[obj] += count
 
     def total(self):
         return sum(list(self.values()))

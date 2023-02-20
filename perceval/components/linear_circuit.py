@@ -377,7 +377,8 @@ class Circuit(ACircuit):
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
         :param component: the component to add, must be a linear component or circuit
-        :param merge: if the component is a complex circuit,
+        :param merge: when the component is a complex circuit, if True, keep the nested structure.
+                      Otherwise flatten the added circuit
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
@@ -387,12 +388,14 @@ class Circuit(ACircuit):
             port_range = tuple([i for i in range(port_range, port_range+component.m)])
         if isinstance(port_range, list):
             port_range = tuple(port_range)
-        assert isinstance(port_range, tuple), "range (%s) must be a tuple"
+        assert isinstance(port_range, tuple), f"Range ({port_range}) must be a tuple"
         for i, x in enumerate(port_range):
-            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
-                "range must a consecutive valid set of ports"
+            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1, \
+                "Range must be a consecutive set of port indexes"
+        assert min(port_range) >= 0 and max(port_range) < self.m, \
+            f"Port range exceeds circuit size (received {port_range} but maximum expected value is {self.m-1})"
         assert len(port_range) == component.m, \
-            "range port (%d) is not matching component size (%d)" % (len(port_range), component.m)
+            f"Port range ({len(port_range)}) is not matching component size ({component.m})"
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:

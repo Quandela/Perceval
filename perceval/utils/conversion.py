@@ -41,11 +41,14 @@ def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
 def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
     perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
-    fac = 1 / sum(prob for prob in perturbed_dist.values())
+    prob_sum = sum(prob for prob in perturbed_dist.values())
+    if prob_sum == 0:
+        return samples_to_sample_count(probs_to_samples(probs, count))
+    fac = 1 / prob_sum
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
     results = BSCount()
     for state in perturbed_dist:
-        results[state] = int(np.round(perturbed_dist[state] * count))
+        results.add(state, int(np.round(perturbed_dist[state] * count)))
     return results
 
 
