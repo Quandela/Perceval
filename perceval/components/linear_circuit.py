@@ -133,7 +133,7 @@ class ACircuit(AParametrizedComponent, ABC):
             component = component[1]
         else:
             pos = 0
-        return self.add(tuple(range(pos, component._m+pos)), component)
+        return self.add(tuple(range(pos, component._m+pos)), component, merge=True)
 
     def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Build a new circuit by adding `component` to the current circuit
@@ -371,14 +371,14 @@ class Circuit(ACircuit):
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = None) -> Circuit:
+            component: ACircuit, merge: bool = False) -> Circuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
         :param component: the component to add, must be a linear component or circuit
-        :param merge: when the component is a complex circuit, if True, keep the nested structure.
-                      Otherwise flatten the added circuit
+        :param merge: when the component is a complex circuit, if True, flatten the added circuit.
+                      Otherwise keep the nested structure (default False)
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
@@ -402,8 +402,6 @@ class Circuit(ACircuit):
                 if p.name in self._params and p._pid != self._params[p.name]._pid:
                     raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                 self._params[p.name] = p
-        if merge is None:
-            merge = len(port_range) != self._m
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
@@ -499,7 +497,7 @@ class Circuit(ACircuit):
         generated = Circuit(m)
         if phase_shifter_fun_gen:
             for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i))
+                generated.add(i, phase_shifter_fun_gen(i), merge=True)
         idx = 0
         depths = [0] * m
         max_depth = depth is None and m or depth
@@ -508,7 +506,7 @@ class Circuit(ACircuit):
                 for j in range(0+i % 2, m-1, 2):
                     if depth is not None and (depths[j] == depth or depths[j+1] == depth):
                         continue
-                    generated.add((j, j+1), fun_gen(idx))
+                    generated.add((j, j+1), fun_gen(idx), merge=True)
                     depths[j] += 1
                     depths[j+1] += 1
                     idx += 1
@@ -517,7 +515,7 @@ class Circuit(ACircuit):
                 for j in range(i, 0, -1):
                     if depth is not None and (depths[j-1] == depth or depths[j] == depth):
                         continue
-                    generated.add((j-1, j), fun_gen(idx))
+                    generated.add((j-1, j), fun_gen(idx), merge=True)
                     depths[j-1] += 1
                     depths[j] += 1
                     idx += 1
