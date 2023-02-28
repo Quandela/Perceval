@@ -25,6 +25,7 @@ import perceval.components.unitary_components as comp
 import perceval.algorithm as algo
 from perceval.rendering.pdisplay import pdisplay_analyzer
 import sympy as sp
+import pytest
 
 from test_circuit import strip_line_12
 
@@ -56,7 +57,7 @@ def test_analyser_on_qrng():
 
     p = pcvl.Processor("Naive", chip_QRNG)
 
-    ca = algo.Analyzer(p, [pcvl.BasicState("[1,0,1,0]"), pcvl.BasicState("[0,1,1,0]")], "*")
+    ca = algo.Analyzer(p, [pcvl.BasicState([1,0,1,0]), pcvl.BasicState([0,1,1,0])], "*")
     ca.compute()
     assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
@@ -66,3 +67,13 @@ def test_analyser_on_qrng():
             | |0,1,1,0> | 0.012162  | 0.240133  | 0.004934  | 0.004934  | 0.237838  | 0.237838  | 0.012162  | 0.018956  | 0.212088  | 0.018956  |
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
         """).strip()
+
+
+def test_analyser_bs():
+    p = pcvl.Processor("Naive", comp.BS())
+    ca = algo.Analyzer(p, [pcvl.BasicState([2,0])],
+                       [pcvl.BasicState([1,1]), pcvl.BasicState([2,0]), pcvl.BasicState([0,2])])
+    ca.compute()
+    assert ca.distribution[0, 0] == pytest.approx(1/2)  # |1,1>
+    assert ca.distribution[0, 1] == pytest.approx(1/4)  # |2,0>
+    assert ca.distribution[0, 2] == pytest.approx(1/4)  # |0,2>
