@@ -41,15 +41,19 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
 .. code:: latex
 
-    @article{heurtel_perceval_2022,
-    title = {Perceval: {A} {Software} {Platform} for {Discrete} {Variable} {Photonic} {Quantum} {Computing}},
-    author = {Heurtel, Nicolas and Fyrillas, Andreas and de Gliniasty, Grégoire and Bihan, Raphaël Le and Malherbe, Sébastien and Pailhas, Marceau and Bourdoncle, Boris and Emeriau, Pierre-Emmanuel and Mezher, Rawad and Music, Luka and Belabas, Nadia and Valiron, Benoît and Senellart, Pascale and Mansfield, Shane and Senellart, Jean},
-    doi = {10.48550/ARXIV.2204.00602},
-    url = {https://arxiv.org/abs/2204.00602},
-    keywords = {Quantum Physics (quant-ph), Computational Physics (physics.comp-ph), FOS: Physical sciences, FOS: Physical sciences},
-    publisher = {arXiv},
-    year = {2022}
-    }
+    @article{heurtel2023perceval,
+    doi = {10.22331/q-2023-02-21-931},
+    url = {https://doi.org/10.22331/q-2023-02-21-931},
+    title = {Perceval: {A} {S}oftware {P}latform for {D}iscrete {V}ariable {P}hotonic {Q}uantum {C}omputing},
+    author = {Heurtel, Nicolas and Fyrillas, Andreas and Gliniasty, Gr{\'{e}}goire de and Le Bihan, Rapha{\"{e}}l and Malherbe, S{\'{e}}bastien and Pailhas, Marceau and Bertasi, Eric and Bourdoncle, Boris and Emeriau, Pierre-Emmanuel and Mezher, Rawad and Music, Luka and Belabas, Nadia and Valiron, Benoît and Senellart, Pascale and Mansfield, Shane and Senellart, Jean},
+    journal = {{Quantum}},
+    issn = {2521-327X},
+    publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
+    volume = {7},
+    pages = {931},
+    month = feb,
+    year = {2023}
+   }
 
 
 .. toctree::
