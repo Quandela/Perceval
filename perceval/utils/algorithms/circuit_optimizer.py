@@ -73,7 +73,7 @@ class CircuitOptimizer:
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
 
         :param target: The target unitary circuit or matrix
-        :param template: A circuit with variable parameters
+        :param template: A circuit with variable parameters (supports only beam splitters and phase shifters)
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):
