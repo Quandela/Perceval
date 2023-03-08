@@ -123,7 +123,7 @@ class Processor(AProcessor):
                     expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
-                    distribution = self._source.probability_distribution()
+                    distribution = self._source.probability_distribution(input_state[input_idx])
                     input_list[k] = input_state[input_idx]
                     expected_photons += 1
                 input_idx += 1
@@ -141,6 +141,15 @@ class Processor(AProcessor):
         self._min_detected_photons = expected_photons
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
+
+    @dispatch(StateVector)
+    def with_input(self, sv: StateVector):
+        r"""
+        Setting directly state vector as input of a processor, use SVDistribution input
+
+        :param sv: the state vector
+        """
+        return self.with_input(SVDistribution(sv))
 
     @dispatch(SVDistribution)
     def with_input(self, svd: SVDistribution):

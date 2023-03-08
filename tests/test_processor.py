@@ -30,7 +30,6 @@ def test_processor_generator_0():
     p.with_input(pcvl.BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {pcvl.StateVector([0, 1, 1, 0]): 1}
 
-
 def test_processor_generator_1():
     p = pcvl.Processor("Naive", pcvl.Circuit(4), pcvl.Source(emission_probability=0.2))
     p.with_input(pcvl.BasicState([0, 1, 1, 0]))
@@ -74,6 +73,13 @@ def test_processor_generator_2():
     result = {str(k): v for k, v in p.source_distribution.items()}
     assert pytest.approx(expected) == result
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
+
+
+def test_processor_generator_3():
+    p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
+    sv = pcvl.BasicState([0, 1, 1, 0])+pcvl.BasicState([1, 0, 0, 1])
+    p.with_input(sv)
+    assert p.source_distribution == {sv: 1}
 
 
 def test_processor_probs():

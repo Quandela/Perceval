@@ -133,7 +133,7 @@ class ACircuit(AParametrizedComponent, ABC):
             component = component[1]
         else:
             pos = 0
-        return self.add(tuple(range(pos, component._m+pos)), component)
+        return self.add(tuple(range(pos, component._m+pos)), component, merge=True)
 
     def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Build a new circuit by adding `component` to the current circuit
@@ -371,13 +371,14 @@ class Circuit(ACircuit):
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = None) -> Circuit:
+            component: ACircuit, merge: bool = False) -> Circuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
         :param component: the component to add, must be a linear component or circuit
-        :param merge: if the component is a complex circuit,
+        :param merge: when the component is a complex circuit, if True, flatten the added circuit.
+                      Otherwise keep the nested structure (default False)
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
@@ -387,20 +388,20 @@ class Circuit(ACircuit):
             port_range = tuple([i for i in range(port_range, port_range+component.m)])
         if isinstance(port_range, list):
             port_range = tuple(port_range)
-        assert isinstance(port_range, tuple), "range (%s) must be a tuple"
+        assert isinstance(port_range, tuple), f"Range ({port_range}) must be a tuple"
         for i, x in enumerate(port_range):
-            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
-                "range must a consecutive valid set of ports"
+            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1, \
+                "Range must be a consecutive set of port indexes"
+        assert min(port_range) >= 0 and max(port_range) < self.m, \
+            f"Port range exceeds circuit size (received {port_range} but maximum expected value is {self.m-1})"
         assert len(port_range) == component.m, \
-            "range port (%d) is not matching component size (%d)" % (len(port_range), component.m)
+            f"Port range ({len(port_range)}) is not matching component size ({component.m})"
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
                 if p.name in self._params and p._pid != self._params[p.name]._pid:
                     raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                 self._params[p.name] = p
-        if merge is None:
-            merge = len(port_range) != self._m
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
@@ -496,7 +497,7 @@ class Circuit(ACircuit):
         generated = Circuit(m)
         if phase_shifter_fun_gen:
             for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i))
+                generated.add(i, phase_shifter_fun_gen(i), merge=True)
         idx = 0
         depths = [0] * m
         max_depth = depth is None and m or depth
@@ -505,7 +506,7 @@ class Circuit(ACircuit):
                 for j in range(0+i % 2, m-1, 2):
                     if depth is not None and (depths[j] == depth or depths[j+1] == depth):
                         continue
-                    generated.add((j, j+1), fun_gen(idx))
+                    generated.add((j, j+1), fun_gen(idx), merge=True)
                     depths[j] += 1
                     depths[j+1] += 1
                     idx += 1
@@ -514,7 +515,7 @@ class Circuit(ACircuit):
                 for j in range(i, 0, -1):
                     if depth is not None and (depths[j-1] == depth or depths[j] == depth):
                         continue
-                    generated.add((j-1, j), fun_gen(idx))
+                    generated.add((j-1, j), fun_gen(idx), merge=True)
                     depths[j-1] += 1
                     depths[j] += 1
                     idx += 1
