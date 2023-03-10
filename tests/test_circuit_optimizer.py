@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Callable
 
 from perceval.utils.algorithms.circuit_optimizer import CircuitOptimizer
 from perceval.utils.algorithms import norm
@@ -28,19 +29,35 @@ from perceval.utils import P, Matrix
 import pytest
 
 
+perfect_theta = BS.r_to_theta(r=.5)
+
+def _ps(i):
+    return PS(P(f"phi_3_{i}"))
+
+
+def _check_optimize(size: int, mzi_func: Callable[[int], None]):
+    circuit_optimizer = CircuitOptimizer()
+    template_interferometer = Circuit.generic_interferometer(size, mzi_func,
+                                                             phase_shifter_fun_gen=_ps,
+                                                             phase_at_output=True)
+    random_unitary = Matrix.random_unitary(size)
+    result_circuit, fidelity = circuit_optimizer.optimize(random_unitary, template_interferometer)
+    assert 1 - fidelity < circuit_optimizer.threshold
+    assert norm.fidelity(result_circuit.compute_unitary(), random_unitary) == pytest.approx(fidelity)
+
 def test_circuit_optimizer():
-    perfect_R = 0.5
+    def mzi(i):
+        return Circuit(2) // PS(P(f"phi_1_{i}")) // BS.Rx(perfect_theta) \
+            // PS(P(f"phi_2_{i}")) // BS.Rx(perfect_theta)
 
-    for size in range(4, 17):
-        circuit_optimizer = CircuitOptimizer()
-        def mzi(i):
-            return Circuit(2) // PS(P(f"phi_1_{i}")) // BS(BS.r_to_theta(perfect_R)) \
-                // PS(P(f"phi_2_{i}")) // BS(BS.r_to_theta(perfect_R))
-        def ps(i):
-            return PS(P(f"phi_3_{i}"))
-        template_interferometer = Circuit.generic_interferometer(size, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
+    for size in range(6, 17, 2):
+        _check_optimize(size, mzi)
 
-        random_unitary = Matrix.random_unitary(size)
-        fidelity, result_circuit = circuit_optimizer.optimize(random_unitary, template_interferometer)
-        assert 1 - fidelity < circuit_optimizer.threshold
-        assert norm.fidelity(result_circuit.compute_unitary(), random_unitary) == pytest.approx(fidelity)
+
+def test_circuit_optimizer_bs_convention():
+    for bs_ctor in [BS.Ry, BS.H]:
+        def mzi_conv(i):
+            return Circuit(2) // PS(P(f"phi_1_{i}")) // bs_ctor(perfect_theta) \
+                // PS(P(f"phi_2_{i}")) // bs_ctor(perfect_theta)
+
+        _check_optimize(12, mzi_conv)

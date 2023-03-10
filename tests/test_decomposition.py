@@ -32,12 +32,12 @@ import numpy as np
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 
-def _mzi_triangle():
+def _mzi_triangle(i: int = 0):
     return (pcvl.Circuit(2)
             // comp.BS()
-            // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
+            // (0, comp.PS(phi=pcvl.Parameter(f"phi_a{i}")))
             // comp.BS()
-            // (0, comp.PS(phi=pcvl.Parameter("φ_b"))))
+            // (0, comp.PS(phi=pcvl.Parameter(f"phi_b{i}"))))
 
 def _mzi_rectangle(i: int):
     return (pcvl.Circuit(2)
@@ -83,7 +83,7 @@ def test_basic_perm_triangle_bs():
 def test_basic_perm_rectangle():
     c = pcvl.Circuit(2).add(0, comp.PERM([1, 0]))
     co = CircuitOptimizer()
-    c1 = co.optimize_rectangle(pcvl.Matrix(c.U), _mzi_rectangle, phase_at_output=True)
+    c1 = co.optimize_rectangle(pcvl.Matrix(c.U))
     m1 = c1.compute_unitary()
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][1])
@@ -150,12 +150,18 @@ def test_any_unitary_triangle():
 
 
 def test_any_unitary_rectangle():
-    with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
+    with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
         m = pcvl.Matrix(f)
         co = CircuitOptimizer()
-        c1 = co.optimize_rectangle(m, _mzi_rectangle, phase_at_output=True)
+        c1 = co.optimize_rectangle(m)
         m1 = c1.compute_unitary()
         assert norm.fidelity(m, m1) > 1 - co.threshold
+
+        # You can decompose with another form of MZI as long as your template remains universal
+        # In this case, that means putting a layer of PS at the input of the circuit
+        c2 = co.optimize_rectangle(m, _mzi_triangle, phase_at_output=False)
+        m2 = c2.compute_unitary()
+        assert norm.fidelity(m, m2) > 1 - co.threshold
 
 
 def test_simple_phase():
