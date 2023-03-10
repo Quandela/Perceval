@@ -11,5 +11,5 @@ scipy
 tqdm
 Deprecated
 requests
-drawSvg
+drawSvg<2.0
 protobuf>=4.21.2
