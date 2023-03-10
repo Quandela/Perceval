@@ -353,7 +353,7 @@ class Unitary(ACircuit):
             params.append(f"name='{self._name}'")
         if self._supports_polarization:
             params.append("use_polarization=True")
-        return f"symb.Unitary({', '.join(params)})"
+        return f"Unitary({', '.join(params)})"
 
 
 class PERM(Unitary):

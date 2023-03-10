@@ -24,18 +24,27 @@ from pathlib import Path
 import pytest
 import perceval as pcvl
 import perceval.components.unitary_components as comp
+from perceval.utils.algorithms.circuit_optimizer import CircuitOptimizer
+from perceval.utils.algorithms import norm
 
 import numpy as np
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 
-def _mzi_triangle():
+def _mzi_triangle(i: int = 0):
     return (pcvl.Circuit(2)
             // comp.BS()
-            // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
+            // (0, comp.PS(phi=pcvl.Parameter(f"phi_a{i}")))
             // comp.BS()
-            // (0, comp.PS(phi=pcvl.Parameter("φ_b"))))
+            // (0, comp.PS(phi=pcvl.Parameter(f"phi_b{i}"))))
+
+def _mzi_rectangle(i: int):
+    return (pcvl.Circuit(2)
+            // (0, comp.PS(phi=pcvl.Parameter(f"phi_a{i}")))
+            // comp.BS()
+            // (0, comp.PS(phi=pcvl.Parameter(f"phi_b{i}")))
+            // comp.BS())
 
 
 def test_perm_0():
@@ -71,43 +80,38 @@ def test_basic_perm_triangle_bs():
     assert pytest.approx(0, abs=1e-7) == abs(m1[1][1])
 
 
-@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_basic_perm_rectangle():
     c = pcvl.Circuit(2).add(0, comp.PERM([1, 0]))
-    ub = (pcvl.Circuit(2)
-          // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
-          // comp.BS()
-          // (0, comp.PS(phi=pcvl.Parameter("φ_b")))
-          // comp.BS())
-    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    m1 = c1.compute_unitary(use_symbolic=False)
-    assert pytest.approx(0, rel=1e-3) == abs(m1[0][0])
+    co = CircuitOptimizer()
+    c1 = co.optimize_rectangle(pcvl.Matrix(c.U))
+    m1 = c1.compute_unitary()
+    assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][1])
     assert pytest.approx(1, rel=1e-3) == abs(m1[1][0])
-    assert pytest.approx(0, rel=1e-3) == abs(m1[1][1])
+    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
 
 
 def test_perm_triangle():
     c = pcvl.Circuit(4).add(0, comp.PERM([3, 1, 2, 0]))
-    m = c.compute_unitary(False)
+    m = c.compute_unitary()
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), _mzi_triangle(), shape="triangle")
-    m1 = c1.compute_unitary(False)
+    m1 = c1.compute_unitary()
     np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
 
-
-@pytest.mark.skip(reason="rectangular decomposition not implemented")
+@pytest.mark.skip(reason="Optimization does not converge with unusual template component")
 def test_perm_rectangle_bs_0():
     c = pcvl.Circuit(3).add(0, comp.PERM([1, 0, 2]))
-    ub = (pcvl.Circuit(2)
-          // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
-          // comp.BS(theta=pcvl.P("theta")))
-    m = c.compute_unitary(False)
-    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    m1 = c1.compute_unitary(False)
-    np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
+    def gen_template_component(i: int):
+        return (pcvl.Circuit(2)
+                // comp.PS(phi=pcvl.Parameter(f"phi_a{i}"))
+                // comp.BS(theta=pcvl.Parameter(f"theta{i}")))
+    co = CircuitOptimizer()
+    co.threshold = 0.1
+    c1 = co.optimize_rectangle(pcvl.Matrix(c.U), gen_template_component, phase_at_output=True)
+    assert norm.fidelity(c.compute_unitary(), c1.compute_unitary()) > 1 - co.threshold
 
 
-@pytest.mark.skip(reason="rectangular decomposition not implemented")
+@pytest.mark.skip(reason="Optimization does not converge with unusual template component")
 def test_perm_rectangle_bs_1():
     c = pcvl.Circuit(3).add(0, comp.PERM([2, 1, 0]))
     ub = (pcvl.Circuit(2)
@@ -121,17 +125,13 @@ def test_perm_rectangle_bs_1():
     assert c2 is None
 
 
-@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_id_decomposition_rectangle():
     # identity matrix decompose as ... identity
     c = pcvl.Circuit(4)
-    ub = (pcvl.Circuit(2)
-          // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
-          // comp.BS()
-          // (0, comp.PS(phi=pcvl.Parameter("φ_b")))
-          // comp.BS())
-    c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="rectangle")
-    np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), c1.compute_unitary(False), decimal=6)
+    co = CircuitOptimizer()
+    c1 = co.optimize_rectangle(pcvl.Matrix(c.U), _mzi_rectangle, phase_at_output=True)
+    m1 = c1.compute_unitary(False)
+    assert norm.fidelity(c.compute_unitary(), m1) > 1 - co.threshold
 
 
 def test_id_decomposition_triangle():
@@ -155,33 +155,22 @@ def test_any_unitary_triangle():
         m = pcvl.Matrix(f)
         c1 = pcvl.Circuit.decomposition(m, _mzi_triangle(), phase_shifter_fn=comp.PS, shape="triangle", max_try=10)
         assert c1 is not None
-        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
+        np.testing.assert_array_almost_equal(m, c1.compute_unitary(), decimal=6)
 
 
-# def test_any_unitary_triangle_bad_ub():
-#     with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
-#         m = pcvl.Matrix(f)
-#         ub = (pcvl.Circuit(2)
-#               // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
-#               // comp.BS()
-#               // (0, comp.PS(phi=pcvl.Parameter("φ_b")))
-#               // comp.BS())
-#         c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=comp.PS, shape="triangle", max_try=10)
-#         assert c1 is None
-
-
-@pytest.mark.skip(reason="rectangular decomposition not implemented")
 def test_any_unitary_rectangle():
-    with open(TEST_DATA_DIR / 'u_random_3', "r") as f:
+    with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
         m = pcvl.Matrix(f)
-        ub = (pcvl.Circuit(2)
-              // (0, comp.PS(phi=pcvl.Parameter("φ_a")))
-              // comp.BS()
-              // (0, comp.PS(phi=pcvl.Parameter("φ_b")))
-              // comp.BS())
-        c1 = pcvl.Circuit.decomposition(m, ub, phase_shifter_fn=comp.PS, shape="rectangle", max_try=10)
-        assert c1 is not None
-        np.testing.assert_array_almost_equal(m, c1.compute_unitary(False), decimal=6)
+        co = CircuitOptimizer()
+        c1 = co.optimize_rectangle(m)
+        m1 = c1.compute_unitary()
+        assert norm.fidelity(m, m1) > 1 - co.threshold
+
+        # You can decompose with another form of MZI as long as your template remains universal
+        # In this case, that means putting a layer of PS at the input of the circuit
+        c2 = co.optimize_rectangle(m, _mzi_triangle, phase_at_output=False)
+        m2 = c2.compute_unitary()
+        assert norm.fidelity(m, m2) > 1 - co.threshold
 
 
 def test_simple_phase():

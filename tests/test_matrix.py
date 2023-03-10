@@ -21,12 +21,12 @@
 # SOFTWARE.
 
 from pathlib import Path
+import numpy as np
+import sympy as sp
 
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
 
-import numpy as np
-import sympy as sp
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 

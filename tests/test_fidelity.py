@@ -21,12 +21,34 @@
 # SOFTWARE.
 
 import pytest
+import numpy as np
 
 import perceval as pcvl
 import perceval.utils.algorithms.norm as norm
 
 
 def test_fidelity():
-    for _ in range(5):
-        u = pcvl.MatrixN.random_unitary(5)
-        assert pytest.approx(1) == norm.fidelity(u, u)
+    size = 8
+
+    # fidelity of a matrix with itself is maximum (1)
+    random_unitary = pcvl.Matrix.random_unitary(size)
+    assert norm.fidelity(random_unitary, random_unitary) == pytest.approx(1)
+
+    # fidelity is commutative
+    random_unitary_2 = pcvl.Matrix.random_unitary(size)
+    assert norm.fidelity(random_unitary, random_unitary_2) == \
+           pytest.approx(norm.fidelity(random_unitary_2, random_unitary))
+
+    # fidelity of orthognonal matrices is minimum (0)
+    identity = pcvl.Matrix(np.identity(size))
+    flipped = pcvl.Matrix(np.flipud(identity))
+    assert norm.fidelity(identity, flipped) == pytest.approx(0)
+
+    # fidelity of any matrix with zeros is 0
+    zero_mat = pcvl.Matrix(np.zeros((size, size)))
+    assert norm.fidelity(random_unitary, zero_mat) == pytest.approx(0)
+
+    # fidelity can be computed only for same size matrices
+    mat_too_small = pcvl.Matrix.random_unitary(size // 2)
+    with pytest.raises(ValueError):
+        norm.fidelity(random_unitary, mat_too_small)
