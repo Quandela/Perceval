@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -41,11 +48,14 @@ def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
 def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
     perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
-    fac = 1 / sum(prob for prob in perturbed_dist.values())
+    prob_sum = sum(prob for prob in perturbed_dist.values())
+    if prob_sum == 0:
+        return samples_to_sample_count(probs_to_samples(probs, count))
+    fac = 1 / prob_sum
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
     results = BSCount()
     for state in perturbed_dist:
-        results[state] = int(np.round(perturbed_dist[state] * count))
+        results.add(state, int(np.round(perturbed_dist[state] * count)))
     return results
 
 

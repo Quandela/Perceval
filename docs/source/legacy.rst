@@ -7,6 +7,32 @@ code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 0.8
+--------------------------------
+
+:code:`Processors.mode_post_selection` changes to :code:`min_detected_photons_filter`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In Perceval 0.7, you could filter results by setting a minimum number of threshold detector "clicks" (which was
+translated, in simulators, to the number of modes with at least one photon)
+
+>>> import perceval as pcvl
+>>> p = pcvl.Processor("SLOS", 8, pcvl.Source(emission_probability=.8))
+>>> p.with_input(pcvl.BasicState([1, 0, 1, 0, 0, 0, 0, 0]))
+>>> p.mode_post_selection(2)  # In Perceval 0.7, Processor p would reject results with less than 2 modes with detections
+
+Even though this filtering works well with QPU simulators and actual QPU acquisitions, it implied that more theoretical
+simulations was impacted by a threshold detection rule when they use perfect detectors. In this case, you could retrieve
+unexpected results.
+
+Perceval introcudes :code:`min_detected_photons_filter` to improve its behavior. Updating to Perceval 0.8 and using
+:code:`min_detected_photons_filter` as you would have used :code:`mode_post_selection`, will not change results
+for threshold detections, and will improve them for perfect simulations (less states will be rejected, improving
+*physical performance*).
+
+>>> p.min_detected_photons_filter(2)  # In Perceval 0.8, the new filter rejects states based on photon count
+
+
 Breaking changes in Perceval 0.7
 --------------------------------
 
@@ -79,9 +105,11 @@ Please use BasicState instead which holds every feature previously held by Annot
 Processor definition and composition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Perceval is getting more and more Processor-centric as we implement more features. The Processor class has got some serious refactoring.
-You may find examples of Processor created from scratch in perceval.components.core_catalog content
-You may use several processors / circuits and compose them : a good example is the QiskitConvert convert method implementation
+Perceval is getting more and more Processor-centric as we implement more features. The Processor class has got some
+serious refactoring.
+You may find examples of Processor created from scratch in perceval.components.core_catalog content.
+You may use several processors / circuits and compose them : a good example is the QiskitConvert convert method
+implementation.
 
 Access to circuit parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

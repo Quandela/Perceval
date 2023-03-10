@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -29,7 +36,6 @@ def test_processor_generator_0():
     p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
     p.with_input(pcvl.BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {pcvl.StateVector([0, 1, 1, 0]): 1}
-
 
 def test_processor_generator_1():
     p = pcvl.Processor("Naive", pcvl.Circuit(4), pcvl.Source(emission_probability=0.2))
@@ -76,16 +82,25 @@ def test_processor_generator_2():
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
 
 
+def test_processor_generator_3():
+    p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
+    sv = pcvl.BasicState([0, 1, 1, 0])+pcvl.BasicState([1, 0, 0, 1])
+    p.with_input(sv)
+    assert p.source_distribution == {sv: 1}
+
+
 def test_processor_probs():
     source = pcvl.Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
     qpu = pcvl.Processor("Naive", comp.BS(), source)
     qpu.with_input(pcvl.BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
+    qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
     probs = qpu.probs()
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
 
-    qpu.mode_post_selection(1)  # Lower mode_post_selection to 1 (default was 2 = expected input photon count)
+    qpu.thresholded_output(False) # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[pcvl.BasicState("|2,0>")]) == 0.5
     assert pytest.approx(bsd_out[pcvl.BasicState("|0,2>")]) == 0.5
+    assert pytest.approx(probs['physical_perf']) == 1

@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +28,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import quandelibc as qc
+import exqalibur as xq
 import thewalrus
 import numpy as np
 import time
@@ -53,15 +60,15 @@ for ind, reps in enumerate(nreps):
     end_walrus = time.time()
     start_qc_1 = time.time()
     for matrix in matrices:
-        res = qc.permanent_cx(matrix, 2)
+        res = xq.permanent_cx(matrix, 2)
     end_qc_1 = time.time()
     start_qc_4 = time.time()
     for matrix in matrices:
-        res = qc.permanent_cx(matrix, 4)
+        res = xq.permanent_cx(matrix, 4)
     end_qc_4 = time.time()
     start_qc_0 = time.time()
     for matrix in matrices:
-        res = qc.permanent_cx(matrix, 0)
+        res = xq.permanent_cx(matrix, 0)
     end_qc_0 = time.time()
 
 

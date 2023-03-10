@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,7 +35,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 import itertools
-import re
 from typing import Dict, List, Union, Tuple, Optional
 from deprecated import deprecated
 
@@ -39,7 +45,7 @@ from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
-from quandelibc import FockState, Annotation, FSArray
+from exqalibur import FockState, FSArray
 
 
 class BasicState(FockState):
@@ -129,7 +135,7 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
             output_array = FSArray(m, n, mask)
         else:
             output_array = FSArray(m, n)
-        for output_idx, output_state in enumerate(output_array):
+        for output_state in output_array:
             yield BasicState(output_state)
 
 
@@ -184,11 +190,11 @@ class StateVector(defaultdict):
     def __getitem__(self, key):
         if isinstance(key, int):
             return list(self.keys())[key]
-        assert isinstance(key, BasicState), "SVState keys should be Basic States"
+        assert isinstance(key, BasicState), "StateVector keys should be Basic States"
         return super().__getitem__(key)
 
     def __setitem__(self, key, value):
-        assert isinstance(key, BasicState), "SVState keys should be Basic States"
+        assert isinstance(key, BasicState), "StateVector keys should be Basic States"
         self._normalized = False
         if self.m is None:
             self.m = key.m
@@ -563,7 +569,8 @@ class BSCount(defaultdict):
         return super().__getitem__(key)
 
     def add(self, obj, count: int):
-        self[obj] += count
+        if count != 0:
+            self[obj] += count
 
     def total(self):
         return sum(list(self.values()))

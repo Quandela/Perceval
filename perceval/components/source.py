@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,7 +30,7 @@
 import math
 
 from perceval.utils import SVDistribution, StateVector
-from typing import Dict, Literal
+from typing import Dict, List, Union
 
 
 class Source:
@@ -42,11 +49,12 @@ class Source:
     :param context: gives a local context for source specific features, like `discernability_tag`
     """
 
-    def __init__(self, emission_probability: float = 1,
+    def __init__(self,
+                 emission_probability: float = 1,
                  multiphoton_component: float = 0,
                  indistinguishability: float = 1,
                  losses: float = 0,
-                 multiphoton_model: Literal["distinguishable", "indistinguishable"] = "distinguishable",
+                 multiphoton_model: str = "distinguishable",  # Literal["distinguishable", "indistinguishable"]
                  context: Dict = None) -> None:
 
         assert 0 < emission_probability <= 1, "emission_probability must be in ]0;1]"
@@ -86,12 +94,34 @@ class Source:
         p1to1 = eta * p1
         p2to2 = eta ** 2 * p2
         p2to1 = eta * (1 - eta) * p2
-
         return p1to1, p2to1, p2to2
 
-    def probability_distribution(self):
-        r"""returns SVDistribution on 1 mode associated to the source
-        """
+    @staticmethod
+    def _merge_photon_distributions(d1: List, d2: List):
+        # Merges two lists of annotations (or unannotated photon count) following the tensor product rules
+        if len(d1) == 0:
+            return d2
+        res = []
+        for k1, p1 in d1:
+            for k2, p2 in d2:
+                if k1 == 0:
+                    k = k2
+                elif k2 == 0:
+                    k = k1
+                else:
+                    k = k1+k2
+                res.append([k, p1*p2])
+        return res
+
+    @staticmethod
+    def _add(plist: List, annotations: Union[int, List], probability: float):
+        # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
+        # parameter `plist`
+        if probability > 0:
+            plist.append([annotations, probability])
+
+    def _generate_one_photon_distribution(self):
+        # Generates a distribution of annotations given the source parameters for one photon in one mode
         distinguishability = 1 - math.sqrt(self._indistinguishability)
 
         # Approximation distinguishable photons are pure
@@ -100,27 +130,36 @@ class Source:
             if self._multiphoton_model == "distinguishable" else 0  # Noise photon or signal
 
         (p1to1, p2to1, p2to2) = self._get_probs()
+        p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)  # 2 * p2to1 because of symmetry
 
-        svd = SVDistribution()
-
-        # 2 * p2to1 because of symmetry
-        p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)
-        svd.add(StateVector([0]), p0)
-
+        dist = []  # Distribution represented as a list of annotations on 1 mode + probability
+        self._add(dist, 0, p0)
         if distinguishability or (self._multiphoton_model == "distinguishable" and p2to2):
-            svd.add(StateVector([2], {0: ["_: 0", "_:%s" % second_photon]}),
-                    (1 - distinguishability) * p2to2)
-            svd.add(StateVector([2], {0: ["_:%s" % distinguishable_photon, "_:%s" % second_photon]}),
-                    distinguishability * p2to2)
-            svd.add(StateVector([1], {0: ["_:%s" % distinguishable_photon]}),
-                    distinguishability * (p1to1 + p2to1))
-            svd.add(StateVector([1], {0: ["_:0"]}),
-                    (1 - distinguishability) * (p1to1 + p2to1))
-            svd.add(StateVector([1], {0: ["_:%s" % second_photon]}),
-                    p2to1)
+            self._add(dist, ["_:0", "_:%s" % second_photon],  (1 - distinguishability) * p2to2)
+            self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
+            self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
+            self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
+            self._add(dist, ["_:%s" % second_photon], p2to1)
         else:
             # Just avoids annotations
-            svd.add(StateVector([2]), p2to2)
-            svd.add(StateVector([1]), p1to1 + 2 * p2to1)
+            self._add(dist, 2, p2to2)
+            self._add(dist, 1, p1to1 + 2 * p2to1)
+        return dist
 
+    def probability_distribution(self, nphotons: int = 1) -> SVDistribution:
+        r"""returns SVDistribution on 1 mode associated to the source
+
+        :param nphotons: Require `nphotons` in the mode (default 1).
+        """
+        dist_all = []
+        for p in range(nphotons):
+            d1 = self._generate_one_photon_distribution()
+            dist_all = self._merge_photon_distributions(dist_all, d1)
+
+        svd = SVDistribution()
+        for photons, prob in dist_all:
+            if isinstance(photons, int):
+                svd.add(StateVector([photons]), prob)
+            else:
+                svd.add(StateVector([len(photons)], {0: photons}), prob)
         return svd

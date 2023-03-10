@@ -1,15 +1,14 @@
 numpy
-quandelibc~=0.6.0
+exqalibur~=0.1.0
 tabulate
 pytest
 setuptools
 multipledispatch
-
 sympy
 matplotlib
 scipy
 tqdm
 Deprecated
 requests
-drawSvg<2.0
+drawsvg>=2.0
 protobuf>=4.21.2

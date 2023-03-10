@@ -47,8 +47,7 @@ like loss of photons, noise, time delays, and more. Ideal simulators should take
 The Backends
 ------------
 
-Perceval has built-in 5 different backends with the support of optimized C-library documented
-`here <https://perceval.quandela.net/docs-quandelibc>`_.
+Perceval has 5 different built-in back-ends with the support of optimized C++ library.
 
 Comparison Table
 ^^^^^^^^^^^^^^^^

@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -238,30 +245,29 @@ def test_svg_dump_grover(tmp_path, save_figs):
         PC_state, LC_state = oracle_dict[mark]
         # Mode b
         if PC_state == 1:
-            oracle_circuit.add(0, _HWP(0))
+            oracle_circuit.add(0, _HWP(0), merge=True)
         oracle_circuit.add(0, PR(sp.pi / 2))
         if LC_state == 1:
-            oracle_circuit.add(0, _HWP(0))
+            oracle_circuit.add(0, _HWP(0), merge=True)
         # Mode a
         if LC_state == 1:
-            oracle_circuit.add(1, _HWP(0))
+            oracle_circuit.add(1, _HWP(0), merge=True)
         if PC_state == 1:
-            oracle_circuit.add(1, _HWP(0))
+            oracle_circuit.add(1, _HWP(0), merge=True)
         return oracle_circuit
 
     def _HWP(xsi):
-        hwp = pcvl.Circuit(m=1)
-        hwp.add(0, HWP(xsi)).add(0, PS(-sp.pi / 2))
+        hwp = pcvl.Circuit(m=1) // HWP(xsi) // PS(-sp.pi / 2)
         return hwp
 
     bs = BS.H(phi_tr=sp.pi / 2, phi_tl=-sp.pi / 2)
     init_circuit = pcvl.Circuit(m=2, name="Initialization")
-    init_circuit.add(0, _HWP(sp.pi / 8))
+    init_circuit.add(0, _HWP(sp.pi / 8), merge=True)
     init_circuit.add((0, 1), bs)
     init_circuit.add(0, PS(-sp.pi))
     inversion_circuit = pcvl.Circuit(m=2, name='Inversion')
     inversion_circuit.add((0, 1), bs)
-    inversion_circuit.add(0, _HWP(sp.pi / 4))
+    inversion_circuit.add(0, _HWP(sp.pi / 4), merge=True)
     inversion_circuit.add((0, 1), bs)
     detection_circuit = pcvl.Circuit(m=4, name='Detection')
     detection_circuit.add((0, 1), PBS())
@@ -276,25 +282,25 @@ def test_svg_dump_grover(tmp_path, save_figs):
 
 def test_svg_bs_based_generic_no_phase_rectangle(tmp_path, save_figs):
     c = pcvl.Circuit.generic_interferometer(5,
-                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("φ_%d" % idx)),
+                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("phi_%d" % idx)),
                                             shape="rectangle")
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
 def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
     c = pcvl.Circuit.generic_interferometer(5,
-                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("φ_%d" % idx)),
+                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("phi_%d" % idx)),
                                             shape="rectangle",
                                             depth=10,
-                                            phase_shifter_fun_gen=lambda idx: PS(pcvl.P("Φ_%d" % idx)))
+                                            phase_shifter_fun_gen=lambda idx: PS(pcvl.P("theta_%d" % idx)))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
 def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
     c = pcvl.Circuit.generic_interferometer(5,
-                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("φ_%d" % idx)),
+                                            fun_gen=lambda idx: BS.H() // PS(pcvl.P("phi_%d" % idx)),
                                             shape="triangle",
-                                            phase_shifter_fun_gen=lambda idx: PS(pcvl.P("Φ_%d" % idx)))
+                                            phase_shifter_fun_gen=lambda idx: PS(pcvl.P("theta_%d" % idx)))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 

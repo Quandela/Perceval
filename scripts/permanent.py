@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +28,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import quandelibc as qc
+import exqalibur as xq
 import numpy as np
 import time
 
@@ -31,13 +38,13 @@ n = 12
 u = pcvl.Matrix.random_unitary(m)
 
 fsms = [[]]
-fsas = [qc.FSArray(m, 0)]
+fsas = [xq.FSArray(m, 0)]
 coefs = [[1]]
 
 for i in range(1, m+1):
-    fsas.append(qc.FSArray(m, i))
+    fsas.append(xq.FSArray(m, i))
     coefs.append(np.zeros(fsas[-1].count(), dtype=complex))
-    fsms.append(qc.FSiMap(fsas[-1], fsas[-2], True))
+    fsms.append(xq.FSiMap(fsas[-1], fsas[-2], True))
 
 compute = 0
 def permanent(idx_current, k):
@@ -48,7 +55,7 @@ def permanent(idx_current, k):
         m = 0
         while m < k:
             index_parent, mode = fsms[k].get(idx_current, m)
-            if index_parent == qc.npos:
+            if index_parent == xq.npos:
                 break
             compute += 1
             coefs[k][idx_current] += permanent(index_parent, k-1)*u[k-1, mode]
@@ -64,7 +71,7 @@ print("slos", time_total_slos)
 
 start_qc_1 = time.time()
 for idx in range(fsas[-1].count()):
-    qc.permanent_cx(u, 1)
+    xq.permanent_cx(u, 1)
 end_qc_1 = time.time()
 
 print("qc", end_qc_1-start_qc_1)

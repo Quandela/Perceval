@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -59,7 +66,8 @@ def decompose_triangle(u,
                        permutation,
                        precision,
                        constraints,
-                       allow_error):
+                       allow_error,
+                       ignore_identity_block):
     m = u.shape[0]
     params = component.get_parameters()
     params_symbols = [x.spv for x in params]
@@ -80,23 +88,22 @@ def decompose_triangle(u,
         for n in range(j):
             # goal is to null M[n,m]
             solve_cell = False
-            if abs(u[n, j]) <= precision:
+            if abs(u[n, j]) <= precision and ignore_identity_block:
                 solve_cell = True
-            else:
-                if permutation is not None:
-                    p = [0]
-                    for k in range(n + 1, j + 1):
-                        p.append(k - n)
-                        if abs(u[k, j]) <= precision:
-                            p[0] = k - n
-                            p[-1] = 0
-                            list_components = [(list(range(n, k + 1)), permutation(p))] + list_components
-                            RI = Matrix.eye(m, use_symbolic=False)
-                            RI[n, n] = RI[k, k] = 0
-                            RI[k, n] = RI[n, k] = 1
-                            u = RI @ u
-                            solve_cell = True
-                            break
+            elif permutation is not None:
+                p = [0]
+                for k in range(n + 1, j + 1):
+                    p.append(k - n)
+                    if abs(u[k, j]) <= precision and ignore_identity_block:
+                        p[0] = k - n
+                        p[-1] = 0
+                        list_components = [(list(range(n, k + 1)), permutation(p))] + list_components
+                        RI = Matrix.eye(m, use_symbolic=False)
+                        RI[n, n] = RI[k, k] = 0
+                        RI[k, n] = RI[n, k] = 1
+                        u = RI @ u
+                        solve_cell = True
+                        break
             if not solve_cell:
                 equation = cU_inv[0, 0] * u[n, j] + cU_inv[0, 1] * u[n + 1, j]
                 f = sp.lambdify([params_symbols], [equation], modules=[np, scp])
@@ -140,5 +147,6 @@ def decompose_rectangle(u,
                         permutation,
                         precision,
                         constraints,
-                        allow_error):
+                        allow_error,
+                        ignore_identity_block):
     raise NotImplementedError("rectangular decomposition not implemented yet")

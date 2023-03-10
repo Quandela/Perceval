@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,7 +37,7 @@ p.add(0, BS())
 
 def test_without_herald():
     p.with_input(BasicState([1, 0]))
-    p.mode_post_selection(0)
+    p.min_detected_photons_filter(0)
 
     expected = BSDistribution()
     expected[BasicState([0, 0])] = 0.25
@@ -44,7 +51,7 @@ def test_without_herald():
 
 def test_with_selection():
     p.with_input(BasicState([1, 0]))
-    p.mode_post_selection(1)
+    p.min_detected_photons_filter(1)
 
     expected = BSDistribution()
     expected[BasicState([1, 0])] = 1/3
@@ -63,7 +70,7 @@ def test_with_selection():
 def test_with_heralds():
     p.add_herald(1, 0)
     p.with_input(BasicState([1]))
-    p.mode_post_selection(0)
+    p.min_detected_photons_filter(0)
 
     expected = BSDistribution()
     expected[BasicState([0])] = 0.4
