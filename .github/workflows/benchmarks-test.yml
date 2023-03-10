@@ -2,7 +2,7 @@
 # runs benchmarks at benchmarks/benchmark_*.py
 # compare the result on the gh-page branch
 # save the log on (.benchmark/<runner>_CPython-<PyVersion>/<branch>_<tag_version>_<nb_runner>_<commit>.json)
-# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/) 
+# and display web page at (benchmarks/<runner>_CPython-<PyVersion>/)
 
 name: Benchmarks
 
@@ -22,11 +22,6 @@ on:
         default: ''
         type: string
         required: false
-      quandelibc_ref:
-        description: Use specific Quandelibc's ref (branch, tag or SHA)
-        default: ''
-        type: string
-        required: false
       save:
         description: 'Save log'
         default: false
@@ -38,56 +33,15 @@ env:
   python_v: '3.9'
 
 jobs:
-  build-quandelibc:
-    if: inputs.quandelibc_ref != ''
-    name: Build quandelibc "${{ inputs.quandelibc_ref }}" wheels for ${{ github.event.inputs.os }}
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: Quandela/QuandeLibC
-          ref: ${{ inputs.quandelibc_ref }}
-          path: quandelibc
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.9
-
-      - name: Build wheels for cp39
-        env:
-          CIBW_BUILD: 'cp39-*'
-          CIBW_SKIP: '*-musllinux_*'
-          CIBW_ARCHS_LINUX: x86_64
-          CIBW_ARCHS_MACOS: arm64
-          CIBW_ARCHS_WINDOWS: AMD64
-          CIBW_BUILD_VERBOSITY: 1
-        run: |
-          cd quandelibc
-          python -m pip install cibuildwheel
-          python -m cibuildwheel --output-dir precompiled-quandelibc
-
-      - name: Store wheel
-        uses: actions/upload-artifact@v2
-        with:
-          name: python-package-distributions
-          path: quandelibc/precompiled-quandelibc
-
   benchmark:
     name: Run pytest-benchmark benchmark example
     if: ${{ always() }}
-    needs:
-      - build-quandelibc
     runs-on: ${{ github.event.inputs.os }}
     steps:
       - uses: actions/checkout@v2
         with:
           ref: ${{ inputs.commit_ref }}
           fetch-depth: 0
-
 
       # install python, already DL on MiniMac_arm64
       - if:  ${{ github.event.inputs.os != 'MiniMac_arm64' }}
@@ -97,19 +51,6 @@ jobs:
 
       - uses: syphar/restore-virtualenv@v1
         id: cache-virtualenv
-
-      - if: inputs.quandelibc_ref != ''
-        name: Fetch previously compiled Quandelibc
-        uses: actions/download-artifact@v2
-        with:
-          name: python-package-distributions
-          path: precompiled-quandelibc
-
-      - if: inputs.quandelibc_ref != ''
-        name: Install previously compiled Quandelibc
-        run: |
-          python -m pip uninstall -r requirements.txt -y
-          bash -c "python -m pip install precompiled-quandelibc/*macosx_11_0_arm64.whl"
 
       - name: Install dependencies
         run: |

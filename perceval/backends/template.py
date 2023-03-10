@@ -29,7 +29,7 @@ from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
 from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
 
-import quandelibc as qc
+import exqalibur as xq
 import numpy as np
 
 
@@ -103,7 +103,7 @@ class Backend(ABC):
         self._mask = None
         if mask is not None:
             assert n is not None, "number of photons required when using a mask"
-            self._mask = qc.FSMask(self._m, n, mask)
+            self._mask = xq.FSMask(self._m, n, mask)
 
         self._compiled_input = None
 
@@ -283,9 +283,9 @@ class Backend(ABC):
             ns = [ns]
         for n in ns:
             if self._mask:
-                output_array = qc.FSArray(m, n, self._mask)
+                output_array = xq.FSArray(m, n, self._mask)
             else:
-                output_array = qc.FSArray(m, n)
+                output_array = xq.FSArray(m, n)
             for output_state in output_array:
                 yield BasicState(output_state)
 

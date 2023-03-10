@@ -27,7 +27,7 @@ from perceval.utils import StateVector, BasicState
 from perceval.components import ACircuit
 from perceval.backends import BACKEND_LIST
 
-import quandelibc as qc
+import exqalibur as xq
 
 
 class StepperBackend:
@@ -167,7 +167,7 @@ class StepperBackend:
         if not isinstance(ns, list):
             ns = [ns]
         for n in ns:
-            output_array = qc.FSArray(m, n)
+            output_array = xq.FSArray(m, n)
             for output_idx, output_state in enumerate(output_array):
                 yield BasicState(output_state)
 

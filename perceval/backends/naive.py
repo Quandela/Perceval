@@ -24,7 +24,7 @@ import math
 import numpy as np
 
 from .template import Backend
-import quandelibc as qc
+import exqalibur as xq
 
 
 class NaiveBackend(Backend):
@@ -51,7 +51,7 @@ class NaiveBackend(Backend):
                         Ust[rowidx, colidx] = self._U[ok, ik]
                         rowidx += 1
                 colidx += 1
-        return qc.permanent_cx(Ust, n_threads=1)/math.sqrt(p)
+        return xq.permanent_cx(Ust, n_threads=1)/math.sqrt(p)
 
     def prob_be(self, input_state, output_state):
         return abs(self.probampli_be(input_state, output_state))**2
