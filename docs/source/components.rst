@@ -151,7 +151,7 @@ a 4-mode permutation. It matches the first input path (index 0) with the third o
 
 >>> import perceval as pcvl
 >>> import perceval.components.unitary_components as comp
->>> c = comp.PERM([2, 3, 0, 1])
+>>> c = comp.PERM([2, 3, 1, 0])
 >>> pcvl.pdisplay(c)
 >>> pcvl.pdisplay(c.compute_unitary(), output_format=pcvl.Format.LATEX)
 
@@ -160,7 +160,7 @@ a 4-mode permutation. It matches the first input path (index 0) with the third o
    * - .. image:: _static/library/phys/perm-2310.png
            :width: 180
      - .. math::
-            \left[\begin{matrix}0 & 0 & 1 & 0\\0 & 0 & 0 & 1\\1 & 0 & 0 & 0\\0 & 1 & 0 & 0\end{matrix}\right]
+            \left[\begin{matrix}0 & 0 & 0 & 1\\0 & 0 & 1 & 0\\1 & 0 & 0 & 0\\0 & 1 & 0 & 0\end{matrix}\right]
 
 Waveplate
 ^^^^^^^^^^
