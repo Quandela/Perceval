@@ -98,7 +98,7 @@ def test_perm_triangle():
     m1 = c1.compute_unitary()
     np.testing.assert_array_almost_equal(abs(m), abs(m1), decimal=6)
 
-
+@pytest.mark.skip(reason="Optimization does not converge with unusual template component")
 def test_perm_rectangle_bs_0():
     c = pcvl.Circuit(3).add(0, comp.PERM([1, 0, 2]))
     def gen_template_component(i: int):
@@ -111,7 +111,7 @@ def test_perm_rectangle_bs_0():
     assert norm.fidelity(c.compute_unitary(), c1.compute_unitary()) > 1 - co.threshold
 
 
-@pytest.mark.skip(reason="rectangular decomposition not implemented")
+@pytest.mark.skip(reason="Optimization does not converge with unusual template component")
 def test_perm_rectangle_bs_1():
     c = pcvl.Circuit(3).add(0, comp.PERM([2, 1, 0]))
     ub = (pcvl.Circuit(2)

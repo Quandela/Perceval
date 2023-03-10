@@ -91,6 +91,7 @@ class CircuitOptimizer:
         assert not target.is_symbolic(), "Target must not contain variables"
 
         optimizer = xq.CircuitOptimizer(serialize_binary(target), serialize_binary(template))
+        optimizer.set_max_eval_per_trial(50000)
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
         return optimized_circuit, optimizer.fidelity
