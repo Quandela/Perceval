@@ -22,6 +22,7 @@
 import json
 import time
 from typing import Any
+from requests.exceptions import HTTPError, ConnectionError
 
 from .job import Job
 from .job_status import JobStatus, RunningStatus
@@ -30,6 +31,7 @@ from perceval.serialization import deserialize, serialize
 
 class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
+    _MAX_ERROR = 5
 
     def __init__(self, request_data, rpc_handler, job_name, delta_parameters=None, job_context=None,
                  command_param_names=None, refresh_progress_delay: int = 3):
@@ -62,8 +64,9 @@ class RemoteJob(Job):
         self._job_context = job_context
         self._refresh_progress_delay = refresh_progress_delay  # When syncing an async job (in s)
         self._previous_status_refresh = 0.
+        self._status_refresh_error = 0
         self._id = None
-        self._name = job_name
+        self.name = job_name
         self._request_data = request_data
         self._param_names = command_param_names or []
 
@@ -73,17 +76,41 @@ class RemoteJob(Job):
 
     @staticmethod
     def from_id(job_id: str, rpc_handler):
-        j = RemoteJob(None, rpc_handler)
+        j = RemoteJob(None, rpc_handler, "resumed")  # There is no access to the job name, let's call it "resumed"
         j._id = job_id
         j.status()
         return j
+
+    def _handle_status_error(self, error):
+        """
+        Handle a potentially non-blocking error
+        After _MAX_ERROR errors in a row, the exception is raised
+        """
+        self._status_refresh_error += 1
+        if self._status_refresh_error == self._MAX_ERROR:
+            raise error
+        if isinstance(error, HTTPError):
+            error_code = error.response.status_code
+            if error_code not in [
+                408,  # Time-out
+                409,  # Conflict in the current state of the resource
+                421,  # Misdirected request
+                423,  # Resource locked
+                429   # Too many requests
+            ]:  # If the status code is any other error, it is considered unrecoverable
+                raise error
+        return self._job_status
 
     @property
     def status(self) -> JobStatus:
         now = time.time()
         if now - self._previous_status_refresh > RemoteJob.STATUS_REFRESH_DELAY:
             self._previous_status_refresh = now
-            response = self._rpc_handler.get_job_status(self._id)
+            try:
+                response = self._rpc_handler.get_job_status(self._id)
+                self._status_refresh_error = 0
+            except (HTTPError, ConnectionError) as error:
+                return self._handle_status_error(error)
 
             self._job_status.status = RunningStatus.from_server_response(response['status'])
             if self._job_status.running:

@@ -133,7 +133,7 @@ class ACircuit(AParametrizedComponent, ABC):
             component = component[1]
         else:
             pos = 0
-        return self.add(tuple(range(pos, component._m+pos)), component)
+        return self.add(tuple(range(pos, component._m+pos)), component, merge=True)
 
     def __floordiv__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Build a new circuit by adding `component` to the current circuit
@@ -371,13 +371,14 @@ class Circuit(ACircuit):
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = None) -> Circuit:
+            component: ACircuit, merge: bool = False) -> Circuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
         :param component: the component to add, must be a linear component or circuit
-        :param merge: if the component is a complex circuit,
+        :param merge: when the component is a complex circuit, if True, flatten the added circuit.
+                      Otherwise keep the nested structure (default False)
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
@@ -387,20 +388,20 @@ class Circuit(ACircuit):
             port_range = tuple([i for i in range(port_range, port_range+component.m)])
         if isinstance(port_range, list):
             port_range = tuple(port_range)
-        assert isinstance(port_range, tuple), "range (%s) must be a tuple"
+        assert isinstance(port_range, tuple), f"Range ({port_range}) must be a tuple"
         for i, x in enumerate(port_range):
-            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1 and x < self._m,\
-                "range must a consecutive valid set of ports"
+            assert isinstance(x, int) and i == 0 or x == port_range[i - 1] + 1, \
+                "Range must be a consecutive set of port indexes"
+        assert min(port_range) >= 0 and max(port_range) < self.m, \
+            f"Port range exceeds circuit size (received {port_range} but maximum expected value is {self.m-1})"
         assert len(port_range) == component.m, \
-            "range port (%d) is not matching component size (%d)" % (len(port_range), component.m)
+            f"Port range ({len(port_range)}) is not matching component size ({component.m})"
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
                 if p.name in self._params and p._pid != self._params[p.name]._pid:
                     raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                 self._params[p.name] = p
-        if merge is None:
-            merge = len(port_range) != self._m
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
@@ -499,7 +500,7 @@ class Circuit(ACircuit):
         generated = Circuit(m)
         if phase_shifter_fun_gen and not phase_at_output:
             for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i))
+                generated.add(i, phase_shifter_fun_gen(i), merge=True)
         idx = 0
         depths = [0] * m
         max_depth = depth is None and m or depth
@@ -547,25 +548,27 @@ class Circuit(ACircuit):
                       merge: bool = True,
                       precision: float = 1e-6,
                       max_try: int = 10,
-                      allow_error: bool = False):
-        r"""Decompose a given unitary matrix U into a circuit with specified component type
+                      allow_error: bool = False,
+                      ignore_identity_block: bool = True):
+        r"""Decompose a given unitary matrix U into a circuit with a specified component type
 
         :param U: the matrix to decompose
-        :param allow_error: allow decomposition error - when the actual solution is not locally reachable
         :param component: a circuit, to solve any decomposition must have up to 2 independent parameters
-        :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
-                            Each constraint should have the numbers of free parameters of the system.
+        :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
+               ignored
+        :param shape: shape of the decomposition (`triangle` is natively supported in Perceval)
+        :param permutation: if provided, type of permutation operator to avoid unnecessary operators
         :param inverse_v: inverse the decomposition vertically
         :param inverse_h: inverse the decomposition horizontally
-        :param phase_shifter_fn: a function generating a phase_shifter circuit. If `None`, residual phase will be
-                            ignored
-        :param shape: `triangle`
-        :param permutation: if provided, type of permutation operator to avoid unnecessary operators
+        :param constraints: constraints to apply on both parameters, it is a list of individual constraints.
+                            Each constraint should have the numbers of free parameters of the system.
         :param merge: don't use sub-circuits
         :param precision: for intermediate values - norm below precision are considered 0. If not - use `global_params`
         :param max_try: number of times to try the decomposition
+        :param allow_error: allow decomposition error - when the actual solution is not locally reachable
+        :param ignore_identity_block: If true, do not insert a component when it's not needed (component is an identity)
+                                      Otherwise, insert a component everytime (default True).
         :return: a circuit
-
         """
         if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
             raise(ValueError("decomposed matrix should be non symbolic unitary"))
@@ -583,10 +586,12 @@ class Circuit(ACircuit):
         while count < max_try:
             if shape == "triangle":
                 lc = decomposition.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
-                                                      constraints, allow_error=allow_error)
+                                                      constraints, allow_error=allow_error,
+                                                      ignore_identity_block=ignore_identity_block)
             else:
                 lc = decomposition.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
-                                                       constraints, allow_error=allow_error)
+                                                       constraints, allow_error=allow_error,
+                                                       ignore_identity_block=ignore_identity_block)
             if lc is not None:
                 C = Circuit(N)
                 for range, component in lc:

@@ -30,7 +30,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         action='ignore',
         category=RuntimeWarning)
-    import drawSvg
+    import drawsvg
 
 from perceval.algorithm.analyzer import Analyzer
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
@@ -280,7 +280,7 @@ def pdisplay(o, output_format: Format = None, **opts):
         else:
             raise RuntimeError("pdisplay not defined for type %s" % type(o))
 
-    if isinstance(res, drawSvg.Drawing):
+    if isinstance(res, drawsvg.Drawing):
         return res
     elif in_notebook and output_format != Format.TEXT:
         display(HTML(res))

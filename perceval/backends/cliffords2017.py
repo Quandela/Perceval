@@ -24,7 +24,7 @@ from .template import Backend
 
 import numpy as np
 from typing import List, Union
-import quandelibc as qc
+import exqalibur as xq
 from perceval.utils import BasicState, StateVector
 
 
@@ -41,10 +41,10 @@ class CliffordClifford2017Backend(Backend):
     supports_symbolic = False
     supports_circuit_computing = False
 
-    def prob_be(self, input_state, output_state, n=None, output_idx=None):
+    def prob_be(self, input_state, output_state):
         raise NotImplementedError(f'Cannot call prob_be on {self.name}')
 
-    def probampli_be(self, input_state, output_state, n=None):
+    def probampli_be(self, input_state, output_state):
         raise NotImplementedError(f'Cannot call probampli_be on {self.name}')
 
     def sample(self, input_state: Union[BasicState, StateVector]) -> BasicState:
@@ -75,7 +75,7 @@ class CliffordClifford2017Backend(Backend):
         fs[mode_seq[0]] = 1
         for mode_limit in range(2, n+1):
             # permanents of sub-matrices using Laplace-type expansion (arXiv:1505.05486)
-            sub_perm = np.array(qc.sub_permanents_cx(np.copy(np.reshape(A[0:mode_limit, mode_seq],
+            sub_perm = np.array(xq.sub_permanents_cx(np.copy(np.reshape(A[0:mode_limit, mode_seq],
                                                                         (-1, mode_limit-1)))))
             sub_perm /= _get_scale(sub_perm)
             # generate next mode from there

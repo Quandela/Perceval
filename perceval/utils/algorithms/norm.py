@@ -26,6 +26,12 @@ from perceval.utils.matrix import Matrix
 
 
 def fidelity(u: Matrix, v: Matrix) -> float:
+    r""" Calculate the fidelity of a unitary implementation compared to a reference unitary
+
+    :param u: the unitary to evaluate
+    :param v: the reference unitary
+    :return: real [0-1] float fidelity
+    """
     u_dag = np.transpose(np.conjugate(u))
     f = abs(np.trace(u_dag @ v)) ** 2 / (u.shape[0] * np.trace(u_dag @ u))
     if isinstance(f, complex):
@@ -33,6 +39,26 @@ def fidelity(u: Matrix, v: Matrix) -> float:
     else:
         return f
 
+def modulus_fidelity(u: Matrix, v: Matrix) -> float:
+    r""" Calculate the fidelity of a unitary implementation compared to a reference unitary just comparing
+    single input-single output probabilities
+
+    :param u: the unitary to evaluate
+    :param v: the reference unitary
+    :return: real [0-1] float fidelity
+    """
+    u_dag = np.transpose(np.conjugate(u))
+    f = np.trace(np.dot(abs(u_dag), abs(v)))/u.shape[0]
+    if isinstance(f, complex):
+        return f.real
+    else:
+        return f
 
 def frobenius(u: Matrix, v: Matrix) -> float:
+    r""" Frobenius norm
+
+    :param u: the unitary to evaluate
+    :param v: the reference unitary
+    :return: real [0-1] float fidelity
+    """
     return np.linalg.norm(u - v)

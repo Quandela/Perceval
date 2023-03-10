@@ -26,12 +26,12 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         action='ignore',
         category=RuntimeWarning)
-    import drawSvg as draw
+    import drawsvg as draw
 
 
 class SvgCanvas(Canvas):
     """
-    This class relies on drawSvg 3rd party library.
+    This class relies on drawsvg 3rd party library.
     With it, it is possible to create dynamic svg graphics.
     """
     def __init__(self, **opts):
@@ -114,4 +114,4 @@ class SvgCanvas(Canvas):
                              origin=(self._minx-25, -self._maxy))
         for dr in self._draws:
             d.append(dr)
-        return d.setPixelScale(self._pixel_size)
+        return d.set_pixel_scale(self._pixel_size)

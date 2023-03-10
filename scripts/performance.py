@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import perceval as pcvl
-import quandelibc as qc
+import exqalibur as xq
 import thewalrus
 import numpy as np
 import time
@@ -53,15 +53,15 @@ for ind, reps in enumerate(nreps):
     end_walrus = time.time()
     start_qc_1 = time.time()
     for matrix in matrices:
-        res = qc.permanent_cx(matrix, 2)
+        res = xq.permanent_cx(matrix, 2)
     end_qc_1 = time.time()
     start_qc_4 = time.time()
     for matrix in matrices:
-        res = qc.permanent_cx(matrix, 4)
+        res = xq.permanent_cx(matrix, 4)
     end_qc_4 = time.time()
     start_qc_0 = time.time()
     for matrix in matrices:
-        res = qc.permanent_cx(matrix, 0)
+        res = xq.permanent_cx(matrix, 0)
     end_qc_0 = time.time()
 
 

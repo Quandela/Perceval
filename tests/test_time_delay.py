@@ -30,7 +30,7 @@ p.add(0, BS())
 
 def test_without_herald():
     p.with_input(BasicState([1, 0]))
-    p.mode_post_selection(0)
+    p.min_detected_photons_filter(0)
 
     expected = BSDistribution()
     expected[BasicState([0, 0])] = 0.25
@@ -44,7 +44,7 @@ def test_without_herald():
 
 def test_with_selection():
     p.with_input(BasicState([1, 0]))
-    p.mode_post_selection(1)
+    p.min_detected_photons_filter(1)
 
     expected = BSDistribution()
     expected[BasicState([1, 0])] = 1/3
@@ -63,7 +63,7 @@ def test_with_selection():
 def test_with_heralds():
     p.add_herald(1, 0)
     p.with_input(BasicState([1]))
-    p.mode_post_selection(0)
+    p.min_detected_photons_filter(0)
 
     expected = BSDistribution()
     expected[BasicState([0])] = 0.4

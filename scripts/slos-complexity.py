@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import quandelibc as qc
+import exqalibur as xq
 import numpy as np
 
 for m in range(6, 25):
     for n in range(1, 13):
-        fsa = qc.FSArray(m, n)
+        fsa = xq.FSArray(m, n)
 
         allop = 0
         count = 0

@@ -76,7 +76,7 @@ class Processor(AProcessor):
             self._simulator = StepperBackend(self.non_unitary_circuit(),
                                              m=self.circuit_size,
                                              backend_name=self._backend_name,
-                                             mode_post_selection=self._min_mode_post_select)
+                                             min_detected_photons_filter=self._min_detected_photons)
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -123,7 +123,7 @@ class Processor(AProcessor):
                     expected_photons += 1
             else:
                 if input_state[input_idx] > 0:
-                    distribution = self._source.probability_distribution()
+                    distribution = self._source.probability_distribution(input_state[input_idx])
                     input_list[k] = input_state[input_idx]
                     expected_photons += 1
                 input_idx += 1
@@ -138,9 +138,18 @@ class Processor(AProcessor):
         self._inputs_map = used_input_map
 
         self._input_state = BasicState(input_list)
-        self._min_mode_post_select = expected_photons
-        if 'mode_post_select' in self._parameters:
-            self._min_mode_post_select = self._parameters['mode_post_select']
+        self._min_detected_photons = expected_photons
+        if 'min_detected_photons' in self._parameters:
+            self._min_detected_photons = self._parameters['min_detected_photons']
+
+    @dispatch(StateVector)
+    def with_input(self, sv: StateVector):
+        r"""
+        Setting directly state vector as input of a processor, use SVDistribution input
+
+        :param sv: the state vector
+        """
+        return self.with_input(SVDistribution(sv))
 
     @dispatch(SVDistribution)
     def with_input(self, svd: SVDistribution):
@@ -160,9 +169,9 @@ class Processor(AProcessor):
                     raise ValueError(
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._inputs_map = svd
-        self._min_mode_post_select = expected_photons
-        if 'mode_post_select' in self._parameters:
-            self._min_mode_post_select = self._parameters['mode_post_select']
+        self._min_detected_photons = expected_photons
+        if 'min_detected_photons' in self._parameters:
+            self._min_detected_photons = self._parameters['min_detected_photons']
 
     def clear_input_and_circuit(self):
         super().clear_input_and_circuit()
@@ -180,6 +189,15 @@ class Processor(AProcessor):
                 "Time delays are not implemented within CliffordClifford2017 backend. Please use another one.")
         if not self._has_td:  # TODO: remove quickfix by something clever :  self._simulator is None and
             self._setup_simulator()
+
+    def _state_preselected_physical(self, input_state: StateVector) -> bool:
+        return max(input_state.n) >= self._min_detected_photons
+
+    def _state_selected_physical(self, output_state: BasicState) -> bool:
+        if self.is_threshold:
+            modes_with_photons = len([n for n in output_state if n > 0])
+            return modes_with_photons >= self._min_detected_photons
+        return output_state.n >= self._min_detected_photons
 
     def samples(self, count: int, progress_callback=None) -> Dict:
         self._init_command("samples")
@@ -254,7 +272,7 @@ class Processor(AProcessor):
                                               depth,
                                               extend_m,
                                               self._input_state,
-                                              self._min_mode_post_select,
+                                              self._min_detected_photons,
                                               self.source)
 
             res = extended_p.probs(progress_callback=progress_callback)
@@ -290,7 +308,7 @@ class Processor(AProcessor):
 
 
 def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int,
-                         input_states: Union[SVDistribution, BasicState], mode_post_select: int,
+                         input_states: Union[SVDistribution, BasicState], min_detected_photons: int,
                          source: Source):
     p = Processor(backend_name, m, source)
     if isinstance(input_states, SVDistribution):
@@ -301,7 +319,7 @@ def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int
     p.with_input(input_states)
     for r, c in components:
         p.add(r, c)
-    p.mode_post_selection(mode_post_select)
+    p.min_detected_photons_filter(min_detected_photons)
     return p
 
 

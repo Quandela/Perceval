@@ -101,3 +101,15 @@ def test_source_indistinguishability():
             assert pytest.approx(1-math.sqrt(0.5)) == v
         else:
             assert pytest.approx(math.sqrt(0.5)) == v
+
+
+def test_source_multiple_photons_per_mode():
+    s = Source()
+    for nphotons in range(2,10):
+        svd = s.probability_distribution(nphotons)
+        _check_svdistribution(svd, {f"|{nphotons}>": 1})
+
+    ep = 0.41
+    s = Source(emission_probability=ep)
+    svd = s.probability_distribution(2)
+    _check_svdistribution(svd, {"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2})

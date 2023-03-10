@@ -48,8 +48,7 @@ class AProcessor(ABC):
         self._parameters: Dict = {}
 
         self._thresholded_output: bool = False
-        # Mode post selection: expect at least # modes with photons in output
-        self._min_mode_post_select = None
+        self._min_detected_photons = None
 
         self._reset_circuit()
 
@@ -98,16 +97,17 @@ class AProcessor(ABC):
         self._reset_circuit()
         self._input_state = None
 
-    def mode_post_selection(self, n: int):
+    def min_detected_photons_filter(self, n: int):
         r"""
-        Sets-up a state post-selection on the number of "clicks" (number of modes with a thresholded detection)
+        Sets-up a state post-selection on the number of detected photons. With thresholded detectors, this will
+        actually filter on "click" count.
 
-        :param n: Minimum expected "click" count
+        :param n: Minimum expected photons
 
         This post-selection has an impact on the output physical performance
         """
-        self.set_parameter('mode_post_select', n)
-        self._min_mode_post_select = n
+        self.set_parameter('min_detected_photons', n)
+        self._min_detected_photons = n
 
     @property
     def input_state(self):
@@ -146,13 +146,6 @@ class AProcessor(ABC):
 
     def clear_postprocess(self):
         self._postprocess = None
-
-    def _state_preselected_physical(self, input_state: StateVector):
-        return max(input_state.n) >= self._min_mode_post_select
-
-    def _state_selected_physical(self, output_state: BasicState) -> bool:
-        modes_with_photons = len([n for n in output_state if n > 0])
-        return modes_with_photons >= self._min_mode_post_select
 
     def _state_selected(self, state: BasicState) -> bool:
         """

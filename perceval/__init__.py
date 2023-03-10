@@ -21,9 +21,23 @@
 # SOFTWARE.
 
 """
-Through a simple object-oriented Python API, Perceval provides tools for composing photonic circuits from linear
-optical components like beamsplitters and phase shifters, defining single-photon sources, manipulating Fock states,
-and running simulations."""
+Through a simple object-oriented python API, Perceval provides tools for building a circuit with linear optics
+components, defining single-photon sources and their error model, manipulating Fock states, running simulations,
+reproducing published experimental papers results and experimenting a new generation of quantum algorithms.
+
+It is interfaced with the available QPUs on https://cloud.quandela.com, so it is possible to run computations on an
+actual photonic computer.
+
+Perceval aims to be a companion tool for developing discrete-variable photonic circuits
+    - while simulating their design, modeling their ideal and real-life behaviour;
+    - and proposing a normalized interface to control photonic quantum computers;
+    - while using powerful simulation backends to get state-of-the-art simulation;
+    - and also allowing direct access to the QPUs of Quandela.
+
+See also:
+    - Perceval user documentation: https://perceval.quandela.net/docs/
+    - Quandela cloud documentation: https://cloud.quandela.com/webide/documentation (requires a free account to access)
+"""
 
 from pkg_resources import get_distribution
 import importlib

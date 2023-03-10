@@ -39,7 +39,7 @@ def test_sampler():
 
     for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:
         p = pcvl.Processor(backend_name, cnot, imperfect_source)
-        p.mode_post_selection(1)
+        p.min_detected_photons_filter(1)
         p.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
         sampler = Sampler(p)
         probs = sampler.probs()

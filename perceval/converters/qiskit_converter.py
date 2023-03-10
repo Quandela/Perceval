@@ -20,15 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Port, Encoding, PortLocation, Circuit, Processor, Source
+from perceval.components import Port, Encoding, Circuit, Processor, Source
 from perceval.utils import P, BasicState
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
 
-import qiskit
-
-# TODO: add typing on library
 
 min_precision_gate = 1e-4
 
@@ -59,6 +56,7 @@ class QiskitConverter:
             `heralded CNOT`
         :return: the converted processor
         """
+        import qiskit  # this nested import fixes automatic class reference generation
 
         # count the number of cnot to use during the conversion, will give us the number of herald to handle
         n_cnot = 0

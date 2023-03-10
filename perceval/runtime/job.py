@@ -41,9 +41,7 @@ class Job(ABC):
     def name(self, new_name: str):
         if not isinstance(new_name, str):
             raise TypeError("A job name must be a string")
-        if len(new_name) == 0:
-            raise ValueError("A job name must not be empty")
-        self._name = new_name
+        self._name = new_name if len(new_name) > 0 else "unnamed"
 
     def _adapt_parameters(self, args, kwargs):
         r"""adapt the parameters according to delta_parameters map passed to the Job

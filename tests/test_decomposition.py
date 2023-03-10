@@ -63,10 +63,10 @@ def test_basic_perm_triangle():
     c = pcvl.Circuit(2).add(0, comp.PERM([1, 0]))
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), _mzi_triangle(), shape="triangle")
     m1 = c1.compute_unitary(use_symbolic=False)
-    assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
-    assert pytest.approx(2, rel=1e-3) == abs(m1[0][1])+1
-    assert pytest.approx(2, rel=1e-3) == abs(m1[1][0])+1
-    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
+    assert pytest.approx(0, abs=1e-7) == abs(m1[0][0])
+    assert pytest.approx(1, abs=1e-7) == abs(m1[0][1])
+    assert pytest.approx(1, abs=1e-7) == abs(m1[1][0])
+    assert pytest.approx(0, abs=1e-7) == abs(m1[1][1])
 
 
 def test_basic_perm_triangle_bs():
@@ -74,10 +74,10 @@ def test_basic_perm_triangle_bs():
     ub = comp.BS(theta=pcvl.Parameter("theta"))
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), ub, shape="triangle")
     m1 = c1.compute_unitary(use_symbolic=False)
-    assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
-    assert pytest.approx(2, rel=1e-3) == abs(m1[0][1])+1
-    assert pytest.approx(2, rel=1e-3) == abs(m1[1][0])+1
-    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
+    assert pytest.approx(0, abs=1e-7) == abs(m1[0][0])
+    assert pytest.approx(1, abs=1e-7) == abs(m1[0][1])
+    assert pytest.approx(1, abs=1e-7) == abs(m1[1][0])
+    assert pytest.approx(0, abs=1e-7) == abs(m1[1][1])
 
 
 def test_basic_perm_rectangle():
@@ -88,7 +88,7 @@ def test_basic_perm_rectangle():
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][1])
     assert pytest.approx(1, rel=1e-3) == abs(m1[1][0])
-    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
+    assert pytest.approx(0, rel=1e-3) == abs(m1[1][1])
 
 
 def test_perm_triangle():
@@ -139,6 +139,15 @@ def test_id_decomposition_triangle():
     c = pcvl.Circuit(4)
     c1 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), _mzi_triangle(), shape="triangle")
     np.testing.assert_array_almost_equal(pcvl.Matrix.eye(4, use_symbolic=False), c1.compute_unitary(False), decimal=6)
+    assert c1.ncomponents() == 0
+    # With ignore_identity_block=False, the decomposed circuit contains multiple MZIs with trivial values
+    c2 = pcvl.Circuit.decomposition(pcvl.Matrix(c.U), _mzi_triangle(), shape="triangle", ignore_identity_block=False)
+    m2 = c2.compute_unitary()
+    assert pytest.approx(1, abs=1e-7) == abs(m2[0][0])
+    assert pytest.approx(0, abs=1e-7) == abs(m2[0][1])
+    assert pytest.approx(0, abs=1e-7) == abs(m2[1][0])
+    assert pytest.approx(1, abs=1e-7) == abs(m2[1][1])
+    assert c2.ncomponents() == 6*_mzi_triangle().ncomponents()
 
 
 def test_any_unitary_triangle():
