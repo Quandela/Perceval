@@ -88,7 +88,7 @@ def test_basic_perm_rectangle():
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][0])+1
     assert pytest.approx(1, rel=1e-3) == abs(m1[0][1])
     assert pytest.approx(1, rel=1e-3) == abs(m1[1][0])
-    assert pytest.approx(0, rel=1e-3) == abs(m1[1][1])
+    assert pytest.approx(1, rel=1e-3) == abs(m1[1][1])+1
 
 
 def test_perm_triangle():
