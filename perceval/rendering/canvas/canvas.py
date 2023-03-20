@@ -75,6 +75,12 @@ class Canvas(ABC):
             self._maxy = y
         self._position = (x, y)
 
+    def height(self):
+        return self._maxy - self._miny
+
+    def width(self):
+        return self._maxx - self._minx
+
     def add_mline(self,
                   points: List[float],
                   stroke: str = "black",
