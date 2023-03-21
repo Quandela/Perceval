@@ -317,9 +317,9 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
         _, output_ext = os.path.splitext(path)
         try:
             if output_ext == ".png":
-                res.savePng(path)  # May fail when rasterization is not available (i.e. on Windows)
+                res.save_png(path)  # May fail when rasterization is not available (i.e. on Windows)
             else:
-                res.saveSvg(path)
+                res.save_svg(path)
             return
         except:
             pass

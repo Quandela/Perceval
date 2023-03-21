@@ -103,9 +103,7 @@ class ASkin(ABC):
                 comp_width = self.get_width(comp)
             end_w = start_w + comp_width
             w[r] = [end_w] * comp.m
-        # For now, return the whole circuit height as processor height, even if some heralded modes are not shown.
-        # TODO fix this
-        return max(w), p.circuit_size  # min(p.circuit_size, height+2)
+        return max(w), min(p.circuit_size, height+2)
 
     def measure(self, c: AComponent) -> Tuple[int, int]:
         """
