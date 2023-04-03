@@ -70,7 +70,19 @@ class Sampler(AAlgorithm):
                     return k, converter
         return None, None
 
+    def _input_available(self) -> bool:
+        if self._processor.input_state is not None:  # Default input will cover all cases
+            return True
+        elif len(self._iterator) == 0:  # ...else you need at least one iteration...
+            return False
+        else:
+            for it in self._iterator:  # ...and all iterations must contain an input state
+                if 'input_state' not in it:
+                    return False
+        return True
+
     def _generic(self, method: str):
+        assert self._input_available(), "Missing input state"
         primitive, converter = self._get_primitive_converter(method)
         delta_parameters = {}
         # adapt the parameters list
@@ -79,8 +91,8 @@ class Sampler(AAlgorithm):
             delta_parameters['count'] = None
         elif method.find('sample') == -1 and primitive.find('sample') != -1:
             delta_parameters['count'] = self.PROBS_SIMU_SAMPLE_COUNT
-        if primitive is None:
-            raise NotImplementedError(f"cannot find primitive to execute {method} in {self._processor.available_commands}")
+        assert primitive is not None, \
+            f"cannot find primitive to execute {method} in {self._processor.available_commands}"
         if self._processor.is_remote:
             job_context = None
             if converter:
@@ -97,7 +109,6 @@ class Sampler(AAlgorithm):
             return LocalJob(getattr(self._processor, primitive),
                             result_mapping_function=converter,
                             delta_parameters=delta_parameters)
-
 
     @property
     def samples(self) -> Job:
@@ -129,8 +140,11 @@ class Sampler(AAlgorithm):
         if 'circuit_params' in iter_params:
             assert isinstance(iter_params['circuit_params'], dict), \
                 "Iteration: circuit_params field must be a valid dictionnary"
-            for v in iter_params['circuit_params'].values():
-                assert isinstance(v, Number), f"Iteration: circuit parameters have to be numerical values (got {v})"
+            for param_name, param_value in iter_params['circuit_params'].items():
+                assert isinstance(param_value, Number), \
+                    f"Iteration: circuit parameters have to be numerical values (got {param_value})"
+                assert param_name in self._processor.get_circuit_parameters(), \
+                    f"Iteration: circuit parameter {param_name} does not exist in processor"
         if 'input_state' in iter_params:
             assert isinstance(iter_params['input_state'], BasicState), \
                 "Iteration: input_state field must be a basic state"
