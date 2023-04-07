@@ -86,6 +86,9 @@ class BasicState(FockState):
             it = BasicState(it)
         return it
 
+    def __repr__(self):
+        return super().__str__()
+
     def set_slice(self, slice, state):
         return BasicState(super().set_slice(slice, state))
 
@@ -550,6 +553,23 @@ class BSDistribution(ProbabilityDistribution):
         for s in results:
             output.append(BasicState(s))
         return output
+
+    def __mul__(self, other):
+        return BSDistribution.tensor_product(self, other)
+
+    @staticmethod
+    def tensor_product(bsd1, bsd2, reuse_modes: bool = False):
+        if len(bsd1) == 0:
+            return bsd2
+        new_dist = BSDistribution()
+        for bs1, proba1 in bsd1.items():
+            for bs2, proba2 in bsd2.items():
+                if reuse_modes:
+                    bs = bs1 * bs2
+                else:
+                    bs = BasicState(list(np.add(bs1, bs2)))  # Does not work for states with annotations
+                new_dist[bs] = proba1 * proba2
+        return new_dist
 
 
 class BSCount(defaultdict):
