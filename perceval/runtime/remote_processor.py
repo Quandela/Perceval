@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
 from pkg_resources import get_distribution
@@ -39,6 +39,8 @@ from perceval.utils import BasicState
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
+
+__process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
@@ -146,7 +148,8 @@ class RemoteProcessor(AProcessor):
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
         j = {
             'platform_name': self.name,
-            'pcvl_version': get_distribution("perceval-quandela").version
+            'pcvl_version': get_distribution("perceval-quandela").version,
+            'process_id': str(__process_id__)
         }
         payload = {
             'command': command,
