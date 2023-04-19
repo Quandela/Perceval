@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, allstate_iterator
+from perceval.utils import BasicState, BSDistribution, allstate_iterator, StateVector
 
 
 class ABackend(ABC):
@@ -82,6 +82,13 @@ class AProbAmpliBackend(ABackend):
         for output_state in allstate_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
+
+    def evolve(self) -> StateVector:
+        res = StateVector()
+        for output_state in allstate_iterator(self._input_state):
+            res[output_state] = self.prob_amplitude(output_state)
+        res.normalize()
+        return res
 
     @staticmethod
     def preferred_command() -> str:
