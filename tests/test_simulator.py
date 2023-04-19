@@ -28,9 +28,10 @@
 # SOFTWARE.
 
 from perceval.backends._abstract_backends import AProbAmpliBackend
+from perceval.backends._naive import NaiveBackend
 from perceval.backends.simulator import Simulator
-from perceval.components import Circuit
-from perceval.utils import BasicState, BSDistribution
+from perceval.components import Circuit, BS
+from perceval.utils import BasicState, BSDistribution, StateVector
 
 
 class MockBackend(AProbAmpliBackend):
@@ -65,3 +66,15 @@ def test_simulator_probs():
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
     assert simulator.DEBUG_computation_count == 1
+
+
+def test_evolve_indistinguishable():
+    simulator = Simulator(NaiveBackend())
+    simulator.set_circuit(BS.H())
+    sv1 = BasicState([1, 1])
+    sv1_out = simulator.evolve(sv1)
+    assert str(sv1_out) == "sqrt(2)/2*|2,0>-sqrt(2)/2*|0,2>"
+
+    sv2 = BasicState("|{a:0},{a:0}{a:1}>")
+    sv2_out = simulator.evolve(sv2)
+    assert str(sv2_out) == "1/2*|{a:1}2{a:0},0>-1/2*|{a:1},2{a:0}>-1/2*|2{a:0},{a:1}>+1/2*|0,{a:1}2{a:0}>"
