@@ -48,78 +48,47 @@ import sympy as sp
 from exqalibur import FockState, FSArray
 
 
-class BasicState(FockState):
-    r"""Basic states
+def _fockstate_add(self, other):
+    return StateVector(self) + other
+
+def _fockstate_sub(self, other):
+    return StateVector(self) - other
+
+def _fockstate_partition(self, distribution_photons: List[int]):
+    r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
+
+    :param distribution_photons:
+    :return:
     """
+    def _partition(one_list: list, distribution: list, current: list, all_res: list):
+        if len(distribution) == 0:
+            all_res.append(copy(current))
+            return
+        for one_subset in itertools.combinations(one_list, distribution[0]):
+            current.append(one_subset)
+            _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
+            current.pop()
 
-    def __init__(self, *args, **kwargs):
-        super(BasicState, self).__init__(*args, **kwargs)
+    all_photons = list(range(self.n))
+    partitions_idx = []
+    _partition(all_photons, distribution_photons, [], partitions_idx)
+    partitions_states = set()
+    for partition in partitions_idx:
+        o_state = []
+        for a_subset in partition:
+            state = [0] * self.m
+            for photon_id in a_subset:
+                state[self.photon2mode(photon_id)] += 1
+            o_state.append(BasicState(state))
+        partitions_states.add(tuple(o_state))
+    return list(partitions_states)
 
-    def __len__(self):
-        return self.m
 
-    def __copy__(self):
-        return BasicState(self)
-
-    def __add__(self, o):
-        return StateVector(self) + o
-
-    def __sub__(self, o):
-        if not isinstance(o, StateVector):
-            o = StateVector(o)
-        return StateVector(self) - o
-
-    def separate_state(self):
-        return [BasicState(s) for s in super(BasicState, self).separate_state()]
-
-    def __mul__(self, s):
-        if isinstance(s, StateVector):
-            return StateVector(self) * s
-        return BasicState(super(BasicState, self).__mul__(s))
-
-    def __pow__(self, power):
-        return BasicState(power * list(self))
-
-    def __getitem__(self, item):
-        it = super().__getitem__(item)
-        if isinstance(it, FockState):
-            it = BasicState(it)
-        return it
-
-    def __repr__(self):
-        return super().__str__()
-
-    def set_slice(self, slice, state):
-        return BasicState(super().set_slice(slice, state))
-
-    def partition(self, distribution_photons: List[int]):
-        r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
-
-        :param distribution_photons:
-        :return:
-        """
-        def _partition(one_list: list, distribution: list, current: list, all_res: list):
-            if len(distribution) == 0:
-                all_res.append(copy(current))
-                return
-            for one_subset in itertools.combinations(one_list, distribution[0]):
-                current.append(one_subset)
-                _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
-                current.pop()
-
-        all_photons = list(range(self.n))
-        partitions_idx = []
-        _partition(all_photons, distribution_photons, [], partitions_idx)
-        partitions_states = set()
-        for partition in partitions_idx:
-            o_state = []
-            for a_subset in partition:
-                state = [0] * self.m
-                for photon_id in a_subset:
-                    state[self.photon2mode(photon_id)] += 1
-                o_state.append(BasicState(state))
-            partitions_states.add(tuple(o_state))
-        return list(partitions_states)
+# Define BasicState as exqalibur FockState + redefine some methods
+BasicState = FockState
+BasicState.__add__ = _fockstate_add
+BasicState.__sub__ = _fockstate_sub
+BasicState.partition = _fockstate_partition  # TODO use the cpp version of this call
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
@@ -286,6 +255,8 @@ class StateVector(defaultdict):
 
     def __sub__(self, other):
         r"""Sub two StateVectors"""
+        if isinstance(other, BasicState):
+            other = StateVector(other)
         return self + -1 * other
 
     def sample(self) -> BasicState:
@@ -558,16 +529,16 @@ class BSDistribution(ProbabilityDistribution):
         return BSDistribution.tensor_product(self, other)
 
     @staticmethod
-    def tensor_product(bsd1, bsd2, reuse_modes: bool = False):
+    def tensor_product(bsd1, bsd2, merge_modes: bool = False):
         if len(bsd1) == 0:
             return bsd2
         new_dist = BSDistribution()
         for bs1, proba1 in bsd1.items():
             for bs2, proba2 in bsd2.items():
-                if reuse_modes:
-                    bs = bs1 * bs2
+                if merge_modes:
+                    bs = bs1.merge(bs2)
                 else:
-                    bs = BasicState(list(np.add(bs1, bs2)))  # Does not work for states with annotations
+                    bs = bs1 * bs2
                 new_dist[bs] = proba1 * proba2
         return new_dist
 

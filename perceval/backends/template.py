@@ -169,7 +169,7 @@ class Backend(ABC):
             if input_state.has_annotations:
                 input_states = input_state.separate_state()
                 all_prob = 0
-                for p_output_state in BasicState(output_state).partition(
+                for p_output_state in output_state.partition(
                         [input_state.n for input_state in input_states]):
                     prob = 1
                     for i_state, o_state in zip(input_states, p_output_state):

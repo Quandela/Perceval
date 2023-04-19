@@ -56,7 +56,7 @@ def test_mul():
                 + 0.5 * 2 ** 0.5 * 1j * StateVector([1, 1, 6, 7]))
     _assert_sv_approx_eq(result, expected, "SV with BS multiplication is wrong")
 
-    result = bs * sv0
+    result = StateVector(bs) * sv0
     expected = (0.5 * 2 ** 0.5 * StateVector([6, 7, 0, 1])
                 + 0.5 * 2 ** 0.5 * 1j * StateVector([6, 7, 1, 1]))
     _assert_sv_approx_eq(result, expected, "BS with SV multiplication is wrong")
