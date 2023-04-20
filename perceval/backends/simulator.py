@@ -31,10 +31,10 @@ from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution
 from perceval.backends._abstract_backends import AProbAmpliBackend
 
+from abc import ABC, abstractmethod
 from copy import copy
 from multipledispatch import dispatch
 from typing import Set
-
 
 
 class Simulator:
@@ -132,3 +132,27 @@ class Simulator:
     @dispatch(SVDistribution)
     def probs(self, input_state: SVDistribution):
         raise NotImplementedError()
+
+
+class ASimulatorDecorator(ABC):
+    def __init__(self, simulator: Simulator):
+        self._simulator = simulator
+
+    @abstractmethod
+    def _prepare_input(self, input_state):
+        pass
+
+    @abstractmethod
+    def _prepare_circuit(self, circuit) -> ACircuit:
+        pass
+
+    @abstractmethod
+    def _postprocess_results(self, results):
+        pass
+
+    def set_circuit(self, circuit):
+        self._simulator.set_circuit(self._prepare_circuit(circuit))
+
+    def probs(self, input_state):
+        results = self._simulator.probs(self._prepare_input(input_state))
+        return self._postprocess_results(results)
