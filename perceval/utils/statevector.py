@@ -399,6 +399,19 @@ class ProbabilityDistribution(defaultdict, ABC):
             distribution_copy[copy(k)] = prob
         return distribution_copy
 
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_distrib = self
+        out = type(self)()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_distrib
+            if i != len(binary) - 1:
+                power_distrib *= power_distrib
+        return out
+
     @abstractmethod
     def sample(self, count: int, non_null: bool = True):
         pass
@@ -431,34 +444,21 @@ class SVDistribution(ProbabilityDistribution):
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
-    def __mul__(self, svd):
+    def __mul__(self, other):
         r"""Combines two `SVDistribution`
 
-        :param svd:
-        :return:
+        :param other: State / distribution to multiply with
+        :return: The result of the tensor product
         """
+        if isinstance(other, (BasicState, StateVector)):
+            other = SVDistribution(other)
         if len(self) == 0:
-            return svd
+            return other
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
-            for sv2, proba2 in svd.items():
-                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+            for sv2, proba2 in other.items():
                 new_svd[sv1*sv2] = proba1 * proba2
-
         return new_svd
-
-    def __pow__(self, power):
-        # Fast exponentiation
-        binary = [int(i) for i in bin(power)[2:]]
-        binary.reverse()
-        power_svd = self
-        out = SVDistribution()
-        for i in range(len(binary)):
-            if binary[i] == 1:
-                out *= power_svd
-            if i != len(binary) - 1:
-                power_svd *= power_svd
-        return out
 
     def normalize(self):
         sum_probs = sum(list(self.values()))

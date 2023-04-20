@@ -146,6 +146,26 @@ def test_init_state_vector():
     assert str(st) == "|1,0>"
 
 
+def test_bsdistribution():
+    bs1 = pcvl.BasicState([1,2])
+    bs2 = pcvl.BasicState([3,4])
+    bsd = pcvl.BSDistribution()
+    bsd[bs1] = 0.9
+    bsd[bs2] = 0.1
+    bsd_squared = bsd ** 2
+    assert isinstance(bsd_squared, pcvl.BSDistribution)
+    assert len(bsd_squared) == 4
+    assert bsd_squared[bs1*bs1] == pytest.approx(0.81)
+    assert bsd_squared[bs1*bs2] == pytest.approx(0.09)
+    assert bsd_squared[bs2*bs1] == pytest.approx(0.09)
+    assert bsd_squared[bs2*bs2] == pytest.approx(0.01)
+
+    bsd_mult = pcvl.BSDistribution(bs1) * pcvl.BSDistribution({bs1:0.4, bs2:0.6})
+    assert len(bsd_mult) == 2
+    assert bsd_mult[bs1*bs1] == pytest.approx(0.4)
+    assert bsd_mult[bs1*bs2] == pytest.approx(0.6)
+
+
 def test_svdistribution():
     st1 = pcvl.StateVector("|0,1>")
     st2 = pcvl.StateVector("|1,0>")
@@ -159,6 +179,13 @@ def test_svdistribution():
             | |0,1> |     1/2     |
             | |1,0> |     1/2     |
             +-------+-------------+""")
+    svd_squared = svd**2
+    assert isinstance(svd_squared, pcvl.SVDistribution)
+    assert len(svd_squared) == 4
+    assert svd_squared[pcvl.StateVector("|1,0,1,0>")] == pytest.approx(1/4)
+    assert svd_squared[pcvl.StateVector("|1,0,0,1>")] == pytest.approx(1/4)
+    assert svd_squared[pcvl.StateVector("|0,1,1,0>")] == pytest.approx(1/4)
+    assert svd_squared[pcvl.StateVector("|0,1,0,1>")] == pytest.approx(1/4)
 
 
 def test_sv_separation_0():
@@ -166,30 +193,30 @@ def test_sv_separation_0():
     assert st1.separate_state() == [pcvl.BasicState("|0,0>")]
 
 
-def test_sv_separation_1():
+def test_separate_state_without_annots():
     st1 = pcvl.BasicState("|0,1>")
     assert st1.separate_state() == [pcvl.BasicState("|0,1>")]
     st2 = pcvl.BasicState("|2,1>")
     assert st2.separate_state() == [pcvl.BasicState("|2,1>")]
 
 
-def test_sv_separation_2():
+def test_separate_state_with_annots():
     st1 = pcvl.BasicState("|0,{_:1}>")
-    assert st1.separate_state() == [pcvl.BasicState("|0,1>")]
+    assert st1.separate_state() == [st1]
     st2 = pcvl.BasicState("|{_:1},{P:V}>")
-    assert st2.separate_state() == [pcvl.BasicState("|1,1>")]
+    assert st2.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,1>")]
     st3 = pcvl.BasicState("|{_:1},{_:2}>")
-    assert st3.separate_state() == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st3.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st3.separate_state() == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:2}>")]
+    st4 = pcvl.BasicState("|{_:1},{_:0}>")
+    assert st4.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st4.separate_state() == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:0}>")]
+    st5 = pcvl.BasicState("|{_:0},{_:0},{_:3}>")
+    assert st5.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
+    assert st5.separate_state() == [pcvl.BasicState("|{_:0},{_:0},0>"), pcvl.BasicState("|0,0,{_:3}>")]
 
 
-def test_sv_separation_3():
-    st1 = pcvl.BasicState("|{_:1},{_:0}>")
-    assert st1.separate_state() == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
-    st2 = pcvl.BasicState("|{_:0},{_:0},{_:3}>")
-    assert st2.separate_state() == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
-
-
-def test_sv_split():
+def test_partition():
     st1 = pcvl.BasicState("|1,1,1>")
     partition = st1.partition([2, 1])
     expected = ["|1,1,0> |0,0,1>", "|1,0,1> |0,1,0>", "|0,1,1> |1,0,0>"]
@@ -200,7 +227,7 @@ def test_sv_split():
         assert r == e
 
 
-def test_sv_parse_annot():
+def test_parse_annot():
     invalid_str = ["|{_:0}", "|0{_:0}>", "|1{_:2>", "{P:(0.3,0)>",
                    "|{;}>", "|{P:(1,2,3)}>", "|{P:(1,a)}>", "|{a:0,a:1}>"]
     for s in invalid_str:
