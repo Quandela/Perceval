@@ -113,6 +113,16 @@ def test_state_identical_annots():
     st2 = pcvl.BasicState("|0,1,{P:V}1>")
     assert str(st1) == str(st2)
 
+    st3 = pcvl.BasicState("|{a:1}2{a:0},0>")
+    st4 = pcvl.BasicState("|2{a:0}{a:1},0>")
+    assert str(st3) == str(st4)
+
+    sv = pcvl.StateVector()
+    sv[st1] = 0.5
+    sv[st3] += 1
+    sv[st4] -= 1
+    assert str(sv) == str(st1)
+
 
 def test_state_invalid_superposition():
     st1 = pcvl.StateVector("|0,1>")
@@ -342,3 +352,26 @@ def test_statevector_polar_evolve1():
     for o, p in simulator.allstateprob_iterator(st2):
         sum_p += p
     assert pytest.approx(1) == sum_p
+
+
+def test_statevector_arithmetic():
+    sv1 = pcvl.StateVector()
+    sv1 += pcvl.StateVector([0,1])
+    sv1 += pcvl.StateVector([1,0])
+    assert str(sv1) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
+
+    sv2 = pcvl.StateVector()
+    sv2 += 0.5*pcvl.StateVector([0,1])
+    sv2 += -0.5*pcvl.StateVector([1,0])
+    assert str(sv2) == "sqrt(2)/2*|0,1>-sqrt(2)/2*|1,0>"
+
+    sv3 = sv1 + sv2
+    assert str(sv3) == "|0,1>"
+
+    sv4 = 0.2j*sv1 - 0.6j*sv2
+    assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"
+
+    sv4 = pcvl.StateVector()
+    sv4 += 0.2j*sv1
+    sv4 += -0.6j*sv2
+    assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"

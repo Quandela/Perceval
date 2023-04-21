@@ -34,7 +34,7 @@ from perceval.backends._abstract_backends import AProbAmpliBackend
 from abc import ABC, abstractmethod
 from copy import copy
 from multipledispatch import dispatch
-from typing import Set
+from typing import Set, Union
 
 
 class Simulator:
@@ -60,13 +60,13 @@ class Simulator:
             self._backend.set_input_state(input_state)
             self._pdists.append(self._backend.prob_distribution())
 
-    def _cache_output_pa_dist(self, input_set: Set[BasicState]):
-        self.DEBUG_computation_count = len(input_set)
-        self._padists = []
-        self._iset = list(input_set)
-        for input_state in input_set:
-            self._backend.set_input_state(input_state)
-            self._padists.append(self._backend.probampli_distribution())
+    # def _cache_evolve(self, input_set: Set[BasicState]):
+    #     self.DEBUG_computation_count = len(input_set)
+    #     self._padists = []
+    #     self._iset = list(input_set)
+    #     for input_state in input_set:
+    #         self._backend.set_input_state(input_state)
+    #         self._padists.append(self._backend.())
 
     def _merge_probability_dist(self, input_list):
         results = BSDistribution()
@@ -81,16 +81,16 @@ class Simulator:
         self._cache_output_dist(set(input_list))
         return self._merge_probability_dist(input_list)
 
-    # @dispatch(StateVector)
-    # def probs(self, input_state: StateVector) -> BSDistribution:
-    #     if len(input_state) == 1:
-    #         return self.probs(input_state[0])
-    #     input_set = set()
-    #     for fock_state in input_state:
-    #         input_set.union(fock_state.separate_state())
-    #     self._cache_output_pa_dist(input_set)
-    #     for fs, amp in input_state.items():
-    #         pass
+    @dispatch(StateVector)
+    def probs(self, input_state: StateVector) -> BSDistribution:
+        if len(input_state) == 1:
+            return self.probs(input_state[0])
+        input_set = set()
+        for fock_state in input_state:
+            input_set.union(fock_state.separate_state())
+        self._cache_output_pa_dist(input_set)
+        for fs, amp in input_state.items():
+            pass
 
     def _merge_sv(self, sv1, sv2) -> StateVector:
         res = StateVector()
@@ -99,35 +99,43 @@ class Simulator:
                 res[s1.merge(s2)] = pa1*pa2
         return res
 
-    @dispatch(BasicState)
-    def evolve(self, input_state: BasicState) -> StateVector:
-        input_list = input_state.separate_state()
-        input_set = list(set([copy(state) for state in input_list]))
+    def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
+        if not isinstance(input_state, StateVector):
+            input_state = StateVector(input_state)
+
+        input_list = [(pa, st.separate_state()) for st, pa in input_state.items()]
+        input_set = [copy(state) for t in input_list for state in t[1]]
         for state in input_set:
             state.clear_annotations()
+        input_set = list(set(input_set))  # Remove duplicates
         sv_cache = []
-        reslist = []
         for inps in input_set:
             self._backend.set_input_state(inps)
             sv_cache.append(self._backend.evolve())
-        for in_s in input_list:
-            annotation = in_s.get_photon_annotation(0)
-            in_s.clear_annotations()
-            sv = copy(sv_cache[input_set.index(in_s)])
-            # Re-inject annotation
-            if len(annotation):
-                for s in sv:
-                    s.inject_annotation(annotation)
-            reslist.append(sv)
-        if len(reslist) == 1:
-            return reslist[0]
+        result_sv = StateVector()
+        final_list = []
+        for in_s_list in input_list:
+            reslist = []
+            for in_s in in_s_list[1]:
+                annotation = in_s.get_photon_annotation(0)
+                in_s.clear_annotations()
+                sv = copy(sv_cache[input_set.index(in_s)])
+                # Re-inject annotation
+                if len(annotation):
+                    for s in sv:
+                        s.inject_annotation(annotation)
+                reslist.append(sv)
 
-        # Recombine results
-        res = reslist.pop()
-        for sv in reslist:
-            res = self._merge_sv(res, sv)
-        res.normalize()
-        return res
+            # Recombine results for one basic state input
+            res = reslist.pop(0)
+            for sv in reslist:
+                res = self._merge_sv(res, sv)
+
+            result_sv += res * in_s_list[0]
+            final_list.append(res)
+
+        result_sv.normalize()
+        return result_sv
 
     @dispatch(SVDistribution)
     def probs(self, input_state: SVDistribution):
