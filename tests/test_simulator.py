@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import pytest
 
 from perceval.backends._abstract_backends import AProbAmpliBackend
 from perceval.backends._naive import NaiveBackend
@@ -66,6 +67,28 @@ def test_simulator_probs():
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
     assert simulator.DEBUG_computation_count == 1
+
+
+def test_simulator_probs_sv():
+    st1 = StateVector("|0,1>")
+    st2 = StateVector("|1,0>")
+    sv = st1 + st2
+    simulator = Simulator(NaiveBackend())
+    c = BS.H()
+    simulator.set_circuit(c)
+    result = simulator.probs(sv)
+    assert len(result) == 1
+    assert result[BasicState("|1,0>")] == pytest.approx(1)
+
+    input_state = StateVector()
+    input_state[BasicState("|{_:0},{_:1}>")] += 1
+    input_state[BasicState([1, 1])] += 1
+    simulator.set_circuit(c)
+    result = simulator.probs(input_state)
+    assert len(result) == 3
+    assert result[BasicState("|2,0>")] == pytest.approx(3/8)
+    assert result[BasicState("|0,2>")] == pytest.approx(3/8)
+    assert result[BasicState("|1,1>")] == pytest.approx(1/4)
 
 
 def test_evolve_indistinguishable():

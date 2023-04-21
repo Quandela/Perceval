@@ -85,12 +85,12 @@ class Simulator:
     def probs(self, input_state: StateVector) -> BSDistribution:
         if len(input_state) == 1:
             return self.probs(input_state[0])
-        input_set = set()
-        for fock_state in input_state:
-            input_set.union(fock_state.separate_state())
-        self._cache_output_pa_dist(input_set)
-        for fs, amp in input_state.items():
-            pass
+        out_sv = self.evolve(input_state)
+        res = BSDistribution()
+        for state, pa in out_sv.items():
+            state.clear_annotations()
+            res[state] += abs(pa) ** 2
+        return res
 
     def _merge_sv(self, sv1, sv2) -> StateVector:
         res = StateVector()
