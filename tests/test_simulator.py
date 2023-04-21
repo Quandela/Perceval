@@ -74,7 +74,15 @@ def test_evolve_indistinguishable():
     sv1 = BasicState([1, 1])
     sv1_out = simulator.evolve(sv1)
     assert str(sv1_out) == "sqrt(2)/2*|2,0>-sqrt(2)/2*|0,2>"
+    sv1_out_out = simulator.evolve(sv1_out)
+    assert str(sv1_out_out) == "|1,1>"
 
+
+def test_evolve_distinguishable():
+    simulator = Simulator(NaiveBackend())
+    simulator.set_circuit(BS.H())
     sv2 = BasicState("|{a:0},{a:0}{a:1}>")
     sv2_out = simulator.evolve(sv2)
-    assert str(sv2_out) == "1/2*|{a:1}2{a:0},0>-1/2*|{a:1},2{a:0}>-1/2*|2{a:0},{a:1}>+1/2*|0,{a:1}2{a:0}>"
+    assert str(sv2_out) == "1/2*|2{a:0}{a:1},0>-1/2*|2{a:0},{a:1}>-1/2*|{a:1},2{a:0}>+1/2*|0,2{a:0}{a:1}>"
+    sv2_out_out = simulator.evolve(sv2_out)
+    assert str(sv2_out_out) == "|{a:0},{a:0}{a:1}>"
