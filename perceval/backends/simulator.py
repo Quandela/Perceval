@@ -61,6 +61,16 @@ def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
     return res
 
 
+def _annot_state_mapping(bs_with_annots: BasicState):
+    bs_list = bs_with_annots.separate_state()
+    mapping = {}
+    for bs in bs_list:
+        annot = bs.get_photon_annotation(0)
+        bs.clear_annotations()
+        mapping[annot] = bs
+    return mapping
+
+
 class Simulator:
 
     def __init__(self, backend: AProbAmpliBackend):
@@ -71,10 +81,20 @@ class Simulator:
         self._invalidate_cache()
         self._backend.set_circuit(circuit)
 
-    # def prob_amplitude(self, input_state: BasicState, output_state: BasicState):
-    #     if input_state.n == 0:
-    #         return complex(1) if output_state.n == 0 else complex(0)
-    #     input_list = input_state.separate_state()
+    def prob_amplitude(self, input_state: BasicState, output_state: BasicState) -> complex:
+        if input_state.n == 0:
+            return complex(1) if output_state.n == 0 else complex(0)
+        input_map = _annot_state_mapping(input_state)
+        output_map = _annot_state_mapping(output_state)
+        if len(input_map) != len(output_map):
+            return complex(0)
+        probampli = 1
+        for annot, in_s in input_map.items():
+            if annot not in output_map:
+                return complex(0)
+            self._backend.set_input_state(in_s)
+            probampli *= self._backend.prob_amplitude(output_map[annot])
+        return probampli
 
     def _invalidate_cache(self):
         self._cache = {}

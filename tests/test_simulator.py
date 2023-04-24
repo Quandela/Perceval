@@ -76,6 +76,20 @@ def test_simulator_probs():
     assert simulator.DEBUG_evolve_count == 4
 
 
+def test_simulator_probampli():
+    input_state = BasicState("|{_:0},{_:1}>")
+    simulator = Simulator(NaiveBackend())
+    simulator.set_circuit(BS())
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|0,{_:0}{_:1}>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0},{_:1}>")) == pytest.approx(0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:1},{_:0}>")) == pytest.approx(-0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
+    assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
+    # prob_amplitude call is strict on annotations name
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
+
+
 def test_simulator_probs_sv():
     st1 = StateVector("|0,1>")
     st2 = StateVector("|1,0>")
