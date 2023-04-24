@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution
+from perceval.utils import Annotation, BasicState, BSDistribution, StateVector, SVDistribution
 from perceval.backends._abstract_backends import AProbAmpliBackend
 
 from abc import ABC, abstractmethod
@@ -37,14 +37,38 @@ from multipledispatch import dispatch
 from typing import Set, Union
 
 
+def _to_bsd(sv: StateVector) -> BSDistribution:
+    res = BSDistribution()
+    for state, pa in sv.items():
+        state.clear_annotations()
+        res[state] += abs(pa) ** 2
+    return res
+
+
+def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
+    res_sv = copy(sv)
+    if len(annotation):
+        for s in res_sv:
+            s.inject_annotation(annotation)
+    return res_sv
+
+
+def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
+    res = StateVector()
+    for s1, pa1 in sv1.items():
+        for s2, pa2 in sv2.items():
+            res[s1.merge(s2)] = pa1*pa2
+    return res
+
+
 class Simulator:
 
     def __init__(self, backend: AProbAmpliBackend):
         self._backend = backend
-        self._pdists = []
-        self.DEBUG_computation_count = 0
+        self._invalidate_cache()
 
     def set_circuit(self, circuit: ACircuit):
+        self._invalidate_cache()
         self._backend.set_circuit(circuit)
 
     # def prob_amplitude(self, input_state: BasicState, output_state: BasicState):
@@ -52,87 +76,62 @@ class Simulator:
     #         return complex(1) if output_state.n == 0 else complex(0)
     #     input_list = input_state.separate_state()
 
-    def _cache_output_dist(self, input_set: Set[BasicState]):
-        self.DEBUG_computation_count = len(input_set)
-        self._pdists = []
-        self._iset = list(input_set)
-        for input_state in input_set:
-            self._backend.set_input_state(input_state)
-            self._pdists.append(self._backend.prob_distribution())
+    def _invalidate_cache(self):
+        self._cache = {}
+        self.DEBUG_evolve_count = 0
+        self.DEBUG_merge_count = 0
 
-    # def _cache_evolve(self, input_set: Set[BasicState]):
-    #     self.DEBUG_computation_count = len(input_set)
-    #     self._padists = []
-    #     self._iset = list(input_set)
-    #     for input_state in input_set:
-    #         self._backend.set_input_state(input_state)
-    #         self._padists.append(self._backend.())
+    def _evolve_cache(self, input_list: Set[BasicState]):
+        for state in input_list:
+            if state not in self._cache:
+                self._backend.set_input_state(state)
+                self._cache[state] = self._backend.evolve()
+                self.DEBUG_evolve_count += 1
 
     def _merge_probability_dist(self, input_list):
         results = BSDistribution()
         for input_state in input_list:
-            idx = self._iset.index(input_state)
-            results = BSDistribution.tensor_product(results, self._pdists[idx], merge_modes=True)
+            results = BSDistribution.tensor_product(results, _to_bsd(self._cache[input_state]), merge_modes=True)
+            self.DEBUG_merge_count += 1
         return results
 
     @dispatch(BasicState)
     def probs(self, input_state: BasicState) -> BSDistribution:
         input_list = input_state.separate_state(keep_annotations=False)
-        self._cache_output_dist(set(input_list))
+        self._evolve_cache(set(input_list))
         return self._merge_probability_dist(input_list)
 
     @dispatch(StateVector)
     def probs(self, input_state: StateVector) -> BSDistribution:
         if len(input_state) == 1:
             return self.probs(input_state[0])
-        out_sv = self.evolve(input_state)
-        res = BSDistribution()
-        for state, pa in out_sv.items():
-            state.clear_annotations()
-            res[state] += abs(pa) ** 2
-        return res
-
-    def _merge_sv(self, sv1, sv2) -> StateVector:
-        res = StateVector()
-        for s1, pa1 in sv1.items():
-            for s2, pa2 in sv2.items():
-                res[s1.merge(s2)] = pa1*pa2
-        return res
+        return _to_bsd(self.evolve(input_state))
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         if not isinstance(input_state, StateVector):
             input_state = StateVector(input_state)
 
-        input_list = [(pa, st.separate_state()) for st, pa in input_state.items()]
-        input_set = [copy(state) for t in input_list for state in t[1]]
-        for state in input_set:
+        # Decay input to a list of basic states without annotations and evolve each of them
+        decomposed_input = [(pa, st.separate_state()) for st, pa in input_state.items()]
+        input_list = [copy(state) for t in decomposed_input for state in t[1]]
+        for state in input_list:
             state.clear_annotations()
-        input_set = list(set(input_set))  # Remove duplicates
-        sv_cache = []
-        for inps in input_set:
-            self._backend.set_input_state(inps)
-            sv_cache.append(self._backend.evolve())
+        self._evolve_cache(set(input_list))
+
         result_sv = StateVector()
-        final_list = []
-        for in_s_list in input_list:
+        for probampli, instate_list in decomposed_input:
             reslist = []
-            for in_s in in_s_list[1]:
+            for in_s in instate_list:
                 annotation = in_s.get_photon_annotation(0)
                 in_s.clear_annotations()
-                sv = copy(sv_cache[input_set.index(in_s)])
-                # Re-inject annotation
-                if len(annotation):
-                    for s in sv:
-                        s.inject_annotation(annotation)
-                reslist.append(sv)
+                reslist.append(_inject_annotation(self._cache[in_s], annotation))
 
             # Recombine results for one basic state input
-            res = reslist.pop(0)
+            evolved_in_s = reslist.pop(0)
             for sv in reslist:
-                res = self._merge_sv(res, sv)
-
-            result_sv += res * in_s_list[0]
-            final_list.append(res)
+                evolved_in_s = _merge_sv(evolved_in_s, sv)
+                self.DEBUG_merge_count += 1
+            result_sv += evolved_in_s * probampli
 
         result_sv.normalize()
         return result_sv

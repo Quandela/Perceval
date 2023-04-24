@@ -46,6 +46,13 @@ class MockBackend(AProbAmpliBackend):
         output_state[(n-1) % m] = n
         return BSDistribution(BasicState(output_state))
 
+    def evolve(self) -> StateVector:
+        n = self._input_state.n
+        m = self._input_state.m
+        output_state = [0] * m
+        output_state[(n-1) % m] = n
+        return StateVector(output_state)
+
 
 def test_simulator_probs():
     input_state = BasicState([1,1,1])
@@ -54,19 +61,19 @@ def test_simulator_probs():
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([0, 0, 3])
-    assert simulator.DEBUG_computation_count == 1
+    assert simulator.DEBUG_evolve_count == 1
 
     input_state = BasicState('|{_:1},{_:2},{_:3}>')
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
-    assert simulator.DEBUG_computation_count == 3
+    assert simulator.DEBUG_evolve_count == 4
 
     input_state = BasicState('|{_:1}{_:2}{_:3},0,0>')
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 1
     assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
-    assert simulator.DEBUG_computation_count == 1
+    assert simulator.DEBUG_evolve_count == 4
 
 
 def test_simulator_probs_sv():
