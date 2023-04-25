@@ -62,7 +62,7 @@ def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
 
 
 def _annot_state_mapping(bs_with_annots: BasicState):
-    bs_list = bs_with_annots.separate_state()
+    bs_list = bs_with_annots.separate_state(keep_annotations=True)
     mapping = {}
     for bs in bs_list:
         annot = bs.get_photon_annotation(0)
@@ -132,7 +132,7 @@ class Simulator:
             input_state = StateVector(input_state)
 
         # Decay input to a list of basic states without annotations and evolve each of them
-        decomposed_input = [(pa, st.separate_state()) for st, pa in input_state.items()]
+        decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state.items()]
         input_list = [copy(state) for t in decomposed_input for state in t[1]]
         for state in input_list:
             state.clear_annotations()

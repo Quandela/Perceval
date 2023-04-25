@@ -212,18 +212,19 @@ def test_separate_state_without_annots():
 
 def test_separate_state_with_annots():
     st1 = pcvl.BasicState("|0,{_:1}>")
-    assert st1.separate_state() == [st1]
+    assert st1.separate_state(keep_annotations=True) == [st1]
     st2 = pcvl.BasicState("|{_:1},{P:V}>")
     assert st2.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,1>")]
     st3 = pcvl.BasicState("|{_:1},{_:2}>")
-    assert st3.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
-    assert st3.separate_state() == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:2}>")]
+    assert st3.separate_state(False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st3.separate_state(keep_annotations=True) == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:2}>")]
     st4 = pcvl.BasicState("|{_:1},{_:0}>")
     assert st4.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
-    assert st4.separate_state() == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:0}>")]
+    assert st4.separate_state(True) == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:0}>")]
     st5 = pcvl.BasicState("|{_:0},{_:0},{_:3}>")
-    assert st5.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
-    assert st5.separate_state() == [pcvl.BasicState("|{_:0},{_:0},0>"), pcvl.BasicState("|0,0,{_:3}>")]
+    # By default, keep_annotations is false
+    assert st5.separate_state() == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
+    assert st5.separate_state(keep_annotations=True) == [pcvl.BasicState("|{_:0},{_:0},0>"), pcvl.BasicState("|0,0,{_:3}>")]
 
 
 def test_partition():
