@@ -90,6 +90,23 @@ def test_simulator_probampli():
     assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
 
 
+def test_simulator_probability():
+    input_state = BasicState("|{_:0},{_:1}>")
+    simulator = Simulator(NaiveBackend())
+    simulator.set_circuit(BS())
+    # Output annotations are ignored for a probability call
+    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5)
+
+    input_state = BasicState("|1,1>")
+    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5)
+    assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.5)
+    assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.5)
+    assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.0)
+
+
 def test_simulator_probs_sv():
     st1 = StateVector("|0,1>")
     st2 = StateVector("|1,0>")
@@ -110,6 +127,17 @@ def test_simulator_probs_sv():
     assert result[BasicState("|2,0>")] == pytest.approx(3/8)
     assert result[BasicState("|0,2>")] == pytest.approx(3/8)
     assert result[BasicState("|1,1>")] == pytest.approx(1/4)
+
+    simulator.set_circuit(BS())
+    s_boson = StateVector("|{Q:0},{Q:1}>") + StateVector("|{Q:1},{Q:0}>")
+    s_fermion = StateVector("|{Q:0},{Q:1}>") - StateVector("|{Q:1},{Q:0}>")
+    result_boson = simulator.probs(s_boson)
+    assert len(result_boson) == 2
+    assert result_boson[BasicState("|2,0>")] == pytest.approx(1/2)
+    assert result_boson[BasicState("|0,2>")] == pytest.approx(1/2)
+    result_fermion = simulator.probs(s_fermion)
+    assert len(result_fermion) == 1
+    assert result_fermion[BasicState("|1,1>")] == pytest.approx(1)
 
 
 def test_evolve_indistinguishable():

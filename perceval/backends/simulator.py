@@ -78,10 +78,27 @@ class Simulator:
         self._invalidate_cache()
 
     def set_circuit(self, circuit: ACircuit):
+        """Set a circuit for simulation.
+        :param circuit: a unitary circuit without polarized components
+        """
         self._invalidate_cache()
         self._backend.set_circuit(circuit)
 
+    @dispatch(BasicState, BasicState)
     def prob_amplitude(self, input_state: BasicState, output_state: BasicState) -> complex:
+        """Compute the probability amplitude of an output fock state versus an input fock state.
+        :param input_state: A fock state with or without photon annotations
+        :param output_state: A fock state with or without photon annotations. If the input state holds annotations,
+            the output state must hold the same ones, otherwise the computed probability amplitude is 0.
+
+            >>> simulator.set_circuit(Circuit(1))  # One mode identity
+            >>> simulator.prob_amplitude(BasicState('|{_:0}>'), BasicState('|{_:1}>'))
+            0
+            >>> simulator.prob_amplitude(BasicState('|{_:0}>'), BasicState('|{_:0}>'))
+            1
+
+        :return: The complex probability amplitude
+        """
         if input_state.n == 0:
             return complex(1) if output_state.n == 0 else complex(0)
         input_map = _annot_state_mapping(input_state)
@@ -95,6 +112,44 @@ class Simulator:
             self._backend.set_input_state(in_s)
             probampli *= self._backend.prob_amplitude(output_map[annot])
         return probampli
+
+    @dispatch(StateVector, BasicState)
+    def prob_amplitude(self, input_state: StateVector, output_state: BasicState) -> complex:
+        result = complex(0)
+        for state, pa in input_state.items():
+            result += self.prob_amplitude(state, output_state) * pa
+        return result
+
+    @dispatch(BasicState, BasicState)
+    def probability(self, input_state: BasicState, output_state: BasicState) -> float:
+        """Compute the probability of an output fock state versus an input fock state, simulating a measure.
+        :param input_state: A fock state with or without photon annotations
+        :param output_state: A fock state, annotations are ignored
+        :return: The probability (float between 0 and 1)
+        """
+        if input_state.n == 0:
+            return 1 if output_state.n == 0 else 0
+        input_list = input_state.separate_state(keep_annotations=False)
+        result = 0
+        for p_output_state in output_state.partition(
+                [input_state.n for input_state in input_list]):
+            prob = 1
+            for i_state, o_state in zip(input_list, p_output_state):
+                self._backend.set_input_state(i_state)
+                prob *= self._backend.probability(o_state)
+            result += prob
+        return result
+
+    @dispatch(StateVector, BasicState)
+    def probability(self, input_state: StateVector, output_state: BasicState) -> float:
+        output_state.clear_annotations()
+        sv_out = self.evolve(input_state)  # This is not as optimized as it could be
+        result = 0
+        for state, pa in sv_out.items():
+            state.clear_annotations()
+            if state == output_state:
+                result += abs(pa) ** 2
+        return result
 
     def _invalidate_cache(self):
         self._cache = {}
@@ -127,6 +182,10 @@ class Simulator:
             return self.probs(input_state[0])
         return _to_bsd(self.evolve(input_state))
 
+    @dispatch(SVDistribution)
+    def probs(self, input_state: SVDistribution):
+        raise NotImplementedError()
+
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         if not isinstance(input_state, StateVector):
             input_state = StateVector(input_state)
@@ -156,10 +215,6 @@ class Simulator:
         result_sv.normalize()
         return result_sv
 
-    @dispatch(SVDistribution)
-    def probs(self, input_state: SVDistribution):
-        raise NotImplementedError()
-
 
 class ASimulatorDecorator(ABC):
     def __init__(self, simulator: Simulator):
@@ -182,4 +237,8 @@ class ASimulatorDecorator(ABC):
 
     def probs(self, input_state):
         results = self._simulator.probs(self._prepare_input(input_state))
+        return self._postprocess_results(results)
+
+    def evolve(self, input_state):
+        results = self._simulator.evolve(self._prepare_input(input_state))
         return self._postprocess_results(results)
