@@ -29,6 +29,7 @@
 
 from perceval.backends._clifford2017 import Clifford2017Backend
 from perceval.backends._naive import NaiveBackend, AProbAmpliBackend
+from perceval.backends._slos import SLOSBackend
 from perceval.components import BS, PS, Circuit
 from perceval.utils import BSCount, BasicState
 import pytest
@@ -54,15 +55,14 @@ def check_output_distribution(backend: AProbAmpliBackend, input_state: BasicStat
         if prob_expected is None:
             assert pytest.approx(0) == prob, "cannot find: %s (prob=%f)" % (str(output_state), prob)
         else:
-            assert pytest.approx(prob_expected) == prob, "incorrect value for %s: %f/%f" % (str(output_state),
-                                                                                            prob,
-                                                                                            prob_expected)
+            assert pytest.approx(prob_expected) == prob,\
+                "incorrect value for %s: %f/%f" % (str(output_state), prob, prob_expected)
         prob_list.append(prob)
     assert pytest.approx(sum(prob_list)) == 1
 
 
 def test_probampli_backends():
-    for backend_type in [NaiveBackend]:
+    for backend_type in [NaiveBackend, SLOSBackend]:
         backend = backend_type()
         circuit = Circuit(3) // BS.H() // (1, PS(np.pi/4)) // (1, BS.H())
         backend.set_circuit(circuit)
@@ -76,4 +76,17 @@ def test_probampli_backends():
                 BasicState("|2,0,0>"): 0,
                 BasicState("|0,2,0>"): 0.25,
                 BasicState("|0,0,2>"): 0.25,
+            })
+
+        backend.set_circuit(BS())
+        check_output_distribution(
+            backend,
+            BasicState("|2,3>"),
+            {
+                BasicState("|5,0>"): 0.3125,
+                BasicState("|4,1>"): 0.0625,
+                BasicState("|3,2>"): 0.125,
+                BasicState("|2,3>"): 0.125,
+                BasicState("|1,4>"): 0.0625,
+                BasicState("|0,5>"): 0.3125,
             })
