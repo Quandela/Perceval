@@ -32,9 +32,10 @@ import logging
 import random
 from typing import List, Tuple, Union, Iterator, Optional
 
-from perceval.utils import Matrix, StateVector, BasicState
-from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
-from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
+from perceval.utils import Matrix, matrix_double
+from perceval.utils.statevector import StateVector, BasicState
+from perceval.utils.polarization import convert_polarized_state, build_spatial_output_states
+from ..components.linear_circuit import ACircuit
 
 import exqalibur as xq
 import numpy as np
@@ -185,7 +186,7 @@ class Backend(ABC):
         _U_ref = self._U
         _realm_ref = self._realm
         if not self._requires_polarization:
-            _U_new = _matrix_double_for_polarization(self._m, self._U)
+            _U_new = matrix_double(self._U)
             self._realm = 2 * self._realm
         else:
             _U_new = self._U
@@ -235,7 +236,7 @@ class Backend(ABC):
         _U_ref = self._U
         _realm_ref = self._realm
         if not self._requires_polarization:
-            self._U = _matrix_double_for_polarization(self._m, self._U)
+            self._U = matrix_double(self._U)
             self._realm = 2 * self._realm
         self.compile(spatial_mode_input_state)
         self._U = self._U @ prep_matrix_input

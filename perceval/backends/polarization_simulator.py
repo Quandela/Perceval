@@ -27,15 +27,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, AnnotatedBasicState, allstate_iterator
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+from .simulator import ASimulatorDecorator
+
+from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector
+from perceval.components import Unitary
+
+
+class PolarizationSimulator(ASimulatorDecorator):
+    def __init__(self, simulator):
+        super().__init__(simulator)
+        self._upol = None
+
+    def _prepare_input(self, input_state):
+        spatial_input, preprocess_matrix = convert_polarized_state(input_state)
+        circuit = Unitary(self._upol @ preprocess_matrix)
+        self._simulator.set_circuit(circuit)
+        return spatial_input
+
+    def set_circuit(self, circuit):
+        self._prepare_circuit(circuit)
+
+    def _prepare_circuit(self, circuit):
+        self._upol = circuit.compute_unitary(use_polarization=True)
+
+    def _postprocess_results(self, results):
+        output = type(results)()
+        keep_annots = isinstance(results, StateVector)
+        for out_state, output_prob in results.items():
+            s_odd = BasicState()
+            s_even = BasicState()
+            for i in range(0, out_state.m, 2):
+                s_even *= out_state[slice(i, i+1)]
+                s_odd *= out_state[slice(i+1, i+2)]
+            if keep_annots:
+                s_even.inject_annotation(Annotation("P:H"))
+                s_odd.inject_annotation(Annotation("P:V"))
+            reduced_out_state = s_odd.merge(s_even)
+            output[reduced_out_state] += output_prob
+        return output
