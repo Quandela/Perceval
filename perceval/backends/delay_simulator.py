@@ -29,7 +29,7 @@
 
 from .simulator import ASimulatorDecorator
 from perceval.components import ACircuit, Circuit, PERM, TD
-from perceval.utils import BasicState, BSDistribution
+from perceval.utils import BasicState
 
 from enum import Enum
 from typing import List
@@ -94,7 +94,7 @@ class DelaySimulator(ASimulatorDecorator):
         return expanded_circuit
 
     def _postprocess_results(self, results):
-        output = BSDistribution()
+        output = type(results)()
         mode_range = [(self._depth - 1) * self._original_m, self._depth * self._original_m]
         for out_state, output_prob in results.items():
             reduced_out_state = out_state[mode_range[0]:mode_range[1]]
