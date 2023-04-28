@@ -32,7 +32,7 @@ from perceval.utils import allstate_iterator, Matrix, BasicState, BSDistribution
 
 import exqalibur as xq
 import numpy as np
-from typing import List
+from typing import Dict, List
 
 
 class _Path:
@@ -114,17 +114,22 @@ class SLOSBackend(AProbAmpliBackend):
     def _reset(self):
         self._fsms = [[]]
         self._fsas = {}
-        self._mk_l = [1]
-        self._path_root = None
-        self._state_mapping = {}
+        self._mk_l: List[int] = [1]
+        self._path_roots: List[_Path] = []
+        self._state_mapping: Dict[BasicState, _Path] = {}
         self._mask = None
+
+    def _compute_path(self, umat):
+        for path in self._path_roots:
+            path.compute(umat)
 
     def set_circuit(self, circuit):
         previous_circuit = self._circuit
         super().set_circuit(circuit)
         self._umat = circuit.compute_unitary()
-        if self._path_root is not None and previous_circuit.m == circuit.m:
-            self._path_root.compute(self._umat)
+        if self._path_roots and previous_circuit.m == circuit.m:
+            # Use the previously deployed paths to store the new circuit's coefs
+            self._compute_path(self._umat)
         else:
             self._reset()
 
@@ -155,15 +160,16 @@ class SLOSBackend(AProbAmpliBackend):
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:
+            found_new = (input_state not in self._state_mapping)
             if found_new:
                 break
-            found_new = (input_state not in self._state_mapping)
         if not found_new:
             return False
 
         self._deploy(input_list)  # build the necessary fsa/fsms
-        self._path_root = _Path(0, self._circuit.m, input_list, None, self)
-        self._path_root.compute(self._umat)
+        new_path = _Path(0, self._circuit.m, input_list, None, self)
+        new_path.compute(self._umat)
+        self._path_roots.append(new_path)
         return True
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
