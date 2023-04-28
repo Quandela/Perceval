@@ -90,3 +90,31 @@ def test_probampli_backends():
                 BasicState("|1,4>"): 0.0625,
                 BasicState("|0,5>"): 0.3125,
             })
+
+
+def test_slos_refresh_coefs():
+    """
+    The previous SLOS implementation was failing to refresh its results when the circuit
+    was changed to another circuit of the same size, AFTER multiple fock states were used
+    as input.
+    The following code reproduces such a behavior
+    """
+    slos = SLOSBackend()
+    slos.set_circuit(BS())  # Use a beam splitter as circuit
+    slos.set_input_state(BasicState("|1,1>"))
+    slos.set_input_state(BasicState("|8,5>"))
+    check_output_distribution(
+        slos,
+        BasicState("|1,1>"),  # Input
+        {  # Expected results for a beam splitter
+            BasicState("|0,2>"): 0.5,
+            BasicState("|2,0>"): 0.5
+        })
+
+    slos.set_circuit(Circuit(2))  # Set the circuit as identity
+    check_output_distribution(
+        slos,
+        BasicState("|1,1>"),
+        {  # Expected results for an identity
+            BasicState("|1,1>"): 1
+        })
