@@ -34,6 +34,7 @@ from .mlstr import mlstr
 from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
     tensorproduct, AnnotatedBasicState, allstate_iterator
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
+from .postselect import PostSelect
 from .random import random_seed
 from .globals import global_params
 from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
