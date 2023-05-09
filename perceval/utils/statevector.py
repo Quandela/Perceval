@@ -35,6 +35,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 import itertools
+from multipledispatch import dispatch
 from typing import Dict, List, Union, Tuple, Optional
 from deprecated import deprecated
 
@@ -479,6 +480,32 @@ class SVDistribution(ProbabilityDistribution):
         rng = np.random.default_rng()
         results = rng.choice(states, count, p=np.array(probs) / sum(probs))
         return list(results)
+
+
+@dispatch(StateVector)
+def anonymize_annotations(sv: StateVector):
+    m = sv.m
+    annot_map = {}
+    result = StateVector()
+    for bs, pa in sv.items():
+        s = [""] * m
+        for i in range(bs.n):
+            mode = bs.photon2mode(i)
+            annot = bs.get_photon_annotation(i)
+            if annot_map.get(str(annot)) is None:
+                annot_map[str(annot)] = "{a:%d}" % len(annot_map)
+            s[mode] += annot_map[str(annot)]
+        result += StateVector("|" + ",".join([v and v or "0" for v in s]) + ">") * pa
+    result.normalize()
+    return result
+
+@dispatch(SVDistribution)
+def anonymize_annotations(svd: SVDistribution):
+    sv_dist = defaultdict(lambda: 0)
+    for k, p in svd.items():
+        state = anonymize_annotations(k)
+        sv_dist[state] += p
+    return SVDistribution({k: v for k, v in sorted(sv_dist.items(), key=lambda x: -x[1])})
 
 
 class BSDistribution(ProbabilityDistribution):

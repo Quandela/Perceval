@@ -33,7 +33,8 @@ from .port import LogicalState
 from .source import Source
 from .linear_circuit import ACircuit
 from .computation import count_TD, count_independant_TD, expand_TD
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params,\
+    anonymize_annotations
 from perceval.backends import BACKEND_LIST
 from perceval.backends.processor import StepperBackend
 
@@ -121,7 +122,6 @@ class Processor(AProcessor):
         """
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
-        self._inputs_map = SVDistribution()
         input_idx = 0
         expected_photons = 0
         for k in range(self.circuit_size):
@@ -137,16 +137,9 @@ class Processor(AProcessor):
                     input_list[k] = input_state[input_idx]
                     expected_photons += 1
                 input_idx += 1
-            self._inputs_map *= distribution  # combine distributions
+            inputs_map *= distribution  # combine distributions
 
-        # Needed to do this at the end
-        used_input_map = SVDistribution()
-        for state, prob in self._inputs_map.items():
-            if prob:
-                used_input_map[_find_equivalent(state[0])] += prob
-
-        self._inputs_map = used_input_map
-
+        self._inputs_map = anonymize_annotations(inputs_map)
         self._input_state = BasicState(input_list)
         self._min_detected_photons = expected_photons
         if 'min_detected_photons' in self._parameters:
@@ -331,28 +324,3 @@ def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int
         p.add(r, c)
     p.min_detected_photons_filter(min_detected_photons)
     return p
-
-
-def _find_equivalent(state):
-    if not state.has_annotations:
-        return state
-    annot_numbers = dict()
-    i = 0
-    new_state = "|"
-
-    for mode in range(state.m):
-        if not state[mode]:
-            new_state += "0,"
-            continue
-        annotations = state.get_mode_annotations(mode)
-        for n in range(state[mode]):
-            annot = annotations[n]["_"]
-            if annot is not None:
-                nb = int(annot.real)
-                if nb not in annot_numbers:
-                    annot_numbers[nb] = i
-                    i += 1
-                new_state += "{_:" + f"{annot_numbers[nb]}" + "}"
-        new_state += ","
-    new_state = new_state[:-1] + ">"
-    return StateVector(new_state)

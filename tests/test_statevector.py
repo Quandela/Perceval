@@ -278,6 +278,27 @@ def test_svd_sample():
     assert isinstance(sample[1], pcvl.StateVector)
 
 
+def test_svd_anonymize_annots():
+    svd = pcvl.SVDistribution({
+        pcvl.StateVector("|{_:0},{_:0},{_:1}>") + pcvl.StateVector("|{_:0},{_:2},{_:1}>"): 0.1,
+        pcvl.StateVector("|{_:1},{_:2},{_:3}>") + pcvl.StateVector("|{_:0},{_:0},{_:8}>"): 0.1,
+        pcvl.StateVector("|{_:2},{_:2},{_:3}>") + pcvl.StateVector("|{_:2},{_:4},{_:3}>"): 0.1,
+        pcvl.BasicState("|{_:4},{_:4},{_:2}>"): 0.1,
+        pcvl.BasicState("|{_:1},{_:3},{_:3}>"): 0.1,
+        pcvl.BasicState("|{_:0},{_:2},{_:3}>"): 0.5,
+    })
+    svd2 = pcvl.anonymize_annotations(svd)
+
+    assert len(svd2) == 5
+    assert str(svd2) == """{
+  |{a:0},{a:1},{a:2}>: 0.5
+  sqrt(2)/2*|{a:0},{a:0},{a:1}>+sqrt(2)/2*|{a:0},{a:2},{a:1}>: 0.2
+  sqrt(2)/2*|{a:0},{a:1},{a:2}>+sqrt(2)/2*|{a:3},{a:3},{a:4}>: 0.1
+  |{a:0},{a:0},{a:1}>: 0.1
+  |{a:0},{a:1},{a:1}>: 0.1
+}"""
+
+
 def test_statevector_sample():
     sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
     counter = Counter()
