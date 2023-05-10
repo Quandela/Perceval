@@ -115,7 +115,6 @@ class Processor(AProcessor):
         an input. Imperfect ones won't.
         """
         input_list = [0] * self.circuit_size
-        inputs_map = SVDistribution()
         assert self.m is not None, "A circuit has to be set before the input state"
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
@@ -123,22 +122,16 @@ class Processor(AProcessor):
         input_idx = 0
         expected_photons = 0
         for k in range(self.circuit_size):
-            distribution = SVDistribution(StateVector("|0>"))
-            if k in self.heralds:
-                if self.heralds[k] == 1:
-                    distribution = self._source.probability_distribution()
-                    input_list[k] = 1
-                    expected_photons += 1
+            if k in self.heralds and self.heralds[k] == 1:
+                input_list[k] = 1
+                expected_photons += 1
             else:
-                if input_state[input_idx] > 0:
-                    distribution = self._source.probability_distribution(input_state[input_idx])
-                    input_list[k] = input_state[input_idx]
-                    expected_photons += 1
+                input_list[k] = input_state[input_idx]
+                expected_photons += input_state[input_idx]
                 input_idx += 1
-            inputs_map *= distribution  # combine distributions
 
-        self._inputs_map = anonymize_annotations(inputs_map)
         self._input_state = BasicState(input_list)
+        self._inputs_map = self._source.generate_distribution(self._input_state)
         self._min_detected_photons = expected_photons
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
