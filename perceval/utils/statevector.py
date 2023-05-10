@@ -482,8 +482,8 @@ class SVDistribution(ProbabilityDistribution):
         return list(results)
 
 
-@dispatch(StateVector)
-def anonymize_annotations(sv: StateVector):
+@dispatch(StateVector, annot_tag=str)
+def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
     m = sv.m
     annot_map = {}
     result = StateVector()
@@ -493,17 +493,17 @@ def anonymize_annotations(sv: StateVector):
             mode = bs.photon2mode(i)
             annot = bs.get_photon_annotation(i)
             if annot_map.get(str(annot)) is None:
-                annot_map[str(annot)] = "{a:%d}" % len(annot_map)
+                annot_map[str(annot)] = f"{{{annot_tag}:{len(annot_map)}}}"
             s[mode] += annot_map[str(annot)]
         result += StateVector("|" + ",".join([v and v or "0" for v in s]) + ">") * pa
     result.normalize()
     return result
 
-@dispatch(SVDistribution)
-def anonymize_annotations(svd: SVDistribution):
+@dispatch(SVDistribution, annot_tag=str)
+def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
     sv_dist = defaultdict(lambda: 0)
     for k, p in svd.items():
-        state = anonymize_annotations(k)
+        state = anonymize_annotations(k, annot_tag=annot_tag)
         sv_dist[state] += p
     return SVDistribution({k: v for k, v in sorted(sv_dist.items(), key=lambda x: -x[1])})
 
