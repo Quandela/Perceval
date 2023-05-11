@@ -30,9 +30,10 @@ import pytest
 
 from perceval.backends._abstract_backends import AProbAmpliBackend
 from perceval.backends._naive import NaiveBackend
+from perceval.backends._slos import SLOSBackend
 from perceval.backends.simulator import Simulator
 from perceval.components import Circuit, BS
-from perceval.utils import BasicState, BSDistribution, StateVector
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
 
 
 class MockBackend(AProbAmpliBackend):
@@ -76,9 +77,48 @@ def test_simulator_probs():
     assert simulator.DEBUG_evolve_count == 4
 
 
+def test_simulator_probs_svd():
+    svd = SVDistribution()
+    svd[StateVector([1,0]) + StateVector([0,1])] = 0.3
+    svd[StateVector([1,1]) + 1j*StateVector([0,1])] = 0.3
+    svd[StateVector('|2,0>') + StateVector([1,1])] = 0.4
+    simulator = Simulator(SLOSBackend())
+    simulator.set_circuit(BS())
+    res = simulator.probs(svd)
+    assert len(res) == 5
+    assert res[BasicState("|1,0>")] == pytest.approx(0.225)
+    assert res[BasicState("|0,1>")] == pytest.approx(0.225)
+    assert res[BasicState("|2,0>")] == pytest.approx(0.225)
+    assert res[BasicState("|0,2>")] == pytest.approx(0.225)
+    assert res[BasicState("|1,1>")] == pytest.approx(0.1)
+
+
+def test_simulator_probs_postselection():
+    input_state = BasicState([1, 1, 1])
+    ps = PostSelect("[2] < 2")  # At most 1 photon on mode #2
+    simulator = Simulator(MockBackend())
+    simulator.set_postselect(ps)
+    simulator.set_circuit(Circuit(3))
+    output_dist = simulator.probs(input_state)
+    assert len(output_dist) == 0
+    assert simulator.logical_perf == pytest.approx(0)
+
+    input_state = BasicState('|{_:1},{_:2},{_:3}>')
+    output_dist = simulator.probs(input_state)
+    assert len(output_dist) == 1
+    assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
+    assert simulator.logical_perf == pytest.approx(1)
+
+    input_state = BasicState('|{_:1}{_:2}{_:3},0,0>')
+    output_dist = simulator.probs(input_state)
+    assert len(output_dist) == 1
+    assert list(output_dist.keys())[0] == BasicState([3, 0, 0])
+    assert simulator.logical_perf == pytest.approx(1)
+
+
 def test_simulator_probampli():
     input_state = BasicState("|{_:0},{_:1}>")
-    simulator = Simulator(NaiveBackend())
+    simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
     assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5j)
     assert simulator.prob_amplitude(input_state, BasicState("|0,{_:0}{_:1}>")) == pytest.approx(0.5j)
@@ -92,7 +132,7 @@ def test_simulator_probampli():
 
 def test_simulator_probability():
     input_state = BasicState("|{_:0},{_:1}>")
-    simulator = Simulator(NaiveBackend())
+    simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
     # Output annotations are ignored for a probability call
     assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.25)
@@ -111,7 +151,7 @@ def test_simulator_probs_sv():
     st1 = StateVector("|0,1>")
     st2 = StateVector("|1,0>")
     sv = st1 + st2
-    simulator = Simulator(NaiveBackend())
+    simulator = Simulator(SLOSBackend())
     c = BS.H()
     simulator.set_circuit(c)
     result = simulator.probs(sv)
@@ -139,9 +179,15 @@ def test_simulator_probs_sv():
     assert len(result_fermion) == 1
     assert result_fermion[BasicState("|1,1>")] == pytest.approx(1)
 
+    result2_2 = simulator.probs(BasicState("|2,2>"))
+    assert len(result2_2) == 3
+    assert result2_2[BasicState("|4,0>")] == pytest.approx(0.375)
+    assert result2_2[BasicState("|2,2>")] == pytest.approx(0.25)
+    assert result2_2[BasicState("|0,4>")] == pytest.approx(0.375)
+
 
 def test_evolve_indistinguishable():
-    simulator = Simulator(NaiveBackend())
+    simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS.H())
     sv1 = BasicState([1, 1])
     sv1_out = simulator.evolve(sv1)
@@ -151,7 +197,7 @@ def test_evolve_indistinguishable():
 
 
 def test_evolve_distinguishable():
-    simulator = Simulator(NaiveBackend())
+    simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS.H())
     sv2 = BasicState("|{a:0},{a:0}{a:1}>")
     sv2_out = simulator.evolve(sv2)

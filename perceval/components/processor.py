@@ -124,10 +124,11 @@ class Processor(AProcessor):
         input_list = [0] * self.circuit_size
         input_idx = 0
         expected_photons = 0
+        # Build real input state (merging ancillas + expected input) and compute expected photon count
         for k in range(self.circuit_size):
-            if k in self.heralds and self.heralds[k] == 1:
-                input_list[k] = 1
-                expected_photons += 1
+            if k in self.heralds:
+                input_list[k] = self.heralds[k]
+                expected_photons += self.heralds[k]
             else:
                 input_list[k] = input_state[input_idx]
                 expected_photons += input_state[input_idx]

@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 from perceval.components import ACircuit
-from perceval.utils import Annotation, BasicState, BSDistribution, StateVector, SVDistribution
+from perceval.utils import Annotation, BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, \
+    anonymize_annotations, global_params
 from perceval.backends._abstract_backends import AProbAmpliBackend
 
 from abc import ABC, abstractmethod
@@ -47,13 +48,15 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     res_sv = copy(sv)
-    if len(annotation):
+    if str(annotation):  # len(annotation) not working on unix
         for s in res_sv:
             s.inject_annotation(annotation)
     return res_sv
 
 
 def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
+    if not sv1:
+        return sv2
     res = StateVector()
     for s1, pa1 in sv1.items():
         for s2, pa2 in sv2.items():
@@ -76,6 +79,22 @@ class Simulator:
     def __init__(self, backend: AProbAmpliBackend):
         self._backend = backend
         self._invalidate_cache()
+        self._postselect: PostSelect = PostSelect()
+        self._logical_perf: float = 1
+        self._physical_perf: float = 1
+        self._rel_precision: float = 1e-6
+        self.min_detected_photons: int = 0
+
+    @property
+    def logical_perf(self):
+        return self._logical_perf
+
+    @dispatch(PostSelect)
+    def set_postselect(self, postselect: PostSelect):
+        self._postselect = postselect
+
+    def clear_postselect(self):
+        self._postselect = PostSelect()
 
     def set_circuit(self, circuit: ACircuit):
         """Set a circuit for simulation.
@@ -163,28 +182,75 @@ class Simulator:
                 self._cache[state] = self._backend.evolve()
                 self.DEBUG_evolve_count += 1
 
-    def _merge_probability_dist(self, input_list):
+    def _merge_probability_dist(self, input_list) -> BSDistribution:
         results = BSDistribution()
         for input_state in input_list:
             results = BSDistribution.tensor_product(results, _to_bsd(self._cache[input_state]), merge_modes=True)
             self.DEBUG_merge_count += 1
         return results
 
+    def _post_select_on_distribution(self, bsd: BSDistribution) -> BSDistribution:
+        self._logical_perf = 1
+        if not self._postselect.has_condition:
+            bsd.normalize()
+            return bsd
+        result = BSDistribution()
+        for state, prob in bsd.items():
+            if self._postselect(state):
+                result[state] = prob
+            else:
+                self._logical_perf -= prob
+        result.normalize()
+        return result
+
     @dispatch(BasicState)
     def probs(self, input_state: BasicState) -> BSDistribution:
         input_list = input_state.separate_state(keep_annotations=False)
         self._evolve_cache(set(input_list))
-        return self._merge_probability_dist(input_list)
+        result = self._merge_probability_dist(input_list)
+        return self._post_select_on_distribution(result)
 
     @dispatch(StateVector)
     def probs(self, input_state: StateVector) -> BSDistribution:
         if len(input_state) == 1:
             return self.probs(input_state[0])
-        return _to_bsd(self.evolve(input_state))
+        return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
 
     @dispatch(SVDistribution)
     def probs(self, input_state: SVDistribution):
-        raise NotImplementedError()
+        # Trim svd
+        max_p = 0
+        for sv, p in input_state.items():
+            if max(sv.n) >= self.min_detected_photons:
+                max_p = p
+                break
+        p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
+        svd = SVDistribution({state: pr for state, pr in input_state.items() if pr > p_threshold})
+
+        decomposed_input = []
+        for sv, prob in svd.items():
+            if min(sv.n) >= self.min_detected_photons:
+                decomposed_input.append((prob, [(pa, st.separate_state(keep_annotations=False)) for st, pa in sv.items()]))
+            else:
+                self._physical_perf -= prob
+        input_set = set([state for s in decomposed_input for t in s[1] for state in t[1]])
+        self._evolve_cache(input_set)
+
+        res = BSDistribution()
+        for prob, sv_data in decomposed_input:
+            result_sv = StateVector()
+            for probampli, instate_list in sv_data:
+                if len(instate_list) == 1:
+                    evolved_in_s = self._cache[instate_list[0]]
+                else:
+                    evolved_in_s = StateVector()
+                    for in_s in instate_list:
+                        evolved_in_s = _merge_sv(evolved_in_s, self._cache[in_s])
+                        self.DEBUG_merge_count += 1
+                result_sv += evolved_in_s * probampli
+            for bs, p in _to_bsd(result_sv).items():
+                res[bs] += p*prob
+        return self._post_select_on_distribution(res)
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         if not isinstance(input_state, StateVector):

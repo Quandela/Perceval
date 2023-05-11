@@ -95,23 +95,9 @@ class PostSelect:
     def __eq__(self, other):
         return self._conditions == other._conditions
 
-if __name__ == "__main__":
-    def ps_fn(s) -> bool:
-        return s[0] == 0 and (s[1] + s[2]) == 1 and (s[3] + s[4]) == 1 and s[5] == 0
+    @property
+    def has_condition(self):
+        return len(self._conditions) > 0
 
-    ps1 = PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0")
-
-    bs = BasicState([0,1,0,1,0,0])
-    import time
-    tfn_start = time.time()
-    for _ in range(100000):
-        ps_fn(bs)
-    tfn_dur = time.time() - tfn_start
-
-    tps_start = time.time()
-    for _ in range(100000):
-        ps1(bs)
-    tps_dur = time.time() - tps_start
-
-    print("Function:",tfn_dur)
-    print("Object:",tps_dur)
+    def clear(self):
+        self._conditions.clear()
