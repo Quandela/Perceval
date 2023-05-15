@@ -27,41 +27,46 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .simulator_interface import ASimulatorDecorator
+from perceval.utils import BasicState, BSDistribution, StateVector, Annotation
+from copy import copy
+from typing import List
 
-from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector
-from perceval.components import Unitary
+
+def _to_bsd(sv: StateVector) -> BSDistribution:
+    res = BSDistribution()
+    for state, pa in sv.items():
+        state.clear_annotations()
+        res[state] += abs(pa) ** 2
+    return res
 
 
-class PolarizationSimulator(ASimulatorDecorator):
-    def __init__(self, simulator):
-        super().__init__(simulator)
-        self._upol = None
+def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
+    res_sv = copy(sv)
+    if str(annotation):  # len(annotation) not working on unix
+        for s in res_sv:
+            s.inject_annotation(annotation)
+    return res_sv
 
-    def _prepare_input(self, input_state):
-        spatial_input, preprocess_matrix = convert_polarized_state(input_state)
-        circuit = Unitary(self._upol @ preprocess_matrix)
-        self._simulator.set_circuit(circuit)
-        return spatial_input
 
-    def set_circuit(self, circuit):
-        self._prepare_circuit(circuit)
+def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
+    if not sv1:
+        return sv2
+    res = StateVector()
+    for s1, pa1 in sv1.items():
+        for s2, pa2 in sv2.items():
+            res[s1.merge(s2)] = pa1*pa2
+    return res
 
-    def _prepare_circuit(self, circuit):
-        self._upol = circuit.compute_unitary(use_polarization=True)
 
-    def _postprocess_results(self, results):
-        output = type(results)()
-        keep_annots = isinstance(results, StateVector)
-        for out_state, output_prob in results.items():
-            s_odd = BasicState()
-            s_even = BasicState()
-            for i in range(0, out_state.m, 2):
-                s_even *= out_state[slice(i, i+1)]
-                s_odd *= out_state[slice(i+1, i+2)]
-            if keep_annots:
-                s_even.inject_annotation(Annotation("P:H"))
-                s_odd.inject_annotation(Annotation("P:V"))
-            reduced_out_state = s_odd.merge(s_even)
-            output[reduced_out_state] += output_prob
-        return output
+def _annot_state_mapping(bs_with_annots: BasicState):
+    bs_list = bs_with_annots.separate_state(keep_annotations=True)
+    mapping = {}
+    for bs in bs_list:
+        annot = bs.get_photon_annotation(0)
+        bs.clear_annotations()
+        mapping[annot] = bs
+    return mapping
+
+
+def _retrieve_mode_count(component_list: List) -> int:
+    return max([m for r in component_list for m in r[0]]) + 1

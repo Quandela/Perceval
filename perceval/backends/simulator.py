@@ -26,55 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
+from .simulator_interface import ISimulator
 from perceval.components import ACircuit
-from perceval.utils import Annotation, BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, \
-    anonymize_annotations, global_params
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params
 from perceval.backends._abstract_backends import AProbAmpliBackend
 
-from abc import ABC, abstractmethod
 from copy import copy
 from multipledispatch import dispatch
 from typing import Set, Union
 
 
-def _to_bsd(sv: StateVector) -> BSDistribution:
-    res = BSDistribution()
-    for state, pa in sv.items():
-        state.clear_annotations()
-        res[state] += abs(pa) ** 2
-    return res
-
-
-def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
-    res_sv = copy(sv)
-    if str(annotation):  # len(annotation) not working on unix
-        for s in res_sv:
-            s.inject_annotation(annotation)
-    return res_sv
-
-
-def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
-    if not sv1:
-        return sv2
-    res = StateVector()
-    for s1, pa1 in sv1.items():
-        for s2, pa2 in sv2.items():
-            res[s1.merge(s2)] = pa1*pa2
-    return res
-
-
-def _annot_state_mapping(bs_with_annots: BasicState):
-    bs_list = bs_with_annots.separate_state(keep_annotations=True)
-    mapping = {}
-    for bs in bs_list:
-        annot = bs.get_photon_annotation(0)
-        bs.clear_annotations()
-        mapping[annot] = bs
-    return mapping
-
-
-class Simulator:
+class Simulator(ISimulator):
 
     def __init__(self, backend: AProbAmpliBackend):
         self._backend = backend
@@ -83,7 +46,10 @@ class Simulator:
         self._logical_perf: float = 1
         self._physical_perf: float = 1
         self._rel_precision: float = 1e-6
-        self.min_detected_photons: int = 0
+        self._min_detected_photons: int = 0
+
+    def set_min_detected_photon_filter(self, value: int):
+        self._min_detected_photons = value
 
     @property
     def logical_perf(self):
@@ -221,7 +187,7 @@ class Simulator:
         # Trim svd
         max_p = 0
         for sv, p in input_state.items():
-            if max(sv.n) >= self.min_detected_photons:
+            if max(sv.n) >= self._min_detected_photons:
                 max_p = p
                 break
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
@@ -229,7 +195,7 @@ class Simulator:
 
         decomposed_input = []
         for sv, prob in svd.items():
-            if min(sv.n) >= self.min_detected_photons:
+            if min(sv.n) >= self._min_detected_photons:
                 decomposed_input.append((prob, [(pa, st.separate_state(keep_annotations=False)) for st, pa in sv.items()]))
             else:
                 self._physical_perf -= prob
@@ -280,31 +246,3 @@ class Simulator:
 
         result_sv.normalize()
         return result_sv
-
-
-class ASimulatorDecorator(ABC):
-    def __init__(self, simulator: Simulator):
-        self._simulator = simulator
-
-    @abstractmethod
-    def _prepare_input(self, input_state):
-        pass
-
-    @abstractmethod
-    def _prepare_circuit(self, circuit) -> ACircuit:
-        pass
-
-    @abstractmethod
-    def _postprocess_results(self, results):
-        pass
-
-    def set_circuit(self, circuit):
-        self._simulator.set_circuit(self._prepare_circuit(circuit))
-
-    def probs(self, input_state):
-        results = self._simulator.probs(self._prepare_input(input_state))
-        return self._postprocess_results(results)
-
-    def evolve(self, input_state):
-        results = self._simulator.evolve(self._prepare_input(input_state))
-        return self._postprocess_results(results)

@@ -27,7 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .simulator import ASimulatorDecorator
+from .simulator_interface import ASimulatorDecorator
+from ._simulator_utils import _retrieve_mode_count
 from perceval.components import ACircuit, Circuit, PERM, TD
 from perceval.utils import BasicState
 
@@ -40,9 +41,6 @@ class _CType(Enum):
     DELAY = 1
     OTHER = 2
 
-
-def _retrieve_mode_count(component_list: List) -> int:
-    return max([m for r in component_list for m in r[0]]) + 1
 
 def _count_total_delay(component_list: List) -> int:
     return int(sum([c.get_variables()["t"] if isinstance(c, TD) else 0 for _, c in component_list]))

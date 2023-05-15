@@ -27,41 +27,55 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .simulator_interface import ASimulatorDecorator
+from abc import ABC, abstractmethod
 
-from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector
-from perceval.components import Unitary
+from perceval.components import ACircuit
 
 
-class PolarizationSimulator(ASimulatorDecorator):
-    def __init__(self, simulator):
-        super().__init__(simulator)
-        self._upol = None
+class ISimulator(ABC):
+    @abstractmethod
+    def set_circuit(self, circuit):
+        pass
 
+    @abstractmethod
+    def probs(self, input_state):
+        pass
+
+    @abstractmethod
+    def evolve(self, input_state):
+        pass
+
+    @abstractmethod
+    def set_min_detected_photon_filter(self, value: int):
+        pass
+
+
+class ASimulatorDecorator(ISimulator, ABC):
+    def __init__(self, simulator: ISimulator):
+        self._simulator = simulator
+
+    @abstractmethod
     def _prepare_input(self, input_state):
-        spatial_input, preprocess_matrix = convert_polarized_state(input_state)
-        circuit = Unitary(self._upol @ preprocess_matrix)
-        self._simulator.set_circuit(circuit)
-        return spatial_input
+        pass
+
+    @abstractmethod
+    def _prepare_circuit(self, circuit) -> ACircuit:
+        pass
+
+    @abstractmethod
+    def _postprocess_results(self, results):
+        pass
 
     def set_circuit(self, circuit):
-        self._prepare_circuit(circuit)
+        self._simulator.set_circuit(self._prepare_circuit(circuit))
 
-    def _prepare_circuit(self, circuit):
-        self._upol = circuit.compute_unitary(use_polarization=True)
+    def probs(self, input_state):
+        results = self._simulator.probs(self._prepare_input(input_state))
+        return self._postprocess_results(results)
 
-    def _postprocess_results(self, results):
-        output = type(results)()
-        keep_annots = isinstance(results, StateVector)
-        for out_state, output_prob in results.items():
-            s_odd = BasicState()
-            s_even = BasicState()
-            for i in range(0, out_state.m, 2):
-                s_even *= out_state[slice(i, i+1)]
-                s_odd *= out_state[slice(i+1, i+2)]
-            if keep_annots:
-                s_even.inject_annotation(Annotation("P:H"))
-                s_odd.inject_annotation(Annotation("P:V"))
-            reduced_out_state = s_odd.merge(s_even)
-            output[reduced_out_state] += output_prob
-        return output
+    def evolve(self, input_state):
+        results = self._simulator.evolve(self._prepare_input(input_state))
+        return self._postprocess_results(results)
+
+    def set_min_detected_photon_filter(self, value: int):
+        self._simulator.set_min_detected_photon_filter(value)
