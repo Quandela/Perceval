@@ -493,6 +493,10 @@ class AProcessor(ABC):
         input_state = input_state.to_basic_state(list(self._in_ports.keys()))
         self.with_input(input_state)
 
+    @abstractmethod
+    def check_input(self, input_state: BasicState):
+        r"""Check if a basic state input matches with the current processor configuration"""
+
     @property
     def source_distribution(self) -> Union[SVDistribution, None]:
         r"""

@@ -131,6 +131,10 @@ class RemoteProcessor(AProcessor):
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
+        self.check_input(input_state)
+        self._input_state = input_state
+
+    def check_input(self, input_state: BasicState) -> None:
         if 'max_photon_count' in self.constraints and input_state.n > self.constraints['max_photon_count']:
             raise RuntimeError(
                 f"Too many photons in input state ({input_state.n} > {self.constraints['max_photon_count']})")
@@ -139,7 +143,6 @@ class RemoteProcessor(AProcessor):
                 f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
         if self._n_moi is not None and input_state.m != self._n_moi:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
-        self._input_state = input_state
 
     @property
     def available_commands(self) -> List[str]:
