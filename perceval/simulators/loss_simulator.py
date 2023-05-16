@@ -28,8 +28,8 @@
 # SOFTWARE.
 
 from .simulator_interface import ASimulatorDecorator
-from ._simulator_utils import _retrieve_mode_count
-from perceval.components import ACircuit, Circuit, LC, PERM, BS
+from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
+from perceval.components import ACircuit, LC, PERM, BS
 from perceval.utils import BasicState
 
 from typing import List
@@ -83,9 +83,6 @@ class LossSimulator(ASimulatorDecorator):
 
         self._expanded_m = next_free_mode
         if can_output_circuit:
-            circuit = Circuit(self._expanded_m)
-            for r, c in output:
-                circuit.add(r, c)
-            output = circuit
+            output = _unitary_components_to_circuit(output, self._expanded_m)
 
         return output

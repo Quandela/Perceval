@@ -30,8 +30,8 @@
 import pytest
 from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, Source
 from perceval.algorithm import Sampler
-from perceval.backends.loss_simulator import LossSimulator
-from perceval.backends.simulator import Simulator
+from perceval.simulators.loss_simulator import LossSimulator
+from perceval.simulators.simulator import Simulator
 from perceval.backends._slos import SLOSBackend
 
 

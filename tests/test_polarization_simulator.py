@@ -27,8 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.backends.polarization_simulator import PolarizationSimulator
-from perceval.backends.simulator import Simulator
+from perceval.simulators.polarization_simulator import PolarizationSimulator
+from perceval.simulators.simulator import Simulator
 from perceval.backends._naive import NaiveBackend
 from perceval.components import Circuit, BS, PBS, PERM, PS, PR, HWP
 from perceval.utils import BasicState

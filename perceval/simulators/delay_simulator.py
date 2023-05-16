@@ -28,8 +28,8 @@
 # SOFTWARE.
 
 from .simulator_interface import ASimulatorDecorator
-from ._simulator_utils import _retrieve_mode_count
-from perceval.components import ACircuit, Circuit, PERM, TD
+from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
+from perceval.components import ACircuit, PERM, TD
 from perceval.utils import BasicState
 
 from enum import Enum
@@ -155,8 +155,5 @@ class DelaySimulator(ASimulatorDecorator):
                     new_circ.append((r0, PERM(perm_list)))
 
         if can_output_circuit:
-            circuit = Circuit(new_m)
-            for r, c in new_circ:
-                circuit.add(r, c)
-            new_circ = circuit
+            new_circ = _unitary_components_to_circuit(new_circ, new_m)
         return new_circ, new_m

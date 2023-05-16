@@ -34,7 +34,7 @@ from perceval.backends._abstract_backends import AProbAmpliBackend
 
 from copy import copy
 from multipledispatch import dispatch
-from typing import Set, Union
+from typing import Callable, Set, Union
 
 
 class Simulator(ISimulator):
@@ -182,8 +182,8 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
 
-    @dispatch(SVDistribution)
-    def probs(self, input_state: SVDistribution):
+    @dispatch(SVDistribution, progress_callback = Callable)
+    def probs(self, input_state: SVDistribution, progress_callback: Callable = None):
         # Trim svd
         max_p = 0
         for sv, p in input_state.items():
@@ -203,7 +203,7 @@ class Simulator(ISimulator):
         self._evolve_cache(input_set)
 
         res = BSDistribution()
-        for prob, sv_data in decomposed_input:
+        for idx, (prob, sv_data) in enumerate(decomposed_input):
             result_sv = StateVector()
             for probampli, instate_list in sv_data:
                 if len(instate_list) == 1:
@@ -216,6 +216,10 @@ class Simulator(ISimulator):
                 result_sv += evolved_in_s * probampli
             for bs, p in _to_bsd(result_sv).items():
                 res[bs] += p*prob
+            if progress_callback:
+                exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    raise RuntimeError("Cancel requested")
         return self._post_select_on_distribution(res)
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:

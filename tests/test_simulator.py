@@ -29,9 +29,8 @@
 import pytest
 
 from perceval.backends._abstract_backends import AProbAmpliBackend
-from perceval.backends._naive import NaiveBackend
 from perceval.backends._slos import SLOSBackend
-from perceval.backends.simulator import Simulator
+from perceval.simulators import Simulator
 from perceval.components import Circuit, BS
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
 
