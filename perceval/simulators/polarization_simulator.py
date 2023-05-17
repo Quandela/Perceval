@@ -39,6 +39,8 @@ class PolarizationSimulator(ASimulatorDecorator):
         self._upol = None
 
     def _prepare_input(self, input_state):
+        if not isinstance(input_state, BasicState):
+            raise NotImplementedError("Polarization simulator can only process BasicState inputs")
         spatial_input, preprocess_matrix = convert_polarized_state(input_state)
         circuit = Unitary(self._upol @ preprocess_matrix)
         self._simulator.set_circuit(circuit)

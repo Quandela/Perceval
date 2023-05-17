@@ -182,8 +182,7 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
 
-    @dispatch(SVDistribution, progress_callback = Callable)
-    def probs(self, input_state: SVDistribution, progress_callback: Callable = None):
+    def probs_svd(self, input_state: SVDistribution, progress_callback: Callable = None):
         # Trim svd
         max_p = 0
         for sv, p in input_state.items():
@@ -220,7 +219,9 @@ class Simulator(ISimulator):
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
-        return self._post_select_on_distribution(res)
+        return {'results': self._post_select_on_distribution(res),
+                'physical_perf': self._physical_perf,
+                'logical_perf': self._logical_perf}
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         if not isinstance(input_state, StateVector):

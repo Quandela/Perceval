@@ -27,16 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .delay_simulator import DelaySimulator
-from .loss_simulator import LossSimulator
-from .polarization_simulator import PolarizationSimulator
-from .simulator import Simulator
+from typing import Callable
+
+from perceval.utils import BSDistribution
 from .simulator_factory import SimulatorFactory
 
-# Workaround an issue of circular dependency
-# TODO clean this up!
-from perceval.components import Processor as _Processor
-from ._processor_probs import _processor_probs
 
-
-_Processor.probs = _processor_probs
+def _processor_probs(self, progress_callback: Callable = None):
+    assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
+    simulator = SimulatorFactory.build(self)
+    return simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)

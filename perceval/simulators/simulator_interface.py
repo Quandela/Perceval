@@ -28,8 +28,10 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
+from typing import Callable, Dict
 
 from perceval.components import ACircuit
+from perceval.utils import BSDistribution, StateVector, SVDistribution
 
 
 class ISimulator(ABC):
@@ -38,11 +40,15 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def probs(self, input_state):
+    def probs(self, input_state) -> BSDistribution:
         pass
 
     @abstractmethod
-    def evolve(self, input_state):
+    def probs_svd(self, svd: SVDistribution, progress_callback: Callable) -> Dict:
+        pass
+
+    @abstractmethod
+    def evolve(self, input_state) -> StateVector:
         pass
 
     @abstractmethod
@@ -72,6 +78,11 @@ class ASimulatorDecorator(ISimulator, ABC):
     def probs(self, input_state):
         results = self._simulator.probs(self._prepare_input(input_state))
         return self._postprocess_results(results)
+
+    def probs_svd(self, svd: SVDistribution, progress_callback: Callable) -> Dict:
+        probs = self._simulator.probs_svd(self._prepare_input(svd))
+        probs['results'] = self._postprocess_results(probs['results'])
+        return probs
 
     def evolve(self, input_state):
         results = self._simulator.evolve(self._prepare_input(input_state))

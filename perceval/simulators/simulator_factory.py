@@ -70,6 +70,7 @@ class SimulatorFactory:
         sim_delay = False
         sim_losses = False
         convert_to_circuit = False
+        min_detected_photons = None
         if isinstance(circuit, ACircuit):
             sim_polarization = circuit.requires_polarization
         else:
@@ -78,6 +79,7 @@ class SimulatorFactory:
                 # If no backend was chosen, the backend type set in the Processor is used
                 if backend is None:
                     backend = circuit._backend_name
+                min_detected_photons = circuit.parameters.get('min_detected_photons')
                 circuit = circuit.components
 
             for _, cp in circuit:
@@ -100,6 +102,8 @@ class SimulatorFactory:
 
         # Building the simulator layers
         simulator = Simulator(backend)
+        if min_detected_photons is not None:
+            simulator.set_min_detected_photon_filter(min_detected_photons)
         if sim_polarization:
             simulator = PolarizationSimulator(simulator)
         if sim_delay:

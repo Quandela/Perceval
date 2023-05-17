@@ -83,7 +83,7 @@ def test_simulator_probs_svd():
     svd[StateVector('|2,0>') + StateVector([1,1])] = 0.4
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
-    res = simulator.probs(svd)
+    res = simulator.probs_svd(svd)['results']
     assert len(res) == 5
     assert res[BasicState("|1,0>")] == pytest.approx(0.225)
     assert res[BasicState("|0,1>")] == pytest.approx(0.225)
