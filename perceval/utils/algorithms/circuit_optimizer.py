@@ -12,6 +12,35 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -41,11 +70,14 @@ class CircuitOptimizer:
     :param threshold: Error threshold = 1-fidelity - i.e. the lower the threshold, the better the output fidelity
                       (default 1e-6)
     :param ntrials: Number of optimization trials (default 4)
+    :param max_eval_per_trial: maximum number of evaluations per optimization trial (default 200000)
     """
 
-    def __init__(self, threshold: float = 1e-6, ntrials: int = 4):
+    def __init__(self, threshold: float = 1e-6, ntrials: int = 4, max_eval_per_trial: int = 200000):
+
         self.threshold = threshold
         self.trials = ntrials
+        self.max_eval_per_trial = max_eval_per_trial
 
     @property
     def threshold(self):
@@ -64,6 +96,14 @@ class CircuitOptimizer:
     @trials.setter
     def trials(self, value):
         self._trials = value
+
+    @property
+    def max_eval_per_trial(self):
+        return self._max_eval_per_trial
+
+    @max_eval_per_trial.setter
+    def max_eval_per_trial(self, value):
+        self._max_eval_per_trial = value
 
     def optimize(self,
                  target: Union[ACircuit, Matrix],
@@ -91,14 +131,14 @@ class CircuitOptimizer:
         assert not target.is_symbolic(), "Target must not contain variables"
 
         optimizer = xq.CircuitOptimizer(serialize_binary(target), serialize_binary(template))
-        optimizer.set_max_eval_per_trial(50000)
+        optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
         return optimized_circuit, optimizer.fidelity
 
     def optimize_rectangle(self,
                            target: Matrix,
-                           template_component_generator_func: Callable[[int],ACircuit] = None,
+                           template_component_generator_func: Callable[[int], ACircuit] = None,
                            phase_at_output: bool = True,
                            allow_error: bool = False,
                            ) -> ACircuit:
