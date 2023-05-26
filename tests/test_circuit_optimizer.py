@@ -65,11 +65,11 @@ def _ps(i):
     return PS(P(f"phi_3_{i}"))
 
 
-def _check_optimize(size: int, mzi_func: Callable[[int], None], max_eval_per_trial_tested=200000):
-    if max_eval_per_trial_tested < 1000:
-        raise ValueError("Value for Maximum number of evaluations per trial too low")
-
-    circuit_optimizer = CircuitOptimizer(max_eval_per_trial=max_eval_per_trial_tested)
+def _check_optimize(size: int, mzi_func: Callable[[int], None], max_eval_per_trial_tested: int = None):
+    if max_eval_per_trial_tested is None:
+        circuit_optimizer = CircuitOptimizer()
+    else:
+        circuit_optimizer = CircuitOptimizer(max_eval_per_trial=max_eval_per_trial_tested)
 
     template_interferometer = Circuit.generic_interferometer(size, mzi_func,
                                                              phase_shifter_fun_gen=_ps,
@@ -98,13 +98,15 @@ def test_circuit_optimizer_bs_convention():
         _check_optimize(12, mzi_conv)
 
 
-@pytest.mark.parametrize("test_val", [200, 50000])
-def test_circuit_optimizer_max_eval_convergence(test_val):
+@pytest.mark.parametrize("nb_iteration, expected_success", [(None, True), (200, False), (50000, True)])
+def test_circuit_optimizer_max_eval_convergence(nb_iteration: int, expected_success: bool):
     def mzi(i):
         return Circuit(2) // PS(P(f"phi_1_{i}")) // BS.Rx(perfect_theta) \
             // PS(P(f"phi_2_{i}")) // BS.Rx(perfect_theta)
-
+    success = False
     try:
-        _check_optimize(10, mzi, test_val)
-    except ValueError as e:
-        print(" Value Error occurred (test designed to fail): ", str(e))
+        _check_optimize(10, mzi, nb_iteration)
+        success = True
+    except:
+        pass
+    assert success == expected_success
