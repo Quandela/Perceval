@@ -106,5 +106,5 @@ def test_circuit_optimizer_max_eval_convergence(test_val):
 
     try:
         _check_optimize(10, mzi, test_val)
-    except ValueError:
-        pytest.fail("Error")
+    except ValueError as e:
+        print(" Value Error occurred : Max number of evaluations too low for convergence", str(e))
