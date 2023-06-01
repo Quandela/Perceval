@@ -79,7 +79,10 @@ class BasicState(FockState):
         return BasicState(super(BasicState, self).__mul__(s))
 
     def __pow__(self, power):
-        return BasicState(power * list(self))
+        bs = self.__copy__()
+        for i in range(power-1):
+            bs = bs*self
+        return bs
 
     def __getitem__(self, item):
         it = super().__getitem__(item)
