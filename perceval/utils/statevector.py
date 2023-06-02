@@ -276,7 +276,6 @@ class StateVector(defaultdict):
             else:
                 copy_state[state] += amplitude
         copy_state._normalized = False
-        print("checking copy states normalization", copy_state._normalized)
         copy_state.m = self.m
         if other._has_symbolic:
             copy_state._has_symbolic = True
