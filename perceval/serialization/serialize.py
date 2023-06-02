@@ -51,7 +51,9 @@ def to_compress(func):
             # serialized and compressed : byte format
             serialized_string_compressed_byt2str = b64encode(serialized_string_compressed).decode('utf-8')
             # serialized and compressed : string format
-            return serialized_string_compressed_byt2str
+            serialized_compressed_byt2str_zip_prefix = ":PCVL:zip:" + serialized_string_compressed_byt2str
+            # adding zip prefix
+            return serialized_compressed_byt2str_zip_prefix
         else:
             return func(*args, **kwargs)
     return compressor
