@@ -44,8 +44,7 @@ import json
 def to_compress(func):
     @wraps(func)
     def compressor(*args, **kwargs):
-        if isinstance(args[0], ACircuit) or kwargs.get('compress', False):
-            # ACircuit is always compressed
+        if kwargs.get('compress', False):
             serialized_string = func(*args, **kwargs)  # serialized circuit : string format
             serialized_string_compressed = compress(serialized_string.encode('utf-8'))
             # serialized and compressed : byte format
