@@ -45,7 +45,7 @@ def to_compress(func):
     @wraps(func)
     def compressor(*args, **kwargs):
         if kwargs.get('compress', False):
-            serialized_string = func(*args, **kwargs)  # serialized circuit : string format
+            serialized_string = func(*args, **kwargs)  # serialized obj: string format
             serialized_string_compressed = compress(serialized_string.encode('utf-8'))
             # serialized and compressed : byte format
             serialized_string_compressed_byt2str = b64encode(serialized_string_compressed).decode('utf-8')
@@ -138,6 +138,6 @@ def serialize(obj, compress=False) -> object:
 
 
 def serialize_to_file(obj, filepath: str, compress=False) -> None:
-    serial_repr = serialize(obj)
+    serial_repr = serialize(obj, compress=compress)
     with open(filepath, mode="w") as f:
         f.write(json.dumps(serial_repr))
