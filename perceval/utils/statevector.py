@@ -316,7 +316,8 @@ class StateVector(defaultdict):
         return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
 
     def measure(self, modes: Union[int, List[int]]) -> Dict[BasicState, Tuple[float, StateVector]]:
-        r"""perform a measure on one or multiple modes and collapse the remaining statevector
+        r"""perform a measure on one or multiple modes and collapse the remaining statevector. The resulting
+        statevector are not normalised by default.
 
         :param modes: the mode to measure
         :return: a dictionary - key is the possible measures, values are pairs (probability, BasicState vector)
@@ -366,8 +367,8 @@ class StateVector(defaultdict):
             self._normalized = True
 
     def __str__(self):
-        if not self:
-            return "|>"
+        if not self.keys():
+             return "|>"
         self_copy = copy(self)
         self_copy.normalize()
         ls = []
