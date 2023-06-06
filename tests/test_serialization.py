@@ -37,7 +37,7 @@ from perceval.serialization import serialize, deserialize, serialize_binary, des
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
 import json
-
+from perceval.serialization.serialize import to_compress
 
 def test_numeric_matrix_serialization():
     input_mat = Matrix.random_unitary(10)
@@ -203,3 +203,16 @@ def test_binary_serialization():
     assert isinstance(bin_serialization, bytes)
     m_after = deserialize_matrix(bin_serialization)
     assert numpy.allclose(m_before, m_after)
+
+
+@to_compress
+def serialize_dummy(obj, compress=True):
+    return obj
+
+
+def test_compressor():
+    string = '123456'
+    assert serialize_dummy(string, compress=False) == string
+
+    prefix = ":PCVL:zip:"
+    assert serialize_dummy(string, compress=True).startswith(prefix)
