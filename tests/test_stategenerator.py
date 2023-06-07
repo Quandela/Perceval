@@ -27,123 +27,121 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections import Counter
-
 import perceval as pcvl
 import networkx as nx
 
 
 def test_logical_state_raw():
     sg = pcvl.StateGenerator(pcvl.Encoding.RAW)
-    sv = sg.LogicalState([0, 1, 1, 0])
+    sv = sg.logical_state([0, 1, 1, 0])
     assert str(sv) == "|0,1,1,0>"
 
 
 def test_logical_state_dual_rail():
     sg = pcvl.StateGenerator(pcvl.Encoding.DUAL_RAIL)
-    sv = sg.LogicalState([0, 1, 1, 0])
+    sv = sg.logical_state([0, 1, 1, 0])
     assert str(sv) == "|1,0,0,1,0,1,1,0>"
 
 
 def test_logical_state_polarization():
     sg = pcvl.StateGenerator(pcvl.Encoding.POLARIZATION)
-    sv = sg.LogicalState([0, 1, 1, 0])
+    sv = sg.logical_state([0, 1, 1, 0])
     assert str(sv) == "|{P:H},{P:V},{P:V},{P:H}>"
 
 
 def test_bell_state_raw():
     sg = pcvl.StateGenerator(pcvl.Encoding.RAW)
-    sv = sg.BellState("phi+")
+    sv = sg.bell_state("phi+")
     bsv = pcvl.StateVector(pcvl.BasicState([0, 0])) + pcvl.StateVector(pcvl.BasicState([1, 1]))
     assert sv == bsv
-    sv = sg.BellState("phi-")
+    sv = sg.bell_state("phi-")
     bsv = pcvl.StateVector(pcvl.BasicState([0, 0])) - pcvl.StateVector(pcvl.BasicState([1, 1]))
     assert sv == bsv
-    sv = sg.BellState("psi+")
+    sv = sg.bell_state("psi+")
     bsv = pcvl.StateVector(pcvl.BasicState([0, 1])) + pcvl.StateVector(pcvl.BasicState([1, 0]))
     assert sv == bsv
-    sv = sg.BellState("psi-")
+    sv = sg.bell_state("psi-")
     bsv = pcvl.StateVector(pcvl.BasicState([0, 1])) - pcvl.StateVector(pcvl.BasicState([1, 0]))
     assert sv == bsv
 
 
 def test_bell_state_dual_rail():
     sg = pcvl.StateGenerator(pcvl.Encoding.DUAL_RAIL)
-    sv = sg.BellState("phi+")
+    sv = sg.bell_state("phi+")
     bsv = pcvl.StateVector(pcvl.BasicState([1, 0, 1, 0])) + pcvl.StateVector(pcvl.BasicState([0, 1, 0, 1]))
     assert sv == bsv
-    sv = sg.BellState("phi-")
+    sv = sg.bell_state("phi-")
     bsv = pcvl.StateVector(pcvl.BasicState([1, 0, 1, 0])) - pcvl.StateVector(pcvl.BasicState([0, 1, 0, 1]))
     assert sv == bsv
-    sv = sg.BellState("psi+")
+    sv = sg.bell_state("psi+")
     bsv = pcvl.StateVector(pcvl.BasicState([1, 0, 0, 1])) + pcvl.StateVector(pcvl.BasicState([0, 1, 1, 0]))
     assert sv == bsv
-    sv = sg.BellState("psi-")
+    sv = sg.bell_state("psi-")
     bsv = pcvl.StateVector(pcvl.BasicState([1, 0, 0, 1])) - pcvl.StateVector(pcvl.BasicState([0, 1, 1, 0]))
     assert sv == bsv
 
 
 def test_bell_state_polarization():
     sg = pcvl.StateGenerator(pcvl.Encoding.POLARIZATION)
-    sv = sg.BellState("phi+")
+    sv = sg.bell_state("phi+")
     bsv = pcvl.StateVector(pcvl.BasicState("|{P:H},{P:H}>")) + pcvl.StateVector(pcvl.BasicState("|{P:V},{P:V}>"))
     assert sv == bsv
-    sv = sg.BellState("phi-")
+    sv = sg.bell_state("phi-")
     bsv = pcvl.StateVector(pcvl.BasicState("|{P:H},{P:H}>")) - pcvl.StateVector(pcvl.BasicState("|{P:V},{P:V}>"))
     assert sv == bsv
-    sv = sg.BellState("psi+")
+    sv = sg.bell_state("psi+")
     bsv = pcvl.StateVector(pcvl.BasicState("|{P:H},{P:V}>")) + pcvl.StateVector(pcvl.BasicState("|{P:V},{P:H}>"))
     assert sv == bsv
-    sv = sg.BellState("psi-")
+    sv = sg.bell_state("psi-")
     bsv = pcvl.StateVector(pcvl.BasicState("|{P:H},{P:V}>")) - pcvl.StateVector(pcvl.BasicState("|{P:V},{P:H}>"))
     assert sv == bsv
 
 
 def test_ghz_state_raw():
     sg = pcvl.StateGenerator(pcvl.Encoding.RAW)
-    sv = sg.GHZState(3)
+    sv = sg.ghz_state(3)
     assert sv == pcvl.StateVector(pcvl.BasicState([0, 0, 0])) + pcvl.StateVector(pcvl.BasicState([1, 1, 1]))
-    sv = sg.GHZState(4)
+    sv = sg.ghz_state(4)
     assert sv == pcvl.StateVector(pcvl.BasicState([0, 0, 0, 0])) + pcvl.StateVector(pcvl.BasicState([1, 1, 1, 1]))
 
 
 def test_ghz_state_dual_rail():
     sg = pcvl.StateGenerator(pcvl.Encoding.DUAL_RAIL)
-    sv = sg.GHZState(3)
+    sv = sg.ghz_state(3)
     assert sv == pcvl.StateVector(pcvl.BasicState([1, 0, 1, 0, 1, 0])) + pcvl.StateVector(
         pcvl.BasicState([0, 1, 0, 1, 0, 1]))
-    sv = sg.GHZState(4)
+    sv = sg.ghz_state(4)
     assert sv == pcvl.StateVector(pcvl.BasicState([1, 0, 1, 0, 1, 0, 1, 0])) + pcvl.StateVector(
         pcvl.BasicState([0, 1, 0, 1, 0, 1, 0, 1]))
 
 
 def test_ghz_state_polarization():
     sg = pcvl.StateGenerator(pcvl.Encoding.POLARIZATION)
-    sv = sg.GHZState(3)
+    sv = sg.ghz_state(3)
     assert sv == pcvl.StateVector(pcvl.BasicState("|{P:H},{P:H},{P:H}>")) + pcvl.StateVector(
         pcvl.BasicState("|{P:V},{P:V},{P:V}>"))
-    sv = sg.GHZState(4)
+    sv = sg.ghz_state(4)
     assert sv == pcvl.StateVector(pcvl.BasicState("|{P:H},{P:H},{P:H},{P:H}>")) + pcvl.StateVector(
         pcvl.BasicState("|{P:V},{P:V},{P:V},{P:V}>"))
 
 
 def test_graph_state_raw():
     sg = pcvl.StateGenerator(pcvl.Encoding.RAW)
-    sv = sg.GraphState(nx.path_graph(3))
+    sv = sg.graph_state(nx.path_graph(3))
     assert str(sv) == "sqrt(2)/4*|1,0,0>+sqrt(2)/4*|0,0,0>-sqrt(2)/4*|1,1,0>+sqrt(2)/4*|0,1,0>+" \
                       "sqrt(2)/4*|1,0,1>+sqrt(2)/4*|0,0,1>+sqrt(2)/4*|1,1,1>-sqrt(2)/4*|0,1,1>"
 
 
 def test_graph_state_dual_rail():
     sg = pcvl.StateGenerator(pcvl.Encoding.DUAL_RAIL)
-    sv = sg.GraphState(nx.path_graph(3))
+    sv = sg.graph_state(nx.path_graph(3))
     assert str(sv) == "sqrt(2)/4*|0,1,1,0,1,0>+sqrt(2)/4*|1,0,1,0,1,0>-sqrt(2)/4*|0,1,0,1,1,0>+sqrt(2)/4*|1,0,0,1,1,0>+" \
                       "sqrt(2)/4*|0,1,1,0,0,1>+sqrt(2)/4*|1,0,1,0,0,1>+sqrt(2)/4*|0,1,0,1,0,1>-sqrt(2)/4*|1,0,0,1,0,1>"
 
 
 def test_graph_state_polarization():
     sg = pcvl.StateGenerator(pcvl.Encoding.POLARIZATION)
-    sv = sg.GraphState(nx.path_graph(3))
+    sv = sg.graph_state(nx.path_graph(3))
     assert str(sv) == "sqrt(2)/4*|{P:V},{P:H},{P:H}>+sqrt(2)/4*|{P:H},{P:H},{P:H}>-sqrt(2)/4*|{P:V},{P:V},{P:H}>+" \
                       "sqrt(2)/4*|{P:H},{P:V},{P:H}>+sqrt(2)/4*|{P:V},{P:H},{P:V}>+sqrt(2)/4*|{P:H},{P:H},{P:V}>+" \
                       "sqrt(2)/4*|{P:V},{P:V},{P:V}>-sqrt(2)/4*|{P:H},{P:V},{P:V}>"
