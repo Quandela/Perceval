@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,7 +31,7 @@ import math
 import numpy as np
 
 from .template import Backend
-import quandelibc as qc
+import exqalibur as xq
 
 
 class NaiveBackend(Backend):
@@ -34,12 +41,10 @@ class NaiveBackend(Backend):
     supports_symbolic = False
     supports_circuit_computing = False
 
-    def probampli_be(self, input_state, output_state, n=None, output_idx=None):
+    def probampli_be(self, input_state, output_state):
         if input_state.n != output_state.n:
             return 0
-        if n is None:
-            n = input_state.n
-        Ust = np.empty((n, n), dtype=complex)
+        Ust = np.empty((input_state.n, input_state.n), dtype=complex)
         colidx = 0
         p = 1
         for ok in range(self._realm):
@@ -53,10 +58,10 @@ class NaiveBackend(Backend):
                         Ust[rowidx, colidx] = self._U[ok, ik]
                         rowidx += 1
                 colidx += 1
-        return qc.permanent_cx(Ust, n_threads=1)/math.sqrt(p)
+        return xq.permanent_cx(Ust, n_threads=1)/math.sqrt(p)
 
-    def prob_be(self, input_state, output_state, n=None, output_idx=None):
-        return abs(self.probampli_be(input_state, output_state, n, output_idx))**2
+    def prob_be(self, input_state, output_state):
+        return abs(self.probampli_be(input_state, output_state))**2
 
     @staticmethod
     def preferred_command() -> str:

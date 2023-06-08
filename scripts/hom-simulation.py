@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,7 +29,7 @@
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-import quandelibc as qc
+import exqalibur as xq
 
 
 dt = pcvl.Parameter("Δt")
@@ -51,7 +58,7 @@ sim = backend(c)
 
 def f(x):
     dt.set_value(x)
-    return sim.prob(st0, qc.FockState([2, 0]))+sim.prob(st0, qc.FockState([0, 2]))
+    return sim.prob(st0, xq.FockState([2, 0]))+sim.prob(st0, xq.FockState([0, 2]))
 
 
 for i in range(100):

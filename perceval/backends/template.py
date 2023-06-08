@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -29,7 +36,7 @@ from perceval.utils import Matrix, StateVector, BasicState
 from perceval.utils.statevector import convert_polarized_state, build_spatial_output_states
 from ..components.linear_circuit import ACircuit, _matrix_double_for_polarization
 
-import quandelibc as qc
+import exqalibur as xq
 import numpy as np
 
 
@@ -103,7 +110,7 @@ class Backend(ABC):
         self._mask = None
         if mask is not None:
             assert n is not None, "number of photons required when using a mask"
-            self._mask = qc.FSMask(self._m, n, mask)
+            self._mask = xq.FSMask(self._m, n, mask)
 
         self._compiled_input = None
 
@@ -136,23 +143,22 @@ class Backend(ABC):
                 f'State/circuit size mismatch: circuit({self._m}) and state({state.m}) should be the same size')
 
     @abstractmethod
-    def prob_be(self, input_state, output_state, n=None):
+    def prob_be(self, input_state, output_state):
         pass
 
     @abstractmethod
-    def probampli_be(self, input_state, output_state, n=None):
+    def probampli_be(self, input_state, output_state):
         pass
 
     def prob(self,
              input_state: BasicState,
              output_state: BasicState,
-             n: int = None,
-             skip_compile: bool = False) -> float:
+             skip_compile: bool = False
+             ) -> float:
         r"""
         gives the probability of an output state given an input state
         :param input_state: the input state
         :param output_state: the output state
-        :param n:
         :return: float probability
         """
         self._check_state_size(input_state)
@@ -169,12 +175,12 @@ class Backend(ABC):
                     for i_state, o_state in zip(input_states, p_output_state):
                         if not skip_compile:
                             self.compile(i_state)
-                        prob *= self.prob_be(i_state, o_state, n)
+                        prob *= self.prob_be(i_state, o_state)
                     all_prob += prob
                 return all_prob
             if not skip_compile:
                 self.compile(input_state)
-            return self.prob_be(input_state, output_state, n)
+            return self.prob_be(input_state, output_state)
         spatial_mode_input_state, prep_matrix_input = convert_polarized_state(input_state)
         _U_ref = self._U
         _realm_ref = self._realm
@@ -185,11 +191,11 @@ class Backend(ABC):
             _U_new = self._U
         _U_new = _U_new @ prep_matrix_input
         if isinstance(output_state, BasicState) and output_state.has_polarization:
-            # if output state is polarized, we will directly calculating probabilities for it
+            # if output state is polarized, we will directly compute probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
             self.U = un_prep_matrix_output @ _U_new
             self.compile(spatial_mode_input_state)
-            prob = self.prob_be(spatial_mode_input_state, spatial_mode_output_state, n)
+            prob = self.prob_be(spatial_mode_input_state, spatial_mode_output_state)
         else:
             # for each polarized mode with k photons, we have to calculate probabilities on the spatial mode, ies all
             # |m,l> for m+l = k
@@ -211,12 +217,11 @@ class Backend(ABC):
     def probampli(self,
                   input_state: BasicState,
                   output_state: BasicState,
-                  n: int = None) -> complex:
+                  ) -> complex:
         """Gives the probability amplitude of an output state given an input state
 
         :param input_state: the input state
         :param output_state: the output state
-        :param n:
         :return: complex probability amplitude
         """
         self._check_state_size(input_state)
@@ -225,7 +230,7 @@ class Backend(ABC):
             return complex(1) if output_state.n == 0 else complex(0)
         if self._U is None or (not self._requires_polarization and not input_state.has_polarization):
             self.compile(input_state)
-            return self.probampli_be(input_state, output_state, n)
+            return self.probampli_be(input_state, output_state)
         spatial_mode_input_state, prep_matrix_input = convert_polarized_state(input_state)
         _U_ref = self._U
         _realm_ref = self._realm
@@ -238,7 +243,7 @@ class Backend(ABC):
             # if output state is polarized, we will directly calculate probabilities for it
             spatial_mode_output_state, un_prep_matrix_output = convert_polarized_state(output_state, inverse=True)
             self._U = un_prep_matrix_output @ self._U
-            prob_ampli = self.probampli_be(spatial_mode_input_state, spatial_mode_output_state, n)
+            prob_ampli = self.probampli_be(spatial_mode_input_state, spatial_mode_output_state)
         else:
             # for each polarized mode with k photons, we have to calculate probabilities on the spatial mode, ies all
             # |m,l> for m+l = k
@@ -285,10 +290,10 @@ class Backend(ABC):
             ns = [ns]
         for n in ns:
             if self._mask:
-                output_array = qc.FSArray(m, n, self._mask)
+                output_array = xq.FSArray(m, n, self._mask)
             else:
-                output_array = qc.FSArray(m, n)
-            for output_idx, output_state in enumerate(output_array):
+                output_array = xq.FSArray(m, n)
+            for output_state in output_array:
                 yield BasicState(output_state)
 
     def evolve(self, input_state: [BasicState, StateVector]) -> StateVector:

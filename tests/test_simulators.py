@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -51,7 +58,7 @@ def assert_cnot(s_cnot):
 
 
 def check_output(simulator, input_state, expected):
-    all_prob = 0
+    prob_list = []
     for (output_state, prob) in simulator.allstateprob_iterator(input_state):
         prob_expected = expected.get(output_state)
         if prob_expected is None:
@@ -60,8 +67,18 @@ def check_output(simulator, input_state, expected):
             assert pytest.approx(prob_expected) == prob, "incorrect value for %s: %f/%f" % (str(output_state),
                                                                                             prob,
                                                                                             prob_expected)
-        all_prob += prob
-    assert pytest.approx(all_prob) == 1
+        prob_list.append(prob)
+    assert pytest.approx(sum(prob_list)) == 1
+
+    # When possible, test simulator.all_prob call and compare results
+    if isinstance(input_state, pcvl.StateVector) and len(input_state) == 1:
+        input_state = input_state[0]
+    if isinstance(input_state, pcvl.BasicState):
+        all_prob = simulator.all_prob(input_state)
+        assert pytest.approx(sum(all_prob)) == 1
+        assert len(all_prob) == len(prob_list)
+        for p1, p2 in zip(prob_list, all_prob):
+            assert pytest.approx(p1) == p2
 
 
 def test_simulator_default():
@@ -210,7 +227,6 @@ def test_non_symmetrical():
         circuit.add((0, 1), BS.H())
         circuit.add((1,), PS(sp.pi/4))
         circuit.add((1, 2), BS.H())
-        pcvl.pdisplay(circuit.U)
         s = simulator_backend(circuit.U)
         check_output(s, pcvl.BasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
                                                      pcvl.BasicState("|1,1,0>"): 0.25,

@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,7 +40,7 @@ def autoselect_backend():
     except Exception:  # We cannot guess the exception type we need to catch here: it can come from any Matplotlib
         # backend or third party. We do not have control over this code
 
-        # In order to avoid matplotlib trying to use cairo (which is a dependency of cairocffi retrieved by drawSvg),
+        # In order to avoid matplotlib trying to use cairo (which is a dependency of cairocffi retrieved by drawsvg),
         # hint the backend given the execution context, and avoid cairo related backends at all cost!
         in_notebook = False
         in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ

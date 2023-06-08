@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,19 +33,18 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         action='ignore',
         category=RuntimeWarning)
-    import drawSvg as draw
+    import drawsvg as draw
 
 
 class SvgCanvas(Canvas):
     """
-    This class relies on drawSvg 3rd party library.
+    This class relies on drawsvg 3rd party library.
     With it, it is possible to create dynamic svg graphics.
     """
     def __init__(self, **opts):
-        super().__init__(**opts, inverse_Y=True)
+        super().__init__(**opts)
         self._draws = []
-        self._render_width = (opts["total_width"]+3)*50
-        self._render_height = (opts["total_height"]+1)*50
+        self._render_height = (opts["total_height"]+.5)*50
         self._pixel_size = 1.25
         if 'render_size' in opts:
             self._pixel_size *= opts['render_size']
@@ -110,8 +116,8 @@ class SvgCanvas(Canvas):
         if hasattr(self, "_group"):
             d = draw.Group(x=self._group[0], y=self._group[1])
         else:
-            d = draw.Drawing(self._render_width, self._render_height,
-                             origin=(self._minx-25, -self._maxy))
+            d = draw.Drawing(self.width()+50, self._render_height,
+                             origin=(self._minx-25, 0))
         for dr in self._draws:
             d.append(dr)
-        return d.setPixelScale(self._pixel_size)
+        return d.set_pixel_scale(self._pixel_size)

@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,15 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Port, Encoding, PortLocation, Circuit, Processor, Source
+from perceval.components import Port, Encoding, Circuit, Processor, Source
 from perceval.utils import P, BasicState
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
 
-import qiskit
-
-# TODO: add typing on library
 
 min_precision_gate = 1e-4
 
@@ -59,6 +63,7 @@ class QiskitConverter:
             `heralded CNOT`
         :return: the converted processor
         """
+        import qiskit  # this nested import fixes automatic class reference generation
 
         # count the number of cnot to use during the conversion, will give us the number of herald to handle
         n_cnot = 0

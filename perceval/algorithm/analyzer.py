@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -81,15 +88,14 @@ class Analyzer(AAlgorithm):
                 for os in allstate_iterator(input_state):
                     out_set.add(os)
             self.output_states_list = list(out_set)  # All states will be used in compute()
-        # Setup output state selection on clicks
+        # Setup output state selection on detected photons
         if output_states == '*':
-            min_output_photon_count = 1
+            min_output_photon_count = 1  # To retrieve all non-empty states on a QPU, set filter to 1
         else:
             min_output_photon_count = processor.m
             for ostate in self.output_states_list:
-                modes_with_photons = len([n for n in ostate if n > 0])
-                min_output_photon_count = min(modes_with_photons, min_output_photon_count)
-        processor.mode_post_selection(min_output_photon_count)
+                min_output_photon_count = min(ostate.n, min_output_photon_count)
+        processor.min_detected_photons_filter(min_output_photon_count)
 
     def compute(self, normalize=False, expected=None, progress_callback=None):
         """

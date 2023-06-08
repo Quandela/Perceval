@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -41,9 +48,7 @@ class Job(ABC):
     def name(self, new_name: str):
         if not isinstance(new_name, str):
             raise TypeError("A job name must be a string")
-        if len(new_name) == 0:
-            raise ValueError("A job name must not be empty")
-        self._name = new_name
+        self._name = new_name if len(new_name) > 0 else "unnamed"
 
     def _adapt_parameters(self, args, kwargs):
         r"""adapt the parameters according to delta_parameters map passed to the Job
