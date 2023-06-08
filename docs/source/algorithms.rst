@@ -28,7 +28,8 @@ The processor definition is then fine-tuned with ports (``add_port``) and herald
 following heralded CNOT gate example:
 
 >>> import perceval as pcvl
->>> from perceval.components import BS, PERM, Port, Encoding
+>>> from perceval.components import BS, PERM, Port
+>>> from perceval.utils import Encoding
 >>> c_hcnot = (pcvl.Circuit(8, name="Heralded CNOT")
 ...            .add((0, 1, 2), PERM([1, 2, 0]))
 ...            .add((4, 5), BS.H())

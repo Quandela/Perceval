@@ -27,8 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Port, Encoding, Circuit, Processor, Source
-from perceval.utils import P, BasicState
+from perceval.components import Port, Circuit, Processor, Source
+from perceval.utils import P, BasicState, Encoding
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
