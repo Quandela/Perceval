@@ -36,8 +36,7 @@ from typing import Dict, List
 
 
 class _Path:
-    """A `Path` is the minimal computing graph for covering a set of input states
-    """
+    """A `Path` is the minimal computing graph for covering a set of input states"""
 
     def __init__(self, n, m, states, targets, backend):
         self._n = n

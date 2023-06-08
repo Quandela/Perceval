@@ -387,6 +387,10 @@ def test_statevector_arithmetic():
     sv2 += -0.5*pcvl.StateVector([1,0])
     assert str(sv2) == "sqrt(2)/2*|0,1>-sqrt(2)/2*|1,0>"
 
+    sv3 = sv1 + sv2  # sv1 and sv2 is not normalized yet
+    assert str(sv3) != "|0,1>"  # so the result of the addition  won't suppress the |1,0> component
+    sv1.normalize()
+    sv2.normalize()
     sv3 = sv1 + sv2
     assert str(sv3) == "|0,1>"
 

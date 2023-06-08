@@ -32,8 +32,7 @@ from .abstract_processor import AProcessor, ProcessorType
 from .port import LogicalState
 from .source import Source
 from .linear_circuit import ACircuit
-from .computation import count_TD, count_independant_TD, expand_TD
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, global_params
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector
 from perceval.backends import BACKEND_LIST
 from perceval.backends.processor import StepperBackend
 
@@ -114,8 +113,7 @@ class Processor(AProcessor):
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
 
-        :param input_state: Expected input BasicState of length `self.m` (heralded modes are managed
-        automatically)
+        :param input_state: Expected input BasicState of length `self.m` (heralded modes are managed automatically)
         The properties of the source will alter the input state. A perfect source always delivers the expected state as
         an input. Imperfect ones won't.
         """
@@ -229,92 +227,28 @@ class Processor(AProcessor):
         logical_perf = count / (count + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    # def probs(self, progress_callback: Callable = None) -> Dict:
-    #     self._init_command("probs")
-    #     output = BSDistribution()
-    #     p_logic_discard = 0
-    #     if not self._has_td:
-    #         input_length = len(self._inputs_map)
-    #         physical_perf = 1
-    #
-    #         for idx, (input_state, input_prob) in enumerate(self._inputs_map.items()):
-    #             if not self._state_preselected_physical(input_state):
-    #                 physical_perf -= input_prob
-    #             else:
-    #                 for (output_state, p) in self._simulator.allstateprob_iterator(input_state):
-    #                     if p < global_params['min_p']:
-    #                         continue
-    #                     output_prob = p * input_prob
-    #                     if not self._state_selected_physical(output_state):
-    #                         physical_perf -= output_prob
-    #                         continue
-    #                     if self._state_selected(output_state):
-    #                         output[self.postprocess_output(output_state)] += output_prob
-    #                     else:
-    #                         p_logic_discard += output_prob
-    #             if progress_callback:
-    #                 exec_request = progress_callback(idx/input_length, 'probs')
-    #                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
-    #                     raise RuntimeError("Cancel requested")
-    #
-    #     else:
-    #         # Create a bigger processor with no heralds to represent the time delays
-    #         p_comp = self.flatten()
-    #         TD_number = count_TD(p_comp)
-    #         depth = count_independant_TD(p_comp, self.circuit_size) + 1
-    #         p_comp, extend_m = expand_TD(p_comp, depth, self.circuit_size, TD_number, True)
-    #         # p_comp = simplify(p_comp, extend_m)
-    #         extended_p = _expand_TD_processor(p_comp,
-    #                                           self._backend_name,
-    #                                           depth,
-    #                                           extend_m,
-    #                                           self._input_state,
-    #                                           self._min_detected_photons,
-    #                                           self.source)
-    #
-    #         res = extended_p.probs(progress_callback=progress_callback)
-    #
-    #         # Now reduce the states.
-    #         interest_m = [(depth - 1) * self.circuit_size, depth * self.circuit_size]
-    #         extended_out = res["results"]
-    #
-    #         second_perf = 1
-    #         for out_state, output_prob in extended_out.items():
-    #             reduced_out_state = out_state[interest_m[0]: interest_m[1]]
-    #             if not self._state_selected_physical(reduced_out_state):
-    #                 second_perf -= output_prob
-    #                 continue
-    #             if self._state_selected(reduced_out_state):
-    #                 output[self.postprocess_output(reduced_out_state)] += output_prob
-    #             else:
-    #                 p_logic_discard += output_prob
-    #         physical_perf = second_perf * res["physical_perf"]
-    #
-    #     if physical_perf < global_params['min_p']:
-    #         physical_perf = 0
-    #     all_p = sum(v for v in output.values())
-    #     if all_p == 0:
-    #         return {'results': output, 'physical_perf': physical_perf}
-    #     logical_perf = 1 - p_logic_discard / (p_logic_discard + all_p)
-    #     output.normalize()
-    #     return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+    def probs(self, progress_callback: Callable = None) -> Dict:
+        assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
+        from perceval.simulators import SimulatorFactory  # Avoids a circular import
+        simulator = SimulatorFactory.build(self)
+        res = simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
+        lperf = 1
+        pperf = 1
+        postprocessed_res = BSDistribution()
+        for state, prob in res['results'].items():
+            if not self._state_selected_physical(state):
+                pperf -= prob
+                continue
+            if self._state_selected(state):
+                postprocessed_res[self.postprocess_output(state)] = prob
+            else:
+                lperf -= prob
+        postprocessed_res.normalize()
+        res['logical_perf'] = res['logical_perf']*lperf if 'logical_perf' in res else lperf
+        res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
+        res['results'] = postprocessed_res
+        return res
 
     @property
     def available_commands(self) -> List[str]:
-        return [BACKEND_LIST[self._backend_name].preferred_command()=="samples" and "samples" or "probs"]
-
-
-def _expand_TD_processor(components: list, backend_name: str, depth: int, m: int,
-                         input_states: Union[SVDistribution, BasicState], min_detected_photons: int,
-                         source: Source):
-    p = Processor(backend_name, m, source)
-    if isinstance(input_states, SVDistribution):
-        input_states = input_states ** depth * SVDistribution(BasicState([0] * (m - depth * next(iter(input_states)).m)))
-    else:  # BasicState
-        input_states = input_states ** depth * BasicState([0] * (m - depth * input_states.m))
-
-    p.with_input(input_states)
-    for r, c in components:
-        p.add(r, c)
-    p.min_detected_photons_filter(min_detected_photons)
-    return p
+        return ["samples" if BACKEND_LIST[self._backend_name].preferred_command() == "samples" else "probs"]

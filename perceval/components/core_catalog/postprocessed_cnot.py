@@ -30,11 +30,8 @@
 from perceval.components import Circuit, Processor
 from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.components.port import Herald, Port, Encoding
-
-
-def _post_process(s):
-    return (s[1] or s[2]) and (s[3] or s[4])
+from perceval.components.port import Port, Encoding
+from perceval.utils import PostSelect
 
 
 class PostProcessedCnotItem(CatalogItem):
@@ -69,5 +66,5 @@ data (dual rail) ─────┤     ├───── data (dual rail)
              .add_port(1, Port(Encoding.DUAL_RAIL, 'ctrl')) \
              .add_port(3, Port(Encoding.DUAL_RAIL, 'data')) \
              .add_herald(5, 0)
-            p.set_postprocess(_post_process)
+            p.set_postselection(PostSelect("[1,2]==1 & [3,4]==1"))
             return p

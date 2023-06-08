@@ -32,11 +32,3 @@ from .loss_simulator import LossSimulator
 from .polarization_simulator import PolarizationSimulator
 from .simulator import Simulator
 from .simulator_factory import SimulatorFactory
-
-# Workaround an issue of circular dependency
-# TODO clean this up!
-from perceval.components import Processor as _Processor
-from ._processor_probs import _processor_probs
-
-
-_Processor.probs = _processor_probs
