@@ -142,7 +142,7 @@ class LatexCanvas(Canvas):
 
         pathstr = f"\draw[color={stroke},line width={stroke_width},line join={stroke_linejoin},fill={fill}]"
         idx = 0
-        x_pos, y_pos = 0, 0
+        x_pos = y_pos = x_ctl_1 = y_ctl_1 = x_ctl_2 = y_ctl_2 = x_end = y_end = 0
         while idx < len(points):
             if points[idx] == "M":
                 x_pos, y_pos = points[idx + 1 : idx + 3]
@@ -183,7 +183,7 @@ class LatexCanvas(Canvas):
             fill = "none"
 
         self._draws.append(
-            f"\draw[color={stroke},line width={stroke_width},line join={stroke_linejoin},fill={fill}] ({points[0]},{points[1]}) circle[radius={r}];"
+            f"\draw[color={stroke},line width={stroke_width},fill={fill}] ({points[0]},{points[1]}) circle[radius={r}];"
         )
 
     def add_text(self, points, text, size, ta="left", fontstyle="normal"):
