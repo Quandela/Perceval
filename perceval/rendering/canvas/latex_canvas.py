@@ -101,7 +101,6 @@ class LatexCanvas(Canvas):
         self._header = [
             "\\documentclass{standalone}",
             "\\usepackage{tikz}",
-            # "\\usepackage{lmodern}",
         ]
         self._prescript = [
             "\\begin{document}",
