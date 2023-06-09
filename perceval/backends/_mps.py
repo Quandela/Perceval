@@ -54,21 +54,23 @@ class MPSBackend(AProbAmpliBackend):
                  n: int = None,
                  mask: list = None):
         super().__init__(cu, use_symbolic, n, mask)
-        for r, c in self._C:
+        for r, c in self._C: # this would be a circuit or a matrix simply - FIX accordingly
             assert c.compute_unitary(use_symbolic=False).shape[0] <= 2,\
                 "MPS backend can not be used with components of using more than 2 modes"
         self._s_min = 1e-8
-        self.cutoff = self.m
-        self.res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
-        self.current_input = None
+        self._cutoff = self._input_state.m
+        self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
+        self._current_input = None
 
     name = "MPS"
     supports_symbolic = False
     supports_circuit_computing = True
 
-    def set_cutoff(self, cutoff: int):
-        assert isinstance(cutoff, int), "cutoff must be an integer"
-        self.cutoff = cutoff
+    def set_cutoff(self, _cutoff: int):
+        # DISCUSS IF NECESARRY, THE USER WOULD PROBABLY NOT INTERACT IF THE
+        # CUTOFF IS SET BY M ANYWAY AND BECAUSE OF THE NEW SIMULATOR INTERFACE
+        assert isinstance(_cutoff, int), "cutoff must be an integer"
+        self._cutoff = _cutoff
 
     def apply(self, r, c):
         u = c.compute_unitary(False)
@@ -80,27 +82,27 @@ class MPSBackend(AProbAmpliBackend):
 
     def compile(self, input_state: BasicState) -> bool:
         var = [float(p) for p in self._C.get_parameters()]
-        if self._compiled_input and self._compiled_input[0] == var and input_state in self.res:
+        if self._compiled_input and self._compiled_input[0] == var and input_state in self._res:
             return False
         self._compiled_input = copy.copy((var, input_state))
-        self.current_input = None
+        self._current_input = None
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS
         input_state *= BasicState([0] * (self.m - input_state.m))
         self.n = input_state.n
         self.d = self.n + 1
-        self.cutoff = min(self.cutoff, self.d ** (self.m//2))
-        self.gamma = np.zeros((self.m, self.cutoff, self.cutoff, self.d), dtype='complex_')
+        self._cutoff = min(self._cutoff, self.d ** (self.m//2))
+        self.gamma = np.zeros((self.m, self._cutoff, self._cutoff, self.d), dtype='complex_')
         for i in range(self.m):
             self.gamma[i, 0, 0, input_state[i]] = 1
-        self.sv = np.zeros((self.m, self.cutoff))
+        self.sv = np.zeros((self.m, self._cutoff))
         self.sv[:, 0] = 1
 
         for r, c in self._C:
             self.apply(r, c)
 
-        self.res[tuple(input_state)]["gamma"] = self.gamma.copy()
-        self.res[tuple(input_state)]["sv"] = self.sv.copy()
+        self._res[tuple(input_state)]["gamma"] = self.gamma.copy()
+        self._res[tuple(input_state)]["sv"] = self.sv.copy()
         return True
 
     # def prob_be(self, input_state, output_state):
@@ -110,11 +112,11 @@ class MPSBackend(AProbAmpliBackend):
         # TODO: put in quandelibc
         m = self._input_state.m
         mps_in_list = []
-        self.current_input = tuple(self._input_state)
+        self._current_input = tuple(self._input_state)
         for k in range(m - 1):
-            mps_in_list.append(self.res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
+            mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
             mps_in_list.append(self._sv_diag(k))
-        mps_in_list.append(self.res[tuple(self._input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
+        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     @staticmethod
@@ -144,7 +146,7 @@ class MPSBackend(AProbAmpliBackend):
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 2], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self.cutoff, self.d * self.cutoff)
+            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         elif k == 0:
             theta = np.tensordot(self.gamma[k, :], self._sv_diag(k), axes=(1, 0))
@@ -153,7 +155,7 @@ class MPSBackend(AProbAmpliBackend):
             theta = np.tensordot(theta, self._transition_matrix(u),
                                  axes=([1, 2], [0, 1]))  # Pretty weird thing... To check
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self.cutoff, self.d * self.cutoff)
+            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         elif k == self.m - 2:
             theta = np.tensordot(self._sv_diag(k - 1), self.gamma[k, :], axes=(1, 0))
@@ -161,13 +163,13 @@ class MPSBackend(AProbAmpliBackend):
             theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 3], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self.cutoff, self.d * self.cutoff)
+            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         v, s, w = np.linalg.svd(theta)
 
-        v = v.reshape(self.d, self.cutoff, self.d * self.cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self.cutoff]
-        w = w.reshape(self.d * self.cutoff, self.d, self.cutoff).swapaxes(1, 2)[:self.cutoff]
-        s = s[:self.cutoff]
+        v = v.reshape(self.d, self._cutoff, self.d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
+        w = w.reshape(self.d * self._cutoff, self.d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
+        s = s[:self._cutoff]
 
         self.sv[k] = np.where(s > self._s_min, s, 0)
 
@@ -204,10 +206,10 @@ class MPSBackend(AProbAmpliBackend):
         return big_u
 
     def _sv_diag(self, k):
-        if self.res[self.current_input]["sv"].any():
-            sv = self.res[self.current_input]["sv"]
+        if self._res[self._current_input]["sv"].any():
+            sv = self._res[self._current_input]["sv"]
         else:
             sv = self.sv
-        sv_diag = np.zeros((self.cutoff, self.cutoff))
+        sv_diag = np.zeros((self._cutoff, self._cutoff))
         np.fill_diagonal(sv_diag, sv[k, :])
         return sv_diag
