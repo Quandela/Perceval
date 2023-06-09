@@ -53,6 +53,12 @@ def _fockstate_add(self, other):
 def _fockstate_sub(self, other):
     return StateVector(self) - other
 
+def _fockstate_pow(self, power: int):
+    bs = self.__copy__()
+    for i in range(power - 1):
+        bs = bs * self
+    return bs
+
 def _fockstate_partition(self, distribution_photons: List[int]):
     r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
 
@@ -87,6 +93,7 @@ def _fockstate_partition(self, distribution_photons: List[int]):
 BasicState = FockState
 BasicState.__add__ = _fockstate_add
 BasicState.__sub__ = _fockstate_sub
+BasicState.__pow__ = _fockstate_pow  # Using issue #210 fix before moving the fix to exqalibur
 BasicState.partition = _fockstate_partition  # TODO use the cpp version of this call
 
 
