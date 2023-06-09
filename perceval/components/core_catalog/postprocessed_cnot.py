@@ -30,8 +30,8 @@
 from perceval.components import Circuit, Processor
 from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.components.port import Port, Encoding
-from perceval.utils import PostSelect
+from perceval.components.port import Port
+from perceval.utils import Encoding, PostSelect
 
 
 class PostProcessedCnotItem(CatalogItem):

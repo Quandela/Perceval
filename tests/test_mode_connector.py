@@ -31,7 +31,8 @@ import pytest
 
 from perceval.components._mode_connector import ModeConnector, UnavailableModeException, \
     InvalidMappingException
-from perceval.components import Processor, Circuit, Port, Encoding, PortLocation
+from perceval.components import Processor, Circuit, Port, PortLocation
+from perceval.utils import Encoding
 
 
 slos = "SLOS"
