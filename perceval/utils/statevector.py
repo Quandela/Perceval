@@ -338,7 +338,7 @@ class StateVector(defaultdict):
                     self[key] /= norm
             self._normalized = True
 
-    def __str__(self):
+    def __str__(self, nsimplify=True):
         if not self:
             return "|>"
         self_copy = copy(self)
@@ -351,14 +351,17 @@ class StateVector(defaultdict):
                 if isinstance(value, sp.Expr):
                     ls.append(str(value) + "*" + str(key))
                 else:
-                    value = simple_complex(value)[1]
-                    if value[1:].find("-") != -1 or value.find("+") != -1:
-                        value = "("+value+")"
+                    if nsimplify:
+                        value = simple_complex(value)[1]
+                        if value[1:].find("-") != -1 or value.find("+") != -1:
+                            value = f"({value})"
+                    else:
+                        value = str(value)
                     ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
 
     def __hash__(self):
-        return self.__str__().__hash__()
+        return self.__str__(nsimplify=False).__hash__()
 
 
 def tensorproduct(states: List[Union[StateVector, BasicState]]):

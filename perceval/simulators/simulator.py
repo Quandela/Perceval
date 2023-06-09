@@ -202,16 +202,24 @@ class Simulator(ISimulator):
         self._evolve_cache(input_set)
 
         res = BSDistribution()
+        merge_cache = {}
         for idx, (prob, sv_data) in enumerate(decomposed_input):
             result_sv = StateVector()
             for probampli, instate_list in sv_data:
                 if len(instate_list) == 1:
                     evolved_in_s = self._cache[instate_list[0]]
                 else:
-                    evolved_in_s = StateVector()
+                    evolved_in_s = self._cache[instate_list.pop()]
                     for in_s in instate_list:
-                        evolved_in_s = _merge_sv(evolved_in_s, self._cache[in_s])
-                        self.DEBUG_merge_count += 1
+                        if evolved_in_s in merge_cache and self._cache[in_s] in merge_cache[evolved_in_s]:
+                            evolved_in_s = merge_cache[evolved_in_s][self._cache[in_s]]
+                        else:
+                            merge_res = _merge_sv(evolved_in_s, self._cache[in_s])
+                            if evolved_in_s not in merge_cache:
+                                merge_cache[evolved_in_s] = {}
+                            merge_cache[evolved_in_s][self._cache[in_s]] = merge_res
+                            evolved_in_s = merge_res
+                            self.DEBUG_merge_count += 1
                 result_sv += evolved_in_s * probampli
             for bs, p in _to_bsd(result_sv).items():
                 res[bs] += p*prob
