@@ -243,11 +243,11 @@ class LatexCanvas(Canvas):
             )
         elif fontstyle == "italic":
             self._draws.append(
-                f"\\node[align={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\itshape\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text.translate(str.maketrans(latex_greek_letters))}}};"
             )
         elif fontstyle == "bold":
             self._draws.append(
-                f"\\node[align={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\bfseries\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text.translate(str.maketrans(latex_greek_letters))}}};"
             )
         else:
             raise NotImplementedError(f"Font style {fontstyle} not implemented")
