@@ -30,27 +30,68 @@
 from .canvas import Canvas
 
 tikz_implemented_colors = {
-    "red": True,
-    "green": True,
-    "blue": True,
-    "cyan": True,
-    "magenta": True,
-    "yellow": True,
+    "aquamarine": "\\definecolor{aquamarine}{rgb}{0.5, 1.0, 0.83}",
     "black": True,
-    "gray": True,
-    "white": True,
-    "darkgray": True,
-    "lightgray": True,
+    "blue": True,
     "brown": True,
+    "cyan": True,
+    "darkgray": True,
+    "darkred": "\\definecolor{darkred}{rgb}{0.55, 0.0, 0.0}",
+    "gray": True,
+    "green": True,
+    "lightblue": "\\definecolor{lightblue}{rgb}{0.68, 0.85, 0.9}",
+    "lightgray": True,
+    "lightpink": "\\definecolor{lightpink}{rgb}{1.0, 0.71, 0.76}",
+    "lightyellow": "\\definecolor{lightyellow}{rgb}{1.0, 1.0, 0.88}",
     "lime": True,
+    "magenta": True,
     "olive": True,
     "orange": True,
     "pink": True,
     "purple": True,
+    "red": True,
     "teal": True,
-    "violet": True,
-    "darkred": "\\definecolor{darkred}{rgb}{0.55, 0.0, 0.0}",
     "thistle": "\\definecolor{thistle}{rgb}{0.85, 0.75, 0.85}",
+    "violet": True,
+    "white": True,
+    "yellow": True,
+}
+
+latex_greek_letters = {
+    "α": "$\\alpha$",
+    "β": "$\\beta$",
+    "γ": "$\\gamma$",
+    "δ": "$\\delta$",
+    "ϵ": "$\\epsilon$",
+    "ζ": "$\\zeta$",
+    "η": "$\\eta$",
+    "θ": "$\\theta$",
+    "ι": "$\\iota$",
+    "κ": "$\\kappa$",
+    "λ": "$\\lambda$",
+    "μ": "$\\mu$",
+    "ν": "$\\nu$",
+    "ξ": "$\\xi$",
+    "π": "$\\pi$",
+    "ρ": "$\\rho$",
+    "σ": "$\\sigma$",
+    "τ": "$\\tau$",
+    "υ": "$\\upsilon$",
+    "ϕ": "$\\phi$",
+    "χ": "$\\chi$",
+    "ψ": "$\\psi$",
+    "ω": "$\\omega$",
+    "Γ": "$\\Gamma$",
+    "Δ": "$\\Delta$",
+    "Θ": "$\\Theta$",
+    "Λ": "$\\Lambda$",
+    "Ξ": "$\\Xi$",
+    "Π": "$\\Pi$",
+    "Σ": "$\\Sigma$",
+    "Υ": "$\\Upsilon$",
+    "Φ": "$\\Phi$",
+    "Ψ": "$\\Psi$",
+    "Ω": "$\\Omega$",
 }
 
 
@@ -60,20 +101,21 @@ class LatexCanvas(Canvas):
         self._header = [
             "\\documentclass{standalone}",
             "\\usepackage{tikz}",
+            # "\\usepackage{lmodern}",
         ]
         self._prescript = [
             "\\begin{document}",
-            "\\begin{tikzpicture}[scale=1.5,x=1pt,y=1pt]",
+            "\\begin{tikzpicture}[scale=1.0,x=1pt,y=1pt]",
         ]
         self._draws = []
-        self._postscrip = [
+        self._postscript = [
             "\\end{tikzpicture}",
             "\\end{document}",
         ]
         self._color_check_list = tikz_implemented_colors.copy()
 
     def _check_color_is_implemented(self, color):
-        if self._color_check_list[color] is None:
+        if color not in self._color_check_list:
             raise NotImplementedError(f"Color {color} is not defined")
         elif self._color_check_list[color] is not True:
             self._header.append(self._color_check_list[color])
@@ -94,7 +136,7 @@ class LatexCanvas(Canvas):
         for idx in range(0, len(points), 2):
             nodes.append(f"({points[idx]},{-points[idx+1]})")
         self._draws.append(
-            f"\draw[color={stroke},line width={stroke_width}] "
+            f"\\draw[color={stroke},line width={stroke_width}] "
             + " -- ".join(nodes)
             + ";"
         )
@@ -119,7 +161,7 @@ class LatexCanvas(Canvas):
         for idx in range(0, len(points), 2):
             nodes.append(f"({points[idx]},{-points[idx+1]})")
         self._draws.append(
-            f"\draw[color={stroke},line width={stroke_width},fill={fill}] "
+            f"\\draw[color={stroke},line width={stroke_width},fill={fill}] "
             + " -- ".join(nodes)
             + " -- cycle;"
         )
@@ -140,7 +182,7 @@ class LatexCanvas(Canvas):
         else:
             self._check_color_is_implemented(fill)
 
-        pathstr = f"\draw[color={stroke},line width={stroke_width},line join={stroke_linejoin},fill={fill}]"
+        pathstr = f"\\draw[color={stroke},line width={stroke_width},line join={stroke_linejoin},fill={fill}]"
         idx = 0
         x_pos = y_pos = x_ctl_1 = y_ctl_1 = x_ctl_2 = y_ctl_2 = x_end = y_end = 0
         while idx < len(points):
@@ -183,12 +225,12 @@ class LatexCanvas(Canvas):
             fill = "none"
 
         self._draws.append(
-            f"\draw[color={stroke},line width={stroke_width},fill={fill}] ({points[0]},{points[1]}) circle[radius={r}];"
+            f"\\draw[color={stroke},line width={stroke_width},fill={fill}] ({points[0]},{points[1]}) circle[radius={r}];"
         )
 
     def add_text(self, points, text, size, ta="left", fontstyle="normal"):
         if ta == "middle":
-            ta = "mid"
+            ta = "base"
         elif ta == "left":
             ta = "west"
         elif ta == "right":
@@ -198,19 +240,21 @@ class LatexCanvas(Canvas):
 
         if fontstyle == "normal":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text.translate(str.maketrans(latex_greek_letters))}}};"
             )
         elif fontstyle == "italic":
             self._draws.append(
-                f"\\node[align={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\itshape}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\itshape\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "bold":
             self._draws.append(
-                f"\\node[align={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\bfseries}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\bfseries\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         else:
             raise NotImplementedError(f"Font style {fontstyle} not implemented")
 
     def draw(self):
         super().draw()
-        return "\n".join(self._header + self._prescript + self._draws + self._postscrip)
+        return "\n".join(
+            self._header + self._prescript + self._draws + self._postscript
+        )
