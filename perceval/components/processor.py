@@ -168,6 +168,14 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
 
+    def with_polarized_input(self, bs: BasicState):
+        assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
+        self._input_state = bs
+        self._inputs_map = SVDistribution(bs)
+        self._min_detected_photons = bs.n
+        if 'min_detected_photons' in self._parameters:
+            self._min_detected_photons = self._parameters['min_detected_photons']
+
     def clear_input_and_circuit(self):
         super().clear_input_and_circuit()
         self._inputs_map = None

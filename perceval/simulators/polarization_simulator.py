@@ -29,7 +29,7 @@
 
 from .simulator_interface import ASimulatorDecorator
 
-from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector
+from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector, SVDistribution
 from perceval.components import Unitary
 
 
@@ -39,11 +39,20 @@ class PolarizationSimulator(ASimulatorDecorator):
         self._upol = None
 
     def _prepare_input(self, input_state):
+        is_svd = False
+        if isinstance(input_state, SVDistribution) and len(input_state) == 1:
+            is_svd = True
+            temp_sv = list(input_state.keys())[0]
+            if len(temp_sv) == 1:
+                input_state = temp_sv[0]
+
         if not isinstance(input_state, BasicState):
             raise NotImplementedError("Polarization simulator can only process BasicState inputs")
         spatial_input, preprocess_matrix = convert_polarized_state(input_state)
         circuit = Unitary(self._upol @ preprocess_matrix)
         self._simulator.set_circuit(circuit)
+        if is_svd:
+            spatial_input = SVDistribution(spatial_input)
         return spatial_input
 
     def set_circuit(self, circuit):
