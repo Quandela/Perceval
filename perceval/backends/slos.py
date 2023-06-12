@@ -42,7 +42,7 @@ class ComputePath:
     def __init__(self, n, states, targets, backend):
         self._n = n
         self._backend = backend
-        self.coefs = Matrix.zeros((backend.mk_l[n], 1),
+        self.coefs = Matrix.zeros((backend._n_par_unitaries, backend.mk_l[n]),
                                   use_symbolic=self._backend.is_symbolic())
         if n == 0:
             self.coefs.fill(1)
@@ -91,14 +91,19 @@ class ComputePath:
         r"""Given the precompiled compute path, update all the coefficients"""
         if parent_coefs is not None:
             if self._backend._use_symbolic:
-                self.coefs.fill(0)
-                for parent_idx, coef_parent in enumerate(parent_coefs):
-                    for j in range(self._backend._realm):
-                        idx = self._backend.fsms[self._n].get(parent_idx, j)
-                        if idx != xq.npos:
-                            self.coefs[idx] += coef_parent * u[j, mk]
+                for k in range(self._backend._n_par_unitaries):
+                    self.coefs[k].fill(0)
+                    for parent_idx, coef_parent in enumerate(parent_coefs):
+                        for j in range(self._backend._realm):
+                            idx = self._backend.fsms[self._n].get(parent_idx, j)
+                            if idx != xq.npos:
+                                self.coefs[k][idx] += coef_parent * u[k][j, mk]
             else:
-                self._backend.fsms[self._n].compute_slos_layer(u, self._backend._realm, mk, self.coefs, parent_coefs)
+                self._backend.fsms[self._n].compute_slos_layer_par(u,
+                                                                   self._backend._realm,
+                                                                   mk,
+                                                                   self.coefs, parent_coefs,
+                                                                   self._backend._n_par_unitaries)
 
         for mk, child in self._children.items():
             child.compute(u, self.coefs, mk)
@@ -113,17 +118,34 @@ class SLOSBackend(Backend):
     def __init__(self, u, use_symbolic=None, n=None, mask=None):
         super().__init__(u, use_symbolic=use_symbolic, n=n, mask=mask)
         self._compute_path = None
+        self._par_unitary_array = None
+        self._n_par_unitaries = 0
         self._changed_unitary(None)
 
-    def _changed_unitary(self, prev_u):
-        if self._compute_path is not None and prev_u is not None and prev_u.shape == self._U.shape:
-            self._calculation()
-        else:
+    def set_multi_unitary(self, list_u, single_mode=False):
+        self._single_mode = single_mode
+        prev_u = self._U
+        self._U = list_u[0]
+        self._n_par_unitaries = len(list_u)
+        if prev_u is None or prev_u.shape != self._U.shape or self._par_unitary_array.shape[0] < len(list_u):
             self.mk_l = [1]
             self.fsms = [[]]
             self.fsas = {}
             self._compute_path = None
             self.state_mapping = {}
+            self._par_unitary_array = np.zeros((len(list_u), self._U.shape[0], self._U[0].shape[0]),
+                                               dtype=np.complex128)
+            for i, u in enumerate(list_u):
+                self._par_unitary_array[i] = u
+        else:
+            for i, u in enumerate(list_u):
+                self._par_unitary_array[i] = u
+            self._calculation()
+
+    def _changed_unitary(self, prev_u):
+        u = self._U
+        self._U = prev_u
+        self.set_multi_unitary([u], single_mode=True)
 
     def _compilation(self, input_states):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
@@ -157,7 +179,7 @@ class SLOSBackend(Backend):
         Simulation step: update computation path coef with unitary U
         :return:
         """
-        self._compute_path.compute(self._U)
+        self._compute_path.compute(self._par_unitary_array)
 
     def compile(self, input_states):
         if isinstance(input_states, BasicState):
@@ -194,11 +216,17 @@ class SLOSBackend(Backend):
                * output_state.prodnfact()/input_state.prodnfact()
 
     # The following SLOS-specific optimization is broken for polarized states/circuits
-    # def all_prob(self, input_state):
-    #     self.compile(input_state)
-    #     c = np.copy(self.state_mapping[input_state].coefs).reshape(self.fsas[input_state.n].count())
-    #     self.fsas[input_state.n].norm_coefs(c)
-    #     return abs(c)**2 / input_state.prodnfact()
+    def all_prob(self, input_state):
+         self.compile(input_state)
+         l_c = []
+         for k in range(self._n_par_unitaries):
+            c = np.copy(self.state_mapping[input_state].coefs[k]).reshape(self.fsas[input_state.n].count())
+            self.fsas[input_state.n].norm_coefs(c)
+            l_c.append(abs(c) ** 2 / input_state.prodnfact())
+         if self._single_mode:
+             return l_c[0]
+         else:
+             return l_c
 
     @staticmethod
     def preferred_command() -> str:
