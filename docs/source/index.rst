@@ -91,6 +91,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Qiskit conversion
    notebooks/Remote computing
    notebooks/Reinforcement learning
+   notebooks/QUBO
 
 .. toctree::
    :caption: Code Reference
