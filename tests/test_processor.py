@@ -37,6 +37,7 @@ def test_processor_generator_0():
     p.with_input(pcvl.BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {pcvl.StateVector([0, 1, 1, 0]): 1}
 
+
 def test_processor_generator_1():
     p = pcvl.Processor("Naive", pcvl.Circuit(4), pcvl.Source(emission_probability=0.2))
     p.with_input(pcvl.BasicState([0, 1, 1, 0]))
@@ -82,9 +83,9 @@ def test_processor_generator_2():
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
 
 
-def test_processor_generator_3():
+def test_processor_identity_sv():
     p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
-    sv = pcvl.BasicState([0, 1, 1, 0])+pcvl.BasicState([1, 0, 0, 1])
+    sv = pcvl.BasicState([0, 1, 1, 0]) + pcvl.BasicState([1, 0, 0, 1])
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}
 
@@ -104,3 +105,17 @@ def test_processor_probs():
     assert pytest.approx(bsd_out[pcvl.BasicState("|2,0>")]) == 0.5
     assert pytest.approx(bsd_out[pcvl.BasicState("|0,2>")]) == 0.5
     assert pytest.approx(probs['physical_perf']) == 1
+
+
+def test_processor_samples():
+    proc = pcvl.Processor("CliffordClifford2017", comp.BS())
+
+    # Without annotations
+    proc.with_input(pcvl.BasicState("|1,1>"))
+    samples = proc.samples(500)
+    assert samples["results"].count(pcvl.BasicState([1, 1])) == 0
+
+    # With annotations
+    proc.with_input(pcvl.SVDistribution({pcvl.BasicState("|{_:0},{_:1}>"): 1}))
+    samples = proc.samples(500)
+    assert samples["results"].count(pcvl.BasicState([1,1])) > 50

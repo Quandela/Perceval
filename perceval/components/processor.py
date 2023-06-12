@@ -34,7 +34,7 @@ from .source import Source
 from .linear_circuit import ACircuit
 from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector
 from perceval.backends import BACKEND_LIST
-from perceval.backends.processor import StepperBackend
+from perceval.backends._clifford2017 import Clifford2017Backend
 
 from multipledispatch import dispatch
 from typing import Dict, Callable, Union, List
@@ -72,17 +72,6 @@ class Processor(AProcessor):
         self._simulator = None
         assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
         self._backend_name = backend_name
-
-    def _setup_simulator(self, **kwargs):
-        if self._is_unitary:
-            self._simulator = BACKEND_LIST[self._backend_name](self.linear_circuit(), **kwargs)
-        else:
-            if "probampli" not in BACKEND_LIST[self._backend_name].available_commands():
-                raise RuntimeError(f"{self._backend_name} backend cannot be used on a non-unitary processor")
-            self._simulator = StepperBackend(self.non_unitary_circuit(),
-                                             m=self.circuit_size,
-                                             backend_name=self._backend_name,
-                                             min_detected_photons_filter=self._min_detected_photons)
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -185,14 +174,6 @@ class Processor(AProcessor):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
-    def _init_command(self, command_name: str):
-        assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
-        if self._backend_name == "CliffordClifford2017" and self._has_td:
-            raise NotImplementedError(
-                "Time delays are not implemented within CliffordClifford2017 backend. Please use another one.")
-        if not self._has_td:  # TODO: remove quickfix by something clever :  self._simulator is None and
-            self._setup_simulator()
-
     def _state_preselected_physical(self, input_state: StateVector) -> bool:
         return max(input_state.n) >= self._min_detected_photons
 
@@ -203,22 +184,47 @@ class Processor(AProcessor):
         return output_state.n >= self._min_detected_photons
 
     def samples(self, count: int, progress_callback=None) -> Dict:
-        self._init_command("samples")
+        pre_physical_perf = 1
+        # Rework input map so that it contains only states with enough photons
+        input_svd = SVDistribution()
+        for sv, p in self._inputs_map.items():
+            if self._state_preselected_physical(sv):
+                if len(sv) > 1:
+                    raise RuntimeError("Cannot sample on a superposed state")
+                input_svd[sv] = p
+            else:
+                pre_physical_perf -= p
+
+        sampling_backend = Clifford2017Backend()
+        sampling_backend.set_circuit(self.linear_circuit())
+
         output = BSSamples()
+        selected_inputs = []
+        idx = 0
         not_selected_physical = 0
         not_selected = 0
-        selected_inputs = self._inputs_map.sample(count)
-        idx = 0
         while len(output) < count:
-            selected_input = selected_inputs[idx]
-            idx += 1
             if idx == len(selected_inputs):
                 idx = 0
-                selected_inputs = self._inputs_map.sample(count)
-            if not self._state_preselected_physical(selected_input):
-                not_selected_physical += 1
-                continue
-            sampled_state = self._simulator.sample(selected_input)
+                selected_inputs = input_svd.sample(count)
+            selected_bs = selected_inputs[idx][0]
+            idx += 1
+
+            # Sampling
+            if selected_bs.has_annotations:  # In case of annotations, input must be separately sampled, then recombined
+                bs_list = selected_bs.separate_state()
+                sampled_components = []
+                for bs in bs_list:
+                    sampling_backend.set_input_state(bs)
+                    sampled_components.append(sampling_backend.sample())
+                sampled_state = sampled_components.pop()
+                for component in sampled_components:
+                    sampled_state = sampled_state.merge(component)
+            else:
+                sampling_backend.set_input_state(selected_bs)
+                sampled_state = sampling_backend.sample()
+
+            # Post-processing
             if not self._state_selected_physical(sampled_state):
                 not_selected_physical += 1
                 continue
@@ -226,12 +232,14 @@ class Processor(AProcessor):
                 output.append(self.postprocess_output(sampled_state))
             else:
                 not_selected += 1
+
+            # Progress
             if progress_callback:
                 exec_request = progress_callback(len(output)/count, "sampling")
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     break
 
-        physical_perf = (count + not_selected) / (count + not_selected + not_selected_physical)
+        physical_perf = pre_physical_perf * (count + not_selected) / (count + not_selected + not_selected_physical)
         logical_perf = count / (count + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
