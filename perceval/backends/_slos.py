@@ -42,7 +42,7 @@ class _Path:
         self._n = n
         self._m = m
         self._backend = backend
-        self.coefs = Matrix.zeros((backend._mk_l[n], 1))  # , use_symbolic=self._backend.is_symbolic())
+        self.coefs = Matrix.zeros((backend._mk_l[n], 1), use_symbolic=self._backend._symb)
         if n == 0:
             self.coefs.fill(1)
 
@@ -89,26 +89,27 @@ class _Path:
     def compute(self, u, parent_coefs: Matrix = None, mk: int = None):
         r"""Given the precompiled compute path, update all the coefficients"""
         if parent_coefs is not None:
-            # if self._backend._use_symbolic:
-            #     self.coefs.fill(0)
-            #     for parent_idx, coef_parent in enumerate(parent_coefs):
-            #         for j in range(self._backend._realm):
-            #             idx = self._backend.fsms[self._n].get(parent_idx, j)
-            #             if idx != xq.npos:
-            #                 self.coefs[idx] += coef_parent * u[j, mk]
-            # else:
-            self._backend._fsms[self._n].compute_slos_layer(u, self._m, mk, self.coefs, parent_coefs)
+            if self._backend._symb:
+                self.coefs.fill(0)
+                for parent_idx, coef_parent in enumerate(parent_coefs):
+                    for j in range(self._backend._realm):
+                        idx = self._backend.fsms[self._n].get(parent_idx, j)
+                        if idx != xq.npos:
+                            self.coefs[idx] += coef_parent * u[j, mk]
+            else:
+                self._backend._fsms[self._n].compute_slos_layer(u, self._m, mk, self.coefs, parent_coefs)
 
         for mk, child in self._children.items():
             child.compute(u, self.coefs, mk)
 
 
 class SLOSBackend(AProbAmpliBackend):
-    def __init__(self, mask=None):
+    def __init__(self, mask=None, use_symbolic=False):
         super().__init__()
         self._reset()
         self._mask = mask
         self._umat = None
+        self._symb = use_symbolic
 
     @property
     def name(self) -> str:
