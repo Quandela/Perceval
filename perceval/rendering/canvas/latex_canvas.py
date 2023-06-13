@@ -29,6 +29,7 @@
 
 from .canvas import Canvas
 
+from copy import copy
 import latexcodec  # noqa
 
 tikz_implemented_colors = {
@@ -154,21 +155,33 @@ class LatexCanvas(Canvas):
                 x_pos, y_pos = points[idx + 1 : idx + 3]
                 idx += 2
             elif points[idx] == "L":
+                x_prev, y_prev = copy(x_end), copy(y_end)
                 x_end, y_end = points[idx + 1 : idx + 3]
-                pathstr += f" ({x_pos},{-y_pos}) -- ({x_end},{-y_end})"
+                if x_prev != x_pos and y_prev != y_pos:
+                    pathstr += f" ({x_pos},{-y_pos}) -- ({x_end},{-y_end})"
+                else:
+                    pathstr += f" -- ({x_end},{-y_end})"
                 x_pos, y_pos = x_end, y_end
                 idx += 2
             elif points[idx] == "S":
+                x_prev, y_prev = copy(x_end), copy(y_end)
                 x_ctl_1, y_ctl_1 = x_ctl_2, y_ctl_2
                 x_ctl_2, y_ctl_2, x_end, y_end = points[idx + 1 : idx + 5]
-                pathstr += f" ({x_pos},{-y_pos}) .. controls ({x_ctl_1},{-y_ctl_1}) and ({x_ctl_2},{-y_ctl_2}) .. ({x_end},{-y_end})"
+                if x_prev != x_pos and y_prev != y_pos:
+                    pathstr += f" ({x_pos},{-y_pos}) .. controls ({x_ctl_1},{-y_ctl_1}) and ({x_ctl_2},{-y_ctl_2}) .. ({x_end},{-y_end})"
+                else:
+                    pathstr += f" .. controls ({x_ctl_1},{-y_ctl_1}) and ({x_ctl_2},{-y_ctl_2}) .. ({x_end},{-y_end})"
                 x_pos, y_pos = x_end, y_end
                 idx += 4
             elif points[idx] == "C":
+                x_prev, y_prev = copy(x_end), copy(y_end)
                 x_ctl_1, y_ctl_1, x_ctl_2, y_ctl_2, x_end, y_end = points[
                     idx + 1 : idx + 7
                 ]
-                pathstr += f" ({x_pos},{-y_pos}) .. controls ({x_ctl_1},{-y_ctl_1}) and ({x_ctl_2},{-y_ctl_2}) .. ({x_end},{-y_end})"
+                if x_prev != x_pos and y_prev != y_pos:
+                    pathstr += f" ({x_pos},{-y_pos}) .. controls ({x_ctl_1},{-y_ctl_1}) and ({x_ctl_2},{-y_ctl_2}) .. ({x_end},{-y_end})"
+                else:
+                    pathstr += f" .. controls ({x_ctl_1},{-y_ctl_1}) and ({x_ctl_2},{-y_ctl_2}) .. ({x_end},{-y_end})"
                 x_pos, y_pos = x_end, y_end
                 idx += 6
             idx += 1
