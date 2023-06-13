@@ -49,18 +49,20 @@ class MPSBackend(AProbAmpliBackend):
     """
 
     def __init__(self, mask: list = None):
-        super().__init__(self, mask)
+        super().__init__()
         self._s_min = 1e-8
-        self._cutoff = self._input_state.m
+        self._cutoff = None
         self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
         self._current_input = None
 
-    def set_cutoff(self, _cutoff: int):
-        assert isinstance(_cutoff, int), "cutoff must be an integer"
-        self._cutoff = _cutoff
+    def set_cutoff(self, cutoff_val: int):
+        assert isinstance(cutoff_val, int), "cutoff must be an integer"
+        if cutoff_val:
+            self._cutoff = cutoff_val
+        self._cutoff = self._input_state.m
 
     def set_circuit(self, circuit: ACircuit):
-        super().set_circuit(self, circuit)
+        super().set_circuit(circuit)
         C = self._circuit
         for r, c in C:
             assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \

@@ -30,6 +30,7 @@
 from perceval.backends._clifford2017 import Clifford2017Backend
 from perceval.backends._naive import NaiveBackend, AProbAmpliBackend
 from perceval.backends._slos import SLOSBackend
+from perceval.backends._mps import MPSBackend
 from perceval.components import BS, PS, Circuit
 from perceval.utils import BSCount, BasicState
 import pytest
@@ -62,7 +63,7 @@ def check_output_distribution(backend: AProbAmpliBackend, input_state: BasicStat
 
 
 def test_probampli_backends():
-    for backend_type in [NaiveBackend, SLOSBackend]:
+    for backend_type in [NaiveBackend, SLOSBackend, MPSBackend]:
         backend = backend_type()
         circuit = Circuit(3) // BS.H() // (1, PS(np.pi/4)) // (1, BS.H())
         backend.set_circuit(circuit)
