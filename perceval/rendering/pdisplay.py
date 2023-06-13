@@ -289,7 +289,7 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     if isinstance(res, drawsvg.Drawing):
         return res
-    elif in_notebook and output_format != Format.TEXT:
+    elif in_notebook and output_format != Format.TEXT and output_format != Format.LATEX:
         display(HTML(res))
     else:
         print(res)
@@ -323,6 +323,11 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
             return
         except:
             pass
+    
+    if output_format == Format.LATEX:
+        with open(path, 'w', encoding='utf-8') as f_out:
+            f_out.write(res)
+        return
 
     warnings.warn(
         f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}")
