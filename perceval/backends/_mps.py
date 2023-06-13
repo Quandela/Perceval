@@ -59,8 +59,9 @@ class MPSBackend(AProbAmpliBackend):
         assert isinstance(_cutoff, int), "cutoff must be an integer"
         self._cutoff = _cutoff
 
-    def set_circuit(self, circuit):
-        C = super().set_circuit(self, circuit)
+    def set_circuit(self, circuit: ACircuit):
+        super().set_circuit(self, circuit)
+        C = self._circuit
         for r, c in C:
             assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
                 "MPS backend can not be used with components of using more than 2 modes"
@@ -82,7 +83,7 @@ class MPSBackend(AProbAmpliBackend):
         # this is the function that calls apply() which further calls all the other update_state and
         # transition stuff. Doubts wiht how it is related to the calculation of probampli and the backend computation :(
 
-        C = self.set_circuit(self, circuit=ACircuit)  # work out on how to get/pass the circuit arguement
+        C = self.set_circuit(circuit=ACircuit)  # work out on how to get/pass the circuit arguement
         var = [float(p) for p in C.get_parameters()]
         if self._compiled_input and self._compiled_input[0] == var and input_state in self._res:
             return False
