@@ -1,5 +1,5 @@
 numpy
-exqalibur~=0.1.0
+exqalibur~=0.1.1
 tabulate
 pytest
 setuptools
@@ -12,4 +12,5 @@ Deprecated
 requests
 drawsvg>=2.0
 protobuf>=4.21.2
+networkx~=3.1
 latexcodec
