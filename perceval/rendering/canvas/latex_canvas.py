@@ -220,15 +220,15 @@ class LatexCanvas(Canvas):
 
         if fontstyle == "normal":
             self._draws.append(
-                f"\\node[align=left,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align=center,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "italic":
             self._draws.append(
-                f"\\node[align=left,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align=center,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "bold":
             self._draws.append(
-                f"\\node[align=left,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align=center,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         else:
             raise NotImplementedError(f"Font style {fontstyle} not implemented")
