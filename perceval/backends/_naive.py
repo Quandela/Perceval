@@ -47,7 +47,9 @@ class NaiveBackend(AProbAmpliBackend):
         n = self._input_state.n
         m = self._input_state.m
         if n != output_state.n:
-            return 0
+            return complex(0)
+        if n == 0:
+            return complex(1)
         u_st = np.empty((n, n), dtype=complex)
         colidx = 0
         p = output_state.prodnfact() * self._input_state.prodnfact()
