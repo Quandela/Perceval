@@ -48,31 +48,26 @@ class MPSBackend(AProbAmpliBackend):
     - TODO: link to the quandelibc computation
     """
 
-    def __init__(self,
-                 cu: Union[ACircuit, Matrix],
-                 use_symbolic: bool = None,
-                 n: int = None,
-                 mask: list = None):
-        super().__init__(cu, use_symbolic, n, mask)
-        for r, c in self._C: # this would be a circuit or a matrix simply - FIX accordingly
-            assert c.compute_unitary(use_symbolic=False).shape[0] <= 2,\
-                "MPS backend can not be used with components of using more than 2 modes"
+    def __init__(self, mask: list = None):
+        super().__init__(self, mask)
         self._s_min = 1e-8
         self._cutoff = self._input_state.m
         self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
         self._current_input = None
 
-    name = "MPS"
-    supports_symbolic = False
-    supports_circuit_computing = True
-
     def set_cutoff(self, _cutoff: int):
-        # DISCUSS IF NECESARRY, THE USER WOULD PROBABLY NOT INTERACT IF THE
-        # CUTOFF IS SET BY M ANYWAY AND BECAUSE OF THE NEW SIMULATOR INTERFACE
         assert isinstance(_cutoff, int), "cutoff must be an integer"
         self._cutoff = _cutoff
 
+    def set_circuit(self, circuit):
+        C = super().set_circuit(self, circuit)
+        for r, c in C:
+            assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
+                "MPS backend can not be used with components of using more than 2 modes"
+        return C
+
     def apply(self, r, c):
+        # Apply is used only in compile function here and in stepper;
         u = c.compute_unitary(False)
         k_mode = r[0]
         if len(u) == 2:
@@ -81,7 +76,14 @@ class MPSBackend(AProbAmpliBackend):
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
     def compile(self, input_state: BasicState) -> bool:
-        var = [float(p) for p in self._C.get_parameters()]
+        # Not called by any other function in the backend; what does it do?
+        # there is a test for compile, it is also in benchmark of bosonsampling but MPS is not used there
+
+        # this is the function that calls apply() which further calls all the other update_state and
+        # transition stuff. Doubts wiht how it is related to the calculation of probampli and the backend computation :(
+
+        C = self.set_circuit(self, circuit=ACircuit)  # work out on how to get/pass the circuit arguement
+        var = [float(p) for p in C.get_parameters()]
         if self._compiled_input and self._compiled_input[0] == var and input_state in self._res:
             return False
         self._compiled_input = copy.copy((var, input_state))
@@ -98,15 +100,12 @@ class MPSBackend(AProbAmpliBackend):
         self.sv = np.zeros((self.m, self._cutoff))
         self.sv[:, 0] = 1
 
-        for r, c in self._C:
+        for r, c in C:
             self.apply(r, c)
 
         self._res[tuple(input_state)]["gamma"] = self.gamma.copy()
         self._res[tuple(input_state)]["sv"] = self.sv.copy()
         return True
-
-    # def prob_be(self, input_state, output_state):
-    #     return abs(self.probampli_be(input_state, output_state))**2
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
         # TODO: put in quandelibc
@@ -135,22 +134,22 @@ class MPSBackend(AProbAmpliBackend):
         return big_u
 
     def update_state_1_mode(self, k, u):
-        self.gamma[k] = np.tensordot(self.gamma[k], self._transition_matrix_1_mode(u), axes=(2,0))
+        self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2,0))
 
     def update_state(self, k, u):
 
         if 0 < k < self.m - 2:
-            theta = np.tensordot(self._sv_diag(k - 1), self.gamma[k, :], axes=(1, 0))
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 2], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         elif k == 0:
-            theta = np.tensordot(self.gamma[k, :], self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
+            theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u),
                                  axes=([1, 2], [0, 1]))  # Pretty weird thing... To check
@@ -158,9 +157,9 @@ class MPSBackend(AProbAmpliBackend):
             theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         elif k == self.m - 2:
-            theta = np.tensordot(self._sv_diag(k - 1), self.gamma[k, :], axes=(1, 0))
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 3], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
@@ -175,16 +174,16 @@ class MPSBackend(AProbAmpliBackend):
 
         if k > 0:
             rank = np.nonzero(self.sv[k - 1])[0][-1] + 1
-            self.gamma[k, :rank] = v[:rank] / self.sv[k - 1, :rank][:, np.newaxis, np.newaxis]
-            self.gamma[k, rank:] = 0
+            self._gamma[k, :rank] = v[:rank] / self.sv[k - 1, :rank][:, np.newaxis, np.newaxis]
+            self._gamma[k, rank:] = 0
         else:
-            self.gamma[k] = v
+            self._gamma[k] = v
         if k < self.m - 2:
             rank = np.nonzero(self.sv[k + 1])[0][-1] + 1
-            self.gamma[k + 1, :, :rank] = (w[:, :rank] / self.sv[k + 1, :rank][:, np.newaxis])
-            self.gamma[k + 1, :, rank:] = 0
+            self._gamma[k + 1, :, :rank] = (w[:, :rank] / self.sv[k + 1, :rank][:, np.newaxis])
+            self._gamma[k + 1, :, rank:] = 0
         else:
-            self.gamma[k + 1] = w
+            self._gamma[k + 1] = w
 
     def _transition_matrix(self, u):
         "This function computes the elements (I,J) = (i_k, i_k+1, j_k, j_k+1) of the matrix U_k,k+1."
