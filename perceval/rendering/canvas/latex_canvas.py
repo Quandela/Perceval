@@ -213,21 +213,22 @@ class LatexCanvas(Canvas):
         elif ta == "right":
             ta = "east"
 
+        text = text.replace("\n", "\\\\ ")
         text = text.encode("latex").decode("utf-8")
 
         points = super().add_text(points, text, size, ta)
 
         if fontstyle == "normal":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align=left,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "italic":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align=left,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "bold":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text}}};"
+                f"\\node[align=left,anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         else:
             raise NotImplementedError(f"Font style {fontstyle} not implemented")
