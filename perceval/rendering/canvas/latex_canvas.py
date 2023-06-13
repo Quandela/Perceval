@@ -29,6 +29,8 @@
 
 from .canvas import Canvas
 
+import latexcodec  # noqa
+
 tikz_implemented_colors = {
     "aquamarine": "\\definecolor{aquamarine}{rgb}{0.5, 1.0, 0.83}",
     "black": True,
@@ -55,43 +57,6 @@ tikz_implemented_colors = {
     "violet": True,
     "white": True,
     "yellow": True,
-}
-
-latex_greek_letters = {
-    "α": "$\\alpha$",
-    "β": "$\\beta$",
-    "γ": "$\\gamma$",
-    "δ": "$\\delta$",
-    "ϵ": "$\\epsilon$",
-    "ζ": "$\\zeta$",
-    "η": "$\\eta$",
-    "θ": "$\\theta$",
-    "ι": "$\\iota$",
-    "κ": "$\\kappa$",
-    "λ": "$\\lambda$",
-    "μ": "$\\mu$",
-    "ν": "$\\nu$",
-    "ξ": "$\\xi$",
-    "π": "$\\pi$",
-    "ρ": "$\\rho$",
-    "σ": "$\\sigma$",
-    "τ": "$\\tau$",
-    "υ": "$\\upsilon$",
-    "ϕ": "$\\phi$",
-    "χ": "$\\chi$",
-    "ψ": "$\\psi$",
-    "ω": "$\\omega$",
-    "Γ": "$\\Gamma$",
-    "Δ": "$\\Delta$",
-    "Θ": "$\\Theta$",
-    "Λ": "$\\Lambda$",
-    "Ξ": "$\\Xi$",
-    "Π": "$\\Pi$",
-    "Σ": "$\\Sigma$",
-    "Υ": "$\\Upsilon$",
-    "Φ": "$\\Phi$",
-    "Ψ": "$\\Psi$",
-    "Ω": "$\\Omega$",
 }
 
 
@@ -235,19 +200,21 @@ class LatexCanvas(Canvas):
         elif ta == "right":
             ta = "east"
 
+        text = text.encode("latex").decode("utf-8")
+
         points = super().add_text(points, text, size, ta)
 
         if fontstyle == "normal":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text.translate(str.maketrans(latex_greek_letters))}}};"
+                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "italic":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text.translate(str.maketrans(latex_greek_letters))}}};"
+                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\itshape}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         elif fontstyle == "bold":
             self._draws.append(
-                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text.translate(str.maketrans(latex_greek_letters))}}};"
+                f"\\node[anchor={ta},font = {{\\fontsize{{{size}pt}}{{0}}\\selectfont\\bfseries}}] at ({points[0]},{-points[1]}) {{{text}}};"
             )
         else:
             raise NotImplementedError(f"Font style {fontstyle} not implemented")

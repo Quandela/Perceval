@@ -12,3 +12,4 @@ Deprecated
 requests
 drawsvg>=2.0
 protobuf>=4.21.2
+latexcodec
