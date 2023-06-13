@@ -45,21 +45,16 @@ data (dual rail) ─────┤     ├───── data (dual rail)
         self._default_opts['type'] = AsType.PROCESSOR
 
     def build(self):
+	#the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
 	last_modes_cz = (Circuit(4)
-		.add(1, PS(np.pi))
-		.add(2, PS(np.pi))
+		.add(0, PS(np.pi))
+		.add(3, PS(np.pi))
 		.add((1, 2), PERM([1, 0]))
 		.add((0, 1), BS.H(theta=self.theta1))
-		.add(1, PS(np.pi))
 		.add((2, 3), BS.H(theta=self.theta1))
-		.add(3, PS(np.pi))
 		.add((1, 2), PERM([1, 0]))
 		.add((0, 1), BS.H(theta=-self.theta1))
-		.add(1, PS(np.pi))
-		.add((2, 3), BS.H(theta=self.theta2))
-		.add(3, PS(np.pi))
-		.add(0, PS(np.pi))
-		.add(3, PS(np.pi)))
+		.add((2, 3), BS.H(theta=self.theta2)))
 
 	c_hcz=(Circuit(6, name="Heralded CZ")
 		.add((1, 2), PERM([1, 0]))
