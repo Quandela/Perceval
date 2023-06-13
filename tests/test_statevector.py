@@ -40,11 +40,14 @@ import sympy as sp
 from test_circuit import strip_line_12
 
 
-def test_state():
+def test_basic_state():
     st = pcvl.BasicState([1, 0])
     assert str(st) == "|1,0>"
     assert st.n == 1
     assert st.has_annotations is False
+
+    with pytest.raises(RuntimeError):
+        bs = pcvl.BasicState([0]*300)  # 300 modes is too much (mode count is capped at 256)
 
 
 def test_str_state_vector():

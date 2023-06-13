@@ -92,6 +92,12 @@ class Processor(AProcessor):
     def is_remote(self) -> bool:
         return False
 
+    def check_input(self, input_state: BasicState):
+        assert self.m is not None, "A circuit has to be set before the input state"
+        expected_input_length = self.m
+        assert len(input_state) == expected_input_length, \
+            f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
+
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState) -> None:
         r"""
@@ -113,12 +119,9 @@ class Processor(AProcessor):
         The properties of the source will alter the input state. A perfect source always delivers the expected state as
         an input. Imperfect ones won't.
         """
+        self.check_input(input_state)
         input_list = [0] * self.circuit_size
         self._inputs_map = SVDistribution()
-        assert self.m is not None, "A circuit has to be set before the input state"
-        expected_input_length = self.m
-        assert len(input_state) == expected_input_length, \
-            f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
         input_idx = 0
         expected_photons = 0
         for k in range(self.circuit_size):

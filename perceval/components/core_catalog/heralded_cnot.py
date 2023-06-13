@@ -30,7 +30,8 @@
 from perceval.components import Circuit, Processor
 from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.components.port import Herald, Port, Encoding
+from perceval.components.port import Herald, Port
+from perceval.utils import Encoding
 
 
 class HeraldedCnotItem(CatalogItem):

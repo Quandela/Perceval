@@ -194,5 +194,9 @@ class RemoteJob(Job):
             result_mapping_function = getattr(module, path_parts[1])
             # retrieve delta parameters from the response
             self._delta_parameters = results["job_context"].get("mapping_delta_parameters", {})
-            results["results"] = result_mapping_function(results["results"], **self._delta_parameters)
+            if "results_list" in results:
+                for res in results["results_list"]:
+                    res["results"] = result_mapping_function(res["results"], **self._delta_parameters)
+            else:
+                results["results"] = result_mapping_function(results["results"], **self._delta_parameters)
         return results

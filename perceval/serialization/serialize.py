@@ -28,6 +28,8 @@
 # SOFTWARE.
 
 from multipledispatch import dispatch
+from functools import wraps
+from zlib import compress
 
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
@@ -39,74 +41,103 @@ from base64 import b64encode
 import json
 
 
+def to_compress(func):
+    @wraps(func)
+    def compressor(*args, **kwargs):
+        if kwargs.get('compress', False):
+            serialized_string = func(*args, **kwargs)  # serialized obj: string format
+            serialized_string_compressed = compress(serialized_string.encode('utf-8'))
+            # serialized and compressed : byte format
+            serialized_string_compressed_byt2str = b64encode(serialized_string_compressed).decode('utf-8')
+            # serialized and compressed : string format
+            serialized_compressed_byt2str_zip_prefix = ":PCVL:zip:" + serialized_string_compressed_byt2str
+            # adding zip prefix
+            return serialized_compressed_byt2str_zip_prefix
+        else:
+            return func(*args, **kwargs)
+    return compressor
+
+
+@to_compress
 @dispatch(ACircuit)
-def serialize(circuit: ACircuit) -> str:
+def serialize(circuit: ACircuit, compress=True) -> str:
     return ":PCVL:ACircuit:" + b64encode(serialize_circuit(circuit).SerializeToString()).decode('utf-8')
 
 
+@to_compress
 @dispatch(Matrix)
-def serialize(m: Matrix) -> str:
+def serialize(m: Matrix, compress=False) -> str:
     return ":PCVL:Matrix:" + b64encode(serialize_matrix(m).SerializeToString()).decode('utf-8')
 
 
+@to_compress
 @dispatch(BasicState)
-def serialize(obj) -> str:
+def serialize(obj, compress=False) -> str:
     return ":PCVL:BasicState:" + serialize_state(obj)
 
 
+@to_compress
 @dispatch(StateVector)
-def serialize(sv) -> str:
+def serialize(sv, compress=False) -> str:
     return ":PCVL:StateVector:" + serialize_statevector(sv)
 
 
+@to_compress
 @dispatch(SVDistribution)
-def serialize(dist) -> str:
+def serialize(dist, compress=False) -> str:
     return ":PCVL:SVDistribution:{" \
            + ";".join(["%s=%s" % (serialize_statevector(k), simple_float(v, nsimplify=False)[1])
                        for k, v in dist.items()]) \
            + "}"
 
 
+@to_compress
 @dispatch(BSDistribution)
-def serialize(dist) -> str:
+def serialize(dist, compress=False) -> str:
     return ":PCVL:BSDistribution:{" \
            + ";".join(["%s=%s" % (serialize_state(k), simple_float(v, nsimplify=False)[1]) for k, v in dist.items()]) \
            + "}"
 
 
+@to_compress
 @dispatch(BSCount)
-def serialize(obj) -> str:
+def serialize(obj, compress=False) -> str:
     return ":PCVL:BSCount:{" \
            + ";".join(["%s=%s" % (serialize_state(k), str(v)) for k, v in obj.items()]) \
            + "}"
 
 
+@to_compress
 @dispatch(BSSamples)
-def serialize(obj) -> str:
+def serialize(obj, compress=False) -> str:
     return ":PCVL:BSSamples:" + serialize_bssamples(obj)
 
 
+@to_compress
 @dispatch(dict)
-def serialize(obj) -> dict:
+def serialize(obj, compress=False) -> dict:
     r = {}
     for k, v in obj.items():
         r[serialize(k)] = serialize(v)
     return r
 
 
+@to_compress
 @dispatch(list)
-def serialize(obj) -> list:
+def serialize(obj, compress=False) -> list:
     r = []
     for k in obj:
         r.append(serialize(k))
     return r
 
+
+@to_compress
 @dispatch(object)
-def serialize(obj) -> object:
+def serialize(obj, compress=False) -> object:
     return obj
 
 
-def serialize_to_file(obj, filepath: str) -> None:
-    serial_repr = serialize(obj)
+def serialize_to_file(obj, filepath: str, compress=False) -> None:
+    serial_repr = serialize(obj, compress=compress)
     with open(filepath, mode="w") as f:
         f.write(json.dumps(serial_repr))

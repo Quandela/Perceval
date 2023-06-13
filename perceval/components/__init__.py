@@ -34,7 +34,7 @@ from .predefined_circuit import PredefinedCircuit
 from .processor import Processor
 from .source import Source
 
-from .port import Port, Herald, Encoding, PortLocation, LogicalState
+from .port import Port, Herald, PortLocation, LogicalState
 from .unitary_components import *
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
