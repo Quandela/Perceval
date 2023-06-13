@@ -110,6 +110,10 @@ class SLOSBackend(AProbAmpliBackend):
         self._mask = mask
         self._umat = None
 
+    @property
+    def name(self) -> str:
+        return "SLOS"
+
     def _reset(self):
         self._fsms = [[]]
         self._fsas = {}

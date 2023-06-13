@@ -30,6 +30,7 @@
 import pytest
 import perceval as pcvl
 import perceval.components.unitary_components as comp
+from perceval.backends._clifford2017 import Clifford2017Backend
 
 
 def test_processor_generator_0():
@@ -108,7 +109,7 @@ def test_processor_probs():
 
 
 def test_processor_samples():
-    proc = pcvl.Processor("CliffordClifford2017", comp.BS())
+    proc = pcvl.Processor(Clifford2017Backend(), comp.BS())
 
     # Without annotations
     proc.with_input(pcvl.BasicState("|1,1>"))

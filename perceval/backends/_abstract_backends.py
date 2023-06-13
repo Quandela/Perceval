@@ -53,6 +53,11 @@ class ABackend(ABC):
         assert self._circuit.m == state.m, f'Circuit({self._circuit.m}) and state({state.m}) size mismatch'
         assert not state.has_annotations, 'State should be composed of indistinguishable photons only'
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Each backend has to expose its name as a string"""
+
     @staticmethod
     @abstractmethod
     def preferred_command() -> str:

@@ -44,6 +44,10 @@ def _get_scale(w):
 
 class Clifford2017Backend(ASamplingBackend):
 
+    @property
+    def name(self) -> str:
+        return "CliffordClifford2017"
+
     def _prepare_us(self):
         # prepare Us that is a m*n matrix
         m = self._input_state.m

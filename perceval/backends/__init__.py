@@ -33,24 +33,28 @@ from .cliffords2017 import CliffordClifford2017Backend
 from .naive import NaiveBackend
 from .slos import SLOSBackend
 from .mps import MPSBackend
+from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
 
 
+from ._clifford2017 import Clifford2017Backend
+from ._naive import NaiveBackend as _Naive
+from ._slos import SLOSBackend as _SLOS
 BACKEND_LIST = {
-    CliffordClifford2017Backend.name: CliffordClifford2017Backend,
-    MPSBackend.name: MPSBackend,
-    NaiveBackend.name: NaiveBackend,
-    SLOSBackend.name: SLOSBackend,
+    "CliffordClifford2017": Clifford2017Backend,
+    # MPSBackend.name: MPSBackend,
+    "Naive": _Naive,
+    "SLOS": _SLOS
 }
 
 
 class BackendFactory:
     @staticmethod
-    def get_backend(backend_name="SLOS"):
+    def get_backend(backend_name: str = "SLOS") -> ABackend:
         name = backend_name
         if name in BACKEND_LIST:
-            return BACKEND_LIST[name]
+            return BACKEND_LIST[name]()
         warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
-        return BACKEND_LIST['SLOS']
+        return BACKEND_LIST['SLOS']()
 
     @staticmethod
     def list():

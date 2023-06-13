@@ -78,7 +78,7 @@ class SimulatorFactory:
             if isinstance(circuit, Processor):
                 # If no backend was chosen, the backend type set in the Processor is used
                 if backend is None:
-                    backend = circuit._backend_name
+                    backend = circuit.backend
                 min_detected_photons = circuit.parameters.get('min_detected_photons')
                 circuit = circuit.components
 

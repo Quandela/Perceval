@@ -33,8 +33,7 @@ from .port import LogicalState
 from .source import Source
 from .linear_circuit import ACircuit
 from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector
-from perceval.backends import BACKEND_LIST
-from perceval.backends._clifford2017 import Clifford2017Backend
+from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 from multipledispatch import dispatch
 from typing import Dict, Callable, Union, List
@@ -45,7 +44,7 @@ class Processor(AProcessor):
     Generic definition of processor as a source + components (both unitary and non-unitary) + ports
     + optional post-processing logic
 
-    :param backend_name: Name of the simulator backend to run
+    :param backend: Name or instance of a simulation backend
     :param m_circuit: can either be:
 
         - an int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
@@ -56,7 +55,7 @@ class Processor(AProcessor):
 
     :param source: the Source used by the processor (defaults to perfect source)
     """
-    def __init__(self, backend_name: str, m_circuit: Union[int, ACircuit] = None, source: Source = Source(),
+    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = Source(),
                  name: str = None):
         super().__init__()
         self._source = source
@@ -69,9 +68,11 @@ class Processor(AProcessor):
             self._n_moi = m_circuit  # number of modes of interest (MOI)
 
         self._inputs_map: Union[SVDistribution, None] = None
-        self._simulator = None
-        assert backend_name in BACKEND_LIST, f"Simulation backend '{backend_name}' does not exist"
-        self._backend_name = backend_name
+        if isinstance(backend, str):
+            assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
+            self.backend = BACKEND_LIST[backend]()
+        else:
+            self.backend = backend
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -184,6 +185,7 @@ class Processor(AProcessor):
         return output_state.n >= self._min_detected_photons
 
     def samples(self, count: int, progress_callback=None) -> Dict:
+        assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         pre_physical_perf = 1
         # Rework input map so that it contains only states with enough photons
         input_svd = SVDistribution()
@@ -195,9 +197,7 @@ class Processor(AProcessor):
             else:
                 pre_physical_perf -= p
 
-        sampling_backend = Clifford2017Backend()
-        sampling_backend.set_circuit(self.linear_circuit())
-
+        self.backend.set_circuit(self.linear_circuit())
         output = BSSamples()
         selected_inputs = []
         idx = 0
@@ -215,14 +215,14 @@ class Processor(AProcessor):
                 bs_list = selected_bs.separate_state()
                 sampled_components = []
                 for bs in bs_list:
-                    sampling_backend.set_input_state(bs)
-                    sampled_components.append(sampling_backend.sample())
+                    self.backend.set_input_state(bs)
+                    sampled_components.append(self.backend.sample())
                 sampled_state = sampled_components.pop()
                 for component in sampled_components:
                     sampled_state = sampled_state.merge(component)
             else:
-                sampling_backend.set_input_state(selected_bs)
-                sampled_state = sampling_backend.sample()
+                self.backend.set_input_state(selected_bs)
+                sampled_state = self.backend.sample()
 
             # Post-processing
             if not self._state_selected_physical(sampled_state):
@@ -233,7 +233,7 @@ class Processor(AProcessor):
             else:
                 not_selected += 1
 
-            # Progress
+            # Progress handling
             if progress_callback:
                 exec_request = progress_callback(len(output)/count, "sampling")
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
@@ -267,4 +267,4 @@ class Processor(AProcessor):
 
     @property
     def available_commands(self) -> List[str]:
-        return ["samples" if BACKEND_LIST[self._backend_name].preferred_command() == "samples" else "probs"]
+        return ["samples" if self.backend.preferred_command() == "sample" else "probs"]

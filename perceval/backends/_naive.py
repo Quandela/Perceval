@@ -38,6 +38,11 @@ from perceval.utils import BasicState
 class NaiveBackend(AProbAmpliBackend):
     """Naive algorithm, no clever calculation path, does not cache anything,
        recompute all states on the fly"""
+
+    @property
+    def name(self) -> str:
+        return "Naive"
+
     def prob_amplitude(self, output_state: BasicState) -> complex:
         n = self._input_state.n
         m = self._input_state.m
