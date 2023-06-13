@@ -53,6 +53,7 @@ class MPSBackend(AProbAmpliBackend):
         self._s_min = 1e-8
         self._cutoff = None
         self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
+        # Doubts : Nested dictionary why?
         self._current_input = None
 
     def set_cutoff(self, cutoff_val: int):
@@ -78,7 +79,7 @@ class MPSBackend(AProbAmpliBackend):
         elif len(u) == 1:
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
-    def compile(self, input_state: BasicState) -> bool:
+    def compile(self) -> bool:
         # Not called by any other function in the backend; what does it do?
         # there is a test for compile, it is also in benchmark of bosonsampling but MPS is not used there
 
@@ -87,27 +88,27 @@ class MPSBackend(AProbAmpliBackend):
 
         C = self.set_circuit(circuit=ACircuit)  # work out on how to get/pass the circuit arguement
         var = [float(p) for p in C.get_parameters()]
-        if self._compiled_input and self._compiled_input[0] == var and input_state in self._res:
+        if self._compiled_input and self._compiled_input[0] == var and self._input_state in self._res:
             return False
-        self._compiled_input = copy.copy((var, input_state))
+        self._compiled_input = copy.copy((var, self._input_state))
         self._current_input = None
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS
-        input_state *= BasicState([0] * (self.m - input_state.m))
-        self.n = input_state.n
+        self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
+        self.n = self._input_state.n
         self.d = self.n + 1
-        self._cutoff = min(self._cutoff, self.d ** (self.m//2))
-        self.gamma = np.zeros((self.m, self._cutoff, self._cutoff, self.d), dtype='complex_')
-        for i in range(self.m):
-            self.gamma[i, 0, 0, input_state[i]] = 1
-        self.sv = np.zeros((self.m, self._cutoff))
+        self._cutoff = min(self._cutoff, self.d ** (self._input_state.m//2))
+        self.gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self.d), dtype='complex_')
+        for i in range(self._input_state.m):
+            self.gamma[i, 0, 0, self._input_state[i]] = 1
+        self.sv = np.zeros((self._input_state.m, self._cutoff))
         self.sv[:, 0] = 1
 
         for r, c in C:
             self.apply(r, c)
 
-        self._res[tuple(input_state)]["gamma"] = self.gamma.copy()
-        self._res[tuple(input_state)]["sv"] = self.sv.copy()
+        self._res[tuple(self._input_state)]["gamma"] = self.gamma.copy()
+        self._res[tuple(self._input_state)]["sv"] = self.sv.copy()
         return True
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
@@ -117,8 +118,9 @@ class MPSBackend(AProbAmpliBackend):
         self._current_input = tuple(self._input_state)
         for k in range(m - 1):
             mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
+            # Doubts : this container is very confusing even now - this is the reason the test is failing
             mps_in_list.append(self._sv_diag(k))
-        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
+        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][self._input_state.m-1, :, :, output_state[self._input_state.m-1]])
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     @staticmethod
@@ -141,7 +143,7 @@ class MPSBackend(AProbAmpliBackend):
 
     def update_state(self, k, u):
 
-        if 0 < k < self.m - 2:
+        if 0 < k < self._input_state.m - 2:
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
             theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
@@ -159,7 +161,7 @@ class MPSBackend(AProbAmpliBackend):
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
-        elif k == self.m - 2:
+        elif k == self._input_state.m - 2:
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
             theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
@@ -181,7 +183,7 @@ class MPSBackend(AProbAmpliBackend):
             self._gamma[k, rank:] = 0
         else:
             self._gamma[k] = v
-        if k < self.m - 2:
+        if k < self._input_state.m - 2:
             rank = np.nonzero(self.sv[k + 1])[0][-1] + 1
             self._gamma[k + 1, :, :rank] = (w[:, :rank] / self.sv[k + 1, :rank][:, np.newaxis])
             self._gamma[k + 1, :, rank:] = 0
