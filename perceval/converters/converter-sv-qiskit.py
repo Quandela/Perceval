@@ -13,10 +13,10 @@ class Encoding(Enum):
     RAW = 4
 
 
-def sv_to_qsphere_param(sv, ancilla=None, encoding=Encoding.DUAL_RAIL,
-                        polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
-    r"""Convert a StateVector in dual rail encoding to be interpreted by qsphere from qiskit
-    ancilla are the mode we are supressing to obtain our multi-qubits state"""
+def sv_to_qiskit(sv, ancilla=None, encoding=Encoding.DUAL_RAIL,
+                 polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
+    r"""Convert a StateVector from perceval to a Statevector from qiskit.
+    The parameter ancilla is the list of modes we want to supress to obtain a n-qubit state"""
 
     l_sv = len(sv)
     if l_sv == 0:
@@ -26,10 +26,9 @@ def sv_to_qsphere_param(sv, ancilla=None, encoding=Encoding.DUAL_RAIL,
 
     zero, one = encoding_to_log(encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>")))
     step = len(zero)
-    print(zero, one)
 
     l_bs = len(sv[0])
-    print(step)
+
     if l_bs % step != 0:
         raise ValueError("The StateVector doesn't represent a n-qubit")
     else:
@@ -42,12 +41,10 @@ def sv_to_qsphere_param(sv, ancilla=None, encoding=Encoding.DUAL_RAIL,
         for i in range(l_n_qbt):
             # check the value of each qubit
             # i-th qubit = 1
-            print(bs[step * i: step * i + step])
             if bs[step * i: step * i + step] == one:
                 N += 2 ** (l_n_qbt - i - 1)
             else:
                 # i-th qubit = 0
-                print(bs[step * i: step * i + step], zero)
                 if bs[step * i: step * i + step] != zero:
                     raise ValueError("The StateVector doesn't represent a n-qubit")
         ampli[N] = sv[bs]
@@ -68,6 +65,7 @@ def remove_ancilla(sv, anscilla):
         new_bs = StateVector()
         previous = -1
         for i in range(len(anscilla)):
+            # recreate each BasicState without the ancilla modes
             new_bs = new_bs * bs[previous + 1:anscilla[i]]
             previous = anscilla[i]
         new_sv += sv[bs] * new_bs
@@ -81,6 +79,7 @@ def remove_ancilla(sv, anscilla):
 
 
 def encoding_to_log(encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
+    r"""Defines what are the logical 0 and 1 according to the encoding"""
     assert isinstance(encoding, Encoding), "You need to provide an encoding"
 
     if encoding == Encoding.RAW:
@@ -99,6 +98,3 @@ def encoding_to_log(encoding, polarization_base=(BasicState("|{P:H}>"), BasicSta
 
     return zero, one
 
-
-a = sv_to_qsphere_param(StateVector("|0,1, 0,1, 1,0>") - StateVector("|1,0, 0,1, 1,0>"))
-print(a)
