@@ -33,7 +33,11 @@ import sympy as sp
 from .template import Backend
 from perceval.utils import Matrix, BasicState
 import exqalibur as xq
+import numba
 
+@numba.vectorize([numba.float64(numba.complex128),numba.float32(numba.complex64)])
+def abs2(x):
+    return x.real**2 + x.imag**2
 
 class ComputePath:
     """A `ComputePath` is the minimal computing graph for covering a set of input states
@@ -52,6 +56,7 @@ class ComputePath:
         self._targets = []
         self._states = []
         self._children = {}
+        self.norm_coefficients = None
         for t, s in zip(targets, states):
             if sum(t) == 0:
                 backend.state_mapping[s] = self
@@ -99,11 +104,12 @@ class ComputePath:
                             if idx != xq.npos:
                                 self.coefs[k][idx] += coef_parent * u[k][j, mk]
             else:
-                self._backend.fsms[self._n].compute_slos_layer_par(u,
+                self._backend._compute_time += self._backend.fsms[self._n].compute_slos_layer_par(u,
                                                                    self._backend._realm,
                                                                    mk,
                                                                    self.coefs, parent_coefs,
-                                                                   self._backend._n_par_unitaries)
+                                                                   self._backend._n_par_unitaries,
+                                                                   self._backend._parallel)
 
         for mk, child in self._children.items():
             child.compute(u, self.coefs, mk)
@@ -115,12 +121,14 @@ class SLOSBackend(Backend):
     supports_symbolic = True
     supports_circuit_computing = False
 
-    def __init__(self, u, use_symbolic=None, n=None, mask=None):
+    def __init__(self, u, use_symbolic=None, n=None, mask=None, parallel=True):
         super().__init__(u, use_symbolic=use_symbolic, n=n, mask=mask)
         self._compute_path = None
         self._par_unitary_array = None
         self._n_par_unitaries = 0
         self._changed_unitary(None)
+        self._needs_calculation = True
+        self._parallel = parallel
 
     def set_multi_unitary(self, list_u, single_mode=False):
         self._single_mode = single_mode
@@ -135,12 +143,9 @@ class SLOSBackend(Backend):
             self.state_mapping = {}
             self._par_unitary_array = np.zeros((len(list_u), self._U.shape[0], self._U[0].shape[0]),
                                                dtype=np.complex128)
-            for i, u in enumerate(list_u):
-                self._par_unitary_array[i] = u
-        else:
-            for i, u in enumerate(list_u):
-                self._par_unitary_array[i] = u
-            self._calculation()
+        for i, u in enumerate(list_u):
+            self._par_unitary_array[i] = u
+        self._needs_calculation = True
 
     def _changed_unitary(self, prev_u):
         u = self._U
@@ -179,7 +184,9 @@ class SLOSBackend(Backend):
         Simulation step: update computation path coef with unitary U
         :return:
         """
+        self._compute_time = 0
         self._compute_path.compute(self._par_unitary_array)
+        self._needs_calculation = False
 
     def compile(self, input_states):
         if isinstance(input_states, BasicState):
@@ -192,10 +199,11 @@ class SLOSBackend(Backend):
             if found_new:
                 break
             found_new = input_state not in self.state_mapping
-        if not found_new:
-            return False
-        self._compute_path = ComputePath(0, input_states, None, self)
-        self._calculation()
+        if found_new:
+            self._compute_path = ComputePath(0, input_states, None, self)
+            self._needs_calculation = True
+        if self._needs_calculation:
+            self._calculation()
         return True
 
     def probampli_be(self, input_state, output_state, norm=True):
@@ -203,7 +211,7 @@ class SLOSBackend(Backend):
             return 0
         output_idx = self.fsas[output_state.n].find(output_state)
         assert output_idx != xq.npos
-        non_normalized_result = self.state_mapping[input_state].coefs[output_idx, 0]
+        non_normalized_result = self.state_mapping[input_state].coefs[0, output_idx]
         if not norm:
             return non_normalized_result
         if self._use_symbolic:
@@ -218,11 +226,18 @@ class SLOSBackend(Backend):
     # The following SLOS-specific optimization is broken for polarized states/circuits
     def all_prob(self, input_state):
          self.compile(input_state)
+         # precompute once for all the normalization coefficients that will be used to normalize the output states
+         # probabilities
+         if self.state_mapping[input_state].norm_coefficients is None:
+             self.state_mapping[input_state].norm_coefficients = np.zeros(self.fsas[input_state.n].count(),
+                                                                          dtype=np.float64)
+             input_state_prodnfact = input_state.prodnfact()
+             for idx, o in enumerate(self.fsas[input_state.n]):
+                 self.state_mapping[input_state].norm_coefficients[idx] = 1/(o.prodnfact()*input_state_prodnfact)
          l_c = []
          for k in range(self._n_par_unitaries):
-            c = np.copy(self.state_mapping[input_state].coefs[k]).reshape(self.fsas[input_state.n].count())
-            self.fsas[input_state.n].norm_coefs(c)
-            l_c.append(abs(c) ** 2 / input_state.prodnfact())
+            c = self.state_mapping[input_state].coefs[k].reshape(self.fsas[input_state.n].count())
+            l_c.append(np.multiply(abs2(c), self.state_mapping[input_state].norm_coefficients))
          if self._single_mode:
              return l_c[0]
          else:
