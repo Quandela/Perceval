@@ -2,7 +2,7 @@ import numpy as np
 from perceval.utils import StateVector
 from perceval.utils import BasicState
 from enum import Enum
-from qiskit.quantum_info import Statevector as qiskit_sv
+from qiskit.quantum_info import Statevector as Qiskit_sv
 
 
 class Encoding(Enum):
@@ -59,7 +59,7 @@ class StatevectorConverter:
                 # recreate each BasicState without the ancilla modes
                 new_bs = new_bs * bs[previous + 1:ancillae[i]]
                 previous = ancillae[i]
-            new_sv = new_sv + sv[bs] * (new_bs * bs[ancillae[l_a-1]+1:])
+            new_sv = new_sv + sv[bs] * (new_bs * bs[ancillae[l_a - 1] + 1:])
 
         if len(sv) != len(new_sv):
             raise ValueError(
@@ -91,21 +91,21 @@ class StatevectorConverter:
         ampli = np.zeros(2 ** l_n_qbt, dtype=complex)
         for state in sv:
             bs = BasicState(state)
-            N = 0
+            n = 0
             for i in range(l_n_qbt):
                 # check the value of each qubit
                 # i-th qubit = 1
                 if bs[step * i: step * i + step] == one:
-                    N += 2 ** (l_n_qbt - i - 1)
+                    n += 2 ** (l_n_qbt - i - 1)
                 else:
                     # i-th qubit = 0
                     if bs[step * i: step * i + step] != zero:
                         raise ValueError("The StateVector doesn't represent a n-qubit")
-            ampli[N] = sv[bs]
+            ampli[n] = sv[bs]
         norm = np.sqrt(np.sum(abs(ampli) ** 2))
         ampli = ampli / norm
 
-        return qiskit_sv(ampli)
+        return Qiskit_sv(ampli)
 
     def sv_to_perceval(self, q_sv):
         r"""Converts a Statevector from qiskit to a StateVector from perceval
@@ -133,4 +133,3 @@ class StatevectorConverter:
             pcvl_sv += q_sv[i] * state_i
 
         return pcvl_sv
-
