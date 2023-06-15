@@ -33,10 +33,12 @@ import sympy as sp
 from .template import Backend
 from perceval.utils import Matrix, BasicState
 import exqalibur as xq
+import time
 import numba
 
 @numba.vectorize([numba.float64(numba.complex128),numba.float32(numba.complex64)])
-def abs2(x):
+def _abs2(x):
+    """optimized computing"""
     return x.real**2 + x.imag**2
 
 class ComputePath:
@@ -109,7 +111,7 @@ class ComputePath:
                                                                    mk,
                                                                    self.coefs, parent_coefs,
                                                                    self._backend._n_par_unitaries,
-                                                                   self._backend._parallel)
+                                                                   self._backend._parallel)/1e9
 
         for mk, child in self._children.items():
             child.compute(u, self.coefs, mk)
@@ -129,8 +131,13 @@ class SLOSBackend(Backend):
         self._changed_unitary(None)
         self._needs_calculation = True
         self._parallel = parallel
+        self._compute_time = None
+        self._compile_time = 0
+
 
     def set_multi_unitary(self, list_u, single_mode=False):
+        """Set a unitary list to be simulated, if single_mode is True, the unitary list is treated as a single unitary
+        otherwise, each unitary is used for parallel computing - can be only used with all_prob command"""
         self._single_mode = single_mode
         prev_u = self._U
         self._U = list_u[0]
@@ -140,6 +147,7 @@ class SLOSBackend(Backend):
             self.fsms = [[]]
             self.fsas = {}
             self._compute_path = None
+            self._compile_time = 0
             self.state_mapping = {}
             self._par_unitary_array = np.zeros((len(list_u), self._U.shape[0], self._U[0].shape[0]),
                                                dtype=np.complex128)
@@ -188,9 +196,19 @@ class SLOSBackend(Backend):
         self._compute_path.compute(self._par_unitary_array)
         self._needs_calculation = False
 
+    numba.njit()
+    def _build_norm_coefficients(self, input_state):
+        coefs = np.zeros(self.fsas[input_state.n].count(), dtype=np.float64)
+        input_state_prodnfact = input_state.prodnfact()
+        # the following can be optimized to be run in parallel
+        for idx, o in enumerate(self.fsas[input_state.n]):
+            coefs[idx] = 1 / (o.prodnfact() * input_state_prodnfact)
+        return coefs
+
     def compile(self, input_states):
         if isinstance(input_states, BasicState):
             input_states = [input_states]
+        start = time.time()
         # build the necessary fsa/fsms
         self._compilation(input_states)
         # now check if we have a path for the input states
@@ -202,11 +220,16 @@ class SLOSBackend(Backend):
         if found_new:
             self._compute_path = ComputePath(0, input_states, None, self)
             self._needs_calculation = True
+        for input_state in input_states:
+            if self.state_mapping[input_state].norm_coefficients is None:
+                self.state_mapping[input_state].norm_coefficients = self._build_norm_coefficients(input_state)
+        self._compile_time += time.time() - start
         if self._needs_calculation:
             self._calculation()
         return True
 
     def probampli_be(self, input_state, output_state, norm=True):
+        assert self._single_mode, "probampli cannot operate on multi-unitary mode"
         if input_state.n != output_state.n:
             return 0
         output_idx = self.fsas[output_state.n].find(output_state)
@@ -220,6 +243,7 @@ class SLOSBackend(Backend):
             return non_normalized_result * np.sqrt(output_state.prodnfact()/input_state.prodnfact())
 
     def prob_be(self, input_state, output_state):
+        assert self._single_mode, "prob cannot operate on multi-unitary mode"
         return abs(self.probampli_be(input_state, output_state, False))**2\
                * output_state.prodnfact()/input_state.prodnfact()
 
@@ -228,16 +252,10 @@ class SLOSBackend(Backend):
          self.compile(input_state)
          # precompute once for all the normalization coefficients that will be used to normalize the output states
          # probabilities
-         if self.state_mapping[input_state].norm_coefficients is None:
-             self.state_mapping[input_state].norm_coefficients = np.zeros(self.fsas[input_state.n].count(),
-                                                                          dtype=np.float64)
-             input_state_prodnfact = input_state.prodnfact()
-             for idx, o in enumerate(self.fsas[input_state.n]):
-                 self.state_mapping[input_state].norm_coefficients[idx] = 1/(o.prodnfact()*input_state_prodnfact)
          l_c = []
          for k in range(self._n_par_unitaries):
             c = self.state_mapping[input_state].coefs[k].reshape(self.fsas[input_state.n].count())
-            l_c.append(np.multiply(abs2(c), self.state_mapping[input_state].norm_coefficients))
+            l_c.append(np.multiply(_abs2(c), self.state_mapping[input_state].norm_coefficients))
          if self._single_mode:
              return l_c[0]
          else:

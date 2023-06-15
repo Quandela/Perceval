@@ -44,19 +44,22 @@ input_state = pcvl.BasicState([1]*n+[0]*(m-n))
 
 simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
 s1 = simulator_backend(pcvl.Matrix.random_unitary(m), parallel=False)
-
-start_time = time.time()
-cpp_time = 0
-for _ in range(iter):
-    for u in us:
-        s1.U = u
-        s1.all_prob(input_state)
-        cpp_time += s1._compute_time
-end_time = time.time()
-print("time iter: ", 0, (end_time-start_time)/iter, "cpp_time: ", cpp_time/iter/1e9)
+s1.compile(input_state)
+print("time compile: ", s1._compile_time)
+if True:
+    start_time = time.time()
+    cpp_time = 0
+    for _ in range(iter):
+        for u in us:
+            s1.U = u
+            s1.all_prob(input_state)
+            cpp_time += s1._compute_time
+    end_time = time.time()
+    print("time iter:", 0, (end_time-start_time)/iter, "cpp_time: ", cpp_time/iter)
 
 for n_threads in (-1,):
     s1 = simulator_backend(pcvl.Matrix.random_unitary(m))
+    s1.compile(input_state)
 
     start_time = time.time()
     cpp_time = 0
@@ -66,4 +69,4 @@ for n_threads in (-1,):
             continue
         cpp_time += s1._compute_time
     end_time = time.time()
-    print("time par: ", n_threads, (end_time-start_time)/iter, "cpp_time: ", cpp_time/iter/1e9)
+    print("time par:", n_threads, (end_time-start_time)/iter, "cpp_time: ", cpp_time/iter)
