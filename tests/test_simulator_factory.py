@@ -51,10 +51,6 @@ def test_create_simulator_from_circuit():
     assert isinstance(simu, Simulator)
     assert isinstance(simu._backend, SLOSBackend)
 
-    simu = SimulatorFactory.build(c, "slos")
-    assert isinstance(simu, Simulator)
-    assert isinstance(simu._backend, SLOSBackend)
-
     simu = SimulatorFactory.build(c, "Naive")
     assert isinstance(simu, Simulator)
     assert isinstance(simu._backend, NaiveBackend)
@@ -76,14 +72,14 @@ def test_create_simulator_from_components():
     cp_list_1 = [((0,1), BS()),
                  ((1,), PS(phi=2)),
                  ((0,1), BS())]
-    simu = SimulatorFactory.build(cp_list_1, "slos")
+    simu = SimulatorFactory.build(cp_list_1, "SLOS")
     assert isinstance(simu, Simulator)
     assert isinstance(simu._backend, SLOSBackend)
 
     cp_list_2 = [((0,1), BS()),
                  ((1,), TD(dt=2)),
                  ((0,1), BS())]
-    simu = SimulatorFactory.build(cp_list_2, "naive")
+    simu = SimulatorFactory.build(cp_list_2, "Naive")
     assert isinstance(simu, DelaySimulator)
     assert isinstance(simu._simulator, Simulator)
     assert isinstance(simu._simulator._backend, NaiveBackend)

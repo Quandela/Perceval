@@ -30,7 +30,7 @@ from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_sta
 from .simulator_interface import ISimulator
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params
-from perceval.backends._abstract_backends import AProbAmpliBackend
+from perceval.backends import AProbAmpliBackend
 
 from copy import copy
 from multipledispatch import dispatch

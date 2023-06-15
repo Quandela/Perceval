@@ -35,7 +35,7 @@ from .processor import Processor
 from .source import Source
 
 from .port import Port, Herald, PortLocation, LogicalState
-from .unitary_components import *
+from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException

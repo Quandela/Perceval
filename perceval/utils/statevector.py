@@ -348,7 +348,7 @@ class StateVector(defaultdict):
 
     def __str__(self, nsimplify=True):
         if not self.keys():
-             return "|>"
+            return "|>"
         self_copy = copy(self)
         self_copy.normalize()
         ls = []

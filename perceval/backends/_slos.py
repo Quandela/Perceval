@@ -92,8 +92,8 @@ class _Path:
             if self._backend._symb:
                 self.coefs.fill(0)
                 for parent_idx, coef_parent in enumerate(parent_coefs):
-                    for j in range(self._backend._realm):
-                        idx = self._backend.fsms[self._n].get(parent_idx, j)
+                    for j in range(self._m):
+                        idx = self._backend._fsms[self._n].get(parent_idx, j)
                         if idx != xq.npos:
                             self.coefs[idx] += coef_parent * u[j, mk]
             else:
@@ -104,12 +104,13 @@ class _Path:
 
 
 class SLOSBackend(AProbAmpliBackend):
-    def __init__(self, mask=None, use_symbolic=False):
+    def __init__(self, mask=None, n=None, use_symbolic=False):
         super().__init__()
         self._reset()
-        self._mask = mask
-        self._umat = None
         self._symb = use_symbolic
+        self._mask_str = mask
+        self._n = n
+        self._mask = None
 
     @property
     def name(self) -> str:
@@ -129,16 +130,21 @@ class SLOSBackend(AProbAmpliBackend):
 
     def set_circuit(self, circuit):
         previous_circuit = self._circuit
-        super().set_circuit(circuit)
-        self._umat = circuit.compute_unitary()
+        assert not circuit.requires_polarization, "Circuit must not contain polarized components"
+        self._input_state = None
+        self._circuit = circuit
+        self._umat = circuit.compute_unitary(use_symbolic=self._symb)
         if self._path_roots and previous_circuit.m == circuit.m:
             # Use the previously deployed paths to store the new circuit's coefs
             self._compute_path(self._umat)
         else:
             self._reset()
+            if self._mask_str is not None:
+                assert self._n is not None, "Photon count (n) is required when using a mask"
+                self._mask = xq.FSMask(circuit.m, self._n, self._mask_str)
 
     def set_input_state(self, input_state: BasicState):
-        self._preprocess([input_state])
+        self.preprocess([input_state])
         super().set_input_state(input_state)
 
     def _deploy(self, input_list: List[BasicState]):
@@ -160,7 +166,7 @@ class SLOSBackend(AProbAmpliBackend):
             if n not in self._fsas:
                 self._fsas[n] = current_fsa
 
-    def _preprocess(self, input_list: List[BasicState]):
+    def preprocess(self, input_list: List[BasicState]) -> bool:
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:
@@ -178,7 +184,7 @@ class SLOSBackend(AProbAmpliBackend):
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
         if self._input_state.n != output_state.n:
-            return 0
+            return complex(0)
         output_idx = self._fsas[output_state.n].find(output_state)
         assert output_idx != xq.npos
         non_normalized_result = self._state_mapping[self._input_state].coefs[output_idx, 0]
@@ -189,7 +195,7 @@ class SLOSBackend(AProbAmpliBackend):
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
         bsd = BSDistribution()
         iprodnfact = istate.prodnfact()
-        for output_state, unnormed_pa in zip(allstate_iterator(self._input_state), c):
+        for output_state, unnormed_pa in zip(allstate_iterator(self._input_state, self._mask), c):
             bsd.add(output_state, (abs(unnormed_pa) ** 2) * output_state.prodnfact() / iprodnfact)
         return bsd
 
@@ -198,7 +204,7 @@ class SLOSBackend(AProbAmpliBackend):
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
-        for output_state, pa in zip(allstate_iterator(self._input_state), c):
+        for output_state, pa in zip(allstate_iterator(self._input_state, self._mask), c):
             res[output_state] = pa * np.sqrt(output_state.prodnfact() / iprodnfact)
         res.normalize()
         return res

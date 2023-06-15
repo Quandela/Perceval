@@ -28,22 +28,18 @@
 # SOFTWARE.
 import warnings
 
-from .template import Backend
-from .cliffords2017 import CliffordClifford2017Backend
-from .naive import NaiveBackend
-from .slos import SLOSBackend
-from .mps import MPSBackend
 from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
-
-
 from ._clifford2017 import Clifford2017Backend
-from ._naive import NaiveBackend as _Naive
-from ._slos import SLOSBackend as _SLOS
+from ._naive import NaiveBackend
+from ._slos import SLOSBackend
+from ._mps import MPSBackend
+
+
 BACKEND_LIST = {
     "CliffordClifford2017": Clifford2017Backend,
-    # MPSBackend.name: MPSBackend,
-    "Naive": _Naive,
-    "SLOS": _SLOS
+    "MPS": MPSBackend,
+    "Naive": NaiveBackend,
+    "SLOS": SLOSBackend
 }
 
 

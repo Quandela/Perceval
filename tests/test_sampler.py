@@ -45,9 +45,7 @@ def test_sampler():
     cnot.add((3, 4), BS.H())
     imperfect_source = Source(emission_probability=0.9)
 
-    # for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:  # MPS is not reimplemented with the new flavour
-    # TODO reimplement MPSBackend + fix this
-    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS']:
+    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:
         p = Processor(backend_name, cnot, imperfect_source)
         p.min_detected_photons_filter(1)
         p.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))

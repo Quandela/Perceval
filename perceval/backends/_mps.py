@@ -56,6 +56,10 @@ class MPSBackend(AProbAmpliBackend):
         # Doubts : Nested dictionary why?
         self._current_input = None
 
+    @property
+    def name(self) -> str:
+        return "MPS"
+
     def set_cutoff(self, cutoff_val: int):
         assert isinstance(cutoff_val, int), "cutoff must be an integer"
         self._cutoff = cutoff_val

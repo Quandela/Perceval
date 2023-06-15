@@ -30,7 +30,7 @@
 import pytest
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval.backends._clifford2017 import Clifford2017Backend
+from perceval.backends import Clifford2017Backend
 
 
 def test_processor_generator_0():

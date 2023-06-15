@@ -34,9 +34,7 @@ from .loss_simulator import LossSimulator
 from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Processor
-from perceval.backends._slos import SLOSBackend
-from perceval.backends._naive import NaiveBackend
-from perceval.backends._abstract_backends import ABackend  # TODO clean up these imports
+from perceval.backends import ABackend, SLOSBackend, NaiveBackend, BACKEND_LIST
 
 from typing import List, Union
 
@@ -47,11 +45,6 @@ class SimulatorFactory:
     given circuit. The factory will adapt to the component needs, in terms of simulation, and chain the correct
     simulator calls.
     """
-
-    _BACKEND = {
-        "slos": SLOSBackend,
-        "naive": NaiveBackend
-    }
 
     @staticmethod
     def build(circuit: Union[ACircuit, Processor, List],
@@ -95,8 +88,8 @@ class SimulatorFactory:
         if backend is None:
             backend = SLOSBackend()  # The default is SLOS
         if isinstance(backend, str):
-            if backend.lower() in SimulatorFactory._BACKEND:
-                backend = SimulatorFactory._BACKEND[backend.lower()](**kwargs)  # Create an instance of the backend
+            if backend in BACKEND_LIST:
+                backend = BACKEND_LIST[backend](**kwargs)  # Create an instance of the backend
             else:
                 raise ValueError(f"Backend '{backend}' not supported")
 

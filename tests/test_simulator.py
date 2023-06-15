@@ -27,15 +27,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
+import numpy as np
 
-from perceval.backends._abstract_backends import AProbAmpliBackend
-from perceval.backends._slos import SLOSBackend
+from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
 
 
 class MockBackend(AProbAmpliBackend):
+
+    @property
+    def name(self) -> str:
+        return "Mock"
+
     def prob_amplitude(self, output_state: BasicState) -> complex:
         return 0
 
@@ -203,3 +208,22 @@ def test_evolve_distinguishable():
     assert str(sv2_out) == "1/2*|2{a:0}{a:1},0>-1/2*|2{a:0},{a:1}>-1/2*|{a:1},2{a:0}>+1/2*|0,2{a:0}{a:1}>"
     sv2_out_out = simulator.evolve(sv2_out)
     assert str(sv2_out_out) == "|{a:0},{a:0}{a:1}>"
+
+
+def test_statevector_polar_evolve():
+    simulator = Simulator(SLOSBackend())
+    simulator.set_circuit(BS())
+    st1 = StateVector("|{P:H},{P:H}>")
+    st2 = StateVector("|{P:H},{P:V}>")
+    gamma = np.pi / 2
+    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+
+    sum_p = 0
+    for _, p in simulator.probs(input_state).items():
+        sum_p += p
+    assert pytest.approx(1) == sum_p
+
+    sum_p = 0
+    for _, p in simulator.probs(st2).items():
+        sum_p += p
+    assert pytest.approx(1) == sum_p

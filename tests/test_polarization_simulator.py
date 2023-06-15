@@ -29,7 +29,7 @@
 
 from perceval.simulators.polarization_simulator import PolarizationSimulator
 from perceval.simulators.simulator import Simulator
-from perceval.backends._naive import NaiveBackend
+from perceval.backends import NaiveBackend, BackendFactory
 from perceval.components import Circuit, BS, PBS, PERM, PS, PR, HWP
 from perceval.utils import BasicState
 
@@ -108,3 +108,17 @@ def test_polarization_evolve():
     psimu.set_circuit(circuit)
     sv_out = psimu.evolve(input_state)
     assert str(sv_out) == "sqrt(2)/2*|{P:H}>-sqrt(2)/2*|{P:V}>"
+
+
+def test_polarization_circuit_0():
+    c = HWP(np.pi/4)
+    for backend_name in ["Naive", "SLOS", "MPS"]:
+        psimu = PolarizationSimulator(Simulator(BackendFactory.get_backend(backend_name)))
+        psimu.set_circuit(c)
+        res = psimu.probs(BasicState("|{P:H}>"))
+        assert len(res) == 1
+        assert res[BasicState("|1>")] == pytest.approx(1)
+        assert str(psimu.evolve(BasicState("|{P:H}>"))) == '|{P:V}>'
+        assert str(psimu.evolve(BasicState("|{P:V}>"))) == '|{P:H}>'
+        assert str(psimu.evolve(BasicState("|{P:D}>"))) == 'sqrt(2)*I/2*|{P:H}>+sqrt(2)*I/2*|{P:V}>'
+        # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
