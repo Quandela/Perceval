@@ -13,88 +13,124 @@ class Encoding(Enum):
     RAW = 4
 
 
-def sv_to_qiskit(sv, ancilla=None, encoding=Encoding.DUAL_RAIL,
-                 polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
-    r"""Convert a StateVector from perceval to a Statevector from qiskit.
-    The parameter ancilla is the list of modes we want to supress to obtain a n-qubit state"""
+class StatevectorConverter:
 
-    l_sv = len(sv)
-    if l_sv == 0:
-        raise ValueError("The StateVector is empty")
-    if ancilla is not None:
-        sv = remove_ancilla(sv, ancilla)
+    def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>")), ancillae=None):
+        r"""
+        :param encoding: for specifying the output format of the StateVector
+            supported are Encoding.RAW, Encoding.DUAL_RAIL, Encoding.POLARIZATION
+        :param polarization_base:(optional) you can provide your own polarization basis as a tuple of BasicStates
+            default=(BasicState("|{P:H}>"), BasicState("|{P:V}>")
+        :param ancillae: (optional) you can  provide a list of additional modes, not taken in account for n-qubit
+        """
 
-    zero, one = encoding_to_log(encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>")))
-    step = len(zero)
+        if ancillae is None:
+            ancillae = []
+        self.ancillae = ancillae
 
-    l_bs = len(sv[0])
+        assert isinstance(encoding, Encoding), "You need to provide an encoding"
 
-    if l_bs % step != 0:
-        raise ValueError("The StateVector doesn't represent a n-qubit")
-    else:
-        l_n_qbt = l_bs // step
+        if encoding == Encoding.RAW:
+            self._zero_state = BasicState("|0>")
+            self._one_state = BasicState("|1>")
+        elif encoding == Encoding.DUAL_RAIL:
+            self._zero_state = BasicState("|1,0>")
+            self._one_state = BasicState("|0,1>")
+        elif encoding == Encoding.POLARIZATION:
+            if len(polarization_base[0]) != 1 or len(polarization_base[1]) != 1:
+                raise ValueError("The BasicStates representing the polarization basis should only contain one mode")
+            self._zero_state = polarization_base[0]
+            self._one_state = polarization_base[1]
+        else:
+            raise ValueError("Only use RAW, DUAL_RAIL or POLARIZATION encoding.")
 
-    ampli = np.zeros(2 ** l_n_qbt, dtype=complex)
-    for state in sv:
-        bs = BasicState(state)
-        N = 0
-        for i in range(l_n_qbt):
-            # check the value of each qubit
-            # i-th qubit = 1
-            if bs[step * i: step * i + step] == one:
-                N += 2 ** (l_n_qbt - i - 1)
-            else:
-                # i-th qubit = 0
-                if bs[step * i: step * i + step] != zero:
-                    raise ValueError("The StateVector doesn't represent a n-qubit")
-        ampli[N] = sv[bs]
-    norm = np.sqrt(np.sum(abs(ampli) ** 2))
-    ampli = ampli / norm
+    def remove_ancilla(self, sv):
+        r"""Removes the auxiliary modes to obtain a proper n-qubits state
+        """
 
-    return qiskit_sv(ampli)
+        ancillae = np.sort(self.ancillae)
+        l_a = len(ancillae)
+        new_sv = StateVector()
+        for state in sv:
+            bs = BasicState(state)
+            new_bs = StateVector()
+            previous = -1
+            for i in range(l_a):
+                # recreate each BasicState without the ancilla modes
+                new_bs = new_bs * bs[previous + 1:ancillae[i]]
+                previous = ancillae[i]
+            new_sv = new_sv + sv[bs] * (new_bs * bs[ancillae[l_a-1]+1:])
 
+        if len(sv) != len(new_sv):
+            raise ValueError(
+                "The StateVector doesn't represent a n-qubit: some terms have been suppressed while removing ancillae")
+        else:
+            sv = new_sv
+        return sv
 
-def remove_ancilla(sv, anscilla):
-    r"""Removes the auxiliary modes to obtain a proper n-qubits state
-    """
+    def sv_to_qiskit(self, sv):
+        r"""Converts a StateVector from perceval to a Statevector from qiskit
+        """
 
-    anscilla = np.sort(anscilla)
-    new_sv = StateVector()
-    for state in sv:
-        bs = BasicState(state)
-        new_bs = StateVector()
-        previous = -1
-        for i in range(len(anscilla)):
-            # recreate each BasicState without the ancilla modes
-            new_bs = new_bs * bs[previous + 1:anscilla[i]]
-            previous = anscilla[i]
-        new_sv += sv[bs] * new_bs
+        l_sv = len(sv)
+        if l_sv == 0:
+            raise ValueError("The StateVector is empty")
+        if len(self.ancillae) != 0:
+            sv = self.remove_ancilla(sv)
 
-    if len(sv) != len(new_sv):
-        raise ValueError(
-            "The StateVector doesn't represent a n-qubit: some termes have been supressed while removing ancillas")
-    else:
-        sv = new_sv
-    return sv
+        zero, one = self._zero_state, self._one_state
+        step = len(zero)
 
+        l_bs = len(sv[0])
 
-def encoding_to_log(encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
-    r"""Defines what are the logical 0 and 1 according to the encoding"""
-    assert isinstance(encoding, Encoding), "You need to provide an encoding"
+        if l_bs % step != 0:
+            raise ValueError("The StateVector doesn't represent a n-qubit")
+        else:
+            l_n_qbt = l_bs // step
 
-    if encoding == Encoding.RAW:
-        zero = BasicState("|0>")
-        one = BasicState("|1>")
-    elif encoding == Encoding.DUAL_RAIL:
-        zero = BasicState("|1,0>")
-        one = BasicState("|0,1>")
-    elif encoding == Encoding.POLARIZATION:
-        if len(polarization_base[0]) != 1 or len(polarization_base[1]) != 1:
-            raise ValueError("The BasicStates representing the polarization basis should only contain one mode")
-        zero = polarization_base[0]
-        one = polarization_base[1]
-    else:
-        raise ValueError("Only use RAW, DUAL_RAIL or POLARIZATION encoding.")
+        ampli = np.zeros(2 ** l_n_qbt, dtype=complex)
+        for state in sv:
+            bs = BasicState(state)
+            N = 0
+            for i in range(l_n_qbt):
+                # check the value of each qubit
+                # i-th qubit = 1
+                if bs[step * i: step * i + step] == one:
+                    N += 2 ** (l_n_qbt - i - 1)
+                else:
+                    # i-th qubit = 0
+                    if bs[step * i: step * i + step] != zero:
+                        raise ValueError("The StateVector doesn't represent a n-qubit")
+            ampli[N] = sv[bs]
+        norm = np.sqrt(np.sum(abs(ampli) ** 2))
+        ampli = ampli / norm
 
-    return zero, one
+        return qiskit_sv(ampli)
+
+    def sv_to_perceval(self, q_sv):
+        r"""Converts a Statevector from qiskit to a StateVector from perceval
+        """
+        l_sv = len(q_sv)
+        zero, one = self._zero_state, self._one_state
+        n = np.log2(l_sv)
+
+        if np.round(n, 10) % 1 != 0:
+            raise ValueError("The Statevector doesn't represent a n-qubit: the argument length is not a power of 2")
+        n = int(n)
+
+        pcvl_sv = StateVector()
+        for i in range(l_sv):
+            state_i = StateVector()
+            bin_i = bin(i)[2:]
+            bin_i = '0' * (n - len(bin_i)) + bin_i
+
+            for bit in bin_i:
+                if bit == '0':
+                    state_i = state_i * zero
+                else:
+                    state_i = state_i * one
+
+            pcvl_sv += q_sv[i] * state_i
+
+        return pcvl_sv
 
