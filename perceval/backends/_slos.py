@@ -199,6 +199,15 @@ class SLOSBackend(AProbAmpliBackend):
             bsd.add(output_state, (abs(unnormed_pa) ** 2) * output_state.prodnfact() / iprodnfact)
         return bsd
 
+    def all_prob(self, input_state: BasicState):
+        """SLOS specific signature, to enhance optimization in some computations"""
+        self.set_input_state(input_state)
+        c = np.copy(self._state_mapping[self._input_state].coefs).reshape(self._fsas[self._input_state.n].count())
+        c = abs(c)**2 / self._input_state.prodnfact()
+        for idx, (output_state, _) in enumerate(zip(allstate_iterator(self._input_state, self._mask), c)):
+            c[idx] = c[idx] * output_state.prodnfact()
+        return c
+
     def evolve(self) -> StateVector:
         istate = self._input_state
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
