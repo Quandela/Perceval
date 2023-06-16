@@ -35,7 +35,9 @@ from typing import List
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
     res = BSDistribution()
-    for state, pa in sv.items():
+    sv_copy = copy(sv)
+    sv_copy.normalize()
+    for state, pa in sv_copy.items():
         state.clear_annotations()
         res[state] += abs(pa) ** 2
     return res

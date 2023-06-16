@@ -44,7 +44,7 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
         pass
 
     @abstractmethod
@@ -79,7 +79,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         results = self._simulator.probs(self._prepare_input(input_state))
         return self._postprocess_results(results)
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
         probs = self._simulator.probs_svd(self._prepare_input(svd))
         probs['results'] = self._postprocess_results(probs['results'])
         return probs
