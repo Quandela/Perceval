@@ -1,21 +1,14 @@
 import numpy as np
 from perceval.utils import StateVector
 from perceval.utils import BasicState
-from enum import Enum
+from perceval.utils import Encoding
+
 from qiskit.quantum_info import Statevector as Qiskit_sv
-
-
-class Encoding(Enum):
-    DUAL_RAIL = 0
-    POLARIZATION = 1
-    QUDIT = 2
-    TIME = 3
-    RAW = 4
 
 
 class StatevectorConverter:
 
-    def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>")), ancillae=None):
+    def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>")), ancillae=[]):
         r"""
         :param encoding: for specifying the output format of the StateVector
             supported are Encoding.RAW, Encoding.DUAL_RAIL, Encoding.POLARIZATION
@@ -24,8 +17,6 @@ class StatevectorConverter:
         :param ancillae: (optional) you can  provide a list of additional modes, not taken in account for n-qubit
         """
 
-        if ancillae is None:
-            ancillae = []
         self.ancillae = ancillae
 
         assert isinstance(encoding, Encoding), "You need to provide an encoding"
@@ -68,7 +59,7 @@ class StatevectorConverter:
             sv = new_sv
         return sv
 
-    def sv_to_qiskit(self, sv):
+    def to_qiskit(self, sv):
         r"""Converts a StateVector from perceval to a Statevector from qiskit
         """
 
@@ -107,7 +98,7 @@ class StatevectorConverter:
 
         return Qiskit_sv(ampli)
 
-    def sv_to_perceval(self, q_sv):
+    def to_perceval(self, q_sv):
         r"""Converts a Statevector from qiskit to a StateVector from perceval
         """
         l_sv = len(q_sv)
