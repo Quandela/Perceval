@@ -37,15 +37,15 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
 	
-    theta_1 = 2*np.pi*54.74/180
-    theta_2 = 2*np.pi*17.63/180
+    theta1 = 2*np.pi*54.74/180
+    theta2 = 2*np.pi*17.63/180
 
     def __init__(self):
         super().__init__("heralded cz")
         self._default_opts['type'] = AsType.PROCESSOR
 
     def build(self):
-	#the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
+        #the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
         last_modes_cz = (Circuit(4)
             .add(0, PS(np.pi))
             .add(3, PS(np.pi))
