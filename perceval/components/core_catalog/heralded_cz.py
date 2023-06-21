@@ -58,7 +58,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
 
         c_hcz=(Circuit(6, name="Heralded CZ")
             .add((1, 2), PERM([1, 0]))
-            .add((2, 3, 4, 5), last_modes_cz)
+            .add((2, 3, 4, 5), last_modes_cz, merge=True)
             .add((1, 2), PERM([1, 0])))
 
         if self._opt('type') == AsType.CIRCUIT:
