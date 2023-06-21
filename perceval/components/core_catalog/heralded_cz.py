@@ -36,9 +36,10 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
 data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
-	
+
     theta1 = 2*np.pi*54.74/180
     theta2 = 2*np.pi*17.63/180
+    #The additional 2 factor takes into account the difference between the beam-splitter conventions of Perceval and the paper
 
     def __init__(self):
         super().__init__("heralded cz")
