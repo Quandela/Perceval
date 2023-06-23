@@ -4,6 +4,7 @@ from perceval.utils import BasicState
 from perceval.utils import Encoding
 
 from qiskit.quantum_info import Statevector as Qiskit_sv
+from qutip import Qobj, ket
 
 
 class StatevectorConverter:
@@ -59,8 +60,10 @@ class StatevectorConverter:
             sv = new_sv
         return sv
 
-    def to_qiskit(self, sv):
-        r"""Converts a StateVector from perceval to a Statevector from qiskit
+    def amplitude(self, sv):
+        r"""Converts a logical StateVector from Perceval to an array of amplitudes.
+        For a n-qubits StateVector, the returned array is of size 2^n with the first element corresponding to the
+        n-qubits vector '00...0' and the last element to '11...1'
         """
 
         l_sv = len(sv)
@@ -96,11 +99,28 @@ class StatevectorConverter:
         norm = np.sqrt(np.sum(abs(ampli) ** 2))
         ampli = ampli / norm
 
-        return Qiskit_sv(ampli)
+        return ampli
+
+    def to_qiskit(self, sv):
+        r"""With the array of amplitudes, returns a Statevector from qiskit
+        """
+
+        return Qiskit_sv(self.amplitude(sv))
+
+    def to_qutip(self, sv):
+        r"""With the array of amplitudes, returns a Statevector from qutip
+        """
+        ampli = self.amplitude(sv)
+        qutip_ampli = [[a] for a in ampli]
+        n = int(np.log2(len(ampli)))
+        dims = [[2] * n, [1] * n]
+
+        return Qobj(qutip_ampli, dims)
 
     def to_perceval(self, q_sv):
-        r"""Converts a Statevector from qiskit to a StateVector from perceval
+        r"""Converts a Statevector from qiskit or qutip to a StateVector from Perceval
         """
+        q_sv = np.array(q_sv).reshape(-1)
         l_sv = len(q_sv)
         zero, one = self._zero_state, self._one_state
         n = np.log2(l_sv)
@@ -124,3 +144,6 @@ class StatevectorConverter:
             pcvl_sv += q_sv[i] * state_i
 
         return pcvl_sv
+
+
+
