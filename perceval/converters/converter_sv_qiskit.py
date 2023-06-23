@@ -144,6 +144,3 @@ class StatevectorConverter:
             pcvl_sv += q_sv[i] * state_i
 
         return pcvl_sv
-
-
-
