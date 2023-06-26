@@ -282,11 +282,8 @@ class AProcessor(ABC):
             if perm_component is None:
                 self._postselect = processor._postselect
             else:
-                perm = perm_component.perm_vector
                 c_first = perm_modes[0]
-                # TODO EB: apply permutation to a PostSelect object
-                self._postselect = lambda s: processor._postselect([s[perm.index(ii) + c_first]
-                                                                    for ii in range(processor.circuit_size)])
+                self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)

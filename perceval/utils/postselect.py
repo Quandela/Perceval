@@ -31,7 +31,7 @@ from perceval.utils.statevector import BasicState
 
 import json
 import re
-from typing import Callable
+from typing import Callable, List
 
 
 class PostSelect:
@@ -101,3 +101,17 @@ class PostSelect:
 
     def clear(self):
         self._conditions.clear()
+
+    def apply_permutation(self, perm_vector: List[int], first_mode: int = 0):
+        output = PostSelect()
+        for operator, cond in self._conditions.items():
+            output._conditions[operator] = []
+            for (indexes, value) in cond:
+                new_indexes = []
+                for i in indexes:
+                    if i < first_mode or i >= first_mode + len(perm_vector):
+                        new_indexes.append(i)
+                    else:
+                        new_indexes.append(first_mode + perm_vector[i - first_mode])
+                output._conditions[operator].append((tuple(new_indexes), value))
+        return output

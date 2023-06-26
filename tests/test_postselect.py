@@ -78,3 +78,20 @@ def test_postselect_str():
     ps1 = PostSelect("[0]==0 & [1, 2 ]>0 & [3, 4]==1 & [5]<1")
     ps2 = PostSelect(str(ps1))
     assert ps1 == ps2
+
+
+def test_postselect_apply_permutation():
+    ps = PostSelect("[0,1]==1 & [2,3]>2 & [4,5]<3")
+
+    perm_vector = [1, 2, 0]  # Corresponds to PERM(perm_vector)
+    ps_out = ps.apply_permutation(perm_vector)
+    assert len(ps_out._conditions) == len(ps._conditions)
+    assert ((1, 2), 1) in ps_out._conditions[int.__eq__]
+    assert ((0, 3), 2) in ps_out._conditions[int.__gt__]
+    assert ((4, 5), 3) in ps_out._conditions[int.__lt__]
+
+    ps_out = ps.apply_permutation(perm_vector, 1)
+    assert len(ps_out._conditions) == len(ps._conditions)
+    assert ((0, 2), 1) in ps_out._conditions[int.__eq__]
+    assert ((3, 1), 2) in ps_out._conditions[int.__gt__]
+    assert ((4, 5), 3) in ps_out._conditions[int.__lt__]
