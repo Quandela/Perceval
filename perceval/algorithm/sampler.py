@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Union, List, Dict
+from typing import Callable, List, Dict
 from numbers import Number
 
 from .abstract_algorithm import AAlgorithm
@@ -81,6 +81,7 @@ class Sampler(AAlgorithm):
                     return False
         return True
 
+    # Job creation methods
     def _generic(self, method: str):
         assert self._input_available(), "Missing input state"
         primitive, converter = self._get_primitive_converter(method)
@@ -106,9 +107,14 @@ class Sampler(AAlgorithm):
                            delta_parameters=delta_parameters, job_context=job_context)
             return rj
         else:
-            return LocalJob(getattr(self._processor, primitive),
-                            result_mapping_function=converter,
-                            delta_parameters=delta_parameters)
+            if self._iterator:
+                return LocalJob(getattr(self, f"_{primitive}_iterate_locally"),
+                                result_mapping_function=converter,
+                                delta_parameters=delta_parameters)
+            else:
+                return LocalJob(getattr(self._processor, primitive),
+                                result_mapping_function=converter,
+                                delta_parameters=delta_parameters)
 
     @property
     def samples(self) -> Job:
@@ -122,6 +128,7 @@ class Sampler(AAlgorithm):
     def probs(self) -> Job:
         return self._generic("probs")
 
+    # Iterator construction methods
     def add_iteration(self, circuit_params: Dict = None,
                       input_state: BasicState = None,
                       min_detected_photons: int = None):
@@ -155,3 +162,41 @@ class Sampler(AAlgorithm):
     def add_iteration_list(self, iterations: List[Dict]):
         for iter_params in iterations:
             self.add_iteration(**iter_params)
+
+    # Local iteration methods: mimic the remote iteration for interchangeability purpose
+    def _probs_iterate_locally(self, progress_callback: Callable = None):
+        results = {'results_list':[]}
+        for idx, it in enumerate(self._iterator):
+            self._apply_iteration(it)
+            results['results_list'].append(self._processor.probs())
+            if progress_callback is not None:
+                progress_callback((idx+1)/len(self._iterator))
+        return results
+
+    def _sample_count_iterate_locally(self, count: int, progress_callback: Callable = None):
+        results = {'results_list':[]}
+        for idx, it in enumerate(self._iterator):
+            self._apply_iteration(it)
+            results['results_list'].append(self._processor.sample_count(count))
+            if progress_callback is not None:
+                progress_callback((idx+1)/len(self._iterator))
+        return results
+
+    def _samples_iterate_locally(self, count: int, progress_callback: Callable = None):
+        results = {'results_list':[]}
+        for idx, it in enumerate(self._iterator):
+            self._apply_iteration(it)
+            results['results_list'].append(self._processor.samples(count))
+            if progress_callback is not None:
+                progress_callback((idx+1)/len(self._iterator))
+        return results
+
+    def _apply_iteration(self, it):
+        if 'circuit_params' in it:
+            circuit_params = self._processor.get_circuit_parameters()
+            for name, value in it['circuit_params'].items():
+                circuit_params[name].set_value(value)
+        if 'input_state' in it:
+            self._processor.with_input(it['input_state'])
+        if 'min_detected_photons' in it:
+            self._processor.min_detected_photons_filter(it['min_detected_photons'])

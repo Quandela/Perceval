@@ -107,3 +107,21 @@ def test_sampler_iteration_bad_params():
         sampler.add_iteration(input_state=pcvl.BasicState([1]))  # input state too short
     with pytest.raises(AssertionError):
         sampler.add_iteration(input_state=pcvl.BasicState([1, 0, 0]))  # input state too large
+
+def test_sampler_iterator():
+    c = BS() // PS(phi=pcvl.P("phi1")) // BS()
+    for backend_name in ["SLOS", "CliffordClifford2017"]:
+        p = pcvl.Processor(backend_name, c)
+        sampler = Sampler(p)
+        iteration_list = [
+            {"circuit_params": {"phi1": 0.03}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+            {"circuit_params": {"phi1": 0.03}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+            {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1}
+        ]
+        sampler.add_iteration_list(iteration_list)
+        res = sampler.probs()
+        assert len(res['results_list']) == len(iteration_list)
+        res = sampler.samples(10)
+        assert len(res['results_list']) == len(iteration_list)
+        res = sampler.sample_count(100)
+        assert len(res['results_list']) == len(iteration_list)

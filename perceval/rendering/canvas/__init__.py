@@ -30,3 +30,4 @@
 from .canvas import Canvas
 from .mplot_canvas import MplotCanvas
 from .svg_canvas import SvgCanvas
+from .latex_canvas import LatexCanvas
