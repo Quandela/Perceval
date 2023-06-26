@@ -59,7 +59,7 @@ class MockBackend(AProbAmpliBackend):
         return StateVector(output_state)
 
 
-def test_simulator_probs():
+def test_simulator_probs_mock():
     input_state = BasicState([1,1,1])
     simulator = Simulator(MockBackend())
     simulator.set_circuit(Circuit(3))
@@ -81,7 +81,7 @@ def test_simulator_probs():
     assert simulator.DEBUG_evolve_count == 4
 
 
-def test_simulator_probs_svd():
+def test_simulator_probs_svd_indistinguishable():
     svd = SVDistribution()
     svd[StateVector([1,0]) + StateVector([0,1])] = 0.3
     svd[StateVector([1,1]) + 1j*StateVector([0,1])] = 0.3
@@ -95,6 +95,34 @@ def test_simulator_probs_svd():
     assert res[BasicState("|2,0>")] == pytest.approx(0.225)
     assert res[BasicState("|0,2>")] == pytest.approx(0.225)
     assert res[BasicState("|1,1>")] == pytest.approx(0.1)
+
+
+def test_simulator_probs_svd_distinguishable():
+    in_svd = SVDistribution({
+        BasicState('|{_:0}{_:1},{_:0}>'): 1
+    })
+    circuit = BS.H(theta=BS.r_to_theta(0.4))
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    res = sim.probs_svd(in_svd)['results']
+    assert len(res) == 4
+    assert res[BasicState("|3,0>")] == pytest.approx(0.192)
+    assert res[BasicState("|2,1>")] == pytest.approx(0.304)
+    assert res[BasicState("|1,2>")] == pytest.approx(0.216)
+    assert res[BasicState("|0,3>")] == pytest.approx(0.288)
+
+
+def test_simulator_probs_distinguishable():
+    in_state = BasicState('|{_:0}{_:1},{_:0}>')
+    circuit = BS.H(theta=BS.r_to_theta(0.4))
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    res = sim.probs(in_state)
+    assert len(res) == 4
+    assert res[BasicState("|3,0>")] == pytest.approx(0.192)
+    assert res[BasicState("|2,1>")] == pytest.approx(0.304)
+    assert res[BasicState("|1,2>")] == pytest.approx(0.216)
+    assert res[BasicState("|0,3>")] == pytest.approx(0.288)
 
 
 def test_simulator_probs_postselection():

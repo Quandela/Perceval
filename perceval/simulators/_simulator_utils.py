@@ -65,6 +65,9 @@ def _annot_state_mapping(bs_with_annots: BasicState):
     bs_list = bs_with_annots.separate_state(keep_annotations=True)
     mapping = {}
     for bs in bs_list:
+        if bs.n == 0:
+            mapping[Annotation()] = bs
+            continue
         annot = bs.get_photon_annotation(0)
         bs.clear_annotations()
         mapping[annot] = bs

@@ -183,7 +183,7 @@ class Simulator(ISimulator):
         return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
 
     def probs_svd(self, input_state: SVDistribution, progress_callback: Callable = None):
-        # Trim svd
+        """Trim input SVD given _rel_precision threshold"""
         max_p = 0
         for sv, p in input_state.items():
             if max(sv.n) >= self._min_detected_photons:
@@ -192,37 +192,56 @@ class Simulator(ISimulator):
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
         svd = SVDistribution({state: pr for state, pr in input_state.items() if pr > p_threshold})
 
+        """decomposed input:
+        From a SVD = {
+            pa_11*bs_11 + ... + pa_n1*bs_n1: p1,
+            pa_12*bs_12 + ... + pa_n2*bs_n2: p2,
+            ...
+            pa_1k*bs_1k + ... + pa_nk*bs_nk: pk
+        }
+        the following data structure is built:
+        [
+            (p1, [
+                    (pa_11, {annot_11*: bs_11*}),
+                    ...
+                    (pa_n1, {annot_n1*: bs_n1*})
+                 ]
+            ),
+            (pk, [
+                    (pa_1k, {annot_1k*: bs_1k*}),
+                    ...
+                    (pa_nk, {annot_nk*: bs_nk*})
+                 ]
+            )
+        ]
+        where {annot_xy*: bs_xy*} is the mapping of the separated basic state with its annotations
+        """
         decomposed_input = []
         for sv, prob in svd.items():
             if min(sv.n) >= self._min_detected_photons:
-                decomposed_input.append((prob, [(pa, st.separate_state(keep_annotations=False)) for st, pa in sv.items()]))
+                decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv.items()]))
             else:
                 self._physical_perf -= prob
-        input_set = set([state for s in decomposed_input for t in s[1] for state in t[1]])
+        input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
         self._evolve_cache(input_set)
 
+        """Reconstruct output probability distribution"""
         res = BSDistribution()
-        merge_cache = {}
         for idx, (prob, sv_data) in enumerate(decomposed_input):
+            """First, recombine evolved state vectors given a single input"""
             result_sv = StateVector()
             for probampli, instate_list in sv_data:
-                if len(instate_list) == 1:
-                    evolved_in_s = self._cache[instate_list[0]]
-                else:
-                    evolved_in_s = self._cache[instate_list.pop()]
-                    for in_s in instate_list:
-                        if evolved_in_s in merge_cache and self._cache[in_s] in merge_cache[evolved_in_s]:
-                            evolved_in_s = merge_cache[evolved_in_s][self._cache[in_s]]
-                        else:
-                            merge_res = _merge_sv(evolved_in_s, self._cache[in_s])
-                            if evolved_in_s not in merge_cache:
-                                merge_cache[evolved_in_s] = {}
-                            merge_cache[evolved_in_s][self._cache[in_s]] = merge_res
-                            evolved_in_s = merge_res
-                            self.DEBUG_merge_count += 1
-                result_sv += evolved_in_s * probampli
+                evolved_in_s = StateVector()
+                for annot, in_s in instate_list.items():
+                    cached_res = _inject_annotation(self._cache[in_s], annot)
+                    evolved_in_s = _merge_sv(evolved_in_s, cached_res)
+                    self.DEBUG_merge_count += 1
+                result_sv += probampli*evolved_in_s
+
+            """Then, turn the resulting recombined state vector into a probability distribution"""
             for bs, p in _to_bsd(result_sv).items():
                 res[bs] += p*prob
+
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:

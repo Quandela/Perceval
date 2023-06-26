@@ -232,7 +232,7 @@ class StateVector(defaultdict):
     def __copy__(self):
         sv_copy = StateVector(None)
         for k, v in self.items():
-            sv_copy[k] = v
+            sv_copy[copy(k)] = v
         sv_copy._has_symbolic = self._has_symbolic
         sv_copy._normalized = self._normalized
         sv_copy.m = self.m
@@ -575,7 +575,7 @@ class BSDistribution(ProbabilityDistribution):
                     bs = bs1.merge(bs2)
                 else:
                     bs = bs1 * bs2
-                new_dist[bs] = proba1 * proba2
+                new_dist[bs] += proba1 * proba2
         return new_dist
 
 
