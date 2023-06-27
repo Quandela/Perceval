@@ -73,6 +73,7 @@ class Processor(AProcessor):
             self.backend = BACKEND_LIST[backend]()
         else:
             self.backend = backend
+        self._simulator = None
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -158,6 +159,10 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
 
+    def _circuit_changed(self):
+        # Override parent's method to reset the internal simulator as soon as the component list changes
+        self._simulator = None
+
     def with_polarized_input(self, bs: BasicState):
         assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
         self._input_state = bs
@@ -169,7 +174,6 @@ class Processor(AProcessor):
     def clear_input_and_circuit(self):
         super().clear_input_and_circuit()
         self._inputs_map = None
-        self._simulator = None
 
     def _compose_processor(self, connector, processor, keep_port: bool):
         assert isinstance(processor, Processor), "can not mix types of processors"
@@ -244,10 +248,11 @@ class Processor(AProcessor):
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
     def probs(self, progress_callback: Callable = None) -> Dict:
-        assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
-        from perceval.simulators import SimulatorFactory  # Avoids a circular import
-        simulator = SimulatorFactory.build(self)
-        res = simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
+        # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
+        if self._simulator is None:
+            from perceval.simulators import SimulatorFactory  # Avoids a circular import
+            self._simulator = SimulatorFactory.build(self)
+        res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
         lperf = 1
         pperf = 1
         postprocessed_res = BSDistribution()

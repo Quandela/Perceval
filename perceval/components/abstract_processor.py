@@ -103,6 +103,11 @@ class AProcessor(ABC):
     def clear_input_and_circuit(self):
         self._reset_circuit()
         self._input_state = None
+        self._circuit_changed()
+
+    def _circuit_changed(self):
+        # Can be used by child class
+        pass
 
     def min_detected_photons_filter(self, n: int):
         r"""
@@ -228,6 +233,7 @@ class AProcessor(ABC):
             self._add_component(connector.resolve(), component)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
+        self._circuit_changed()
         return self
 
     def _compose_processor(self, connector, processor, keep_port: bool):
