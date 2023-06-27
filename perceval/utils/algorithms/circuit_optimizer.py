@@ -93,7 +93,7 @@ class CircuitOptimizer:
         >>>    return PS(P(f"phi_3_{i}"))
         >>> template = Circuit.generic_interferometer(12, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
         >>> random_unitary = Matrix.random_unitary(12)
-        >>> fidelity, result_circuit = CircuitOptimizer().optimize(random_unitary, template)
+        >>> result_circuit, fidelity = CircuitOptimizer().optimize(random_unitary, template)
         """
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
