@@ -27,10 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from . import StateVector
-from . import BasicState
+from .statevector import BasicState, StateVector
+
 from enum import Enum
 import networkx as nx
+from typing import List
 
 class Encoding(Enum):
     DUAL_RAIL = 0
@@ -68,7 +69,7 @@ class StateGenerator:
         else:
             raise ValueError("Only use RAW, DUAL_RAIL or POLARIZATION encoding.")
 
-    def logical_state(self, state: list[int]):
+    def logical_state(self, state: List[int]):
         r"""
         Generate a StateVector from a list of logical state
 

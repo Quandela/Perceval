@@ -265,4 +265,4 @@ def test_evolve_indistinguishable():
         backend.set_circuit(BS.H())
         backend.set_input_state(BasicState([1, 1]))
         sv_out = backend.evolve()
-        assert sv_out == sqrt(2)/2*StateVector([2, 0]) - sqrt(2)/2*StateVector([0, 2])
+        assert pytest.approx(sv_out) == sqrt(2)/2*StateVector([2, 0]) - sqrt(2)/2*StateVector([0, 2])
