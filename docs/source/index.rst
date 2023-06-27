@@ -106,6 +106,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/source
    reference/processor
    reference/qiskit_converter
+   reference/stategenerator
 
 .. toctree::
    :caption: Community
