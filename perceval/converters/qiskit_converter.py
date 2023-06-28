@@ -47,6 +47,7 @@ class QiskitConverter:
     def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
         self._source = source
         self._heralded_cnot_builder = catalog["heralded cnot"]
+        self._heralded_cz_builder = catalog["heralded cnot"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
         self._generic_2mode_builder = catalog["generic 2 mode circuit"]
         self._lower_phase_component = Circuit(2) // (0, comp.PS(P("phi2")))
@@ -101,6 +102,10 @@ class QiskitConverter:
                 if instruction[0].name == "swap":
                     # c_idx and c_data are consecutive - not necessarily ordered
                     p.add(c_first, comp.PERM([2, 3, 0, 1]))
+                elif instruction[0].name == "cz":
+                    cz_processor = self._heralded_cnot_builder.build()
+                    mode_map = {c_idx: 2, c_idx + 1: 3, c_data: 4, c_data + 1: 5}
+                    p.add(mode_map, cz_processor)
                 elif instruction[0].name == "cx":
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
