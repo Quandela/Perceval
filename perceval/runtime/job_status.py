@@ -60,6 +60,7 @@ class JobStatus:
         self._status: RunningStatus = RunningStatus.WAITING
         self._init_time_start = time()
         self._running_time_start = None
+        self._duration = None
         self._completed_time = None
         self._running_progress: float = 0
         self._running_phase: Optional[str] = None
@@ -85,6 +86,7 @@ class JobStatus:
     def stop_run(self, cause: RunningStatus = RunningStatus.SUCCESS, mesg: Optional[str] = None):
         self._status = cause
         self._completed_time = time()
+        self._duration = self._completed_time - self._init_time_start
         if cause == RunningStatus.SUCCESS:
             self._running_progress = 1
         self._stop_message = mesg
@@ -95,17 +97,31 @@ class JobStatus:
         self._running_progress = progress
         self._running_phase = phase
         now = time()
-        if self._last_progress_time is not None and self._last_progress_time - now > 5:
+        if self._last_progress_time and self._last_progress_time - now > 5:
             sleep(0.001)
         self._last_progress_time = now
 
-    def update_times(self, start_time: float, duration: int):
-        if start_time is None:
-            return
+    def update_times(self, creation_datetime: float, start_time: float, duration: int):
+        if creation_datetime:
+            self._init_time_start = creation_datetime
+        if start_time:
+            self._running_time_start = start_time
+        if duration:
+            self._duration = duration
+            if self.completed:
+                self._completed_time = self._running_time_start + self._duration
 
-        self._init_time_start = start_time
-        if duration is not None:
-            self._completed_time = start_time + duration
+    @property
+    def creation_timestamp(self):
+        return self._init_time_start
+
+    @property
+    def start_timestamp(self):
+        return self._running_time_start
+
+    @property
+    def duration(self):
+        return self._duration
 
     @property
     def waiting(self):
@@ -137,5 +153,8 @@ class JobStatus:
 
     @property
     def running_time(self):
+        if self._duration:
+            return self._duration
+
         assert self.completed
         return self._completed_time - self._running_time_start
