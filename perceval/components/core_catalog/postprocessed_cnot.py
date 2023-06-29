@@ -36,7 +36,7 @@ from perceval.utils import Encoding, PostSelect
 
 class PostProcessedCnotItem(CatalogItem):
     article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
-    description = r"""CNOT gate with 2 heralded modes and a post-processing function"""
+    description = r"""CNOT gate with 2 heralded modes and a post-selection function"""
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
@@ -52,9 +52,13 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def build(self):
         theta_13 = BS.r_to_theta(1/3)
         c_cnot = (Circuit(6, name="PostProcessed CNOT")
-                  .add((0, 1), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                  .add((0, 1), PERM([1, 0]))
+                  .add((0, 1), BS.H(theta_13))
+                  .add((0, 1), PERM([1, 0]))
                   .add((3, 4), BS.H())
-                  .add((2, 3), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
+                  .add((2, 3), PERM([1, 0]))
+                  .add((2, 3), BS.H(theta_13))
+                  .add((2, 3), PERM([1, 0]))
                   .add((4, 5), BS.H(theta_13))
                   .add((3, 4), BS.H()))
 
