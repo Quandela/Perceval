@@ -54,7 +54,7 @@ class ModeConnector:
     """
     Resolves a mapping supporting multiple syntaxes in order to connect two objects.
     The left object must be a Processor
-    The right object can be a Processor, a (linear or non-linear) component
+    The right object can be a Processor, a (unitary or non-unitary) component
     """
 
     def __init__(self, left_processor, right_obj, mapping):

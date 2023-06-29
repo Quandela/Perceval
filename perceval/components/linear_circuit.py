@@ -38,20 +38,10 @@ import sympy as sp
 import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
-from perceval.utils import Parameter, Matrix, MatrixN, global_params
+from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params
 import perceval.utils.algorithms.decomposition as decomposition
 from perceval.utils.algorithms.match import Match
 from perceval.utils.algorithms.solve import solve
-
-
-def _matrix_double_for_polarization(m, u):
-    pu = Matrix(m * 2, u.is_symbolic())
-    pu.fill(0)
-    for k1 in range(0, m):
-        for k2 in range(0, m):
-            pu[2 * k1, 2 * k2] = u[k1, k2]
-            pu[2 * k1 + 1, 2 * k2 + 1] = u[k1, k2]
-    return pu
 
 
 class ACircuit(AParametrizedComponent, ABC):
@@ -97,7 +87,7 @@ class ACircuit(AParametrizedComponent, ABC):
             use_polarization = False
         u = self._compute_unitary(assign, use_symbolic)
         if use_polarization and not self._supports_polarization:
-            return _matrix_double_for_polarization(self._m, u)
+            return matrix_double(u)
         return u
 
     @property

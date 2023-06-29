@@ -27,57 +27,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
-import perceval as pcvl
-import perceval.components.unitary_components as comp
-from perceval.backends.processor import StepperBackend
+from perceval.components import BS, PS, Circuit
+from perceval.simulators import Stepper, Simulator
+from perceval.utils import BasicState
+from perceval.backends._naive import NaiveBackend
 
+import numpy as np
 import pytest
 
-from test_simulators import check_output
+
+def test_stepper_basic_interference():
+    c = BS()
+    sim = Stepper()
+    sim.set_circuit(c)
+    res = sim.probs(BasicState([1, 1]))
+    assert len(res) == 2
+    assert pytest.approx(res[BasicState([2, 0])]) == 0.5
+    assert pytest.approx(res[BasicState([0, 2])]) == 0.5
 
 
-def test_minimal():
-    # simulator directly initialized on circuit
-    s = StepperBackend(comp.BS())
-    check_output(s, pcvl.BasicState([1, 1]), {pcvl.BasicState("|1,0>"): 0,
-                                              pcvl.BasicState("|0,1>"): 0,
-                                              pcvl.BasicState("|0,2>"): 0.5,
-                                              pcvl.BasicState("|2,0>"): 0.5})
+def test_stepper_complex_circuit():
+    def _gen_mzi(i: int):
+        return BS(BS.r_to_theta(0.42)) // PS(np.pi+i*0.1) // BS(BS.r_to_theta(0.52)) // PS(np.pi/2)
 
+    c = Circuit.generic_interferometer(4, _gen_mzi)
+    stepper_sim = Stepper()
+    stepper_sim.set_circuit(c)
+    stepper_res = stepper_sim.probs(BasicState([1, 0, 1, 0]))
 
-def test_c3():
-    for backend in ["Stepper", "Naive", "SLOS", "MPS"]:
-        if backend != "Stepper":
-            # default simulator backend
-            simulator_backend = pcvl.BackendFactory().get_backend(backend)
-        else:
-            simulator_backend = StepperBackend
-        # simulator directly initialized on circuit
-        circuit = pcvl.Circuit(3)
-        circuit.add((0, 1), comp.BS())
-        circuit.add((1,), comp.PS(np.pi/4))
-        circuit.add((1, 2), comp.BS())
-        s = simulator_backend(circuit)
-        if backend == "MPS":
-            s.set_cutoff(3)
-        check_output(s, pcvl.BasicState([0, 1, 1]), {pcvl.BasicState("|0,1,1>"): 0,
-                                                              pcvl.BasicState("|1,1,0>"): 0.25,
-                                                              pcvl.BasicState("|1,0,1>"): 0.25,
-                                                              pcvl.BasicState("|2,0,0>"): 0,
-                                                              pcvl.BasicState("|0,2,0>"): 0.25,
-                                                              pcvl.BasicState("|0,0,2>"): 0.25,
-                                                              })
+    slos_sim = Simulator(NaiveBackend())
+    slos_sim.set_circuit(c)
+    slos_res = slos_sim.probs(BasicState([1, 0, 1, 0]))
 
-
-
-def test_basic_interference():
-    simulator_backend = StepperBackend
-    c = comp.BS()
-    sim = simulator_backend(c)
-    assert pytest.approx(sim.prob(pcvl.BasicState([1, 1]), pcvl.BasicState([2, 0]))) == 0.5
-
-    simulator_backend = pcvl.BackendFactory().get_backend("MPS")
-    sim = simulator_backend(c, use_symbolic=False)
-    sim.set_cutoff(3)
-    assert pytest.approx(sim.prob(pcvl.BasicState([1, 1]), pcvl.BasicState([2, 0]))) == 0.5
+    assert len(stepper_res) == len(slos_res)
+    for stepper_bs, stepper_p in stepper_res.items():
+        assert slos_res[stepper_bs] == pytest.approx(stepper_p)

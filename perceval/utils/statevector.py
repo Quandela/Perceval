@@ -35,91 +35,66 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 import itertools
+from multipledispatch import dispatch
 from typing import Dict, List, Union, Tuple, Optional
 from deprecated import deprecated
 
-from .matrix import Matrix
-from .format import simple_complex, simple_float
+from .format import simple_complex
 from .globals import global_params
-from .polarization import Polarization
 import numpy as np
 import sympy as sp
 
 from exqalibur import FockState, FSArray
 
 
-class BasicState(FockState):
-    r"""Basic states
+def _fockstate_add(self, other):
+    return StateVector(self) + other
+
+def _fockstate_sub(self, other):
+    return StateVector(self) - other
+
+def _fockstate_pow(self, power: int):
+    bs = self.__copy__()
+    for i in range(power - 1):
+        bs = bs * self
+    return bs
+
+def _fockstate_partition(self, distribution_photons: List[int]):
+    r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
+
+    :param distribution_photons:
+    :return:
     """
+    def _partition(one_list: list, distribution: list, current: list, all_res: list):
+        if len(distribution) == 0:
+            all_res.append(copy(current))
+            return
+        for one_subset in itertools.combinations(one_list, distribution[0]):
+            current.append(one_subset)
+            _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
+            current.pop()
 
-    def __init__(self, *args, **kwargs):
-        super(BasicState, self).__init__(*args, **kwargs)
+    all_photons = list(range(self.n))
+    partitions_idx = []
+    _partition(all_photons, distribution_photons, [], partitions_idx)
+    partitions_states = set()
+    for partition in partitions_idx:
+        o_state = []
+        for a_subset in partition:
+            state = [0] * self.m
+            for photon_id in a_subset:
+                state[self.photon2mode(photon_id)] += 1
+            o_state.append(BasicState(state))
+        partitions_states.add(tuple(o_state))
+    return list(partitions_states)
 
-    def __len__(self):
-        return self.m
 
-    def __copy__(self):
-        return BasicState(self)
-
-    def __add__(self, o):
-        return StateVector(self) + o
-
-    def __sub__(self, o):
-        if not isinstance(o, StateVector):
-            o = StateVector(o)
-        return StateVector(self) - o
-
-    def separate_state(self):
-        return [BasicState(s) for s in super(BasicState, self).separate_state()]
-
-    def __mul__(self, s):
-        if isinstance(s, StateVector):
-            return StateVector(self) * s
-        return BasicState(super(BasicState, self).__mul__(s))
-
-    def __pow__(self, power):
-        bs = self.__copy__()
-        for i in range(power-1):
-            bs = bs*self
-        return bs
-
-    def __getitem__(self, item):
-        it = super().__getitem__(item)
-        if isinstance(it, FockState):
-            it = BasicState(it)
-        return it
-
-    def set_slice(self, slice, state):
-        return BasicState(super().set_slice(slice, state))
-
-    def partition(self, distribution_photons: List[int]):
-        r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
-
-        :param distribution_photons:
-        :return:
-        """
-        def _partition(one_list: list, distribution: list, current: list, all_res: list):
-            if len(distribution) == 0:
-                all_res.append(copy(current))
-                return
-            for one_subset in itertools.combinations(one_list, distribution[0]):
-                current.append(one_subset)
-                _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
-                current.pop()
-
-        all_photons = list(range(self.n))
-        partitions_idx = []
-        _partition(all_photons, distribution_photons, [], partitions_idx)
-        partitions_states = set()
-        for partition in partitions_idx:
-            o_state = []
-            for a_subset in partition:
-                state = [0] * self.m
-                for photon_id in a_subset:
-                    state[self.photon2mode(photon_id)] += 1
-                o_state.append(BasicState(state))
-            partitions_states.add(tuple(o_state))
-        return list(partitions_states)
+# Define BasicState as exqalibur FockState + redefine some methods
+BasicState = FockState
+BasicState.__add__ = _fockstate_add
+BasicState.__sub__ = _fockstate_sub
+BasicState.__pow__ = _fockstate_pow  # Using issue #210 fix before moving the fix to exqalibur
+BasicState.partition = _fockstate_partition  # TODO use the cpp version of this call
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
@@ -257,7 +232,7 @@ class StateVector(defaultdict):
     def __copy__(self):
         sv_copy = StateVector(None)
         for k, v in self.items():
-            sv_copy[k] = v
+            sv_copy[copy(k)] = v
         sv_copy._has_symbolic = self._has_symbolic
         sv_copy._normalized = self._normalized
         sv_copy.m = self.m
@@ -286,6 +261,8 @@ class StateVector(defaultdict):
 
     def __sub__(self, other):
         r"""Sub two StateVectors"""
+        if isinstance(other, BasicState):
+            other = StateVector(other)
         return self + -1 * other
 
     def sample(self) -> BasicState:
@@ -369,9 +346,9 @@ class StateVector(defaultdict):
                     self[key] /= norm
             self._normalized = True
 
-    def __str__(self):
+    def __str__(self, nsimplify=True):
         if not self.keys():
-             return "|>"
+            return "|>"
         self_copy = copy(self)
         self_copy.normalize()
         ls = []
@@ -382,14 +359,17 @@ class StateVector(defaultdict):
                 if isinstance(value, sp.Expr):
                     ls.append(str(value) + "*" + str(key))
                 else:
-                    value = simple_complex(value)[1]
-                    if value[1:].find("-") != -1 or value.find("+") != -1:
-                        value = "("+value+")"
+                    if nsimplify:
+                        value = simple_complex(value)[1]
+                        if value[1:].find("-") != -1 or value.find("+") != -1:
+                            value = f"({value})"
+                    else:
+                        value = str(value)
                     ls.append( value + "*" + str(key))
         return "+".join(ls).replace("+-", "-")
 
     def __hash__(self):
-        return self.__str__().__hash__()
+        return self.__str__(nsimplify=False).__hash__()
 
 
 def tensorproduct(states: List[Union[StateVector, BasicState]]):
@@ -420,7 +400,7 @@ class ProbabilityDistribution(defaultdict, ABC):
 
     def __str__(self):
         return "{\n  "\
-               + "\n  ".join(["%s: %s" % (str(k), simple_float(v, nsimplify=True)[1]) for k, v in self.items()])\
+               + "\n  ".join(["%s: %s" % (str(k), v) for k, v in self.items()])\
                + "\n}"
 
     def __copy__(self):
@@ -428,6 +408,19 @@ class ProbabilityDistribution(defaultdict, ABC):
         for k, prob in self.items():
             distribution_copy[copy(k)] = prob
         return distribution_copy
+
+    def __pow__(self, power):
+        # Fast exponentiation
+        binary = [int(i) for i in bin(power)[2:]]
+        binary.reverse()
+        power_distrib = self
+        out = type(self)()
+        for i in range(len(binary)):
+            if binary[i] == 1:
+                out *= power_distrib
+            if i != len(binary) - 1:
+                power_distrib *= power_distrib
+        return out
 
     @abstractmethod
     def sample(self, count: int, non_null: bool = True):
@@ -461,34 +454,21 @@ class SVDistribution(ProbabilityDistribution):
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
-    def __mul__(self, svd):
+    def __mul__(self, other):
         r"""Combines two `SVDistribution`
 
-        :param svd:
-        :return:
+        :param other: State / distribution to multiply with
+        :return: The result of the tensor product
         """
+        if isinstance(other, (BasicState, StateVector)):
+            other = SVDistribution(other)
         if len(self) == 0:
-            return svd
+            return other
         new_svd = SVDistribution()
         for sv1, proba1 in self.items():
-            for sv2, proba2 in svd.items():
-                # assert len(sv1) == 1 and len(sv2) == 1, "can only combine basic states"
+            for sv2, proba2 in other.items():
                 new_svd[sv1*sv2] = proba1 * proba2
-
         return new_svd
-
-    def __pow__(self, power):
-        # Fast exponentiation
-        binary = [int(i) for i in bin(power)[2:]]
-        binary.reverse()
-        power_svd = self
-        out = SVDistribution()
-        for i in range(len(binary)):
-            if binary[i] == 1:
-                out *= power_svd
-            if i != len(binary) - 1:
-                power_svd *= power_svd
-        return out
 
     def normalize(self):
         sum_probs = sum(list(self.values()))
@@ -511,6 +491,32 @@ class SVDistribution(ProbabilityDistribution):
         rng = np.random.default_rng()
         results = rng.choice(states, count, p=np.array(probs) / sum(probs))
         return list(results)
+
+
+@dispatch(StateVector, annot_tag=str)
+def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
+    m = sv.m
+    annot_map = {}
+    result = StateVector()
+    for bs, pa in sv.items():
+        s = [""] * m
+        for i in range(bs.n):
+            mode = bs.photon2mode(i)
+            annot = bs.get_photon_annotation(i)
+            if annot_map.get(str(annot)) is None:
+                annot_map[str(annot)] = f"{{{annot_tag}:{len(annot_map)}}}"
+            s[mode] += annot_map[str(annot)]
+        result += StateVector("|" + ",".join([v and v or "0" for v in s]) + ">") * pa
+    result.normalize()
+    return result
+
+@dispatch(SVDistribution, annot_tag=str)
+def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
+    sv_dist = defaultdict(lambda: 0)
+    for k, p in svd.items():
+        state = anonymize_annotations(k, annot_tag=annot_tag)
+        sv_dist[state] += p
+    return SVDistribution({k: v for k, v in sorted(sv_dist.items(), key=lambda x: -x[1])})
 
 
 class BSDistribution(ProbabilityDistribution):
@@ -555,6 +561,23 @@ class BSDistribution(ProbabilityDistribution):
             output.append(BasicState(s))
         return output
 
+    def __mul__(self, other):
+        return BSDistribution.tensor_product(self, other)
+
+    @staticmethod
+    def tensor_product(bsd1, bsd2, merge_modes: bool = False):
+        if len(bsd1) == 0:
+            return bsd2
+        new_dist = BSDistribution()
+        for bs1, proba1 in bsd1.items():
+            for bs2, proba2 in bsd2.items():
+                if merge_modes:
+                    bs = bs1.merge(bs2)
+                else:
+                    bs = bs1 * bs2
+                new_dist[bs] += proba1 * proba2
+        return new_dist
+
 
 class BSCount(defaultdict):
     def __init__(self, d: Optional[Dict] = None):
@@ -596,83 +619,3 @@ class BSSamples(list):
             s += f', ... (size={sz})'
         s += ']'
         return s
-
-
-def _rec_build_spatial_output_states(lfs: list, output: list):
-    if len(lfs) == 0:
-        yield BasicState(output)
-    else:
-        if lfs[0] == 0:
-            yield from _rec_build_spatial_output_states(lfs[1:], output+[0, 0])
-        else:
-            for k in range(lfs[0]+1):
-                yield from _rec_build_spatial_output_states(lfs[1:], output+[k, lfs[0]-k])
-
-
-def build_spatial_output_states(state: BasicState):
-    yield from _rec_build_spatial_output_states(list(state), [])
-
-
-def _is_orthogonal(v1, v2, use_symbolic):
-    if use_symbolic:
-        orth = sp.conjugate(v1[0]) * v2[0] + sp.conjugate(v1[1]) * v2[1]
-        return orth == 0
-    orth = np.conjugate(v1[0]) * v2[0] + np.conjugate(v1[1]) * v2[1]
-    return abs(orth) < 1e-6
-
-
-def convert_polarized_state(state: BasicState,
-                            use_symbolic: bool = False,
-                            inverse: bool = False) -> Tuple[BasicState, Matrix]:
-    r"""Convert a polarized BasicState into an expanded BasicState vector
-
-    :param inverse:
-    :param use_symbolic:
-    :param state:
-    :return:
-    """
-    idx = 0
-    input_state = []
-    prep_matrix = None
-    for k_m in range(state.m):
-        input_state += [0, 0]
-        if state[k_m]:
-            vectors = []
-            for k_n in range(state[k_m]):
-                # for each state we can handle up to two orthogonal vectors
-                annot = state.get_photon_annotation(idx)
-                idx += 1
-                v_hv = Polarization(annot.get("P", complex(Polarization(0)))).project_eh_ev(use_symbolic)
-                v_idx = None
-                for i, v in enumerate(vectors):
-                    if v == v_hv:
-                        v_idx = i
-                        break
-                if v_idx is None:
-                    if len(vectors) == 2:
-                        raise ValueError("use statevectors to handle more than 2 orthogonal vectors")
-                    if len(vectors) == 0 or _is_orthogonal(vectors[0], v_hv, use_symbolic):
-                        v_idx = len(vectors)
-                        vectors.append(v_hv)
-                    else:
-                        raise ValueError("use statevectors to handle non orthogonal vectors")
-                input_state[-2+v_idx] += 1
-            if vectors:
-                eh1, ev1 = vectors[0]
-                if len(vectors) == 1:
-                    if use_symbolic:
-                        eh2 = -sp.conjugate(ev1)
-                        ev2 = sp.conjugate(eh1)
-                    else:
-                        eh2 = -np.conjugate(ev1)
-                        ev2 = np.conjugate(eh1)
-                else:
-                    eh2, ev2 = vectors[1]
-                if prep_matrix is None:
-                    prep_matrix = Matrix.eye(2*state.m, use_symbolic)
-                prep_state_matrix = Matrix([[eh1, eh2],
-                                            [ev1, ev2]], use_symbolic)
-                if inverse:
-                    prep_state_matrix = prep_state_matrix.inv()
-                prep_matrix[2*k_m:2*k_m+2, 2*k_m:2*k_m+2] = prep_state_matrix
-    return BasicState(input_state), prep_matrix

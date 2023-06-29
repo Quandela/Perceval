@@ -27,42 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import math
-import numpy as np
-
-from .template import Backend
-import exqalibur as xq
-
-
-class NaiveBackend(Backend):
-    """Naive algorithm, no clever calculation path, does not cache anything,
-       recompute all states on the fly"""
-    name = "Naive"
-    supports_symbolic = False
-    supports_circuit_computing = False
-
-    def probampli_be(self, input_state, output_state):
-        if input_state.n != output_state.n:
-            return 0
-        Ust = np.empty((input_state.n, input_state.n), dtype=complex)
-        colidx = 0
-        p = 1
-        for ok in range(self._realm):
-            p *= math.factorial(output_state[ok])
-        for ik in range(self._realm):
-            p *= math.factorial(input_state[ik])
-            for i in range(input_state[ik]):
-                rowidx = 0
-                for ok in range(self._realm):
-                    for j in range(output_state[ok]):
-                        Ust[rowidx, colidx] = self._U[ok, ik]
-                        rowidx += 1
-                colidx += 1
-        return xq.permanent_cx(Ust, n_threads=1)/math.sqrt(p)
-
-    def prob_be(self, input_state, output_state):
-        return abs(self.probampli_be(input_state, output_state))**2
-
-    @staticmethod
-    def preferred_command() -> str:
-        return 'probampli'
+from .delay_simulator import DelaySimulator
+from .loss_simulator import LossSimulator
+from .polarization_simulator import PolarizationSimulator
+from .simulator import Simulator
+from .simulator_factory import SimulatorFactory
+from .stepper import Stepper
