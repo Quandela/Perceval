@@ -11,17 +11,15 @@ class Encoding(Enum):
     RAW = 4
 
 class StateGenerator:
-    r"""StateGenerator
+    r"""
+    StateGenerator class for conveniently generating common complex StateVectors
+
+    :param encoding: for specifying the output format of the StateVector
+        supported are Encoding.RAW, Encoding.DUAL_RAIL, Encoding.POLARIZATION
+    :param polarization_base: (optional) you can provide your own polarization basis as a tuple of BasicStates
+        default=(BasicState("|{P:H}>"), BasicState("|{P:V}>")
     """
     def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
-        r"""
-        StateGenerator class for conveniently generating common complex StateVectors
-
-        :param encoding: for specifying the output format of the StateVector
-            supported are Encoding.RAW, Encoding.DUAL_RAIL, Encoding.POLARIZATION
-        :param polarization_base:(optional) you can provide your own polarization basis as a tuple of BasicStates
-            default=(BasicState("|{P:H}>"), BasicState("|{P:V}>")
-        """
 
         assert isinstance(encoding, Encoding), "You need to provide an encoding"
 
