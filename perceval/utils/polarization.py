@@ -59,7 +59,7 @@ class Polarization:
             elif v == "L":
                 self.theta_phi = (sp.pi/2, sp.pi/2)
             else:
-                raise ValueError("undefined value '%s' for polarization")
+                raise ValueError("undefined value '%s' for polarization" %v)
         elif isinstance(v, tuple):
             if len(v) != 2:
                 raise ValueError("Polarization is defined by 2 angles")
