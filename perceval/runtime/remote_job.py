@@ -36,7 +36,7 @@ from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize, serialize
 
 
-def extract_job_times(response):
+def _extract_job_times(response):
     creation_datetime = None
     start_time = None
     duration = None
@@ -138,7 +138,7 @@ class RemoteJob(Job):
             elif self._job_status.failed:
                 self._job_status._stop_message = response['failure_code']
 
-            creation_datetime, duration, start_time = extract_job_times(response)
+            creation_datetime, duration, start_time = _extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_time, duration)
 
             name = response.get("name")
