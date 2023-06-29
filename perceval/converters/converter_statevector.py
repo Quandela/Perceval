@@ -141,7 +141,6 @@ class StatevectorConverter:
         qutip_ampli = [[a] for a in ampli]
         n = int(np.log2(len(ampli)))
         dims = [[2] * n, [1] * n]
-
         return Qobj(qutip_ampli, dims)
 
     def to_perceval(self, q_sv):
