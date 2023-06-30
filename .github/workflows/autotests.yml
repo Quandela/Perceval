@@ -59,7 +59,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install -r tests/requirements.txt
         python -m pip install -r requirements.txt
         python -m pip install .
 
@@ -103,13 +103,21 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install wheel sphinx sphinx-rtd-theme sphinxcontrib-bibtex sphinx-autodoc-typehints nbsphinx jinja2==3.0.0 ipython
-        pip install .
+        python -m pip install -r docs/requirements.txt
+        python -m pip install .
     - name: Install Pandoc
       run: |
         sudo apt update
         sudo apt install pandoc
+  
     - name: Build docs
       run: |
         cd docs
         make html
+    
+    - name: 'Create docs Artefact'
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs
+        path: docs/build/html
+        retention-days: 1
