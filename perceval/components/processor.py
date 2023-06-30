@@ -261,7 +261,7 @@ class Processor(AProcessor):
                 pperf -= prob
                 continue
             if self._state_selected(state):
-                postprocessed_res[self.postprocess_output(state)] = prob
+                postprocessed_res[self.postprocess_output(state)] += prob
             else:
                 lperf -= prob
         postprocessed_res.normalize()

@@ -565,12 +565,14 @@ class BSDistribution(ProbabilityDistribution):
         return BSDistribution.tensor_product(self, other)
 
     @staticmethod
-    def tensor_product(bsd1, bsd2, merge_modes: bool = False):
+    def tensor_product(bsd1, bsd2, merge_modes: bool = False, prob_threshold: float = 0):
         if len(bsd1) == 0:
             return bsd2
         new_dist = BSDistribution()
         for bs1, proba1 in bsd1.items():
             for bs2, proba2 in bsd2.items():
+                if proba1 * proba2 < prob_threshold:
+                    continue
                 if merge_modes:
                     bs = bs1.merge(bs2)
                 else:

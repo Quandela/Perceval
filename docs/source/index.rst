@@ -104,6 +104,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/circuit_optimizer
    reference/utils
    reference/source
+   reference/simulator
    reference/processor
    reference/qiskit_converter
    reference/stategenerator

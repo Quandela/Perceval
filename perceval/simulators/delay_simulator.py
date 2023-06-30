@@ -30,7 +30,7 @@
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, PERM, TD
-from perceval.utils import BasicState
+from perceval.utils import BasicState, global_params
 
 from enum import Enum
 from typing import List
@@ -95,8 +95,9 @@ class DelaySimulator(ASimulatorDecorator):
         output = type(results)()
         mode_range = [(self._depth - 1) * self._original_m, self._depth * self._original_m]
         for out_state, output_prob in results.items():
-            reduced_out_state = out_state[mode_range[0]:mode_range[1]]
-            output[reduced_out_state] += output_prob
+            if output_prob > global_params['min_p']:
+                reduced_out_state = out_state[mode_range[0]:mode_range[1]]
+                output[reduced_out_state] += output_prob
         return output
 
     def _expand_td(self, component_list: List):
