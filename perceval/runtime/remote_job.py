@@ -36,6 +36,19 @@ from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize, serialize
 
 
+def _extract_job_times(response):
+    creation_datetime = None
+    start_time = None
+    duration = None
+    try:
+        creation_datetime = float(response['creation_datetime'])
+        start_time = float(response['start_time'])
+        duration = int(response['duration'])
+    except:
+        pass
+    return creation_datetime, duration, start_time
+
+
 class RemoteJob(Job):
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
     _MAX_ERROR = 5
@@ -125,15 +138,12 @@ class RemoteJob(Job):
             elif self._job_status.failed:
                 self._job_status._stop_message = response['failure_code']
 
-            start_time = None
-            duration = None
-            try:
-                start_time = float(response['start_time'])
-                duration = int(response['duration'])
-            except:
-                pass
+            creation_datetime, duration, start_time = _extract_job_times(response)
+            self._job_status.update_times(creation_datetime, start_time, duration)
 
-            self._job_status.update_times(start_time, duration)
+            name = response.get("name")
+            if name and name != self.name:
+                self.name = name
 
         return self._job_status
 
