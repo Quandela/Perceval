@@ -31,9 +31,6 @@ setuptools.setup(
     install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.2.0', 'multipledispatch',
                       'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec'],
     setup_requires=["scmver"],
-    extras_require={"tests": ["pytest", "pytest-cov", "pytest-benchmark", "flake8"], 
-                    "docs":["wheel", "sphinx==6.2.1", "sphinx-rtd-theme", "sphinxcontrib-bibtex", "sphinx-autodoc-typehints", "nbsphinx", "jinja2==3.0.0", "ipython"],
-                    "publish":["wheel", "scmver"]},
     python_requires=">=3.7",
     scmver=True
 )
