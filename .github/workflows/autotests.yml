@@ -109,7 +109,15 @@ jobs:
       run: |
         sudo apt update
         sudo apt install pandoc
+  
     - name: Build docs
       run: |
         cd docs
         make html
+    
+    - name: 'Create docs Artefact'
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs
+        path: docs/build/html
+        retention-days: 1
