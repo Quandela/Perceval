@@ -92,6 +92,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Remote computing
    notebooks/Reinforcement learning
    notebooks/QUBO
+   notebooks/Graph States and representation
 
 .. toctree::
    :caption: Code Reference
