@@ -52,7 +52,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def build(self):
         theta_13 = BS.r_to_theta(1/3)
         c_cnot = (Circuit(6, name="PostProcessed CNOT")
-                  .add((0, 1), PERM([1, 0]))
+                  .add(0, PERM([0, 2, 3, 4, 1]))  # So that both heralded modes are on the bottom of the gate
                   .add((0, 1), BS.H(theta_13))
                   .add((0, 1), PERM([1, 0]))
                   .add((3, 4), BS.H())
@@ -60,15 +60,16 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                   .add((2, 3), BS.H(theta_13))
                   .add((2, 3), PERM([1, 0]))
                   .add((4, 5), BS.H(theta_13))
-                  .add((3, 4), BS.H()))
+                  .add((3, 4), BS.H())
+                  .add(0, PERM([4, 0, 1, 2, 3])))  # So that both heralded modes are on the bottom of the gate
 
         if self._opt('type') == AsType.CIRCUIT:
             return c_cnot
         elif self._opt('type') == AsType.PROCESSOR:
             p = Processor(self._opt('backend'), c_cnot)
-            p.add_herald(0, 0) \
-             .add_port(1, Port(Encoding.DUAL_RAIL, 'ctrl')) \
-             .add_port(3, Port(Encoding.DUAL_RAIL, 'data')) \
+            p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
+             .add_herald(4, 0) \
              .add_herald(5, 0)
-            p.set_postselection(PostSelect("[1,2]==1 & [3,4]==1"))
+            p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
             return p
