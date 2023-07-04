@@ -6,4 +6,3 @@ sphinx-autodoc-typehints
 nbsphinx
 jinja2==3.0.0
 ipython
-myst-parser

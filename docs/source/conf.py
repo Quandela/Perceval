@@ -66,7 +66,6 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinxcontrib.bibtex',
     'nbsphinx',
-    'myst_parser',
 ]
 
 bibtex_bibfiles = ['references.bib']
@@ -107,9 +106,3 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.figure_formats={'svg', 'pdf'}",
     "--InlineBackend.rc={'figure.dpi': 96}",
 ]
-
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
-    '.ipybn': 'markdown',
-}
