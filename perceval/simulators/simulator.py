@@ -135,7 +135,9 @@ class Simulator(ISimulator):
             return 1 if output_state.n == 0 else 0
         input_list = input_state.separate_state(keep_annotations=False)
         result = 0
-        for p_output_state in output_state.partition(input_state):
+        # for p_output_state in output_state.partition(input_state):
+        for p_output_state in output_state.partition(
+                [input_state.n for input_state in input_list]):
             prob = 1
             for i_state, o_state in zip(input_list, p_output_state):
                 self._backend.set_input_state(i_state)
@@ -262,7 +264,8 @@ class Simulator(ISimulator):
         decomposed_input = []
         for sv, prob in svd.items():
             if min(sv.n) >= self._min_detected_photons:
-                decomposed_input.append((prob, [(abs(pa)**2, st.separate_state(keep_annotations=False)) for st, pa in sv.items()]))
+                decomposed_input.append(
+                    (prob, [(abs(pa)**2, st.separate_state(keep_annotations=False)) for st, pa in sv.items()]))
             else:
                 self._physical_perf -= prob
         input_set = set([state for s in decomposed_input for t in s[1] for state in t[1]])
@@ -279,14 +282,14 @@ class Simulator(ISimulator):
                 for in_s in instate_list:
                     evolved_in_s = BSDistribution.tensor_product(evolved_in_s, self._probd[in_s],
                                                                  merge_modes=True,
-                                                                 prob_threshold=p_threshold/(prob_sv*prob0))
+                                                                 prob_threshold=p_threshold / (prob_sv * prob0))
                     self.DEBUG_merge_count += 1
                 for bs, p in evolved_in_s.items():
-                    result_bsd[bs] += prob_sv*p
+                    result_bsd[bs] += prob_sv * p
 
             """Then, add the resulting distribution the """
             for bs, p in result_bsd.items():
-                res[bs] += p*prob0
+                res[bs] += p * prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
