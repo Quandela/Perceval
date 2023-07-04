@@ -135,8 +135,7 @@ class Simulator(ISimulator):
             return 1 if output_state.n == 0 else 0
         input_list = input_state.separate_state(keep_annotations=False)
         result = 0
-        for p_output_state in output_state.partition(
-                [input_state.n for input_state in input_list]):
+        for p_output_state in output_state.partition(input_state):
             prob = 1
             for i_state, o_state in zip(input_list, p_output_state):
                 self._backend.set_input_state(i_state)

@@ -94,7 +94,6 @@ BasicState = FockState
 BasicState.__add__ = _fockstate_add
 BasicState.__sub__ = _fockstate_sub
 BasicState.__pow__ = _fockstate_pow  # Using issue #210 fix before moving the fix to exqalibur
-BasicState.partition = _fockstate_partition  # TODO use the cpp version of this call
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
