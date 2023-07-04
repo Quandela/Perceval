@@ -64,11 +64,13 @@ class SimulatorFactory:
         sim_losses = False
         convert_to_circuit = False
         min_detected_photons = None
+        m = 0
         if isinstance(circuit, ACircuit):
             sim_polarization = circuit.requires_polarization
         else:
             convert_to_circuit = True
             if isinstance(circuit, Processor):
+                m = circuit.circuit_size
                 # If no backend was chosen, the backend type set in the Processor is used
                 if backend is None:
                     backend = circuit.backend
@@ -105,6 +107,6 @@ class SimulatorFactory:
             simulator = LossSimulator(simulator)
 
         if convert_to_circuit:
-            circuit = _unitary_components_to_circuit(circuit)
+            circuit = _unitary_components_to_circuit(circuit, m)
         simulator.set_circuit(circuit)
         return simulator

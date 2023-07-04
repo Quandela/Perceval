@@ -91,7 +91,7 @@ class QiskitConverter:
 
             if instruction[0].num_qubits == 1:
                 # one mode gate
-                ins = self._create_one_mode_gate(instruction[0].to_matrix())
+                ins = self._create_one_qubit_gate(instruction[0].to_matrix())
                 ins._name = instruction[0].name
                 p.add(instruction[1][0].index * 2, ins.copy())
             else:
@@ -110,10 +110,10 @@ class QiskitConverter:
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
                         cnot_processor = self._postprocessed_cnot_builder.build()
-                        mode_map = {c_idx: 1, c_idx + 1: 2, c_data: 3, c_data + 1: 4}
+                        mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     else:
                         cnot_processor = self._heralded_cnot_builder.build()
-                        mode_map = {c_idx: 2, c_idx + 1: 3, c_data: 4, c_data + 1: 5}
+                        mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cnot_processor)
 
                 else:
@@ -121,7 +121,7 @@ class QiskitConverter:
         p.with_input(default_input_state)
         return p
 
-    def _create_one_mode_gate(self, u):
+    def _create_one_qubit_gate(self, u):
         if abs(u[1, 0]) + abs(u[0, 1]) < 2 * min_precision_gate:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
