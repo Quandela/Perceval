@@ -192,10 +192,14 @@ some time (overhead of job management) as well as tidy up your job list, especia
 (but it can still be used in a local simulation context).
 
 The system relies on defining a circuit containing variable parameters, then with each iteration of the batch job,
-different values of these parameters can be set, along the input state and the `detected photons filter`. Each iteration
-must define a value for all variable parameters.
+you can set values for:
 
->>> c = BS() // PS(phi=pcvl.P("my_phase")) // BS()
+* The circuit `variable parameters` - each iteration must define a value for all variable parameters so that the circuit
+  is fully defined,
+* the `input state`,
+* the `detected photons filter`.
+
+>>> c = BS() // PS(phi=pcvl.P("my_phase")) // BS()  # Define a circuit containing "my_phase" variable
 >>> processor = pcvl.RemoteProcessor("qpu:ascella", token_qcloud)
 >>> processor.set_circuit(c)
 >>> sampler = Sampler(processor)
@@ -203,10 +207,15 @@ must define a value for all variable parameters.
 >>>                       input_state=BasicState([1, 1]),
 >>>                       min_detected_photons=1)  # You can add a single iteration
 >>> sampler.add_iteration_list([
->>>     {"circuit_params": {"my_phase": i/2}, "input_state": BasicState([1, 1]), "min_detected_photons": 1}
->>>     for i in range(1, 6)
+>>>     {"circuit_params": {"my_phase": i/2},
+>>>      "input_state": BasicState([1, 1]),
+>>>      "min_detected_photons": 1
+>>>     } for i in range(1, 6)
 >>> ])  # Or you can add multiple iterations at once
 >>> sample_count = sampler.sample_count(10000)
+
+.. note:: As the same input state is used for all iterations, it could have been set once with
+   :code:`processor.with_input` method and :code:`input_state` removed from every iteration definition.
 
 This job will iterate over all the sampling parameters in a batch and return all the results at once.
 
