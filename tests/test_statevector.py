@@ -230,7 +230,6 @@ def test_separate_state_with_annots():
 
 def test_partition():
     st1 = pcvl.BasicState("|1,1,1>")
-    # partition = st1.partition(pcvl.BasicState("|{_:1}{_:2},1>"))
     partition = st1.partition([2, 1])
     expected = ["|1,1,0> |0,0,1>", "|1,0,1> |0,1,0>", "|0,1,1> |1,0,0>"]
     result = []
