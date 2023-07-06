@@ -107,6 +107,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/source
    reference/simulator
    reference/processor
+   reference/postselect
    reference/qiskit_converter
    reference/stategenerator
 

@@ -35,6 +35,22 @@ from typing import Callable, List
 
 
 class PostSelect:
+    """PostSelect is a post-selection callable used to filter out unwanted output states. It is designed to be an
+    expressive way of describing post-selection logic on a state after detection.
+
+    :param str_repr: string representation of the selection logic. The format is: "cond_1 & cond_2 & ... & cond_n"
+        where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, > and <)
+
+    Example:
+
+    >>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
+    >>> ps = PostSelect().eq([0,1], 1).gt(2, 1) # Same as above
+    >>> print(ps(BasicState([0, 1, 1])))
+    True
+    >>> print(ps(BasicState([1, 1, 1])))
+    False
+    """
+
     _OPERATOR = {"==": int.__eq__, "<": int.__lt__, ">": int.__gt__}
     _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)(==|<|>)\s*(\d+\b)")
 
@@ -42,11 +58,9 @@ class PostSelect:
         self._conditions = {}
         condition_count = 0
         if str_repr is not None:
-
             try:
                 for match in self._PATTERN.finditer(str_repr):
                     indexes = tuple(json.loads(match.group(1)))
-                    # print(match.group(1), indexes)
                     self._add_condition(indexes=indexes,
                                         operator=self._OPERATOR[match.group(2)],
                                         value=int(match.group(3)))
@@ -57,14 +71,17 @@ class PostSelect:
                 raise RuntimeError(f"Could not interpret input string '{str_repr}': Invalid format")
 
     def eq(self, indexes, value: int):
+        """Create a new "equals"     condition for the current PostSelect instance"""
         self._add_condition(indexes, int.__eq__, value)
         return self
 
     def gt(self, indexes, value: int):
+        """Create a new "greater than" condition for the current PostSelect instance"""
         self._add_condition(indexes, int.__gt__, value)
         return self
 
     def lt(self, indexes, value: int):
+        """Create a new "lower than" condition for the current PostSelect instance"""
         self._add_condition(indexes, int.__lt__, value)
         return self
 
@@ -75,6 +92,9 @@ class PostSelect:
         self._conditions[operator].append((indexes, value))
 
     def __call__(self, state: BasicState) -> bool:
+        """PostSelect is callable, with a `post_select(BasicState) -> bool` signature.
+        Returns `True` if the input state validates all conditions, returns `False` otherwise.
+        """
         for operator, cond in self._conditions.items():
             for indexes, value in cond:
                 s = 0
@@ -96,13 +116,21 @@ class PostSelect:
         return self._conditions == other._conditions
 
     @property
-    def has_condition(self):
+    def has_condition(self) -> bool:
+        """Returns True if at least one condition is defined"""
         return len(self._conditions) > 0
 
     def clear(self):
+        """Clear all existing conditions"""
         self._conditions.clear()
 
     def apply_permutation(self, perm_vector: List[int], first_mode: int = 0):
+        """
+        Apply a given permutation on the conditions.
+
+        :param perm_vector: Permutation vector to apply (as returned by PERM.perm_vector)
+        :param first_mode: First mode of the permutation to apply (default 0)
+        """
         output = PostSelect()
         for operator, cond in self._conditions.items():
             output._conditions[operator] = []
