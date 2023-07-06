@@ -34,6 +34,7 @@ from perceval.backends import AProbAmpliBackend
 
 from copy import copy
 from multipledispatch import dispatch
+import numbers
 from typing import Callable, Set, Union, Optional
 
 
@@ -52,8 +53,17 @@ class Simulator(ISimulator):
         self._postselect: PostSelect = PostSelect()
         self._logical_perf: float = 1
         self._physical_perf: float = 1
-        self._rel_precision: float = 1e-6
+        self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._min_detected_photons: int = 0
+
+    @property
+    def precision(self):
+        return self._rel_precision
+
+    @precision.setter
+    def precision(self, value: float):
+        assert isinstance(value, numbers.Number) and value >= 0., "Precision must be a positive number"
+        self._rel_precision = value
 
     def set_min_detected_photon_filter(self, value: int):
         """
