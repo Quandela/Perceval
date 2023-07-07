@@ -7,6 +7,121 @@ code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 0.9
+--------------------------------
+
+The main changes come from the simulation rework. Some syntax was changed and your code might be broken. Note that if
+you were using the :code:`Processor` layer to compute your simulations, the 0.8 syntax is still working with only two
+deprecated methods (see below).
+
+Simulation rework: backends
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `backend` classes were reworked in order to let them do what they do best: perform a perfect simulation with a pure
+input fock state. The rest of the features (e.g. simulating a :code:`StateVector` input, with distinguishable photons,
+etc.) were moved to a new class: the :ref:`Simulator`. Thus, former backend users should now preferably use the
+:code:`Simulator`.
+
+Backend syntax changes
+++++++++++++++++++++++
+
+If you still need to use the backend level, here are the following changes from version 0.8 to version 0.9:
+
+From version 0.8
+
+>>> backend_name = "SLOS"
+>>> backend_type = pcvl.BackendFactory.get_backend(backend_name) # In 0.8, the BackendFactory would only be a mapping between a name and a type
+>>> backend_obj = backend_type(circuit) # You'd have to instanciate the backend on the next line using the type
+>>> pa = backend_obj.probampli(input_state, output_state) # You can then start simulating
+
+To version 0.9
+
+>>> backend_name = "SLOS"
+>>> backend_obj = pcvl.BackendFactory.get_backend(backend_name) # In 0.9, the BackendFactory returns an empty backend instance
+>>>
+>>> from perceval.backends import SLOSBackend
+>>> slos = SLOSBackend() # This is equivalent to using the BackendFactory
+>>> slos_with_mask = SLOSBackend(mask="0    0", n=2) # You can also use the specifics of each backend when creating one
+>>>
+>>> slos.set_circuit(circuit) # Set a circuit first
+>>> slos.set_input_state(input_state) # Input state has to be a Fock state (all indistinguishable photons)
+>>> pa = slos.prob_amplitude(output_state) # Then you can start simulating
+
+.. note:: As all simulation methods signature changed slightly, their name was changed too (e.g. :code:`probampli` to
+   :code:`prob_amplitude`) in order to get an error message as soon as possible in your script. In API-break cases, it's
+   better to get an error than a seemingly working code with an unexpected behavior!
+
+.. note:: Backends are more specialized than before. For instance, :code:`sample()` cannot be called on SLOS and Naive
+   anymore because they are natively probability amplitude computing backend. They however offer a way to compute the
+   whole output probability distribution (:code:`prob_distribution()` method) from which it is possible to sample. On a
+   similar note, `Clifford & Clifford` backend is only capable of sampling (its native simulation method).
+
+How to use the :code:`Simulator`
+++++++++++++++++++++++++++++++++
+
+The :code:`Simulator` is a versatile class which can simulate state evolution and sampling, using any of the probability
+amplitude capable backend for its computations.
+
+>>> from perceval.simulators import Simulator
+>>> from perceval.backends import SLOSBackend
+>>>
+>>> simulator = Simulator(SLOSBackend()) # Initialize a simulator instance with a backend object
+>>> simulator.set_circuit(circuit)
+>>> # Here input state can be a BasicState or a StateVector, with or without photon annotations
+>>> pa = simulator.prob_amplitude(input_state, output_state)
+
+The :code:`Simulator` is also optimized to simulate a whole input distribution in one pass
+
+>>> from perceval.components import Source
+>>> from perceval.utils import BasicState
+>>>
+>>> # A simple example with a source-generated input distribution
+>>> source = Source(losses=0.85, indistinguishability=0.9)
+>>> input_distribution = source.generate_distribution(expected_input=BasicState([1, 0, 1, 0]))
+{
+  |0,0,0,0>: 0.7224999999999999
+  |0,0,{_:0},0>: 0.1275
+  |{_:0},0,0,0>: 0.1275
+  |{_:0},0,{_:0},0>: 0.020250000000000004
+  |{_:0},0,{_:1},0>: 0.002250000000000002
+}
+>>> simulator.set_min_detected_photon_filter(1)
+>>> probs = simulator.probs_svd(input_distribution)
+>>> print("physical performance:", probs["physical_perf"])
+>>> print("output distribution:", probs["results"])
+physical performance: 0.2775000000000001
+output distribution: {
+  |0,1,0,0>: 0.1456843866834125
+  |0,0,1,0>: 0.1456843866834125
+  |0,0,0,1>: 0.22972972972972971
+  |1,0,0,0>: 0.39782041582236416
+  |1,1,0,0>: 0.017550900698045487
+  |1,0,1,0>: 0.017550900698045487
+  |1,0,0,1>: 0.03510180139609097
+  |0,2,0,0>: 0.00258340109361355
+  |0,1,0,1>: 0.0027193695722247894
+  |0,0,2,0>: 0.00258340109361355
+  |0,0,1,1>: 0.0027193695722247894
+  |0,1,1,0>: 0.00027193695722247914
+}
+
+See :ref:`Simulator` for the list of available simulation methods.
+
+Simulation rework: processor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`Processor` can be used exactly as in version 0.8. However, please note that :code:`set_postprocess` and
+:code:`clear_postprocess` methods have been deprecated in favor of :code:`set_postselection` and
+:code:`clear_postselection`.
+
+:code:`set_postselection` is more restrictive as it only allows :ref:`PostSelect` objects allowing Perceval to get rid
+of Python free functions / lambdas.
+We suggest you update your existing code base which is using :code:`set_postprocess` with Python functions as it will be
+removed in an upcoming release without further notice.
+
+See also: :ref:`PostSelect` code reference
+
+
 Breaking changes in Perceval 0.8
 --------------------------------
 

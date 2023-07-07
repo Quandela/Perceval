@@ -168,21 +168,6 @@ algorithms and comparison with the implementation present in the
     What is interesting to note is that all implementations have convergence to the theoretical performance but the
     factor between optimised and less optimised implementation still makes a perceptible time difference for the end-user.
 
-
-Stepper
-^^^^^^^
-
-This backend takes a totally different approach. Without computing the circuit's overall unitary matrix first,
-it applies the unitary matrix associated with the components in each layer of the circuit one-by-one,
-simulating the evolution of the statevector. The complexity of this backend is therefore proportional to the
-number of components. It has the nice features that:
-
-* it supports non unitary components like :ref:`Time Delay`, or :ref:`Loss Channel`;
-* it is very flexible with simulating noise in the circuit, like photon loss;
-* it enables simpler debugging of circuits by exposing intermediate states.
-
-Since Perceval 0.7, the Stepper is integrated to the Processor.
-
 MPS
 ^^^
 
@@ -192,8 +177,18 @@ As the Stepper, MPS backend does the computation on each component of the circui
 The states are represented by tensors, which are then updated at each component.
 These tensors can be seen as a big set of matrices, and the approximation is done by choosing the dimension of these matrices, called the *bond* dimension.
 
+Stepper
+^^^^^^^
+
+This simulator takes a totally different approach. Without computing the circuit's overall unitary matrix first,
+it applies the unitary matrix associated with the components in each layer of the circuit one-by-one,
+simulating the evolution of the statevector. The complexity of this backend is therefore proportional to the
+number of components. It enables simple debugging of circuits by exposing intermediate states.
+
+The `Stepper` formerly a `backend` is a `simulator` since Perceval 0.9.
+
 .. rubric:: Footnotes
 
-.. [1] Those backends technically support sampling, but to do so, they need to compute the full output distribution which
-       is totally inefficient.
+.. [1] Those backends technically support sampling, but to do so, they need to compute the full output distribution then
+       sample on it, which is totally inefficient.
 .. [#] Following the methodology presented at https://the-walrus.readthedocs.io/en/latest/gallery/permanent_tutorial.html.
