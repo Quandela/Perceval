@@ -395,7 +395,7 @@ class ProbabilityDistribution(defaultdict, ABC):
             self[sv] /= sum_probs
 
     def add(self, obj, proba: float):
-        if proba != 0:
+        if proba > global_params['min_p']:
             self[obj] += proba
 
     def __str__(self):
