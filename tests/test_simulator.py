@@ -129,7 +129,7 @@ def test_simulator_probs_postselection():
     input_state = BasicState([1, 1, 1])
     ps = PostSelect("[2] < 2")  # At most 1 photon on mode #2
     simulator = Simulator(MockBackend())
-    simulator.set_postselect(ps)
+    simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
     output_dist = simulator.probs(input_state)
     assert len(output_dist) == 0

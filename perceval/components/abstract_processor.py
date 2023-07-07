@@ -29,8 +29,9 @@
 
 from abc import ABC, abstractmethod
 import copy
+from deprecated import deprecated
 from enum import Enum
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Callable
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -143,18 +144,27 @@ class AProcessor(ABC):
         return BasicState(new_state)
 
     @property
-    def post_selection(self):
+    def post_select_fn(self):
         return self._postselect
+
+    @deprecated(version="0.9", reason="use set_postselection(PostSelect) instead")
+    def set_postprocess(self, postprocess_func: Callable):  # Deprecated in order to avoid free Python function
+        self._postselect = postprocess_func
 
     def set_postselection(self, postselect: PostSelect):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
         on the logical performance of the processor
 
-        :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
+        :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
         """
+        assert isinstance(postselect, PostSelect), "Parameter must be a PostSelect object"
         self._postselect = postselect
+
+    @deprecated(version="0.9", reason="use clear_postselection() instead")
+    def clear_postprocess(self):
+        self.clear_postselection()
 
     def clear_postselection(self):
         self._postselect = None

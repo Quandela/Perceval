@@ -34,6 +34,7 @@ from perceval.backends import AProbAmpliBackend
 
 from copy import copy
 from multipledispatch import dispatch
+from numbers import Number
 from typing import Callable, Set, Union, Optional
 
 
@@ -43,7 +44,7 @@ class Simulator(ISimulator):
     non-polarized circuit given an BasicState, StateVector or SVDistribution input. The simulator is able to evolve
     or simulate the sampling a states with annotated photons.
 
-    :param backend: A AProbAmpliBackend object
+    :param backend: A probability amplitude capable backend object
     """
 
     def __init__(self, backend: AProbAmpliBackend):
@@ -52,8 +53,17 @@ class Simulator(ISimulator):
         self._postselect: PostSelect = PostSelect()
         self._logical_perf: float = 1
         self._physical_perf: float = 1
-        self._rel_precision: float = 1e-6
+        self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._min_detected_photons: int = 0
+
+    @property
+    def precision(self):
+        return self._rel_precision
+
+    @precision.setter
+    def precision(self, value: float):
+        assert isinstance(value, Number) and value >= 0., "Precision must be a positive number"
+        self._rel_precision = value
 
     def set_min_detected_photon_filter(self, value: int):
         """
@@ -67,14 +77,14 @@ class Simulator(ISimulator):
     def logical_perf(self):
         return self._logical_perf
 
-    def set_postselect(self, postselect: PostSelect):
+    def set_postselection(self, postselect: PostSelect):
         """Set a post-selection function
 
         :param postselect: a PostSelect object
         """
         self._postselect = postselect
 
-    def clear_postselect(self):
+    def clear_postselection(self):
         """Clear the post-selection function"""
         self._postselect = PostSelect()
 

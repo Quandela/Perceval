@@ -209,7 +209,7 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
             value = real_part + imag_part
         else:
             value = str(value)
-        d.append([k, value])
+        d.append([str(k), value])
 
     headers = ["state", "probability"]
     if isinstance(sv, StateVector):
@@ -323,7 +323,7 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
             return
         except:
             pass
-    
+
     if output_format == Format.LATEX:
         with open(path, 'w', encoding='utf-8') as f_out:
             f_out.write(res)
