@@ -1,20 +1,19 @@
 
 # This is a basic workflow that is manually triggered
 
-name: Build and deploy docs
+name: Rerun notebooks and build docs
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
 on:
-  release:
-    types: [published]
+  push:
 
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build-env:
-    name: Build and deploy docs to website
+    name: Rerun notebooks and build docs
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -31,19 +30,17 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -r docs/requirements.txt
         python -m pip install .
-        python -m pip install -r docs/source/notebooks/requirements.txt
+        python -m pip install -r docs/requirements.txt -r docs/source/notebooks/requirements.txt
+
+    - name: Rerun notebooks
+      run: |
+        ./.github/workflows/rerun_notebooks.sh
 
     - name: Install Pandoc
       run: |
         sudo apt update
         sudo apt install pandoc
-
-    - name: Build docs
-      run: |
-        chmod +x rerun_notebooks.sh
-        ./.github/workflows/rerun_notebooks.sh
 
     - name: Build docs
       run: |

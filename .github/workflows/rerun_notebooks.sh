@@ -26,8 +26,6 @@ my_function
 notebook='Reinforcement learning.ipynb' 
 my_function
 notebook='Differential equation solving.ipynb'
-my_function 
-notebook='Remote computing.ipynb' 
 my_function
 notebook='walkthrough-cnot.ipynb' 
 my_function
