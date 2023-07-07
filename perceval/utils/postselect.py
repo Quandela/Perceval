@@ -35,8 +35,8 @@ from typing import Callable, List
 
 
 class PostSelect:
-    """PostSelect is a post-selection callable used to filter out unwanted output states. It is designed to be an
-    expressive way of describing post-selection logic on a state after detection.
+    """PostSelect is a callable post-selection intended to filter out unwanted output states. It is designed to be a
+    user-friendly description of any post-selection logic.
 
     :param str_repr: string representation of the selection logic. The format is: "cond_1 & cond_2 & ... & cond_n"
         where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, > and <)

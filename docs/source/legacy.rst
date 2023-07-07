@@ -10,9 +10,10 @@ This section lists the major breaking changes introduced.
 Breaking changes in Perceval 0.9
 --------------------------------
 
-The main changes come from the simulation rework. Some syntax was changed and your code might be broken. Note that if
+The main changes between versions 0.8 and 0.9 come from the simulation rework. The simulation code was split in three
+different layers: backends, simulators, processor. Some syntax was changed and your code might be broken. Note that if
 you were using the :code:`Processor` layer to compute your simulations, the 0.8 syntax is still working with only two
-deprecated methods (see below).
+deprecated methods (see :ref:`Simulation rework: processor`).
 
 Simulation rework: backends
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -51,13 +52,13 @@ To version 0.9
    :code:`prob_amplitude`) in order to get an error message as soon as possible in your script. In API-break cases, it's
    better to get an error than a seemingly working code with an unexpected behavior!
 
-.. note:: Backends are more specialized than before. For instance, :code:`sample()` cannot be called on SLOS and Naive
+.. note:: Backends are more specialized than before. For instance, :code:`sample()` cannot be called on `SLOS` and `Naive`
    anymore because they are natively probability amplitude computing backend. They however offer a way to compute the
    whole output probability distribution (:code:`prob_distribution()` method) from which it is possible to sample. On a
    similar note, `Clifford & Clifford` backend is only capable of sampling (its native simulation method).
 
-How to use the :code:`Simulator`
-++++++++++++++++++++++++++++++++
+How to use the simulator layer
+++++++++++++++++++++++++++++++
 
 The :code:`Simulator` is a versatile class which can simulate state evolution and sampling, using any of the probability
 amplitude capable backend for its computations.
