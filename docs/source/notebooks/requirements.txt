@@ -2,5 +2,5 @@ jupyter
 tqdm
 qiskit
 qutip
-nbconvert
 seaborn
+nbconvert
