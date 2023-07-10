@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
 from pkg_resources import get_distribution
@@ -39,6 +39,8 @@ from perceval.utils import BasicState
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
+
+__process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
@@ -129,6 +131,10 @@ class RemoteProcessor(AProcessor):
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
+        self.check_input(input_state)
+        self._input_state = input_state
+
+    def check_input(self, input_state: BasicState) -> None:
         if 'max_photon_count' in self.constraints and input_state.n > self.constraints['max_photon_count']:
             raise RuntimeError(
                 f"Too many photons in input state ({input_state.n} > {self.constraints['max_photon_count']})")
@@ -137,7 +143,6 @@ class RemoteProcessor(AProcessor):
                 f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
         if self._n_moi is not None and input_state.m != self._n_moi:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
-        self._input_state = input_state
 
     @property
     def available_commands(self) -> List[str]:
@@ -146,7 +151,8 @@ class RemoteProcessor(AProcessor):
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
         j = {
             'platform_name': self.name,
-            'pcvl_version': get_distribution("perceval-quandela").version
+            'pcvl_version': get_distribution("perceval-quandela").version,
+            'process_id': str(__process_id__)
         }
         payload = {
             'command': command,

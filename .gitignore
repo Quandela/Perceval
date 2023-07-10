@@ -4,6 +4,6 @@ perceval_quandela.egg-info
 build
 .eggs/
 .idea/
-venv/
+venv*/
 *.whl
 .ipynb_checkpoints/

@@ -76,7 +76,7 @@ limited to ``H``/``V``:
 
 * ``|{P:H},{P:V}>`` corresponding to an annotated ``|1,1>`` ``BasicState``.
 * ``|2{P:H},0>`` corresponding to an annotated ``|2,0>`` ``BasicState`` where the 2 photons in the first mode are annotated with the same annotation.
-* ``|{P:H}{P:V},0>`` corresponding also to an annotated``|2,0>`` ``BasicState`` where the two photons in the first mode have different annotations.
+* ``|{P:H}{P:V},0>`` corresponding also to an annotated ``|2,0>`` ``BasicState`` where the two photons in the first mode have different annotations.
 * ``|1,{t:-1}>`` corresponding to an annotated ``|1,1>`` ``BasicState``, the degree of freedom being time, with the photon in the second mode coming from previous period, and the photon in the first mode is not annotated.
 
 Example code:
@@ -86,9 +86,14 @@ Example code:
 >>> a_bs = pcvl.BasicState("|{P:H}{P:V},0>")  # Creates an annotated state |2,0>, with two photons in the first mode, one having a horizontal polarization, and the other a vertical polarization.
 >>> print(a_bs)
 |{P:H}{P:V},0>
->>> a_bs[0]  # prints the photons in the first mode
-({"P":"H"},{"P":"V"})
->>> print(a_bs.clear())  # prints the non-annotated Basic state corresponding to a_bs
+>>> a_bs[0]  # prints the photon count in the first mode
+2
+>>> for annot in a_bs.get_mode_annotations(0):
+>>>     print(annot)  # prints the annotation of each photon
+P:H
+P:V
+>>> a_bs.clear_annotations()
+>>> print(a_bs)  # prints the non-annotated state corresponding to a_bs
 |2,0>
 
 State Vector

@@ -62,18 +62,19 @@ def test_helloword():
     assert c.U.is_unitary()
     for backend_name in ["SLOS", "Naive"]:
         backend = BackendFactory.get_backend(backend_name)
-        simulator = backend(c.U)
+        backend.set_circuit(c)
         expected_outputs = {
             BasicState("|0,1>"): 0.5,
             BasicState("|1,0>"): 0.5
         }
         input_state = BasicState("|0,1>")
-        count = 0
-        for output_state in simulator.allstate_iterator(input_state):
+        backend.set_input_state(input_state)
+        bsd = backend.prob_distribution()
+        for output_state, p in bsd.items():
             assert output_state in expected_outputs
-            assert pytest.approx(expected_outputs[output_state]) == simulator.prob(input_state, output_state)
-            count += 1
-        assert count == len(expected_outputs)
+            assert pytest.approx(expected_outputs[output_state]) == p
+            assert pytest.approx(expected_outputs[output_state]) == backend.probability(output_state)
+        assert len(bsd) == len(expected_outputs)
         p = Processor(backend_name, c)
         ca = algo.Analyzer(p,
                            [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
@@ -120,54 +121,15 @@ def test_bs_symbolic_unitary():
             ⎣I*exp(I*phi)*sin(theta/2)  cos(theta/2)  ⎦""")
 
 
-def test_bs():
+def test_bs_u():
     bs = comp.BS()
     assert pdisplay_matrix(bs.U) == "⎡sqrt(2)/2    sqrt(2)*I/2⎤\n⎣sqrt(2)*I/2  sqrt(2)/2  ⎦"
-    for backend_name in ["SLOS", "Naive"]:
-        backend = BackendFactory.get_backend(backend_name)
-        sbs = backend(bs.U)
-        for _ in range(10):
-            out = sbs.sample(BasicState("|0,1>"))
-            assert str(out) == "|0,1>" or str(out) == "|1,0>"
-        p = Processor(backend_name, bs)
-        ca = algo.Analyzer(p, [BasicState([0, 1]), BasicState([1, 0])])
-        ca.compute()
-        assert pdisplay_analyzer(ca, nsimplify=True) == strip_line_12("""
-            +-------+-------+-------+
-            |       | |0,1> | |1,0> |
-            +-------+-------+-------+
-            | |0,1> |  1/2  |  1/2  |
-            | |1,0> |  1/2  |  1/2  |
-            +-------+-------+-------+""")
-        assert pdisplay_analyzer(ca, nsimplify=False) == strip_line_12("""
-            +-------+-------+-------+
-            |       | |0,1> | |1,0> |
-            +-------+-------+-------+
-            | |0,1> |  0.5  |  0.5  |
-            | |1,0> |  0.5  |  0.5  |
-            +-------+-------+-------+""")
 
-
-def test_bs_0():
     bs = comp.BS(theta=comp.BS.r_to_theta(1))
     assert pdisplay_matrix(bs.U) == "⎡1  0⎤\n⎣0  1⎦"
-    for backend in ["SLOS", "Naive"]:
-        simulator_backend = BackendFactory().get_backend(backend)
-        sbs = simulator_backend(bs.U)
-        for _ in range(10):
-            out = sbs.sample(BasicState("|0,1>"))
-            assert str(out) == "|0,1>"
 
-
-def test_sbs_1():
     bs = comp.BS(theta=comp.BS.r_to_theta(0))
     assert pdisplay_matrix(bs.U) == "⎡0  I⎤\n⎣I  0⎦"
-    for backend in ["SLOS", "Naive"]:
-        simulator_backend = BackendFactory().get_backend(backend)
-        sbs = simulator_backend(bs.U)
-        for _ in range(10):
-            out = sbs.sample(BasicState("|0,1>"))
-            assert str(out) == "|1,0>"
 
 
 def test_parameter():
@@ -188,7 +150,7 @@ def test_double_parameter_ok():
 def test_double_parameter_dup():
     phi1 = P("phi")
     phi2 = P("phi")
-    with pytest.raises(RuntimeError):  # Exception should have been generated for two parameters with same name
+    with pytest.raises(RuntimeError):  # Exception should be raised for two parameters with same name
         comp.BS(phi_tr=phi1, phi_bl=phi2)
 
 
@@ -299,10 +261,11 @@ def test_iterator():
 
 
 def test_evolve():
-    c = comp.BS.H()
-    for backend_name in ["SLOS", "Naive"]:
-        simulator = BackendFactory().get_backend(backend_name)(c)
-        assert str(simulator.evolve(BasicState("|1,0>"))) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
+    for backend_name in ["SLOS", "Naive", "MPS"]:
+        backend = BackendFactory.get_backend(backend_name)
+        backend.set_circuit(comp.BS.H())
+        backend.set_input_state(BasicState("|1,0>"))
+        assert str(backend.evolve()) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
 
 
 def _generate_simple_circuit():
@@ -338,15 +301,15 @@ def test_depths_ncomponents():
     assert c.depths() == [3, 2, 2]
     assert c.ncomponents() == 3
     with open(TEST_DATA_DIR / 'u_random_8', "r") as f:
-        M = Matrix(f)
+        m = Matrix(f)
         ub = (Circuit(2)
               // comp.BS()
               // (0, comp.PS(phi=P("φ_a")))
               // comp.BS()
               // (0, comp.PS(phi=P("φ_b"))))
-        C1 = Circuit.decomposition(M, ub, shape="triangle")
-        assert C1 is not None and C1.depths() == [28, 38, 32, 26, 20, 14, 8, 2]
-        assert C1.ncomponents() == 112
+        c1 = Circuit.decomposition(m, ub, shape="triangle")
+        assert c1 is not None and c1.depths() == [28, 38, 32, 26, 20, 14, 8, 2]
+        assert c1.ncomponents() == 112
 
 
 def test_reflexivity():
@@ -357,11 +320,11 @@ def test_reflexivity():
 def test_getitem1_index():
     c = Circuit(2) // comp.BS() // comp.PS(P("phi1")) // comp.BS() // comp.PS(P("phi2"))
     with pytest.raises(IndexError):
-        a = c[0, 5]
+        _ = c[0, 5]
     with pytest.raises(ValueError):
-        a = c[-1]
+        _ = c[-1]
     with pytest.raises(IndexError):
-        a = c[4, 0]
+        _ = c[4, 0]
 
 
 def test_getitem2_value():

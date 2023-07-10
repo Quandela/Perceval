@@ -1,0 +1,8 @@
+wheel
+sphinx==6.2.1
+sphinx-rtd-theme
+sphinxcontrib-bibtex
+sphinx-autodoc-typehints
+nbsphinx
+jinja2==3.0.0
+ipython

@@ -38,7 +38,6 @@ from perceval.serialization._parameter_serialization import serialize_parameter,
 import perceval.components.unitary_components as comp
 import json
 
-
 def test_numeric_matrix_serialization():
     input_mat = Matrix.random_unitary(10)
     serialized_mat = serialize(input_mat)
@@ -104,6 +103,8 @@ def test_circuit_serialization_backward_compat():
     serial_circuits = {
         # Perceval version (key) that generated the serialized representation of a given circuit (value)
         "0.7": ":PCVL:ACircuit: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"
+        #0.8 : Did not change circuit serialization
+        #0.9 : Did not change circuit serialization
     }
     for perceval_version, serial_c in serial_circuits.items():
         try:
@@ -203,3 +204,41 @@ def test_binary_serialization():
     assert isinstance(bin_serialization, bytes)
     m_after = deserialize_matrix(bin_serialization)
     assert numpy.allclose(m_before, m_after)
+
+
+def test_compress():
+    zip_prefix = ":PCVL:zip:"
+
+    c = _build_test_circuit()
+    assert serialize(c).startswith(zip_prefix)  # Default value is to compress circuits
+    assert serialize(c, compress=True).startswith(zip_prefix)
+    assert serialize(c, compress=["ACircuit"]).startswith(zip_prefix)
+    assert serialize(c, compress=["toto", "tutu", "ACircuit", "papa"]).startswith(zip_prefix)
+    assert not serialize(c, compress=False).startswith(zip_prefix)
+    assert not serialize(c, compress=[]).startswith(zip_prefix)
+    assert not serialize(c, compress=["toto", "tutu", "papa"]).startswith(zip_prefix)
+    with pytest.raises(NotImplementedError):
+        serialize(c, compress=12).startswith(zip_prefix)
+
+    d = {
+        "input_state": BasicState([0, 1, 0, 1]),
+        "circuit": Circuit(4) // (0, comp.BS()) // (2, comp.BS()),
+        "integer": 43
+    }
+    d_compressed = serialize(d, compress=True)
+    assert d_compressed["input_state"].startswith(zip_prefix)
+    assert d_compressed["circuit"].startswith(zip_prefix)
+    assert d_compressed["integer"] == 43  # JSon-compatible integral types are neither serialized nor compressed
+
+    d_not_compressed = serialize(d, compress=False)
+    assert not d_not_compressed["input_state"].startswith(zip_prefix)
+    assert not d_not_compressed["circuit"].startswith(zip_prefix)
+    assert d_not_compressed["integer"] == 43  # JSon-compatible integral types are neither serialized nor compressed
+
+    d_only_circuit = serialize(d, compress=["ACircuit"])  # Compress only ACircuit objects
+    assert not d_only_circuit["input_state"].startswith(zip_prefix)
+    assert d_only_circuit["circuit"].startswith(zip_prefix)
+
+    d_only_basicstate = serialize(d, compress=["BasicState"])  # Compress only BasicState objects
+    assert d_only_basicstate["input_state"].startswith(zip_prefix)
+    assert not d_only_basicstate["circuit"].startswith(zip_prefix)

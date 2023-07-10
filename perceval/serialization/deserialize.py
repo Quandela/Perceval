@@ -38,6 +38,7 @@ from ._state_serialization import deserialize_statevector, deserialize_bssamples
 import perceval.serialization._component_deserialization as _cd
 from perceval.serialization import _schema_circuit_pb2 as pb
 from base64 import b64decode
+from zlib import decompress
 
 
 _MATRIX_PREFIX = ":PCVL:Matrix:"
@@ -135,6 +136,14 @@ def deserialize(obj):
         for k in obj:
             r.append(deserialize(k))
     elif isinstance(obj, str) and obj.startswith(":PCVL:"):
+        if obj.startswith(":PCVL:zip:"):
+            # if zip found -> update obj
+            # STEPS: remove prefix -> decode b64 encoding -> decompress -> decode utf-8 (byte-> str)
+            zip_prefix = ":PCVL:zip:"
+            obj = obj[len(zip_prefix):]
+            obj = b64decode(obj)
+            obj = (decompress(obj)).decode('utf-8')
+
         p = obj[6:].find(":")
         cl = obj[6:p+6]
         sobj = obj[p+7:]

@@ -31,12 +31,17 @@ import pytest
 
 perfect_theta = BS.r_to_theta(r=.5)
 
+
 def _ps(i):
     return PS(P(f"phi_3_{i}"))
 
 
-def _check_optimize(size: int, mzi_func: Callable[[int], None]):
-    circuit_optimizer = CircuitOptimizer()
+def _check_optimize(size: int, mzi_func: Callable[[int], None], max_eval_per_trial_tested: int = None):
+    if max_eval_per_trial_tested is None:
+        circuit_optimizer = CircuitOptimizer()
+    else:
+        circuit_optimizer = CircuitOptimizer(max_eval_per_trial=max_eval_per_trial_tested)
+
     template_interferometer = Circuit.generic_interferometer(size, mzi_func,
                                                              phase_shifter_fun_gen=_ps,
                                                              phase_at_output=True)
@@ -44,6 +49,7 @@ def _check_optimize(size: int, mzi_func: Callable[[int], None]):
     result_circuit, fidelity = circuit_optimizer.optimize(random_unitary, template_interferometer)
     assert 1 - fidelity < circuit_optimizer.threshold
     assert norm.fidelity(result_circuit.compute_unitary(), random_unitary) == pytest.approx(fidelity)
+
 
 def test_circuit_optimizer():
     def mzi(i):
@@ -61,3 +67,17 @@ def test_circuit_optimizer_bs_convention():
                 // PS(P(f"phi_2_{i}")) // bs_ctor(perfect_theta)
 
         _check_optimize(12, mzi_conv)
+
+
+@pytest.mark.parametrize("nb_iteration, expected_success", [(None, True), (200, False), (50000, True)])
+def test_circuit_optimizer_max_eval_convergence(nb_iteration: int, expected_success: bool):
+    def mzi(i):
+        return Circuit(2) // PS(P(f"phi_1_{i}")) // BS.Rx(perfect_theta) \
+            // PS(P(f"phi_2_{i}")) // BS.Rx(perfect_theta)
+    success = False
+    try:
+        _check_optimize(10, mzi, nb_iteration)
+        success = True
+    except:
+        pass
+    assert success == expected_success

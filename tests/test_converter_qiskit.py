@@ -115,15 +115,7 @@ def test_cnot_1_heralded():
     assert pc.circuit_size == 8
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
-    assert len(pc._components) == 4
-    # should be BS//PERM//CNOT//PERM
-    perm1 = pc._components[1][1]
-    assert isinstance(perm1, comp.PERM)
-    perm2 = pc._components[3][1]
-    assert isinstance(perm2, comp.PERM)
-    # check that ports are correctly connected
-    assert perm1.perm_vector == [2, 3, 4, 5, 0, 1]
-    assert perm2.perm_vector == [4, 5, 0, 1, 2, 3]
+    assert len(pc._components) == 2  # should be BS.H//CNOT
 
 
 def test_cnot_1_inverse_heralded():
@@ -142,8 +134,8 @@ def test_cnot_1_inverse_heralded():
     perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [4, 5, 2, 3, 0, 1]
-    assert perm2.perm_vector == [4, 5, 2, 3, 0, 1]
+    assert perm1.perm_vector == [2, 3, 0 ,1]
+    assert perm2.perm_vector == [2, 3, 0, 1]
 
 
 def test_cnot_2_heralded():
@@ -162,8 +154,8 @@ def test_cnot_2_heralded():
     perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [2, 3, 8, 9, 4, 5, 0, 1, 6, 7]
-    assert perm2.perm_vector == [6, 7, 0, 1, 4, 5, 8, 9, 2, 3]
+    assert perm1.perm_vector == [6, 7, 0, 1, 2, 3, 4, 5]
+    assert perm2.perm_vector == [2, 3, 4, 5, 6, 7, 0, 1]
 
 
 def test_cnot_1_postprocessed():
@@ -174,15 +166,8 @@ def test_cnot_1_postprocessed():
     pc = convertor.convert(qc, use_postselection=True)
     assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
-    assert len(pc._components) == 4
-    # should be BS//PERM//CNOT//PERM
-    perm1 = pc._components[1][1]
-    assert isinstance(perm1, comp.PERM)
-    perm2 = pc._components[3][1]
-    assert isinstance(perm2, comp.PERM)
-    # check that ports are correctly connected
-    assert perm1.perm_vector == [1, 2, 3, 4, 0]
-    assert perm2.perm_vector == [4, 0, 1, 2, 3]
+    assert len(pc._components) == 2  # No permutation needed, only H and CNOT components exist in the Processor
+    # should be BS//CNOT
 
 
 def test_cnot_postprocess():

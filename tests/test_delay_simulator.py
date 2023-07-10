@@ -27,9 +27,46 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from perceval.simulators.delay_simulator import _retrieve_mode_count, DelaySimulator
+from perceval.simulators.simulator import Simulator
+from perceval.backends._naive import NaiveBackend
+from perceval.components import Circuit, BS, TD
+from perceval.utils import BasicState, BSDistribution
+
 import pytest
-import perceval as pcvl
 
 
-def test_main():
-    assert pcvl.__version__
+def test_retrieve_mode_count():
+    comp_list = [((0,1), None), ((1,2,3), None), ((0,1), None), ((0,1), None), ((0,), None)]
+    assert _retrieve_mode_count(comp_list) == 4
+
+
+def test_prepare_circuit():
+    sim = DelaySimulator(None)
+    c = sim._prepare_circuit(BS())  # Prepare circuit shouldn't change a circuit without any TD
+    assert isinstance(c, Circuit)
+    assert c.m == 2
+    assert len(c._components) == 1
+    assert c._components[0][0] == (0,1)
+    assert isinstance(c._components[0][1], BS)
+
+    input_circ = [((0,1), BS()), ((0,), TD(1)), ((0,1), BS())]
+    output_circ = sim._prepare_circuit(input_circ)
+    assert output_circ.m == 5
+
+
+def test_delay_simulation():
+    backend = NaiveBackend()
+    simulator = DelaySimulator(Simulator(backend))
+    input_circ = [((0, 1), BS()), ((0,), TD(1)), ((0, 1), BS())]
+    simulator.set_circuit(input_circ)
+    res = simulator.probs(BasicState([1, 0]))
+
+    expected = BSDistribution()
+    expected[BasicState([0, 0])] = 0.25
+    expected[BasicState([1, 0])] = 0.25
+    expected[BasicState([0, 1])] = 0.25
+    expected[BasicState([2, 0])] = 0.125
+    expected[BasicState([0, 2])] = 0.125
+
+    assert pytest.approx(res) == expected

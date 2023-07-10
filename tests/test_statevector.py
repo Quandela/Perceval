@@ -40,11 +40,14 @@ import sympy as sp
 from test_circuit import strip_line_12
 
 
-def test_state():
+def test_basic_state():
     st = pcvl.BasicState([1, 0])
     assert str(st) == "|1,0>"
     assert st.n == 1
     assert st.has_annotations is False
+
+    with pytest.raises(RuntimeError):
+        bs = pcvl.BasicState([0]*300)  # 300 modes is too much (mode count is capped at 256)
 
 
 def test_str_state_vector():
@@ -110,6 +113,16 @@ def test_state_identical_annots():
     st2 = pcvl.BasicState("|0,1,{P:V}1>")
     assert str(st1) == str(st2)
 
+    st3 = pcvl.BasicState("|{a:1}2{a:0},0>")
+    st4 = pcvl.BasicState("|2{a:0}{a:1},0>")
+    assert str(st3) == str(st4)
+
+    sv = pcvl.StateVector()
+    sv[st1] = 0.5
+    sv[st3] += 1
+    sv[st4] -= 1
+    assert str(sv) == str(st1)
+
 
 def test_state_invalid_superposition():
     st1 = pcvl.StateVector("|0,1>")
@@ -143,6 +156,26 @@ def test_init_state_vector():
     assert str(st) == "|1,0>"
 
 
+def test_bsdistribution():
+    bs1 = pcvl.BasicState([1,2])
+    bs2 = pcvl.BasicState([3,4])
+    bsd = pcvl.BSDistribution()
+    bsd[bs1] = 0.9
+    bsd[bs2] = 0.1
+    bsd_squared = bsd ** 2
+    assert isinstance(bsd_squared, pcvl.BSDistribution)
+    assert len(bsd_squared) == 4
+    assert bsd_squared[bs1*bs1] == pytest.approx(0.81)
+    assert bsd_squared[bs1*bs2] == pytest.approx(0.09)
+    assert bsd_squared[bs2*bs1] == pytest.approx(0.09)
+    assert bsd_squared[bs2*bs2] == pytest.approx(0.01)
+
+    bsd_mult = pcvl.BSDistribution(bs1) * pcvl.BSDistribution({bs1:0.4, bs2:0.6})
+    assert len(bsd_mult) == 2
+    assert bsd_mult[bs1*bs1] == pytest.approx(0.4)
+    assert bsd_mult[bs1*bs2] == pytest.approx(0.6)
+
+
 def test_svdistribution():
     st1 = pcvl.StateVector("|0,1>")
     st2 = pcvl.StateVector("|1,0>")
@@ -156,6 +189,13 @@ def test_svdistribution():
             | |0,1> |     1/2     |
             | |1,0> |     1/2     |
             +-------+-------------+""")
+    svd_squared = svd**2
+    assert isinstance(svd_squared, pcvl.SVDistribution)
+    assert len(svd_squared) == 4
+    assert svd_squared[pcvl.StateVector("|1,0,1,0>")] == pytest.approx(1/4)
+    assert svd_squared[pcvl.StateVector("|1,0,0,1>")] == pytest.approx(1/4)
+    assert svd_squared[pcvl.StateVector("|0,1,1,0>")] == pytest.approx(1/4)
+    assert svd_squared[pcvl.StateVector("|0,1,0,1>")] == pytest.approx(1/4)
 
 
 def test_sv_separation_0():
@@ -163,30 +203,31 @@ def test_sv_separation_0():
     assert st1.separate_state() == [pcvl.BasicState("|0,0>")]
 
 
-def test_sv_separation_1():
+def test_separate_state_without_annots():
     st1 = pcvl.BasicState("|0,1>")
     assert st1.separate_state() == [pcvl.BasicState("|0,1>")]
     st2 = pcvl.BasicState("|2,1>")
     assert st2.separate_state() == [pcvl.BasicState("|2,1>")]
 
 
-def test_sv_separation_2():
+def test_separate_state_with_annots():
     st1 = pcvl.BasicState("|0,{_:1}>")
-    assert st1.separate_state() == [pcvl.BasicState("|0,1>")]
+    assert st1.separate_state(keep_annotations=True) == [st1]
     st2 = pcvl.BasicState("|{_:1},{P:V}>")
-    assert st2.separate_state() == [pcvl.BasicState("|1,1>")]
+    assert st2.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,1>")]
     st3 = pcvl.BasicState("|{_:1},{_:2}>")
-    assert st3.separate_state() == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st3.separate_state(False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st3.separate_state(keep_annotations=True) == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:2}>")]
+    st4 = pcvl.BasicState("|{_:1},{_:0}>")
+    assert st4.separate_state(keep_annotations=False) == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
+    assert st4.separate_state(True) == [pcvl.BasicState("|{_:1},0>"), pcvl.BasicState("|0,{_:0}>")]
+    st5 = pcvl.BasicState("|{_:0},{_:0},{_:3}>")
+    # By default, keep_annotations is false
+    assert st5.separate_state() == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
+    assert st5.separate_state(keep_annotations=True) == [pcvl.BasicState("|{_:0},{_:0},0>"), pcvl.BasicState("|0,0,{_:3}>")]
 
 
-def test_sv_separation_3():
-    st1 = pcvl.BasicState("|{_:1},{_:0}>")
-    assert st1.separate_state() == [pcvl.BasicState("|1,0>"), pcvl.BasicState("|0,1>")]
-    st2 = pcvl.BasicState("|{_:0},{_:0},{_:3}>")
-    assert st2.separate_state() == [pcvl.BasicState("|1,1,0>"), pcvl.BasicState("|0,0,1>")]
-
-
-def test_sv_split():
+def test_partition():
     st1 = pcvl.BasicState("|1,1,1>")
     partition = st1.partition([2, 1])
     expected = ["|1,1,0> |0,0,1>", "|1,0,1> |0,1,0>", "|0,1,1> |1,0,0>"]
@@ -197,7 +238,7 @@ def test_sv_split():
         assert r == e
 
 
-def test_sv_parse_annot():
+def test_parse_annot():
     invalid_str = ["|{_:0}", "|0{_:0}>", "|1{_:2>", "{P:(0.3,0)>",
                    "|{;}>", "|{P:(1,2,3)}>", "|{P:(1,a)}>", "|{a:0,a:1}>"]
     for s in invalid_str:
@@ -235,6 +276,27 @@ def test_svd_sample():
     assert len(sample) == 2
     assert isinstance(sample[0], pcvl.StateVector)
     assert isinstance(sample[1], pcvl.StateVector)
+
+
+def test_svd_anonymize_annots():
+    svd = pcvl.SVDistribution({
+        pcvl.StateVector("|{_:0},{_:0},{_:1}>") + pcvl.StateVector("|{_:0},{_:2},{_:1}>"): 0.1,
+        pcvl.StateVector("|{_:1},{_:2},{_:3}>") + pcvl.StateVector("|{_:0},{_:0},{_:8}>"): 0.1,
+        pcvl.StateVector("|{_:2},{_:2},{_:3}>") + pcvl.StateVector("|{_:2},{_:4},{_:3}>"): 0.1,
+        pcvl.BasicState("|{_:4},{_:4},{_:2}>"): 0.1,
+        pcvl.BasicState("|{_:1},{_:3},{_:3}>"): 0.1,
+        pcvl.BasicState("|{_:0},{_:2},{_:3}>"): 0.5,
+    })
+    svd2 = pcvl.anonymize_annotations(svd)
+
+    assert len(svd2) == 5
+    assert str(svd2) == """{
+  |{a:0},{a:1},{a:2}>: 0.5
+  sqrt(2)/2*|{a:0},{a:0},{a:1}>+sqrt(2)/2*|{a:0},{a:2},{a:1}>: 0.2
+  sqrt(2)/2*|{a:0},{a:1},{a:2}>+sqrt(2)/2*|{a:3},{a:3},{a:4}>: 0.1
+  |{a:0},{a:0},{a:1}>: 0.1
+  |{a:0},{a:1},{a:1}>: 0.1
+}"""
 
 
 def test_statevector_sample():
@@ -296,19 +358,28 @@ def test_statevector_equality():
     assert input_state == st2
 
 
-def test_statevector_polar_evolve1():
-    simulator = pcvl.BackendFactory.get_backend("SLOS")(comp.BS())
-    st1 = pcvl.StateVector("|{P:H},{P:H}>")
-    st2 = pcvl.StateVector("|{P:H},{P:V}>")
-    gamma = np.pi / 2
-    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+def test_statevector_arithmetic():
+    sv1 = pcvl.StateVector()
+    sv1 += pcvl.StateVector([0,1])
+    sv1 += pcvl.StateVector([1,0])
+    assert str(sv1) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
 
-    sum_p = 0
-    for o, p in simulator.allstateprob_iterator(input_state):
-        sum_p += p
-    assert pytest.approx(1) == sum_p
+    sv2 = pcvl.StateVector()
+    sv2 += 0.5*pcvl.StateVector([0,1])
+    sv2 += -0.5*pcvl.StateVector([1,0])
+    assert str(sv2) == "sqrt(2)/2*|0,1>-sqrt(2)/2*|1,0>"
 
-    sum_p = 0
-    for o, p in simulator.allstateprob_iterator(st2):
-        sum_p += p
-    assert pytest.approx(1) == sum_p
+    sv3 = sv1 + sv2  # sv1 and sv2 is not normalized yet
+    assert str(sv3) != "|0,1>"  # so the result of the addition  won't suppress the |1,0> component
+    sv1.normalize()
+    sv2.normalize()
+    sv3 = sv1 + sv2
+    assert str(sv3) == "|0,1>"
+
+    sv4 = 0.2j*sv1 - 0.6j*sv2
+    assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"
+
+    sv4 = pcvl.StateVector()
+    sv4 += 0.2j*sv1
+    sv4 += -0.6j*sv2
+    assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"

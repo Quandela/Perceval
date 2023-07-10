@@ -34,7 +34,7 @@ from typing import Any, Tuple
 
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
-from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas
+from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas, LatexCanvas
 from perceval.components import ACircuit, Circuit, PortLocation, PERM, Herald
 from perceval.utils.format import format_parameters
 
@@ -561,12 +561,12 @@ def create_renderer(
     """
     if output_format == Format.TEXT:
         return TextRenderer(n)
-    if output_format == Format.LATEX:
-        raise NotImplementedError("Latex format is not supported for circuit rendering")
-
+    
     assert skin is not None, "A skin must be selected for circuit graphical rendering"
     if output_format == Format.HTML:
         canvas = SvgCanvas(**opts)
+    elif output_format == Format.LATEX:
+        canvas = LatexCanvas(**opts)
     else:
         canvas = MplotCanvas(**opts)
     return CanvasRenderer(n, canvas, skin)

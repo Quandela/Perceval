@@ -35,38 +35,47 @@ from math import factorial
 from scipy.special import comb
 from collections import defaultdict
 
-from .template import Backend
-from perceval.utils import BasicState, Matrix
+from ._abstract_backends import AProbAmpliBackend
+from perceval.utils import BasicState
 from perceval.components import ACircuit
 
 
-class MPSBackend(Backend):
-    """Step-by-step circuit propagation algorithm, works on a circuit. Approximate the probability amplitudes with a cutoff.
+class MPSBackend(AProbAmpliBackend):
+    """Step-by-step circuit propagation algorithm, works on a circuit.
+    Approximate the probability amplitudes with a cutoff.
     - For now only supports Phase shifters and Beam Splitters
     - TODO: link to the quandelibc computation
     """
 
-    def __init__(self,
-                 cu: Union[ACircuit, Matrix],
-                 use_symbolic: bool = None,
-                 n: int = None,
-                 mask: list = None):
-        super().__init__(cu, use_symbolic, n, mask)
-        for r, c in self._C:
-            assert c.compute_unitary(use_symbolic=False).shape[0] <= 2,\
-                "MPS backend can not be used with components of using more than 2 modes"
+    def __init__(self):
+        super().__init__()
         self._s_min = 1e-8
-        self.cutoff = self.m
-        self.res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
-        self.current_input = None
+        self._cutoff = None
+        self._compiled_input = None
+        self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
+        # Doubts : Nested dictionary why?
+        self._current_input = None
 
-    name = "MPS"
-    supports_symbolic = False
-    supports_circuit_computing = True
+    @property
+    def name(self) -> str:
+        return "MPS"
 
-    def set_cutoff(self, cutoff: int):
-        assert isinstance(cutoff, int), "cutoff must be an integer"
-        self.cutoff = cutoff
+    def set_cutoff(self, cutoff_val: int):
+        assert isinstance(cutoff_val, int), "cutoff must be an integer"
+        self._cutoff = cutoff_val
+
+    def set_circuit(self, circuit: ACircuit):
+        super().set_circuit(circuit)
+        C = self._circuit
+        for r, c in C:
+            assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
+                "MPS backend can not be used with components of using more than 2 modes"
+        if self._cutoff is None:
+            self._cutoff = C.m
+
+    def set_input_state(self, input_state: BasicState):
+        super().set_input_state(input_state)
+        self.compile()
 
     def apply(self, r, c):
         u = c.compute_unitary(False)
@@ -76,42 +85,41 @@ class MPSBackend(Backend):
         elif len(u) == 1:
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
-    def compile(self, input_state: BasicState) -> bool:
-        var = [float(p) for p in self._C.get_parameters()]
-        if self._compiled_input and self._compiled_input[0] == var and input_state in self.res:
+    def compile(self) -> bool:
+        C = self._circuit
+        var = [float(p) for p in C.get_parameters()]
+        if self._compiled_input and self._compiled_input[0] == var and self._input_state in self._res:
             return False
-        self._compiled_input = copy.copy((var, input_state))
-        self.current_input = None
+        self._compiled_input = copy.copy((var, self._input_state))
+        self._current_input = None
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS
-        input_state *= BasicState([0] * (self.m - input_state.m))
-        self.n = input_state.n
+        # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
+        self.n = self._input_state.n
         self.d = self.n + 1
-        self.cutoff = min(self.cutoff, self.d ** (self.m//2))
-        self.gamma = np.zeros((self.m, self.cutoff, self.cutoff, self.d), dtype='complex_')
-        for i in range(self.m):
-            self.gamma[i, 0, 0, input_state[i]] = 1
-        self.sv = np.zeros((self.m, self.cutoff))
+        self._cutoff = min(self._cutoff, self.d ** (self._input_state.m//2))
+        self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self.d), dtype='complex_')
+        for i in range(self._input_state.m):
+            self._gamma[i, 0, 0, self._input_state[i]] = 1
+        self.sv = np.zeros((self._input_state.m, self._cutoff))
         self.sv[:, 0] = 1
 
-        for r, c in self._C:
+        for r, c in C:
             self.apply(r, c)
 
-        self.res[tuple(input_state)]["gamma"] = self.gamma.copy()
-        self.res[tuple(input_state)]["sv"] = self.sv.copy()
+        self._res[tuple(self._input_state)]["gamma"] = self._gamma.copy()
+        self._res[tuple(self._input_state)]["sv"] = self.sv.copy()
         return True
 
-    def prob_be(self, input_state, output_state):
-        return abs(self.probampli_be(input_state, output_state))**2
-
-    def probampli_be(self, input_state, output_state):
+    def prob_amplitude(self, output_state: BasicState) -> complex:
         # TODO: put in quandelibc
+        m = self._input_state.m
         mps_in_list = []
-        self.current_input = tuple(input_state)
-        for k in range(self.m - 1):
-            mps_in_list.append(self.res[tuple(input_state)]["gamma"][k, :, :, output_state[k]])
+        self._current_input = tuple(self._input_state)
+        for k in range(m - 1):
+            mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
             mps_in_list.append(self._sv_diag(k))
-        mps_in_list.append(self.res[tuple(input_state)]["gamma"][self.m-1, :, :, output_state[self.m-1]])
+        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][self._input_state.m-1, :, :, output_state[self._input_state.m-1]])
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     @staticmethod
@@ -130,56 +138,56 @@ class MPSBackend(Backend):
         return big_u
 
     def update_state_1_mode(self, k, u):
-        self.gamma[k] = np.tensordot(self.gamma[k], self._transition_matrix_1_mode(u), axes=(2,0))
+        self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2, 0))
 
     def update_state(self, k, u):
 
-        if 0 < k < self.m - 2:
-            theta = np.tensordot(self._sv_diag(k - 1), self.gamma[k, :], axes=(1, 0))
+        if 0 < k < self._input_state.m - 2:
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 2], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self.cutoff, self.d * self.cutoff)
+            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         elif k == 0:
-            theta = np.tensordot(self.gamma[k, :], self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
+            theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u),
                                  axes=([1, 2], [0, 1]))  # Pretty weird thing... To check
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self.cutoff, self.d * self.cutoff)
+            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
-        elif k == self.m - 2:
-            theta = np.tensordot(self._sv_diag(k - 1), self.gamma[k, :], axes=(1, 0))
+        elif k == self._input_state.m - 2:
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self.gamma[k + 1, :], axes=(2, 0))
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 3], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self.cutoff, self.d * self.cutoff)
+            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
 
         v, s, w = np.linalg.svd(theta)
 
-        v = v.reshape(self.d, self.cutoff, self.d * self.cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self.cutoff]
-        w = w.reshape(self.d * self.cutoff, self.d, self.cutoff).swapaxes(1, 2)[:self.cutoff]
-        s = s[:self.cutoff]
+        v = v.reshape(self.d, self._cutoff, self.d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
+        w = w.reshape(self.d * self._cutoff, self.d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
+        s = s[:self._cutoff]
 
         self.sv[k] = np.where(s > self._s_min, s, 0)
 
         if k > 0:
             rank = np.nonzero(self.sv[k - 1])[0][-1] + 1
-            self.gamma[k, :rank] = v[:rank] / self.sv[k - 1, :rank][:, np.newaxis, np.newaxis]
-            self.gamma[k, rank:] = 0
+            self._gamma[k, :rank] = v[:rank] / self.sv[k - 1, :rank][:, np.newaxis, np.newaxis]
+            self._gamma[k, rank:] = 0
         else:
-            self.gamma[k] = v
-        if k < self.m - 2:
+            self._gamma[k] = v
+        if k < self._input_state.m - 2:
             rank = np.nonzero(self.sv[k + 1])[0][-1] + 1
-            self.gamma[k + 1, :, :rank] = (w[:, :rank] / self.sv[k + 1, :rank][:, np.newaxis])
-            self.gamma[k + 1, :, rank:] = 0
+            self._gamma[k + 1, :, :rank] = (w[:, :rank] / self.sv[k + 1, :rank][:, np.newaxis])
+            self._gamma[k + 1, :, rank:] = 0
         else:
-            self.gamma[k + 1] = w
+            self._gamma[k + 1] = w
 
     def _transition_matrix(self, u):
         "This function computes the elements (I,J) = (i_k, i_k+1, j_k, j_k+1) of the matrix U_k,k+1."
@@ -201,10 +209,10 @@ class MPSBackend(Backend):
         return big_u
 
     def _sv_diag(self, k):
-        if self.res[self.current_input]["sv"].any():
-            sv = self.res[self.current_input]["sv"]
+        if self._res[self._current_input]["sv"].any():
+            sv = self._res[self._current_input]["sv"]
         else:
             sv = self.sv
-        sv_diag = np.zeros((self.cutoff, self.cutoff))
+        sv_diag = np.zeros((self._cutoff, self._cutoff))
         np.fill_diagonal(sv_diag, sv[k, :])
         return sv_diag

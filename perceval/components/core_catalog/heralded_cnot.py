@@ -27,10 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, Processor
-from perceval.components.unitary_components import *
+from perceval.components import Circuit, Processor, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.components.port import Herald, Port, Encoding
+from perceval.utils import Encoding
 
 
 class HeraldedCnotItem(CatalogItem):
@@ -55,29 +54,30 @@ data (dual rail) ─────┤     ├───── data (dual rail)
 
     def build(self):
         c_hcnot = (Circuit(8, name="Heralded CNOT")
-                   .add((0, 1, 2), PERM([1, 2, 0]))
-                   .add((4, 5), BS.H())
-                   .add((5, 6, 7), PERM([1, 2, 0]))
-                   .add((3, 4), BS.H())
-                   .add((2, 3), BS.H(theta=self.theta1, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-                   .add((4, 5), BS.H(theta=self.theta1))
-                   .add((3, 4), BS.H())
-                   .add((5, 6, 7), PERM([2, 1, 0]))
-                   .add((1, 2), PERM([1, 0]))
-                   .add((2, 3), BS.H(theta=self.theta2))
-                   .add((4, 5), BS.H(theta=self.theta2, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-                   .add((5, 6), PERM([1, 0]))
-                   .add((4, 5), BS.H())
-                   .add((4, 5), PERM([1, 0]))
-                   .add((0, 1, 2), PERM([2, 1, 0])))
+                   .add(1, PERM([2, 4, 3, 0, 1]))
+                   .add(4, BS.H())
+                   .add(3, PERM([1, 3, 0, 4, 2]))
+                   .add(3, BS.H())
+                   .add(3, PERM([2, 0, 1]))
+                   .add(2, BS.H(theta=self.theta1))
+                   .add(4, BS.H(theta=self.theta1))
+                   .add(3, PERM([1, 2, 0]))
+                   .add(3, BS.H())
+                   .add(1, PERM([2, 0, 3, 1, 6, 5, 4]))
+                   .add(2, BS.H(theta=self.theta2))
+                   .add(2, PERM([1, 0]))
+                   .add(4, BS.H(theta=self.theta2))
+                   .add(4, PERM([1, 2, 0]))
+                   .add(4, BS.H())
+                   .add(1, PERM([4, 3, 0, 2, 1])))
 
         if self._opt('type') == AsType.CIRCUIT:
             return c_hcnot
         elif self._opt('type') == AsType.PROCESSOR:
             p = Processor(self._opt('backend'), c_hcnot)
-            return p.add_herald(0, 0) \
-                    .add_herald(1, 1) \
-                    .add_port(2, Port(Encoding.DUAL_RAIL, 'ctrl')) \
-                    .add_port(4, Port(Encoding.DUAL_RAIL, 'data')) \
+            return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+                    .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
+                    .add_herald(4, 0) \
+                    .add_herald(5, 1) \
                     .add_herald(6, 0) \
                     .add_herald(7, 1)

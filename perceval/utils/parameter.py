@@ -114,7 +114,7 @@ class Parameter:
                 p = int((min_v-v)/(max_v-min_v))
                 v = v + (p+1) * (max_v-min_v)
         if (min_v is not None and v < min_v) or (max_v is not None and v > max_v):
-            raise ValueError("value %f out of bound [%f,%f]", v, min_v, max_v)
+            raise ValueError("value %f out of bound [%f,%f]" %(v, min_v, max_v))
         return v
 
     def check_value(self, v):

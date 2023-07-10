@@ -27,4 +27,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .stepper import StepperBackend
+import pytest
+
+from perceval.utils import StateVector
+from perceval.simulators._simulator_utils import _merge_sv
+from math import sqrt
+
+
+def _approx_eq_sv(sv1, sv2):
+    if len(sv1) != len(sv2):
+        return False
+    for bs1, pa1 in sv1.items():
+        if bs1 not in sv2:
+            return False
+        if pa1 != pytest.approx(sv2[bs1]):
+            return False
+    return True
+
+
+def test_merge_sv():
+    a1 = complex(0, 1/sqrt(2))
+    b1 = complex(-1.2, 3.7)
+    sv1 = a1 * StateVector([1, 0]) + b1 * StateVector([0, 1])
+
+    a2 = complex(-0.598, -0.65)
+    b2 = complex(0.15, 0.297)
+    sv2 = a2 * StateVector([1, 0]) + b2 * StateVector([0, 1])
+
+    sv_res = _merge_sv(sv1, sv2)
+    assert _approx_eq_sv(
+        sv_res,
+        a1*a2 * StateVector([2, 0]) + (a1*b2 + b1*a2) * StateVector([1, 1]) + b1*b2 * StateVector([0, 2])
+    )
