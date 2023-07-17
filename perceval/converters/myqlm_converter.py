@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Port, Circuit, Processor, Source
+from perceval.components import Port, Circuit, Processor, Source, BS
 from perceval.utils import P, BasicState, Encoding
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
@@ -37,12 +37,14 @@ import perceval.components.unitary_components as comp
 min_precision_gate = 1e-4
 
 
-class myQLMConverter:
+class MyQLMConverter:
     r"""myQLM quantum circuit to perceval circuit converter.
     # todo: myQLM circuit does nt seem to know about the type of simulation do, we may need to see Jobs
     :param catalog: component library of perceval
     """
-    def __init__(self, catalog):
+    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
+        self._source = source
+        self._backend_name = backend_name
         self._heralded_cnot_builder = catalog["heralded cnot"]
         self._heralded_cz_builder = catalog["heralded cz"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
@@ -51,14 +53,14 @@ class myQLMConverter:
         self._upper_phase_component = Circuit(2) // (1, comp.PS(P("phi1")))
         self._two_phase_component = Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2")))
 
-    def convert(self, qlmc, use_postselection: bool = True) -> Circuit:
+    def convert(self, qlmc, use_postselection: bool = True) -> Processor:
         r"""Convert a myQLM quantum circuit into a `Circuit`.
 
         :param qlmc: quantum gate-based myqlm circuit
         :type qlmc: qat.core.Circuit
         :param use_postselection: when True, uses a `postprocessed CNOT` as the last gate. Otherwise, uses only
             `heralded CNOT`
-        :return: the converted Circuit
+        :return: the converted Processor
         """
         import qat  # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
@@ -69,15 +71,15 @@ class myQLMConverter:
             # todo: implement this loop
             # in QIskit converter it counts the number of CNOT gates; why?
             pass
-        #     if instruction[0].name == "cx":
-        #         n_cnot += 1
-        # cnot_idx = 0
 
         n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
-        c = Circuit()
+        p = Processor(self._backend_name, n_moi, self._source)
 
-        # todo: confused with ports, work on it
+        # todo: ports from Processor, verify through debugger and implement
+        # it seems to create default input state sort of thing to initialize ports
+        # and encoding - as logical |0>_L = |1,0> our Dual rail encoding
+
         # qubit_names = qc.qregs[0].name
         # for i in range(qc.qregs[0].size):
         #     p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qubit_names}{i}'))
@@ -93,14 +95,18 @@ class myQLMConverter:
             # tuple ('Name', [IDK yet], [list of number of qbits where gate is applied])
 
             # only gates are converted
-            assert isinstance(instruction[0], qat.lang.AQASM.gates.Gate), "cannot convert (%s)" % instruction[0]
+            # assert isinstance(instruction_name, qat.lang.AQASM.gates.Gate), "cannot convert (%s)" % instruction_name
 
             if len(instruction_qbit) == 1:
-                # one mode gate
-                ins = self._create_one_qubit_gate(instruction_qbit)
+                if instruction_name == "H":
+                    ins = BS.H()
+                else:
+                    print("Only H gate is implemented")
+                # ins = self._create_one_qubit_gate(instruction_qbit)
                 # ins._name = instruction_name
-                c //= ins
+                p.add(instruction_qbit[0]*2, ins.copy())
             else:
+                print("Only Single qubit gate implemented")
                 # more than 1 qubit gates
                 c_idx = instruction[1][0].index * 2
                 c_data = instruction[1][1].index * 2
@@ -114,10 +120,12 @@ class myQLMConverter:
                     pass
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
-        return c
+        # p.with_input()
+        return p
 
     def _create_one_qubit_gate(self, u):
-        # Question : why are we not using simply a hadamard?  todo: find out
+        # universal method, takes in unitary and approximates one using
+        # Frobenius method todo: see if the unitary from myqlm can be used
         if abs(u[1, 0]) + abs(u[0, 1]) < 2 * min_precision_gate:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
