@@ -31,36 +31,29 @@ from math import sqrt
 
 from perceval.backends import Clifford2017Backend, NaiveBackend, AProbAmpliBackend, SLOSBackend, MPSBackend,\
     BackendFactory
-from perceval.components import BS, PS, Circuit
+from perceval.components import BS, PS, Circuit, catalog
 from perceval.utils import BSCount, BasicState, Parameter, StateVector
 import pytest
 import numpy as np
 
 
-def _cnot_circuit():
-    theta_13 = BS.r_to_theta(1 / 3)
-    cnot = (Circuit(6, name="CNOT")
-            .add((0, 1), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi / 2, phi_tl=-np.pi / 2))
-            .add((3, 4), BS.H())
-            .add((2, 3), BS.H(theta_13, phi_bl=np.pi, phi_tr=np.pi / 2, phi_tl=-np.pi / 2))
-            .add((4, 5), BS.H(theta_13))
-            .add((3, 4), BS.H()))
-    return cnot
-
-
 def _assert_cnot(backend: AProbAmpliBackend):
-    backend.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
-    assert pytest.approx(backend.probability(BasicState([0, 1, 0, 1, 0, 0]))) == 1 / 9
-    assert pytest.approx(backend.probability(BasicState([0, 1, 0, 0, 1, 0]))) == 0
-    backend.set_input_state(BasicState([0, 1, 0, 0, 1, 0]))
-    assert pytest.approx(backend.probability(BasicState([0, 1, 0, 0, 1, 0]))) == 1 / 9
-    assert pytest.approx(backend.probability(BasicState([0, 1, 0, 1, 0, 0]))) == 0
-    backend.set_input_state(BasicState([0, 0, 1, 1, 0, 0]))
-    assert pytest.approx(backend.probability(BasicState([0, 0, 1, 0, 1, 0]))) == 1 / 9
-    assert pytest.approx(backend.probability(BasicState([0, 0, 1, 1, 0, 0]))) == 0
-    backend.set_input_state(BasicState([0, 0, 1, 0, 1, 0]))
-    assert pytest.approx(backend.probability(BasicState([0, 0, 1, 0, 1, 0]))) == 0
-    assert pytest.approx(backend.probability(BasicState([0, 0, 1, 1, 0, 0]))) == 1 / 9
+    s00 = BasicState([1, 0, 1, 0, 0, 0])
+    s01 = BasicState([1, 0, 0, 1, 0, 0])
+    s10 = BasicState([0, 1, 1, 0, 0, 0])
+    s11 = BasicState([0, 1, 0, 1, 0, 0])
+    backend.set_input_state(s00)
+    assert pytest.approx(backend.probability(s00)) == 1 / 9
+    assert pytest.approx(backend.probability(s01)) == 0
+    backend.set_input_state(s01)
+    assert pytest.approx(backend.probability(s01)) == 1 / 9
+    assert pytest.approx(backend.probability(s00)) == 0
+    backend.set_input_state(s10)
+    assert pytest.approx(backend.probability(s11)) == 1 / 9
+    assert pytest.approx(backend.probability(s10)) == 0
+    backend.set_input_state(s11)
+    assert pytest.approx(backend.probability(s11)) == 0
+    assert pytest.approx(backend.probability(s10)) == 1 / 9
 
 
 
@@ -170,22 +163,22 @@ def test_slos_symbolic():
 
 
 def test_backend_cnot():
-    for backend_name in ["SLOS", "Naive", "MPS"]:
+    for backend_name in ["SLOS", "Naive"]:  # MPS not working with >2-modes components
         backend = BackendFactory.get_backend(backend_name)
-        cnot = _cnot_circuit()
+        cnot = catalog["postprocessed cnot"].build_circuit()
         backend.set_circuit(cnot)
         _assert_cnot(backend)
         non_post_selected_probability = 0
-        backend.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
+        backend.set_input_state(BasicState([1, 0, 1, 0, 0, 0]))  # Two last modes are ancillaries
         for output_state, prob in backend.prob_distribution().items():
-            if output_state[0] or output_state[5]:
+            if output_state[4] or output_state[5]:
                 non_post_selected_probability += prob
         assert pytest.approx(non_post_selected_probability) == 7/9
 
 
 def test_slos_cnot_with_mask():
-    slos_cnot = SLOSBackend(n=2, mask=["0    0"])
-    cnot = _cnot_circuit()
+    slos_cnot = SLOSBackend(n=2, mask=["    00"])  # Masking ancillary modes
+    cnot = catalog["postprocessed cnot"].build_circuit()
     slos_cnot.set_circuit(cnot)
     _assert_cnot(slos_cnot)
     non_post_selected_probability = 0

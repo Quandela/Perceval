@@ -31,5 +31,6 @@ from .heralded_cnot import HeraldedCnotItem
 from .postprocessed_cnot import PostProcessedCnotItem
 from .heralded_cz import HeraldedCzItem
 from .generic_2mode import Generic2ModeItem
+from .mzi import MZIPhaseFirst, MZIPhaseLast
 
-catalog = [HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem]
+catalog_items = [HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst, MZIPhaseLast]

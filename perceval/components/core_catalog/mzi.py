@@ -26,32 +26,47 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from deprecated import deprecated
-from perceval.utils.parameter import P
-from perceval.components import Processor, Circuit, BS
-from perceval.components.component_catalog import CatalogItem, AsType
+
+from abc import ABC, abstractmethod
+from perceval.components import Processor, Circuit, BS, PS
+from perceval.components.component_catalog import CatalogItem
+
+import numpy as np
 
 
-class Generic2ModeItem(CatalogItem):
-    def __init__(self):
-        super().__init__("generic 2 mode circuit")
-        self._default_opts['type'] = AsType.CIRCUIT
-        self._reset_opts()
+class AMZI(CatalogItem, ABC):
+    @staticmethod
+    def _handle_params(**kwargs):
+        if "i" in kwargs:
+            kwargs["phi_a"] = f"phi_a{kwargs['i']}"
+            kwargs["phi_b"] = f"phi_b{kwargs['i']}"
+        return CatalogItem._handle_param(kwargs.get("phi_a", "phi_a")), \
+            CatalogItem._handle_param(kwargs.get("phi_b", "phi_b")), \
+            kwargs.get("theta_a", np.pi/2), \
+            kwargs.get("theta_b", np.pi/2)
 
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        c = BS.H(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
-        if self._opt('type') == AsType.CIRCUIT:
-            return c
-        elif self._opt('type') == AsType.PROCESSOR:
-            return Processor(self._opt('backend'), c)
-
-    def build_circuit(self, **kwargs):
-        return Circuit(2, name=kwargs.get("name", "U2")) \
-            // BS.H(theta=self._handle_param(kwargs.get("theta", "theta")),
-                    phi_tl=self._handle_param(kwargs.get("phi_tl", "phi_tl")),
-                    phi_bl=self._handle_param(kwargs.get("phi_bl", "phi_bl")),
-                    phi_tr=self._handle_param(kwargs.get("phi_tr", "phi_tr")))
-
-    def build_processor(self, **kwargs):
+    def build_processor(self, **kwargs) -> Processor:
         return self._init_processor(**kwargs)
+
+    def generate(self, i: int):
+        return self.build_circuit(i=i)
+
+
+class MZIPhaseFirst(AMZI):
+    def __init__(self):
+        super().__init__("mzi phase first")
+
+    def build_circuit(self, **kwargs) -> Circuit:
+        phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
+        return (Circuit(2, name="MZI")
+               // (0, PS(phi=phi_a)) // BS(theta=theta_a) // (0, PS(phi=phi_b)) // BS(theta=theta_b))
+
+
+class MZIPhaseLast(AMZI):
+    def __init__(self):
+        super().__init__("mzi phase last")
+
+    def build_circuit(self, **kwargs) -> Circuit:
+        phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
+        return (Circuit(2, name="MZI")
+                // BS(theta=theta_a) // (1, PS(phi=phi_a)) // BS(theta=theta_b) // (1, PS(phi=phi_b)))
