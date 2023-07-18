@@ -65,12 +65,13 @@ class MyQLMConverter:
         import qat  # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        # count the number of cnot to use during the conversion, will give us the number of herald to handle
+        # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
         n_cnot = 0
         for instruction in qlmc.iterate_simple():
-            # todo: implement this loop
-            # in QIskit converter it counts the number of CNOT gates; why?
-            pass
+            if instruction[0] == "CNOT":
+                n_cnot += 1
+
+        cnot_idx = 0
 
         n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
@@ -79,7 +80,6 @@ class MyQLMConverter:
         # todo: ports from Processor, verify through debugger and implement
         # it seems to create default input state sort of thing to initialize ports
         # and encoding - as logical |0>_L = |1,0> our Dual rail encoding
-
         # qubit_names = qc.qregs[0].name
         # for i in range(qc.qregs[0].size):
         #     p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qubit_names}{i}'))
@@ -87,8 +87,8 @@ class MyQLMConverter:
         # default_input_state = BasicState(input_list)
 
         for instruction in qlmc.iterate_simple():
-            instruction_name = instruction[0]
-            instruction_qbit = instruction[-1]
+            instruction_name = instruction[0]  # name of the Gate
+            instruction_qbit = instruction[-1]  # tuple with list of qbit positions
             # information carried by instruction
             # each instruction will be a tuple containing 'name' and 'list of qbit numbers' of gate in the 1st and
             # the last position of the tuple respectively
@@ -108,15 +108,22 @@ class MyQLMConverter:
             else:
                 print("Only Single qubit gate implemented")
                 # more than 1 qubit gates
-                c_idx = instruction[1][0].index * 2
-                c_data = instruction[1][1].index * 2
+                c_idx = instruction_qbit[0] * 2  # position of 1st qbit
+                c_data = instruction_qbit[1] * 2  # position of 2nd qbit todo: clarify how this works
                 c_first = min(c_idx, c_data)
 
-                if instruction_name == "swap":
-                    pass
-                elif instruction_name == "cz":
-                    pass
-                elif instruction_name == "cx":
+                if instruction_name == "CNOT":
+                    # todo: doubt with how mode map is working
+                    cnot_idx += 1
+                    if use_postselection and cnot_idx == n_cnot:
+                        cnot_processor = self._postprocessed_cnot_builder.build()
+                        mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
+                    else:
+                        cnot_processor = self._heralded_cnot_builder.build()
+                        mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
+                    p.add(mode_map, cnot_processor)
+
+                elif instruction_name == "SWAP":
                     pass
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
