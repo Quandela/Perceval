@@ -30,6 +30,7 @@
 from perceval.utils import BasicState, BSDistribution, StateVector, Annotation
 from perceval.components import Circuit
 from copy import copy
+from math import sqrt
 from typing import List
 
 
@@ -51,13 +52,16 @@ def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     return res_sv
 
 
-def _merge_sv(sv1: StateVector, sv2: StateVector) -> StateVector:
+def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> StateVector:
     if not sv1:
         return sv2
+    pa_threshold = sqrt(prob_threshold)
     res = StateVector()
     for s1, pa1 in sv1.items():
         for s2, pa2 in sv2.items():
-            res[s1.merge(s2)] += pa1*pa2
+            pa = pa1*pa2
+            if abs(pa) > pa_threshold:
+                res[s1.merge(s2)] += pa
     return res
 
 

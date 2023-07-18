@@ -167,7 +167,6 @@ class Simulator(ISimulator):
 
     def _invalidate_cache(self):
         self._evolve = {}
-        self._probd = {}
         self.DEBUG_evolve_count = 0
         self.DEBUG_merge_count = 0
 
@@ -176,13 +175,6 @@ class Simulator(ISimulator):
             if state not in self._evolve:
                 self._backend.set_input_state(state)
                 self._evolve[state] = self._backend.evolve()
-                self.DEBUG_evolve_count += 1
-
-    def _probs_cache(self, input_list: Set[BasicState]):
-        for state in input_list:
-            if state not in self._probd:
-                self._backend.set_input_state(state)
-                self._probd[state] = self._backend.prob_distribution()
                 self.DEBUG_evolve_count += 1
 
     def _merge_probability_dist(self, input_list) -> BSDistribution:
@@ -256,47 +248,49 @@ class Simulator(ISimulator):
         the following data structure is built:
         [
             (p1, [
-                    (pa_11, [bs_11,]),
+                    (pa_11, {annot_11*: bs_11*,..}),
                     ...
-                    (pa_n1, [bs_n1,])
+                    (pa_n1, {annot_n1*: bs_n1*,..})
                  ]
             ),
+            ...
             (pk, [
-                    (pa_1k, [bs_1k,]),
+                    (pa_1k, {annot_1k*: bs_1k*,..}),
                     ...
-                    (pa_nk, [bs_nk,])
+                    (pa_nk, {annot_nk*: bs_nk*,..})
                  ]
             )
         ]
-        where [bs_xy,] is the list of the un-annotated separated basic state (bs_xy.separate_state())
+        where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state
         """
         decomposed_input = []
         for sv, prob in svd.items():
             if min(sv.n) >= self._min_detected_photons:
-                decomposed_input.append((prob, [(abs(pa)**2, st.separate_state(keep_annotations=False)) for st, pa in sv.items()]))
+                decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv.items()]))
             else:
                 self._physical_perf -= prob
-        input_set = set([state for s in decomposed_input for t in s[1] for state in t[1]])
-        self._probs_cache(input_set)
+        input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
+        self._evolve_cache(input_set)
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
         for idx, (prob0, sv_data) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            result_bsd = BSDistribution()
+            result_sv = StateVector()
             for probampli, instate_list in sv_data:
                 prob_sv = abs(probampli)**2
-                evolved_in_s = BSDistribution()
-                for in_s in instate_list:
-                    evolved_in_s = BSDistribution.tensor_product(evolved_in_s, self._probd[in_s],
-                                                                 merge_modes=True,
-                                                                 prob_threshold=p_threshold/(prob_sv*prob0))
+                evolved_in_s = StateVector()
+                for annot, in_s in instate_list.items():
+                    cached_res = _inject_annotation(self._evolve[in_s], annot)
+                    evolved_in_s = _merge_sv(evolved_in_s, cached_res, prob_threshold=p_threshold/(prob_sv*prob0))
+                    if len(evolved_in_s) == 0:
+                        break
                     self.DEBUG_merge_count += 1
-                for bs, p in evolved_in_s.items():
-                    result_bsd[bs] += prob_sv*p
+                if evolved_in_s:
+                    result_sv += probampli*evolved_in_s
 
-            """Then, add the resulting distribution the """
-            for bs, p in result_bsd.items():
+            """Then, add the resulting distribution for a single input to the global distribution"""
+            for bs, p in _to_bsd(result_sv).items():
                 res[bs] += p*prob0
 
             if progress_callback:
