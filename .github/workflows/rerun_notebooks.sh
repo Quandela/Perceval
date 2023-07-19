@@ -1,36 +1,31 @@
-
 my_function () {
-    jupyter nbconvert --clear-output --inplace "$notebook.ipynb"
-    jupyter nbconvert --execute --to notebook "$notebook.ipynb"
-    rm "$notebook.ipynb"
-    mv "$notebook.nbconvert.ipynb" "$notebook.ipynb"
+    echo converting $notebook
+    jupyter nbconvert --clear-output --inplace "$notebook"
+    jupyter nbconvert --execute --to notebook --inplace "$notebook"
+    jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace "$notebook"
 }
-
-cd docs/source/notebooks/
-
-notebook='2-mode Grover algorithm'
-my_function
-notebook='Non-unitary components' 
-my_function
-notebook='Shor Implementation' 
-my_function
-notebook='QUBO' 
-my_function
-notebook='Tutorial' 
-my_function
-notebook='Boson Sampling with MPS' 
-my_function
-notebook='Qiskit conversion' 
-my_function
-notebook='Variational Quantum Eigensolver' 
-my_function
-notebook='Reinforcement learning' 
-my_function
-notebook='Differential equation solving'
-my_function
-notebook='walkthrough-cnot' 
-my_function
-notebook='Graph States and representation' 
-my_function
-notebook='Rewriting rules in Perceval'
-my_function
+cd nb_dir
+nb_dir="docs/source/notebooks/"
+notebook=$nb_dir
+for entry in `ls $nb_dir | grep \.ipynb`; do
+    if [[ $entry =~ ".ipynb" ]]
+    then
+        notebook+=$entry
+        if [ "$notebook" = "docs/source/notebooks/Boson Sampling.ipynb" ]
+        then
+            echo $notebook is ignore
+        elif [ "$notebook" = "docs/source/notebooks/BS-based implementation notebook.ipynb" ]
+        then
+            echo $notebook is ignore
+        elif [ "$notebook" = "docs/source/notebooks/Remote computing.ipynb" ]
+        then
+            echo $notebook is ignore
+        else
+            my_function
+            exit
+        fi
+        notebook=$nb_dir
+    else
+        notebook+="${entry} "
+    fi
+done

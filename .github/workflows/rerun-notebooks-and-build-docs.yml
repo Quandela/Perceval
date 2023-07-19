@@ -5,8 +5,13 @@ name: Rerun notebooks and build docs
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
+
 on:
   push:
+  pull_request:
+    branches:
+    - main
+    - release/*
 
   workflow_dispatch:
 
@@ -46,7 +51,7 @@ jobs:
       run: |
         cd docs
         make html
-        
+
     - name: 'Create docs Artefact'
       uses: actions/upload-artifact@v3
       with:
