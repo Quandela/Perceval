@@ -22,7 +22,6 @@ for entry in `ls $nb_dir | grep \.ipynb`; do
             echo $notebook is ignore
         else
             my_function
-            exit
         fi
         notebook=$nb_dir
     else
