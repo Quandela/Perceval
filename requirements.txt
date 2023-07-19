@@ -1,6 +1,6 @@
 numpy
 exqalibur~=0.2.0
-tabulate~=0.8.9
+tabulate
 pytest
 setuptools
 multipledispatch
