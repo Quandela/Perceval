@@ -40,7 +40,6 @@ min_precision_gate = 1e-4
 
 class MyQLMConverter:
     r"""myQLM quantum circuit to perceval circuit converter.
-    # todo: myQLM circuit does nt seem to know about the type of simulation do, we may need to see Jobs
     :param catalog: component library of perceval
     """
     def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
@@ -71,56 +70,50 @@ class MyQLMConverter:
         for instruction in qlmc.iterate_simple():
             if instruction[0] == "CNOT":
                 n_cnot += 1
-
-        cnot_idx = 0
+        cnot_idx = 0  # todo: do not understand why we need this yet
 
         n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
         p = Processor(self._backend_name, n_moi, self._source)
 
-        # todo: ports from Processor, verify through debugger and implement
-        # it seems to create default input state sort of thing to initialize ports
-        # and encoding - as logical |0>_L = |1,0> our Dual rail encoding
-        # qubit_names = qc.qregs[0].name
-        # for i in range(qc.qregs[0].size):
-        #     p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qubit_names}{i}'))
-        #     input_list[i * 2] = 1
-        # default_input_state = BasicState(input_list)
+        for i in range(qlmc.nbqbits):
+            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find how qlm stores names of qubits
+            input_list[i * 2] = 1
+        default_input_state = BasicState(input_list)
+        # todo: doubts with default input state and how it would work/be updated
 
         i = 0
         for instruction in qlmc.iterate_simple():
             instruction_name = instruction[0]  # name of the Gate
             instruction_qbit = instruction[-1]  # tuple with list of qbit positions
             # information carried by instruction
-            # each instruction will be a tuple containing 'name' and 'list of qbit numbers' of gate in the 1st and
+            # each instruction will be a tuple containing 'name' and 'list of qbit postions' of gate in the 1st and
             # the last position of the tuple respectively
-            # tuple ('Name', [IDK yet], [list of number of qbits where gate is applied])
+            # tuple ('Name', [value of the parameter for gate], [list of number of qbits where gate is applied])
 
             # only gates are converted
+            # todo: see how to extract "Gateobj" and not a name to fix the following assert
             # assert isinstance(instruction_name, qat.lang.AQASM.gates.Gate), "cannot convert (%s)" % instruction_name
 
             gate_id = qlmc.ops[i].gate
             gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
             gate_u = self._gate_def_nparray(gate_matrix)  # U of the gate given by current instruction_name
+            # todo: implement use of unitary
 
             if len(instruction_qbit) == 1:
                 if instruction_name == "H":
                     ins = BS.H()
                 else:
                     print("Only H gate is implemented")
-                # ins = self._create_one_qubit_gate(instruction_qbit)
-                # ins._name = instruction_name
                 p.add(instruction_qbit[0]*2, ins.copy())
             else:
-                print("Only Single qubit gate implemented")
-                # more than 1 qubit gates
-                c_idx = instruction_qbit[0] * 2  # position of 1st qbit
-                c_data = instruction_qbit[1] * 2  # position of 2nd qbit todo: clarify how this works
-                c_first = min(c_idx, c_data)
+                # 2 qubit gates for now
+                c_idx = instruction_qbit[0] * 2  # mode position for 1st qbit in 2 qbit gate
+                c_data = instruction_qbit[1] * 2  # mode position for 1st qbit in 2 qbit gate
+                c_first = min(c_idx, c_data)  # todo: clarify how this works -> confused :(
 
                 if instruction_name == "CNOT":
                     # todo: doubt with how mode map is working
-                    # TODO TODO First version - only Heralded CNOT
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
                         cnot_processor = self._postprocessed_cnot_builder.build()
@@ -130,14 +123,15 @@ class MyQLMConverter:
                         mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cnot_processor)
 
-                elif instruction_name == "SWAP":
+                elif instruction_name == "CZ":
+                    # todo: implement
                     pass
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
-        # p.with_input()
+        # p.with_input()  # todo: implement
         return p
 
-    def _gate_def_nparray(gate_matrix):
+    def _gate_def_nparray(self, gate_matrix):
         """
         takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
         """
