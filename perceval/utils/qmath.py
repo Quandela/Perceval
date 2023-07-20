@@ -40,11 +40,13 @@ def exponentiation_by_squaring(base, power: int):
         raise ValueError("Power value must be positive")
 
     if type(base) == int:
-        result = 1
         temp_base = base
+        result = base
     else:
-        result = type(base)()
         temp_base = base.__copy__()
+        result = base.__copy__()
+
+    power -= 1
 
     while power > 0:
         # If power is odd
