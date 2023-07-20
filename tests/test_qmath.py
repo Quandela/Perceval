@@ -35,13 +35,11 @@ def test_exponentiation():
     assert exponentiation_by_squaring(12, 1), 12
     assert exponentiation_by_squaring(8, 2), 64
     assert exponentiation_by_squaring(52, 13), 20325604337285010030592
-    bs = pcvl.BasicState([1, 1])
-    assert exponentiation_by_squaring(bs, 35), bs
-    bs = pcvl.BasicState([1, 4])
-    assert bs**3, pcvl.BasicState([1, 64])
-    sv = pcvl.StateVector('|1,0,1,0,0,1,0,1>')
+    bs = pcvl.BasicState("|1,0,1,0,0>")
+    assert bs**3, bs*bs*bs
+    sv = pcvl.StateVector(pcvl.BasicState("|1,0,1,0,0>")) + pcvl.StateVector(pcvl.BasicState("|1,0,0,1,0>"))
     assert sv**2, sv*sv
     assert sv**5, sv*sv*sv*sv*sv
-    sv = pcvl.StateVector('|1,0,4,0,0,2,0,1>')
+    sv = pcvl.StateVector(pcvl.BasicState('|1,0,4,0,0,2,0,1>')) - pcvl.StateVector(pcvl.BasicState('|1,0,3,0,2,1,0,1>'))
     assert sv**2, sv*sv
     assert sv**7, sv*sv*sv*sv*sv*sv*sv*sv*sv
