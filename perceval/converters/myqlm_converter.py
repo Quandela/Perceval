@@ -32,6 +32,7 @@ from perceval.utils import P, BasicState, Encoding
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
+import numpy as np
 
 
 min_precision_gate = 1e-4
@@ -86,6 +87,7 @@ class MyQLMConverter:
         #     input_list[i * 2] = 1
         # default_input_state = BasicState(input_list)
 
+        i = 0
         for instruction in qlmc.iterate_simple():
             instruction_name = instruction[0]  # name of the Gate
             instruction_qbit = instruction[-1]  # tuple with list of qbit positions
@@ -96,6 +98,10 @@ class MyQLMConverter:
 
             # only gates are converted
             # assert isinstance(instruction_name, qat.lang.AQASM.gates.Gate), "cannot convert (%s)" % instruction_name
+
+            gate_id = qlmc.ops[i].gate
+            gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
+            gate_u = self._gate_def_nparray(gate_matrix)  # U of the gate given by current instruction_name
 
             if len(instruction_qbit) == 1:
                 if instruction_name == "H":
@@ -114,6 +120,7 @@ class MyQLMConverter:
 
                 if instruction_name == "CNOT":
                     # todo: doubt with how mode map is working
+                    # TODO TODO First version - only Heralded CNOT
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
                         cnot_processor = self._postprocessed_cnot_builder.build()
@@ -129,6 +136,16 @@ class MyQLMConverter:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
         # p.with_input()
         return p
+
+    def _gate_def_nparray(gate_matrix):
+        """
+        takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
+        """
+        gate_u_list = []
+        for val in gate_matrix.data:
+            gate_u_list.append(val.re + 1j * val.im)
+        u = np.array(gate_u_list).reshape(gate_matrix.nRows, gate_matrix.nCols)
+        return u
 
     def _create_one_qubit_gate(self, u):
         # universal method, takes in unitary and approximates one using
