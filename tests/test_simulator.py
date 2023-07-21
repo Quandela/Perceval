@@ -112,6 +112,25 @@ def test_simulator_probs_svd_distinguishable():
     assert res[BasicState("|0,3>")] == pytest.approx(0.288)
 
 
+def test_simulator_probs_svd_superposed():
+    superposed_state = StateVector("|0,{_:0},{_:1},0>") + StateVector("|0,{_:1},{_:0},0>")
+    in_svd = SVDistribution({superposed_state: 1})
+    circuit = Circuit(4)
+    circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1/3), phi_tl=-np.pi / 2, phi_bl=np.pi, phi_tr=np.pi / 2))
+    circuit.add(2, BS.H(BS.r_to_theta(1/3))).add(1, BS.H())
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    res = sim.probs_svd(in_svd)['results']
+    assert len(res) == 7
+    assert res[BasicState("|2,0,0,0>")] == pytest.approx(2/9)
+    assert res[BasicState("|0,0,0,2>")] == pytest.approx(2/9)
+    assert res[BasicState("|1,0,1,0>")] == pytest.approx(1/9)
+    assert res[BasicState("|1,1,0,0>")] == pytest.approx(1/9)
+    assert res[BasicState("|0,1,1,0>")] == pytest.approx(1/9)
+    assert res[BasicState("|0,1,0,1>")] == pytest.approx(1/9)
+    assert res[BasicState("|0,0,1,1>")] == pytest.approx(1/9)
+
+
 def test_simulator_probs_distinguishable():
     in_state = BasicState('|{_:0}{_:1},{_:0}>')
     circuit = BS.H(theta=BS.r_to_theta(0.4))

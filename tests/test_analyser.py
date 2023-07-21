@@ -64,7 +64,19 @@ def test_analyzer_on_qrng():
 
     p = pcvl.Processor("Naive", chip_QRNG)
 
-    ca = algo.Analyzer(p, [pcvl.BasicState([1,0,1,0]), pcvl.BasicState([0,1,1,0])], "*")
+    output_states = [  # Fix the output order for the unit test
+        pcvl.BasicState('|1,0,1,0>'),
+        pcvl.BasicState('|1,1,0,0>'),
+        pcvl.BasicState('|0,2,0,0>'),
+        pcvl.BasicState('|2,0,0,0>'),
+        pcvl.BasicState('|1,0,0,1>'),
+        pcvl.BasicState('|0,1,1,0>'),
+        pcvl.BasicState('|0,1,0,1>'),
+        pcvl.BasicState('|0,0,2,0>'),
+        pcvl.BasicState('|0,0,1,1>'),
+        pcvl.BasicState('|0,0,0,2>')
+    ]
+    ca = algo.Analyzer(p, [pcvl.BasicState([1,0,1,0]), pcvl.BasicState([0,1,1,0])], output_states)
     ca.compute()
     assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
