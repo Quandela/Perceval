@@ -65,3 +65,17 @@ def test_cnot_1_heralded():
     pc = convertor.convert(myqlmc, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
+
+
+def test_cnot_H():
+    convertor = MyQLMConverter(catalog)
+    qprog = Program()
+    qbits = qprog.qalloc(2)  # AllocateS 2 qbits
+    qprog.apply(H, qbits[0])
+    qprog.apply(CNOT, qbits[0], qbits[1])
+    qprog.apply(H, qbits[1])
+    myqlmc = qprog.to_circ()
+
+    pc = convertor.convert(myqlmc, use_postselection=False)
+    assert pc.circuit_size == 8
+    assert pc.m == 4
