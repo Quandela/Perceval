@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Port, Circuit, Processor, Source, BS
+from perceval.components import Port, Circuit, Processor, Source, BS, PS
 from perceval.utils import P, BasicState, Encoding
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
@@ -70,7 +70,7 @@ class MyQLMConverter:
         for instruction in qlmc.iterate_simple():
             if instruction[0] == "CNOT":
                 n_cnot += 1
-        cnot_idx = 0  # todo: do not understand why we need this yet
+        cnot_idx = 0
 
         n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
@@ -80,40 +80,36 @@ class MyQLMConverter:
             p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find how qlm stores names of qubits
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
-        # todo: doubts with default input state and how it would work/be updated
 
-        i = 0
-        for instruction in qlmc.iterate_simple():
+        for i, instruction in enumerate(qlmc.iterate_simple()):
             instruction_name = instruction[0]  # name of the Gate
             instruction_qbit = instruction[-1]  # tuple with list of qbit positions
             # information carried by instruction
-            # each instruction will be a tuple containing 'name' and 'list of qbit postions' of gate in the 1st and
-            # the last position of the tuple respectively
-            # tuple ('Name', [value of the parameter for gate], [list of number of qbits where gate is applied])
+            # tuple ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
 
             # only gates are converted
             # todo: see how to extract "Gateobj" and not a name to fix the following assert
             # assert isinstance(instruction_name, qat.lang.AQASM.gates.Gate), "cannot convert (%s)" % instruction_name
 
-            gate_id = qlmc.ops[i].gate
-            gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-            gate_u = self._gate_def_nparray(gate_matrix)  # U of the gate given by current instruction_name
-            # todo: implement use of unitary
-
             if len(instruction_qbit) == 1:
                 if instruction_name == "H":
                     ins = Circuit(2, name='H') // BS.H()
+                elif instruction_name == "PH":
+                    phi = instruction[1][0]  # value of the variable parameter in gate
+                    ins = Circuit(2, name='PS') // PS(phi)
                 else:
-                    print("Only H gate is implemented")
+                    gate_id = qlmc.ops[i].gate
+                    gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
+                    gate_u = self._gate_def_nparray(gate_matrix)  # U of the gate given by current instruction_name
+                    ins = self._create_one_qubit_gate(gate_u)
                 p.add(instruction_qbit[0]*2, ins.copy())
             else:
-                # 2 qubit gates for now
-                c_idx = instruction_qbit[0] * 2  # mode position for 1st qbit in 2 qbit gate
-                c_data = instruction_qbit[1] * 2  # mode position for 1st qbit in 2 qbit gate
-                c_first = min(c_idx, c_data)  # todo: clarify how this works -> confused :(
+                # only 2 qubit gates
+                c_idx = instruction_qbit[0] * 2
+                c_data = instruction_qbit[1] * 2
+                c_first = min(c_idx, c_data)  # used in SWAP, not implemented yet
 
-                if instruction_name == "CNOT":
-                    # todo: doubt with how mode map is working
+                if instruction_name == "CNOT":  # todo: check matrix for CNOT before and after verify modes are good
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
                         cnot_processor = self._postprocessed_cnot_builder.build()
@@ -128,12 +124,12 @@ class MyQLMConverter:
                     p.add(mode_map, cz_processor)
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
-        # p.with_input()  # todo: implement
+        p.with_input(default_input_state)
         return p
 
     def _gate_def_nparray(self, gate_matrix):
         """
-        takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
+        Takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
         """
         gate_u_list = []
         for val in gate_matrix.data:
@@ -143,7 +139,7 @@ class MyQLMConverter:
 
     def _create_one_qubit_gate(self, u):
         # universal method, takes in unitary and approximates one using
-        # Frobenius method todo: see if the unitary from myqlm can be used
+        # Frobenius method
         if abs(u[1, 0]) + abs(u[0, 1]) < 2 * min_precision_gate:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision

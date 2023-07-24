@@ -28,9 +28,10 @@
 # SOFTWARE.
 
 import pytest
+import numpy as np
 
 try:
-    from qat.lang.AQASM import Program, H, CNOT, CSIGN
+    from qat.lang.AQASM import Program, H, PH, CNOT, CSIGN
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
@@ -76,7 +77,6 @@ def test_cnot_H():
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(H, qbits[0])
     qprog.apply(CNOT, qbits[0], qbits[1])
-    qprog.apply(H, qbits[1])
     myqlmc = qprog.to_circ()
 
     pc = convertor.convert(myqlmc, use_postselection=False)
@@ -91,6 +91,22 @@ def test_cz_heralded():
     qprog.apply(CSIGN, qbits[0], qbits[1])  # CZ or Controlled Z gate is called CSIGN in myqlm
     myqlmc = qprog.to_circ()
 
-    pc = convertor.convert(myqlmc, use_postselection=False)
-    assert pc.circuit_size == 6
+    pc = convertor.convert(myqlmc)
+    assert pc.circuit_size == 6  # 2 heralded modes for CZ
     assert pc.m == 4
+
+
+def test_phase_shifter():
+    convertor = MyQLMConverter(catalog)
+    qprog = Program()
+    qbits = qprog.qalloc(1)
+    qprog.apply(PH(np.pi/2), qbits[0])  # PH -> phase shifter
+    myqlmc = qprog.to_circ()
+
+    pc = convertor.convert(myqlmc)
+    assert pc.m == 2
+
+
+def test_noon_state():
+    # todo: implement a circuit using H and CNOT gates to prepare NOON states
+    pass
