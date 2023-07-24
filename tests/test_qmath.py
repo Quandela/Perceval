@@ -27,9 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
+from perceval import BasicState, StateVector, BSDistribution, SVDistribution
 from perceval.utils.qmath import exponentiation_by_squaring
 from pytest import approx
+from time import time
 
 
 def almost_equal_sv_distribution(lhsvd, rhsvd):
@@ -74,31 +75,34 @@ def test_exponentiation():
     assert exponentiation_by_squaring(52, 13), 20325604337285010030592
 
     # Basic state
-    bs = pcvl.BasicState("|1,0,1,0,0>")
+    bs = BasicState("|1,0,1,0,0>")
     assert bs**3 == bs * bs * bs
 
     # Annoted basic state
-    bs = pcvl.BasicState("|0,0,{_:0}{_:1},0>")
-    assert bs**5 == bs * bs * bs * bs * bs
+    annot_bs = BasicState("|0,0,{_:0}{_:1},0>")
+    assert annot_bs**5 == annot_bs * annot_bs * annot_bs * annot_bs * annot_bs
 
     # State vector
-    sv = pcvl.StateVector(pcvl.BasicState('|1,0,4,0,0,2,0,1>')) - pcvl.StateVector(pcvl.BasicState('|1,0,3,0,2,1,0,1>'))
+    sv = StateVector(BasicState("|1,0,4,0,0,2,0,1>")) - 1j * StateVector(BasicState("|1,0,3,0,2,1,0,1>"))
+    almost_equal_state_vector(sv, sv)
     almost_equal_state_vector(sv**2, sv * sv)
     almost_equal_state_vector(sv**7, sv * sv * sv * sv * sv * sv * sv)
 
     # Basic state Distribution
-    bsd = pcvl.BSDistribution()
-    bsd[pcvl.BasicState([0, 0])] = 0.25
-    bsd[pcvl.BasicState([1, 0])] = 0.25
-    bsd[pcvl.BasicState([0, 1])] = 0.25
-    bsd[pcvl.BasicState([2, 0])] = 0.125
-    bsd[pcvl.BasicState([0, 2])] = 0.125
+    bsd = BSDistribution()
+    bsd[BasicState([0, 0])] = 0.25
+    bsd[BasicState([1, 0])] = 0.25
+    bsd[BasicState([0, 1])] = 0.25
+    bsd[BasicState([2, 0])] = 0.125
+    bsd[BasicState([0, 2])] = 0.125
     assert bsd**2 == bsd * bsd
     assert bsd**7 == bsd * bsd * bsd * bsd * bsd * bsd * bsd
 
     # State vector Distribution
-    svd = pcvl.SVDistribution()
-    svd[pcvl.StateVector(bs)] = 0.2
-    svd[sv] = 0.7
-    assert svd**2 == svd * svd
+    svd = SVDistribution()
+    svd[StateVector([1, 0]) + StateVector([0, 1])] = 0.3
+    svd[StateVector([1, 1]) + 1j * StateVector([0, 1])] = 0.3
+    svd[StateVector('|2,0>') + StateVector([1, 1])] = 0.4
+    almost_equal_sv_distribution(svd, svd)
+    almost_equal_sv_distribution(svd**2, svd * svd)
     almost_equal_sv_distribution(svd**5, svd * svd * svd * svd * svd)
