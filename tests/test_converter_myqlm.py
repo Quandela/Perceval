@@ -30,7 +30,7 @@
 import pytest
 
 try:
-    from qat.lang.AQASM import Program, H, CNOT
+    from qat.lang.AQASM import Program, H, CNOT, CSIGN
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
@@ -53,6 +53,9 @@ def test_basic_circuit_h():
 
     c = pc.linear_circuit()
     assert c.m == 2 * len(qbits)
+
+    c0 = c._components[0][1]._components[0][1]
+    assert isinstance(c0, comp.BS)
 
 
 def test_cnot_1_heralded():
@@ -78,4 +81,16 @@ def test_cnot_H():
 
     pc = convertor.convert(myqlmc, use_postselection=False)
     assert pc.circuit_size == 8
+    assert pc.m == 4
+
+
+def test_cz_heralded():
+    convertor = MyQLMConverter(catalog)
+    qprog = Program()
+    qbits = qprog.qalloc(2)  # AllocateS 2 qbits
+    qprog.apply(CSIGN, qbits[0], qbits[1])  # CZ or Controlled Z gate is called CSIGN in myqlm
+    myqlmc = qprog.to_circ()
+
+    pc = convertor.convert(myqlmc, use_postselection=False)
+    assert pc.circuit_size == 6
     assert pc.m == 4

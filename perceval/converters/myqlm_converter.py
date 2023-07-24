@@ -102,7 +102,7 @@ class MyQLMConverter:
 
             if len(instruction_qbit) == 1:
                 if instruction_name == "H":
-                    ins = BS.H()
+                    ins = Circuit(2, name='H') // BS.H()
                 else:
                     print("Only H gate is implemented")
                 p.add(instruction_qbit[0]*2, ins.copy())
@@ -122,10 +122,10 @@ class MyQLMConverter:
                         cnot_processor = self._heralded_cnot_builder.build()
                         mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cnot_processor)
-
-                elif instruction_name == "CZ":
-                    # todo: implement
-                    pass
+                elif instruction_name == "CSIGN":
+                    cz_processor = self._heralded_cz_builder.build()
+                    mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
+                    p.add(mode_map, cz_processor)
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
         # p.with_input()  # todo: implement
