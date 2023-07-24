@@ -47,11 +47,11 @@ def test_basic_circuit_h():
     convertor = MyQLMConverter(catalog)
     qprog = Program()  # Create a Program
     qbits = qprog.qalloc(1)  # Allocate some qbits
+    print(qbits, type(qbits))
     qprog.apply(H, qbits[0])  # Apply H gate
     myqlmc = qprog.to_circ()  # Export this program into a quantum circuit
 
     pc = convertor.convert(myqlmc)
-
     c = pc.linear_circuit()
     assert c.m == 2 * len(qbits)
 

@@ -58,7 +58,7 @@ class MyQLMConverter:
 
         :param qlmc: quantum gate-based myqlm circuit
         :type qlmc: qat.core.Circuit
-        :param use_postselection: when True, uses a `postprocessed CNOT` as the last gate. Otherwise, uses only
+        :param use_postselection: when True, uses a `post-processed CNOT` as the last gate. Otherwise, uses only
             `heralded CNOT`
         :return: the converted Processor
         """
@@ -77,7 +77,9 @@ class MyQLMConverter:
         p = Processor(self._backend_name, n_moi, self._source)
 
         for i in range(qlmc.nbqbits):
-            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find how qlm stores names of qubits
+            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find if we really need qubit name!
+            # Qbits are of this type : qat.lang.AQASM.bits.QRegister but this class does not have "name" attribute
+            # classqat.lang.AQASM.bits.QRegister(offset, length=1, scope=None, qbits_list=None)
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
 
@@ -87,9 +89,10 @@ class MyQLMConverter:
             # information carried by instruction
             # tuple ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
 
-            # only gates are converted
-            # todo: see how to extract "Gateobj" and not a name to fix the following assert
-            # assert isinstance(instruction_name, qat.lang.AQASM.gates.Gate), "cannot convert (%s)" % instruction_name
+            # only gates are converted -> checking if instruction is in gate_set of AQASM
+            # in addition to known gates, there is "LOCK3 and "RELEASE3 -> todo: find out what they are
+            # todo: find how does this affect AbstractGates
+            assert instruction_name in qlmc.gate_set, "cannot convert (%s)" % instruction_name
 
             if len(instruction_qbit) == 1:
                 if instruction_name == "H":
@@ -100,7 +103,7 @@ class MyQLMConverter:
                 else:
                     gate_id = qlmc.ops[i].gate
                     gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-                    gate_u = self._gate_def_nparray(gate_matrix)  # U of the gate given by current instruction_name
+                    gate_u = self._gate_def_nparray(gate_matrix)  # U of gate given by current instruction_name
                     ins = self._create_one_qubit_gate(gate_u)
                 p.add(instruction_qbit[0]*2, ins.copy())
             else:
@@ -127,7 +130,8 @@ class MyQLMConverter:
         p.with_input(default_input_state)
         return p
 
-    def _gate_def_nparray(self, gate_matrix):
+    @staticmethod
+    def _gate_def_nparray(gate_matrix):
         """
         Takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
         """
