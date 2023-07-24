@@ -29,17 +29,76 @@
 
 import perceval as pcvl
 from perceval.utils.qmath import exponentiation_by_squaring
+from pytest import approx
+
+
+def almost_equal_sv_distribution(lhsvd, rhsvd):
+    lhkeys, rhkeys = [[[svkeys for svkeys in svdkeys] for svdkeys in svd.keys()] for svd in [lhsvd, rhsvd]]
+    # check if all the basic state are here
+    assert lhkeys == rhkeys
+    # search correct key in both dict (since the keys can be different because of pointing float error causing different probabilities)
+    for incomplete_key in lhkeys:
+        found_key = False
+        for lkey in lhsvd.keys():
+            found_key = True
+            for bs in incomplete_key:
+                if bs not in lkey:
+                    found_key = False
+                    break
+            if found_key:
+                break
+        found_key = False
+        for rkey in rhsvd.keys():
+            found_key = True
+            for bs in incomplete_key:
+                if bs not in rkey:
+                    found_key = False
+                    break
+            if found_key:
+                break
+        # compare the found keys
+        almost_equal_state_vector(lkey, rkey)
+        assert lhsvd[lkey] == approx(rhsvd[rkey])
+
+
+def almost_equal_state_vector(lhsv, rhsv):
+    assert set(lhsv.keys()) == set(rhsv.keys())
+    for key in lhsv.keys():
+        assert lhsv[key] == approx(rhsv[key])  # approx <=> error < 1e-6
 
 
 def test_exponentiation():
+    # Numbers
     assert exponentiation_by_squaring(12, 1), 12
     assert exponentiation_by_squaring(8, 2), 64
     assert exponentiation_by_squaring(52, 13), 20325604337285010030592
+
+    # Basic state
     bs = pcvl.BasicState("|1,0,1,0,0>")
-    assert bs**3, bs*bs*bs
-    sv = pcvl.StateVector(pcvl.BasicState("|1,0,1,0,0>")) + pcvl.StateVector(pcvl.BasicState("|1,0,0,1,0>"))
-    assert sv**2, sv*sv
-    assert sv**5, sv*sv*sv*sv*sv
+    assert bs**3 == bs * bs * bs
+
+    # Annoted basic state
+    bs = pcvl.BasicState("|0,0,{_:0}{_:1},0>")
+    assert bs**5 == bs * bs * bs * bs * bs
+
+    # State vector
     sv = pcvl.StateVector(pcvl.BasicState('|1,0,4,0,0,2,0,1>')) - pcvl.StateVector(pcvl.BasicState('|1,0,3,0,2,1,0,1>'))
-    assert sv**2, sv*sv
-    assert sv**7, sv*sv*sv*sv*sv*sv*sv*sv*sv
+    almost_equal_state_vector(sv**2, sv * sv)
+    almost_equal_state_vector(sv**7, sv * sv * sv * sv * sv * sv * sv)
+
+    # Basic state Distribution
+    bsd = pcvl.BSDistribution()
+    bsd[pcvl.BasicState([0, 0])] = 0.25
+    bsd[pcvl.BasicState([1, 0])] = 0.25
+    bsd[pcvl.BasicState([0, 1])] = 0.25
+    bsd[pcvl.BasicState([2, 0])] = 0.125
+    bsd[pcvl.BasicState([0, 2])] = 0.125
+    assert bsd**2 == bsd * bsd
+    assert bsd**7 == bsd * bsd * bsd * bsd * bsd * bsd * bsd
+
+    # State vector Distribution
+    svd = pcvl.SVDistribution()
+    svd[pcvl.StateVector(bs)] = 0.2
+    svd[sv] = 0.7
+    assert svd**2 == svd * svd
+    almost_equal_sv_distribution(svd**5, svd * svd * svd * svd * svd)
