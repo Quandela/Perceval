@@ -130,6 +130,7 @@ class PostSelect:
 
         :param perm_vector: Permutation vector to apply (as returned by PERM.perm_vector)
         :param first_mode: First mode of the permutation to apply (default 0)
+        :return: A PostSelect with the permutation applied
         """
         output = PostSelect()
         for operator, cond in self._conditions.items():
@@ -143,3 +144,18 @@ class PostSelect:
                         new_indexes.append(first_mode + perm_vector[i - first_mode])
                 output._conditions[operator].append((tuple(new_indexes), value))
         return output
+
+    def can_compose_with(self, modes: List[int]) -> bool:
+        """
+        Check if all conditions are compatible with a compisition on given modes
+
+        :param modes: Modes used in the composition
+        :return: `True` if the composition is allowed without mixing conditions, `False` otherwise
+        """
+        m_set = set(modes)
+        for _, cond in self._conditions.items():
+            for (indexes, _) in cond:
+                i_set = set(indexes)
+                if i_set.intersection(m_set) and not i_set.issuperset(m_set):
+                    return False
+        return True

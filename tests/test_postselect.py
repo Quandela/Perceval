@@ -95,3 +95,24 @@ def test_postselect_apply_permutation():
     assert ((0, 2), 1) in ps_out._conditions[int.__eq__]
     assert ((3, 1), 2) in ps_out._conditions[int.__gt__]
     assert ((4, 5), 3) in ps_out._conditions[int.__lt__]
+
+
+def test_postselect_can_compose_with():
+    ps = PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0")
+    assert ps.can_compose_with([0])
+    assert ps.can_compose_with([1, 2])
+    assert ps.can_compose_with([3, 4])
+    assert ps.can_compose_with([5])
+
+    # Special cases
+    assert ps.can_compose_with([1])  # You can compose with a subset of a condition (here [1,2]==1)
+    assert ps.can_compose_with([6, 7])  # You can compose if the modes are not even in the post-selection conditions
+
+    assert not ps.can_compose_with([2, 3])
+    assert not ps.can_compose_with([5, 6])
+
+    ps = PostSelect("[0]>0 & [1,2,3]<1 & [2,3,4]<1 & [5]>0")
+    assert ps.can_compose_with([2])
+    assert ps.can_compose_with([2, 3])
+    assert not ps.can_compose_with([2, 3, 4])
+    assert not ps.can_compose_with([3, 4])
