@@ -54,6 +54,7 @@ class Processor(AProcessor):
         >>> p = Processor("SLOS", BS() // PS() // BS())
 
     :param source: the Source used by the processor (defaults to perfect source)
+    :param name: a textual name for the processor (defaults to "Local processor")
     """
     def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = Source(),
                  name: str = None):
@@ -252,6 +253,9 @@ class Processor(AProcessor):
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
             self._simulator = SimulatorFactory.build(self)
+        else:
+            self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components)
+
         res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
         lperf = 1
         pperf = 1

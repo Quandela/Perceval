@@ -325,7 +325,7 @@ class StateVector(defaultdict):
         return list(set([st.n for st in self.keys()]))
 
     def normalize(self):
-        r"""Normalize a non-normalized BasicState"""
+        r"""Normalize a state vector"""
         if not self._normalized:
             norm = 0
             to_remove = []

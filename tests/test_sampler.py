@@ -114,13 +114,18 @@ def test_sampler_iterator():
         p = pcvl.Processor(backend_name, c)
         sampler = Sampler(p)
         iteration_list = [
-            {"circuit_params": {"phi1": 0.03}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
-            {"circuit_params": {"phi1": 0.03}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+            {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+            {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
             {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1}
         ]
         sampler.add_iteration_list(iteration_list)
-        res = sampler.probs()
-        assert len(res['results_list']) == len(iteration_list)
+        rl = sampler.probs()['results_list']
+        assert len(rl) == len(iteration_list)
+        # Test that the results changes given the iteration parameters (avoid Clifford as sampling adds randomness)
+        if backend_name == "SLOS":
+            assert rl[0]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.7701511529340699)
+            assert rl[1]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.38639895265345636)
+            assert rl[2]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0)
         res = sampler.samples(10)
         assert len(res['results_list']) == len(iteration_list)
         res = sampler.sample_count(100)
