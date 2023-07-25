@@ -31,7 +31,7 @@ import pytest
 import numpy as np
 
 try:
-    from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, CNOT, CSIGN
+    from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, CNOT, CSIGN, AbstractGate
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
@@ -124,9 +124,9 @@ def test_compare_u_1qbit(Gate_Name):
     qbits = qprog.qalloc(1)
 
     if Gate_Name in ([RX, RY, RZ]):
-        Gate_Name(np.pi)(qbits[0])
+        qprog.apply(Gate_Name(np.pi/2), qbits[0])
     else:
-        Gate_Name(qbits[0])
+        qprog.apply(Gate_Name, qbits[0])
 
     circ = qprog.to_circ()
     gate_id = circ.ops[0].gate
@@ -141,6 +141,39 @@ def test_compare_u_1qbit(Gate_Name):
     diff = np.absolute(np.array(cm) - myqlm_gate_u)
 
     assert np.all(diff < 1e-5)  # todo: precision depends on optimize in converter
+
+
+def test_abstract_1qbit_gate():
+
+    # Generator method
+    def Abs_Gate_generator(phi, theta):
+        _I = np.eye(2, dtype=np.complex128)
+        _X = np.array([[0, 1], [1, 0]], dtype=np.complex128)
+        _Y = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
+        return np.cos(theta / 2) * _I - 1j * np.sin(theta / 2) * (np.cos(phi) * _X + np.sin(phi) * _Y)
+
+    # Some abstract gate with 2 parameters
+    Abs_gate = AbstractGate("Abs_Gate", [float, float], arity=1)
+    Abs_gate.set_matrix_generator(Abs_Gate_generator)
+
+    prog = Program()
+    qbits = prog.qalloc(1)
+    prog.apply(Abs_gate(np.pi, np.pi / 3), qbits[0])  # simply testing with 2 arbitrary values
+    circ = prog.to_circ()
+
+    gate_id = circ.ops[0].gate
+    gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
+
+    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_gate_u = myqlm_converter._myqlm_gate_unitary(gate_matrix)
+
+    pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
+    c = pcvl_proc.linear_circuit()
+    cm = c.compute_unitary()
+    diff = np.absolute(np.array(cm) - myqlm_gate_u)
+
+    assert np.all(diff < 1e-5)  # todo: precision depends on optimize in converter
+    assert c.m == 2 * len(qbits)
 
 
 def test_noon_state():
