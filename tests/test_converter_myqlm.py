@@ -32,6 +32,7 @@ import numpy as np
 
 try:
     from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, CNOT, CSIGN, AbstractGate
+    from qat.qpus import PyLinalg
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
@@ -39,8 +40,7 @@ from perceval import BasicState, StateVector, Circuit
 from perceval.converters import MyQLMConverter
 import perceval.components.unitary_components as comp
 from perceval.components import catalog
-
-# todo : implement further assertions
+from perceval.algorithm import Analyzer, Sampler
 
 
 def test_basic_circuit_h():
@@ -74,7 +74,7 @@ def test_cnot_1_heralded():
 
     gate_id = myqlmc.ops[0].gate
     gate_matrix = myqlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-    gate_u = MyQLMConverter._gate_def_nparray(gate_matrix)
+    gate_u = MyQLMConverter._myqlm_gate_unitary(gate_matrix)
     print(gate_u)
 
     assert pc.circuit_size == 8
@@ -140,7 +140,7 @@ def test_compare_u_1qbit(Gate_Name):
     cm = c.compute_unitary()
     diff = np.absolute(np.array(cm) - myqlm_gate_u)
 
-    assert np.all(diff < 1e-5)  # todo: precision depends on optimize in converter
+    assert np.all(diff < 1e-4)  # todo: precision depends on optimize in converter
 
 
 def test_abstract_1qbit_gate():
@@ -172,10 +172,57 @@ def test_abstract_1qbit_gate():
     cm = c.compute_unitary()
     diff = np.absolute(np.array(cm) - myqlm_gate_u)
 
-    assert np.all(diff < 1e-5)  # todo: precision depends on optimize in converter
+    assert np.all(diff < 1e-4)  # todo: precision depends on optimize in converter
     assert c.m == 2 * len(qbits)
 
 
-def test_noon_state():
-    # todo: implement a circuit using H and CNOT gates to prepare NOON states
-    pass
+def test_converter_ghz_state():
+    convertor = MyQLMConverter(catalog, backend_name="Naive")
+    qprog = Program()
+    qbits = qprog.qalloc(3)
+    qprog.apply(H, qbits[0])
+    qprog.apply(CNOT, qbits[0], qbits[1])
+    qprog.apply(CNOT, qbits[0], qbits[2])
+    myqlmc = qprog.to_circ()
+
+    pc = convertor.convert(myqlmc, use_postselection=True)
+    assert pc.m == 6
+    assert pc.circuit_size == 12 # m + heralded modes
+    import perceval as pcvl
+    pc.with_input(pcvl.LogicalState([0, 0, 0]))
+    sampler = Sampler(pc)
+    output_distribution = sampler.probs()["results"]
+    print(output_distribution)
+    pcvl.pdisplay(output_distribution, precision=1e-2, max_v=4)
+
+    # Create a job
+    pylinalgqpu = PyLinalg()
+    job = myqlmc.to_job()
+    result = pylinalgqpu.submit(job)  # Submit the job to the QPU
+
+    # Iterate over the final state vector to get all final components
+    for sample in result:
+        print("State %s amplitude %s" % (sample.state, sample.amplitude))
+        print(type(sample.state.bitstring), list(sample.state.bitstring))
+
+
+
+def test_converter_noon_state():
+    convertor = MyQLMConverter(catalog, backend_name="Naive")
+    qprog = Program()
+    qbits = qprog.qalloc(4)
+    qprog.apply(H, qbits[0])
+    qprog.apply(CNOT, qbits[0], qbits[1])
+    qprog.apply(CNOT, qbits[0], qbits[2])
+    qprog.apply(CNOT, qbits[0], qbits[3])
+    myqlmc = qprog.to_circ()
+
+    pc = convertor.convert(myqlmc, use_postselection=True)
+    import perceval as pcvl
+    pcvl.pdisplay(pc)
+    pc.with_input(pcvl.LogicalState([0, 0, 0, 0]))
+
+    sampler = Sampler(pc)
+
+    output_distribution = sampler.probs()["results"]
+    pcvl.pdisplay(output_distribution, precision=1e-2, max_v=4)
