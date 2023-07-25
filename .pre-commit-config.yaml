@@ -23,3 +23,11 @@ repos:
         args:
         - --license-filepath
         - LICENSE
+-   repo: local
+    hooks:
+    -   id: jupyter-nb-clear-metadata
+        name: jupyter-nb-clear-metadata
+        files: \.ipynb$
+        stages: [commit]
+        language: system
+        entry: jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace
