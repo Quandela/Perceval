@@ -175,9 +175,13 @@ def test_cnot_postprocess():
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
-    pc = convertor.convert(qc)
+    pc = convertor.convert(qc, use_postselection=True)
     bsd_out = pc.probs()['results']
     assert len(bsd_out) == 2
+
+    qc.h(0)  # We should be able to continue the circuit with 1-qubit gates even with a post-selected CNOT
+    pc = convertor.convert(qc, use_postselection=True)
+    assert isinstance(pc._components[-1][1]._components[0][1], comp.BS)
 
 
 def test_cnot_herald():

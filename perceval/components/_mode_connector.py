@@ -117,7 +117,7 @@ class ModeConnector:
             return self._map
 
         # Handle list input case
-        if isinstance(self._map, list):
+        if isinstance(self._map, list) or isinstance(self._map, tuple):
             map_keys = self._map
             map_values = self._get_ordered_rmodes()
             if len(map_keys) != len(map_values):

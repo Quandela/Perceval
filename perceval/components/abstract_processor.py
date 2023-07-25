@@ -227,10 +227,6 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._postselect is not None:
-            raise RuntimeError("Cannot add any component to a processor with a post-process function. You may remove the post-process function by calling clear_postprocess()")
-
-        self._simulator = None  # Invalidate simulator which will have to be recreated later on
         if self._n_moi is None:
             if isinstance(mode_mapping, int):
                 self._n_moi = (component.m if isinstance(component, ACircuit) else component.circuit_size) + mode_mapping
@@ -246,10 +242,19 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
-    def _compose_processor(self, connector, processor, keep_port: bool):
+    def _validate_postselect_composition(self, mode_mapping: Dict):
+        if self._postselect is not None and isinstance(self._postselect, PostSelect):
+            impacted_modes = list(mode_mapping.keys())
+            assert self._postselect.can_compose_with(impacted_modes),\
+                f"Post-selection conditions cannot compose with modes {impacted_modes}"
+
+    def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
+        assert self._postselect is None or processor._postselect is None, \
+            "Cannot automatically compose two processors with post-selection conditions"
+        self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new processor
             for i in mode_mapping:
@@ -302,6 +307,7 @@ class AProcessor(ABC):
                 self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
 
     def _add_component(self, mode_mapping, component):
+        self._validate_postselect_composition(mode_mapping)
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
@@ -360,8 +366,7 @@ class AProcessor(ABC):
         Creates a linear circuit from internal components, if all internal components are unitary.
         :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
         """
-        if not self._is_unitary:
-            raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
+        assert self._is_unitary, "Cannot retrieve a linear circuit because some components are non-unitary"
         circuit = Circuit(self.circuit_size)
         for component in self._components:
             circuit.add(component[0], component[1], merge=flatten)

@@ -30,7 +30,7 @@
 import pytest
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval.backends import Clifford2017Backend
+from perceval.backends import Clifford2017Backend, SLOSBackend
 
 
 def test_processor_generator_0():
@@ -120,3 +120,14 @@ def test_processor_samples():
     proc.with_input(pcvl.SVDistribution({pcvl.BasicState("|{_:0},{_:1}>"): 1}))
     samples = proc.samples(500)
     assert samples["results"].count(pcvl.BasicState([1,1])) > 50
+
+
+def test_processor_composition():
+    p = pcvl.catalog['postprocessed cnot'].build()  # Circuit with [0,1] and [2,3] post-selection conditions
+    p.add((0, 1), comp.BS())  # Composing with a component on modes [0,1] should work
+    with pytest.raises(AssertionError):
+        p.add((1, 2), comp.BS())  # Composing with a component on modes [1,2] should fail
+    p_bs = pcvl.Processor("SLOS", comp.BS())
+    p.add((0, 1), p_bs)  # Composing with a processor on modes [0,1] should work
+    with pytest.raises(AssertionError):
+        p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
