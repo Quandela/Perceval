@@ -31,7 +31,7 @@ import pytest
 import numpy as np
 
 try:
-    from qat.lang.AQASM import Program, H, PH, CNOT, CSIGN
+    from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, CNOT, CSIGN
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
@@ -67,6 +67,16 @@ def test_cnot_1_heralded():
     myqlmc = qprog.to_circ()
 
     pc = convertor.convert(myqlmc, use_postselection=False)
+    c = pc.linear_circuit()
+    print('unitary')
+    import perceval as pcvl
+    pcvl.pdisplay(c.compute_unitary())
+
+    gate_id = myqlmc.ops[0].gate
+    gate_matrix = myqlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
+    gate_u = MyQLMConverter._gate_def_nparray(gate_matrix)
+    print(gate_u)
+
     assert pc.circuit_size == 8
     assert pc.m == 4
 
@@ -105,6 +115,32 @@ def test_phase_shifter():
 
     pc = convertor.convert(myqlmc)
     assert pc.m == 2
+
+
+@pytest.mark.parametrize('Gate_Name', [H, X, Y, Z, S, T, RX, RY, RZ])
+def test_compare_u_1qbit(Gate_Name):
+    # todo: I and PH not working
+    qprog = Program()
+    qbits = qprog.qalloc(1)
+
+    if Gate_Name in ([RX, RY, RZ]):
+        Gate_Name(np.pi)(qbits[0])
+    else:
+        Gate_Name(qbits[0])
+
+    circ = qprog.to_circ()
+    gate_id = circ.ops[0].gate
+    gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
+
+    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_gate_u = myqlm_converter._myqlm_gate_unitary(gate_matrix)
+
+    pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
+    c = pcvl_proc.linear_circuit()
+    cm = c.compute_unitary()
+    diff = np.absolute(np.array(cm) - myqlm_gate_u)
+
+    assert np.all(diff < 1e-5)  # todo: precision depends on optimize in converter
 
 
 def test_noon_state():

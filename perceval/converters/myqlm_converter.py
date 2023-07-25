@@ -79,7 +79,7 @@ class MyQLMConverter:
         for i in range(qlmc.nbqbits):
             p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find if we really need qubit name!
             # Qbits are of this type : qat.lang.AQASM.bits.QRegister but this class does not have "name" attribute
-            # classqat.lang.AQASM.bits.QRegister(offset, length=1, scope=None, qbits_list=None)
+            # class qat.lang.AQASM.bits.QRegister(offset, length=1, scope=None, qbits_list=None)
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
 
@@ -103,7 +103,7 @@ class MyQLMConverter:
                 else:
                     gate_id = qlmc.ops[i].gate
                     gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-                    gate_u = self._gate_def_nparray(gate_matrix)  # U of gate given by current instruction_name
+                    gate_u = self._myqlm_gate_unitary(gate_matrix)  # U of gate given by current instruction_name
                     ins = self._create_one_qubit_gate(gate_u)
                 p.add(instruction_qbit[0]*2, ins.copy())
             else:
@@ -131,7 +131,7 @@ class MyQLMConverter:
         return p
 
     @staticmethod
-    def _gate_def_nparray(gate_matrix):
+    def _myqlm_gate_unitary(gate_matrix):
         """
         Takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
         """
