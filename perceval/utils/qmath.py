@@ -29,17 +29,17 @@
 
 
 def exponentiation_by_squaring(base, power: int):
-    """Calculate the result of base^power i.e. base**power using exponentiating by squaring (or square-and-multiply)
+    """Calculate the result of base^power i.e. base**power using exponentiation by squaring (or square-and-multiply)
 
     Args:
         :param base: the element to exponentiate
-        :param power: *positive* integer power
+        :param power: *strictly positive* integer power
         :param result: the initialisation of the result
     """
-    if power <= 0:
-        raise ValueError("Power value must be positive")
+    if power < 1:
+        raise ValueError("Power value must be strictly positive")
 
-    if type(base) == int:
+    if isinstance(base, int):
         temp_base = base
         result = base
     else:

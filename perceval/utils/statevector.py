@@ -55,6 +55,10 @@ def _fockstate_sub(self, other):
     return StateVector(self) - other
 
 def _fockstate_pow(self, power: int):
+    if power < 0:
+        raise ValueError("Power value must be positive")
+    if power == 0:
+        return BasicState("|>")
     return exponentiation_by_squaring(self, power)
 
 
