@@ -45,6 +45,7 @@ import numpy as np
 import sympy as sp
 
 from exqalibur import FockState, FSArray
+from .qmath import exponentiation_by_squaring
 
 
 def _fockstate_add(self, other):
@@ -54,10 +55,12 @@ def _fockstate_sub(self, other):
     return StateVector(self) - other
 
 def _fockstate_pow(self, power: int):
-    bs = self.__copy__()
-    for i in range(power - 1):
-        bs = bs * self
-    return bs
+    if power < 0:
+        raise ValueError("Power value must be positive")
+    if power == 0:
+        return BasicState("|>")
+    return exponentiation_by_squaring(self, power)
+
 
 def _fockstate_partition(self, distribution_photons: List[int]):
     r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
@@ -216,18 +219,8 @@ class StateVector(defaultdict):
             self._has_symbolic = True
         return copy_state
 
-    def __pow__(self, power):
-        # Fast exponentiation
-        binary = [int(i) for i in bin(power)[2:]]
-        binary.reverse()
-        power_state = self
-        out = StateVector()
-        for i in range(len(binary)):
-            if binary[i] == 1:
-                out *= power_state
-            if i != len(binary) - 1:
-                power_state *= power_state
-        return out
+    def __pow__(self, power: int):
+        return exponentiation_by_squaring(self, power)
 
     def __copy__(self):
         sv_copy = StateVector(None)
@@ -410,17 +403,7 @@ class ProbabilityDistribution(defaultdict, ABC):
         return distribution_copy
 
     def __pow__(self, power):
-        # Fast exponentiation
-        binary = [int(i) for i in bin(power)[2:]]
-        binary.reverse()
-        power_distrib = self
-        out = type(self)()
-        for i in range(len(binary)):
-            if binary[i] == 1:
-                out *= power_distrib
-            if i != len(binary) - 1:
-                power_distrib *= power_distrib
-        return out
+        return exponentiation_by_squaring(self, power)
 
     @abstractmethod
     def sample(self, count: int, non_null: bool = True):
@@ -509,6 +492,7 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
         result += StateVector("|" + ",".join([v and v or "0" for v in s]) + ">") * pa
     result.normalize()
     return result
+
 
 @dispatch(SVDistribution, annot_tag=str)
 def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
