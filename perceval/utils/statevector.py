@@ -45,7 +45,7 @@ import numpy as np
 import sympy as sp
 
 from exqalibur import FockState, FSArray
-from perceval.utils.qmath import exponentiation_by_squaring
+from .qmath import exponentiation_by_squaring
 
 
 def _fockstate_add(self, other):
