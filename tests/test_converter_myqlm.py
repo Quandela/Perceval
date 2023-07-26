@@ -41,6 +41,8 @@ from perceval.converters import MyQLMConverter
 import perceval.components.unitary_components as comp
 from perceval.components import catalog
 from perceval.algorithm import Analyzer, Sampler
+from perceval.utils.stategenerator import StateGenerator
+from perceval.utils import Encoding
 
 
 def test_basic_circuit_h():
@@ -223,9 +225,13 @@ def test_converter_ghz_state():
     pc.with_input(pcvl.LogicalState([0, 0, 0]))
     sampler = Sampler(pc)
     output_distribution = sampler.probs()["results"]
-    print(output_distribution)
-    pcvl.pdisplay(output_distribution, precision=1e-2, max_v=4)
+    assert sum(list(output_distribution.values())) == 1
 
+
+    pcvl.pdisplay(output_distribution)
+
+    # trying to see if i can compare actual results
+    print(output_distribution)
     # Create a job
     pylinalgqpu = PyLinalg()
     job = myqlmc.to_job()
@@ -234,7 +240,13 @@ def test_converter_ghz_state():
     # Iterate over the final state vector to get all final components
     for sample in result:
         print("State %s amplitude %s" % (sample.state, sample.amplitude))
-        print(type(sample.state.bitstring), list(sample.state.bitstring))
+
+        myqlm_logical_state_list = (list(sample.state.bitstring))  # obtained in string format
+        logical_state = [int(i) for i in myqlm_logical_state_list]  # pcvl needs int/float
+        print("myqlm output state in list", (logical_state))
+        sg = StateGenerator(encoding=Encoding.DUAL_RAIL)
+        sv_logical = sg.logical_state(logical_state)  # statevector
+        print("myqlm list turned to logical state", sv_logical)
 
 
 def test_converter_noon_state():

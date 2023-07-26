@@ -74,9 +74,11 @@ class MyQLMConverter:
         p = Processor(self._backend_name, n_moi, self._source)
 
         for i in range(qlmc.nbqbits):
-            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find if we really need qubit name!
+            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find how myqlm names the qubits
             # Qbits are of this type : qat.lang.AQASM.bits.QRegister but this class does not have "name" attribute
             # class qat.lang.AQASM.bits.QRegister(offset, length=1, scope=None, qbits_list=None)
+            # display shows different things - a capital "Q" and in one case "cbit" or "qbit"
+            # https://notebooks.gesis.org/binder/jupyter/user/myqlm-myqlm-notebooks-gb48yzjd/notebooks/tutorials/lang/py_aqasm.ipynb
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
 
@@ -88,7 +90,7 @@ class MyQLMConverter:
 
             # only gates are converted -> checking if instruction is in gate_set of AQASM
             # in addition to known gates, there is "LOCK3 and "RELEASE" ->
-            # todo: find out about lock and release
+            # todo: find out about lock and release - THEY ARE NOT GATES, idk what they are :(
             assert instruction_name in qlmc.gate_set, "cannot convert (%s)" % instruction_name
 
             if len(instruction_qbit) == 1:
