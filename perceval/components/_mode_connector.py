@@ -52,12 +52,17 @@ class InvalidMappingException(Exception):
 
 class ModeConnector:
     """
-    Resolves a mapping supporting multiple syntaxes in order to connect two objects.
+    Resolves a mapping, supporting multiple syntaxes, to connect two objects.
     The left object must be a Processor
     The right object can be a Processor, a (unitary or non-unitary) component
     """
 
     def __init__(self, left_processor, right_obj, mapping):
+        """
+        :param left_processor: any abstract processor on which to plug `right_obj`
+        :param right_obj: the component or processor to plug on the left of `left_processor`
+        :param mapping: the user mapping defining the plugging rules (see resolve method doc for more info)
+        """
         self._lp = left_processor
         self._ro = right_obj  # Can either be a component or a processor
         self._r_is_component = isinstance(right_obj, AComponent)  # False means it is a Processor
@@ -86,11 +91,13 @@ class ModeConnector:
         r_list = list(range(self._ro.circuit_size))
         return [x for x in r_list if x not in self._ro.heralds.keys()]
 
-    def resolve(self):
+    def resolve(self) -> Dict[int, int]:
         """
-        Resolves mode mapping and checks if the mapping is consistent.
+        Resolves mode mapping (self._map) and checks if it is consistent.
 
-        :param mapping: can be an integer, a list or a dictionnary.
+        :return: the resolved mapping containing mode indexes
+
+        self._map can be an integer, a list or a dictionnary.
          Case int:
             Creates a dictionnary { mapping: 0, mapping+1: 1, ..., mapping+n: n }
          Case list:
@@ -117,7 +124,7 @@ class ModeConnector:
             return self._map
 
         # Handle list input case
-        if isinstance(self._map, list):
+        if isinstance(self._map, list) or isinstance(self._map, tuple):
             map_keys = self._map
             map_values = self._get_ordered_rmodes()
             if len(map_keys) != len(map_values):
