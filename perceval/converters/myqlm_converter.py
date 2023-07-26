@@ -66,10 +66,7 @@ class MyQLMConverter:
         # this nested import fixes automatic class reference generation
 
         # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
-        n_cnot = 0
-        for instruction in qlmc.iterate_simple():
-            if instruction[0] == "CNOT":
-                n_cnot += 1
+        n_cnot = qlmc.count("CNOT")
         cnot_idx = 0
 
         n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
