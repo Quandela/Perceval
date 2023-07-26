@@ -245,6 +245,7 @@ class AProcessor(ABC):
     def _validate_postselect_composition(self, mode_mapping: Dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
             impacted_modes = list(mode_mapping.keys())
+            # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
             assert self._postselect.can_compose_with(impacted_modes),\
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
@@ -252,8 +253,8 @@ class AProcessor(ABC):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
-        assert self._postselect is None or processor._postselect is None, \
-            "Cannot automatically compose two processors with post-selection conditions"
+        if not (self._postselect is None or processor._postselect is None):
+            raise RuntimeError("Cannot automatically compose two processors with post-selection conditions")
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new processor
@@ -366,7 +367,8 @@ class AProcessor(ABC):
         Creates a linear circuit from internal components, if all internal components are unitary.
         :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
         """
-        assert self._is_unitary, "Cannot retrieve a linear circuit because some components are non-unitary"
+        if not self._is_unitary:
+            raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
         for component in self._components:
             circuit.add(component[0], component[1], merge=flatten)
