@@ -90,8 +90,8 @@ class MyQLMConverter:
             # tuple ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
 
             # only gates are converted -> checking if instruction is in gate_set of AQASM
-            # in addition to known gates, there is "LOCK3 and "RELEASE3 -> todo: find out what they are
-            # todo: find how does this affect AbstractGates
+            # in addition to known gates, there is "LOCK3 and "RELEASE" ->
+            # todo: find out about lock and release
             assert instruction_name in qlmc.gate_set, "cannot convert (%s)" % instruction_name
 
             if len(instruction_qbit) == 1:
@@ -110,9 +110,9 @@ class MyQLMConverter:
                 # only 2 qubit gates
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
-                c_first = min(c_idx, c_data)  # used in SWAP, not implemented yet
+                c_first = min(c_idx, c_data)  # used in SWAP, not implemented yet todo: implement
 
-                if instruction_name == "CNOT":  # todo: check matrix for CNOT before and after verify modes are good
+                if instruction_name == "CNOT":
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
                         cnot_processor = self._postprocessed_cnot_builder.build()

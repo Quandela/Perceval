@@ -58,6 +58,10 @@ def test_basic_circuit_h():
     c0 = c._components[0][1]._components[0][1]
     assert isinstance(c0, comp.BS)
 
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+
 
 def test_cnot_1_heralded():
     convertor = MyQLMConverter(catalog)
@@ -68,17 +72,10 @@ def test_cnot_1_heralded():
 
     pc = convertor.convert(myqlmc, use_postselection=False)
     c = pc.linear_circuit()
-    print('unitary')
-    import perceval as pcvl
-    pcvl.pdisplay(c.compute_unitary())
-
-    gate_id = myqlmc.ops[0].gate
-    gate_matrix = myqlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-    gate_u = MyQLMConverter._myqlm_gate_unitary(gate_matrix)
-    print(gate_u)
 
     assert pc.circuit_size == 8
     assert pc.m == 4
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
 
 
 def test_cnot_H():
@@ -92,6 +89,24 @@ def test_cnot_H():
     pc = convertor.convert(myqlmc, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+
+
+def test_cnot_1_postprocessed():
+    convertor = MyQLMConverter(catalog)
+    qprog = Program()
+    qbits = qprog.qalloc(2)  # AllocateS 2 qbits
+    qprog.apply(H, qbits[0])
+    qprog.apply(CNOT, qbits[0], qbits[1])
+    myqlmc = qprog.to_circ()
+
+    pc = convertor.convert(myqlmc, use_postselection=True)
+    assert pc.circuit_size == 6
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
+    assert len(pc._components) == 2  # No permutation needed, only H and CNOT components exist in the Processor
+    # should be BS//CNOT
+    bsd_out = pc.probs()['results']
+    assert len(bsd_out) == 2
 
 
 def test_cz_heralded():
@@ -104,17 +119,33 @@ def test_cz_heralded():
     pc = convertor.convert(myqlmc)
     assert pc.circuit_size == 6  # 2 heralded modes for CZ
     assert pc.m == 4
+    bsd_out = pc.probs()['results']
+    assert len(bsd_out) == 1
 
 
 def test_phase_shifter():
+    # todo: fix U, mode verification
     convertor = MyQLMConverter(catalog)
     qprog = Program()
     qbits = qprog.qalloc(1)
-    qprog.apply(PH(np.pi/2), qbits[0])  # PH -> phase shifter
+    qprog.apply(PH(np.pi/3), qbits[0])  # PH -> phase shifter
     myqlmc = qprog.to_circ()
 
     pc = convertor.convert(myqlmc)
     assert pc.m == 2
+    gate_id = myqlmc.ops[0].gate
+    gate_matrix = myqlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
+
+    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_gate_u = myqlm_converter._myqlm_gate_unitary(gate_matrix)
+
+    pcvl_proc = myqlm_converter.convert(myqlmc, use_postselection=False)
+    c = pcvl_proc.linear_circuit()
+    cm = c.compute_unitary()
+    diff = np.absolute(np.array(cm) - myqlm_gate_u)
+    print('myqlm \n', myqlm_gate_u)
+    print('pcvl \n', cm)
+    print("diff \n", diff)
 
 
 @pytest.mark.parametrize('Gate_Name', [H, X, Y, Z, S, T, RX, RY, RZ])
@@ -140,11 +171,10 @@ def test_compare_u_1qbit(Gate_Name):
     cm = c.compute_unitary()
     diff = np.absolute(np.array(cm) - myqlm_gate_u)
 
-    assert np.all(diff < 1e-4)  # todo: precision depends on optimize in converter
+    assert np.all(diff < 1e-4)  # precision depends on that of optimize in converter min_precision_gate set to 1e-4
 
 
 def test_abstract_1qbit_gate():
-
     # Generator method
     def Abs_Gate_generator(phi, theta):
         _I = np.eye(2, dtype=np.complex128)
@@ -172,11 +202,12 @@ def test_abstract_1qbit_gate():
     cm = c.compute_unitary()
     diff = np.absolute(np.array(cm) - myqlm_gate_u)
 
-    assert np.all(diff < 1e-4)  # todo: precision depends on optimize in converter
+    assert np.all(diff < 1e-4)  # precision depends on that of optimize in converter min_precision_gate set to 1e-4
     assert c.m == 2 * len(qbits)
 
 
 def test_converter_ghz_state():
+    # todo : comparison of state to logical in results - remove display and add assertions
     convertor = MyQLMConverter(catalog, backend_name="Naive")
     qprog = Program()
     qbits = qprog.qalloc(3)
@@ -206,9 +237,9 @@ def test_converter_ghz_state():
         print(type(sample.state.bitstring), list(sample.state.bitstring))
 
 
-
 def test_converter_noon_state():
-    convertor = MyQLMConverter(catalog, backend_name="Naive")
+    # todo: decide if we need it, ghz confirms they are working - this is slower even with SLOS
+    convertor = MyQLMConverter(catalog, backend_name="SLOS")
     qprog = Program()
     qbits = qprog.qalloc(4)
     qprog.apply(H, qbits[0])
