@@ -31,8 +31,8 @@ import pytest
 import numpy as np
 
 try:
-    from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, CNOT, CSIGN, AbstractGate
-    from qat.qpus import PyLinalg
+    from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, SWAP, CNOT, CSIGN, AbstractGate
+    from qat.core.circuit_builder.matrix_util import circ_to_np
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
@@ -125,38 +125,30 @@ def test_cz_heralded():
     assert len(bsd_out) == 1
 
 
-def test_phase_shifter():
-    # todo: fix U, mode verification
+def test_basic_circuit_swap():
     convertor = MyQLMConverter(catalog)
     qprog = Program()
-    qbits = qprog.qalloc(1)
-    qprog.apply(PH(np.pi/3), qbits[0])  # PH -> phase shifter
+    qbits = qprog.qalloc(2)
+    qprog.apply(SWAP, qbits[0], qbits[1])
     myqlmc = qprog.to_circ()
 
     pc = convertor.convert(myqlmc)
-    assert pc.m == 2
-    gate_id = myqlmc.ops[0].gate
-    gate_matrix = myqlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-
-    myqlm_converter = MyQLMConverter(catalog)
-    myqlm_gate_u = myqlm_converter._myqlm_gate_unitary(gate_matrix)
-
-    pcvl_proc = myqlm_converter.convert(myqlmc, use_postselection=False)
-    c = pcvl_proc.linear_circuit()
-    cm = c.compute_unitary()
-    diff = np.absolute(np.array(cm) - myqlm_gate_u)
-    print('myqlm \n', myqlm_gate_u)
-    print('pcvl \n', cm)
-    print("diff \n", diff)
+    assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
+    assert len(pc._components) == 1
+    r0, c0 = pc._components[0]
+    assert r0 == [0, 1, 2, 3]
+    assert isinstance(c0, comp.PERM)
+    assert c0.perm_vector == [2, 3, 0, 1]
 
 
-@pytest.mark.parametrize('Gate_Name', [H, X, Y, Z, S, T, RX, RY, RZ])
+
+@pytest.mark.parametrize('Gate_Name', [H, PH, X, Y, Z, S, T, RX, RY, RZ])
 def test_compare_u_1qbit(Gate_Name):
-    # todo: I and PH not working
+    # todo: I not working because our method to create 1qbit gate from u return None in this case
     qprog = Program()
     qbits = qprog.qalloc(1)
 
-    if Gate_Name in ([RX, RY, RZ]):
+    if Gate_Name in ([PH, RX, RY, RZ]):
         qprog.apply(Gate_Name(np.pi/2), qbits[0])
     else:
         qprog.apply(Gate_Name, qbits[0])
@@ -166,7 +158,7 @@ def test_compare_u_1qbit(Gate_Name):
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
     myqlm_converter = MyQLMConverter(catalog)
-    myqlm_gate_u = myqlm_converter._myqlm_gate_unitary(gate_matrix)
+    myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
     c = pcvl_proc.linear_circuit()
@@ -197,7 +189,7 @@ def test_abstract_1qbit_gate():
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
     myqlm_converter = MyQLMConverter(catalog)
-    myqlm_gate_u = myqlm_converter._myqlm_gate_unitary(gate_matrix)
+    myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
     c = pcvl_proc.linear_circuit()
@@ -209,7 +201,8 @@ def test_abstract_1qbit_gate():
 
 
 def test_converter_ghz_state():
-    # todo : comparison of state to logical in results - remove display and add assertions
+    # output distribution being displayed to verify computation from converted circuit in perceval
+    #  todo : work on a better assertion than display
     convertor = MyQLMConverter(catalog, backend_name="Naive")
     qprog = Program()
     qbits = qprog.qalloc(3)
@@ -226,31 +219,11 @@ def test_converter_ghz_state():
     sampler = Sampler(pc)
     output_distribution = sampler.probs()["results"]
     assert sum(list(output_distribution.values())) == 1
-
-
     pcvl.pdisplay(output_distribution)
 
-    # trying to see if i can compare actual results
-    print(output_distribution)
-    # Create a job
-    pylinalgqpu = PyLinalg()
-    job = myqlmc.to_job()
-    result = pylinalgqpu.submit(job)  # Submit the job to the QPU
 
-    # Iterate over the final state vector to get all final components
-    for sample in result:
-        print("State %s amplitude %s" % (sample.state, sample.amplitude))
-
-        myqlm_logical_state_list = (list(sample.state.bitstring))  # obtained in string format
-        logical_state = [int(i) for i in myqlm_logical_state_list]  # pcvl needs int/float
-        print("myqlm output state in list", (logical_state))
-        sg = StateGenerator(encoding=Encoding.DUAL_RAIL)
-        sv_logical = sg.logical_state(logical_state)  # statevector
-        print("myqlm list turned to logical state", sv_logical)
-
-
+@pytest.mark.skip(reason="Only for Dev, takes long for computation and displays truth table")
 def test_converter_noon_state():
-    # todo: decide if we need it, ghz confirms they are working - this is slower even with SLOS
     convertor = MyQLMConverter(catalog, backend_name="SLOS")
     qprog = Program()
     qbits = qprog.qalloc(4)
@@ -266,6 +239,6 @@ def test_converter_noon_state():
     pc.with_input(pcvl.LogicalState([0, 0, 0, 0]))
 
     sampler = Sampler(pc)
-
+    assert pc.m == 2 * len(qbits)
     output_distribution = sampler.probs()["results"]
     pcvl.pdisplay(output_distribution, precision=1e-2, max_v=4)

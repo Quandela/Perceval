@@ -63,6 +63,7 @@ class MyQLMConverter:
         :return: the converted Processor
         """
         import qat
+        from qat.core.circuit_builder.matrix_util import circ_to_np
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
@@ -96,8 +97,8 @@ class MyQLMConverter:
                     ins = Circuit(2, name='PS') // (1, PS(phi))  # apply phase shift on 2nd mode
                 else:
                     gate_id = qlmc.ops[i].gate
-                    gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
-                    gate_u = self._myqlm_gate_unitary(gate_matrix)  # U of gate given by current instruction_name
+                    gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data
+                    gate_u = circ_to_np(gate_matrix)  # gate matrix to numpy
                     ins = self._create_one_qubit_gate(gate_u)
                 p.add(instruction_qbit[0]*2, ins.copy())
             else:
@@ -127,17 +128,6 @@ class MyQLMConverter:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
         p.with_input(default_input_state)
         return p
-
-    @staticmethod
-    def _myqlm_gate_unitary(gate_matrix):
-        """
-        Takes in GateDefinition Matrix -> as in myQLM and converts it into a numpy array of shape (nRows, nCols)
-        """
-        gate_u_list = []
-        for val in gate_matrix.data:
-            gate_u_list.append(val.re + 1j * val.im)
-        u = np.array(gate_u_list).reshape(gate_matrix.nRows, gate_matrix.nCols)
-        return u
 
     def _create_one_qubit_gate(self, u):
         # universal method, takes in unitary and approximates one using
