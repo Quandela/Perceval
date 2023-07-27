@@ -137,7 +137,7 @@ class MyQLMConverter:
             # limited numeric precision
             if abs(u[0, 0] - 1) < min_precision_gate:
                 if abs(u[1, 1] - 1) < min_precision_gate:
-                    return None
+                    return Circuit(2, name="I")  # returns Identity/empty circuit
                 ins = self._upper_phase_component.copy()
             else:
                 if abs(u[1, 1] - 1) < min_precision_gate:

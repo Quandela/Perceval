@@ -141,10 +141,8 @@ def test_basic_circuit_swap():
     assert c0.perm_vector == [2, 3, 0, 1]
 
 
-
-@pytest.mark.parametrize('Gate_Name', [H, PH, X, Y, Z, S, T, RX, RY, RZ])
+@pytest.mark.parametrize('Gate_Name', [H, PH, I, X, Y, Z, S, T, RX, RY, RZ])
 def test_compare_u_1qbit(Gate_Name):
-    # todo: I not working because our method to create 1qbit gate from u return None in this case
     qprog = Program()
     qbits = qprog.qalloc(1)
 
