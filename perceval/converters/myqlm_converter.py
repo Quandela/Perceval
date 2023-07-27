@@ -54,7 +54,7 @@ class MyQLMConverter:
         self._two_phase_component = Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2")))
 
     def convert(self, qlmc, use_postselection: bool = True) -> Processor:
-        r"""Convert a myQLM quantum circuit into a `Circuit`.
+        r"""Convert a myQLM quantum circuit into a perceval `Processor`.
 
         :param qlmc: quantum gate-based myqlm circuit
         :type qlmc: qat.core.Circuit
@@ -62,7 +62,8 @@ class MyQLMConverter:
             `heralded CNOT`
         :return: the converted Processor
         """
-        import qat  # importing the quantum toolbox of myqlm
+        import qat
+        # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
         # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
@@ -74,11 +75,7 @@ class MyQLMConverter:
         p = Processor(self._backend_name, n_moi, self._source)
 
         for i in range(qlmc.nbqbits):
-            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{"q"}{i}'))  # todo: find how myqlm names the qubits
-            # Qbits are of this type : qat.lang.AQASM.bits.QRegister but this class does not have "name" attribute
-            # class qat.lang.AQASM.bits.QRegister(offset, length=1, scope=None, qbits_list=None)
-            # display shows different things - a capital "Q" and in one case "cbit" or "qbit"
-            # https://notebooks.gesis.org/binder/jupyter/user/myqlm-myqlm-notebooks-gb48yzjd/notebooks/tutorials/lang/py_aqasm.ipynb
+            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'Q{i}'))
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
 
@@ -88,17 +85,15 @@ class MyQLMConverter:
             # information carried by instruction
             # tuple ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
 
-            # only gates are converted -> checking if instruction is in gate_set of AQASM
-            # in addition to known gates, there is "LOCK3 and "RELEASE" ->
-            # todo: find out about lock and release - THEY ARE NOT GATES, idk what they are :(
             assert instruction_name in qlmc.gate_set, "cannot convert (%s)" % instruction_name
+            # only gates are converted -> checking if instruction is in gate_set of AQASM
 
             if len(instruction_qbit) == 1:
                 if instruction_name == "H":
                     ins = Circuit(2, name='H') // BS.H()
                 elif instruction_name == "PH":
                     phi = instruction[1][0]  # value of the variable parameter in gate
-                    ins = Circuit(2, name='PS') // PS(phi)
+                    ins = Circuit(2, name='PS') // (1, PS(phi))  # apply phase shift on 2nd mode
                 else:
                     gate_id = qlmc.ops[i].gate
                     gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data from myQLM
@@ -109,7 +104,7 @@ class MyQLMConverter:
                 # only 2 qubit gates
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
-                c_first = min(c_idx, c_data)  # used in SWAP, not implemented yet todo: implement
+                c_first = min(c_idx, c_data)  # used in SWAP
 
                 if instruction_name == "CNOT":
                     cnot_idx += 1
@@ -121,9 +116,13 @@ class MyQLMConverter:
                         mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cnot_processor)
                 elif instruction_name == "CSIGN":
+                    # Controlled Z in myqlm is named CSIGN
                     cz_processor = self._heralded_cz_builder.build()
                     mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cz_processor)
+                elif instruction_name == "SWAP":
+                    # c_idx and c_data are consecutive - not necessarily ordered
+                    p.add(c_first, comp.PERM([2, 3, 0, 1]))
                 else:
                     raise RuntimeError("Gate not yet supported: %s" % instruction_name)
         p.with_input(default_input_state)
