@@ -36,13 +36,11 @@ try:
 except ModuleNotFoundError as e:
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
-from perceval import BasicState, StateVector, Circuit
+from perceval import BasicState, StateVector
 from perceval.converters import MyQLMConverter
 import perceval.components.unitary_components as comp
 from perceval.components import catalog
-from perceval.algorithm import Analyzer, Sampler
-from perceval.utils.stategenerator import StateGenerator
-from perceval.utils import Encoding
+from perceval.algorithm import Sampler
 
 
 def test_basic_circuit_h():
@@ -200,7 +198,6 @@ def test_abstract_1qbit_gate():
 
 def test_converter_ghz_state():
     # output distribution being displayed to verify computation from converted circuit in perceval
-    #  todo : work on a better assertion than display
     convertor = MyQLMConverter(catalog, backend_name="Naive")
     qprog = Program()
     qbits = qprog.qalloc(3)
@@ -216,8 +213,12 @@ def test_converter_ghz_state():
     pc.with_input(pcvl.LogicalState([0, 0, 0]))
     sampler = Sampler(pc)
     output_distribution = sampler.probs()["results"]
+    # GHZ state distribution is expected ( # precision is a bit off because of heralded CNOT implementation)
+    logical000 = BasicState('|1,0,1,0,1,0>')
+    logical111 = BasicState('|0,1,0,1,0,1>')
+    assert output_distribution[logical000] == pytest.approx(0.5, abs=1e-3)
+    assert output_distribution[logical111] == pytest.approx(0.5, abs=1e-3)
     assert sum(list(output_distribution.values())) == 1
-    pcvl.pdisplay(output_distribution)
 
 
 @pytest.mark.skip(reason="Only for Dev, takes long for computation and displays truth table")
