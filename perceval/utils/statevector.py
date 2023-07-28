@@ -54,43 +54,6 @@ def _fockstate_add(self, other):
 def _fockstate_sub(self, other):
     return StateVector(self) - other
 
-def _fockstate_pow(self, power: int):
-    if power < 0:
-        raise ValueError("Power value must be positive")
-    if power == 0:
-        return BasicState("|>")
-    return exponentiation_by_squaring(self, power)
-
-
-def _fockstate_partition(self, distribution_photons: List[int]):
-    r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
-
-    :param distribution_photons:
-    :return:
-    """
-    def _partition(one_list: list, distribution: list, current: list, all_res: list):
-        if len(distribution) == 0:
-            all_res.append(copy(current))
-            return
-        for one_subset in itertools.combinations(one_list, distribution[0]):
-            current.append(one_subset)
-            _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
-            current.pop()
-
-    all_photons = list(range(self.n))
-    partitions_idx = []
-    _partition(all_photons, distribution_photons, [], partitions_idx)
-    partitions_states = set()
-    for partition in partitions_idx:
-        o_state = []
-        for a_subset in partition:
-            state = [0] * self.m
-            for photon_id in a_subset:
-                state[self.photon2mode(photon_id)] += 1
-            o_state.append(BasicState(state))
-        partitions_states.add(tuple(o_state))
-    return list(partitions_states)
-
 
 # Define BasicState as exqalibur FockState + redefine some methods
 BasicState = FockState
