@@ -82,15 +82,15 @@ def test_helloword():
                            "*"  # all possible output states that can be generated with 1 or 2 photons
                            )
 
-        b11 = BasicState("|1,1>")
         b01 = BasicState("|0,1>")
         b10 = BasicState("|1,0>")
         b20 = BasicState("|2,0>")
+        b11 = BasicState("|1,1>")
         b02 = BasicState("|0,2>")
 
         # test if the input & output states are the same
         input_states = [b01, b11, b10]
-        output_states = [b11, b01, b20, b10, b02]
+        output_states = [b01, b10, b20, b11, b02]
 
         assert Counter(ca.input_states_list) == Counter(input_states)
         assert Counter(ca.output_states_list) == Counter(output_states)
@@ -104,8 +104,8 @@ def test_helloword():
         # | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
         # +-------+-------+-------+-------+-------+-------+
 
-        input_states_dict = {BasicState(elem): i for i, elem in enumerate(ca.input_states_list)}
-        output_states_dict = {BasicState(elem): i for i, elem in enumerate(ca.output_states_list)}
+        input_states_dict = {elem: i for i, elem in enumerate(ca.input_states_list)}
+        output_states_dict = {elem: i for i, elem in enumerate(ca.output_states_list)}
 
         assert ca.distribution[input_states_dict[b01]][output_states_dict[b01]] == pytest.approx(1 / 2)
         assert ca.distribution[input_states_dict[b01]][output_states_dict[b10]] == pytest.approx(1 / 2)
