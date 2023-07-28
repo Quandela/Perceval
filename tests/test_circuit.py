@@ -29,6 +29,7 @@
 
 import pytest
 from pathlib import Path
+from collections import Counter
 
 from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
@@ -80,15 +81,49 @@ def test_helloword():
                            [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
                            "*"  # all possible output states that can be generated with 1 or 2 photons
                            )
-        assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
-            +-------+-------+-------+-------+-------+-------+
-            |       | |0,1> | |1,0> | |2,0> | |1,1> | |0,2> |
-            +-------+-------+-------+-------+-------+-------+
-            | |0,1> |  1/2  |  1/2  |   0   |   0   |   0   |
-            | |1,0> |  1/2  |  1/2  |   0   |   0   |   0   |
-            | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
-            +-------+-------+-------+-------+-------+-------+
-        """)
+
+        b11 = BasicState("|1,1>")
+        b01 = BasicState("|0,1>")
+        b10 = BasicState("|1,0>")
+        b20 = BasicState("|2,0>")
+        b02 = BasicState("|0,2>")
+
+        # test if the input & output states are the same
+        input_states = [b01, b11, b10]
+        output_states = [b11, b01, b20, b10, b02]
+
+        assert Counter(ca.input_states_list) == Counter(input_states)
+        assert Counter(ca.output_states_list) == Counter(output_states)
+
+        # test if it's this distribution:
+        # +-------+-------+-------+-------+-------+-------+
+        # |       | |0,1> | |1,0> | |2,0> | |1,1> | |0,2> |
+        # +-------+-------+-------+-------+-------+-------+
+        # | |0,1> |  1/2  |  1/2  |   0   |   0   |   0   |
+        # | |1,0> |  1/2  |  1/2  |   0   |   0   |   0   |
+        # | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
+        # +-------+-------+-------+-------+-------+-------+
+
+        input_states_dict = {BasicState(elem): i for i, elem in enumerate(ca.input_states_list)}
+        output_states_dict = {BasicState(elem): i for i, elem in enumerate(ca.output_states_list)}
+
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b01]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b10]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b20]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b11]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b02]] == pytest.approx(0)
+
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b01]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b10]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b20]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b11]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b02]] == pytest.approx(0)
+
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b01]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b10]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b20]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b11]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b02]] == pytest.approx(1 / 2)
 
 
 def test_empty_circuit():
