@@ -34,18 +34,15 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
-import itertools
 from multipledispatch import dispatch
 from typing import Dict, List, Union, Tuple, Optional
-from deprecated import deprecated
+import sympy as sp
+import numpy as np
 
 from .format import simple_complex
 from .globals import global_params
-import numpy as np
-import sympy as sp
-
-from exqalibur import FockState, FSArray
 from .qmath import exponentiation_by_squaring
+from exqalibur import FockState, FSArray
 
 
 def _fockstate_add(self, other):
@@ -79,15 +76,6 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
             output_array = FSArray(m, n)
         for output_state in output_array:
             yield BasicState(output_state)
-
-
-class AnnotatedBasicState(FockState):
-    r"""Deprecated in version 0.7.0. Use BasicState instead.
-    """
-
-    @deprecated(version="0.7", reason="use BasicState instead")
-    def __init__(self, *args, **kwargs):
-        super(AnnotatedBasicState, self).__init__(*args, **kwargs)
 
 
 class StateVector(defaultdict):
