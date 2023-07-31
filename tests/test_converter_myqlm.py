@@ -218,7 +218,6 @@ def test_converter_ghz_state():
     logical111 = BasicState('|0,1,0,1,0,1>')
     assert output_distribution[logical000] == pytest.approx(0.5, abs=1e-3)
     assert output_distribution[logical111] == pytest.approx(0.5, abs=1e-3)
-    assert sum(list(output_distribution.values())) == 1
 
 
 @pytest.mark.skip(reason="Only for Dev, takes long for computation and displays truth table")

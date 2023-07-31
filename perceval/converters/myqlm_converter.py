@@ -32,15 +32,21 @@ from perceval.utils import P, BasicState, Encoding
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
-import numpy as np
 
 
-min_precision_gate = 1e-4
+MIN_PRECISION_GATE = 1e-4
+
+
+def _create_mode_map(c_idx: int, c_data: int) -> dict:
+    return {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
 
 
 class MyQLMConverter:
     r"""myQLM quantum circuit to perceval circuit converter.
+
     :param catalog: component library of perceval
+    :param backend_name: Backend to use in computation, defaults to SLOS
+    :param source: Defines the parameters of the source, defaults to an ideal one.
     """
     def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
         self._source = source
@@ -67,10 +73,6 @@ class MyQLMConverter:
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
-        n_cnot = qlmc.count("CNOT")
-        cnot_idx = 0
-
         n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
         p = Processor(self._backend_name, n_moi, self._source)
@@ -80,13 +82,19 @@ class MyQLMConverter:
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
 
+        # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
+        n_cnot = qlmc.count("CNOT")
+        cnot_idx = 0
+
         for i, instruction in enumerate(qlmc.iterate_simple()):
+            # qlmc.iterate_simple() is a tuple containing
+            # ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
+
             instruction_name = instruction[0]  # name of the Gate
             instruction_qbit = instruction[-1]  # tuple with list of qbit positions
-            # information carried by instruction
-            # tuple ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
 
-            assert instruction_name in qlmc.gate_set, "cannot convert (%s)" % instruction_name
+            if instruction_name not in qlmc.gate_set:
+                raise ValueError(f"cannot convert {instruction_name} - Not a Gate")
             # only gates are converted -> checking if instruction is in gate_set of AQASM
 
             if len(instruction_qbit) == 1:
@@ -111,36 +119,33 @@ class MyQLMConverter:
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
                         cnot_processor = self._postprocessed_cnot_builder.build()
-                        mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     else:
                         cnot_processor = self._heralded_cnot_builder.build()
-                        mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
-                    p.add(mode_map, cnot_processor)
+                    p.add(_create_mode_map(c_idx, c_data), cnot_processor)
                 elif instruction_name == "CSIGN":
                     # Controlled Z in myqlm is named CSIGN
                     cz_processor = self._heralded_cz_builder.build()
-                    mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
-                    p.add(mode_map, cz_processor)
+                    p.add(_create_mode_map(c_idx, c_data), cz_processor)
                 elif instruction_name == "SWAP":
                     # c_idx and c_data are consecutive - not necessarily ordered
                     p.add(c_first, comp.PERM([2, 3, 0, 1]))
                 else:
-                    raise RuntimeError("Gate not yet supported: %s" % instruction_name)
+                    raise RuntimeError(f"Gate not yet supported: {instruction_name}")
         p.with_input(default_input_state)
         return p
 
-    def _create_one_qubit_gate(self, u):
+    def _create_one_qubit_gate(self, u) -> Circuit:
         # universal method, takes in unitary and approximates one using
         # Frobenius method
-        if abs(u[1, 0]) + abs(u[0, 1]) < 2 * min_precision_gate:
+        if abs(u[1, 0]) + abs(u[0, 1]) < 2 * MIN_PRECISION_GATE:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
-            if abs(u[0, 0] - 1) < min_precision_gate:
-                if abs(u[1, 1] - 1) < min_precision_gate:
+            if abs(u[0, 0] - 1) < MIN_PRECISION_GATE:
+                if abs(u[1, 1] - 1) < MIN_PRECISION_GATE:
                     return Circuit(2, name="I")  # returns Identity/empty circuit
                 ins = self._upper_phase_component.copy()
             else:
-                if abs(u[1, 1] - 1) < min_precision_gate:
+                if abs(u[1, 1] - 1) < MIN_PRECISION_GATE:
                     ins = self._lower_phase_component.copy()
                 else:
                     ins = self._two_phase_component.copy()
