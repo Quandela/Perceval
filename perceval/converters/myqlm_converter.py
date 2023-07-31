@@ -98,6 +98,7 @@ class MyQLMConverter:
             # only gates are converted -> checking if instruction is in gate_set of AQASM
 
             if len(instruction_qbit) == 1:
+                ins = None
                 if instruction_name == "H":
                     ins = Circuit(2, name='H') // BS.H()
                 elif instruction_name == "PH":
@@ -137,6 +138,7 @@ class MyQLMConverter:
     def _create_one_qubit_gate(self, u) -> Circuit:
         # universal method, takes in unitary and approximates one using
         # Frobenius method
+
         if abs(u[1, 0]) + abs(u[0, 1]) < 2 * MIN_PRECISION_GATE:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
