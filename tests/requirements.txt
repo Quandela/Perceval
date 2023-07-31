@@ -2,3 +2,6 @@ pytest
 pytest-cov
 pytest-benchmark
 flake8
+qiskit
+myqlm
+qutip
