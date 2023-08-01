@@ -27,24 +27,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import exqalibur as xq
-import numpy as np
 
-for m in range(6, 25):
-    for n in range(1, 13):
-        fsa = xq.FSArray(m, n)
+def exponentiation_by_squaring(base, power: int):
+    """Calculate the result of base^power i.e. base**power using exponentiation by squaring (or square-and-multiply)
 
-        allop = 0
-        count = 0
-        worst = 0
-        best = None
-        for fs in fsa:
-            nop = np.prod([s+1 for s in fs if s])
-            if nop > worst:
-                worst = nop
-            if best is None or nop < best:
-                best = nop
-            allop += nop
-            count += 1
+    Args:
+        :param base: the element to exponentiate
+        :param power: *strictly positive* integer power
+        :param result: the initialisation of the result
+    """
+    if power < 1:
+        raise ValueError("Power value must be strictly positive")
 
-        print("m=", m, "n=", n, "Mn=", count, "best=", best, "worst=", worst, "avg=", allop/count, "ref=", n*2**n)
+    if isinstance(base, int):
+        temp_base = base
+        result = base
+    else:
+        temp_base = base.__copy__()
+        result = base.__copy__()
+
+    power -= 1
+
+    while power > 0:
+        # If power is odd
+        if power % 2 == 1:
+            result = result * temp_base
+
+        # Divide the power by 2
+        power = power // 2
+        # Multiply base to itself
+        temp_base = temp_base * temp_base
+
+    return result
