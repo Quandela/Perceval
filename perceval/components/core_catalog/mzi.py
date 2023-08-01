@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from perceval.components import Processor, Circuit, BS, PS
 from perceval.components.component_catalog import CatalogItem
 
@@ -35,6 +35,14 @@ import numpy as np
 
 
 class AMZI(CatalogItem, ABC):
+    description = "Mach-Zehnder interferometer"
+    params_doc = {
+        'phi_a': "first phase of the MZI (default 'phi_a')",
+        'phi_b': "second phase of the MZI (default 'phi_b')",
+        'theta_a': "theta value of the first beam splitter (default pi/2)",
+        'theta_b': "theta value of the second beam splitter (default pi/2)",
+    }
+
     @staticmethod
     def _handle_params(**kwargs):
         if "i" in kwargs:
@@ -52,9 +60,20 @@ class AMZI(CatalogItem, ABC):
         return self.build_circuit(i=i)
 
 
+_NAME_MZI_PHASE_FIRST = "mzi phase first"
+_NAME_MZI_PHASE_LAST = "mzi phase last"
+
+
 class MZIPhaseFirst(AMZI):
+    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
+0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
+    ╰─────╯│     │╰─────╯│     │
+1:─────────┤     ├───────┤     ├──:1
+           ╰─────╯       ╰─────╯ """
+    see_also = _NAME_MZI_PHASE_LAST
+
     def __init__(self):
-        super().__init__("mzi phase first")
+        super().__init__(_NAME_MZI_PHASE_FIRST)
 
     def build_circuit(self, **kwargs) -> Circuit:
         phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
@@ -63,8 +82,16 @@ class MZIPhaseFirst(AMZI):
 
 
 class MZIPhaseLast(AMZI):
+    str_repr = r"""    ╭─────╮       ╭─────╮
+0:──┤BS.Rx├───────┤BS.Rx├─────────:0
+    │     │╭─────╮│     │╭─────╮
+1:──┤     ├┤phi_a├┤     ├┤phi_b├──:1
+    ╰─────╯╰─────╯╰─────╯╰─────╯
+    """
+    see_also = _NAME_MZI_PHASE_FIRST
+
     def __init__(self):
-        super().__init__("mzi phase last")
+        super().__init__(_NAME_MZI_PHASE_LAST)
 
     def build_circuit(self, **kwargs) -> Circuit:
         phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)

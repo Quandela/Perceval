@@ -42,6 +42,7 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
 data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
+    see_also = "heralded cnot"
 
     def __init__(self):
         super().__init__("postprocessed cnot")

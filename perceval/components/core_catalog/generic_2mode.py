@@ -33,6 +33,20 @@ from perceval.components.component_catalog import CatalogItem, AsType
 
 
 class Generic2ModeItem(CatalogItem):
+    description = "A universal 2 mode component, implemented as a beam splitter with variable theta + 3 free phases"
+    str_repr = r"""    ╭──────╮╭─────╮╭──────╮
+0:──┤phi_tl├┤     ├┤phi_tr├──:0
+    ╰──────╯│BS.H │╰──────╯
+    ╭──────╮│theta│
+1:──┤phi_bl├┤     ├──────────:1
+    ╰──────╯╰─────╯ """
+    params_doc = {
+        "theta": "name or numerical value for beam splitter 'theta' parameter (default 'theta')",
+        "phi_tl": "name or numerical value for top left phase (default 'phi_tl')",
+        "phi_bl": "name or numerical value for bottom left phase (default 'phi_bl')",
+        "phi_tr": "name or numerical value for top right phase (default 'phi_tr')"
+    }
+
     def __init__(self):
         super().__init__("generic 2 mode circuit")
         self._default_opts['type'] = AsType.CIRCUIT

@@ -46,6 +46,7 @@ class CatalogItem(ABC):
     description = None
     str_repr = None
     see_also = None
+    params_doc = {}
 
     def __init__(self, name: str):
         self._name = name
@@ -86,6 +87,10 @@ class CatalogItem(ABC):
             content += f'\nScientific article reference: {self.article_ref}\n'
         if self.str_repr:
             content += f'\nSchema:\n{self.str_repr}\n'
+        if self.params_doc:
+            content += '\nParameters:\n'
+            for param_name, param_descr in self.params_doc.items():
+                content += f' * {param_name}: {param_descr}\n'
         if self.see_also:
             content += f'\nSee also: {self.see_also}\n'
         if content == '':
