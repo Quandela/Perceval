@@ -30,8 +30,9 @@ import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
 
+from perceval.backends import SLOSBackend
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Source
+from perceval.components import ACircuit, Processor, Source
 from perceval.components.port import PortLocation, APort
 from perceval.utils import BasicState, LogicalState, PMetadata
 from perceval.serialization import deserialize, serialize
@@ -200,3 +201,28 @@ class RemoteProcessor(AProcessor):
     def source(self, source: Source):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
+
+    def _compute_perfect_simulation(self):
+        lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True))
+        lp.min_detected_photons_filter(1)
+        photon_filter = self._input_state.n
+        if self._min_detected_photons is not None:
+            photon_filter = self._min_detected_photons
+        lp.thresholded_output(self._thresholded_output)
+        lp.with_input(self._input_state)
+        probs = lp.probs()
+        p_above_filter = 0
+        for state, prob in probs['results'].items():
+            if state.n >= photon_filter:
+                p_above_filter += prob
+        return p_above_filter
+
+    def estimate_required_shots(self, nsamples: int) -> int:
+        p_above_filter = self._compute_perfect_simulation()
+        if p_above_filter == 0:
+            return None
+        return int(nsamples / p_above_filter)
+
+    def estimate_expected_samples(self, nshots: int) -> int:
+        p_above_filter = self._compute_perfect_simulation()
+        return int(nshots * p_above_filter)
