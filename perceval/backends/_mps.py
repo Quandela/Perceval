@@ -60,18 +60,15 @@ class MPSBackend(AProbAmpliBackend):
         self._s_min = 1e-8
         self._cutoff = None
         self._compiled_input = None
-        self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
-        # Nested Defaultdict : when _res is accessed with a new key - say 'key1'
-        # _res['key1'] it creates -> {'key1': defaultdict(type is lambda func)}.
-        # Adding the second level to it by _res[key1][key1level2] creates
-        # {'key1': {'key1level2': np.array[0]})}
-        # this is being used in the backend in the following manner
-        # _res[tuple(self._input_state)]["gamma"] = self._gamma.copy()
-        # _res[tuple(self._input_state)]["sv"] = self.sv.copy()
-        # the first level of dictionary selects the keys corresponding to a
-        # particular input state, the second to either "gamma" or "sv"
-        # matrices of that input state. they are updated at the "apply()" of each component
         self._current_input = None
+        self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
+        # _res stores output of the state compilation in MPS.
+        # It is a Nested DefaultDict. The outermost dict has "input_states"
+        # as keys with values=DefaultDict. We can do multiple computation
+        # for different input_states.
+        # The 2nd (nested inside) DefaultDict has 2 keys "gamma" and "sv". They
+        # represent the matrices $\Gamma$ and $\lambda$ of the MPS for a
+        # given input_state. Their values are numpy arrays containing the full MPS.
 
     @property
     def name(self) -> str:
@@ -123,17 +120,17 @@ class MPSBackend(AProbAmpliBackend):
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS
         # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
-        self.n = self._input_state.n  # number of photons
-        self.d = self.n + 1  # possible num of photons in each mode {0,1,2,...,n}
+        self._n = self._input_state.n  # number of photons
+        self._d = self._n + 1  # possible num of photons in each mode {0,1,2,...,n}
         # todo: double check : max(all photons for each BS in svd)
         # in perceval it may mean that it is number of non-vacuum inputs
         # check it is not so
-        self._cutoff = min(self._cutoff, self.d ** (self._input_state.m//2))
+        self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
         # choosing a cut-off smaller than the limit as the size of matrix increases
         # exponentially with cutoff
         # this is the Schmidt's rank or bond dimension ($\chi$ in Thibaud's notes)
 
-        self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self.d), dtype='complex_')
+        self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
         # Gamma matrices of the MPS - coming from SVD of the state into MPS
         # todo: understand the size and dimension of gamma
         for i in range(self._input_state.m):
@@ -197,7 +194,7 @@ class MPSBackend(AProbAmpliBackend):
         Returns the full transition matrix "U" related to the component that will update the
         corresponding mode's "gamma" of the matrix product state
         """
-        d = self.d
+        d = self._d
         big_u = np.zeros((d, d), dtype='complex_')
         for i in range(d):
             big_u[i, i] = u[0, 0] ** i
@@ -230,7 +227,7 @@ class MPSBackend(AProbAmpliBackend):
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 2], [0, 1]))
             # introduce the corresponding unitary and contraction with that
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
+            theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
 
         # the following 2 edge cases require one less tensordot/contraction as there would not be a
         # sv_diagonal available
@@ -242,7 +239,7 @@ class MPSBackend(AProbAmpliBackend):
                                  axes=([1, 2], [0, 1]))  # Pretty weird thing... To check
             # todo: tensorproduct of mps with BS is going to include states that he probably neglected while building the BS. Verify
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
+            theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
 
         elif k == self._input_state.m - 2:  # signifies BS is connected between the last 2 modes -> Edge of circuit
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
@@ -250,12 +247,12 @@ class MPSBackend(AProbAmpliBackend):
             theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 3], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self.d * self._cutoff, self.d * self._cutoff)
+            theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
 
         v, s, w = np.linalg.svd(theta)  # svd after all contractions to splits up the big theta matrix formed
 
-        v = v.reshape(self.d, self._cutoff, self.d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
-        w = w.reshape(self.d * self._cutoff, self.d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
+        v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
+        w = w.reshape(self._d * self._cutoff, self._d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
         s = s[:self._cutoff]
 
         self.sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
@@ -283,7 +280,7 @@ class MPSBackend(AProbAmpliBackend):
         The formula for constructing the larger U to contract with the MPS is in
         Thibaud report.
         """
-        d = self.d  # for n photons, d=n+1 - possible number of photons
+        d = self._d  # for n photons, d=n+1 - possible number of photons
         big_u = np.zeros((d,d,d,d), dtype = 'complex_')  # matrix corresponding to BS -> to contract with MPS
         # todo: vectorize and remove so many for loops
         # comment: another possible error - size of the big_u constructed, maybe it does not take all photons
@@ -292,7 +289,7 @@ class MPSBackend(AProbAmpliBackend):
                 itot = i1 + i2
                 u1, u2, u3, u4 = u[0,0], u[0,1], u[1, 0], u[1, 1]
                 outputs = np.zeros((d,d), dtype = 'complex_')
-                if itot <= self.n:  # cannot exceed the total number of photons
+                if itot <= self._n:  # cannot exceed the total number of photons
                     # todo: try removing this if and check : Stephen. possibly he is applying 0 to some state that exist
                     for k1 in range(i1+1):
                         for k2 in range(i2+1):
