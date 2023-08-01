@@ -90,6 +90,7 @@ class MPSBackend(AProbAmpliBackend):
                 "MPS backend can not be used with components of using more than 2 modes"
         if self._cutoff is None:
             self._cutoff = C.m  # sets the default value of cut-off = Num of modes of circuit
+        # self._clear_cache()  # todo: _clear_cache() should define _res? Discuss: Eric
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
@@ -97,13 +98,13 @@ class MPSBackend(AProbAmpliBackend):
 
     def apply(self, r, c):
         """
-        Breaks the circuit into individual components and then applies the
-        corresponding unitary to the MPS - either single mode phase shifter
-        or 2 mode beam splitter. No other component implemented at the moment.
+        Applies the components of the circuit iteratively to update the MPS.
+
+        :param r: List of the mode positions for a component of the Circuit
+        :param c: The component
         """
         u = c.compute_unitary(False)
-        k_mode = r[0]  # k-th mode -> position of the upper mode of the 2 where the component is to be connected
-        # r is a tuple of the mode numbers of modes to which the component is connected
+        k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
         if len(u) == 2:  # BS
             self.update_state(k_mode, u)  # --> quandelibc
         elif len(u) == 1:  # PS
@@ -111,47 +112,38 @@ class MPSBackend(AProbAmpliBackend):
 
     def compile(self) -> bool:
         C = self._circuit
-        var = [float(p) for p in C.get_parameters()]
+        var = [float(p) for p in C.get_parameters()]  # to check if the state is already computed
         if self._compiled_input and self._compiled_input[0] == var and self._input_state in self._res:
-            # todo: i am not sure i understand what they check here, the example i tried gave var = []
             return False
         self._compiled_input = copy.copy((var, self._input_state))
         self._current_input = None
 
-        # TODO : allow any StateVector as in stepper, or a list as in SLOS
+        # TODO : allow any StateVector as in stepper, or a list as in SLOS?
         # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
         self._n = self._input_state.n  # number of photons
         self._d = self._n + 1  # possible num of photons in each mode {0,1,2,...,n}
-        # todo: double check : max(all photons for each BS in svd)
-        # in perceval it may mean that it is number of non-vacuum inputs
-        # check it is not so
         self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
         # choosing a cut-off smaller than the limit as the size of matrix increases
         # exponentially with cutoff
         # this is the Schmidt's rank or bond dimension ($\chi$ in Thibaud's notes)
 
         self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
-        # Gamma matrices of the MPS - coming from SVD of the state into MPS
-        # todo: understand the size and dimension of gamma
+        # Gamma matrices of the MPS - array shape (m,$\chi$,$\chi$,d)
         for i in range(self._input_state.m):
             self._gamma[i, 0, 0, self._input_state[i]] = 1
-        self.sv = np.zeros((self._input_state.m, self._cutoff))
-        # sv matrices are diagonal matrices with singular values - SVD of full state into MPS
 
-        self.sv[:, 0] = 1  # first column set to 1
-        # difference between sv and _sv_diag?
+        self._sv = np.zeros((self._input_state.m, self._cutoff))
+        # sv matrices are diagonal matrices with singular values - array shape (m,$\chi$)
+        self._sv[:, 0] = 1  # first column set to 1
         # Todo: understand completely the initialization of gamma and sv above
 
-        # apply acts (next in line) -> updates both gamma and sv
         for r, c in C:
             # r -> tuple -> lists the modes where the component c is connected
             self.apply(r, c)
 
         self._res[tuple(self._input_state)]["gamma"] = self._gamma.copy()
-        self._res[tuple(self._input_state)]["sv"] = self.sv.copy()
-        # _res is defaultdict type structure
-        # it stores the full MPS -> updates
-        # todo: understand and fix
+        self._res[tuple(self._input_state)]["sv"] = self._sv.copy()
+
         return True
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
@@ -255,19 +247,19 @@ class MPSBackend(AProbAmpliBackend):
         w = w.reshape(self._d * self._cutoff, self._d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
         s = s[:self._cutoff]
 
-        self.sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
+        self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
 
         # the following updates the corresponding gamma after the action of BS;
         # need to take care of edge cases (BS at the first or last 2 modes of circuit) separately
         if k > 0:
-            rank = np.nonzero(self.sv[k - 1])[0][-1] + 1
-            self._gamma[k, :rank] = v[:rank] / self.sv[k - 1, :rank][:, np.newaxis, np.newaxis]
+            rank = np.nonzero(self._sv[k - 1])[0][-1] + 1
+            self._gamma[k, :rank] = v[:rank] / self._sv[k - 1, :rank][:, np.newaxis, np.newaxis]
             self._gamma[k, rank:] = 0
         else:
             self._gamma[k] = v
         if k < self._input_state.m - 2:
-            rank = np.nonzero(self.sv[k + 1])[0][-1] + 1
-            self._gamma[k + 1, :, :rank] = (w[:, :rank] / self.sv[k + 1, :rank][:, np.newaxis])
+            rank = np.nonzero(self._sv[k + 1])[0][-1] + 1
+            self._gamma[k + 1, :, :rank] = (w[:, :rank] / self._sv[k + 1, :rank][:, np.newaxis])
             self._gamma[k + 1, :, rank:] = 0
         else:
             self._gamma[k + 1] = w
@@ -312,7 +304,7 @@ class MPSBackend(AProbAmpliBackend):
         if self._res[self._current_input]["sv"].any():
             sv = self._res[self._current_input]["sv"]
         else:
-            sv = self.sv
+            sv = self._sv
         sv_diag = np.zeros((self._cutoff, self._cutoff))
         np.fill_diagonal(sv_diag, sv[k, :])
         return sv_diag
