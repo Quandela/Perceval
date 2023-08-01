@@ -106,7 +106,7 @@ class MPSBackend(AProbAmpliBackend):
         u = c.compute_unitary(False)
         k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
         if len(u) == 2:  # BS
-            self.update_state(k_mode, u)  # --> quandelibc
+            self.update_state_2_mode(k_mode, u)  # --> quandelibc
         elif len(u) == 1:  # PS
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
@@ -116,7 +116,7 @@ class MPSBackend(AProbAmpliBackend):
         if self._compiled_input and self._compiled_input[0] == var and self._input_state in self._res:
             return False
         self._compiled_input = copy.copy((var, self._input_state))
-        self._current_input = None
+        self._current_input = None  # todo: verify - do I need to set it to None again?
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS?
         # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
@@ -128,7 +128,7 @@ class MPSBackend(AProbAmpliBackend):
         # this is the Schmidt's rank or bond dimension ($\chi$ in Thibaud's notes)
 
         self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
-        # Gamma matrices of the MPS - array shape (m,$\chi$,$\chi$,d)
+        # Gamma matrices of the MPS - array shape (m, $\chi$, $\chi$, d)
         for i in range(self._input_state.m):
             self._gamma[i, 0, 0, self._input_state[i]] = 1
 
@@ -179,11 +179,10 @@ class MPSBackend(AProbAmpliBackend):
 
     def _transition_matrix_1_mode(self, u):
         """
-        Transition matrix "U" related to the application of a phase shifter one a single mode.
+        transition matrix "U" related to the application of a phase shifter one a single mode.
 
-        Size of this "U" depends on the possible number of photons {0,1,2,...n} ==> d=n+1.
-
-        Returns the full transition matrix "U" related to the component that will update the
+        size of this "U" depends on the possible number of photons {0,1,2,...n} ==> d=n+1.
+        returns the full transition matrix "U" related to the component that will update the
         corresponding mode's "gamma" of the matrix product state
         """
         d = self._d
@@ -194,63 +193,81 @@ class MPSBackend(AProbAmpliBackend):
 
     def update_state_1_mode(self, k, u):
         """
-        Tensor contraction between the corresponding mode's "gamma" of the matrix product state
+        tensor contraction between the corresponding mode's "$\Gamma$" of the MPS
         and the transition matrix "U" of phase shifter for that mode [_transition_matrix_1_mode].
         """
         self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2, 0))
-        # in the tensordot above, 2nd axis of the first tensor "_gamma" and 0th axis of the transition matrix is summed
-        # up todo: test why axis =2 of gamma is summed over
-        # gamma[k] -> needed to select which gamma to update - as the component is at the kth mode position
+        # gamma[k] -> takes the kth slice from first dimension -> selects gamma of kth mode
+        # the shape of gamma[k] is ($\chi$, $\chi$, d).
+        # The shape of the matrix returned by _transition_matrix_1_mode(u) is (d, d).
+        # The contraction is on the free index 'd' here, hence 2 of gamma[k]
+        # and 0 of the transition matrix. Assigns the result to the same gamma[k]
+        # and in the process update it.
 
-    def update_state(self, k, u):
+    def update_state_2_mode(self, k, u):
         """
-        takes the gammas with the singular values and then contract with unitary
-        matrix of beam splitter for those 2 modes and then rewrite the appropriate
-        MPS part
+        takes the gamma->kth and (k+1)th + corresponding $\lambda$-s -> contracts the entire thing
+        with 2 mode beam splitter, performs some reshaping and then svd to re-build the corresponding
+        segment of MPS.
         todo: verify the axes in tensordots, imrpovement of code
         """
 
-        if 0 < k < self._input_state.m - 2:  # signifies that BS is anywhere in between
+        if 0 < k < self._input_state.m - 2:
+            # BS anywhere besides the first and the last mode
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
+            # _sv_diag(k - 1) -> shape ($\chi$, $\chi$) and _gamma[k, :] of shape ($\chi$, $\chi$, d)
+            # Output = theta of shape ($\chi$, $\chi$, d)
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
+            # theta of shape ($\chi$, $\chi$, d) and _sv_diag(k - 1) -> shape ($\chi$, $\chi$)
+            # Output = theta of shape ($\chi$, $\chi$, d)
             theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
+            # theta of shape ($\chi$, $\chi$, d) and _gamma[k+1, :] of shape ($\chi$, $\chi$, d)
+            # doubt here with 2 todo: fix
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
             # contraction of the corresponding matrices of MPS finished until here
-            theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 2], [0, 1]))
-            # introduce the corresponding unitary and contraction with that
+            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))
+            # theta of shape ($\chi$, $\chi$, d) and _transition_matrix_2_mode(u) shape ()
+            # should be full contraction of 2 edges of theta (previously connected to MPS, but why 2?)
+            # todo: Rawad - I think 2 was for d index
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
+            # merging indices to have a 2D matrix of shape (d x $\chi$, d x $\chi$) -> step before SVD
 
         # the following 2 edge cases require one less tensordot/contraction as there would not be a
         # sv_diagonal available
-        elif k == 0:  # signifies BS is connected between the first 2 modes -> Edge of circuit
+        elif k == 0:
+            # BS connected between the first 2 modes -> Edge of circuit
             theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))
             theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
             theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
-            theta = np.tensordot(theta, self._transition_matrix(u),
+            theta = np.tensordot(theta, self._transition_matrix_2_mode(u),
                                  axes=([1, 2], [0, 1]))  # Pretty weird thing... To check
-            # todo: tensorproduct of mps with BS is going to include states that he probably neglected while building the BS. Verify
+            # todo: tensorproduct of mps with BS is going to
+            #  include states that he probably neglected while building the BS. Verify
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
 
-        elif k == self._input_state.m - 2:  # signifies BS is connected between the last 2 modes -> Edge of circuit
+        elif k == self._input_state.m - 2:
+            # BS connected between the last 2 modes -> Edge of circuit
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
             theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
-            theta = np.tensordot(theta, self._transition_matrix(u), axes=([1, 3], [0, 1]))
+            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 3], [0, 1]))
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
 
-        v, s, w = np.linalg.svd(theta)  # svd after all contractions to splits up the big theta matrix formed
+        v, s, w = np.linalg.svd(theta)  # svd after all contractions to splits up the big theta matrix
+        # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
+        # this implies U->v, S->s, V->w
 
         v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
         w = w.reshape(self._d * self._cutoff, self._d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
-        s = s[:self._cutoff]
+        s = s[:self._cutoff]  # resticting the size of SV matrices to cut_off -> truncation
 
         self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
+        # _s_min is too low, do we really need this todo: ask Rawad
 
-        # the following updates the corresponding gamma after the action of BS;
-        # need to take care of edge cases (BS at the first or last 2 modes of circuit) separately
+        # todo: below - seems weird, discuss Rawad
         if k > 0:
             rank = np.nonzero(self._sv[k - 1])[0][-1] + 1
             self._gamma[k, :rank] = v[:rank] / self._sv[k - 1, :rank][:, np.newaxis, np.newaxis]
@@ -264,16 +281,17 @@ class MPSBackend(AProbAmpliBackend):
         else:
             self._gamma[k + 1] = w
 
-    def _transition_matrix(self, u):
-        """This function computes the elements
+    def _transition_matrix_2_mode(self, u):
+        """
+        this function computes the elements
         (I,J) = (i_k, i_k+1, j_k, j_k+1) of the matrix U_k,k+1.
         This is concerned with the action of beam splitter between given 2 modes.
         input parameter u is the unitary matrix of the Beam splitter - 2x2 matrix
         The formula for constructing the larger U to contract with the MPS is in
         Thibaud report.
         """
-        d = self._d  # for n photons, d=n+1 - possible number of photons
-        big_u = np.zeros((d,d,d,d), dtype = 'complex_')  # matrix corresponding to BS -> to contract with MPS
+        d = self._d
+        big_u = np.zeros((d, d, d, d), dtype='complex_')  # matrix corresponding to BS -> to contract with MPS
         # todo: vectorize and remove so many for loops
         # comment: another possible error - size of the big_u constructed, maybe it does not take all photons
         for i1 in range(d):  # i1=n1 in the formula in report
