@@ -31,11 +31,54 @@ import os
 
 
 class TokenProvider:
-    _TOKEN_ENV_VAR = "QCLOUD_TOKEN"
+    """Search for a token in different places and retrieve it
 
-    def get_token(self):
-        token = os.getenv(self._TOKEN_ENV_VAR)
-        if token:
-            return token
-        # TODO try to retrieve a token from persistent data
+    The priority order is:
+    - Token cached in memory
+    - Environment variable
+    - File on the disk
+    """
+
+    _CACHED_TOKEN = None
+
+    def __init__(self, env_var: str = "QCLOUD_TOKEN", file_path: str = None):
+        """
+        :param env_var: Environment variable name to search for a token
+        :param file_path: Path to search for a file containing a token
+        """
+        self._env_var = env_var
+        self._file_path = file_path
+
+    def _from_environment_variable(self) -> str:
+        if not self._env_var:
+            return None
+        TokenProvider._CACHED_TOKEN = os.getenv(self._env_var)
+        return TokenProvider._CACHED_TOKEN
+
+    def _from_file(self) -> str:
+        if not self._file_path or not os.path.isfile(self._file_path):
+            return None
+        try:
+            with open(self._file_path, "r") as f:
+                TokenProvider._CACHED_TOKEN = f.read().strip()
+                return TokenProvider._CACHED_TOKEN
+        except IOError:
+            pass
         return None
+
+    def get_token(self) -> str:
+        """Search for a token to provide
+
+        :return: A token, or None if no token was found
+        """
+        return TokenProvider._CACHED_TOKEN or self._from_environment_variable() or self._from_file()
+
+    @staticmethod
+    def clear_cache():
+        """Clear the cached token"""
+        TokenProvider._CACHED_TOKEN = None
+
+    @staticmethod
+    def force_token(token: str):
+        """Force a token to be used (and provided to callers)"""
+        TokenProvider._CACHED_TOKEN = token
