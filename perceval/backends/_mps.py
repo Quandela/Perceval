@@ -230,8 +230,11 @@ class MPSBackend(AProbAmpliBackend):
             # should be full contraction of 2 edges of theta (previously connected to MPS, but why 2?)
             # todo: Rawad - I think 2 was for d index
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
+            # the middle 2 indices reach outside d,x,x,d -> x, d, x, d
+            # todo: Eric - maybe we could do something differently - not a readable code
             theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
             # merging indices to have a 2D matrix of shape (d x $\chi$, d x $\chi$) -> step before SVD
+            # todo: Rawad why this reshape?
 
         # the following 2 edge cases require one less tensordot/contraction as there would not be a
         # sv_diagonal available
