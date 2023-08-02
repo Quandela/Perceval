@@ -78,6 +78,10 @@ class TokenProvider:
         """Clear the cached token"""
         TokenProvider._CACHED_TOKEN = None
 
+    @property
+    def cache(self) -> str:
+        return TokenProvider._CACHED_TOKEN
+
     @staticmethod
     def force_token(token: str):
         """Force a token to be used (and provided to callers)"""
