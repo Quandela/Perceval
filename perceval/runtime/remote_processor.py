@@ -202,27 +202,63 @@ class RemoteProcessor(AProcessor):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
 
-    def _compute_perfect_simulation(self):
-        lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True))
-        lp.min_detected_photons_filter(1)
-        photon_filter = self._input_state.n
+    def _compute_sample_of_interest_probability(self, transmittance: float = 0.06) -> float:
+        # TODO retrieve transmittance from the cloud worker
+        losses = 1 - transmittance
+        n = self._input_state.n
+        photon_filter = n
         if self._min_detected_photons is not None:
             photon_filter = self._min_detected_photons
+            if photon_filter > n:
+                return 0
+        if photon_filter < 2:
+            return 1
+
+        source = Source(losses=losses)
+        input_dist = source.generate_distribution(self._input_state)
+        del input_dist[StateVector([0]*self.m)]
+        input_dist.normalize()
+
+        # p_n = 0
+        # for state, prob in input_dist.items():
+        #     if state.n[0] >= photon_filter:
+        #         p_n += prob
+        #
+        # import perceval as pcvl
+        # pcvl.pdisplay(input_dist)
+        #
+        # lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True))
+        # lp.min_detected_photons_filter(1)
+        # lp.thresholded_output(self._thresholded_output)
+        # lp.with_input(self._input_state)
+        # probs = lp.probs()
+        # p_above_filter = 0
+        # for state, prob in probs['results'].items():
+        #     if state.n >= photon_filter:
+        #         p_above_filter += prob
+
+        ## SIMU WITH NOISY SOURCE
+        lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True), source)
+        lp.min_detected_photons_filter(1)
         lp.thresholded_output(self._thresholded_output)
         lp.with_input(self._input_state)
         probs = lp.probs()
-        p_above_filter = 0
+        p_above_filter_ns = 0
         for state, prob in probs['results'].items():
             if state.n >= photon_filter:
-                p_above_filter += prob
-        return p_above_filter
+                p_above_filter_ns += prob
+
+        # print(p_above_filter * p_n, " = source + perfect sim")
+        print(p_above_filter_ns, " = noisy sim")
+        # return p_above_filter * p_n
+        return p_above_filter_ns
 
     def estimate_required_shots(self, nsamples: int) -> int:
-        p_above_filter = self._compute_perfect_simulation()
-        if p_above_filter == 0:
+        p_interest = self._compute_sample_of_interest_probability()
+        if p_interest == 0:
             return None
-        return int(nsamples / p_above_filter)
+        return round(nsamples / p_interest)
 
     def estimate_expected_samples(self, nshots: int) -> int:
-        p_above_filter = self._compute_perfect_simulation()
-        return int(nshots * p_above_filter)
+        p_interest = self._compute_sample_of_interest_probability()
+        return round(nshots * p_interest)
