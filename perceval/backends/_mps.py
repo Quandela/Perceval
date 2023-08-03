@@ -27,9 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Union
-import copy
 
+import copy
 import numpy as np
 from math import factorial
 from scipy.special import comb
@@ -41,24 +40,19 @@ from perceval.components import ACircuit
 
 
 class MPSBackend(AProbAmpliBackend):
-    """Step-by-step circuit propagation algorithm, works on a circuit.
-    Approximate the probability amplitudes with a cutoff.
+    """
+    The state of the system is written in form of an MPS and
+    updated step-by-step by a circuit propagation algorithm.
+
+    Approximate the probability amplitudes with a cutoff -> bond Dimension in an MPS.
     - For now only supports Phase shifters and Beam Splitters
     - TODO: link to the quandelibc computation
-
-    -Raksha
-    Adding comments to understand and fix MPS. The basic algorithm
-    - The input state vector is approximated by a Matrix Product State (MPS)
-    - Step-by-step circuit propagation refers to the application of individual
-    components of the circuit on MPS - updating it until the output MPS is found
-    - The different prob ampli coefficients of the possible output states are then
-    computed from the final MPS
     """
 
     def __init__(self):
         super().__init__()
-        self._s_min = 1e-8
-        self._cutoff = None
+        self._s_min = 1e-8  # minimum accepted value for singular values
+        self._cutoff = None  # Bond dimension of MPS
         self._compiled_input = None
         self._current_input = None
         self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
@@ -76,8 +70,8 @@ class MPSBackend(AProbAmpliBackend):
 
     def set_cutoff(self, cutoff_val: int):
         """
-        This parameter defines the Schmidt rank of the decomposition of the
-        state into an MPS, in other words - how well approximated the state is.
+        Cut-off defines the Bond dimension (Schmidt rank of the decomposition of the
+        state) of an MPS; in other words, how well approximated the state is.
         """
         assert isinstance(cutoff_val, int), "cutoff must be an integer"
         self._cutoff = cutoff_val
@@ -94,9 +88,9 @@ class MPSBackend(AProbAmpliBackend):
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
-        self.compile()
+        self._compile()
 
-    def apply(self, r, c):
+    def _apply(self, r, c):
         """
         Applies the components of the circuit iteratively to update the MPS.
 
@@ -105,21 +99,25 @@ class MPSBackend(AProbAmpliBackend):
         """
         u = c.compute_unitary(False)
         k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
-        if len(u) == 2:  # BS
+        if len(u) == 2:
+            # BS
             self.update_state_2_mode(k_mode, u)  # --> quandelibc
-        elif len(u) == 1:  # PS
+        elif len(u) == 1:
+            # PS
             self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
-    def compile(self) -> bool:
+    def _compile(self) -> bool:
         C = self._circuit
-        var = [float(p) for p in C.get_parameters()]  # to check if the state is already computed
+        var = [float(p) for p in C.get_parameters()]
         if self._compiled_input and self._compiled_input[0] == var and self._input_state in self._res:
+            # checks if a given input state for a circuit is already computed
             return False
         self._compiled_input = copy.copy((var, self._input_state))
         self._current_input = None  # todo: verify - do I need to set it to None again?
 
         # TODO : allow any StateVector as in stepper, or a list as in SLOS?
         # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
+
         self._n = self._input_state.n  # number of photons
         self._d = self._n + 1  # possible num of photons in each mode {0,1,2,...,n}
         self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
@@ -129,17 +127,20 @@ class MPSBackend(AProbAmpliBackend):
 
         self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
         # Gamma matrices of the MPS - array shape (m, $\chi$, $\chi$, d)
+        # Each Gamma matrix of MPS, in theory, have 3 indices.
+        # The first index 'm' here is used to represent modes
         for i in range(self._input_state.m):
             self._gamma[i, 0, 0, self._input_state[i]] = 1
 
         self._sv = np.zeros((self._input_state.m, self._cutoff))
         # sv matrices are diagonal matrices with singular values - array shape (m,$\chi$)
+        # sv are vectors -> similar to gamma, the first index 'm' represents modes.
         self._sv[:, 0] = 1  # first column set to 1
-        # Todo: understand completely the initialization of gamma and sv above
+        # Todo: Rawad - understand the initialization of gamma and sv above
 
         for r, c in C:
             # r -> tuple -> lists the modes where the component c is connected
-            self.apply(r, c)
+            self._apply(r, c)
 
         self._res[tuple(self._input_state)]["gamma"] = self._gamma.copy()
         self._res[tuple(self._input_state)]["sv"] = self._sv.copy()
@@ -184,6 +185,9 @@ class MPSBackend(AProbAmpliBackend):
         size of this "U" depends on the possible number of photons {0,1,2,...n} ==> d=n+1.
         returns the full transition matrix "U" related to the component that will update the
         corresponding mode's "gamma" of the matrix product state
+
+        :param u: the unitary matrix for single mode component - PS
+        :returns big_u: np.ndarray of the corresponding transition matrix
         """
         d = self._d
         big_u = np.zeros((d, d), dtype='complex_')
@@ -200,41 +204,41 @@ class MPSBackend(AProbAmpliBackend):
         # gamma[k] -> takes the kth slice from first dimension -> selects gamma of kth mode
         # the shape of gamma[k] is ($\chi$, $\chi$, d).
         # The shape of the matrix returned by _transition_matrix_1_mode(u) is (d, d).
-        # The contraction is on the free index 'd' here, hence 2 of gamma[k]
-        # and 0 of the transition matrix. Assigns the result to the same gamma[k]
-        # and in the process update it.
+        # The contraction is on the free index 'd'.
+        # Here, axes=2 of gamma[k] and axes=0 of the transition matrix.
+        # Assigns the result to the same gamma[k] returning the shape ($\chi$, $\chi$, d)
 
     def update_state_2_mode(self, k, u):
         """
         takes the gamma->kth and (k+1)th + corresponding $\lambda$-s -> contracts the entire thing
         with 2 mode beam splitter, performs some reshaping and then svd to re-build the corresponding
         segment of MPS.
-        todo: verify the axes in tensordots, imrpovement of code
+        todo: verify the axes in tensordots, improvement of code
         """
 
         if 0 < k < self._input_state.m - 2:
-            # BS anywhere besides the first and the last mode
+            # BS anywhere except the first and the last mode
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
             # _sv_diag(k - 1) -> shape ($\chi$, $\chi$) and _gamma[k, :] of shape ($\chi$, $\chi$, d)
             # Output = theta of shape ($\chi$, $\chi$, d)
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
             # theta of shape ($\chi$, $\chi$, d) and _sv_diag(k - 1) -> shape ($\chi$, $\chi$)
-            # Output = theta of shape ($\chi$, $\chi$, d)
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
+            # Output = theta of shape ($\chi$, $\chi$, d) ??? or ($\chi$, d, $\chi$)  todo: verify
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # todo: check axes=2 seems incorrect
             # theta of shape ($\chi$, $\chi$, d) and _gamma[k+1, :] of shape ($\chi$, $\chi$, d)
-            # doubt here with 2 todo: fix
-            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
+            # Output = theta of shape ($\chi$, d, $\chi$, d) ??  todo: verify
+            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # todo: check axes=2 seems incorrect
             # contraction of the corresponding matrices of MPS finished until here
-            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))
-            # theta of shape ($\chi$, $\chi$, d) and _transition_matrix_2_mode(u) shape ()
-            # should be full contraction of 2 edges of theta (previously connected to MPS, but why 2?)
-            # todo: Rawad - I think 2 was for d index
+            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))  # todo: verify index
+            # theta of shape ($\chi$, $\chi$, d) and _transition_matrix_2_mode(u) shape (d, d, d, d)
+            # should be full contraction of 2 edges of theta (previously connected to MPS)
+            # todo: Rawad - discuss
+
+            # todo: Rawad - do we need both swap and reshape for the merge ?
             theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
             # the middle 2 indices reach outside d,x,x,d -> x, d, x, d
-            # todo: Eric - maybe we could do something differently - not a readable code
             theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
             # merging indices to have a 2D matrix of shape (d x $\chi$, d x $\chi$) -> step before SVD
-            # todo: Rawad why this reshape?
 
         # the following 2 edge cases require one less tensordot/contraction as there would not be a
         # sv_diagonal available
@@ -263,12 +267,13 @@ class MPSBackend(AProbAmpliBackend):
         # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
         # this implies U->v, S->s, V->w
 
+        # todo: not sure about indices and their sizes
         v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
         w = w.reshape(self._d * self._cutoff, self._d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
-        s = s[:self._cutoff]  # resticting the size of SV matrices to cut_off -> truncation
+        s = s[:self._cutoff]  # restricting the size of SV matrices to cut_off -> truncation
 
         self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
-        # _s_min is too low, do we really need this todo: ask Rawad
+        # todo : _s_min is too low, do we really need this todo: ask Rawad
 
         # todo: below - seems weird, discuss Rawad
         if k > 0:
@@ -296,34 +301,33 @@ class MPSBackend(AProbAmpliBackend):
         d = self._d
         big_u = np.zeros((d, d, d, d), dtype='complex_')  # matrix corresponding to BS -> to contract with MPS
         # todo: vectorize and remove so many for loops
-        # comment: another possible error - size of the big_u constructed, maybe it does not take all photons
-        for i1 in range(d):  # i1=n1 in the formula in report
-            for i2 in range(d):  # i2=n2 in the formula in report
-                itot = i1 + i2
-                u1, u2, u3, u4 = u[0,0], u[0,1], u[1, 0], u[1, 1]
-                outputs = np.zeros((d,d), dtype = 'complex_')
-                if itot <= self._n:  # cannot exceed the total number of photons
+        for i1 in range(d):
+            # i1=n1 -> number of photons in mode 1
+            for i2 in range(d):
+                # i2=n2 -> number of photons in mode 2
+                i_tot = i1 + i2
+                u11, u12, u21, u22 = u[0, 0], u[0, 1], u[1, 0], u[1, 1]
+                outputs = np.zeros((d, d), dtype = 'complex_')
+
+                if i_tot <= self._n:  # cannot exceed the total number of photons
                     # todo: try removing this if and check : Stephen. possibly he is applying 0 to some state that exist
                     for k1 in range(i1+1):
                         for k2 in range(i2+1):
-                            outputs[k1 + k2, itot - (k1 + k2)] += comb(i1, k1)*comb(i2, k2)\
-                            *(u1**k1*u2**k2*u3**(i1-k1)*u4**(i2-k2))\
-                            *(np.sqrt(factorial(k1+k2)*factorial(itot-k1-k2)))  # todo: verfiy; i think this is incorrect
+                            outputs[k1 + k2, i_tot - (k1 + k2)] += comb(i1, k1) * comb(i2, k2) \
+                                                                   * (u11**k1 * u12**(i1-k1) * u21**k2 * u22**(i2-k2)) \
+                                                                * (np.sqrt(factorial(k1+k2) * factorial(i_tot-k1-k2)))
+                            # todo: verify; i think this is incorrect
 
-                big_u[i1,i2,:] = outputs/(np.sqrt(factorial(i1)*factorial(i2)))
+                big_u[i1, i2, :] = outputs / (np.sqrt(factorial(i1) * factorial(i2)))
         return big_u
 
     def _sv_diag(self, k):
         """
         Creates the diagonal matrix containing the singular values of
-        the matrices in the MPS
-        todo: math behind to verify
-        doubt with how the data is extracted and the sv_matrix is constructed
-        particularly with choosing when to read from the self._res or
-        from the sv initiated with single element = 1
+        the matrices in the MPS.
         """
         if self._res[self._current_input]["sv"].any():
-            sv = self._res[self._current_input]["sv"]
+            sv = self._res[self._current_input]["sv"]  # todo: clarify - would this not be the same as else ?
         else:
             sv = self._sv
         sv_diag = np.zeros((self._cutoff, self._cutoff))
