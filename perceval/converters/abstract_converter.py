@@ -95,7 +95,7 @@ class AGateConverter(ABC):
         self._converted_processor.with_input(default_input_state)
 
     @abstractmethod
-    def converter(self):
+    def convert(self):
         """
         converts gates based circuits to one with linear optical components
         and returns a perceval processor

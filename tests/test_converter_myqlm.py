@@ -55,7 +55,7 @@ def test_basic_circuit_h():
     qprog.apply(H, qbits[0])  # Apply H gate
     myqlmc = qprog.to_circ()  # Export this program into a quantum circuit
 
-    pc = convertor.converter(myqlmc)
+    pc = convertor.convert(myqlmc)
     c = pc.linear_circuit()
     assert c.m == 2 * len(qbits)
 
@@ -68,7 +68,7 @@ def test_basic_circuit_h():
 
 
 def test_cnot_1_heralded():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter(catalog=catalog)
     qprog = Program()
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(CNOT, qbits[0], qbits[1])
@@ -157,7 +157,7 @@ def test_compare_u_1qbit(Gate_Name):
     gate_id = circ.ops[0].gate
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
-    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_converter = MyQLMConverter(catalog=catalog)
     myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
@@ -188,7 +188,7 @@ def test_abstract_1qbit_gate():
     gate_id = circ.ops[0].gate
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
-    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_converter = MyQLMConverter(catalog=catalog)
     myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)

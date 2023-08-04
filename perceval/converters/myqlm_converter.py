@@ -49,7 +49,7 @@ class MyQLMConverter(AGateConverter):
         qlmc = gate_circuit
         return qlmc.nbqbits
 
-    def converter(self, qlmc, use_postselection: bool = True):
+    def convert(self, qlmc, use_postselection: bool = True):
         r"""Convert a myQLM quantum circuit into a perceval `Processor`.
 
         :param qlmc: quantum gate-based myqlm circuit
