@@ -33,7 +33,8 @@ import numpy as np
 
 def get_interferometer(n):
     def _gen_mzi(i: int):
-        return BS(BS.r_to_theta(0.42)) // PS(np.pi+i*0.1) // BS(BS.r_to_theta(0.42)) // PS(np.pi/2)
+        return pcvl.catalog["mzi phase last"].build_circuit(theta_a=0.42, theta_b=0.42,
+                                                            phi_a=np.pi+i*0.1, phi_b=np.pi/2)
     return pcvl.Circuit.generic_interferometer(n, _gen_mzi)
 
 

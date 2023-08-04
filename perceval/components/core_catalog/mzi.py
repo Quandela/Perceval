@@ -86,8 +86,7 @@ class MZIPhaseLast(AMZI):
 0:──┤BS.Rx├───────┤BS.Rx├─────────:0
     │     │╭─────╮│     │╭─────╮
 1:──┤     ├┤phi_a├┤     ├┤phi_b├──:1
-    ╰─────╯╰─────╯╰─────╯╰─────╯
-    """
+    ╰─────╯╰─────╯╰─────╯╰─────╯ """
     see_also = _NAME_MZI_PHASE_FIRST
 
     def __init__(self):
