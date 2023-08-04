@@ -49,10 +49,14 @@ class AGateConverter(ABC):
     Qiskit or MyQLM
     """
 
-    def __int__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
-        super.__init__()  # when is this not necessary todo: ask Marion
+    def __init__(self, **kwargs):
         self._converted_processor = None
-        self._source = source
+        if not "catalog" in kwargs:
+            raise KeyError("Missing catalog")
+        catalog = kwargs["catalog"]
+
+        self._source = kwargs.get("source", Source())
+        self._backend_name = kwargs.get("backend_name", "SLOS")
         self._heralded_cnot_builder = catalog["heralded cnot"]
         self._heralded_cz_builder = catalog["heralded cz"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
@@ -60,7 +64,7 @@ class AGateConverter(ABC):
         self._lower_phase_component = Circuit(2) // (0, comp.PS(P("phi2")))
         self._upper_phase_component = Circuit(2) // (1, comp.PS(P("phi1")))
         self._two_phase_component = Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2")))
-        self._backend_name = backend_name
+
 
     @property
     @abstractmethod
@@ -83,7 +87,7 @@ class AGateConverter(ABC):
         """
         n_moi = self.set_num_qbits(gate_circuit) * 2  # number of modes of interest = 2 * number of qbits
         p = Processor(self._backend_name, n_moi, self._source)
-        self._converted_processor = p
+        self._converted_processor = Processor(self._backend_name, n_moi, self._source)
 
     def configure_processor(self, gate_circuit):
         """

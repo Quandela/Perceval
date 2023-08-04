@@ -38,8 +38,8 @@ class MyQLMConverter(AGateConverter):
     :param backend_name: Backend to use in computation, defaults to SLOS
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
 
     @property
     def name(self) -> str:
