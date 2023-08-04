@@ -30,9 +30,9 @@
 import pytest
 import numpy as np
 
-import platform
-if platform.system() not in ["Windows", "Linux"]:
-    pytest.skip("Unsupported OS - Darwin (MacOS) for unitary test", allow_module_level=True)
+# import platform
+# if platform.system() not in ["Windows", "Linux"]:
+#     pytest.skip("Unsupported OS - Darwin (MacOS) for unitary test", allow_module_level=True)
 
 try:
     from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, SWAP, CNOT, CSIGN, AbstractGate
@@ -48,14 +48,14 @@ from perceval.algorithm import Sampler
 
 
 def test_basic_circuit_h():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter(catalog=catalog)  # takes as kwargs
     qprog = Program()  # Create a Program
     qbits = qprog.qalloc(1)  # Allocate some qbits
     print(qbits, type(qbits))
     qprog.apply(H, qbits[0])  # Apply H gate
     myqlmc = qprog.to_circ()  # Export this program into a quantum circuit
 
-    pc = convertor.convert(myqlmc)
+    pc = convertor.converter(myqlmc)
     c = pc.linear_circuit()
     assert c.m == 2 * len(qbits)
 

@@ -51,12 +51,11 @@ class AGateConverter(ABC):
 
     def __init__(self, **kwargs):
         self._converted_processor = None
+        self._source = kwargs.get("source", Source())
+        self._backend_name = kwargs.get("backend_name", "SLOS")
         if not "catalog" in kwargs:
             raise KeyError("Missing catalog")
         catalog = kwargs["catalog"]
-
-        self._source = kwargs.get("source", Source())
-        self._backend_name = kwargs.get("backend_name", "SLOS")
         self._heralded_cnot_builder = catalog["heralded cnot"]
         self._heralded_cz_builder = catalog["heralded cz"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
@@ -65,29 +64,20 @@ class AGateConverter(ABC):
         self._upper_phase_component = Circuit(2) // (1, comp.PS(P("phi1")))
         self._two_phase_component = Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2")))
 
-
     @property
     @abstractmethod
     def name(self) -> str:
         """Each converter would have a distinct name as a string"""
 
-    @staticmethod
-    @abstractmethod
-    def preferred_command() -> str:
+    # @staticmethod
+    # @abstractmethod
+    # def preferred_command() -> str:
         # todo : find out why they are used
-        return "Gate"
+    #    return "Gate"
 
     @abstractmethod
     def set_num_qbits(self, gate_circuit) -> int:
         pass
-
-    def set_converted_processor(self, gate_circuit):
-        """
-        Create an empty processor with certain number of modes
-        """
-        n_moi = self.set_num_qbits(gate_circuit) * 2  # number of modes of interest = 2 * number of qbits
-        p = Processor(self._backend_name, n_moi, self._source)
-        self._converted_processor = Processor(self._backend_name, n_moi, self._source)
 
     def configure_processor(self, gate_circuit):
         """
@@ -96,6 +86,7 @@ class AGateConverter(ABC):
         n_qbits = self.set_num_qbits(gate_circuit)
         n_moi = n_qbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
+        self._converted_processor = Processor(self._backend_name, n_moi, self._source)
         for i in range(n_qbits):
             # todo : Qbit name? QISKIT has a way ; implement that
             self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'Q{i}'))
@@ -142,19 +133,21 @@ class AGateConverter(ABC):
         CZ - Heralded
         SWAP
         """
+        p = self._converted_processor
         if gate_name == "CNOT":
             cnot_idx += 1
             if use_postselection and cnot_idx == n_cnot:
                 cnot_processor = self._postprocessed_cnot_builder.build()
             else:
                 cnot_processor = self._heralded_cnot_builder.build()
-            self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
+            p.add(_create_mode_map(c_idx, c_data), cnot_processor)
         elif gate_name == "CSIGN":
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self._heralded_cz_builder.build()
-            self._converted_processor.add(_create_mode_map(c_idx, c_data), cz_processor)
+            p.add(_create_mode_map(c_idx, c_data), cz_processor)
         elif gate_name == "SWAP":
             # c_idx and c_data are consecutive - not necessarily ordered
-            self._converted_processor.add(c_first, comp.PERM([2, 3, 0, 1]))
+            p.add(c_first, comp.PERM([2, 3, 0, 1]))
         else:
             raise RuntimeError(f"Gate not yet supported: {gate_name}")
+        return p

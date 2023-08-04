@@ -39,7 +39,7 @@ class MyQLMConverter(AGateConverter):
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
     def __init__(self, **kwargs):
-        super().__init__(kwargs)
+        super().__init__(**kwargs)
 
     @property
     def name(self) -> str:
@@ -87,6 +87,10 @@ class MyQLMConverter(AGateConverter):
                 raise ValueError(f"cannot convert {instruction_name} - Not a Gate")
             # only gates are converted -> checking if instruction is in gate_set of AQASM
 
+            if self._converted_processor is None:
+                self.configure_processor(qlmc)
+
+            p = self._converted_processor
             if len(instruction_qbit) == 1:
                 ins = None
                 if instruction_name == "H":
@@ -100,7 +104,7 @@ class MyQLMConverter(AGateConverter):
                     gate_u = circ_to_np(gate_matrix)  # gate matrix to numpy
                     ins = super()._create_generic_1_qubit_gate(gate_u)
 
-                self._converted_processor.add(instruction_qbit[0]*2, ins.copy())
+                p.add(instruction_qbit[0]*2, ins.copy())
             else:
                 if len(instruction_qbit) > 2:
                     # only 2 qubit gates
@@ -108,5 +112,6 @@ class MyQLMConverter(AGateConverter):
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
                 c_first = min(c_idx, c_data)  # used in SWAP
-                super()._create_2_qubits_from_catalog(instruction_name, n_cnot, cnot_idx, c_idx, c_data, c_first,
+                p = super()._create_2_qubits_from_catalog(instruction_name, n_cnot, cnot_idx, c_idx, c_data, c_first,
                                                       use_postselection)
+        return p
