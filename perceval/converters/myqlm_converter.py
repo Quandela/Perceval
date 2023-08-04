@@ -119,13 +119,13 @@ class MyQLMConverter:
                 if instruction_name == "CNOT":
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
-                        cnot_processor = self._postprocessed_cnot_builder.build()
+                        cnot_processor = self._postprocessed_cnot_builder.build_processor()
                     else:
-                        cnot_processor = self._heralded_cnot_builder.build()
+                        cnot_processor = self._heralded_cnot_builder.build_processor()
                     p.add(_create_mode_map(c_idx, c_data), cnot_processor)
                 elif instruction_name == "CSIGN":
                     # Controlled Z in myqlm is named CSIGN
-                    cz_processor = self._heralded_cz_builder.build()
+                    cz_processor = self._heralded_cz_builder.build_processor()
                     p.add(_create_mode_map(c_idx, c_data), cz_processor)
                 elif instruction_name == "SWAP":
                     # c_idx and c_data are consecutive - not necessarily ordered
@@ -153,6 +153,6 @@ class MyQLMConverter:
                     ins = self._two_phase_component.copy()
             optimize(ins, u, frobenius, sign=-1)
         else:
-            ins = self._generic_2mode_builder.build()
+            ins = self._generic_2mode_builder.build_circuit()
             optimize(ins, u, frobenius, sign=-1)
         return ins

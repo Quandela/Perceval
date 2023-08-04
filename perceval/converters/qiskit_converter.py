@@ -103,16 +103,16 @@ class QiskitConverter:
                     # c_idx and c_data are consecutive - not necessarily ordered
                     p.add(c_first, comp.PERM([2, 3, 0, 1]))
                 elif instruction[0].name == "cz":
-                    cz_processor = self._heralded_cz_builder.build()
+                    cz_processor = self._heralded_cz_builder.build_processor()
                     mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cz_processor)
                 elif instruction[0].name == "cx":
                     cnot_idx += 1
                     if use_postselection and cnot_idx == n_cnot:
-                        cnot_processor = self._postprocessed_cnot_builder.build()
+                        cnot_processor = self._postprocessed_cnot_builder.build_processor()
                         mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     else:
-                        cnot_processor = self._heralded_cnot_builder.build()
+                        cnot_processor = self._heralded_cnot_builder.build_processor()
                         mode_map = {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
                     p.add(mode_map, cnot_processor)
 
@@ -136,6 +136,6 @@ class QiskitConverter:
                     ins = self._two_phase_component.copy()
             optimize(ins, u, frobenius, sign=-1)
         else:
-            ins = self._generic_2mode_builder.build()
+            ins = self._generic_2mode_builder.build_circuit()
             optimize(ins, u, frobenius, sign=-1)
         return ins
