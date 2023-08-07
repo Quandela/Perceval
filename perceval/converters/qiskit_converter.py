@@ -59,17 +59,15 @@ class QiskitConverter(AGateConverter):
         """
         import qiskit  # this nested import fixes automatic class reference generation
 
-        # count the number of cnot to use during the conversion, will give us the number of herald to handle
-        n_cnot = 0
+        n_cnot = 0  # count the number of CNOT gates in circuit - needed to find the num. heralds
         for instruction in qc.data:
             if instruction[0].name == "cx":
                 n_cnot += 1
-        cnot_idx = 0
 
         qubit_names = qc.qregs[0].name
         if self._converted_processor is None:
             self.configure_processor(qc, qname=qubit_names)
-        p = self._converted_processor  # empty processor with ports initialized
+            # empty processor with ports initialized
 
         for instruction in qc.data:
             # barrier has no effect
@@ -82,12 +80,16 @@ class QiskitConverter(AGateConverter):
                 # one mode gate
                 ins = super()._create_generic_1_qubit_gate(instruction[0].to_matrix())
                 ins._name = instruction[0].name
-                p.add(instruction[1][0].index * 2, ins.copy())
+                self._converted_processor.add(instruction[1][0].index * 2, ins.copy())
             else:
+                if instruction[0].num_qubits > 2:
+                    # only 2 qubit gates
+                    raise ValueError(f"Gates with number of Qbits higher than 2 not implemented")
                 c_idx = instruction[1][0].index * 2
                 c_data = instruction[1][1].index * 2
                 c_first = min(c_idx, c_data)
 
-                p = super()._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, cnot_idx, c_idx, c_data,
-                                                               c_first, use_postselection)
-        return p
+                super()._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, c_idx, c_data, c_first,
+                                                           use_postselection)
+        self.apply_input_state()
+        return self._converted_processor

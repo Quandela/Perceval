@@ -62,13 +62,11 @@ class MyQLMConverter(AGateConverter):
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
-        n_cnot = qlmc.count("CNOT")
-        cnot_idx = 0
+        n_cnot = qlmc.count("CNOT")  # count the number of CNOT gates in circuit - needed to find the num. heralds
 
         if self._converted_processor is None:
             self.configure_processor(qlmc)
-        p = self._converted_processor  # empty processor with ports initialized
+            # empty processor with ports initialized
 
         for i, instruction in enumerate(qlmc.iterate_simple()):
             # qlmc.iterate_simple() is a tuple containing
@@ -94,7 +92,7 @@ class MyQLMConverter(AGateConverter):
                     gate_u = circ_to_np(gate_matrix)  # gate matrix to numpy
                     ins = super()._create_generic_1_qubit_gate(gate_u)
 
-                p.add(instruction_qbit[0]*2, ins.copy())
+                self._converted_processor.add(instruction_qbit[0]*2, ins.copy())
             else:
                 if len(instruction_qbit) > 2:
                     # only 2 qubit gates
@@ -102,6 +100,9 @@ class MyQLMConverter(AGateConverter):
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
                 c_first = min(c_idx, c_data)  # used in SWAP
-                p = super()._create_2_qubit_gates_from_catalog(instruction_name, n_cnot, cnot_idx, c_idx, c_data,
+
+                super()._create_2_qubit_gates_from_catalog(instruction_name, n_cnot, c_idx, c_data,
                                                                c_first, use_postselection)
-        return p
+
+        self.apply_input_state()
+        return self._converted_processor
