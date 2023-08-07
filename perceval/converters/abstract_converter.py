@@ -73,26 +73,26 @@ class AGateConverter(ABC):
     #    return "Gate"
 
     @abstractmethod
-    def set_num_qbits(self, gate_circuit) -> int:
+    def num_qbits_gate_circuit(self, gate_circuit) -> int:
         pass
 
-    def configure_processor(self, gate_circuit):
+    def configure_processor(self, gate_circuit, **kwargs):
         """
         Sets port Encoding and default input state for the Processor
         """
-        n_qbits = self.set_num_qbits(gate_circuit)
+        qname = kwargs.get("qname", "Q")  # Default value, set any name provided by the gate circuit
+        n_qbits = self.num_qbits_gate_circuit(gate_circuit)
         n_moi = n_qbits * 2  # number of modes of interest = 2 * number of qbits
         input_list = [0] * n_moi
         self._converted_processor = Processor(self._backend_name, n_moi, self._source)
         for i in range(n_qbits):
-            # todo : Qbit name? QISKIT has a way ; implement that
-            self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'Q{i}'))
+            self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))
             input_list[i * 2] = 1
         default_input_state = BasicState(input_list)
         self._converted_processor.with_input(default_input_state)
 
     @abstractmethod
-    def convert(self) -> Processor:
+    def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
         """
         converts gates based circuits to one with linear optical components
         and returns a perceval processor
@@ -118,11 +118,11 @@ class AGateConverter(ABC):
                     ins = self._two_phase_component.copy()
             optimize(ins, u, frobenius, sign=-1)
         else:
-            ins = self._generic_2mode_builder.build_circuit()#build_processor(backend=self._backend_name)
+            ins = self._generic_2mode_builder.build_circuit()
             optimize(ins, u, frobenius, sign=-1)
         return ins
 
-    def _create_2_qubits_from_catalog(self, gate_name: str, n_cnot, cnot_idx, c_idx, c_data, c_first,
+    def _create_2_qubit_gates_from_catalog(self, gate_name: str, n_cnot, cnot_idx, c_idx, c_data, c_first,
                                       use_postselection):
         r"""
         List of Gates implemented:
@@ -148,4 +148,7 @@ class AGateConverter(ABC):
             p.add(c_first, comp.PERM([2, 3, 0, 1]))
         else:
             raise RuntimeError(f"Gate not yet supported: {gate_name}")
+
+        import perceval as pcvl
+        pcvl.pdisplay(p)
         return p

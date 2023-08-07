@@ -45,8 +45,8 @@ class QiskitConverter(AGateConverter):
     def name(self) -> str:
         return "QiskitConverter"
 
-    def set_num_qbits(self, gate_circuit) -> int:
-        return gate_circuit.qregs[0].size  # number of Qbits
+    def num_qbits_gate_circuit(self, gate_circuit) -> int:
+        return gate_circuit.qregs[0].size  # number of qbits
 
     def convert(self, qc, use_postselection: bool = True) -> Processor:
         r"""Convert a qiskit quantum circuit into a `Processor`.
@@ -66,8 +66,9 @@ class QiskitConverter(AGateConverter):
                 n_cnot += 1
         cnot_idx = 0
 
+        qubit_names = qc.qregs[0].name
         if self._converted_processor is None:
-            self.configure_processor(qc)
+            self.configure_processor(qc, qname=qubit_names)
         p = self._converted_processor  # empty processor with ports initialized
 
         for instruction in qc.data:
@@ -87,6 +88,6 @@ class QiskitConverter(AGateConverter):
                 c_data = instruction[1][1].index * 2
                 c_first = min(c_idx, c_data)
 
-                p = super()._create_2_qubits_from_catalog(instruction[0].name, n_cnot, cnot_idx, c_idx, c_data, c_first,
-                                                          use_postselection)
+                p = super()._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, cnot_idx, c_idx, c_data,
+                                                               c_first, use_postselection)
         return p

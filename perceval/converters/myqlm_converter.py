@@ -43,9 +43,9 @@ class MyQLMConverter(AGateConverter):
 
     @property
     def name(self) -> str:
-        return "MyQLMCircuitConverter"
+        return "MyQLMConverter"
 
-    def set_num_qbits(self, gate_circuit) -> int:
+    def num_qbits_gate_circuit(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
 
     def convert(self, qlmc, use_postselection: bool = True) -> Processor:
@@ -102,8 +102,6 @@ class MyQLMConverter(AGateConverter):
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
                 c_first = min(c_idx, c_data)  # used in SWAP
-                p = super()._create_2_qubits_from_catalog(instruction_name, n_cnot, cnot_idx, c_idx, c_data, c_first,
-                                                      use_postselection)
-        import perceval as pcvl
-        pcvl.pdisplay(p)
+                p = super()._create_2_qubit_gates_from_catalog(instruction_name, n_cnot, cnot_idx, c_idx, c_data,
+                                                               c_first, use_postselection)
         return p
