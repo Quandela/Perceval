@@ -30,9 +30,9 @@
 import pytest
 import numpy as np
 
-# import platform
-# if platform.system() not in ["Windows", "Linux"]:
-#     pytest.skip("Unsupported OS - Darwin (MacOS) for unitary test", allow_module_level=True)
+import platform
+if platform.system() not in ["Windows", "Linux"]:
+    pytest.skip("Unsupported OS - Darwin (MacOS) for unitary test", allow_module_level=True)
 
 try:
     from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, SWAP, CNOT, CSIGN, AbstractGate
