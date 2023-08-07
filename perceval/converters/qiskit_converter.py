@@ -65,9 +65,7 @@ class QiskitConverter(AGateConverter):
                 n_cnot += 1
 
         qubit_names = qc.qregs[0].name
-        if self._converted_processor is None:
-            self.configure_processor(qc, qname=qubit_names)
-            # empty processor with ports initialized
+        self.configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
 
         for instruction in qc.data:
             # barrier has no effect

@@ -63,10 +63,7 @@ class MyQLMConverter(AGateConverter):
         # this nested import fixes automatic class reference generation
 
         n_cnot = qlmc.count("CNOT")  # count the number of CNOT gates in circuit - needed to find the num. heralds
-
-        if self._converted_processor is None:
-            self.configure_processor(qlmc)
-            # empty processor with ports initialized
+        self.configure_processor(qlmc)    # empty processor with ports initialized
 
         for i, instruction in enumerate(qlmc.iterate_simple()):
             # qlmc.iterate_simple() is a tuple containing
