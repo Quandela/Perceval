@@ -30,6 +30,7 @@
 from .abstract_component import AComponent
 from .abstract_processor import AProcessor
 from .linear_circuit import Circuit, ACircuit
+from .generic_interferometer import GenericInterferometer
 from .processor import Processor
 from .source import Source
 

@@ -30,6 +30,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
+from deprecated import deprecated
 import random
 from typing import Callable, Optional, Union, Tuple, Type, List
 
@@ -472,58 +473,15 @@ class Circuit(ACircuit):
         return u
 
     @staticmethod
+    @deprecated(version="0.10.0", reason="Construct a GenericInterferometer object instead")
     def generic_interferometer(m: int,
                                fun_gen: Callable[[int], ACircuit],
                                shape: str = "rectangle",  # Literal["triangle", "rectangle"]
                                depth: int = None,
                                phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
                                phase_at_output: bool = False) -> Circuit:
-        r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
-
-        :param m: number of modes
-        :param fun_gen: generator function for the building components, index is an integer allowing to generate
-                        named parameters - for instance:
-                        :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx)))`
-        :param shape: `rectangle` or `triangle`
-        :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
-                      Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
-        :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
-        :param phase_at_output: if True creates a layer of phase shifters at the output of the generated interferometer
-                                else creates it in the input (default: False)
-        :return: a circuit
-
-        See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
-        """
-        generated = Circuit(m)
-        if phase_shifter_fun_gen and not phase_at_output:
-            for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i), merge=True)
-        idx = 0
-        depths = [0] * m
-        max_depth = depth is None and m or depth
-        if shape == "rectangle":
-            for i in range(0, max_depth):
-                for j in range(0+i % 2, m-1, 2):
-                    if depth is not None and (depths[j] == depth or depths[j+1] == depth):
-                        continue
-                    generated.add((j, j+1), fun_gen(idx), merge=True)
-                    depths[j] += 1
-                    depths[j+1] += 1
-                    idx += 1
-        else:
-            for i in range(1, m):
-                for j in range(i, 0, -1):
-                    if depth is not None and (depths[j-1] == depth or depths[j] == depth):
-                        continue
-                    generated.add((j-1, j), fun_gen(idx), merge=True)
-                    depths[j-1] += 1
-                    depths[j] += 1
-                    idx += 1
-
-        if phase_shifter_fun_gen and phase_at_output:
-            for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i))
-        return generated
+        from .generic_interferometer import GenericInterferometer  # Import in method to avoir circular dependency
+        return GenericInterferometer(m, fun_gen, shape, depth, phase_shifter_fun_gen, phase_at_output)
 
     def copy(self, subs: Union[dict,list] = None):
         nc = copy.deepcopy(self)
