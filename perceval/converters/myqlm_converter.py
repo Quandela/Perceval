@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, BS, PS
+from perceval.components import Circuit, Processor, BS, PS
 from .abstract_converter import AGateConverter
 
 
@@ -38,18 +38,17 @@ class MyQLMConverter(AGateConverter):
     :param backend_name: Backend to use in computation, defaults to SLOS
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, catalog, **kwargs):
+        super().__init__(catalog, **kwargs)
 
     @property
     def name(self) -> str:
         return "MyQLMCircuitConverter"
 
     def set_num_qbits(self, gate_circuit) -> int:
-        qlmc = gate_circuit
-        return qlmc.nbqbits
+        return gate_circuit.nbqbits
 
-    def convert(self, qlmc, use_postselection: bool = True):
+    def convert(self, qlmc, use_postselection: bool = True) -> Processor:
         r"""Convert a myQLM quantum circuit into a perceval `Processor`.
 
         :param qlmc: quantum gate-based myqlm circuit
@@ -63,18 +62,13 @@ class MyQLMConverter(AGateConverter):
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        # n_moi = qlmc.nbqbits * 2  # number of modes of interest = 2 * number of qbits
-        # input_list = [0] * n_moi
-        # p = Processor(self._backend_name, n_moi, self._source)
-        #
-        # for i in range(qlmc.nbqbits):
-        #     p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'Q{i}'))
-        #     input_list[i * 2] = 1
-        # default_input_state = BasicState(input_list)
-
         # count the number of CNOT gates to use during the conversion, will give us the number of herald to handle
         n_cnot = qlmc.count("CNOT")
         cnot_idx = 0
+
+        if self._converted_processor is None:
+            self.configure_processor(qlmc)
+        p = self._converted_processor  # empty processor with ports initialized
 
         for i, instruction in enumerate(qlmc.iterate_simple()):
             # qlmc.iterate_simple() is a tuple containing
@@ -87,10 +81,6 @@ class MyQLMConverter(AGateConverter):
                 raise ValueError(f"cannot convert {instruction_name} - Not a Gate")
             # only gates are converted -> checking if instruction is in gate_set of AQASM
 
-            if self._converted_processor is None:
-                self.configure_processor(qlmc)
-
-            p = self._converted_processor
             if len(instruction_qbit) == 1:
                 ins = None
                 if instruction_name == "H":
@@ -114,4 +104,7 @@ class MyQLMConverter(AGateConverter):
                 c_first = min(c_idx, c_data)  # used in SWAP
                 p = super()._create_2_qubits_from_catalog(instruction_name, n_cnot, cnot_idx, c_idx, c_data, c_first,
                                                       use_postselection)
+        import perceval as pcvl
+        pcvl.pdisplay(p)
+
         return p

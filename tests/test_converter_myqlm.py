@@ -48,7 +48,7 @@ from perceval.algorithm import Sampler
 
 
 def test_basic_circuit_h():
-    convertor = MyQLMConverter(catalog=catalog)  # takes as kwargs
+    convertor = MyQLMConverter(catalog)  # takes as kwargs
     qprog = Program()  # Create a Program
     qbits = qprog.qalloc(1)  # Allocate some qbits
     print(qbits, type(qbits))
@@ -68,7 +68,7 @@ def test_basic_circuit_h():
 
 
 def test_cnot_1_heralded():
-    convertor = MyQLMConverter(catalog=catalog)
+    convertor = MyQLMConverter(catalog)
     qprog = Program()
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(CNOT, qbits[0], qbits[1])

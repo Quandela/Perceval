@@ -49,13 +49,10 @@ class AGateConverter(ABC):
     Qiskit or MyQLM
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, catalog, **kwargs):
         self._converted_processor = None
         self._source = kwargs.get("source", Source())
         self._backend_name = kwargs.get("backend_name", "SLOS")
-        if not "catalog" in kwargs:
-            raise KeyError("Missing catalog")
-        catalog = kwargs["catalog"]
         self._heralded_cnot_builder = catalog["heralded cnot"]
         self._heralded_cz_builder = catalog["heralded cz"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
@@ -95,7 +92,7 @@ class AGateConverter(ABC):
         self._converted_processor.with_input(default_input_state)
 
     @abstractmethod
-    def convert(self):
+    def convert(self) -> Processor:
         """
         converts gates based circuits to one with linear optical components
         and returns a perceval processor
@@ -134,18 +131,19 @@ class AGateConverter(ABC):
         SWAP
         """
         p = self._converted_processor
-        if gate_name == "CNOT":
+
+        if gate_name == "CNOT" or "cx":
             cnot_idx += 1
             if use_postselection and cnot_idx == n_cnot:
                 cnot_processor = self._postprocessed_cnot_builder.build()
             else:
                 cnot_processor = self._heralded_cnot_builder.build()
             p.add(_create_mode_map(c_idx, c_data), cnot_processor)
-        elif gate_name == "CSIGN":
+        elif gate_name == "CSIGN" or "cx":
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self._heralded_cz_builder.build()
             p.add(_create_mode_map(c_idx, c_data), cz_processor)
-        elif gate_name == "SWAP":
+        elif gate_name.lower() == "swap":
             # c_idx and c_data are consecutive - not necessarily ordered
             p.add(c_first, comp.PERM([2, 3, 0, 1]))
         else:
