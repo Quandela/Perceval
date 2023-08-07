@@ -26,22 +26,46 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from deprecated import deprecated
 from perceval.utils.parameter import P
-from perceval.components import Circuit, Processor
-from perceval.components.unitary_components import *
+from perceval.components import Processor, Circuit, BS
 from perceval.components.component_catalog import CatalogItem, AsType
 
 
 class Generic2ModeItem(CatalogItem):
+    description = "A universal 2 mode component, implemented as a beam splitter with variable theta + 3 free phases"
+    str_repr = r"""    ╭──────╮╭─────╮╭──────╮
+0:──┤phi_tl├┤     ├┤phi_tr├──:0
+    ╰──────╯│BS.H │╰──────╯
+    ╭──────╮│theta│
+1:──┤phi_bl├┤     ├──────────:1
+    ╰──────╯╰─────╯ """
+    params_doc = {
+        "theta": "name or numerical value for beam splitter 'theta' parameter (default 'theta')",
+        "phi_tl": "name or numerical value for top left phase (default 'phi_tl')",
+        "phi_bl": "name or numerical value for bottom left phase (default 'phi_bl')",
+        "phi_tr": "name or numerical value for top right phase (default 'phi_tr')"
+    }
+
     def __init__(self):
         super().__init__("generic 2 mode circuit")
         self._default_opts['type'] = AsType.CIRCUIT
         self._reset_opts()
 
+    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
     def build(self):
-        c = Circuit(2) // BS.H(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
+        c = BS.H(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
         if self._opt('type') == AsType.CIRCUIT:
             return c
         elif self._opt('type') == AsType.PROCESSOR:
             return Processor(self._opt('backend'), c)
+
+    def build_circuit(self, **kwargs):
+        return Circuit(2, name=kwargs.get("name", "U2")) \
+            // BS.H(theta=self._handle_param(kwargs.get("theta", "theta")),
+                    phi_tl=self._handle_param(kwargs.get("phi_tl", "phi_tl")),
+                    phi_bl=self._handle_param(kwargs.get("phi_bl", "phi_bl")),
+                    phi_tr=self._handle_param(kwargs.get("phi_tr", "phi_tr")))
+
+    def build_processor(self, **kwargs):
+        return self._init_processor(**kwargs)

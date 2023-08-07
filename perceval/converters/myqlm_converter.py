@@ -106,5 +106,4 @@ class MyQLMConverter(AGateConverter):
                                                       use_postselection)
         import perceval as pcvl
         pcvl.pdisplay(p)
-
         return p
