@@ -31,8 +31,8 @@ import pytest
 from pathlib import Path
 from collections import Counter
 
-from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
-from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
+from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor, GenericInterferometer
+from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
@@ -269,11 +269,11 @@ def _gen_bs(i: int):
 
 # noinspection PyTypeChecker
 def test_generator():
-    c = Circuit.generic_interferometer(5, _gen_bs)
+    c = GenericInterferometer(5, _gen_bs)
     assert len(c.get_parameters()) == 5*4/2
-    c = Circuit.generic_interferometer(5, _gen_bs, depth=1)
+    c = GenericInterferometer(5, _gen_bs, depth=1)
     assert len(c.get_parameters()) == 2
-    c = Circuit.generic_interferometer(5, _gen_bs, depth=2)
+    c = GenericInterferometer(5, _gen_bs, depth=2)
     assert len(c.get_parameters()) == 4
 
 
