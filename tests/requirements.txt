@@ -5,3 +5,5 @@ flake8
 qiskit
 myqlm
 qutip
+jax
+jaxlib
