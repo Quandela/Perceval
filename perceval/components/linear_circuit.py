@@ -39,7 +39,7 @@ import sympy as sp
 import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
-from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params
+from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
 import perceval.utils.algorithms.decomposition as decomposition
 from perceval.utils.algorithms.match import Match
 from perceval.utils.algorithms.solve import solve
@@ -476,11 +476,16 @@ class Circuit(ACircuit):
     @deprecated(version="0.10.0", reason="Construct a GenericInterferometer object instead")
     def generic_interferometer(m: int,
                                fun_gen: Callable[[int], ACircuit],
-                               shape: str = "rectangle",  # Literal["triangle", "rectangle"]
+                               shape: Union[str, InterferometerShape] = InterferometerShape.RECTANGLE,
                                depth: int = None,
                                phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
                                phase_at_output: bool = False) -> Circuit:
         from .generic_interferometer import GenericInterferometer  # Import in method to avoir circular dependency
+        if isinstance(shape, str):
+            try:
+                shape = InterferometerShape[shape.upper()]
+            except:
+                raise ValueError(f"Unknown interferometer shape: {shape}")
         return GenericInterferometer(m, fun_gen, shape, depth, phase_shifter_fun_gen, phase_at_output)
 
     def copy(self, subs: Union[dict,list] = None):
@@ -495,7 +500,7 @@ class Circuit(ACircuit):
     def decomposition(U: MatrixN,
                       component: ACircuit,
                       phase_shifter_fn: Callable[[int], ACircuit] = None,
-                      shape: str = "triangle",  # Literal["triangle"]
+                      shape: Union[str, InterferometerShape] = InterferometerShape.TRIANGLE,
                       permutation: Type[ACircuit] = None,
                       inverse_v: bool = False,
                       inverse_h: bool = False,
@@ -525,6 +530,11 @@ class Circuit(ACircuit):
                                       Otherwise, insert a component everytime (default True).
         :return: a circuit
         """
+        if isinstance(shape, str):
+            try:
+                shape = InterferometerShape[shape.upper()]
+            except:
+                raise ValueError(f"Unknown interferometer shape: {shape}")
         if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
             raise(ValueError("decomposed matrix should be non symbolic unitary"))
         if inverse_h:
@@ -539,11 +549,11 @@ class Circuit(ACircuit):
                 assert isinstance(constraint, (list, tuple)) and len(constraint) == len(component.get_parameters()),\
                     "there should as many component in each constraint than free parameters in the component"
         while count < max_try:
-            if shape == "triangle":
+            if shape == InterferometerShape.TRIANGLE:
                 lc = decomposition.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
                                                       constraints, allow_error=allow_error,
                                                       ignore_identity_block=ignore_identity_block)
-            else:
+            elif shape == InterferometerShape.RECTANGLE:
                 lc = decomposition.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
                                                        constraints, allow_error=allow_error,
                                                        ignore_identity_block=ignore_identity_block)

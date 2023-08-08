@@ -31,8 +31,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List
 
-from perceval.utils import BasicState
-from perceval.utils import Encoding
+from perceval.utils import BasicState, Encoding
 from .abstract_component import AComponent
 
 def _port_size(encoding: Encoding):
