@@ -283,14 +283,14 @@ def test_svg_dump_grover(tmp_path, save_figs):
 def test_svg_bs_based_generic_no_phase_rectangle(tmp_path, save_figs):
     c = pcvl.GenericInterferometer(5,
                                    fun_gen=lambda idx: BS.H() // PS(pcvl.P("phi_%d" % idx)),
-                                   shape="rectangle")
+                                   shape=pcvl.InterferometerShape.RECTANGLE)
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
 def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
     c = pcvl.GenericInterferometer(5,
                                    fun_gen=lambda idx: BS.H() // PS(pcvl.P("phi_%d" % idx)),
-                                   shape="rectangle",
+                                   shape=pcvl.InterferometerShape.RECTANGLE,
                                    depth=10,
                                    phase_shifter_fun_gen=lambda idx: PS(pcvl.P("theta_%d" % idx)))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
@@ -299,7 +299,7 @@ def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
 def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
     c = pcvl.GenericInterferometer(5,
                                    fun_gen=lambda idx: BS.H() // PS(pcvl.P("phi_%d" % idx)),
-                                   shape="triangle",
+                                   shape=pcvl.InterferometerShape.TRIANGLE,
                                    phase_shifter_fun_gen=lambda idx: PS(pcvl.P("theta_%d" % idx)))
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 

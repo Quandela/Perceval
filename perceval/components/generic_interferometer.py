@@ -58,6 +58,8 @@ class GenericInterferometer(Circuit):
                  depth: int = None,
                  phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
                  phase_at_output: bool = False):
+        assert isinstance(shape, InterferometerShape),\
+            f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
         self._shape = shape
         self._depth = depth
