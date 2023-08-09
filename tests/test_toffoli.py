@@ -30,7 +30,7 @@ import pytest
 import perceval as pcvl
 
 
-def test_expected():
+def test_toffoli_gate_fidelity():
     p = pcvl.components.catalog['toffoli'].build_processor()
     normal_list_states = {}
     for i in range(8):
@@ -46,7 +46,7 @@ def test_expected():
         associated_fock_state = associated_fock_state[:-1]
         associated_fock_state += ">"
         normal_list_states[pcvl.BasicState(associated_fock_state)] = state
-    ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states, output_states=normal_list_states)
+    ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states)
     ca.compute(expected={"000": "000", "001": "001","010": "010", "011": "011","100": "100", "101": "101", "110": "111", "111": "110"})
     pcvl.pdisplay(ca)
-    print("performance=%s, fidelity=%.3f%%" % (pcvl.simple_float(ca.performance)[1], ca.fidelity * 100))
+    assert ca.fidelity == 1

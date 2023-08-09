@@ -27,16 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from deprecated import deprecated
-from perceval.components import Circuit, Processor, Unitary, Port
+from perceval.components import Circuit, Unitary, Port
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.utils import Encoding, Matrix
+from perceval.utils import Encoding, Matrix, PostSelect
 
 
 class ToffoliItem(CatalogItem):
-    article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
     description = r"""Toffoli gate (CCNOT) with 6 heralded modes"""
-    str_repr = r"""
-                       ╭─────╮
+    str_repr = r"""                       ╭─────╮
 ctrl0 (dual rail) ─────┤     ├───── ctrl0 (dual rail)
                   ─────┤     ├─────
                        │     │
@@ -46,7 +44,6 @@ ctrl1 (dual rail) ─────┤     ├───── ctrl1 (dual rail)
 data (dual rail)  ─────┤     ├───── data (dual rail)
                   ─────┤     ├─────
                        ╰─────╯"""
-    see_also = ""
 
     def __init__(self):
         super().__init__("toffoli")
@@ -76,6 +73,7 @@ data (dual rail)  ─────┤     ├───── data (dual rail)
 
     def build_processor(self, **kwargs):
         p = self._init_processor(**kwargs)
+        p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
         return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl0')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'ctrl1')) \
             .add_port(4, Port(Encoding.DUAL_RAIL, 'data')) \
