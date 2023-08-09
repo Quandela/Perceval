@@ -30,6 +30,7 @@
 from .linear_circuit import ACircuit, Circuit
 from perceval.utils import InterferometerShape
 
+import numpy as np
 from typing import Callable, List, Optional, Tuple
 from warnings import warn
 
@@ -40,7 +41,7 @@ class GenericInterferometer(Circuit):
     :param m: number of modes
     :param fun_gen: generator function for the building components, index is an integer allowing to generate
                     named parameters - for instance:
-                    :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx)))`
+                    :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P(f"phi_{idx}")))`
     :param shape: The output interferometer shape (triangle or rectangle)
     :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                   Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
@@ -80,14 +81,22 @@ class GenericInterferometer(Circuit):
                 self.add(i, phase_shifter_fun_gen(i))
 
     @property
-    def mzi_depths(self):
+    def mzi_depths(self) -> List[int]:
+        """Return a list of MZI depth, per mode"""
         return self._depth_per_mode
 
     def remove_phase_layer(self):
+        """Remove the optional phase layer at the input or at the output.
+        Does nothing if such a layer does not exist"""
         if self._has_input_phase_layer:
             self._components = self._components[self.m:]
         if self._has_output_phase_layer:
             self._components = self._components[:-self.m]
+
+    def set_identity_mode(self):
+        """Set the interferometer in identity mode (i.e. photons are output on the mode they're input)"""
+        for p in self.get_parameters():
+            p.set_value(np.pi)
 
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
@@ -114,7 +123,7 @@ class GenericInterferometer(Circuit):
                 self._depth_per_mode[j] += 1
                 idx += 1
 
-    def _find_param_index(self, col, lin, even_col_size, odd_col_size):
+    def _find_param_index(self, col: int, lin: int, even_col_size: int, odd_col_size: int) -> int:
         p_idx = (even_col_size + odd_col_size) * (col // 2)
         if col % 2 == 1:
             p_idx += even_col_size
@@ -123,22 +132,39 @@ class GenericInterferometer(Circuit):
             p_idx += self.m
         return p_idx
 
+    @staticmethod
+    def _compute_insertion_depth(start_col: int, m: int, param_count: int) -> int:
+        depth = 0
+        cc = 0
+        k = 0
+        while k < param_count:
+            depth += 1
+            k += 2*(m//2) if (start_col+cc)%2 == 0 else 2*((m-1)//2)
+        return depth
 
     def set_param_list(self, param_list: List[float], top_left_pos: Tuple[int, int], m: int):
-        """Set the phases stored in param started from top left position"""
-        depth = len(param_list) // (2*m - 1)
+        """Insert parameters value starting from a given position in the interferometer.
+
+        This method is designed to work on rectangular interferometers
+
+        :param param_list: List of numerical values for the parameters
+        :param top_left_pos: Starting position of the insertion (column#, row#). Position is handled MZI-wise (i.e.
+        (0,0) starts inserting values on the top-left-most MZI of the interferometer whereas (1,0) starts on top of the
+        2nd MZI column). The optional phase layer is ignored in the position handling.
+        :param m: Mode count on where to insert the parameter values
+        """
         col, lin = top_left_pos
-        if col < 0 or col+depth*2 >= self.m:
-            raise ValueError(f"Invalid param list width, expected interval in [0,{self.m}], got [{col},{col+depth*2}]")
+        depth = self._compute_insertion_depth(col, m, len(param_list))
+        if col < 0 or col+depth-1 >= self.m:
+            raise ValueError(f"Invalid param list width, expected interval in [0,{self.m}], got [{col},{col+depth-1}]")
         if lin < 0 or lin+m >= self.m:
             raise ValueError(f"Invalid param list height, expected interval in [0,{self.m}], got [{lin},{lin+m}]")
         if self._shape != InterferometerShape.RECTANGLE:
             warn(f"set_param_list was designed for rectangular interferometer")
 
         even_mode_count = self.m % 2 == 0
-        even_col_size = self.m - self.m % 2
+        even_col_size = self.m - (self.m % 2)
         odd_col_size = even_col_size - 2 if even_mode_count else even_col_size
-
         self_params = self.get_parameters()
         cc = 0  # current col
         k = 0
@@ -153,6 +179,11 @@ class GenericInterferometer(Circuit):
             cc += 1
 
     def set_params_from_other(self, other: Circuit, top_left_pos: Tuple[int, int]):
+        """Retrieve parameter value from another interferometer
+
+        :param other: Another circuit instance
+        :param top_left_pos: Starting position of the insertion. See full description in `set_param_list`
+        """
         if not other.defined:
             raise ValueError("Cannot copy parameters from a circuit which isn't fully defined")
         param_list = [float(p) for p in other.get_parameters()]

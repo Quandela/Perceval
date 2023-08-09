@@ -110,7 +110,7 @@ class ACircuit(AParametrizedComponent, ABC):
             component: ACircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
-    def param(self, param_name):
+    def param(self, param_name) -> Parameter:
         return self._params[param_name]
 
     def __setitem__(self, key, value):
