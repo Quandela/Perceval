@@ -3,5 +3,5 @@ pytest-cov
 pytest-benchmark
 flake8
 qiskit
-myqlm
+myqlm==1.7.3
 qutip
