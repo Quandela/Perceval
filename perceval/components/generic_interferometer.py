@@ -140,6 +140,7 @@ class GenericInterferometer(Circuit):
         while k < param_count:
             depth += 1
             k += 2*(m//2) if (start_col+cc)%2 == 0 else 2*((m-1)//2)
+            cc += 1
         return depth
 
     def set_param_list(self, param_list: List[float], top_left_pos: Tuple[int, int], m: int):
@@ -181,7 +182,7 @@ class GenericInterferometer(Circuit):
     def set_params_from_other(self, other: Circuit, top_left_pos: Tuple[int, int]):
         """Retrieve parameter value from another interferometer
 
-        :param other: Another circuit instance
+        :param other: Another interferometer
         :param top_left_pos: Starting position of the insertion. See full description in `set_param_list`
         """
         if not other.defined:
