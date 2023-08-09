@@ -37,13 +37,14 @@ from .abstract_skin import ASkin, ModeStyle
 from .skin_common import bs_convention_color
 
 
-class PhysSkin(ASkin):
+class DebugSkin(ASkin):
     def __init__(self, compact_display: bool = False):
-        super().__init__({"stroke": "darkred", "stroke_width": 3},
+        super().__init__({"stroke": "darkred", "stroke_width": 10},
                          {"width": 2,
                           "fill": "lightpink",
                           "stroke_style": {"stroke": "darkred", "stroke_width": 1}},
                          compact_display)
+        self.style[ModeStyle.HERALD] = {"stroke": "yellow", "stroke_width": 1}  # Display ancillary modes in yellow
 
     @dispatch(AComponent)
     def get_width(self, c) -> int:
@@ -164,38 +165,32 @@ class PhysSkin(ASkin):
         elif convention == cp.BSConvention.H:
             return -1 if round(theta/2/np.pi) % 2 else 1
 
-    def bs_shape(self, bs, canvas, content, mode_style, **opts):
+    def bs_shape(self, bs: cp.BS, canvas, content, mode_style, **opts):
         split_content = content.split("\n")
-        head_content = "\n".join([s for s in split_content
-                                  if s.startswith("R=") or s.startswith("theta=")])
-        bottom_content_list = [s for s in split_content
-                               if not s.startswith("R=") and not s.startswith("theta=")]
+        head_content = "\n".join([s for s in split_content if s.startswith("theta=")])
+        bottom_content_list = [s for s in split_content if not s.startswith("theta=")]
         bottom_nline = len(bottom_content_list)
         bottom_size = 7 if bottom_nline < 3 else 6
         mode_style = self.style[ModeStyle.PHOTONIC]
+        fill_color = "black" if bs.param('theta').defined else "red"
         canvas.add_mline([0, 25, 28, 25, 47, 44], stroke_linejoin="round", **mode_style)
         canvas.add_mline([53, 44, 72, 25, 100, 25], stroke_linejoin="round", **mode_style)
         canvas.add_mline([0, 75, 28, 75, 47, 56], stroke_linejoin="round", **mode_style)
         canvas.add_mline([53, 56, 72, 75, 100, 75], stroke_linejoin="round", **mode_style)
-        canvas.add_rect((25, 43), 50, 14, fill="black")
+        canvas.add_rect((25, 43), 50, 14, fill=fill_color)
         canvas.add_text((50, 80+5*bottom_nline), '\n'.join(bottom_content_list).replace('phi_', 'Φ_'),
                         size=bottom_size, ta="middle")
         canvas.add_text((50, 26), head_content.replace('theta=', 'Θ='), size=7, ta="middle")
-        # Choose the side of the gray rectangle in beam splitter representation
-
-        r_side = self._reflective_side(bs.param('theta'), bs.convention)
-        if r_side == 1:
-            canvas.add_rect((25, 43), 50, 4, fill="lightgray")
-        elif r_side == -1:
-            canvas.add_rect((25, 53), 50, 4, fill="lightgray")
+        canvas.add_rect((25, 53), 50, 4, fill="lightgray")
         # Add BS convention badge
         canvas.add_rect((68, 50), 10, 10, fill=bs_convention_color(bs.convention))
         canvas.add_text((73, 57), bs.convention.name, size=6, ta="middle")
 
-    def ps_shape(self, circuit, canvas, content, mode_style, **opts):
+    def ps_shape(self, circuit: cp.PS, canvas, content, mode_style, **opts):
         canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        fill_color = "gray" if circuit.defined else "red"
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
-                           stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
+                           stroke="black", fill=fill_color, stroke_width=1, stroke_linejoin="miter")
         canvas.add_text((22, 38), text=content.replace("phi=", "Φ="), size=7, ta="left")
 
     def lc_shape(self, circuit, canvas, content, mode_style, **opts):
@@ -246,7 +241,7 @@ class PhysSkin(ASkin):
             style = self.style[mode_style[an_input]]
             if style['stroke']:
                 canvas.add_mline([3, 25+an_input*50, 47, 25+an_output*50],
-                                 stroke="white", stroke_width=6)
+                                 stroke="white", stroke_width=12)
                 canvas.add_mline([0, 25+an_input*50, 3, 25+an_input*50, 47, 25+an_output*50, 50, 25+an_output*50],
                                  **style)
 
