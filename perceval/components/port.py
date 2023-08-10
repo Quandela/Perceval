@@ -68,8 +68,9 @@ class APort(AComponent):
 
     @staticmethod
     @abstractmethod
-    def has_state_equivalent() -> bool:
+    def has_logical_state_equivalent() -> bool:
         """
+        Returns True if the port has a logical state equivalent
         """
 
 
@@ -87,10 +88,16 @@ class Port(APort):
         return False
 
     @staticmethod
-    def has_state_equivalent():
+    def has_logical_state_equivalent() -> bool:
         return True
 
     def to_logic_state(self, state : bool) -> LogicalState:
+        """Return the logical state corresponding to a state
+
+        :param state: State
+        :raises NotImplementedError: QUBIT and POLARIZATION encoding not currently supported
+        :return: The corresponding logical state
+        """
         if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
             return LogicalState(state)
         elif self.encoding == Encoding.DUAL_RAIL:
@@ -129,7 +136,7 @@ class Herald(APort):
         return self._value
 
     @staticmethod
-    def has_state_equivalent():
+    def has_logical_state_equivalent() -> bool:
         return False
 
 
@@ -149,7 +156,7 @@ class ADetector(APort, ABC):
         return True
 
     @staticmethod
-    def has_state_equivalent():
+    def has_logical_state_equivalent() -> bool:
         return False
 
 
@@ -185,7 +192,7 @@ class DigitalConverterDetector(ADetector):
 
 def get_BS_from_ports(ports : list[APort], state: LogicalState) -> BasicState:
     logical_state = LogicalState()
-    port_list = [port for port in ports if port.has_state_equivalent()]
+    port_list = [port for port in ports if port.has_logical_state_equivalent()]
     if len(port_list) != len(state):
         raise ValueError('Logical state and port list do not match')
     for port, mode in zip(port_list, state):

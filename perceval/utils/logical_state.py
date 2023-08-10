@@ -44,7 +44,7 @@ class LogicalState(list):
         return ''.join([str(x) for x in self])
 
 
-def generate_all_states(n : int) -> list[LogicalState]:
+def generate_all_logical_states(n : int) -> list[LogicalState]:
     format_str = f"#0{n+2}b"
     logical_state_list = []
     for i in range(2**n):
