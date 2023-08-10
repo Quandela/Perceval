@@ -39,6 +39,16 @@ def test_logical_state():
     except:
         raise AssertionError("Wrong exception")
 
+    try:
+        LogicalState("a01")
+        raise AssertionError("Should raise a exception")
+    except ValueError:
+        pass
+    except:
+        raise AssertionError("Wrong exception")
+
+    ls = LogicalState("010011")
+    assert ls == LogicalState([0,1,0,0,1,1])
     ls = LogicalState([0,1,0,0,0,1])
     assert str(ls) == "010001"
     ls1 = LogicalState([1,0])

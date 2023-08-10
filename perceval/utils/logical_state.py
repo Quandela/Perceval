@@ -31,10 +31,24 @@ from typing import List
 
 
 class LogicalState(list):
-    def __init__(self, state: List[int] = []):
-        if state.count(0) + state.count(1) != len(state):
-            raise ValueError("A logical state should only contain 0s and 1s")
-        super().__init__(state)
+    def __init__(self, state: list[int] or str = None):
+        """Represent a Logical state
+
+        :param state: Can be either None, a list or a str, defaults to None
+        :raises ValueError: Must have only 0 and 1 in a state
+        :raises TypeError: Supports only None, list or str as state type
+        """
+        if state is None:
+            super().__init__([])
+            return
+        if isinstance(state, str):
+            state = [int(elem) for elem in state]
+        if isinstance(state, list):
+            if state.count(0) + state.count(1) != len(state):
+                raise ValueError("A logical state should only contain 0s and 1s")
+            super().__init__(state)
+            return
+        raise TypeError(f"LogicalState can be initialise with None, list or str, here {type(state)}")
 
     def __add__(self, other):
         temp = self.copy()
