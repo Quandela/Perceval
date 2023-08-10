@@ -27,30 +27,48 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import List
+from perceval.utils import LogicalState, generate_all_logical_states
 
 
-class LogicalState(list):
-    def __init__(self, state: List[int] = []):
-        if state.count(0) + state.count(1) != len(state):
-            raise ValueError("A logical state should only contain 0s and 1s")
-        super().__init__(state)
+def test_logical_state():
+    try:
+        LogicalState([0,2,1])
+        raise AssertionError("Should raise a exception")
+    except ValueError:
+        pass
+    except:
+        raise AssertionError("Wrong exception")
 
-    def __add__(self, other):
-        temp = self.copy()
-        temp.extend(other)
-        return temp
-
-    def __str__(self):
-        if not self:
-            return ""
-        return ''.join([str(x) for x in self])
+    ls = LogicalState([0,1,0,0,0,1])
+    assert str(ls) == "010001"
+    ls1 = LogicalState([1,0])
+    assert ls + ls1 == LogicalState([0,1,0,0,0,1,1,0])
 
 
-def generate_all_logical_states(n : int) -> list[LogicalState]:
-    format_str = f"#0{n+2}b"
-    logical_state_list = []
-    for i in range(2**n):
-        states = format(i, format_str)[2:]
-        logical_state_list.append(LogicalState([int(state) for state in states]))
-    return logical_state_list
+def test_generate_all_logical_states():
+    states = [LogicalState([0,0,0]),
+              LogicalState([0,0,1]),
+              LogicalState([0,1,0]),
+              LogicalState([0,1,1]),
+              LogicalState([1,0,0]),
+              LogicalState([1,0,1]),
+              LogicalState([1,1,0]),
+              LogicalState([1,1,1]),]
+    assert generate_all_logical_states(3) == states
+    states = [LogicalState([0,0,0,0]),
+              LogicalState([0,0,0,1]),
+              LogicalState([0,0,1,0]),
+              LogicalState([0,0,1,1]),
+              LogicalState([0,1,0,0]),
+              LogicalState([0,1,0,1]),
+              LogicalState([0,1,1,0]),
+              LogicalState([0,1,1,1]),
+              LogicalState([1,0,0,0]),
+              LogicalState([1,0,0,1]),
+              LogicalState([1,0,1,0]),
+              LogicalState([1,0,1,1]),
+              LogicalState([1,1,0,0]),
+              LogicalState([1,1,0,1]),
+              LogicalState([1,1,1,0]),
+              LogicalState([1,1,1,1]),]
+    assert generate_all_logical_states(4) == states

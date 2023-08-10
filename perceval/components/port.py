@@ -99,7 +99,7 @@ class Port(APort):
         :return: The corresponding logical state
         """
         if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
-            return LogicalState(state)
+            return LogicalState([int(state)])
         elif self.encoding == Encoding.DUAL_RAIL:
             return LogicalState([0, 1]) if state else LogicalState([1, 0])
         elif self.encoding == Encoding.QUDIT or self.encoding == Encoding.POLARIZATION:
@@ -194,7 +194,7 @@ def get_BS_from_ports(ports : list[APort], state: LogicalState) -> BasicState:
     logical_state = LogicalState()
     port_list = [port for port in ports if port.has_logical_state_equivalent()]
     if len(port_list) != len(state):
-        raise ValueError('Logical state and port list do not match')
+        raise ValueError('Logical state and port list size do not match')
     for port, mode in zip(port_list, state):
         logical_state += port.to_logic_state(mode)
     return BasicState(logical_state)

@@ -30,6 +30,7 @@
 import perceval as pcvl
 from perceval.components.port import *
 from perceval.components.unitary_components import PS, BS
+from perceval.utils import Encoding, BasicState
 import numpy as np
 
 
@@ -60,3 +61,10 @@ def test_digital_converter():
     detector.trigger(False)
     assert not phi.is_symbolic()
     assert float(phi) == np.pi/4
+
+
+def test_logical_conversion():
+    ports = [Herald(1), Port(Encoding.DUAL_RAIL, "belle"), Port(Encoding.RAW, "bulle"), Herald(1), Herald(0), Port(Encoding.TIME, "rebelle"), Herald(1)]
+    assert BasicState("|0,1,0,1>") == get_BS_from_ports(ports, LogicalState([1,0,1]))
+    assert BasicState("|1,0,0,0>") == get_BS_from_ports(ports, LogicalState([0,0,0]))
+    assert BasicState("|0,1,1,1>") == get_BS_from_ports(ports, LogicalState([1,1,1]))

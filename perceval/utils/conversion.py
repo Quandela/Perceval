@@ -27,9 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BSDistribution, BSCount, BSSamples, BasicState
-from .stategenerator import Encoding
-from typing import List
+from .statevector import BSDistribution, BSCount, BSSamples
 
 import numpy as np
 
