@@ -38,6 +38,7 @@ try:
     from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, SWAP, CNOT, CSIGN, AbstractGate
     from qat.core.circuit_builder.matrix_util import circ_to_np
 except ModuleNotFoundError as e:
+    assert e.name == "myqlm"
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
 from perceval import BasicState, StateVector
@@ -48,7 +49,7 @@ from perceval.algorithm import Sampler
 
 
 def test_basic_circuit_h():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter(catalog)  # takes as kwargs
     qprog = Program()  # Create a Program
     qbits = qprog.qalloc(1)  # Allocate some qbits
     print(qbits, type(qbits))
@@ -157,7 +158,7 @@ def test_compare_u_1qbit(Gate_Name):
     gate_id = circ.ops[0].gate
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
-    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_converter = MyQLMConverter(catalog=catalog)
     myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
@@ -188,7 +189,7 @@ def test_abstract_1qbit_gate():
     gate_id = circ.ops[0].gate
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
-    myqlm_converter = MyQLMConverter(catalog)
+    myqlm_converter = MyQLMConverter(catalog=catalog)
     myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
