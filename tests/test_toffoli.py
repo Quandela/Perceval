@@ -26,12 +26,27 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import pytest
+import perceval as pcvl
 
-from .heralded_cnot import HeraldedCnotItem
-from .postprocessed_cnot import PostProcessedCnotItem
-from .heralded_cz import HeraldedCzItem
-from .generic_2mode import Generic2ModeItem
-from .mzi import MZIPhaseFirst, MZIPhaseLast
-from .toffoli import ToffoliItem
 
-catalog_items = [HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst, MZIPhaseLast, ToffoliItem]
+def test_toffoli_gate_fidelity():
+    p = pcvl.components.catalog['toffoli'].build_processor()
+    normal_list_states = {}
+    for i in range(8):
+        state = format(i, '#05b')[2:]
+        associated_fock_state = "|"
+        for b in state:
+            if b == '0':
+                associated_fock_state += "1,0,"
+            elif b == '1':
+                associated_fock_state += "0,1,"
+            else:
+                raise ValueError()
+        associated_fock_state = associated_fock_state[:-1]
+        associated_fock_state += ">"
+        normal_list_states[pcvl.BasicState(associated_fock_state)] = state
+    ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states)
+    ca.compute(expected={"000": "000", "001": "001","010": "010", "011": "011","100": "100", "101": "101", "110": "111", "111": "110"})
+    pcvl.pdisplay(ca)
+    assert ca.fidelity == 1
