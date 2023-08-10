@@ -26,52 +26,27 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from typing import Dict, Callable
-
-from perceval.components import Circuit
+import pytest
+import perceval as pcvl
 
 
-class PredefinedCircuit:
-    def __init__(self,  c: Circuit,
-                 name: str = None,
-                 description: str = None,
-                 heralds: Dict[int, int] = None,
-                 post_select_fn: Callable = None):
-        r"""Define a `PredefinedCircuit` which is a readonly circuit with more information about its usage
-
-        :param c:
-        :param name:
-        :param description:
-        :param heralds:
-        """
-        self._c = c
-        self._name = name
-        self._description = description
-        self._heralds = heralds
-        self._post_select_fn = post_select_fn
-
-    @property
-    def circuit(self):
-        return self._c.copy()
-
-    @property
-    def description(self):
-        return self._description
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def heralds(self) -> dict:
-        return self._heralds
-
-    @property
-    def has_post_select(self) -> bool:
-        return self._post_select_fn is not None
-
-    def post_select(self, s) -> bool:
-        if self._post_select_fn is None:
-            return True
-        return self._post_select_fn(s)
+def test_toffoli_gate_fidelity():
+    p = pcvl.components.catalog['toffoli'].build_processor()
+    normal_list_states = {}
+    for i in range(8):
+        state = format(i, '#05b')[2:]
+        associated_fock_state = "|"
+        for b in state:
+            if b == '0':
+                associated_fock_state += "1,0,"
+            elif b == '1':
+                associated_fock_state += "0,1,"
+            else:
+                raise ValueError()
+        associated_fock_state = associated_fock_state[:-1]
+        associated_fock_state += ">"
+        normal_list_states[pcvl.BasicState(associated_fock_state)] = state
+    ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states)
+    ca.compute(expected={"000": "000", "001": "001","010": "010", "011": "011","100": "100", "101": "101", "110": "111", "111": "110"})
+    pcvl.pdisplay(ca)
+    assert ca.fidelity == 1

@@ -4,3 +4,5 @@ qiskit
 qutip
 seaborn
 nbconvert
+jax
+jaxlib

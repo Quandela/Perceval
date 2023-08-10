@@ -30,33 +30,25 @@ import pytest
 
 from perceval.algorithm.sampler import Sampler
 import perceval as pcvl
-from perceval.components import BS, PS, Processor, Source
-
-import numpy as np
+from perceval.components import BS, PS, Processor, Source, catalog
 
 
 def test_sampler():
-    theta_r13 = BS.r_to_theta(1 / 3)
-    cnot = pcvl.Circuit(6, name="Ralph CNOT")
-    cnot.add((0, 1), BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi / 2, phi_tl=-np.pi / 2))
-    cnot.add((3, 4), BS.H())
-    cnot.add((2, 3), BS.H(theta=theta_r13, phi_bl=np.pi, phi_tr=np.pi / 2, phi_tl=-np.pi / 2))
-    cnot.add((4, 5), BS.H(theta=theta_r13))
-    cnot.add((3, 4), BS.H())
-    imperfect_source = Source(emission_probability=0.9)
-
-    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:
-        p = Processor(backend_name, cnot, imperfect_source)
-        p.min_detected_photons_filter(1)
-        p.with_input(pcvl.BasicState([1, 0, 1, 0, 1, 0]))
+    TRANSMITTANCE = 0.9
+    imperfect_source = Source(emission_probability=TRANSMITTANCE)
+    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS']:  # MPS cannot be used with >2-modes components
+        p = catalog['postprocessed cnot'].build_processor(backend=backend_name)
+        p.source = imperfect_source
+        p.min_detected_photons_filter(0)
+        p.with_input(pcvl.BasicState([1, 0, 1, 0]))
         sampler = Sampler(p)
         probs = sampler.probs()
-        assert probs['results'][pcvl.BasicState('|0,1,2,0,0,0>')] > 0.1
-        assert probs['results'][pcvl.BasicState('|0,1,0,0,2,0>')] > 0.1
-        samples = sampler.samples(50)
-        assert len(samples['results']) == 50
-        sample_count = sampler.sample_count(1000)
-        assert 940 < sum(list(sample_count['results'].values())) < 1060
+        assert probs['results'][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1)
+        assert probs['results'][pcvl.BasicState([1, 0, 0, 1])] == pytest.approx(0)
+        samples = sampler.samples(4)
+        assert len(samples['results']) == 4
+        sample_count = sampler.sample_count(100)
+        assert 90 < sum(list(sample_count['results'].values())) < 110
 
 
 def test_sampler_missing_input_state():

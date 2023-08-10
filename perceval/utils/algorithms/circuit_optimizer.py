@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,7 +30,7 @@
 from typing import Callable, Tuple, Union
 
 import exqalibur as xq
-from perceval.components import ACircuit, Circuit, BS, PS
+from perceval.components import ACircuit, Circuit, BS, PS, catalog
 from perceval.utils import Matrix, P
 from perceval.serialization import serialize_binary, deserialize_circuit
 
@@ -128,15 +135,8 @@ class CircuitOptimizer:
         def _gen_ps(i: int):
             return PS(P(f"phL_{i}"))
 
-        def _mzi_default(i: int):
-            return (Circuit(2)
-                    // (0, PS(phi=P(f"phi_a{i}")))
-                    // BS()
-                    // (0, PS(phi=P(f"phi_b{i}")))
-                    // BS())
-
         if template_component_generator_func is None:
-            template_component_generator_func = _mzi_default
+            template_component_generator_func = catalog["mzi phase first"].generate
         template = Circuit.generic_interferometer(
             target.shape[0],
             template_component_generator_func,
