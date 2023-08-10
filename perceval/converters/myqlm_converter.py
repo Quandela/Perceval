@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, Processor, BS, PS
+from perceval.components import Circuit, Processor, Source, BS, PS
 from .abstract_converter import AGateConverter
 
 
@@ -38,14 +38,10 @@ class MyQLMConverter(AGateConverter):
     :param backend_name: Backend to use in computation, defaults to SLOS
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self, catalog, **kwargs):
-        super().__init__(catalog, **kwargs)
+    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
+        super().__init__(catalog, backend_name, source)
 
-    @property
-    def name(self) -> str:
-        return "MyQLMConverter"
-
-    def num_qbits_gate_circuit(self, gate_circuit) -> int:
+    def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
 
     def convert(self, qlmc, use_postselection: bool = True) -> Processor:
@@ -63,7 +59,7 @@ class MyQLMConverter(AGateConverter):
         # this nested import fixes automatic class reference generation
 
         n_cnot = qlmc.count("CNOT")  # count the number of CNOT gates in circuit - needed to find the num. heralds
-        self.configure_processor(qlmc)    # empty processor with ports initialized
+        self._configure_processor(qlmc)    # empty processor with ports initialized
 
         for i, instruction in enumerate(qlmc.iterate_simple()):
             # qlmc.iterate_simple() is a tuple containing
@@ -87,7 +83,7 @@ class MyQLMConverter(AGateConverter):
                     gate_id = qlmc.ops[i].gate
                     gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data
                     gate_u = circ_to_np(gate_matrix)  # gate matrix to numpy
-                    ins = super()._create_generic_1_qubit_gate(gate_u)
+                    ins = self._create_generic_1_qubit_gate(gate_u)
 
                 self._converted_processor.add(instruction_qbit[0]*2, ins.copy())
             else:
@@ -98,7 +94,7 @@ class MyQLMConverter(AGateConverter):
                 c_data = instruction_qbit[1] * 2
                 c_first = min(c_idx, c_data)  # used in SWAP
 
-                super()._create_2_qubit_gates_from_catalog(instruction_name, n_cnot, c_idx, c_data,
+                self._create_2_qubit_gates_from_catalog(instruction_name, n_cnot, c_idx, c_data,
                                                                c_first, use_postselection)
 
         self.apply_input_state()

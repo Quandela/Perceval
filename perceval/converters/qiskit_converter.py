@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Processor
+from perceval.components import Processor, Source
 from .abstract_converter import AGateConverter
 
 
@@ -38,14 +38,10 @@ class QiskitConverter(AGateConverter):
     :param backend_name: backend name used in the converted processor (default SLOS)
     :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, catalog, **kwargs):
-        super().__init__(catalog, **kwargs)
+    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
+        super().__init__(catalog, backend_name, source)
 
-    @property
-    def name(self) -> str:
-        return "QiskitConverter"
-
-    def num_qbits_gate_circuit(self, gate_circuit) -> int:
+    def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.qregs[0].size  # number of qbits
 
     def convert(self, qc, use_postselection: bool = True) -> Processor:
@@ -65,7 +61,7 @@ class QiskitConverter(AGateConverter):
                 n_cnot += 1
 
         qubit_names = qc.qregs[0].name
-        self.configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
+        self._configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
 
         for instruction in qc.data:
             # barrier has no effect
@@ -76,7 +72,7 @@ class QiskitConverter(AGateConverter):
 
             if instruction[0].num_qubits == 1:
                 # one mode gate
-                ins = super()._create_generic_1_qubit_gate(instruction[0].to_matrix())
+                ins = self._create_generic_1_qubit_gate(instruction[0].to_matrix())
                 ins._name = instruction[0].name
                 self._converted_processor.add(instruction[1][0].index * 2, ins.copy())
             else:
@@ -87,7 +83,7 @@ class QiskitConverter(AGateConverter):
                 c_data = instruction[1][1].index * 2
                 c_first = min(c_idx, c_data)
 
-                super()._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, c_idx, c_data, c_first,
+                self._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, c_idx, c_data, c_first,
                                                            use_postselection)
         self.apply_input_state()
         return self._converted_processor

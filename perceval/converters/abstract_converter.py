@@ -30,12 +30,10 @@
 from abc import ABC, abstractmethod
 
 from perceval.components import Port, Circuit, Processor, Source
-from perceval.utils import P, BasicState, Encoding
+from perceval.utils import P, BasicState, Encoding, global_params
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
-
-MIN_PRECISION_GATE = 1e-4
 
 
 def _create_mode_map(c_idx: int, c_data: int) -> dict:
@@ -48,12 +46,12 @@ class AGateConverter(ABC):
     Qiskit or MyQLM
     """
 
-    def __init__(self, catalog, **kwargs):
+    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
         self._converted_processor = None
         self._input_list = None  # input state in list
         self._cnot_idx = 0  # counter for CNOTS in circuit
-        self._source = kwargs.get("source", Source())
-        self._backend_name = kwargs.get("backend_name", "SLOS")
+        self._source = source
+        self._backend_name = backend_name
         self._heralded_cnot_builder = catalog["heralded cnot"]
         self._heralded_cz_builder = catalog["heralded cz"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
@@ -62,21 +60,16 @@ class AGateConverter(ABC):
         self._upper_phase_component = Circuit(2) // (1, comp.PS(P("phi1")))
         self._two_phase_component = Circuit(2) // (0, comp.PS(P("phi1"))) // (1, comp.PS(P("phi2")))
 
-    @property
     @abstractmethod
-    def name(self) -> str:
-        """Each converter would have a distinct name as a string"""
-
-    @abstractmethod
-    def num_qbits_gate_circuit(self, gate_circuit) -> int:
+    def count_qubits(self, gate_circuit) -> int:
         pass
 
-    def configure_processor(self, gate_circuit, **kwargs):
+    def _configure_processor(self, gate_circuit, **kwargs):
         """
         Sets port Encoding and default input state for the Processor
         """
         qname = kwargs.get("qname", "Q")  # Default value, set any name provided by the gate circuit
-        n_qbits = self.num_qbits_gate_circuit(gate_circuit)
+        n_qbits = self.count_qubits(gate_circuit)
         n_moi = n_qbits * 2  # number of modes of interest = 2 * number of qbits
         self._input_list = [0] * n_moi
         self._converted_processor = Processor(self._backend_name, n_moi, self._source)
@@ -90,26 +83,21 @@ class AGateConverter(ABC):
 
     @abstractmethod
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
-        """
-        converts gates based circuits to one with linear optical components
-        and returns a perceval processor
-        Children - MyQlMConverter and QiskitConverter should define this method
-        """
         pass
 
     def _create_generic_1_qubit_gate(self, u) -> Circuit:
         # universal method, takes in unitary and approximates one using
         # Frobenius method
 
-        if abs(u[1, 0]) + abs(u[0, 1]) < 2 * MIN_PRECISION_GATE:
+        if abs(u[1, 0]) + abs(u[0, 1]) < 2 * global_params["min_precision_gate"]:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
-            if abs(u[0, 0] - 1) < MIN_PRECISION_GATE:
-                if abs(u[1, 1] - 1) < MIN_PRECISION_GATE:
+            if abs(u[0, 0] - 1) < global_params["min_precision_gate"]:
+                if abs(u[1, 1] - 1) < global_params["min_precision_gate"]:
                     return Circuit(2, name="I")  # returns Identity/empty circuit
                 ins = self._upper_phase_component.copy()
             else:
-                if abs(u[1, 1] - 1) < MIN_PRECISION_GATE:
+                if abs(u[1, 1] - 1) < global_params["min_precision_gate"]:
                     ins = self._lower_phase_component.copy()
                 else:
                     ins = self._two_phase_component.copy()
@@ -120,7 +108,7 @@ class AGateConverter(ABC):
         return ins
 
     def _create_2_qubit_gates_from_catalog(self, gate_name: str, n_cnot, c_idx, c_data, c_first,
-                                      use_postselection):
+                                           use_postselection):
         r"""
         List of Gates implemented:
         CNOT - Heralded and post-processed
