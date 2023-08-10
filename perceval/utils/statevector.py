@@ -48,6 +48,7 @@ from exqalibur import FockState, FSArray
 def _fockstate_add(self, other):
     return StateVector(self) + other
 
+
 def _fockstate_sub(self, other):
     return StateVector(self) - other
 
@@ -554,25 +555,3 @@ class BSSamples(list):
             s += f', ... (size={sz})'
         s += ']'
         return s
-
-class LogicalState(list):
-    def __init__(self, state: List[int] = []):
-        assert state.count(0) + state.count(1) == len(state), "A logical state should only contain 0s and 1s"
-        super().__init__(state)
-
-    def __add__(self, other):
-        self.append(other)
-
-    def __str__(self):
-        if not self:
-            return ""
-        return '|' + ','.join([str(x) for x in self]) + '>_L'
-
-
-def generate_all_states(n : int) -> list[LogicalState]:
-    format_str = f"#0{n+2}b"
-    logical_state_list = []
-    for i in range(2**n):
-        states = format(i, format_str)[2:]
-        logical_state_list.append(LogicalState([int(state) for state in states]))
-    return logical_state_list

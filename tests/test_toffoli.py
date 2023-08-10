@@ -32,10 +32,7 @@ import perceval as pcvl
 
 def test_toffoli_gate_fidelity():
     p = pcvl.components.catalog['toffoli'].build_processor()
-    normal_list_states = {}
-    states = pcvl.utils.statevector.generate_all_states(3)
-    for state in states:
-        normal_list_states[pcvl.components.port.ports_to_BS(p._out_ports, state)] = state
+    normal_list_states = {pcvl.components.get_BS_from_ports(p._out_ports, state) : str(state) for state in pcvl.utils.generate_all_states(3)}
     ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states)
     ca.compute(expected={"000": "000", "001": "001","010": "010", "011": "011","100": "100", "101": "101", "110": "111", "111": "110"})
     pcvl.pdisplay(ca)

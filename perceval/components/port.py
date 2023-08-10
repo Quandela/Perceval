@@ -29,11 +29,9 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List
 
 from perceval.utils import BasicState, Encoding, LogicalState
 from .abstract_component import AComponent
-
 
 
 def _port_size(encoding: Encoding):
@@ -96,9 +94,10 @@ class Port(APort):
         if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
             return LogicalState(state)
         elif self.encoding == Encoding.DUAL_RAIL:
-            return LogicalState([1, 0]) if state else LogicalState([0, 1])
+            return LogicalState([0, 1]) if state else LogicalState([1, 0])
         elif self.encoding == Encoding.QUDIT or self.encoding == Encoding.POLARIZATION:
             raise NotImplementedError
+
 
 class QuditPort(Port):
     def __init__(self, n, name):
@@ -153,6 +152,7 @@ class ADetector(APort, ABC):
     def has_state_equivalent():
         return False
 
+
 class CounterDetector(ADetector):
     def __init__(self, name=''):
         super().__init__(name)
@@ -183,7 +183,7 @@ class DigitalConverterDetector(ADetector):
         return component in self._connections
 
 
-def ports_to_BS(ports : list[APort], state: LogicalState) -> BasicState:
+def get_BS_from_ports(ports : list[APort], state: LogicalState) -> BasicState:
     logical_state = LogicalState()
     port_list = [port for port in ports if port.has_state_equivalent()]
     if len(port_list) != len(state):

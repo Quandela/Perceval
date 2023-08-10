@@ -60,8 +60,8 @@ class ASkin(ABC):
     def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
         self._compact = compact_display
         self.style = {ModeStyle.PHOTONIC: stroke_style,
-                      # ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
-                      ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}  # Use this for debug
+                      ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
+                      # ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}  # Use this for debug
                       }
         self.style_subcircuit = style_subcircuit
 
