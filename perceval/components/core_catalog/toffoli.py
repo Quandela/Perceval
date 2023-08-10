@@ -47,14 +47,6 @@ data (dual rail)  ─────┤     ├───── data (dual rail)
 
     def __init__(self):
         super().__init__("toffoli")
-        self._default_opts['type'] = AsType.PROCESSOR
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        if self._opt('type') == AsType.CIRCUIT:
-            return self.build_circuit()
-        elif self._opt('type') == AsType.PROCESSOR:
-            return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
         U = Unitary(Matrix([[3.12177488e-17 + 5.09824529e-01j, 0, 0, 0, 0, 0, 0, 0, 0, 5.26768603e-17 + 8.60278414e-01j, 0, 0],
