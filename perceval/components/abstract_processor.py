@@ -36,12 +36,13 @@ from typing import Any, Dict, List, Union, Callable
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
-from .port import LogicalState, Herald, PortLocation, APort
+from .port import Herald, PortLocation, APort
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
+from perceval.utils import LogicalState
 
 
 class ProcessorType(Enum):

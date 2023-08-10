@@ -31,8 +31,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List
 
-from perceval.utils import BasicState, Encoding
+from perceval.utils import BasicState, Encoding, LogicalState
 from .abstract_component import AComponent
+
+
 
 def _port_size(encoding: Encoding):
     if encoding == Encoding.DUAL_RAIL:
@@ -66,6 +68,12 @@ class APort(AComponent):
         Returns True if the photonic mode is closed by the port
         """
 
+    @staticmethod
+    @abstractmethod
+    def has_state_equivalent() -> bool:
+        """
+        """
+
 
 class Port(APort):
     def __init__(self, encoding, name):
@@ -80,6 +88,17 @@ class Port(APort):
     def is_output_photonic_mode_closed(self):
         return False
 
+    @staticmethod
+    def has_state_equivalent():
+        return True
+
+    def to_logic_state(self, state : bool) -> LogicalState:
+        if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
+            return LogicalState(state)
+        elif self.encoding == Encoding.DUAL_RAIL:
+            return LogicalState([1, 0]) if state else LogicalState([0, 1])
+        elif self.encoding == Encoding.QUDIT or self.encoding == Encoding.POLARIZATION:
+            raise NotImplementedError
 
 class QuditPort(Port):
     def __init__(self, n, name):
@@ -110,6 +129,10 @@ class Herald(APort):
     def expected(self):
         return self._value
 
+    @staticmethod
+    def has_state_equivalent():
+        return False
+
 
 class ADetector(APort, ABC):
     def __init__(self, name=''):
@@ -126,6 +149,9 @@ class ADetector(APort, ABC):
     def is_output_photonic_mode_closed(self):
         return True
 
+    @staticmethod
+    def has_state_equivalent():
+        return False
 
 class CounterDetector(ADetector):
     def __init__(self, name=''):
@@ -157,31 +183,11 @@ class DigitalConverterDetector(ADetector):
         return component in self._connections
 
 
-class LogicalState(list):
-    def __init__(self, state: List[int]):
-        assert state.count(0) + state.count(1) == len(state), "A logical state should only contain 0s and 1s"
-        super().__init__(state)
-
-    def to_basic_state(self, port_list: List[APort]) -> BasicState:
-        result = []
-        index = 0
-        for port in port_list:
-            if isinstance(port, Herald):
-                continue
-            if index >= len(self):
-                raise ValueError('Logical state and port list do not match (state too short)')
-            if isinstance(port, Port):
-                if port.encoding == Encoding.RAW or port.encoding == Encoding.TIME:
-                    result += [self[index]]
-                    index += 1
-                elif port.encoding == Encoding.DUAL_RAIL:
-                    result += [1, 0] if self[index] == 0 else [0, 1]
-                    index += 1
-                elif port.encoding == Encoding.QUDIT or port.encoding == Encoding.POLARIZATION:
-                    raise NotImplementedError
-        if index != len(self):
-            raise ValueError('Logical state and port list do not match (state too long)')
-        return BasicState(result)
-
-    def __str__(self):
-        return '|' + ','.join([str(x) for x in self]) + '>_L'
+def ports_to_BS(ports : list[APort], state: LogicalState) -> BasicState:
+    logical_state = LogicalState()
+    port_list = [port for port in ports if port.has_state_equivalent()]
+    if len(port_list) != len(state):
+        raise ValueError('Logical state and port list do not match')
+    for port, mode in zip(port_list, state):
+        logical_state += port.to_logic_state(mode)
+    return BasicState(logical_state)
