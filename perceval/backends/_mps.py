@@ -89,6 +89,9 @@ class MPSBackend(AProbAmpliBackend):
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
         self._compile()
+        # essentially the entire computation is compiled and set when the input state is set!
+        # todo: find if we want this here or have it designed more elegantly? Do we want a user to run the computation
+        #  while setting up?
 
     def _apply(self, r, c):
         """
@@ -118,7 +121,7 @@ class MPSBackend(AProbAmpliBackend):
         # TODO : allow any StateVector as in stepper, or a list as in SLOS?
         # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
 
-        self._n = self._input_state.n  # number of photons
+        self._n = self._input_state.n  # total number of photons
         self._d = self._n + 1  # possible num of photons in each mode {0,1,2,...,n}
         self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
         # choosing a cut-off smaller than the limit as the size of matrix increases
@@ -128,15 +131,19 @@ class MPSBackend(AProbAmpliBackend):
         self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
         # Gamma matrices of the MPS - array shape (m, $\chi$, $\chi$, d)
         # Each Gamma matrix of MPS, in theory, have 3 indices.
-        # The first index 'm' here is used to represent modes
+        # The first index 'm' here is used to represent modes - all gammas of MPS stored in a single array
         for i in range(self._input_state.m):
             self._gamma[i, 0, 0, self._input_state[i]] = 1
 
         self._sv = np.zeros((self._input_state.m, self._cutoff))
-        # sv matrices are diagonal matrices with singular values - array shape (m,$\chi$)
-        # sv are vectors -> similar to gamma, the first index 'm' represents modes.
+        # sv matrices store singular values - array shape (m, $\chi$)
+        # sv are vectors of length $\chi$. Similar to gamma, the first index 'm' indexes mode.
         self._sv[:, 0] = 1  # first column set to 1
-        # Todo: Rawad - understand the initialization of gamma and sv above
+
+        # This initialization of MPS (gamma and sv) fixes the input state to be completely separable
+        # and a pure BasicState (no superposition); hence would have only 1 non-zero element whose value = 1.
+        # It is simply written based on this choice as the SVD of such a structure would exactly look like this
+        # todo: maybe make is more generic ITensors(Julia)? some other package?
 
         for r, c in C:
             # r -> tuple -> lists the modes where the component c is connected
@@ -167,9 +174,10 @@ class MPSBackend(AProbAmpliBackend):
             mps_in_list.append(self._sv_diag(k))
             # alternately takes in each gamma and singular value matrices -> puts them in a list
         mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][self._input_state.m-1, :, :, output_state[self._input_state.m-1]])
-        # todo : understand how the multidot would act on this list to return the prob amplis
-        # my guess is that it does the full tensor contraction -> outer product of all
-        # different terms of MPS
+        # Inserting the last gamma into MPS outside the loop as there is no sv after that.
+
+        # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
+        # todo: why is the desired result is always at [0,0]?
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     @staticmethod
@@ -327,7 +335,8 @@ class MPSBackend(AProbAmpliBackend):
         the matrices in the MPS.
         """
         if self._res[self._current_input]["sv"].any():
-            sv = self._res[self._current_input]["sv"]  # todo: clarify - would this not be the same as else ?
+            sv = self._res[self._current_input]["sv"]
+            # todo: clarify - would this not be the same as else ? Also, by the time this is called "sv" is set in _res
         else:
             sv = self._sv
         sv_diag = np.zeros((self._cutoff, self._cutoff))
