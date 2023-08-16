@@ -83,7 +83,8 @@ class MPSBackend(AProbAmpliBackend):
             assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
                 "MPS backend can not be used with components of using more than 2 modes"
         if self._cutoff is None:
-            self._cutoff = C.m  # sets the default value of cut-off = Num of modes of circuit
+            self._cutoff = C.m  # sets the value of cut-off at circuit creation = Num of modes of circuit
+            # todo: find if we need it here?
         # self._clear_cache()  # todo: _clear_cache() should define _res? Discuss: Eric
 
     def set_input_state(self, input_state: BasicState):
@@ -210,10 +211,8 @@ class MPSBackend(AProbAmpliBackend):
         """
         self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2, 0))
         # gamma[k] -> takes the kth slice from first dimension -> selects gamma of kth mode
-        # the shape of gamma[k] is ($\chi$, $\chi$, d).
-        # The shape of the matrix returned by _transition_matrix_1_mode(u) is (d, d).
+        # gamma[k].shape=($\chi$, $\chi$, d) and _transition_matrix_1_mode(u).shape=(d, d).
         # The contraction is on the free index 'd'.
-        # Here, axes=2 of gamma[k] and axes=0 of the transition matrix.
         # Assigns the result to the same gamma[k] returning the shape ($\chi$, $\chi$, d)
 
     def update_state_2_mode(self, k, u):
@@ -221,57 +220,48 @@ class MPSBackend(AProbAmpliBackend):
         takes the gamma->kth and (k+1)th + corresponding $\lambda$-s -> contracts the entire thing
         with 2 mode beam splitter, performs some reshaping and then svd to re-build the corresponding
         segment of MPS.
-        todo: verify the axes in tensordots, improvement of code
         """
 
         if 0 < k < self._input_state.m - 2:
             # BS anywhere except the first and the last mode
-            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
-            # _sv_diag(k - 1) -> shape ($\chi$, $\chi$) and _gamma[k, :] of shape ($\chi$, $\chi$, d)
-            # Output = theta of shape ($\chi$, $\chi$, d)
-            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
-            # theta of shape ($\chi$, $\chi$, d) and _sv_diag(k - 1) -> shape ($\chi$, $\chi$)
-            # Output = theta of shape ($\chi$, $\chi$, d) ??? or ($\chi$, d, $\chi$)  todo: verify
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # todo: check axes=2 seems incorrect
-            # theta of shape ($\chi$, $\chi$, d) and _gamma[k+1, :] of shape ($\chi$, $\chi$, d)
-            # Output = theta of shape ($\chi$, d, $\chi$, d) ??  todo: verify
-            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # todo: check axes=2 seems incorrect
+            # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=($\chi$,$\chi$,d)
+            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=($\chi$, d, $\chi$, d)
+            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # theta.shape=($\chi$, d, d, $\chi$)
             # contraction of the corresponding matrices of MPS finished until here
-            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))  # todo: verify index
-            # theta of shape ($\chi$, $\chi$, d) and _transition_matrix_2_mode(u) shape (d, d, d, d)
-            # should be full contraction of 2 edges of theta (previously connected to MPS)
-            # todo: Rawad - discuss
+            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))
+            # input->theta.shape=($\chi$, d, d, $\chi$) and big_u.shape(d,d,d,d)
+            # output->theta.shape($\chi$, $\chi$, d, d)
 
-            # todo: Rawad - do we need both swap and reshape for the merge ?
-            theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            # the middle 2 indices reach outside d,x,x,d -> x, d, x, d
-            theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
-            # merging indices to have a 2D matrix of shape (d x $\chi$, d x $\chi$) -> step before SVD
-
-        # the following 2 edge cases require one less tensordot/contraction as there would not be a
-        # sv_diagonal available
         elif k == 0:
             # BS connected between the first 2 modes -> Edge of circuit
-            theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
-            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))
-            theta = np.tensordot(theta, self._transition_matrix_2_mode(u),
-                                 axes=([1, 2], [0, 1]))  # Pretty weird thing... To check
-            # todo: tensorproduct of mps with BS is going to
-            #  include states that he probably neglected while building the BS. Verify
-            theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
+            # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
+            theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=($\chi$, d, $\chi$, d)
+            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # theta.shape=($\chi$, d, d, $\chi$)
+            theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))
+            # input->theta.shape=($\chi$, d, d, $\chi$) and big_u.shape(d,d,d,d)
+            # output->theta.shape($\chi$, $\chi$, d, d)
 
         elif k == self._input_state.m - 2:
             # BS connected between the last 2 modes -> Edge of circuit
-            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))
-            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))
+            # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=($\chi$,$\chi$,d)
+            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=($\chi$, d, $\chi$, d)
             theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 3], [0, 1]))
-            theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)
-            theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
+            # input->theta.shape = ($\chi$, d, $\chi$, d) and big_u.shape(d, d, d, d)
+            # output->theta.shape($\chi$, $\chi$, d, d)
 
-        v, s, w = np.linalg.svd(theta)  # svd after all contractions to splits up the big theta matrix
+        # tensorproduct of mps with BS might include states that he probably neglected while building the BS.
+        # todo: how to Verify?
+
+        theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)  # todo: are all these swaps necessary?
+        # resulting theta.shape(d, $\chi$, d, $\chi$) WHY!!!!!!!!
+        theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
+        # merging indices to have a 2D matrix of shape (d x $\chi$, d x $\chi$) -> step before SVD
+        v, s, w = np.linalg.svd(theta)  # svd of the tensor after component is applied to rextract hte MPS form
         # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
         # this implies U->v, S->s, V->w
 
@@ -306,27 +296,24 @@ class MPSBackend(AProbAmpliBackend):
         The formula for constructing the larger U to contract with the MPS is in
         Thibaud report.
         """
+        u11, u12, u21, u22 = u[0, 0], u[0, 1], u[1, 0], u[1, 1]
         d = self._d
         big_u = np.zeros((d, d, d, d), dtype='complex_')  # matrix corresponding to BS -> to contract with MPS
         # todo: vectorize and remove so many for loops
-        for i1 in range(d):
-            # i1=n1 -> number of photons in mode 1
-            for i2 in range(d):
-                # i2=n2 -> number of photons in mode 2
-                i_tot = i1 + i2
-                u11, u12, u21, u22 = u[0, 0], u[0, 1], u[1, 0], u[1, 1]
-                outputs = np.zeros((d, d), dtype = 'complex_')
-
-                if i_tot <= self._n:  # cannot exceed the total number of photons
+        for n1 in range(d):  # n1 -> number of photons in mode 1
+            for n2 in range(d):  # n2 -> number of photons in mode 2
+                n_tot = n1 + n2
+                outputs = np.zeros((d, d), dtype='complex_')
+                if n_tot <= self._n:  # cannot exceed the total number of photons
                     # todo: try removing this if and check : Stephen. possibly he is applying 0 to some state that exist
-                    for k1 in range(i1+1):
-                        for k2 in range(i2+1):
-                            outputs[k1 + k2, i_tot - (k1 + k2)] += comb(i1, k1) * comb(i2, k2) \
-                                                                   * (u11**k1 * u12**(i1-k1) * u21**k2 * u22**(i2-k2)) \
-                                                                * (np.sqrt(factorial(k1+k2) * factorial(i_tot-k1-k2)))
-                            # todo: verify; i think this is incorrect
+                    for k1 in range(n1+1):
+                        for k2 in range(n2+1):
+                            outputs[k1 + k2, n_tot - (k1 + k2)] += comb(n1, k1) * comb(n2, k2) \
+                                                                   * (u11**k1 * u12**(n1-k1) * u21**k2 * u22**(n2-k2)) \
+                                                                * (np.sqrt(factorial(k1+k2) * factorial(n_tot-k1-k2)))
+                            # todo: i did not see the factorial (previous line) in the formula (eq22->Thibaud)
 
-                big_u[i1, i2, :] = outputs / (np.sqrt(factorial(i1) * factorial(i2)))
+                big_u[n1, n2, :] = outputs / (np.sqrt(factorial(n1) * factorial(n2)))
         return big_u
 
     def _sv_diag(self, k):
