@@ -32,6 +32,7 @@ import pytest
 try:
     import qiskit
 except ModuleNotFoundError as e:
+    assert e.name == "qiskit"
     pytest.skip("need `qiskit` module", allow_module_level=True)
 
 from perceval import BasicState, StateVector, Circuit
