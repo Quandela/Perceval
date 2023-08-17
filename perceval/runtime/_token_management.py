@@ -41,7 +41,7 @@ class TokenProvider:
 
     _CACHED_TOKEN = None
 
-    def __init__(self, env_var: str = "QCLOUD_TOKEN", file_path: str = None):
+    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN", file_path: str = None):
         """
         :param env_var: Environment variable name to search for a token
         :param file_path: Path to search for a file containing a token
