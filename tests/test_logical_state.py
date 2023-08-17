@@ -27,25 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+
 from perceval.utils import LogicalState, generate_all_logical_states
 
 
 def test_logical_state():
-    try:
+    with pytest.raises(ValueError):
         LogicalState([0,2,1])
-        raise AssertionError("Should raise a exception")
-    except ValueError:
-        pass
-    except:
-        raise AssertionError("Wrong exception")
 
-    try:
+    with pytest.raises(ValueError):
         LogicalState("a01")
-        raise AssertionError("Should raise a exception")
-    except ValueError:
-        pass
-    except:
-        raise AssertionError("Wrong exception")
 
     ls = LogicalState("010011")
     assert ls == LogicalState([0,1,0,0,1,1])

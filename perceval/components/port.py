@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
+from typing import List
 from enum import Enum
 
 from perceval.utils import BasicState, Encoding, LogicalState
@@ -91,13 +92,15 @@ class Port(APort):
     def has_logical_state_equivalent() -> bool:
         return True
 
-    def to_logic_state(self, state : bool) -> LogicalState:
-        """Return the logical state corresponding to a state
+    def to_state_with_encoding(self, state : int) -> LogicalState:
+        """Return the logical state taking in account the encoding
 
-        :param state: State
+        :param state: State (0 or 1)
         :raises NotImplementedError: QUBIT and POLARIZATION encoding not currently supported
         :return: The corresponding logical state
         """
+        if state not in [0,1]:
+            raise ValueError("state should be 0 or 1")
         if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
             return LogicalState([int(state)])
         elif self.encoding == Encoding.DUAL_RAIL:
@@ -190,11 +193,19 @@ class DigitalConverterDetector(ADetector):
         return component in self._connections
 
 
-def get_BS_from_ports(ports : list[APort], state: LogicalState) -> BasicState:
+def get_state_with_encoding_from_ports(ports : List[APort], state: LogicalState) -> LogicalState:
+    """Get the LogicalState that takes in account:
+        - if the port has a logical state equivalent (herald or ancillary modes are skipped for example)
+        - the port encoding (see Port.to_state_with_encoding())
+
+    :param ports: port list to convert to LogicalState
+    :param state: corresponding LogicalState
+    :return: new LogicalState
+    """
     logical_state = LogicalState()
     port_list = [port for port in ports if port.has_logical_state_equivalent()]
     if len(port_list) != len(state):
         raise ValueError('Logical state and port list size do not match')
     for port, mode in zip(port_list, state):
-        logical_state += port.to_logic_state(mode)
-    return BasicState(logical_state)
+        logical_state += port.to_state_with_encoding(mode)
+    return logical_state
