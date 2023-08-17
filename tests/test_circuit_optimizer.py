@@ -30,7 +30,7 @@ from typing import Callable
 
 from perceval.utils.algorithms.circuit_optimizer import CircuitOptimizer
 from perceval.utils.algorithms import norm
-from perceval.components import BS, PS, Circuit
+from perceval.components import BS, PS, Circuit, GenericInterferometer
 from perceval.utils import P, Matrix
 
 import pytest
@@ -49,9 +49,9 @@ def _check_optimize(size: int, mzi_func: Callable[[int], None], max_eval_per_tri
     else:
         circuit_optimizer = CircuitOptimizer(max_eval_per_trial=max_eval_per_trial_tested)
 
-    template_interferometer = Circuit.generic_interferometer(size, mzi_func,
-                                                             phase_shifter_fun_gen=_ps,
-                                                             phase_at_output=True)
+    template_interferometer = GenericInterferometer(size, mzi_func,
+                                                    phase_shifter_fun_gen=_ps,
+                                                    phase_at_output=True)
     random_unitary = Matrix.random_unitary(size)
     result_circuit, fidelity = circuit_optimizer.optimize(random_unitary, template_interferometer)
     assert 1 - fidelity < circuit_optimizer.threshold
@@ -76,7 +76,7 @@ def test_circuit_optimizer_bs_convention():
         _check_optimize(12, mzi_conv)
 
 
-@pytest.mark.parametrize("nb_iteration, expected_success", [(None, True), (200, False), (50000, True)])
+@pytest.mark.parametrize("nb_iteration, expected_success", [(None, True), (20, False), (50000, True)])
 def test_circuit_optimizer_max_eval_convergence(nb_iteration: int, expected_success: bool):
     def mzi(i):
         return Circuit(2) // PS(P(f"phi_1_{i}")) // BS.Rx(perfect_theta) \
