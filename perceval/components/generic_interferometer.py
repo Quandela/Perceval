@@ -42,7 +42,7 @@ class GenericInterferometer(Circuit):
     :param fun_gen: generator function for the building components, index is an integer allowing to generate
                     named parameters - for instance:
                     :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P(f"phi_{idx}")))`
-    :param shape: The output interferometer shape (triangle or rectangle)
+    :param shape: The output interferometer shape (InterferometerShape.RECTANGLE or InterferometerShape.TRIANGLE)
     :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                   Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
     :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
@@ -75,12 +75,17 @@ class GenericInterferometer(Circuit):
             self._build_rectangle()
         elif shape == InterferometerShape.TRIANGLE:
             self._build_triangle()
+        else:
+            raise NotImplementedError(f"Shape {shape} not supported")
 
         self._has_output_phase_layer = False
         if phase_shifter_fun_gen and phase_at_output:
             self._has_output_phase_layer = True
             for i in range(0, m):
                 self.add(i, phase_shifter_fun_gen(i))
+
+    def __repr__(self):
+        return f"Generic interferometer ({self.m} modes, {str(self._shape.name)}, {self.ncomponents()} components)"
 
     @property
     def mzi_depths(self) -> List[int]:
@@ -163,7 +168,7 @@ class GenericInterferometer(Circuit):
         if lin < 0 or lin+m >= self.m:
             raise ValueError(f"Invalid param list height, expected interval in [0,{self.m}], got [{lin},{lin+m}]")
         if self._shape != InterferometerShape.RECTANGLE:
-            warn(f"set_param_list was designed for rectangular interferometer")
+            warn("set_param_list was designed for rectangular interferometer")
 
         even_mode_count = self.m % 2 == 0
         even_col_size = self.m - (self.m % 2)

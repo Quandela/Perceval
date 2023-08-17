@@ -557,6 +557,8 @@ class Circuit(ACircuit):
                 lc = decomposition.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
                                                        constraints, allow_error=allow_error,
                                                        ignore_identity_block=ignore_identity_block)
+            else:
+                raise NotImplementedError(f"Shape {shape} not supported")
             if lc is not None:
                 C = Circuit(N)
                 for range, component in lc:
