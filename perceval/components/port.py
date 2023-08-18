@@ -69,6 +69,13 @@ class APort(AComponent):
 
     @staticmethod
     @abstractmethod
+    def has_basic_state_equivalent() -> bool:
+        """
+        Returns True if the port has a basic state equivalent
+        """
+
+    @staticmethod
+    @abstractmethod
     def has_logical_state_equivalent() -> bool:
         """
         Returns True if the port has a logical state equivalent
@@ -89,22 +96,26 @@ class Port(APort):
         return False
 
     @staticmethod
+    def has_basic_state_equivalent() -> bool:
+        return True
+
+    @staticmethod
     def has_logical_state_equivalent() -> bool:
         return True
 
-    def to_state_with_encoding(self, state : int) -> LogicalState:
-        """Return the logical state taking in account the encoding
+    def to_basic_state(self, qubit_state: int) -> BasicState:
+        """Return the equivalent BasicState from the qubit state
 
-        :param state: State (0 or 1)
+        :param state: qubit state (0 or 1)
         :raises NotImplementedError: QUBIT and POLARIZATION encoding not currently supported
-        :return: The corresponding logical state
+        :return: The corresponding BasicState
         """
-        if state not in [0,1]:
+        if qubit_state not in [0, 1]:
             raise ValueError("state should be 0 or 1")
         if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
-            return LogicalState([int(state)])
+            return BasicState([int(qubit_state)])
         elif self.encoding == Encoding.DUAL_RAIL:
-            return LogicalState([0, 1]) if state else LogicalState([1, 0])
+            return BasicState("|0,1>") if qubit_state else BasicState("|1,0>")
         elif self.encoding == Encoding.QUDIT or self.encoding == Encoding.POLARIZATION:
             raise NotImplementedError
 
@@ -139,8 +150,17 @@ class Herald(APort):
         return self._value
 
     @staticmethod
+    def has_basic_state_equivalent() -> bool:
+        return True
+
+    @staticmethod
     def has_logical_state_equivalent() -> bool:
         return False
+
+    def to_basic_state(self) -> BasicState:
+        """Return the equivalent BasicState from _value
+        """
+        return BasicState([self._value])
 
 
 class ADetector(APort, ABC):
@@ -157,6 +177,10 @@ class ADetector(APort, ABC):
 
     def is_output_photonic_mode_closed(self):
         return True
+
+    @staticmethod
+    def has_basic_state_equivalent() -> bool:
+        return False
 
     @staticmethod
     def has_logical_state_equivalent() -> bool:
@@ -193,19 +217,25 @@ class DigitalConverterDetector(ADetector):
         return component in self._connections
 
 
-def get_state_with_encoding_from_ports(ports : List[APort], state: LogicalState) -> LogicalState:
-    """Get the LogicalState that takes in account:
-        - if the port has a logical state equivalent (herald or ancillary modes are skipped for example)
-        - the port encoding (see Port.to_state_with_encoding())
+def get_basic_state_from_ports(ports: List[APort], state: LogicalState, add_herald_and_ancillary: bool = False) -> BasicState:
+    """Convert a LogicalState to a BasicState by taking in account a port list
 
-    :param ports: port list to convert to LogicalState
-    :param state: corresponding LogicalState
-    :return: new LogicalState
+    :param ports: port list.
+    :param state: LogicalState to convert to BasicState.
+    :param add_herald_and_ancillary: add the herald and ancillary port to the basic state. Default to False
+    :raises ValueError: ports and state are not consistent
+    :return: corresponding LogicalState.
     """
-    logical_state = LogicalState()
-    port_list = [port for port in ports if port.has_logical_state_equivalent()]
-    if len(port_list) != len(state):
-        raise ValueError('Logical state and port list size do not match')
-    for port, mode in zip(port_list, state):
-        logical_state += port.to_state_with_encoding(mode)
-    return logical_state
+    basic_state = BasicState()
+    i = 0
+    for port in ports:
+        if not port.has_basic_state_equivalent():
+            continue
+        if port.has_logical_state_equivalent():
+            basic_state *= port.to_basic_state(state[i])
+            i += 1
+        elif add_herald_and_ancillary:
+            basic_state *= port.to_basic_state()
+    if len(state) != i:
+        raise IndexError('Logical state and port list size do not match')
+    return basic_state
