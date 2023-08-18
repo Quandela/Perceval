@@ -65,6 +65,9 @@ class Simulator(ISimulator):
         assert isinstance(value, Number) and value >= 0., "Precision must be a positive number"
         self._rel_precision = value
 
+    def set_precision(self, precision: float):
+        self.precision = precision
+
     def set_min_detected_photon_filter(self, value: int):
         """
         Set a minimum number of detected photons in the output distributions
