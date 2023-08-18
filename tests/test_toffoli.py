@@ -26,27 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import pytest
+
 import perceval as pcvl
 
 
 def test_toffoli_gate_fidelity():
     p = pcvl.components.catalog['toffoli'].build_processor()
-    normal_list_states = {}
-    for i in range(8):
-        state = format(i, '#05b')[2:]
-        associated_fock_state = "|"
-        for b in state:
-            if b == '0':
-                associated_fock_state += "1,0,"
-            elif b == '1':
-                associated_fock_state += "0,1,"
-            else:
-                raise ValueError()
-        associated_fock_state = associated_fock_state[:-1]
-        associated_fock_state += ">"
-        normal_list_states[pcvl.BasicState(associated_fock_state)] = state
-    ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states)
-    ca.compute(expected={"000": "000", "001": "001","010": "010", "011": "011","100": "100", "101": "101", "110": "111", "111": "110"})
+    state_dict = {pcvl.components.get_basic_state_from_ports(p._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(3)}
+    ca = pcvl.algorithm.Analyzer(p, input_states=state_dict)
+    ca.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",
+               "100": "100", "101": "101", "110": "111", "111": "110"})
     pcvl.pdisplay(ca)
     assert ca.fidelity == 1

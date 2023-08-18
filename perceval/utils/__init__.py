@@ -33,6 +33,7 @@ from .parameter import Parameter, P, Expression, E
 from .mlstr import mlstr
 from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
     tensorproduct, allstate_iterator, anonymize_annotations
+from .logical_state import LogicalState, generate_all_logical_states
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
 from .postselect import PostSelect
 from ._random import random_seed

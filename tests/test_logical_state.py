@@ -27,17 +27,50 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
+import pytest
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
+from perceval.utils import LogicalState, generate_all_logical_states
 
-catalog = Catalog('perceval.components.core_catalog')
+
+def test_logical_state():
+    with pytest.raises(ValueError):
+        LogicalState([0,2,1])
+
+    with pytest.raises(ValueError):
+        LogicalState("a01")
+
+    ls = LogicalState("010011")
+    assert ls == LogicalState([0,1,0,0,1,1])
+    ls = LogicalState([0,1,0,0,0,1])
+    assert str(ls) == "010001"
+    ls1 = LogicalState([1,0])
+    assert ls + ls1 == LogicalState([0,1,0,0,0,1,1,0])
+
+
+def test_generate_all_logical_states():
+    states = [LogicalState([0,0,0]),
+              LogicalState([0,0,1]),
+              LogicalState([0,1,0]),
+              LogicalState([0,1,1]),
+              LogicalState([1,0,0]),
+              LogicalState([1,0,1]),
+              LogicalState([1,1,0]),
+              LogicalState([1,1,1]),]
+    assert generate_all_logical_states(3) == states
+    states = [LogicalState([0,0,0,0]),
+              LogicalState([0,0,0,1]),
+              LogicalState([0,0,1,0]),
+              LogicalState([0,0,1,1]),
+              LogicalState([0,1,0,0]),
+              LogicalState([0,1,0,1]),
+              LogicalState([0,1,1,0]),
+              LogicalState([0,1,1,1]),
+              LogicalState([1,0,0,0]),
+              LogicalState([1,0,0,1]),
+              LogicalState([1,0,1,0]),
+              LogicalState([1,0,1,1]),
+              LogicalState([1,1,0,0]),
+              LogicalState([1,1,0,1]),
+              LogicalState([1,1,1,0]),
+              LogicalState([1,1,1,1]),]
+    assert generate_all_logical_states(4) == states

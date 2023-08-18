@@ -48,6 +48,7 @@ from exqalibur import FockState, FSArray
 def _fockstate_add(self, other):
     return StateVector(self) + other
 
+
 def _fockstate_sub(self, other):
     return StateVector(self) - other
 
