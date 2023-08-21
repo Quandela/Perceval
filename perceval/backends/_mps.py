@@ -83,14 +83,14 @@ class MPSBackend(AProbAmpliBackend):
                 "MPS backend can not be used with components of using more than 2 modes"
         if self._cutoff is None:
             self._cutoff = C.m  # sets the value of cut-off at circuit creation = Num of modes of circuit
-            # todo: find if we need it here? could be in init.
-        # self._clear_cache()  # todo: _clear_cache() should define _res? Discuss: Eric
+            # todo: ERIC do we need it here? could be in init.
+        # self._clear_cache()  # todo: ERIC _clear_cache() should define _res?
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
         self._compile()
         # essentially the entire computation is compiled and set when the input state is set!
-        # todo: find if we want this here or have it designed more elegantly?
+        # todo: ERIC do we want this here or have it designed more elegantly?
         #  Do we want a user to run the computation while setting up?
 
     def _apply(self, r, c):
@@ -118,9 +118,10 @@ class MPSBackend(AProbAmpliBackend):
             # checks if a given input state for a circuit is already computed
             return False
         self._compiled_input = copy.copy((var, self._input_state))
-        self._current_input = None  # todo: verify - do I need to set it to None again?
+        self._current_input = None  # todo: ERIC - do I need to set it to None again?
 
-        # TODO : allow any StateVector as in stepper, or a list as in SLOS?
+        # TODO : ERIC I am not sure what to do here I had the following comment here
+        #  allow any StateVector as in stepper, or a list as in SLOS?
         # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
 
         self._n = self._input_state.n  # total number of photons
@@ -178,15 +179,11 @@ class MPSBackend(AProbAmpliBackend):
         # Inserting the last gamma into MPS outside the loop as there is no sv after that.
 
         # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
-        # todo: why is the desired result is always at [0,0]?
+        # todo: find out why is the desired result is always at [0,0]
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
-    @staticmethod
-    def preferred_command() -> str:
-        return 'probampli'
-
-# ################ From here, everything must be in quandelibc ##############################
-    # todo:implement
+########################################################################################
+# Starting here everything must be in quandelibc ## todo:implement
 
     def _transition_matrix_1_mode(self, u):
         """
@@ -295,20 +292,21 @@ class MPSBackend(AProbAmpliBackend):
         """
         u11, u12, u21, u22 = u[0, 0], u[0, 1], u[1, 0], u[1, 1]
         d = self._d
-        big_u = np.zeros((d, d, d, d), dtype='complex_')  # matrix corresponding to BS -> to contract with MPS
+        big_u = np.zeros((d, d, d, d), dtype='complex_')  # matrix corresponding to action of BS on the 2 modes
         # todo: find a way to vectorize and remove "for" loops
         for n1 in range(d):  # n1 -> number of photons in mode 1
             for n2 in range(d):  # n2 -> number of photons in mode 2
                 n_tot = n1 + n2
-                outputs = np.zeros((d, d), dtype='complex_')
-                if n_tot <= self._n:  # cannot exceed the total number of photons
+                outputs = np.zeros((d, d), dtype='complex_')  # unitary of BS for a fixed n1 and n2 entering the modes
+                if n_tot <= self._n:  # cannot exceed the total number of photons in the circuit
                     for k1 in range(n1+1):
                         for k2 in range(n2+1):
+                            # of those (n1,n2) entering -> (k1,k2) combinations
                             outputs[k1 + k2, n_tot - (k1 + k2)] += comb(n1, k1) * comb(n2, k2) \
                                                                 * (u11**k1 * u12**(n1-k1) * u21**k2 * u22**(n2-k2)) \
                                                                 * (np.sqrt(factorial(k1+k2) * factorial(n_tot-k1-k2)))
                 big_u[n1, n2, :] = outputs / (np.sqrt(factorial(n1) * factorial(n2)))
-        print("printing the 2 mode U",big_u.shape,"\n",big_u)
+        print("printing the 2 mode U", big_u.shape, "\n", big_u)
         return big_u
 
     def _sv_diag(self, k):
@@ -318,7 +316,8 @@ class MPSBackend(AProbAmpliBackend):
         """
         if self._res[self._current_input]["sv"].any():
             sv = self._res[self._current_input]["sv"]
-            # todo: clarify - would this not be the same as else ? Also, by the time this is called "sv" is set in _res
+            # todo: clarify with Eric -
+            #  would this not be the same as else ? Also, by the time this is called "sv" is set in _res
         else:
             sv = self._sv
         sv_diag = np.zeros((self._cutoff, self._cutoff))
