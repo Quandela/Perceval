@@ -275,4 +275,4 @@ class Processor(AProcessor):
 
     @property
     def available_commands(self) -> List[str]:
-        return ["samples" if self.backend.preferred_command() == "sample" else "probs"]
+        return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
