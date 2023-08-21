@@ -32,221 +32,216 @@ import perceval.components as comp
 from perceval.components import catalog
 
 
-def cnot(proc, ctrl: int, target: int):
-    temp_cnot = catalog['heralded cnot'].as_processor().build()
-    proc.add([ctrl * 2, 1 + ctrl * 2, target * 2, 1 + target * 2], temp_cnot)
+def add_cnot(processor: pcvl.Processor, ctrl: int, target: int):
+    temp_cnot = catalog['heralded cnot'].build_processor()
+    processor.add([ctrl * 2, 1 + ctrl * 2, target * 2, 1 + target * 2], temp_cnot)
 
 
-def cnotp(proc, ctrl: int, target: int):
-    temp_cnot = catalog['postprocessed cnot'].as_processor().build()
-    proc.add([ctrl * 2, 1 + ctrl * 2, target * 2, 1 + target * 2], temp_cnot)
+def add_cnotp(processor: pcvl.Processor, ctrl: int, target: int):
+    temp_cnot = catalog['postprocessed cnot'].build_processor()
+    processor.add([ctrl * 2, 1 + ctrl * 2, target * 2, 1 + target * 2], temp_cnot)
 
 
-def cz(proc, ctrl: int, target: int):
-    temp_cnot = catalog['heralded cz'].as_processor().build()
-    proc.add([ctrl * 2, 1 + ctrl * 2, target * 2, 1 + target * 2], temp_cnot)
+def add_cz(processor: pcvl.Processor, ctrl: int, target: int):
+    temp_cnot = catalog['heralded cz'].build_processor()
+    processor.add([ctrl * 2, 1 + ctrl * 2, target * 2, 1 + target * 2], temp_cnot)
 
 
-def x(proc, wire):
+def add_x(processor: pcvl.Processor, wire: int):
     circ_x = comp.PERM([1, 0])
-    proc.add(2 * wire, circ_x)
+    processor.add(2 * wire, circ_x)
 
 
-def h(proc, wire):
-    proc.add(2 * wire, comp.BS.H())
+def add_h(processor: pcvl.Processor, wire: int):
+    processor.add(2 * wire, comp.BS.H())
 
 
-def measure_proc(proc, expected, nb_samples=10, post=False):
-    init_state = [1, 0] * int(proc.m / 2)
+def measure_processor(processor: pcvl.Processor, expected: pcvl.BasicState):
+    init_state = [1, 0] * int(processor.m / 2)
     basic_state = pcvl.BasicState(init_state)
 
-    proc.with_input(basic_state)
-    sampler = pcvl.algorithm.Sampler(proc)
+    processor.with_input(basic_state)
+    sampler = pcvl.algorithm.Sampler(processor)
+    nb_samples = 10
     samples = sampler.samples(nb_samples)
 
-    samples_counter = dict()
+    samples_counter = {}
     for state in samples['results']:
-        if samples_counter.get(state) is None:
-            samples_counter[state] = 1
-        else:
-            samples_counter[state] += 1
-    if post:
-        temp = samples_counter.copy()
-        # clear the dict from wrong results
-        for (sample, coef) in temp.items():
-            l_sample = list(sample)
-            if 2 in l_sample:
-                samples_counter.pop(sample, None)
-            else:
-                for i in range(0, len(l_sample), 2):
-                    if l_sample[i] == l_sample[i + 1]:
-                        samples_counter.pop(sample, None)
-    for (sample, coef) in samples_counter.items():
-        if not post:
-            # ensure we only have one possibility because it is a deterministic choice.
-            assert nb_samples == coef
+        if state not in samples_counter:
+            samples_counter[state] = samples['results'].count(state)
 
-        assert expected == list(sample)
+    for (sample, coef) in samples_counter.items():
+        # ensure we only have one possibility because it is a deterministic choice.
+        assert nb_samples == coef
+
+        assert expected == sample
 
 
 def test_basic():
     print("Testing Basic 000 measurement...")
-    proc = pcvl.Processor("SLOS", 2 * 3)
+    processor = pcvl.Processor("SLOS", 2 * 3)
 
-    expected = [1, 0, 1, 0, 1, 0]
-    measure_proc(proc, expected)
+    expected = pcvl.BasicState([1, 0, 1, 0, 1, 0])
+    measure_processor(processor, expected)
 
 
 def test_cnot():
     print("Testing cnot ctrl=0...")
-    proc = pcvl.Processor("SLOS", 2 * 2)
+    processor = pcvl.Processor("SLOS", 2 * 2)
 
-    cnot(proc, 0, 1)
-    expected = [1, 0, 1, 0]
-    measure_proc(proc, expected)
+    add_cnot(processor, 0, 1)
+
+    expected = pcvl.BasicState([1, 0, 1, 0])
+    measure_processor(processor, expected)
 
 
 def test_cnot_rev():
     print("Testing cnot ctrl=0 rev...")
-    proc = pcvl.Processor("SLOS", 2 * 2)
+    processor = pcvl.Processor("SLOS", 2 * 2)
 
-    cnot(proc, 1, 0)
-    expected = [1, 0, 1, 0]
-    measure_proc(proc, expected)
+    add_cnot(processor, 1, 0)
+
+    expected = pcvl.BasicState([1, 0, 1, 0])
+    measure_processor(processor, expected)
 
 
 def test_cnot_rev2():
     print("Testing cnot ctrl=1 rev...")
-    proc = pcvl.Processor("SLOS", 2 * 2)
-    x(proc, 0)
-    cnot(proc, 1, 0)
-    expected = [0, 1, 1, 0]
-    measure_proc(proc, expected)
+    processor = pcvl.Processor("SLOS", 2 * 2)
+    add_x(processor, 0)
+    add_cnot(processor, 1, 0)
+
+    expected = pcvl.BasicState([0, 1, 1, 0])
+    measure_processor(processor, expected)
 
 
 def test_cnot_rev2_czbased():
     print("Testing cnot (based on CZ) ctrl=1 rev...")
-    proc = pcvl.Processor("SLOS", 2 * 2)
-    x(proc, 0)
+    processor = pcvl.Processor("SLOS", 2 * 2)
+    add_x(processor, 0)
 
-    h(proc, 0)
-    cz(proc, 1, 0)
-    h(proc, 0)
+    add_h(processor, 0)
+    add_cz(processor, 1, 0)
+    add_h(processor, 0)
 
-    expected = [0, 1, 1, 0]
-    measure_proc(proc, expected)
+    expected = pcvl.BasicState([0, 1, 1, 0])
+    measure_processor(processor, expected)
 
 
 def test_had_and_cz():
     print("Testing Had and native CZ...")
-    proc = pcvl.Processor("SLOS", 2 * 3)
+    processor = pcvl.Processor("SLOS", 2 * 3)
 
-    x(proc, 0)
-    h(proc, 1)
-    h(proc, 2)
+    add_x(processor, 0)
+    add_h(processor, 1)
+    add_h(processor, 2)
 
     # Flip + to - state
-    cz(proc, 0, 1)
-    cz(proc, 0, 2)
+    add_cz(processor, 0, 1)
+    add_cz(processor, 0, 2)
 
     # now convert - to 1
-    h(proc, 1)
-    h(proc, 2)
-    expected = [0, 1, 0, 1, 0, 1]
-    measure_proc(proc, expected)
+    add_h(processor, 1)
+    add_h(processor, 2)
+
+    expected = pcvl.BasicState([0, 1, 0, 1, 0, 1])
+    measure_processor(processor, expected)
 
 
 def test_had_and_cz_cnot_based():
     print("Testing Had and CZ (based on cnot)...")
-    proc = pcvl.Processor("SLOS", 2 * 3)
+    processor = pcvl.Processor("SLOS", 2 * 3)
 
-    x(proc, 0)
-    h(proc, 1)
-    h(proc, 2)
+    add_x(processor, 0)
+    add_h(processor, 1)
+    add_h(processor, 2)
 
     # Flip + to - state
-    h(proc, 1)
-    cnot(proc, 0, 1)
-    h(proc, 1)
+    add_h(processor, 1)
+    add_cnot(processor, 0, 1)
+    add_h(processor, 1)
 
-    h(proc, 2)
-    cnot(proc, 0, 2)
-    h(proc, 2)
+    add_h(processor, 2)
+    add_cnot(processor, 0, 2)
+    add_h(processor, 2)
 
     # now convert - to 1
-    h(proc, 1)
-    h(proc, 2)
-    expected = [0, 1, 0, 1, 0, 1]
-    measure_proc(proc, expected)
+    add_h(processor, 1)
+    add_h(processor, 2)
+
+    expected = pcvl.BasicState([0, 1, 0, 1, 0, 1])
+    measure_processor(processor, expected)
 
 
 def test_had_and_cz_rev():
     print("Testing Had and CZ reverse order...")
-    proc = pcvl.Processor("SLOS", 2 * 3)
+    processor = pcvl.Processor("SLOS", 2 * 3)
 
-    x(proc, 0)
-    h(proc, 1)
-    h(proc, 2)
+    add_x(processor, 0)
+    add_h(processor, 1)
+    add_h(processor, 2)
 
     # Flip + to - state
-    cz(proc, 1, 0)
-    cz(proc, 2, 0)
+    add_cz(processor, 1, 0)
+    add_cz(processor, 2, 0)
 
     # now convert - to 1
-    h(proc, 1)
-    h(proc, 2)
-    expected = [0, 1, 0, 1, 0, 1]
-    measure_proc(proc, expected)
+    add_h(processor, 1)
+    add_h(processor, 2)
+
+    expected = pcvl.BasicState([0, 1, 0, 1, 0, 1])
+    measure_processor(processor, expected)
 
 
 def test_had_and_cz_rev_cnotbased():
     print("Testing Had and CZ (based on cnot) reverse order...")
-    proc = pcvl.Processor("SLOS", 2 * 3)
+    processor = pcvl.Processor("SLOS", 2 * 3)
 
-    x(proc, 0)
-    h(proc, 1)
-    h(proc, 2)
+    add_x(processor, 0)
+    add_h(processor, 1)
+    add_h(processor, 2)
 
     # Flip + to - state using CZ(1,0)
-    h(proc, 0)
-    cnot(proc, 1, 0)
-    h(proc, 0)
+    add_h(processor, 0)
+    add_cnot(processor, 1, 0)
+    add_h(processor, 0)
 
     # Flip + to - state using CZ(2,0)
-    h(proc, 0)
-    cnot(proc, 2, 0)
-    h(proc, 0)
+    add_h(processor, 0)
+    add_cnot(processor, 2, 0)
+    add_h(processor, 0)
     # now convert - to 1
-    h(proc, 1)
-    h(proc, 2)
+    add_h(processor, 1)
+    add_h(processor, 2)
 
-    expected = [0, 1, 0, 1, 0, 1]
-    measure_proc(proc, expected)
+    expected = pcvl.BasicState([0, 1, 0, 1, 0, 1])
+    measure_processor(processor, expected)
 
 
 def test_had_and_cz_rev_cnotbased_post():
     print("Testing Had and CZ (based on cnot post) reverse order...")
-    proc = pcvl.Processor("SLOS", 2 * 3)
+    processor = pcvl.Processor("SLOS", 2 * 3)
 
-    x(proc, 0)
-    h(proc, 1)
-    h(proc, 2)
+    add_x(processor, 0)
+    add_h(processor, 1)
+    add_h(processor, 2)
 
     # Flip + to - state using CZ(1,0)
-    h(proc, 0)
-    cnotp(proc, 1, 0)
-    proc.clear_postselection()
-    h(proc, 0)
+    add_h(processor, 0)
+    add_cnotp(processor, 1, 0)
+    processor.clear_postselection()
+    add_h(processor, 0)
 
     # Flip + to - state using CZ(2,0)
-    h(proc, 0)
-    cnotp(proc, 2, 0)
-    proc.clear_postselection()
-    h(proc, 0)
-    # now convert - to 1
-    h(proc, 1)
-    h(proc, 2)
-    proc.set_postselection(pcvl.PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
+    add_h(processor, 0)
+    add_cnotp(processor, 2, 0)
+    processor.clear_postselection()
+    add_h(processor, 0)
 
-    expected = [0, 1, 0, 1, 0, 1]
-    measure_proc(proc, expected)
+    # now convert - to 1
+    add_h(processor, 1)
+    add_h(processor, 2)
+    processor.set_postselection(pcvl.PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
+
+    expected = pcvl.BasicState([0, 1, 0, 1, 0, 1])
+    measure_processor(processor, expected)
