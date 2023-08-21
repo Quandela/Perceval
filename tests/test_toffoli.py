@@ -27,24 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import exqalibur as xq
-import numpy as np
+import perceval as pcvl
 
-for m in range(6, 25):
-    for n in range(1, 13):
-        fsa = xq.FSArray(m, n)
 
-        allop = 0
-        count = 0
-        worst = 0
-        best = None
-        for fs in fsa:
-            nop = np.prod([s+1 for s in fs if s])
-            if nop > worst:
-                worst = nop
-            if best is None or nop < best:
-                best = nop
-            allop += nop
-            count += 1
-
-        print("m=", m, "n=", n, "Mn=", count, "best=", best, "worst=", worst, "avg=", allop/count, "ref=", n*2**n)
+def test_toffoli_gate_fidelity():
+    p = pcvl.components.catalog['toffoli'].build_processor()
+    state_dict = {pcvl.components.get_basic_state_from_ports(p._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(3)}
+    ca = pcvl.algorithm.Analyzer(p, input_states=state_dict)
+    ca.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",
+               "100": "100", "101": "101", "110": "111", "111": "110"})
+    pcvl.pdisplay(ca)
+    assert ca.fidelity == 1

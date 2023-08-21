@@ -33,8 +33,8 @@ from pkg_resources import get_distribution
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Source
-from perceval.components.port import PortLocation, APort, LogicalState
-from perceval.utils import BasicState
+from perceval.components.port import PortLocation, APort
+from perceval.utils import BasicState, LogicalState
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler

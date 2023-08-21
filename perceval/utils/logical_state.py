@@ -27,32 +27,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import numpy as np
-import matplotlib.pyplot as plt
-import perceval.components.unitary_components as comp
-from perceval.rendering.pdisplay import pdisplay_statevector
+from typing import List
 
 
-N = 100
-ind = np.arange(0, 1, 1/N)
-o = np.zeros((100,))
-simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+class LogicalState(list):
+    def __init__(self, state: list[int] or str = None):
+        """Represent a Logical state
 
-for i in range(N):
-    source = pcvl.Source(brightness=1, purity=1, indistinguishability=ind[i])
-    qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
-    all_p, sv_out = qpu.run(simulator_backend)
-    o[i] = sv_out[pcvl.StateVector("|1,1>")]
+        :param state: Can be either None, a list or a str, defaults to None
+        :raises ValueError: Must have only 0 and 1 in a state
+        :raises TypeError: Supports only None, list or str as state type
+        """
+        if state is None:
+            super().__init__([])
+            return
+        if isinstance(state, str):
+            state = [int(elem) for elem in state]
+        if isinstance(state, list):
+            if state.count(0) + state.count(1) != len(state):
+                raise ValueError("A logical state should only contain 0s and 1s")
+            super().__init__(state)
+            return
+        raise TypeError(f"LogicalState can be initialise with None, list or str, here {type(state)}")
 
-plt.plot(ind, o)
-plt.ylabel("$p(|1,1>)$")
-plt.xlabel("indistinguishability")
-source = pcvl.Source(brightness=1, purity=1, indistinguishability=0.5)
-qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
+    def __add__(self, other):
+        temp = self.copy()
+        temp.extend(other)
+        return temp
 
-all_p, sv_out = qpu.run(simulator_backend)
-print("INPUT\n", pdisplay_statevector(qpu.source_distribution))
-print("OUTPUT\n", pdisplay_statevector(sv_out))
+    def __str__(self):
+        if not self:
+            return ""
+        return ''.join([str(x) for x in self])
 
-plt.show()
+
+def generate_all_logical_states(n : int) -> List[LogicalState]:
+    format_str = f"#0{n+2}b"
+    logical_state_list = []
+    for i in range(2**n):
+        states = format(i, format_str)[2:]
+        logical_state_list.append(LogicalState([int(state) for state in states]))
+    return logical_state_list

@@ -27,51 +27,50 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import exqalibur as xq
-import numpy as np
-import time
+import pytest
 
-m = 16
-n = 12
+from perceval.utils import LogicalState, generate_all_logical_states
 
-u = pcvl.Matrix.random_unitary(m)
 
-fsms = [[]]
-fsas = [xq.FSArray(m, 0)]
-coefs = [[1]]
+def test_logical_state():
+    with pytest.raises(ValueError):
+        LogicalState([0,2,1])
 
-for i in range(1, m+1):
-    fsas.append(xq.FSArray(m, i))
-    coefs.append(np.zeros(fsas[-1].count(), dtype=complex))
-    fsms.append(xq.FSiMap(fsas[-1], fsas[-2], True))
+    with pytest.raises(ValueError):
+        LogicalState("a01")
 
-compute = 0
-def permanent(idx_current, k):
-    global compute
-    if k == 0:
-        return 1
-    if not coefs[k][idx_current]:
-        m = 0
-        while m < k:
-            index_parent, mode = fsms[k].get(idx_current, m)
-            if index_parent == xq.npos:
-                break
-            compute += 1
-            coefs[k][idx_current] += permanent(index_parent, k-1)*u[k-1, mode]
-            m += 1
-    return coefs[k][idx_current]
+    ls = LogicalState("010011")
+    assert ls == LogicalState([0,1,0,0,1,1])
+    ls = LogicalState([0,1,0,0,0,1])
+    assert str(ls) == "010001"
+    ls1 = LogicalState([1,0])
+    assert ls + ls1 == LogicalState([0,1,0,0,0,1,1,0])
 
-start_slos_1 = time.time()
-for idx in range(fsas[-1].count()):
-    permanent(idx, n)
-end_slos_1 = time.time()
-time_total_slos = end_slos_1-start_slos_1
-print("slos", time_total_slos)
 
-start_qc_1 = time.time()
-for idx in range(fsas[-1].count()):
-    xq.permanent_cx(u, 1)
-end_qc_1 = time.time()
-
-print("qc", end_qc_1-start_qc_1)
+def test_generate_all_logical_states():
+    states = [LogicalState([0,0,0]),
+              LogicalState([0,0,1]),
+              LogicalState([0,1,0]),
+              LogicalState([0,1,1]),
+              LogicalState([1,0,0]),
+              LogicalState([1,0,1]),
+              LogicalState([1,1,0]),
+              LogicalState([1,1,1]),]
+    assert generate_all_logical_states(3) == states
+    states = [LogicalState([0,0,0,0]),
+              LogicalState([0,0,0,1]),
+              LogicalState([0,0,1,0]),
+              LogicalState([0,0,1,1]),
+              LogicalState([0,1,0,0]),
+              LogicalState([0,1,0,1]),
+              LogicalState([0,1,1,0]),
+              LogicalState([0,1,1,1]),
+              LogicalState([1,0,0,0]),
+              LogicalState([1,0,0,1]),
+              LogicalState([1,0,1,0]),
+              LogicalState([1,0,1,1]),
+              LogicalState([1,1,0,0]),
+              LogicalState([1,1,0,1]),
+              LogicalState([1,1,1,0]),
+              LogicalState([1,1,1,1]),]
+    assert generate_all_logical_states(4) == states

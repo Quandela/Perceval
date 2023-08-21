@@ -123,7 +123,7 @@ def test_processor_samples():
 
 
 def test_processor_composition():
-    p = pcvl.catalog['postprocessed cnot'].build()  # Circuit with [0,1] and [2,3] post-selection conditions
+    p = pcvl.catalog['postprocessed cnot'].build_processor()  # Circuit with [0,1] and [2,3] post-selection conditions
     p.add((0, 1), comp.BS())  # Composing with a component on modes [0,1] should work
     with pytest.raises(AssertionError):
         p.add((1, 2), comp.BS())  # Composing with a component on modes [1,2] should fail

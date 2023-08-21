@@ -27,17 +27,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+import numpy as np
+
 import perceval as pcvl
+from perceval import BasicState
 from perceval.components.port import *
 from perceval.components.unitary_components import PS, BS
-import numpy as np
+from perceval.utils import Encoding
 
 
 def act_on_phi(value, obj):
     if value:
-        obj.assign({"phi": np.pi/2})
+        obj.assign({"phi": np.pi / 2})
     else:
-        obj.assign({"phi": np.pi/4})
+        obj.assign({"phi": np.pi / 4})
 
 
 def test_digital_converter():
@@ -55,8 +59,29 @@ def test_digital_converter():
 
     detector.trigger(True)
     assert not phi.is_symbolic()
-    assert float(phi) == np.pi/2
+    assert float(phi) == np.pi / 2
 
     detector.trigger(False)
     assert not phi.is_symbolic()
-    assert float(phi) == np.pi/4
+    assert float(phi) == np.pi / 4
+
+
+def test_basic_state_conversion():
+    ports = [Herald(1), Port(Encoding.DUAL_RAIL, "belle"), Port(Encoding.RAW, "bulle"),
+             Herald(1), Herald(0), Port(Encoding.TIME, "rebelle"), Herald(1)]
+
+    assert BasicState([0, 1, 0, 1]) == get_basic_state_from_ports(ports, LogicalState([1, 0, 1]))
+    with pytest.raises(IndexError):
+        get_basic_state_from_ports(ports, LogicalState([1, 0]))
+    with pytest.raises(IndexError):
+        get_basic_state_from_ports(ports, LogicalState([1, 0, 1, 0]))
+    assert BasicState([1, 0, 1, 0, 1, 0, 1, 1]) == get_basic_state_from_ports(
+        ports, LogicalState([1, 0, 1]), add_herald_and_ancillary=True)
+
+    assert BasicState([1, 0, 0, 0]) == get_basic_state_from_ports(ports, LogicalState([0, 0, 0]))
+    assert BasicState([1, 1, 0, 0, 1, 0, 0, 1]) == get_basic_state_from_ports(
+        ports, LogicalState([0, 0, 0]), add_herald_and_ancillary=True)
+
+    assert BasicState([0, 1, 1, 1]) == get_basic_state_from_ports(ports, LogicalState([1, 1, 1]))
+    assert BasicState([1, 0, 1, 1, 1, 0, 1, 1]) == get_basic_state_from_ports(
+        ports, LogicalState([1, 1, 1]), add_herald_and_ancillary=True)
