@@ -46,7 +46,6 @@ class MPSBackend(AProbAmpliBackend):
 
     Approximate the probability amplitudes with a cutoff -> bond Dimension in an MPS.
     - For now only supports Phase shifters and Beam Splitters
-    - TODO: link to the quandelibc computation
     """
 
     def __init__(self):
@@ -84,15 +83,15 @@ class MPSBackend(AProbAmpliBackend):
                 "MPS backend can not be used with components of using more than 2 modes"
         if self._cutoff is None:
             self._cutoff = C.m  # sets the value of cut-off at circuit creation = Num of modes of circuit
-            # todo: find if we need it here?
+            # todo: find if we need it here? could be in init.
         # self._clear_cache()  # todo: _clear_cache() should define _res? Discuss: Eric
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
         self._compile()
         # essentially the entire computation is compiled and set when the input state is set!
-        # todo: find if we want this here or have it designed more elegantly? Do we want a user to run the computation
-        #  while setting up?
+        # todo: find if we want this here or have it designed more elegantly?
+        #  Do we want a user to run the computation while setting up?
 
     def _apply(self, r, c):
         """
@@ -102,6 +101,8 @@ class MPSBackend(AProbAmpliBackend):
         :param c: The component
         """
         u = c.compute_unitary(False)
+        print("unitary")
+        print(u)
         k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
         if len(u) == 2:
             # BS
@@ -158,23 +159,22 @@ class MPSBackend(AProbAmpliBackend):
     def prob_amplitude(self, output_state: BasicState) -> complex:
         """
         This takes in the expected output states, reads the input and from
-        self._res extracts the correponding gamma and diagonal sv matrices.
+        self._res extracts the corresponding gamma and diagonal sv matrices.
         All of this goes to mps_in_list -> each element in order is gamma-sv-gamma-sv-...
         Returns the full contraction -> multidot of all -> which I expect to be the tensor
         containing the prob amplitude coefficients |psi> = c_tensor |pure statevectors>
         """
-        # TODO: put in quandelibc
         m = self._input_state.m
         mps_in_list = []
         self._current_input = tuple(self._input_state)
-        for k in range(m - 1):
+        for k in range(m-1):
             mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
             # _res[1ST LEVEL: selects dict -> given input state][2ND LEVEL: selects "gamma" matrix key of that]
-            # [3RD LEVEL: gamma is np.array -> this indexing chooses corresponding output needed]
-            # seems to be but confused
+            # [3RD LEVEL: gamma is np.array -> first chooses kth mode gamma and then selects the segment
+            # corresponding to the number of photon in that mode of the output_state being considered.
             mps_in_list.append(self._sv_diag(k))
-            # alternately takes in each gamma and singular value matrices -> puts them in a list
-        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][self._input_state.m-1, :, :, output_state[self._input_state.m-1]])
+            # alternately takes in each gamma and singular value matrices (diagonal) -> puts them in a list
+        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][m - 1, :, :, output_state[m - 1]])
         # Inserting the last gamma into MPS outside the loop as there is no sv after that.
 
         # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
@@ -186,6 +186,7 @@ class MPSBackend(AProbAmpliBackend):
         return 'probampli'
 
 # ################ From here, everything must be in quandelibc ##############################
+    # todo:implement
 
     def _transition_matrix_1_mode(self, u):
         """
@@ -222,8 +223,7 @@ class MPSBackend(AProbAmpliBackend):
         segment of MPS.
         """
 
-        if 0 < k < self._input_state.m - 2:
-            # BS anywhere except the first and the last mode
+        if 0 < k < self._input_state.m - 2:  # BS anywhere except the first and the last mode
             # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
             theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=($\chi$,$\chi$,d)
             theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
@@ -254,16 +254,13 @@ class MPSBackend(AProbAmpliBackend):
             # input->theta.shape = ($\chi$, d, $\chi$, d) and big_u.shape(d, d, d, d)
             # output->theta.shape($\chi$, $\chi$, d, d)
 
-        # tensorproduct of mps with BS might include states that he probably neglected while building the BS.
-        # todo: how to Verify?
-
-        theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)  # todo: are all these swaps necessary?
-        # resulting theta.shape(d, $\chi$, d, $\chi$) WHY!!!!!!!!
-        theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)
-        # merging indices to have a 2D matrix of shape (d x $\chi$, d x $\chi$) -> step before SVD
-        v, s, w = np.linalg.svd(theta)  # svd of the tensor after component is applied to rextract hte MPS form
+        theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)  # resulting theta.shape(d, $\chi$, d, $\chi$)
+        theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)  # theta.shape (d x $\chi$, d x $\chi$)
+        v, s, w = np.linalg.svd(theta)
+        # svd of the tensor after component is applied to extract the MPS form
         # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
-        # this implies U->v, S->s, V->w
+        # Here:: U->v [v.shape=(d, $\chi$, d, $\chi$)],
+        # S->s [s.shape=($\chi$)], V->w [w.shape=(d, $\chi$, d, $\chi$)]
 
         # todo: not sure about indices and their sizes
         v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
@@ -273,7 +270,7 @@ class MPSBackend(AProbAmpliBackend):
         self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
         # todo : _s_min is too low, do we really need this todo: ask Rawad
 
-        # todo: below - seems weird, discuss Rawad
+        # todo: below - seems weird, investigate
         if k > 0:
             rank = np.nonzero(self._sv[k - 1])[0][-1] + 1
             self._gamma[k, :rank] = v[:rank] / self._sv[k - 1, :rank][:, np.newaxis, np.newaxis]
@@ -299,21 +296,19 @@ class MPSBackend(AProbAmpliBackend):
         u11, u12, u21, u22 = u[0, 0], u[0, 1], u[1, 0], u[1, 1]
         d = self._d
         big_u = np.zeros((d, d, d, d), dtype='complex_')  # matrix corresponding to BS -> to contract with MPS
-        # todo: vectorize and remove so many for loops
+        # todo: find a way to vectorize and remove "for" loops
         for n1 in range(d):  # n1 -> number of photons in mode 1
             for n2 in range(d):  # n2 -> number of photons in mode 2
                 n_tot = n1 + n2
                 outputs = np.zeros((d, d), dtype='complex_')
                 if n_tot <= self._n:  # cannot exceed the total number of photons
-                    # todo: try removing this if and check : Stephen. possibly he is applying 0 to some state that exist
                     for k1 in range(n1+1):
                         for k2 in range(n2+1):
                             outputs[k1 + k2, n_tot - (k1 + k2)] += comb(n1, k1) * comb(n2, k2) \
-                                                                   * (u11**k1 * u12**(n1-k1) * u21**k2 * u22**(n2-k2)) \
+                                                                * (u11**k1 * u12**(n1-k1) * u21**k2 * u22**(n2-k2)) \
                                                                 * (np.sqrt(factorial(k1+k2) * factorial(n_tot-k1-k2)))
-                            # todo: i did not see the factorial (previous line) in the formula (eq22->Thibaud)
-
                 big_u[n1, n2, :] = outputs / (np.sqrt(factorial(n1) * factorial(n2)))
+        print("printing the 2 mode U",big_u.shape,"\n",big_u)
         return big_u
 
     def _sv_diag(self, k):
