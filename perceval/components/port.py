@@ -32,16 +32,8 @@ from enum import Enum
 from typing import List
 
 from perceval.utils import BasicState
+from perceval.utils import Encoding
 from .abstract_component import AComponent
-
-
-class Encoding(Enum):
-    DUAL_RAIL = 0
-    POLARIZATION = 1
-    QUDIT = 2
-    TIME = 3
-    RAW = 4
-
 
 def _port_size(encoding: Encoding):
     if encoding == Encoding.DUAL_RAIL:

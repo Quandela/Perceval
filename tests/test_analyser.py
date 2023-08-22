@@ -37,7 +37,7 @@ import pytest
 from test_circuit import strip_line_12
 
 
-def test_analyser_on_qrng():
+def test_analyzer_on_qrng():
     chip_QRNG = pcvl.Circuit(4, name='QRNG')
     # Parameters
     phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
@@ -64,7 +64,19 @@ def test_analyser_on_qrng():
 
     p = pcvl.Processor("Naive", chip_QRNG)
 
-    ca = algo.Analyzer(p, [pcvl.BasicState([1,0,1,0]), pcvl.BasicState([0,1,1,0])], "*")
+    output_states = [  # Fix the output order for the unit test
+        pcvl.BasicState('|1,0,1,0>'),
+        pcvl.BasicState('|1,1,0,0>'),
+        pcvl.BasicState('|0,2,0,0>'),
+        pcvl.BasicState('|2,0,0,0>'),
+        pcvl.BasicState('|1,0,0,1>'),
+        pcvl.BasicState('|0,1,1,0>'),
+        pcvl.BasicState('|0,1,0,1>'),
+        pcvl.BasicState('|0,0,2,0>'),
+        pcvl.BasicState('|0,0,1,1>'),
+        pcvl.BasicState('|0,0,0,2>')
+    ]
+    ca = algo.Analyzer(p, [pcvl.BasicState([1,0,1,0]), pcvl.BasicState([0,1,1,0])], output_states)
     ca.compute()
     assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
@@ -76,7 +88,7 @@ def test_analyser_on_qrng():
         """).strip()
 
 
-def test_analyser_bs():
+def test_analyzer_bs_1():
     p = pcvl.Processor("Naive", comp.BS())
     ca = algo.Analyzer(p, [pcvl.BasicState([2,0])],
                        [pcvl.BasicState([1,1]), pcvl.BasicState([2,0]), pcvl.BasicState([0,2])])
@@ -84,3 +96,25 @@ def test_analyser_bs():
     assert ca.distribution[0, 0] == pytest.approx(1/2)  # |1,1>
     assert ca.distribution[0, 1] == pytest.approx(1/4)  # |2,0>
     assert ca.distribution[0, 2] == pytest.approx(1/4)  # |0,2>
+
+
+def test_analyzer_bs_2():
+    bs = comp.BS()
+    for backend_name in ["SLOS", "Naive"]:
+        p = pcvl.Processor(backend_name, bs)
+        ca = algo.Analyzer(p, [pcvl.BasicState([0, 1]), pcvl.BasicState([1, 0])])
+        ca.compute()
+        assert pdisplay_analyzer(ca, nsimplify=True) == strip_line_12("""
+            +-------+-------+-------+
+            |       | |0,1> | |1,0> |
+            +-------+-------+-------+
+            | |0,1> |  1/2  |  1/2  |
+            | |1,0> |  1/2  |  1/2  |
+            +-------+-------+-------+""")
+        assert pdisplay_analyzer(ca, nsimplify=False) == strip_line_12("""
+            +-------+-------+-------+
+            |       | |0,1> | |1,0> |
+            +-------+-------+-------+
+            | |0,1> |  0.5  |  0.5  |
+            | |1,0> |  0.5  |  0.5  |
+            +-------+-------+-------+""")

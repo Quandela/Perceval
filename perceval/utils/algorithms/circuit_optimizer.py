@@ -41,11 +41,14 @@ class CircuitOptimizer:
     :param threshold: Error threshold = 1-fidelity - i.e. the lower the threshold, the better the output fidelity
                       (default 1e-6)
     :param ntrials: Number of optimization trials (default 4)
+    :param max_eval_per_trial: maximum number of evaluations per optimization trial (default 200000)
     """
 
-    def __init__(self, threshold: float = 1e-6, ntrials: int = 4):
+    def __init__(self, threshold: float = 1e-6, ntrials: int = 4, max_eval_per_trial: int = 200000):
+
         self.threshold = threshold
         self.trials = ntrials
+        self.max_eval_per_trial = max_eval_per_trial
 
     @property
     def threshold(self):
@@ -65,6 +68,14 @@ class CircuitOptimizer:
     def trials(self, value):
         self._trials = value
 
+    @property
+    def max_eval_per_trial(self):
+        return self._max_eval_per_trial
+
+    @max_eval_per_trial.setter
+    def max_eval_per_trial(self, value):
+        self._max_eval_per_trial = value
+
     def optimize(self,
                  target: Union[ACircuit, Matrix],
                  template: ACircuit
@@ -82,7 +93,7 @@ class CircuitOptimizer:
         >>>    return PS(P(f"phi_3_{i}"))
         >>> template = Circuit.generic_interferometer(12, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
         >>> random_unitary = Matrix.random_unitary(12)
-        >>> fidelity, result_circuit = CircuitOptimizer().optimize(random_unitary, template)
+        >>> result_circuit, fidelity = CircuitOptimizer().optimize(random_unitary, template)
         """
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
@@ -91,14 +102,14 @@ class CircuitOptimizer:
         assert not target.is_symbolic(), "Target must not contain variables"
 
         optimizer = xq.CircuitOptimizer(serialize_binary(target), serialize_binary(template))
-        optimizer.set_max_eval_per_trial(50000)
+        optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
         return optimized_circuit, optimizer.fidelity
 
     def optimize_rectangle(self,
                            target: Matrix,
-                           template_component_generator_func: Callable[[int],ACircuit] = None,
+                           template_component_generator_func: Callable[[int], ACircuit] = None,
                            phase_at_output: bool = True,
                            allow_error: bool = False,
                            ) -> ACircuit:

@@ -290,3 +290,14 @@ class MatrixN(np.ndarray, Matrix):
         :return:
         """
         return np.linalg.inv(self)
+
+
+def matrix_double(u: Matrix):
+    m = u.shape[0]
+    pu = Matrix(m * 2, u.is_symbolic())
+    pu.fill(0)
+    for k1 in range(0, m):
+        for k2 in range(0, m):
+            pu[2 * k1, 2 * k2] = u[k1, k2]
+            pu[2 * k1 + 1, 2 * k2 + 1] = u[k1, k2]
+    return pu

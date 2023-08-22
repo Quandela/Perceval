@@ -28,11 +28,15 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from typing import Union, Tuple, Any
 
+import numpy as np
 import re
 import sympy as sp
-import numpy as np
+from typing import Union, Tuple, Any
+
+from .statevector import BasicState
+from .matrix import Matrix
+
 
 class Polarization:
     r"""Polarization class
@@ -59,7 +63,7 @@ class Polarization:
             elif v == "L":
                 self.theta_phi = (sp.pi/2, sp.pi/2)
             else:
-                raise ValueError("undefined value '%s' for polarization")
+                raise ValueError("undefined value '%s' for polarization" %v)
         elif isinstance(v, tuple):
             if len(v) != 2:
                 raise ValueError("Polarization is defined by 2 angles")
@@ -157,3 +161,83 @@ class Polarization:
         if self.theta_phi[1] == 0:
             return str(self.theta_phi[0])
         return "(%s,%s)" % (str(self.theta_phi[0]), str(self.theta_phi[1]))
+
+
+def _rec_build_spatial_output_states(lfs: list, output: list):
+    if len(lfs) == 0:
+        yield BasicState(output)
+    else:
+        if lfs[0] == 0:
+            yield from _rec_build_spatial_output_states(lfs[1:], output+[0, 0])
+        else:
+            for k in range(lfs[0]+1):
+                yield from _rec_build_spatial_output_states(lfs[1:], output+[k, lfs[0]-k])
+
+
+def build_spatial_output_states(state: BasicState):
+    yield from _rec_build_spatial_output_states(list(state), [])
+
+
+def _is_orthogonal(v1, v2, use_symbolic):
+    if use_symbolic:
+        orth = sp.conjugate(v1[0]) * v2[0] + sp.conjugate(v1[1]) * v2[1]
+        return orth == 0
+    orth = np.conjugate(v1[0]) * v2[0] + np.conjugate(v1[1]) * v2[1]
+    return abs(orth) < 1e-6
+
+
+def convert_polarized_state(state: BasicState,
+                            use_symbolic: bool = False,
+                            inverse: bool = False) -> Tuple[BasicState, Matrix]:
+    r"""Convert a polarized BasicState into an expanded BasicState vector
+
+    :param inverse:
+    :param use_symbolic:
+    :param state:
+    :return:
+    """
+    idx = 0
+    input_state = []
+    prep_matrix = None
+    for k_m in range(state.m):
+        input_state += [0, 0]
+        if state[k_m]:
+            vectors = []
+            for k_n in range(state[k_m]):
+                # for each state we can handle up to two orthogonal vectors
+                annot = state.get_photon_annotation(idx)
+                idx += 1
+                v_hv = Polarization(annot.get("P", complex(Polarization(0)))).project_eh_ev(use_symbolic)
+                v_idx = None
+                for i, v in enumerate(vectors):
+                    if v == v_hv:
+                        v_idx = i
+                        break
+                if v_idx is None:
+                    if len(vectors) == 2:
+                        raise ValueError("use statevectors to handle more than 2 orthogonal vectors")
+                    if len(vectors) == 0 or _is_orthogonal(vectors[0], v_hv, use_symbolic):
+                        v_idx = len(vectors)
+                        vectors.append(v_hv)
+                    else:
+                        raise ValueError("use statevectors to handle non orthogonal vectors")
+                input_state[-2+v_idx] += 1
+            if vectors:
+                eh1, ev1 = vectors[0]
+                if len(vectors) == 1:
+                    if use_symbolic:
+                        eh2 = -sp.conjugate(ev1)
+                        ev2 = sp.conjugate(eh1)
+                    else:
+                        eh2 = -np.conjugate(ev1)
+                        ev2 = np.conjugate(eh1)
+                else:
+                    eh2, ev2 = vectors[1]
+                if prep_matrix is None:
+                    prep_matrix = Matrix.eye(2*state.m, use_symbolic)
+                prep_state_matrix = Matrix([[eh1, eh2],
+                                            [ev1, ev2]], use_symbolic)
+                if inverse:
+                    prep_state_matrix = prep_state_matrix.inv()
+                prep_matrix[2*k_m:2*k_m+2, 2*k_m:2*k_m+2] = prep_state_matrix
+    return BasicState(input_state), prep_matrix

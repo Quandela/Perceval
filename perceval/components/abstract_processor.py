@@ -29,12 +29,13 @@
 
 from abc import ABC, abstractmethod
 import copy
+from deprecated import deprecated
 from enum import Enum
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Callable
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, StateVector, SVDistribution, Parameter
+from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
 from .port import LogicalState, Herald, PortLocation, APort
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
@@ -62,7 +63,7 @@ class AProcessor(ABC):
     def _reset_circuit(self):
         self._in_ports: Dict = {}
         self._out_ports: Dict = {}
-        self._postprocess = None
+        self._postselect: PostSelect = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
@@ -103,6 +104,11 @@ class AProcessor(ABC):
     def clear_input_and_circuit(self):
         self._reset_circuit()
         self._input_state = None
+        self._circuit_changed()
+
+    def _circuit_changed(self):
+        # Can be used by child class
+        pass
 
     def min_detected_photons_filter(self, n: int):
         r"""
@@ -139,20 +145,29 @@ class AProcessor(ABC):
 
     @property
     def post_select_fn(self):
-        return self._postprocess
+        return self._postselect
 
-    def set_postprocess(self, postprocess_func):
+    @deprecated(version="0.9", reason="use set_postselection(PostSelect) instead")
+    def set_postprocess(self, postprocess_func: Callable):  # Deprecated in order to avoid free Python function
+        self._postselect = postprocess_func
+
+    def set_postselection(self, postselect: PostSelect):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
         on the logical performance of the processor
 
-        :param postprocess_func: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
+        :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
         """
-        self._postprocess = postprocess_func
+        assert isinstance(postselect, PostSelect), "Parameter must be a PostSelect object"
+        self._postselect = postselect
 
+    @deprecated(version="0.9", reason="use clear_postselection() instead")
     def clear_postprocess(self):
-        self._postprocess = None
+        self.clear_postselection()
+
+    def clear_postselection(self):
+        self._postselect = None
 
     def _state_selected(self, state: BasicState) -> bool:
         """
@@ -161,8 +176,8 @@ class AProcessor(ABC):
         for m, v in self.heralds.items():
             if state[m] != v:
                 return False
-        if self._postprocess is not None:
-            return self._postprocess(state)
+        if self._postselect is not None:
+            return self._postselect(state)
         return True
 
     def copy(self, subs: Union[dict, list] = None):
@@ -212,7 +227,7 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._postprocess is not None:
+        if self._postselect is not None:
             raise RuntimeError("Cannot add any component to a processor with a post-process function. You may remove the post-process function by calling clear_postprocess()")
 
         self._simulator = None  # Invalidate simulator which will have to be recreated later on
@@ -228,6 +243,7 @@ class AProcessor(ABC):
             self._add_component(connector.resolve(), component)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
+        self._circuit_changed()
         return self
 
     def _compose_processor(self, connector, processor, keep_port: bool):
@@ -278,14 +294,12 @@ class AProcessor(ABC):
                     self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         # Retrieve post process function from the other processor
-        if processor._postprocess is not None:
+        if processor._postselect is not None:
             if perm_component is None:
-                self._postprocess = processor._postprocess
+                self._postselect = processor._postselect
             else:
-                perm = perm_component.perm_vector
                 c_first = perm_modes[0]
-                self._postprocess = lambda s: processor._postprocess([s[perm.index(ii) + c_first]
-                                                                      for ii in range(processor.circuit_size)])
+                self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
 
     def _add_component(self, mode_mapping, component):
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
@@ -492,6 +506,10 @@ class AProcessor(ABC):
     def _with_logical_input(self, input_state: LogicalState):
         input_state = input_state.to_basic_state(list(self._in_ports.keys()))
         self.with_input(input_state)
+
+    @abstractmethod
+    def check_input(self, input_state: BasicState):
+        r"""Check if a basic state input matches with the current processor configuration"""
 
     @property
     def source_distribution(self) -> Union[SVDistribution, None]:

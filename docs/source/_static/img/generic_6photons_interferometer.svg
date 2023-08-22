@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1000.0" height="437.5" viewBox="-28.5 0 800 350">
+<defs>
+</defs>
+<path d="M10,25 L25,25" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M10,75 L25,75" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M10,125 L25,125" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M10,175 L25,175" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M10,225 L25,225" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M10,275 L25,275" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M25,25 L75,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M30,40 L39,40 L53,10 L44,10 L30,40 L39,40 Z" stroke="black" fill="gray" stroke-linejoin="miter" />
+<text x="47" y="38" font-size="7" text-anchor="start" dy="0em">Φ=phi0</text>
+<path d="M25,75 L75,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M30,90 L39,90 L53,60 L44,60 L30,90 L39,90 Z" stroke="black" fill="gray" stroke-linejoin="miter" />
+<text x="47" y="88" font-size="7" text-anchor="start" dy="0em">Φ=phi1</text>
+<path d="M25,125 L75,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M30,140 L39,140 L53,110 L44,110 L30,140 L39,140 Z" stroke="black" fill="gray" stroke-linejoin="miter" />
+<text x="47" y="138" font-size="7" text-anchor="start" dy="0em">Φ=phi2</text>
+<path d="M25,175 L75,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M30,190 L39,190 L53,160 L44,160 L30,190 L39,190 Z" stroke="black" fill="gray" stroke-linejoin="miter" />
+<text x="47" y="188" font-size="7" text-anchor="start" dy="0em">Φ=phi3</text>
+<path d="M25,225 L75,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M30,240 L39,240 L53,210 L44,210 L30,240 L39,240 Z" stroke="black" fill="gray" stroke-linejoin="miter" />
+<text x="47" y="238" font-size="7" text-anchor="start" dy="0em">Φ=phi4</text>
+<path d="M25,275 L75,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M30,290 L39,290 L53,260 L44,260 L30,290 L39,290 Z" stroke="black" fill="gray" stroke-linejoin="miter" />
+<text x="47" y="288" font-size="7" text-anchor="start" dy="0em">Φ=phi5</text>
+<path d="M75,25 L103,25 L122,44" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M128,44 L147,25 L175,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M75,75 L103,75 L122,56" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M128,56 L147,75 L175,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M100,43 L150,43 L150,57 L100,57 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="125" y="85" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr0</text>
+<text x="125" y="26" font-size="7" text-anchor="middle" dy="0em">Θ=theta0</text>
+<path d="M100,43 L150,43 L150,47 L100,47 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M143,50 L153,50 L153,60 L143,60 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="148" y="57" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M75,125 L103,125 L122,144" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M128,144 L147,125 L175,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M75,175 L103,175 L122,156" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M128,156 L147,175 L175,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M100,143 L150,143 L150,157 L100,157 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="125" y="185" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr1</text>
+<text x="125" y="126" font-size="7" text-anchor="middle" dy="0em">Θ=theta1</text>
+<path d="M100,143 L150,143 L150,147 L100,147 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M143,150 L153,150 L153,160 L143,160 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="148" y="157" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M75,225 L103,225 L122,244" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M128,244 L147,225 L175,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M75,275 L103,275 L122,256" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M128,256 L147,275 L175,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M100,243 L150,243 L150,257 L100,257 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="125" y="285" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr2</text>
+<text x="125" y="226" font-size="7" text-anchor="middle" dy="0em">Θ=theta2</text>
+<path d="M100,243 L150,243 L150,247 L100,247 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M143,250 L153,250 L153,260 L143,260 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="148" y="257" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M175,75 L203,75 L222,94" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M228,94 L247,75 L275,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M175,125 L203,125 L222,106" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M228,106 L247,125 L275,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M200,93 L250,93 L250,107 L200,107 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="225" y="135" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr3</text>
+<text x="225" y="76" font-size="7" text-anchor="middle" dy="0em">Θ=theta3</text>
+<path d="M200,93 L250,93 L250,97 L200,97 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M243,100 L253,100 L253,110 L243,110 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="248" y="107" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M175,175 L203,175 L222,194" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M228,194 L247,175 L275,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M175,225 L203,225 L222,206" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M228,206 L247,225 L275,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M200,193 L250,193 L250,207 L200,207 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="225" y="235" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr4</text>
+<text x="225" y="176" font-size="7" text-anchor="middle" dy="0em">Θ=theta4</text>
+<path d="M200,193 L250,193 L250,197 L200,197 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M243,200 L253,200 L253,210 L243,210 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="248" y="207" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M175,25 L275,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M275,25 L303,25 L322,44" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M328,44 L347,25 L375,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M275,75 L303,75 L322,56" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M328,56 L347,75 L375,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M300,43 L350,43 L350,57 L300,57 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="325" y="85" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr5</text>
+<text x="325" y="26" font-size="7" text-anchor="middle" dy="0em">Θ=theta5</text>
+<path d="M300,43 L350,43 L350,47 L300,47 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M343,50 L353,50 L353,60 L343,60 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="348" y="57" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M275,125 L303,125 L322,144" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M328,144 L347,125 L375,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M275,175 L303,175 L322,156" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M328,156 L347,175 L375,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M300,143 L350,143 L350,157 L300,157 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="325" y="185" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr6</text>
+<text x="325" y="126" font-size="7" text-anchor="middle" dy="0em">Θ=theta6</text>
+<path d="M300,143 L350,143 L350,147 L300,147 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M343,150 L353,150 L353,160 L343,160 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="348" y="157" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M175,275 L275,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M275,225 L303,225 L322,244" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M328,244 L347,225 L375,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M275,275 L303,275 L322,256" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M328,256 L347,275 L375,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M300,243 L350,243 L350,257 L300,257 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="325" y="285" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr7</text>
+<text x="325" y="226" font-size="7" text-anchor="middle" dy="0em">Θ=theta7</text>
+<path d="M300,243 L350,243 L350,247 L300,247 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M343,250 L353,250 L353,260 L343,260 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="348" y="257" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M375,75 L403,75 L422,94" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M428,94 L447,75 L475,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M375,125 L403,125 L422,106" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M428,106 L447,125 L475,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M400,93 L450,93 L450,107 L400,107 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="425" y="135" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr8</text>
+<text x="425" y="76" font-size="7" text-anchor="middle" dy="0em">Θ=theta8</text>
+<path d="M400,93 L450,93 L450,97 L400,97 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M443,100 L453,100 L453,110 L443,110 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="448" y="107" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M375,175 L403,175 L422,194" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M428,194 L447,175 L475,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M375,225 L403,225 L422,206" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M428,206 L447,225 L475,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M400,193 L450,193 L450,207 L400,207 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="425" y="235" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr9</text>
+<text x="425" y="176" font-size="7" text-anchor="middle" dy="0em">Θ=theta9</text>
+<path d="M400,193 L450,193 L450,197 L400,197 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M443,200 L453,200 L453,210 L443,210 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="448" y="207" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M375,25 L475,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M475,25 L503,25 L522,44" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M528,44 L547,25 L575,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M475,75 L503,75 L522,56" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M528,56 L547,75 L575,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M500,43 L550,43 L550,57 L500,57 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="525" y="85" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr10</text>
+<text x="525" y="26" font-size="7" text-anchor="middle" dy="0em">Θ=theta10</text>
+<path d="M500,43 L550,43 L550,47 L500,47 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M543,50 L553,50 L553,60 L543,60 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="548" y="57" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M475,125 L503,125 L522,144" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M528,144 L547,125 L575,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M475,175 L503,175 L522,156" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M528,156 L547,175 L575,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M500,143 L550,143 L550,157 L500,157 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="525" y="185" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr11</text>
+<text x="525" y="126" font-size="7" text-anchor="middle" dy="0em">Θ=theta11</text>
+<path d="M500,143 L550,143 L550,147 L500,147 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M543,150 L553,150 L553,160 L543,160 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="548" y="157" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M375,275 L475,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M475,225 L503,225 L522,244" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M528,244 L547,225 L575,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M475,275 L503,275 L522,256" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M528,256 L547,275 L575,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M500,243 L550,243 L550,257 L500,257 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="525" y="285" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr12</text>
+<text x="525" y="226" font-size="7" text-anchor="middle" dy="0em">Θ=theta12</text>
+<path d="M500,243 L550,243 L550,247 L500,247 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M543,250 L553,250 L553,260 L543,260 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="548" y="257" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M575,75 L603,75 L622,94" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M628,94 L647,75 L675,75" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M575,125 L603,125 L622,106" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M628,106 L647,125 L675,125" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M600,93 L650,93 L650,107 L600,107 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="625" y="135" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr13</text>
+<text x="625" y="76" font-size="7" text-anchor="middle" dy="0em">Θ=theta13</text>
+<path d="M600,93 L650,93 L650,97 L600,97 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M643,100 L653,100 L653,110 L643,110 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="648" y="107" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M575,175 L603,175 L622,194" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M628,194 L647,175 L675,175" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M575,225 L603,225 L622,206" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M628,206 L647,225 L675,225" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M600,193 L650,193 L650,207 L600,207 Z" stroke="black" fill="black" stroke-linejoin="miter" />
+<text x="625" y="235" font-size="7" text-anchor="middle" dy="0em">Φ_tr=Φ_tr14</text>
+<text x="625" y="176" font-size="7" text-anchor="middle" dy="0em">Θ=theta14</text>
+<path d="M600,193 L650,193 L650,197 L600,197 Z" stroke="black" fill="lightgray" stroke-linejoin="miter" />
+<path d="M643,200 L653,200 L653,210 L643,210 Z" stroke="black" fill="thistle" stroke-linejoin="miter" />
+<text x="648" y="207" font-size="6" text-anchor="middle" dy="0em">Rx</text>
+<path d="M575,25 L675,25" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M575,275 L675,275" stroke="darkred" stroke-width="3" fill="none" />
+<path d="M675,25 L690,25" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M675,75 L690,75" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M675,125 L690,125" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M675,175 L690,175" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M675,225 L690,225" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<path d="M675,275 L690,275" stroke-width="3" stroke="darkred" stroke-linejoin="miter" fill="none" />
+<text x="700" y="28" font-size="7" text-anchor="end" dy="0em">0</text>
+<text x="700" y="78" font-size="7" text-anchor="end" dy="0em">1</text>
+<text x="700" y="128" font-size="7" text-anchor="end" dy="0em">2</text>
+<text x="700" y="178" font-size="7" text-anchor="end" dy="0em">3</text>
+<text x="700" y="228" font-size="7" text-anchor="end" dy="0em">4</text>
+<text x="700" y="278" font-size="7" text-anchor="end" dy="0em">5</text>
+<text x="0" y="28" font-size="7" text-anchor="start" dy="0em">0</text>
+<text x="0" y="78" font-size="7" text-anchor="start" dy="0em">1</text>
+<text x="0" y="128" font-size="7" text-anchor="start" dy="0em">2</text>
+<text x="0" y="178" font-size="7" text-anchor="start" dy="0em">3</text>
+<text x="0" y="228" font-size="7" text-anchor="start" dy="0em">4</text>
+<text x="0" y="278" font-size="7" text-anchor="start" dy="0em">5</text>
+</svg>

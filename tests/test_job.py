@@ -37,14 +37,14 @@ def quadratic_count_down(n, speed=0.1, progress_callback=None):
     for i in range(n):
         time.sleep(speed)
         if progress_callback:
-            progress_callback(i/n, "counting %d" % i)
-        l.append(i**2)
+            progress_callback(i / n, "counting %d" % i)
+        l.append(i ** 2)
     assert speed >= 0.1
     return l
 
 
 def test_run_sync_0():
-    assert(pcvl.LocalJob(quadratic_count_down)(5) == [0, 1, 4, 9, 16])
+    assert (pcvl.LocalJob(quadratic_count_down)(5) == [0, 1, 4, 9, 16])
 
 
 def test_run_sync_1():
@@ -74,6 +74,7 @@ def test_run_async():
     # should be at least 1.5s
     assert job.status.running_time > 1
     assert job.status.status == RunningStatus.SUCCESS
+
 
 def test_run_async_fail():
     job = pcvl.LocalJob(quadratic_count_down)
@@ -105,6 +106,12 @@ from perceval.serialization import serialize
 import json
 import pytest
 import time
+
+_REMOTE_JOB_NAME = "a remote job"
+_REMOTE_JOB_DURATION = 5
+_REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
+_REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
+
 
 class MockRPCHandler:
     _ARBITRARY_JOB_ID = "ebb1f8ec-0125-474f-9ffc-5178afef4d1a"
@@ -155,14 +162,17 @@ class MockRPCHandler:
     def get_job_status(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
         return {
-            'duration': 10,
-            'failure_code': None,
-            'msg': 'ok',
-            'progress': 1.0,
-            'progress_message': 'Computing phases to apply (step 3)',
-            'start_time': 1674230323.462364,
-            'status': 'completed',
-            'status_message': None
+            "creation_datetime": _REMOTE_JOB_CREATION_TIMESTAMP,
+            "duration": _REMOTE_JOB_DURATION,
+            "failure_code": None,
+            "last_intermediate_results": None,
+            "msg": "ok",
+            "name": _REMOTE_JOB_NAME,
+            "progress": 1.0,
+            "progress_message": "Computing phases to apply (step 2)",
+            "start_time": _REMOTE_JOB_START_TIMESTAMP,
+            "status": "completed",
+            "status_message": None
         }
 
     def get_job_results(self, job_id: str):
@@ -182,6 +192,7 @@ class MockRPCHandler:
             }
         }))
 
+
 def test_remote_job():
     _FIRST_JOB_NAME = "job name"
     _SECOND_JOB_NAME = "another name"
@@ -200,3 +211,7 @@ def test_remote_job():
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
     assert resumed_rj.id == _TEST_JOB_ID
     assert rj.is_complete == job_status.completed
+    assert rj.name == _REMOTE_JOB_NAME
+    assert rj.status.creation_timestamp == _REMOTE_JOB_CREATION_TIMESTAMP
+    assert rj.status.start_timestamp == _REMOTE_JOB_START_TIMESTAMP
+    assert rj.status.duration == _REMOTE_JOB_DURATION

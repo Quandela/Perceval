@@ -91,6 +91,8 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Qiskit conversion
    notebooks/Remote computing
    notebooks/Reinforcement learning
+   notebooks/QUBO
+   notebooks/Graph States and representation
 
 .. toctree::
    :caption: Code Reference
@@ -103,8 +105,11 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/circuit_optimizer
    reference/utils
    reference/source
+   reference/simulator
    reference/processor
+   reference/postselect
    reference/qiskit_converter
+   reference/stategenerator
 
 .. toctree::
    :caption: Community

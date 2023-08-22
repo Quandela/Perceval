@@ -28,10 +28,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.1.0', 'multipledispatch',
-                      'protobuf>=4.21.2', 'drawsvg>=2.0', 'Deprecated', 'requests'],
+    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.2.0', 'multipledispatch',
+                      'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec'],
     setup_requires=["scmver"],
-    extras_require={"test": ["pytest", "pytest-cov", "pytest-benchmark"]},
     python_requires=">=3.7",
     scmver=True
 )

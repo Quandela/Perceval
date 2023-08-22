@@ -110,7 +110,10 @@ class Analyzer(AAlgorithm):
 
         # Compute probabilities for all input states
         for idx, i_state in enumerate(self.input_states_list):
-            self._processor.with_input(i_state)
+            if i_state.has_polarization:
+                self._processor.with_polarized_input(i_state)
+            else:
+                self._processor.with_input(i_state)
             job = self._sampler.probs
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()

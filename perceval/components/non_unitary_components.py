@@ -86,6 +86,8 @@ class LC(AParametrizedComponent):
 
         The output state vector contains BasicStates which are 1 mode bigger than the ones in input:
         (input modes count + the virtual mode)
+
+        Warning: this method loses annotations! However, it is not currently used in LC simulation (see: LossSimulator)
         """
         # Assumes r of size 1
         # Returns a stateVector of size m + 1. Stepper backend should support this

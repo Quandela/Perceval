@@ -108,6 +108,11 @@ class LocalJob(Job):
         if job_status.status != RunningStatus.SUCCESS:
             raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
         if self._result_mapping_function:
-            self._results['results'] = self._result_mapping_function(self._results['results'],
-                                                                     **self._delta_parameters)
+            if 'results' in self._results:
+                self._results['results'] = self._result_mapping_function(self._results['results'],
+                                                                         **self._delta_parameters)
+            elif 'results_list' in self._results:
+                for res in self._results["results_list"]:
+                    res["results"] = self._result_mapping_function(res['results'],
+                                                                   **self._delta_parameters)
         return self._results

@@ -27,22 +27,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
-
+import math
 import numpy as np
 
-import perceval as pcvl
-import perceval.components.unitary_components as comp
+import exqalibur as xq
+from ._abstract_backends import AProbAmpliBackend
+from perceval.utils import BasicState
 
 
-def test_34():
-    bs = comp.BS.H(theta=0)
-    c = pcvl.Circuit(4, name='phase')
-    c.add((2, 3), bs)
-    pcvl.pdisplay(c)  # looks good
-    simulator_backend = pcvl.BackendFactory.get_backend("Naive")
-    simu = simulator_backend(c.compute_unitary())
-    state = pcvl.BasicState([1, 1, 1, 1])
-    pa = simu.probampli(state, pcvl.BasicState([1, 1, 1, 1]))
-    assert pytest.approx(-1) == pa.real
-    assert pytest.approx(1) == abs(pa)
+class NaiveBackend(AProbAmpliBackend):
+    """Naive algorithm, no clever calculation path, does not cache anything,
+       recompute all states on the fly"""
+
+    @property
+    def name(self) -> str:
+        return "Naive"
+
+    def prob_amplitude(self, output_state: BasicState) -> complex:
+        n = self._input_state.n
+        m = self._input_state.m
+        if n != output_state.n:
+            return complex(0)
+        if n == 0:
+            return complex(1)
+        u_st = np.empty((n, n), dtype=complex)
+        colidx = 0
+        p = output_state.prodnfact() * self._input_state.prodnfact()
+        for ik in range(m):
+            for i in range(self._input_state[ik]):
+                rowidx = 0
+                for ok in range(m):
+                    for j in range(output_state[ok]):
+                        u_st[rowidx, colidx] = self._umat[ok, ik]
+                        rowidx += 1
+                colidx += 1
+        return xq.permanent_cx(u_st, n_threads=1)/math.sqrt(p)

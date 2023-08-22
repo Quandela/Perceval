@@ -56,7 +56,7 @@ Spatial Modes encoding
 ^^^^^^^^^^^^^^^^^^^^^^
 
 In *Spatial Modes encoding* (also called *Path encoding*), each qubit
-of a quantum circuit with a pair of spatial modes.  Each state of the
+of a quantum circuit is encoded as a pair of spatial modes.  Each state of the
 qubit corresponds to a Fock state where one photon is in one of the
 spatial modes:
 
