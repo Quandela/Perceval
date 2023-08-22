@@ -67,8 +67,6 @@ data (dual rail) ─────┤ H ├───┤          ├───┤ H
 
     def build_processor(self, **kwargs):
         p = Processor(backend="SLOS", m_circuit=4, source=Source())
-            #self._backend_name, n_moi, self._source)
-        # p = self._init_processor(**kwargs)
         p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl'))
         p.add_port(2, Port(Encoding.DUAL_RAIL, 'data'))
         p.add(2, Circuit(2, name='H') // BS.H())

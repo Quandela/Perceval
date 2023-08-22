@@ -42,7 +42,7 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
 data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
-    see_also = "postprocessed cnot"
+    see_also = "postprocessed cnot and heralded cnot (using cz)"
 
     R1 = 0.228
     R2 = 0.758
