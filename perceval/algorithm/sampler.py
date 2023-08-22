@@ -49,6 +49,8 @@ class Sampler(AAlgorithm):
     values.
     """
     PROBS_SIMU_SAMPLE_COUNT = 10000  # Arbitrary value
+    # Absolute maximum of samples for local sampling simulation (should be thresholded by a max_shot value)
+    SAMPLES_MAX_COUNT = int(1e8)
     _METHOD_MAPPING = {
         'probs': {'sample_count': sample_count_to_probs, 'samples': samples_to_probs},
         'sample_count': {'probs': probs_to_sample_count, 'samples': samples_to_sample_count},
@@ -82,16 +84,20 @@ class Sampler(AAlgorithm):
         return True
 
     # Job creation methods
-    def _generic(self, method: str):
+    def _create_job(self, method: str):
         assert self._input_available(), "Missing input state"
         primitive, converter = self._get_primitive_converter(method)
+        method_is_probs = method.find('sample') == -1
+        primitive_is_probs = primitive.find('sample') == -1
+
         delta_parameters = {}
         # adapt the parameters list
-        command_param_names = [] if method == 'probs' else ['count']
-        if method.find('sample') != -1 and primitive.find('sample') == -1:
-            delta_parameters['count'] = None
-        elif method.find('sample') == -1 and primitive.find('sample') != -1:
-            delta_parameters['count'] = self.PROBS_SIMU_SAMPLE_COUNT
+        command_param_names = ['max_shots'] if method == 'probs' else ['max_shots', 'max_samples']
+        if not method_is_probs and primitive_is_probs:
+            delta_parameters['max_shots'] = None
+            delta_parameters['max_samples'] = None
+        elif method_is_probs and not primitive_is_probs:
+            delta_parameters['max_samples'] = self.PROBS_SIMU_SAMPLE_COUNT
         assert primitive is not None, \
             f"cannot find primitive to execute {method} in {self._processor.available_commands}"
         if self._processor.is_remote:
@@ -102,31 +108,26 @@ class Sampler(AAlgorithm):
             if self._iterator:
                 payload['payload']['iterator'] = self._iterator
             job_name = self.default_job_name if self.default_job_name is not None else method
-            rj = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
-                           command_param_names=command_param_names,
-                           delta_parameters=delta_parameters, job_context=job_context)
-            return rj
+            return RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
+                             command_param_names=command_param_names,
+                             delta_parameters=delta_parameters, job_context=job_context)
         else:
-            if self._iterator:
-                return LocalJob(getattr(self, f"_{primitive}_iterate_locally"),
-                                result_mapping_function=converter,
-                                delta_parameters=delta_parameters)
-            else:
-                return LocalJob(getattr(self._processor, primitive),
-                                result_mapping_function=converter,
-                                delta_parameters=delta_parameters)
+            func_name = f"_{primitive}_iterate_locally" if self._iterator else f"_{primitive}_wrapper"
+            return LocalJob(getattr(self, func_name),
+                            result_mapping_function=converter,
+                            delta_parameters=delta_parameters)
 
     @property
     def samples(self) -> Job:
-        return self._generic("samples")
+        return self._create_job("samples")
 
     @property
     def sample_count(self) -> Job:
-        return self._generic("sample_count")
+        return self._create_job("sample_count")
 
     @property
     def probs(self) -> Job:
-        return self._generic("probs")
+        return self._create_job("probs")
 
     # Iterator construction methods
     def add_iteration(self, circuit_params: Dict = None,
@@ -163,30 +164,38 @@ class Sampler(AAlgorithm):
         for iter_params in iterations:
             self.add_iteration(**iter_params)
 
-    # Local iteration methods: mimic the remote iteration for interchangeability purpose
-    def _probs_iterate_locally(self, progress_callback: Callable = None):
+    def _probs_wrapper(self, max_shots: int = None, progress_callback: Callable = None):
+        precision = None if max_shots is None else min(1e-6, 1/max_shots)
+        return self._processor.probs(precision, progress_callback)
+
+    def _samples_wrapper(self, max_shots: int = None, max_samples: int = None, progress_callback: Callable = None):
+        if max_samples is None and max_shots is None:
+            raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
+        if max_samples is None:
+            max_samples = self.SAMPLES_MAX_COUNT
+        return self._processor.samples(max_samples, max_shots, progress_callback)
+
+
+    # Local iteration methods mimic remote iterations for interchangeability purpose
+    def _probs_iterate_locally(self, max_shots: int = None, progress_callback: Callable = None):
+        precision = None if max_shots is None else min(1e-6, 1 / max_shots)
         results = {'results_list':[]}
         for idx, it in enumerate(self._iterator):
             self._apply_iteration(it)
-            results['results_list'].append(self._processor.probs())
+            results['results_list'].append(self._processor.probs(precision))
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self._iterator))
         return results
 
-    def _sample_count_iterate_locally(self, count: int, progress_callback: Callable = None):
+    def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None, progress_callback: Callable = None):
+        if max_samples is None and max_shots is None:
+            raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
+        if max_samples is None:
+            max_samples = self.SAMPLES_MAX_COUNT
         results = {'results_list':[]}
         for idx, it in enumerate(self._iterator):
             self._apply_iteration(it)
-            results['results_list'].append(self._processor.sample_count(count))
-            if progress_callback is not None:
-                progress_callback((idx+1)/len(self._iterator))
-        return results
-
-    def _samples_iterate_locally(self, count: int, progress_callback: Callable = None):
-        results = {'results_list':[]}
-        for idx, it in enumerate(self._iterator):
-            self._apply_iteration(it)
-            results['results_list'].append(self._processor.samples(count))
+            results['results_list'].append(self._processor.samples(max_samples, max_shots))
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self._iterator))
         return results

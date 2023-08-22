@@ -60,7 +60,7 @@ class Job(ABC):
                 if k in kwargs:
                     new_delta_parameters[k] = kwargs[k]
                     del kwargs[k]
-                else:
+                elif len(args) > 0:
                     new_delta_parameters[k] = args.pop(0)
             else:
                 kwargs[k] = v

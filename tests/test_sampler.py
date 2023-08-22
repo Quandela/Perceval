@@ -33,6 +33,9 @@ import perceval as pcvl
 from perceval.components import BS, PS, Processor, Source, catalog
 
 
+# To speed up the tests, lower the sample count required to compute a probability distribution
+Sampler.PROBS_SIMU_SAMPLE_COUNT = 1000
+
 def test_sampler():
     TRANSMITTANCE = 0.9
     imperfect_source = Source(emission_probability=TRANSMITTANCE)
@@ -45,9 +48,9 @@ def test_sampler():
         probs = sampler.probs()
         assert probs['results'][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1)
         assert probs['results'][pcvl.BasicState([1, 0, 0, 1])] == pytest.approx(0)
-        samples = sampler.samples(4)
+        samples = sampler.samples(max_samples=4)
         assert len(samples['results']) == 4
-        sample_count = sampler.sample_count(100)
+        sample_count = sampler.sample_count(max_samples=100)
         assert 90 < sum(list(sample_count['results'].values())) < 110
 
 
@@ -118,7 +121,21 @@ def test_sampler_iterator():
             assert rl[0]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.7701511529340699)
             assert rl[1]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.38639895265345636)
             assert rl[2]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0)
-        res = sampler.samples(10)
+        res = sampler.samples(max_samples=10)
         assert len(res['results_list']) == len(iteration_list)
-        res = sampler.sample_count(100)
+        res = sampler.sample_count(max_samples=100)
         assert len(res['results_list']) == len(iteration_list)
+
+
+def test_sampler_shots():
+    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS', 'MPS']:
+        p = Processor(backend_name, BS(theta=0.8))
+        p.with_input(pcvl.BasicState([1, 1]))
+        p.thresholded_output(True)
+        sampler = Sampler(p)
+        samples = sampler.samples(max_samples=100)
+        assert len(samples['results']) == 100
+        samples = sampler.samples(max_shots=10, max_samples=100)
+        assert len(samples['results']) <= 10
+        samples = sampler.samples(max_shots=10)
+        assert len(samples['results']) <= 10
