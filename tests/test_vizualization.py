@@ -311,7 +311,7 @@ def test_svg_decomposition_symb_compact(tmp_path, save_figs):
 
 
 def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
-    p = pcvl.components.catalog['heralded cnot'].build_processor()
+    p = pcvl.components.catalog['klm_cnot'].build_processor()
     c = pcvl.Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
     pc = pcvl.Processor('SLOS', c)
     pc.add_herald(1, 0)

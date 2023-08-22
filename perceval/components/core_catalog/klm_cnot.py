@@ -32,7 +32,7 @@ from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.utils import Encoding
 
 
-class HeraldedCnotItem(CatalogItem):
+class KLMCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
     description = r"""CNOT gate with 4 heralded modes"""
     str_repr = r"""                      ╭─────╮
@@ -50,7 +50,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     theta2 = BS.r_to_theta(R2)
 
     def __init__(self):
-        super().__init__("heralded cnot")
+        super().__init__("klm_cnot")
         self._default_opts['type'] = AsType.PROCESSOR
 
     @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
