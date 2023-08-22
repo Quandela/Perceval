@@ -27,10 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import BS, PS, Circuit
+from perceval.components import BS, PS, GenericInterferometer
 from perceval.simulators import Stepper, Simulator
 from perceval.utils import BasicState
-from perceval.backends._naive import NaiveBackend
+from perceval.backends import NaiveBackend
 
 import numpy as np
 import pytest
@@ -50,7 +50,7 @@ def test_stepper_complex_circuit():
     def _gen_mzi(i: int):
         return BS(BS.r_to_theta(0.42)) // PS(np.pi+i*0.1) // BS(BS.r_to_theta(0.52)) // PS(np.pi/2)
 
-    c = Circuit.generic_interferometer(4, _gen_mzi)
+    c = GenericInterferometer(4, _gen_mzi)
     stepper_sim = Stepper()
     stepper_sim.set_circuit(c)
     stepper_res = stepper_sim.probs(BasicState([1, 0, 1, 0]))

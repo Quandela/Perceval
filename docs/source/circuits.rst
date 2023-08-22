@@ -322,15 +322,15 @@ Where:
 Generic Interferometer
 """"""""""""""""""""""
 
-It is also possible to define generic interferometers with the static method
-:meth:`perceval.components.circuit.Circuit.generic_interferometer`.
+It is also possible to define generic interferometers with the class
+:meth:`perceval.components.GenericInterferometer`.
 
 For instance the following defines a triangular interferometer on 8 modes using a beam splitter
 and a phase shifter as base components:
 
->>> c = pcvl.Circuit.generic_interferometer(8,
-...                                         lambda i: comp.BS() // comp.PS(pcvl.P("φ%d" % i)),
-...                                         shape="triangle")
+>>> c = pcvl.GenericInterferometer(8,
+...                                lambda i: comp.BS() // comp.PS(pcvl.P("φ%d" % i)),
+...                                shape="triangle")
 >>> pcvl.pdisplay(c)
 
 .. figure:: _static/img/generic-interferometer.png

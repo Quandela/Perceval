@@ -2,3 +2,8 @@ pytest
 pytest-cov
 pytest-benchmark
 flake8
+qiskit
+myqlm==1.7.3
+qutip
+jax
+jaxlib

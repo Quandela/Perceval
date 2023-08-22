@@ -51,7 +51,7 @@ from ._processor_utils import precompute_herald_pos
 
 
 in_notebook = False
-in_pycharm_or_spyder = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ
+in_ide = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ or 'VSCODE' in os.environ
 
 try:
     from IPython import get_ipython
@@ -264,14 +264,35 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_pycharm_or_spyder and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
+    elif in_ide and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
         return Format.MPLOT
     return Format.TEXT
 
 
 def pdisplay(o, output_format: Format = None, **opts):
-    """
+    """ Pretty display
     Main rendering entry point. Several data types can be displayed using pdisplay.
+
+    :param o: Perceval object to render
+    :param output_format: Format controls where and how a figure is render (in a interactive window, the terminal, etc.)
+        - MPLOT: Matplotlib drawing (default in IDE - spyder, pycharm or vscode)
+        - HTML: HTML for data table, SVG for circuits/processors (default in notebook)
+        - TEXT: Pretty text display (default in another cases)
+        - LATEX: LaTex code, drawing with Tikz for circuits/processors
+
+    opts:
+        - skin (rendering.circuit.PhysSkin, SymbSkin or DebugSkin or any ASkin subclass instance):
+            Skin controls how a circuit/processor is displayed
+                - PhysSkin(): physical skin (default),
+                - DebugSkin(): Similar to PhysSkin but modes are bigger, ancillary modes are displayed,
+                               components with variable parameters are red,
+                - SymbSkin(): symbolic skin (thin black and white lines).
+        - precision (float): numerical precision
+        - nsimplify (bool): if True, tries to simplify numerical values by searching known values (pi, sqrt, fractions)
+        - recursive (bool): if True, all hierarchy levels in a circuit/processor are displayed. Otherwise, only the top
+                            level is drawn, others are "black boxes"
+        - max_v (int): Maximum number of displayed values in distributions
+        - sort (bool): if True, sorts a distribution (descending order) before displaying
     """
     if output_format is None:
         output_format = _default_output_format(o)

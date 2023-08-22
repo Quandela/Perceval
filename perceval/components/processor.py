@@ -29,10 +29,9 @@
 from numpy import Inf
 
 from .abstract_processor import AProcessor, ProcessorType
-from .port import LogicalState
 from .source import Source
 from .linear_circuit import ACircuit
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 from multipledispatch import dispatch
@@ -276,4 +275,4 @@ class Processor(AProcessor):
 
     @property
     def available_commands(self) -> List[str]:
-        return ["samples" if self.backend.preferred_command() == "sample" else "probs"]
+        return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]

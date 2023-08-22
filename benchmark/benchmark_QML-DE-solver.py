@@ -62,9 +62,9 @@ N = m = 6
 N2 = N ** 2
 
 input_state = pcvl.BasicState([1] * N + [0] * (m - N))
-simulator_backend = pcvl.BackendFactory().get_backend("SLOS")
-s1 = simulator_backend(pcvl.Matrix.random_unitary(m))
-s1.compile(input_state)
+s1 = pcvl.SLOSBackend()
+s1.set_circuit(pcvl.Unitary(pcvl.Matrix.random_unitary(m)))
+s1.preprocess([input_state])
 
 random.seed(0)
 np.random.seed(0)
@@ -79,11 +79,8 @@ parameters = np.random.normal(size=4 * N2)
 
 
 def calc(circuit, input_state, coefs):
-    U = circuit.compute_unitary(use_symbolic=False)
-    s1.U = U
-
+    s1.set_circuit(circuit)
     probs = s1.all_prob(input_state)
-
     return np.sum(np.multiply(probs, coefs))
 
 
