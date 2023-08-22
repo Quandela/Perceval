@@ -37,12 +37,12 @@ TOKEN_FROM_ENV = "DUMMY_TOKEN_FROM_ENV"
 TOKEN_FROM_CACHE = "DUMMY_TOKEN_FROM_CACHE"
 os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
 
-def test_token_provider():
-    provider = TokenProvider(MISSING_KEY)
+def test_token_provider_env_var_vs_cache():
+    provider = TokenProvider(env_var=MISSING_KEY)
     assert provider.get_token() is None
     assert provider.cache is None
 
-    provider = TokenProvider(ENV_VAR_KEY)
+    provider = TokenProvider(env_var=ENV_VAR_KEY)
     assert provider.get_token() == TOKEN_FROM_ENV
     assert provider.cache == TOKEN_FROM_ENV
 

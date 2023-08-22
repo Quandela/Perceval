@@ -43,8 +43,8 @@ class TokenProvider:
 
     def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN", file_path: str = None):
         """
-        :param env_var: Environment variable name to search for a token
-        :param file_path: Path to search for a file containing a token
+        :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
+        :param file_path: Path to search for a file containing a token (default None)
         """
         self._env_var = env_var
         self._file_path = file_path
