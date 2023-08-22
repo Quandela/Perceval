@@ -58,13 +58,12 @@ data (dual rail) ─────┤ H ├───┤          ├───┤ H
             return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
-        pass
-        # c = Circuit(8, name="Heralded CNOT")
-        # c.add(2, Circuit(2, name='H') // BS.H())
-        # heralded_cz = HeraldedCzItem()
-        # c.add(0, heralded_cz.build_circuit())
-        # c.add(2, Circuit(2, name='H') // BS.H())
-        # return c
+        c = Circuit(6, name="Heralded CNOT")
+        c.add(2, Circuit(2, name='H') // BS.H())
+        heralded_cz = HeraldedCzItem()
+        c.add(0, heralded_cz.build_circuit())
+        c.add(2, Circuit(2, name='H') // BS.H())
+        return c
 
     def build_processor(self, **kwargs):
         p = Processor(backend="SLOS", m_circuit=4, source=Source())
