@@ -36,6 +36,9 @@ import perceval as pcvl
 from perceval.components.unitary_components import *
 from perceval.components.non_unitary_components import *
 from perceval.rendering import pdisplay_to_file, Format
+from perceval.rendering.pdisplay import pdisplay_circuit
+from perceval import catalog
+
 from pathlib import Path
 import re
 import sympy as sp
@@ -317,3 +320,28 @@ def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
     pc.add_herald(1, 0)
     p.add(2, pc)
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+def test_x_grid_rendering():
+    cnot = catalog["postprocessed cnot"].build_circuit()
+    displayed = pdisplay_circuit(cnot, output_format=Format.TEXT).strip()
+    expected = """
+            ╭─────╮              ╭──────────────╮╭─────╮       ╭─────╮
+        0:──┤PERM ├──────────────┤BS(H)         ├┤PERM ├───────┤PERM ├──:0 (depth 4)
+            │ ╲ ╱ │              │theta=1.910633││ ╲ ╱ │       │ ╲ ╱ │
+            │  ╳  │              │              ││  ╳  │       │  ╳  │
+        1:──┤ ╱ ╲ ├──────────────┤              ├┤ ╱ ╲ ├───────┤ ╱ ╲ ├──:1 (depth 4)
+            │     │              ╰──────────────╯╰─────╯       │     │
+            │     │       ╭─────╮╭──────────────╮╭─────╮       │     │
+        2:──┤     ├───────┤PERM ├┤BS(H)         ├┤PERM ├───────┤     ├──:2 (depth 5)
+            │     │       │ ╲ ╱ ││theta=1.910633││ ╲ ╱ │       │     │
+            │     │╭─────╮│  ╳  ││              ││  ╳  │╭─────╮│     │
+        3:──┤     ├┤BS(H)├┤ ╱ ╲ ├┤              ├┤ ╱ ╲ ├┤BS(H)├┤     ├──:3 (depth 7)
+            │     ││     │╰─────╯╰──────────────╯╰─────╯│     ││     │
+            │     ││     │       ╭──────────────╮       │     ││     │
+        4:──┤     ├┤     ├───────┤BS(H)         ├───────┤     ├┤     ├──:4 (depth 5)
+            ╰─────╯╰─────╯       │theta=1.910633│       ╰─────╯╰─────╯
+                                 │              │                     
+        5:───────────────────────┤              ├───────────────────────:5 (depth 1)
+                                 ╰──────────────╯                     
+    """.strip().replace("\n        ", "\n")
+    assert displayed == expected
