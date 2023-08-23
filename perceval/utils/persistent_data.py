@@ -27,32 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import re
-from importlib.metadata import metadata
+from platformdirs import PlatformDirs
+from .metadata import PMetadata
 
 
-class PMetadata():
-    _NAME = "perceval"
-    _PACKAGE_NAME = "perceval-quandela"
-    _METADATA = metadata(_PACKAGE_NAME)
-    _REGEX = re.compile(r"(\d+\.\d+(?:\.\d+)*)")
+class PersistentData():
+    def __init__(self) -> None:
+        self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
 
-    @staticmethod
-    def short_version() -> str:
-        return PMetadata._REGEX.findall(PMetadata._METADATA["version"])[0]
-
-    @staticmethod
-    def version() -> str:
-        return PMetadata._METADATA["version"]
-
-    @staticmethod
-    def package_name() -> str:
-        return PMetadata._PACKAGE_NAME
-
-    @staticmethod
-    def author() -> str:
-        return PMetadata._METADATA["author"]
-
-    @staticmethod
-    def name() -> str:
-        return PMetadata._NAME
+    @property
+    def directory(self) -> str:
+        return self._directory

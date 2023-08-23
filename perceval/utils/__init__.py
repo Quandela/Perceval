@@ -42,5 +42,6 @@ from .conversion import samples_to_sample_count, samples_to_probs, sample_count_
     probs_to_samples, probs_to_sample_count
 from .stategenerator import StateGenerator
 from ._enums import Encoding, InterferometerShape
+from .persistent_data import PersistentData
 from .metadata import PMetadata
 from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace

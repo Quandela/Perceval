@@ -27,32 +27,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import platform
 import re
-from importlib.metadata import metadata
+
+from perceval.utils import PersistentData
 
 
-class PMetadata():
-    _NAME = "perceval"
-    _PACKAGE_NAME = "perceval-quandela"
-    _METADATA = metadata(_PACKAGE_NAME)
-    _REGEX = re.compile(r"(\d+\.\d+(?:\.\d+)*)")
-
-    @staticmethod
-    def short_version() -> str:
-        return PMetadata._REGEX.findall(PMetadata._METADATA["version"])[0]
-
-    @staticmethod
-    def version() -> str:
-        return PMetadata._METADATA["version"]
-
-    @staticmethod
-    def package_name() -> str:
-        return PMetadata._PACKAGE_NAME
-
-    @staticmethod
-    def author() -> str:
-        return PMetadata._METADATA["author"]
-
-    @staticmethod
-    def name() -> str:
-        return PMetadata._NAME
+def test_persistent_data():
+    pd = PersistentData()
+    if platform.system() == "Linux":
+        # '/home/my_user/.local/share/perceval-quandela'
+        assert re.match(r"^\/home\/.+\/\.local\/share\/perceval-quandela$", pd.directory) is not None
+    elif platform.system() == "Windows":
+        # 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
+        assert re.match(r"^C:\\Users\\.+\\AppData\\Local\\quandela\\perceval-quandela$", pd.directory) is not None
+    elif platform.system() == "Darwin":
+        # '/Users/my_user/Library/Application Support/perceval-quandela'
+        assert re.match(r"^\/Users\/.+\/Library\/Application Support\/perceval-quandela$", pd.directory) is not None
+    else:
+        raise OSError("My god where are you ?")
