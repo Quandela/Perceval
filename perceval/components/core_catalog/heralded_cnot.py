@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from deprecated import deprecated
-from perceval.components import Circuit, Processor, Source, BS, PERM, Port
+from perceval.components import Circuit, Processor, Source, BS, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.core_catalog.heralded_cz import HeraldedCzItem
 from perceval.utils import Encoding

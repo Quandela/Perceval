@@ -53,7 +53,7 @@ def test_performance_compare_cnot():
     analyzer_postprocessed_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
     analyzer_postprocessed_cnot_perf = pcvl.simple_float(analyzer_postprocessed_cnot.performance)[1]
 
-    # CNOT using CZ : Default = CNOT
+    # CNOT using CZ : called - Heralded CNOT
     heralded_cnot = catalog["heralded cnot"].build_processor()
     analyzer_heralded_cnot = Analyzer(heralded_cnot, STATES)
     analyzer_heralded_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
