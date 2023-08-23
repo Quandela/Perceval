@@ -82,34 +82,36 @@ class MPSBackend(AProbAmpliBackend):
             assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
                 "MPS backend can not be used with components of using more than 2 modes"
         if self._cutoff is None:
-            self._cutoff = C.m  # sets the value of cut-off at circuit creation = Num of modes of circuit
-            # todo: ERIC do we need it here? could be in init.
-        # self._clear_cache()  # todo: ERIC _clear_cache() should define _res?
+            self._cutoff = C.m  # sets the value of cut-off at circuit creation if no _cutoff = Num of modes of circuit
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
         self._compile()
-        # essentially the entire computation is compiled and set when the input state is set!
-        # todo: ERIC do we want this here or have it designed more elegantly?
-        #  Do we want a user to run the computation while setting up?
 
-    def _apply(self, r, c):
+    def prob_amplitude(self, output_state: BasicState) -> complex:
         """
-        Applies the components of the circuit iteratively to update the MPS.
+        This takes in the expected output states, reads the input and from
+        self._res extracts the corresponding gamma and diagonal sv matrices.
+        All of this goes to mps_in_list -> each element in order is gamma-sv-gamma-sv-...
+        Returns the full contraction -> multidot of all -> which I expect to be the tensor
+        containing the prob amplitude coefficients |psi> = c_tensor |pure statevectors>
+        """
+        m = self._input_state.m
+        mps_in_list = []
+        self._current_input = tuple(self._input_state)
+        for k in range(m - 1):
+            mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
+            # _res[1ST LEVEL: selects dict -> given input state][2ND LEVEL: selects "gamma" matrix key of that]
+            # [3RD LEVEL: gamma is np.array -> first chooses kth mode gamma and then selects the segment
+            # corresponding to the number of photon in that mode of the output_state being considered.
+            mps_in_list.append(self._sv_diag(k))
+            # alternately takes in each gamma and singular value matrices (diagonal) -> puts them in a list
+        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][m - 1, :, :, output_state[m - 1]])
+        # Inserting the last gamma into MPS outside the loop as there is no sv after that.
 
-        :param r: List of the mode positions for a component of the Circuit
-        :param c: The component
-        """
-        u = c.compute_unitary(False)
-        print("unitary")
-        print(u)
-        k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
-        if len(u) == 2:
-            # BS
-            self.update_state_2_mode(k_mode, u)  # --> quandelibc
-        elif len(u) == 1:
-            # PS
-            self.update_state_1_mode(k_mode, u)  # --> quandelibc
+        # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
+        # todo: find out why is the desired result is always at [0,0]
+        return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     def _compile(self) -> bool:
         C = self._circuit
@@ -146,7 +148,9 @@ class MPSBackend(AProbAmpliBackend):
         # This initialization of MPS (gamma and sv) fixes the input state to be completely separable
         # and a pure BasicState (no superposition); hence would have only 1 non-zero element whose value = 1.
         # It is simply written based on this choice as the SVD of such a structure would exactly look like this
-        # todo: maybe make is more generic ITensors(Julia)? some other package?
+
+        # todo: maybe make the initialization of MPS more generic - to include mixed/superposed states as input
+        # Suggestions - ITensors(Julia), Qiskit
 
         for r, c in C:
             # r -> tuple -> lists the modes where the component c is connected
@@ -157,33 +161,37 @@ class MPSBackend(AProbAmpliBackend):
 
         return True
 
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def _apply(self, r, c):
         """
-        This takes in the expected output states, reads the input and from
-        self._res extracts the corresponding gamma and diagonal sv matrices.
-        All of this goes to mps_in_list -> each element in order is gamma-sv-gamma-sv-...
-        Returns the full contraction -> multidot of all -> which I expect to be the tensor
-        containing the prob amplitude coefficients |psi> = c_tensor |pure statevectors>
-        """
-        m = self._input_state.m
-        mps_in_list = []
-        self._current_input = tuple(self._input_state)
-        for k in range(m-1):
-            mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
-            # _res[1ST LEVEL: selects dict -> given input state][2ND LEVEL: selects "gamma" matrix key of that]
-            # [3RD LEVEL: gamma is np.array -> first chooses kth mode gamma and then selects the segment
-            # corresponding to the number of photon in that mode of the output_state being considered.
-            mps_in_list.append(self._sv_diag(k))
-            # alternately takes in each gamma and singular value matrices (diagonal) -> puts them in a list
-        mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][m - 1, :, :, output_state[m - 1]])
-        # Inserting the last gamma into MPS outside the loop as there is no sv after that.
+        Applies the components of the circuit iteratively to update the MPS.
 
-        # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
-        # todo: find out why is the desired result is always at [0,0]
-        return np.linalg.multi_dot(mps_in_list)[0, 0]
+        :param r: List of the mode positions for a component of the Circuit
+        :param c: The component
+        """
+        u = c.compute_unitary(False)
+        print("unitary")
+        print(u)
+        k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
+        if len(u) == 2:
+            # BS
+            self.update_state_2_mode(k_mode, u)  # --> quandelibc
+        elif len(u) == 1:
+            # PS
+            self.update_state_1_mode(k_mode, u)  # --> quandelibc
 
 ########################################################################################
 # Starting here everything must be in quandelibc ## todo:implement
+
+    def update_state_1_mode(self, k, u):
+        """
+        tensor contraction between the corresponding mode's "$\Gamma$" of the MPS
+        and the transition matrix "U" of phase shifter for that mode [_transition_matrix_1_mode].
+        """
+        self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2, 0))
+        # gamma[k] -> takes the kth slice from first dimension -> selects gamma of kth mode
+        # gamma[k].shape=($\chi$, $\chi$, d) and _transition_matrix_1_mode(u).shape=(d, d).
+        # The contraction is on the free index 'd'.
+        # Assigns the result to the same gamma[k] returning the shape ($\chi$, $\chi$, d)
 
     def _transition_matrix_1_mode(self, u):
         """
@@ -201,17 +209,6 @@ class MPSBackend(AProbAmpliBackend):
         for i in range(d):
             big_u[i, i] = u[0, 0] ** i
         return big_u
-
-    def update_state_1_mode(self, k, u):
-        """
-        tensor contraction between the corresponding mode's "$\Gamma$" of the MPS
-        and the transition matrix "U" of phase shifter for that mode [_transition_matrix_1_mode].
-        """
-        self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2, 0))
-        # gamma[k] -> takes the kth slice from first dimension -> selects gamma of kth mode
-        # gamma[k].shape=($\chi$, $\chi$, d) and _transition_matrix_1_mode(u).shape=(d, d).
-        # The contraction is on the free index 'd'.
-        # Assigns the result to the same gamma[k] returning the shape ($\chi$, $\chi$, d)
 
     def update_state_2_mode(self, k, u):
         """
