@@ -41,17 +41,20 @@
 #
 import os
 import sys
+from datetime import datetime
+
 sys.path.insert(0, os.path.relpath('../'))
+from perceval import PMetadata
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'perceval'
-copyright = '2022, Quandela'
-author = 'Jean Senellart'
+project = PMetadata.name()
+copyright = f"{datetime.now().year}, {PMetadata.author()[0].capitalize() + PMetadata.author()[1:]}"
+author = PMetadata.author()
 
 # The full version, including alpha/beta/rc tags
-release = '0.9.0'
+release = PMetadata.version()
 
 
 # -- General configuration ---------------------------------------------------

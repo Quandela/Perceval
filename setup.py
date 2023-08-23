@@ -10,9 +10,8 @@ package_list = [dirname(p).replace('\\', '.') for p in glob('perceval/**/__init_
 
 setuptools.setup(
     name="perceval-quandela",
-    version="0.0.1",
-    author="Perceval@Quandela.com",
-    author_email="Perceval@Quandela.com",
+    author="quandela",
+    author_email="perceval@quandela.com",
     description="A powerful Quantum Photonic Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",

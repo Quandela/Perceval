@@ -29,12 +29,11 @@
 import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
-from pkg_resources import get_distribution
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Source
 from perceval.components.port import PortLocation, APort
-from perceval.utils import BasicState, LogicalState
+from perceval.utils import BasicState, LogicalState, PMetadata
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -156,7 +155,7 @@ class RemoteProcessor(AProcessor):
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
         j = {
             'platform_name': self.name,
-            'pcvl_version': get_distribution("perceval-quandela").version,
+            'pcvl_version': PMetadata.short_version(),
             'process_id': str(__process_id__)
         }
         payload = {
