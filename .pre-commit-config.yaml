@@ -30,4 +30,4 @@ repos:
         files: \.ipynb$
         stages: [commit]
         language: system
-        entry: jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace
+        entry: python3 -m jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace

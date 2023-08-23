@@ -29,3 +29,4 @@
 
 from .qiskit_converter import QiskitConverter
 from .converter_statevector import StatevectorConverter
+from .myqlm_converter import MyQLMConverter

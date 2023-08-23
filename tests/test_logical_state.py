@@ -27,12 +27,50 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
+import pytest
 
-u = pcvl.Matrix.random_unitary(10)
-sim = pcvl.BackendFactory().get_backend("SLOS")(pcvl.Circuit(10, u), n=3, mask=["3         "])
+from perceval.utils import LogicalState, generate_all_logical_states
 
-print(sim.prob(input_state=pcvl.BasicState([1,0,1,0,0,1,0,0,0,0]),
-               output_state=pcvl.BasicState([3,0,0,0,0,0,0,0,0,0])))
-print(sim.prob(input_state=pcvl.BasicState([1,0,1,0,0,0,0,0,0,1]),
-               output_state=pcvl.BasicState([3,0,0,0,0,0,0,0,0,0])))
+
+def test_logical_state():
+    with pytest.raises(ValueError):
+        LogicalState([0,2,1])
+
+    with pytest.raises(ValueError):
+        LogicalState("a01")
+
+    ls = LogicalState("010011")
+    assert ls == LogicalState([0,1,0,0,1,1])
+    ls = LogicalState([0,1,0,0,0,1])
+    assert str(ls) == "010001"
+    ls1 = LogicalState([1,0])
+    assert ls + ls1 == LogicalState([0,1,0,0,0,1,1,0])
+
+
+def test_generate_all_logical_states():
+    states = [LogicalState([0,0,0]),
+              LogicalState([0,0,1]),
+              LogicalState([0,1,0]),
+              LogicalState([0,1,1]),
+              LogicalState([1,0,0]),
+              LogicalState([1,0,1]),
+              LogicalState([1,1,0]),
+              LogicalState([1,1,1]),]
+    assert generate_all_logical_states(3) == states
+    states = [LogicalState([0,0,0,0]),
+              LogicalState([0,0,0,1]),
+              LogicalState([0,0,1,0]),
+              LogicalState([0,0,1,1]),
+              LogicalState([0,1,0,0]),
+              LogicalState([0,1,0,1]),
+              LogicalState([0,1,1,0]),
+              LogicalState([0,1,1,1]),
+              LogicalState([1,0,0,0]),
+              LogicalState([1,0,0,1]),
+              LogicalState([1,0,1,0]),
+              LogicalState([1,0,1,1]),
+              LogicalState([1,1,0,0]),
+              LogicalState([1,1,0,1]),
+              LogicalState([1,1,1,0]),
+              LogicalState([1,1,1,1]),]
+    assert generate_all_logical_states(4) == states

@@ -28,47 +28,29 @@
 # SOFTWARE.
 
 import perceval as pcvl
-from perceval.components.unitary_components import BS, PS
+from perceval.components.unitary_components import BS, PS, Unitary
 import numpy as np
 
-def get_matrix_n(n):
+def get_interferometer(n):
     def _gen_mzi(i: int):
-        return BS(BS.r_to_theta(0.42)) // PS(np.pi+i*0.1) // BS(BS.r_to_theta(0.42)) // PS(np.pi/2)
-    return pcvl.Circuit.generic_interferometer(n, _gen_mzi)
+        return pcvl.catalog["mzi phase last"].build_circuit(theta_a=0.42, theta_b=0.42,
+                                                            phi_a=np.pi+i*0.1, phi_b=np.pi/2)
+    return pcvl.GenericInterferometer(n, _gen_mzi)
 
 
-def run_backend(backend, shots, U, input_state):
-    sim = pcvl.BackendFactory().get_backend(backend)(U)
-    sim.compile(input_state)
+def simulate_sampling(shots, circuit, input_state):
+    clifford = pcvl.Clifford2017Backend()
+    clifford.set_circuit(circuit)
+    clifford.set_input_state(input_state)
     for i in range(shots):
-        sim.sample(input_state)
+        clifford.sample()
 
 
 def test_bosonsampling_clifford_6(benchmark):
-    benchmark(run_backend, backend="CliffordClifford2017", shots=100,
-              U=get_matrix_n(6), input_state=pcvl.BasicState([1]*6))
-
-
-def test_bosonsampling_slos_6(benchmark):
-    benchmark(run_backend, backend="SLOS", shots=100,
-              U=get_matrix_n(6), input_state=pcvl.BasicState([1]*6))
-
-
-def test_bosonsampling_naive_6(benchmark):
-    benchmark(run_backend, backend="Naive", shots=100,
-              U=get_matrix_n(6), input_state=pcvl.BasicState([1]*6))
+    benchmark(simulate_sampling, shots=100,
+              circuit=get_interferometer(6), input_state=pcvl.BasicState([1] * 6))
 
 
 def test_bosonsampling_clifford_8(benchmark):
-    benchmark(run_backend, backend="CliffordClifford2017", shots=20,
-              U=get_matrix_n(8), input_state=pcvl.BasicState([1]*8))
-
-
-def test_bosonsampling_slos_8(benchmark):
-    benchmark(run_backend, backend="SLOS", shots=20,
-              U=get_matrix_n(8), input_state=pcvl.BasicState([1]*8))
-
-
-def test_bosonsampling_naive_8(benchmark):
-    benchmark(run_backend, backend="Naive", shots=20,
-              U=get_matrix_n(8), input_state=pcvl.BasicState([1]*8))
+    benchmark(simulate_sampling, shots=20,
+              circuit=get_interferometer(8), input_state=pcvl.BasicState([1] * 8))

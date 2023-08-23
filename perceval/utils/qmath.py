@@ -27,32 +27,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import numpy as np
-import matplotlib.pyplot as plt
-import perceval.components.unitary_components as comp
-from perceval.rendering.pdisplay import pdisplay_statevector
 
+def exponentiation_by_squaring(base, power: int):
+    """Calculate the result of base^power i.e. base**power using exponentiation by squaring (or square-and-multiply)
 
-N = 100
-ind = np.arange(0, 1, 1/N)
-o = np.zeros((100,))
-simulator_backend = pcvl.BackendFactory().get_backend('Naive')
+    Args:
+        :param base: the element to exponentiate
+        :param power: *strictly positive* integer power
+        :param result: the initialisation of the result
+    """
+    if power < 1:
+        raise ValueError("Power value must be strictly positive")
 
-for i in range(N):
-    source = pcvl.Source(brightness=1, purity=1, indistinguishability=ind[i])
-    qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
-    all_p, sv_out = qpu.run(simulator_backend)
-    o[i] = sv_out[pcvl.StateVector("|1,1>")]
+    if isinstance(base, int):
+        temp_base = base
+        result = base
+    else:
+        temp_base = base.__copy__()
+        result = base.__copy__()
 
-plt.plot(ind, o)
-plt.ylabel("$p(|1,1>)$")
-plt.xlabel("indistinguishability")
-source = pcvl.Source(brightness=1, purity=1, indistinguishability=0.5)
-qpu = pcvl.Processor({0: source, 1: source}, comp.BS())
+    power -= 1
 
-all_p, sv_out = qpu.run(simulator_backend)
-print("INPUT\n", pdisplay_statevector(qpu.source_distribution))
-print("OUTPUT\n", pdisplay_statevector(sv_out))
+    while power > 0:
+        # If power is odd
+        if power % 2 == 1:
+            result = result * temp_base
 
-plt.show()
+        # Divide the power by 2
+        power = power // 2
+        # Multiply base to itself
+        temp_base = temp_base * temp_base
+
+    return result

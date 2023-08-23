@@ -32,13 +32,13 @@ from multipledispatch import dispatch
 from pkg_resources import get_distribution
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components.linear_circuit import Circuit, ACircuit
-from perceval.components.source import Source
-from perceval.components.port import PortLocation, APort, LogicalState
-from perceval.utils import BasicState
+from perceval.components import ACircuit, Source
+from perceval.components.port import PortLocation, APort
+from perceval.utils import BasicState, LogicalState
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
+from ._token_management import TokenProvider
 
 __process_id__ = uuid.uuid4()
 
@@ -46,9 +46,14 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
 
 class RemoteProcessor(AProcessor):
-    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL, m: int = None):
+    def __init__(self, name: str, token: str = None, url: str = QUANDELA_CLOUD_URL, m: int = None):
         super().__init__()
         self.name = name
+        if token is None:
+            provider = TokenProvider()
+            token = provider.get_token()
+        if token is None:
+            raise ConnectionError("No token found")
 
         self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}

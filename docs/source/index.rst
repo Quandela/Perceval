@@ -88,7 +88,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/BS-based implementation notebook
    notebooks/Rewriting rules in Perceval
    notebooks/Non-unitary components
-   notebooks/Qiskit conversion
+   notebooks/Circuit conversion Qiskit MyQLM
    notebooks/Remote computing
    notebooks/Reinforcement learning
    notebooks/QUBO

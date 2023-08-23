@@ -31,36 +31,9 @@ import warnings
 from abc import ABC, abstractmethod
 from enum import Enum
 import importlib
-
-
-class Catalog:
-    def __init__(self, path: str):
-        self._items = {}
-        if path:
-            self.add_path(path)
-
-    def add_path(self, path):
-        module = importlib.import_module(path)
-        if 'catalog' in dir(module):
-            sub_catalog = getattr(module, 'catalog')
-            self._add_sub_catalog(sub_catalog)
-        else:
-            warnings.warn(f"No sub catalog found at path {path}", category=ImportWarning)
-
-    def _add_sub_catalog(self, catalog):
-        for cls in catalog:
-            obj = cls()
-            if isinstance(obj, CatalogItem):
-                self._items[obj.name] = obj
-
-    def list(self):
-        return list(self._items.keys())
-
-    def __contains__(self, item):
-        return item in self._items
-
-    def __getitem__(self, item_name: str):
-        return self._items[item_name]
+from typing import List
+from perceval.utils import Parameter
+from perceval.components import Processor, Circuit
 
 
 class AsType(Enum):
@@ -73,6 +46,7 @@ class CatalogItem(ABC):
     description = None
     str_repr = None
     see_also = None
+    params_doc = {}
 
     def __init__(self, name: str):
         self._name = name
@@ -113,6 +87,10 @@ class CatalogItem(ABC):
             content += f'\nScientific article reference: {self.article_ref}\n'
         if self.str_repr:
             content += f'\nSchema:\n{self.str_repr}\n'
+        if self.params_doc:
+            content += '\nParameters:\n'
+            for param_name, param_descr in self.params_doc.items():
+                content += f' * {param_name}: {param_descr}\n'
         if self.see_also:
             content += f'\nSee also: {self.see_also}\n'
         if content == '':
@@ -121,6 +99,54 @@ class CatalogItem(ABC):
         title += '-' * len(title) + '\n'
         return title + content
 
-    @abstractmethod
+    # @abstractmethod was removed and build method deprecated in all child classes
+    # The goal is to get rid of the overkill builder pattern and use build_processor and build_circuit instead
     def build(self):
         pass
+
+    @staticmethod
+    def _handle_param(value):
+        if isinstance(value, str):
+            return Parameter(value)
+        return value
+
+    def _init_processor(self, **kwargs):
+        return Processor(kwargs.get("backend", "SLOS"), self.build_circuit(**kwargs), name=kwargs.get("name"))
+
+    @abstractmethod
+    def build_circuit(self, **kwargs) -> Circuit:
+        pass
+
+    @abstractmethod
+    def build_processor(self, **kwargs) -> Processor:
+        pass
+
+
+class Catalog:
+    def __init__(self, path: str):
+        self._items = {}
+        if path:
+            self.add_path(path)
+
+    def add_path(self, path):
+        module = importlib.import_module(path)
+        if 'catalog_items' in dir(module):
+            sub_catalog = getattr(module, 'catalog_items')
+            self._add_sub_catalog(sub_catalog)
+        else:
+            warnings.warn(f"No sub catalog found at path {path}", category=ImportWarning)
+
+    def _add_sub_catalog(self, catalog):
+        for cls in catalog:
+            obj = cls()
+            if isinstance(obj, CatalogItem):
+                self._items[obj.name] = obj
+
+    def list(self) -> List[str]:
+        return list(self._items.keys())
+
+    def __contains__(self, item: str) -> bool:
+        return item in self._items
+
+    def __getitem__(self, item_name: str) -> CatalogItem:
+        return self._items[item_name]

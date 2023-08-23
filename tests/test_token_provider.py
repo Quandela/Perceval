@@ -27,51 +27,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, Callable
+from perceval.runtime._token_management import TokenProvider
 
-from perceval.components import Circuit
+import os
 
+MISSING_KEY = "MISSING_ENV_VAR"
+ENV_VAR_KEY = "DUMMY_ENV_VAR"
+TOKEN_FROM_ENV = "DUMMY_TOKEN_FROM_ENV"
+TOKEN_FROM_CACHE = "DUMMY_TOKEN_FROM_CACHE"
+os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
 
-class PredefinedCircuit:
-    def __init__(self,  c: Circuit,
-                 name: str = None,
-                 description: str = None,
-                 heralds: Dict[int, int] = None,
-                 post_select_fn: Callable = None):
-        r"""Define a `PredefinedCircuit` which is a readonly circuit with more information about its usage
+def test_token_provider_env_var_vs_cache():
+    provider = TokenProvider(env_var=MISSING_KEY)
+    assert provider.get_token() is None
+    assert provider.cache is None
 
-        :param c:
-        :param name:
-        :param description:
-        :param heralds:
-        """
-        self._c = c
-        self._name = name
-        self._description = description
-        self._heralds = heralds
-        self._post_select_fn = post_select_fn
+    provider = TokenProvider(env_var=ENV_VAR_KEY)
+    assert provider.get_token() == TOKEN_FROM_ENV
+    assert provider.cache == TOKEN_FROM_ENV
 
-    @property
-    def circuit(self):
-        return self._c.copy()
+    provider.force_token(TOKEN_FROM_CACHE)
+    assert provider.get_token() == TOKEN_FROM_CACHE
 
-    @property
-    def description(self):
-        return self._description
+    provider.clear_cache()
+    assert provider.cache is None
+    assert provider.get_token() == TOKEN_FROM_ENV
 
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def heralds(self) -> dict:
-        return self._heralds
-
-    @property
-    def has_post_select(self) -> bool:
-        return self._post_select_fn is not None
-
-    def post_select(self, s) -> bool:
-        if self._post_select_fn is None:
-            return True
-        return self._post_select_fn(s)
+    del os.environ[ENV_VAR_KEY]  # Remove the environment variable
+    provider.clear_cache()
+    assert provider.get_token() is None

@@ -34,67 +34,29 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
-import itertools
 from multipledispatch import dispatch
 from typing import Dict, List, Union, Tuple, Optional
-from deprecated import deprecated
+import sympy as sp
+import numpy as np
 
 from .format import simple_complex
 from .globals import global_params
-import numpy as np
-import sympy as sp
-
+from .qmath import exponentiation_by_squaring
 from exqalibur import FockState, FSArray
 
 
 def _fockstate_add(self, other):
     return StateVector(self) + other
 
+
 def _fockstate_sub(self, other):
     return StateVector(self) - other
-
-def _fockstate_pow(self, power: int):
-    bs = self.__copy__()
-    for i in range(power - 1):
-        bs = bs * self
-    return bs
-
-def _fockstate_partition(self, distribution_photons: List[int]):
-    r"""Given a distribution of photon, find all possible partition of the BasicState - disregard possible annotation
-
-    :param distribution_photons:
-    :return:
-    """
-    def _partition(one_list: list, distribution: list, current: list, all_res: list):
-        if len(distribution) == 0:
-            all_res.append(copy(current))
-            return
-        for one_subset in itertools.combinations(one_list, distribution[0]):
-            current.append(one_subset)
-            _partition(list(set(one_list)-set(one_subset)), distribution[1:], current, all_res)
-            current.pop()
-
-    all_photons = list(range(self.n))
-    partitions_idx = []
-    _partition(all_photons, distribution_photons, [], partitions_idx)
-    partitions_states = set()
-    for partition in partitions_idx:
-        o_state = []
-        for a_subset in partition:
-            state = [0] * self.m
-            for photon_id in a_subset:
-                state[self.photon2mode(photon_id)] += 1
-            o_state.append(BasicState(state))
-        partitions_states.add(tuple(o_state))
-    return list(partitions_states)
 
 
 # Define BasicState as exqalibur FockState + redefine some methods
 BasicState = FockState
 BasicState.__add__ = _fockstate_add
 BasicState.__sub__ = _fockstate_sub
-BasicState.__pow__ = _fockstate_pow  # Using issue #210 fix before moving the fix to exqalibur
-BasicState.partition = _fockstate_partition  # TODO use the cpp version of this call
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
@@ -115,15 +77,6 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
             output_array = FSArray(m, n)
         for output_state in output_array:
             yield BasicState(output_state)
-
-
-class AnnotatedBasicState(FockState):
-    r"""Deprecated in version 0.7.0. Use BasicState instead.
-    """
-
-    @deprecated(version="0.7", reason="use BasicState instead")
-    def __init__(self, *args, **kwargs):
-        super(AnnotatedBasicState, self).__init__(*args, **kwargs)
 
 
 class StateVector(defaultdict):
@@ -216,18 +169,8 @@ class StateVector(defaultdict):
             self._has_symbolic = True
         return copy_state
 
-    def __pow__(self, power):
-        # Fast exponentiation
-        binary = [int(i) for i in bin(power)[2:]]
-        binary.reverse()
-        power_state = self
-        out = StateVector()
-        for i in range(len(binary)):
-            if binary[i] == 1:
-                out *= power_state
-            if i != len(binary) - 1:
-                power_state *= power_state
-        return out
+    def __pow__(self, power: int):
+        return exponentiation_by_squaring(self, power)
 
     def __copy__(self):
         sv_copy = StateVector(None)
@@ -410,17 +353,7 @@ class ProbabilityDistribution(defaultdict, ABC):
         return distribution_copy
 
     def __pow__(self, power):
-        # Fast exponentiation
-        binary = [int(i) for i in bin(power)[2:]]
-        binary.reverse()
-        power_distrib = self
-        out = type(self)()
-        for i in range(len(binary)):
-            if binary[i] == 1:
-                out *= power_distrib
-            if i != len(binary) - 1:
-                power_distrib *= power_distrib
-        return out
+        return exponentiation_by_squaring(self, power)
 
     @abstractmethod
     def sample(self, count: int, non_null: bool = True):
@@ -509,6 +442,7 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
         result += StateVector("|" + ",".join([v and v or "0" for v in s]) + ">") * pa
     result.normalize()
     return result
+
 
 @dispatch(SVDistribution, annot_tag=str)
 def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):

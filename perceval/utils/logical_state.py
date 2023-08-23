@@ -27,51 +27,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
-import exqalibur as xq
-import numpy as np
-import time
+from typing import List
 
-m = 16
-n = 12
 
-u = pcvl.Matrix.random_unitary(m)
+class LogicalState(list):
+    def __init__(self, state: list[int] or str = None):
+        """Represent a Logical state
 
-fsms = [[]]
-fsas = [xq.FSArray(m, 0)]
-coefs = [[1]]
+        :param state: Can be either None, a list or a str, defaults to None
+        :raises ValueError: Must have only 0 and 1 in a state
+        :raises TypeError: Supports only None, list or str as state type
+        """
+        if state is None:
+            super().__init__([])
+            return
+        if isinstance(state, str):
+            state = [int(elem) for elem in state]
+        if isinstance(state, list):
+            if state.count(0) + state.count(1) != len(state):
+                raise ValueError("A logical state should only contain 0s and 1s")
+            super().__init__(state)
+            return
+        raise TypeError(f"LogicalState can be initialise with None, list or str, here {type(state)}")
 
-for i in range(1, m+1):
-    fsas.append(xq.FSArray(m, i))
-    coefs.append(np.zeros(fsas[-1].count(), dtype=complex))
-    fsms.append(xq.FSiMap(fsas[-1], fsas[-2], True))
+    def __add__(self, other):
+        temp = self.copy()
+        temp.extend(other)
+        return temp
 
-compute = 0
-def permanent(idx_current, k):
-    global compute
-    if k == 0:
-        return 1
-    if not coefs[k][idx_current]:
-        m = 0
-        while m < k:
-            index_parent, mode = fsms[k].get(idx_current, m)
-            if index_parent == xq.npos:
-                break
-            compute += 1
-            coefs[k][idx_current] += permanent(index_parent, k-1)*u[k-1, mode]
-            m += 1
-    return coefs[k][idx_current]
+    def __str__(self):
+        if not self:
+            return ""
+        return ''.join([str(x) for x in self])
 
-start_slos_1 = time.time()
-for idx in range(fsas[-1].count()):
-    permanent(idx, n)
-end_slos_1 = time.time()
-time_total_slos = end_slos_1-start_slos_1
-print("slos", time_total_slos)
 
-start_qc_1 = time.time()
-for idx in range(fsas[-1].count()):
-    xq.permanent_cx(u, 1)
-end_qc_1 = time.time()
-
-print("qc", end_qc_1-start_qc_1)
+def generate_all_logical_states(n : int) -> List[LogicalState]:
+    format_str = f"#0{n+2}b"
+    logical_state_list = []
+    for i in range(2**n):
+        states = format(i, format_str)[2:]
+        logical_state_list.append(LogicalState([int(state) for state in states]))
+    return logical_state_list

@@ -30,8 +30,10 @@
 import random
 
 import perceval as pcvl
-from perceval.backends.processor import StepperBackend
-from perceval.components.unitary_components import BS, PS
+from perceval.backends import SLOSBackend, NaiveBackend
+from perceval.simulators import Stepper
+from perceval.components import BS, PS
+from perceval.utils import BasicState
 
 # definition of the circuit
 C = pcvl.Circuit(2)
@@ -56,7 +58,8 @@ def get_sample_from_statevector(sv):
 
 def run_stepper():
     samples = []
-    stepper = StepperBackend(C)
+    stepper = Stepper(SLOSBackend())
+    stepper.set_circuit(C)
     for i in range(N):
         sv = pcvl.StateVector(pcvl.BasicState([1, 0]))
         for r, c in C:
@@ -66,42 +69,37 @@ def run_stepper():
 
 
 def run_direct():
-    u_bs = C._components[0][1].compute_unitary(use_symbolic=False)
-    sim_bs = pcvl.BackendFactory().get_backend("Naive")(u_bs)
-    u_ps = C._components[1][1].compute_unitary(use_symbolic=False)
-    sim_ps = pcvl.BackendFactory().get_backend("Naive")(u_ps)
+    bs = C._components[0][1]
+    sim_bs = NaiveBackend()
+    sim_bs.set_circuit(bs)
+    ps = C._components[1][1]
+    sim_ps = NaiveBackend()
+    sim_ps.set_circuit(ps)
     samples = []
+    bs10 = BasicState([1,0])
+    bs01 = BasicState([0,1])
     for i in range(N):
         # apply first bs
-        sv_a0 = sim_bs.probampli(pcvl.BasicState([1,0]), pcvl.BasicState([1,0]))
-        sv_a1 = sim_bs.probampli(pcvl.BasicState([1,0]), pcvl.BasicState([0,1]))
+        sim_bs.set_input_state(bs10)
+        sv_a0 = sim_bs.prob_amplitude(bs10)
+        sv_a1 = sim_bs.prob_amplitude(bs01)
         # apply ps
         sv_b0 = sv_a0
-        sv_b1 = sv_a1*sim_ps.probampli(pcvl.BasicState([1]), pcvl.BasicState([1]))
+        sim_ps.set_input_state(BasicState([1]))
+        sv_b1 = sv_a1*sim_ps.prob_amplitude(BasicState([1]))
         # apply second bs
-        sv_c0 = sv_b0*sim_bs.probampli(pcvl.BasicState([1,0]), pcvl.BasicState([1,0]))
-        sv_c1 = sv_b0*sim_bs.probampli(pcvl.BasicState([1,0]), pcvl.BasicState([0,1]))
-        sv_c0 += sv_b1*sim_bs.probampli(pcvl.BasicState([0,1]), pcvl.BasicState([1,0]))
-        sv_c1 += sv_b1*sim_bs.probampli(pcvl.BasicState([0,1]), pcvl.BasicState([0,1]))
+        sv_c0 = sv_b0*sim_bs.prob_amplitude(bs10)
+        sv_c1 = sv_b0*sim_bs.prob_amplitude(bs01)
+        sim_bs.set_input_state(bs01)
+        sv_c0 += sv_b1*sim_bs.prob_amplitude(bs10)
+        sv_c1 += sv_b1*sim_bs.prob_amplitude(bs01)
         # sampling from there
-        samples.append(random.random()>abs(sv_c0)**2 and pcvl.BasicState([1,0]) or pcvl.BasicState([0,1]))
-    return samples
-
-
-def run_naive():
-    samples = []
-    sim_naive = pcvl.BackendFactory().get_backend("Naive")(C.compute_unitary(use_symbolic=False))
-    for i in range(N):
-        samples.append(sim_naive.sample(pcvl.BasicState([1,0])))
+        samples.append(bs10 if random.random() > abs(sv_c0)**2 else bs01)
     return samples
 
 
 def test_stepper(benchmark):
     benchmark(run_stepper)
-
-
-def test_stepper_comp_naive(benchmark):
-    benchmark(run_naive)
 
 
 def test_stepper_comp_direct(benchmark):

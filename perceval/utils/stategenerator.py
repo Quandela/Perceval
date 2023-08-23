@@ -28,17 +28,11 @@
 # SOFTWARE.
 
 from .statevector import BasicState, StateVector
+from ._enums import Encoding
 
-from enum import Enum
 import networkx as nx
 from typing import List
 
-class Encoding(Enum):
-    DUAL_RAIL = 0
-    POLARIZATION = 1
-    QUDIT = 2
-    TIME = 3
-    RAW = 4
 
 class StateGenerator:
     r"""
