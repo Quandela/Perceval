@@ -169,8 +169,6 @@ class MPSBackend(AProbAmpliBackend):
         :param c: The component
         """
         u = c.compute_unitary(False)
-        print("unitary")
-        print(u)
         k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
         if len(u) == 2:
             # BS
