@@ -303,7 +303,6 @@ class MPSBackend(AProbAmpliBackend):
                                                                 * (u11**k1 * u12**(n1-k1) * u21**k2 * u22**(n2-k2)) \
                                                                 * (np.sqrt(factorial(k1+k2) * factorial(n_tot-k1-k2)))
                 big_u[n1, n2, :] = outputs / (np.sqrt(factorial(n1) * factorial(n2)))
-        print("printing the 2 mode U", big_u.shape, "\n", big_u)
         return big_u
 
     def _sv_diag(self, k):
