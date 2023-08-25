@@ -251,8 +251,8 @@ class MPSBackend(AProbAmpliBackend):
         v, s, w = np.linalg.svd(theta)
         # svd of the tensor after component is applied to extract the MPS form
         # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
-        # Here:: U->v [v.shape=(d, $\chi$, d, $\chi$)],
-        # S->s [s.shape=($\chi$)], V->w [w.shape=(d, $\chi$, d, $\chi$)]
+        # Here:: U->v [v.shape=(d x $\chi$, d x $\chi$)],
+        # S->s [s.shape=(d x $\chi$)], V->w [w.shape=(d x $\chi$, d x $\chi$)]
 
         # todo: not sure about indices and their sizes
         v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
@@ -260,7 +260,7 @@ class MPSBackend(AProbAmpliBackend):
         s = s[:self._cutoff]  # restricting the size of SV matrices to cut_off -> truncation
 
         self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
-        # todo : _s_min is too low, do we really need this todo: ask Rawad
+        # todo : _s_min is too low, do we really need this? ask Rawad. Maybe another value
 
         # todo: below - seems weird, investigate
         if k > 0:
@@ -269,6 +269,7 @@ class MPSBackend(AProbAmpliBackend):
             self._gamma[k, rank:] = 0
         else:
             self._gamma[k] = v
+
         if k < self._input_state.m - 2:
             rank = np.nonzero(self._sv[k + 1])[0][-1] + 1
             self._gamma[k + 1, :, :rank] = (w[:, :rank] / self._sv[k + 1, :rank][:, np.newaxis])
