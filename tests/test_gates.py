@@ -27,10 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
+from math import pi, sqrt
 
-from perceval.components import BS, PERM, catalog
-from perceval import Processor, BasicState, algorithm, PostSelect
+import perceval as pcvl
+from perceval.components import BS, catalog
+from perceval import Processor, BasicState, algorithm, PostSelect, Matrix
 
 
 def sample_processor(processor: Processor, nb_sample: int):
@@ -103,7 +104,7 @@ def test_CZ_HCXH():
     processorZ = Processor("SLOS", 4)
     processorZ.add((2, 3), BS.H())
     processorZ.add((0, 1, 2, 3), catalog['postprocessed cnot'].build_processor())
-    processorZ.clear_postprocess()
+    processorZ.clear_postselection()
     processorZ.add((2, 3), BS.H())
 
     processorZ.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
@@ -123,7 +124,7 @@ def test_HCZH_CX():
 
     processorX = Processor("SLOS", 4)
     processorX.add((0, 1, 2, 3), catalog['postprocessed cnot'].build_processor())
-    processorX.clear_postprocess()
+    processorX.clear_postselection()
 
     processorX.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
     compare_processors(processorX, processorZ)
@@ -261,3 +262,86 @@ def test_had_and_cz_rev_cnotbased_post():
 
     processor.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
     measure_processor(processor, BasicState([1, 0, 1, 0, 1, 0]))
+
+
+def test_toffoli_gate_fidelity():
+    t = catalog['toffoli'].build_processor()
+    state_dict = {pcvl.components.get_basic_state_from_ports(t._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(3)}
+    ca = pcvl.algorithm.Analyzer(t, input_states=state_dict)
+    ca.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",
+               "100": "100", "101": "101", "110": "111", "111": "110"})
+    assert ca.fidelity == 1
+
+
+def test_toffoli():
+    b101010 = BasicState([1, 0, 1, 0, 1, 0])
+
+    processor = Processor("SLOS", 6)
+    processor.add((0, 1, 2, 3, 4, 5), catalog['toffoli'].build_processor())
+    measure_processor(processor, b101010)
+
+
+def test_full_toffoli():
+    processorA = Processor("SLOS", 6)
+    processorA.add((0, 1, 2, 3, 4, 5), catalog['toffoli'].build_processor())
+
+    a = 1 / sqrt(2)
+    H3 = Matrix([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, a, 0, 0, 0, 0, 0, 0, 0, a, 0],
+                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, a, 0, 0, 0, 0, 0, 0, 0, -a, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
+    Z3 = Matrix([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
+    # U is obtained by a method not communicated
+    U = Matrix([[0.509824528533959, 0.321169327626332 + 0.556281593281541j, 0, 0.330393705586394, -0.165196852793197 - 0.286129342288294j, -0.165196852793197 + 0.286129342288294j, 0, 0, 0, 0, 0, 0],
+                   [0, 0.509824528533959, 0.321169327626332 + 0.556281593281541j, -0.165196852793197
+                       + 0.286129342288294j, 0.330393705586394, -0.165196852793197 - 0.286129342288294j, 0, 0, 0, 0, 0, 0],
+                   [0.321169327626332 + 0.556281593281541j, 0, 0.509824528533959, -0.165196852793197
+                       - 0.286129342288294j, -0.165196852793197 + 0.286129342288294j, 0.330393705586394, 0, 0, 0, 0, 0, 0],
+                   [0.330393705586394, -0.165196852793197 - 0.286129342288294j, -0.165196852793197
+                       + 0.286129342288294j, -0.509824528533959, 0, -0.321169327626332 + 0.556281593281541j, 0, 0, 0, 0, 0, 0],
+                   [-0.165196852793197 + 0.286129342288294j, 0.330393705586394, -0.165196852793197
+                       - 0.286129342288294j, -0.321169327626332 + 0.556281593281541j, -0.509824528533959, 0, 0, 0, 0, 0, 0, 0],
+                   [-0.165196852793197 - 0.286129342288294j, -0.165196852793197 + 0.286129342288294j, 0.330393705586394,
+                       0, -0.321169327626332 + 0.556281593281541j, -0.509824528533959, 0, 0, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0, 0, 0.509824528533959, 0.860278414296864, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0, 0, 0.860278414296864, -0.509824528533959, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0, 0, 0, 0, 0.509824528533959, 0.860278414296864, 0, 0],
+                   [0, 0, 0, 0, 0, 0, 0, 0, 0.860278414296864, -0.509824528533959, 0, 0],
+                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.509824528533959, 0.860278414296864],
+                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.860278414296864, -0.509824528533959]])
+    Pin = pcvl.PERM([6, 0, 8, 1, 10, 2, 3, 4, 5, 7, 9, 11])
+    Pout = pcvl.PERM([1, 3, 5, 6, 7, 8, 0, 9, 2, 10, 4, 11])
+    toffoli = Pin // pcvl.Unitary(Z3 @ H3 @ U @ H3 @ Z3) // Pout
+    toffoli.add(2, pcvl.PS(pi))
+    toffoli.add(0, pcvl.PS(pi / 2))
+
+    processorB = Processor("SLOS", toffoli)
+    processorB.add_herald(6, 0) \
+        .add_herald(7, 0) \
+        .add_herald(8, 0) \
+        .add_herald(9, 0) \
+        .add_herald(10, 0) \
+        .add_herald(11, 0)
+    processorB.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
+
+    compare_processors(processorA, processorB)
