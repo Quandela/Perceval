@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from deprecated import deprecated
-from perceval.components import Circuit, Processor, Source, BS, Port
+from perceval.components import Circuit, BS, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.core_catalog.heralded_cz import HeraldedCzItem
 from perceval.utils import Encoding
@@ -36,7 +36,7 @@ from perceval.utils import Encoding
 
 class HeraldedCnotItem(CatalogItem):
     article_ref = ""
-    description = r"""Heralded CNOT gate built using Heralded CZ and H"""
+    description = r"""CNOT gate with 2 heralded modes (built using Heralded CZ and H)."""
     str_repr = r"""                              ╭──────────╮
 ctrl (dual rail) ─────────────┤          ├───────────── ctrl (dual rail)
                  ─────────────┤ Heralded ├─────────────
@@ -59,18 +59,15 @@ data (dual rail) ─────┤ H ├───┤          ├───┤ H
 
     def build_circuit(self, **kwargs):
         c = Circuit(6, name="Heralded CNOT")
-        c.add(2, Circuit(2, name='H') // BS.H())
+        c.add(2, BS.H())
         heralded_cz = HeraldedCzItem()
-        c.add(0, heralded_cz.build_circuit())
-        c.add(2, Circuit(2, name='H') // BS.H())
+        c.add(0, heralded_cz.build_circuit(), merge=True)
+        c.add(2, BS.H())
         return c
 
     def build_processor(self, **kwargs):
-        p = Processor(backend="SLOS", m_circuit=4, source=Source())
-        p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl'))
-        p.add_port(2, Port(Encoding.DUAL_RAIL, 'data'))
-        p.add(2, Circuit(2, name='H') // BS.H())
-        heralded_cz = HeraldedCzItem()
-        p.add(0, heralded_cz.build_processor())
-        p.add(2, Circuit(2, name='H') // BS.H())
-        return p
+        p = self._init_processor(**kwargs)
+        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl'))\
+            .add_port(2, Port(Encoding.DUAL_RAIL, 'data'))\
+            .add_herald(4, 1)\
+            .add_herald(5, 1)
