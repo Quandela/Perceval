@@ -52,7 +52,7 @@ class AGateConverter(ABC):
         self._cnot_idx = 0  # counter for CNOTS in circuit
         self._source = source
         self._backend_name = backend_name
-        self._heralded_cnot_builder = catalog["heralded cnot"]
+        self._heralded_cnot_builder = catalog["klm cnot"]
         self._heralded_cz_builder = catalog["heralded cz"]
         self._postprocessed_cnot_builder = catalog["postprocessed cnot"]
         self._generic_2mode_builder = catalog["generic 2 mode circuit"]
