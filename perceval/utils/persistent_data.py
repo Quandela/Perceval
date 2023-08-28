@@ -74,10 +74,10 @@ class PersistentData:
         if not os.path.exists(self._directory):
             os.makedirs(self._directory)
 
-    def get_data_size(self):
+    def get_folder_size(self) -> int:
         """Get the directory data size
 
-        :return: directory data size
+        :return: directory data size in bytes
         """
         return sum(os.path.getsize(os.path.join(dirpath, filename))
                    for dirpath, dirnames, filenames in os.walk(self._directory) for filename in filenames)
@@ -90,7 +90,7 @@ class PersistentData:
         """
         return os.path.join(self._directory, element_name)
 
-    def create_file(self, filename: str):
+    def create_binary_file(self, filename: str):
         """Create a file in persistent data directory
         if file already exist, raise a user warning
 

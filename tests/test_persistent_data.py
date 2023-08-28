@@ -52,14 +52,17 @@ def test_directory():
 
 def test_basic_methods():
     persistent_data = PersistentData()
+    os.removedirs(persistent_data.directory)
+    persistent_data = PersistentData()
+
     assert os.path.exists(persistent_data.directory)
     assert persistent_data.is_writable()
     assert persistent_data.is_readable()
 
-    persistent_data.create_file("toto")
+    persistent_data.create_binary_file("toto")
     assert os.path.exists(os.path.join(persistent_data.directory, "toto"))
     with pytest.warns(UserWarning):
-        persistent_data.create_file("toto")
+        persistent_data.create_binary_file("toto")
 
     persistent_data.delete_file("toto")
     assert not os.path.exists(os.path.join(persistent_data.directory, "toto"))
@@ -70,9 +73,13 @@ def test_basic_methods():
 
     persistent_data.write_binary_file("toto", b"DEADBEEFDEADBEEF")
     assert persistent_data.read_binary_file("toto") == b"DEADBEEFDEADBEEF"
+
+    assert persistent_data.get_folder_size() == 16
     persistent_data.delete_file("toto")
+    assert persistent_data.get_folder_size() == 0
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_access():
     persistent_data = PersistentData()
     directory = persistent_data.directory
