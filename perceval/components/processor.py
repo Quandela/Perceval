@@ -189,7 +189,10 @@ class Processor(AProcessor):
         return output_state.n >= self._min_detected_photons
 
     def samples(self, count: int, progress_callback=None) -> Dict:
-        assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
+        if isinstance(self.backend, ASamplingBackend):
+            raise TypeError("A sampling backend is required to call samples method")
+        if count < 1:
+            raise ValueError("count must be at least 1")
         pre_physical_perf = 1
         # Rework input map so that it contains only states with enough photons
         input_svd = SVDistribution()
