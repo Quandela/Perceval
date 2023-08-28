@@ -52,9 +52,7 @@ from perceval import PMetadata
 project = PMetadata.name()
 copyright = f"{datetime.now().year}, {PMetadata.author()[0].capitalize() + PMetadata.author()[1:]}"
 author = PMetadata.author()
-
-# The full version, including alpha/beta/rc tags
-release = PMetadata.version()
+release = PMetadata.short_version()
 
 
 # -- General configuration ---------------------------------------------------

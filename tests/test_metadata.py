@@ -34,4 +34,4 @@ def test_metadata():
     assert PMetadata.package_name() == "perceval-quandela"
     assert PMetadata.author() == "quandela"
     assert PMetadata.version() == __version__
-    assert PMetadata.short_version() in __version__
+    assert __version__.startswith(PMetadata.short_version())
