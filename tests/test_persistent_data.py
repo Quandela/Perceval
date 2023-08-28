@@ -29,54 +29,69 @@
 
 import os
 import re
+import shutil
 import pytest
 import platform
 
-from perceval.utils import PersistentData
+from perceval.utils import PersistentData, FileFormat
 
 
 def test_directory():
-    pd = PersistentData()
+    persistent_data = PersistentData()
     if platform.system() == "Linux":
         # '/home/my_user/.local/share/perceval-quandela'
-        assert re.match(r"^\/home\/.+\/\.local\/share\/perceval-quandela$", pd.directory) is not None
+        assert re.match(r"^\/home\/.+\/\.local\/share\/perceval-quandela$", persistent_data.directory) is not None
     elif platform.system() == "Windows":
         # 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
-        assert re.match(r"^C:\\Users\\.+\\AppData\\Local\\quandela\\perceval-quandela$", pd.directory) is not None
+        assert re.match(r"^C:\\Users\\.+\\AppData\\Local\\quandela\\perceval-quandela$", persistent_data.directory) is not None
     elif platform.system() == "Darwin":
         # '/Users/my_user/Library/Application Support/perceval-quandela'
-        assert re.match(r"^\/Users\/.+\/Library\/Application Support\/perceval-quandela$", pd.directory) is not None
+        assert re.match(r"^\/Users\/.+\/Library\/Application Support\/perceval-quandela$", persistent_data.directory) is not None
     else:
         raise OSError("My god where are you ?")
+    shutil.rmtree(persistent_data.directory)
 
 
 def test_basic_methods():
     persistent_data = PersistentData()
-    os.removedirs(persistent_data.directory)
+    shutil.rmtree(persistent_data.directory)
     persistent_data = PersistentData()
 
     assert os.path.exists(persistent_data.directory)
     assert persistent_data.is_writable()
     assert persistent_data.is_readable()
 
-    persistent_data.create_binary_file("toto")
+    persistent_data.write_file("toto", b"", FileFormat.BINARY)
     assert os.path.exists(os.path.join(persistent_data.directory, "toto"))
-    with pytest.warns(UserWarning):
-        persistent_data.create_binary_file("toto")
 
     persistent_data.delete_file("toto")
     assert not os.path.exists(os.path.join(persistent_data.directory, "toto"))
     with pytest.warns(UserWarning):
         persistent_data.delete_file("toto")
     with pytest.raises(FileNotFoundError):
-        persistent_data.read_binary_file("toto")
+        persistent_data.read_file("toto", FileFormat.BINARY)
 
-    persistent_data.write_binary_file("toto", b"DEADBEEFDEADBEEF")
-    assert persistent_data.read_binary_file("toto") == b"DEADBEEFDEADBEEF"
+    persistent_data.write_file("toto", b"DEADBEEFDEADBEEF", FileFormat.BINARY)
+    assert persistent_data.read_file("toto", FileFormat.BINARY) == b"DEADBEEFDEADBEEF"
 
     assert persistent_data.get_folder_size() == 16
     persistent_data.delete_file("toto")
     assert persistent_data.get_folder_size() == 0
+
+    persistent_data.write_file("toto", "DEADBEEFDEADBEEF", FileFormat.TEXT)
+    assert persistent_data.read_file("toto", FileFormat.TEXT) == "DEADBEEFDEADBEEF"
+
+    assert persistent_data.get_folder_size() == 16
+    persistent_data.delete_file("toto")
+    assert persistent_data.get_folder_size() == 0
+
+    with pytest.raises(TypeError):
+        persistent_data.write_file("toto", "DEADBEEFDEADBEEF", FileFormat.BINARY)
+    persistent_data.delete_file("toto")
+    with pytest.raises(TypeError):
+        persistent_data.write_file("toto", b"DEADBEEFDEADBEEF", FileFormat.TEXT)
+
+    shutil.rmtree(persistent_data.directory)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
@@ -107,3 +122,5 @@ def test_access():
         PersistentData()
 
     os.chmod(parent_directory, 0o777)
+
+    shutil.rmtree(directory)

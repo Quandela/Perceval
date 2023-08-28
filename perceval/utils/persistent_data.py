@@ -32,6 +32,8 @@ import warnings
 from platformdirs import PlatformDirs
 
 from .metadata import PMetadata
+from ._enums import FileFormat
+
 
 
 class PersistentData:
@@ -44,6 +46,7 @@ class PersistentData:
 
     If the directory cannot be created or read/write in, a warning will inform the user
     """
+
     def __init__(self) -> None:
         self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
         try:
@@ -90,19 +93,6 @@ class PersistentData:
         """
         return os.path.join(self._directory, element_name)
 
-    def create_binary_file(self, filename: str):
-        """Create a file in persistent data directory
-        if file already exist, raise a user warning
-
-        :param filename: name of the file to create (with extension)
-        """
-        file_path = self._get_full_path(filename)
-        if os.path.exists(file_path):
-            warnings.warn(UserWarning(f"Cannot create {file_path}, file already exist"))
-            return
-        with open(file_path, "bx") as file:
-            file.write(b'')
-
     def delete_file(self, filename: str):
         """Delete a file in persistent data directory
         if file doesn't exist, raise a user warning
@@ -115,18 +105,25 @@ class PersistentData:
             return
         os.remove(file_path)
 
-    def write_binary_file(self, filename: str, data: bytes):
-        """Write binary data into a file in persistent data directory
+    def write_file(self, filename: str, data: bytes, file_format: FileFormat):
+        """Write data into a file in persistent data directory
 
         :param filename: name of the file to write in (with extension)
         :param data: data to write
         """
         file_path = self._get_full_path(filename)
-        with open(file_path, "wb") as file:
-            file.write(data)
 
-    def read_binary_file(self, filename: str) -> bytes:
-        """Read binary data from a file in persistent data directory
+        if file_format == FileFormat.BINARY:
+            with open(file_path, "wb") as file:
+                file.write(data)
+        elif file_format == FileFormat.TEXT:
+            with open(file_path, "wt", encoding="UTF-8") as file:
+                file.write(data)
+        else:
+            raise NotImplementedError(f"format {format} is not supported")
+
+    def read_file(self, filename: str, file_format: FileFormat) -> bytes:
+        """Read data from a file in persistent data directory
 
         :param filename: name of the file to read (with extension)
         :raises FileNotFoundError: Raise an exception if file is not found
@@ -136,9 +133,17 @@ class PersistentData:
         if not os.path.exists(file_path):
             raise FileNotFoundError(file_path)
         data = None
-        with open(file_path, "r+b") as file:
-            data = file.read()
-        data = data.removesuffix(b'\n').removesuffix(b' ')
+
+        if file_format == FileFormat.BINARY:
+            with open(file_path, "r+b") as file:
+                data = file.read()
+            data = data.removesuffix(b'\n').removesuffix(b' ')
+        elif file_format == FileFormat.TEXT:
+            with open(file_path, "r+t", encoding="UTF-8") as file:
+                data = file.read()
+            data = data.removesuffix('\n').rstrip()
+        else:
+            raise NotImplementedError(f"format {format} is not supported")
         return data
 
     @property
