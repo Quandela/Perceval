@@ -51,7 +51,7 @@ def sample_processor(processor: Processor, nb_sample: int):
 
 
 def measure_processor(processor: Processor, expected: BasicState):
-    nb_sample = 10
+    nb_sample = 10000
     samples_counter = sample_processor(processor, nb_sample)
 
     for (sample, coef) in samples_counter.items():
@@ -61,7 +61,7 @@ def measure_processor(processor: Processor, expected: BasicState):
 
 
 def compare_processors(processor_lh: Processor, processor_rh: Processor):
-    nb_sample = 10
+    nb_sample = 10000
     samples_counter_lh = sample_processor(processor_lh, nb_sample)
     samples_counter_rh = sample_processor(processor_rh, nb_sample)
 

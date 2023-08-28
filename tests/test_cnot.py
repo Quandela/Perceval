@@ -27,36 +27,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+
 import perceval as pcvl
 from perceval.components import catalog
 from perceval.algorithm import Analyzer
-
-STATES = {
-    pcvl.BasicState([1, 0, 1, 0]): "00",
-    pcvl.BasicState([1, 0, 0, 1]): "01",
-    pcvl.BasicState([0, 1, 1, 0]): "10",
-    pcvl.BasicState([0, 1, 0, 1]): "11"
-}
 
 
 def test_performance_compare_cnot():
     # Tests the performance of different CNOT in perceval
     # KLM CNOT
     klm_cnot = catalog["klm cnot"].build_processor()
-    analyzer_klm_cnot = Analyzer(klm_cnot, STATES)
+    state_dict = {pcvl.components.get_basic_state_from_ports(klm_cnot._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(2)}
+    analyzer_klm_cnot = Analyzer(klm_cnot, state_dict)
     analyzer_klm_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+    assert pytest.approx(analyzer_klm_cnot.fidelity, 10E-5) == 1
     analyzer_klm_cnot_perf = pcvl.simple_float(analyzer_klm_cnot.performance)[1]
 
     # Postprocessed CNOT
     postprocessed_cnot = catalog["postprocessed cnot"].build_processor()
-    analyzer_postprocessed_cnot = Analyzer(postprocessed_cnot, STATES)
+    state_dict = {pcvl.components.get_basic_state_from_ports(postprocessed_cnot._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(2)}
+    analyzer_postprocessed_cnot = Analyzer(postprocessed_cnot, state_dict)
     analyzer_postprocessed_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+    assert analyzer_postprocessed_cnot.fidelity == 1
     analyzer_postprocessed_cnot_perf = pcvl.simple_float(analyzer_postprocessed_cnot.performance)[1]
 
     # CNOT using CZ : called - Heralded CNOT
     heralded_cnot = catalog["heralded cnot"].build_processor()
-    analyzer_heralded_cnot = Analyzer(heralded_cnot, STATES)
+    state_dict = {pcvl.components.get_basic_state_from_ports(heralded_cnot._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(2)}
+    analyzer_heralded_cnot = Analyzer(heralded_cnot, state_dict)
     analyzer_heralded_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+    assert pytest.approx(analyzer_heralded_cnot.fidelity) == 1
     analyzer_heralded_cnot_perf = pcvl.simple_float(analyzer_heralded_cnot.performance)[1]
 
     assert analyzer_postprocessed_cnot_perf > analyzer_heralded_cnot_perf > analyzer_klm_cnot_perf
