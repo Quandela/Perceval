@@ -45,12 +45,12 @@ BACKEND_LIST = {
 
 class BackendFactory:
     @staticmethod
-    def get_backend(backend_name: str = "SLOS") -> ABackend:
+    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
         name = backend_name
         if name in BACKEND_LIST:
-            return BACKEND_LIST[name]()
+            return BACKEND_LIST[name](**kwargs)
         warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
-        return BACKEND_LIST['SLOS']()
+        return BACKEND_LIST['SLOS'](**kwargs)
 
     @staticmethod
     def list():
