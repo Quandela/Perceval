@@ -3,6 +3,7 @@ __pycache__
 perceval_quandela.egg-info
 build
 .eggs/
+dist/
 .idea/
 venv*/
 *.whl

@@ -27,21 +27,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_iterator, anonymize_annotations
-from .logical_state import LogicalState, generate_all_logical_states
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect
-from ._random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
-from .persistent_data import PersistentData
-from .metadata import PMetadata
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+import re
+from importlib.metadata import metadata
+
+
+class PMetadata():
+    _NAME = "perceval"
+    _PACKAGE_NAME = "perceval-quandela"
+    _METADATA = metadata(_PACKAGE_NAME)
+    _REGEX = re.compile(r"(\d+\.\d+(?:\.\d+)*)")
+
+    @staticmethod
+    def short_version() -> str:
+        return PMetadata._REGEX.findall(PMetadata._METADATA["version"])[0]
+
+    @staticmethod
+    def version() -> str:
+        return PMetadata._METADATA["version"]
+
+    @staticmethod
+    def package_name() -> str:
+        return PMetadata._PACKAGE_NAME
+
+    @staticmethod
+    def author() -> str:
+        return PMetadata._METADATA["author"]
+
+    @staticmethod
+    def name() -> str:
+        return PMetadata._NAME
