@@ -27,7 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime._token_management import TokenProvider
+from perceval.runtime._token_management import TokenProvider, save_token
+from perceval import PersistentData
 
 import os
 
@@ -35,7 +36,9 @@ MISSING_KEY = "MISSING_ENV_VAR"
 ENV_VAR_KEY = "DUMMY_ENV_VAR"
 TOKEN_FROM_ENV = "DUMMY_TOKEN_FROM_ENV"
 TOKEN_FROM_CACHE = "DUMMY_TOKEN_FROM_CACHE"
+TOKEN_FROM_FILE = "DUMMY_TOKEN_FROM_FILE"
 os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
+
 
 def test_token_provider_env_var_vs_cache():
     provider = TokenProvider(env_var=MISSING_KEY)
@@ -55,4 +58,30 @@ def test_token_provider_env_var_vs_cache():
 
     del os.environ[ENV_VAR_KEY]  # Remove the environment variable
     provider.clear_cache()
+    assert provider.get_token() is None
+
+
+def test_token_provider_from_file():
+    persistent_data = PersistentData()
+    persistent_data.clear_all_data()
+
+    provider = TokenProvider()
+    assert provider.get_token() is None
+    provider.save_token(TOKEN_FROM_FILE)
+    assert provider.get_token() == TOKEN_FROM_FILE
+
+    provider.clear_cache()
+    persistent_data.clear_all_data()
+
+    assert provider.get_token() is None
+
+    save_token(TOKEN_FROM_FILE)
+    assert provider.get_token() == TOKEN_FROM_FILE
+
+    save_token(TOKEN_FROM_FILE)
+    assert provider.get_token() == TOKEN_FROM_FILE
+
+    provider.clear_cache()
+    persistent_data.clear_all_data()
+
     assert provider.get_token() is None
