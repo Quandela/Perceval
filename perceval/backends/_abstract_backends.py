@@ -61,9 +61,12 @@ class ABackend(ABC):
 
 class ASamplingBackend(ABackend):
     @abstractmethod
-    def sample(self):
+    def sample(self, useGPU=False):
         """Request samples from the circuit given an input state"""
 
+    @abstractmethod
+    def parallel_sample(self, n, m, A):
+        """Request samples from the circuit given an input state, calculated in parallel"""
 
 class AProbAmpliBackend(ABackend):
     @abstractmethod

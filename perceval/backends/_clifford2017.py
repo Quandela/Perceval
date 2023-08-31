@@ -61,7 +61,7 @@ class Clifford2017Backend(ASamplingBackend):
                 rowidx += 1
         return us
 
-    def sample(self) -> BasicState:
+    def sample(self, useGPU=True) -> BasicState:
         n = self._input_state.n
         if n == 0:
             return self._input_state
@@ -77,12 +77,35 @@ class Clifford2017Backend(ASamplingBackend):
         for mode_limit in range(2, n + 1):
             # permanents of sub-matrices using Laplace-type expansion (arXiv:1505.05486)
             sub_perm = np.array(
-                xq.sub_permanents_cx(np.copy(np.reshape(A[0:mode_limit, mode_seq], (-1, mode_limit - 1)))))
+                xq.sub_permanents_cx(np.copy(np.reshape(A[0:mode_limit, mode_seq], (-1, mode_limit - 1))), (useGPU and mode_limit > 16)))
             sub_perm /= _get_scale(sub_perm)
             # generate next mode from there
             perm_vector = np.dot(sub_perm.transpose(), A[0:mode_limit])
             w = _square(perm_vector)
             next_mode = np.random.choice(np.arange(0, m), p=w/sum(w), size=1)[0]
+            mode_seq.append(next_mode)
+            output_state[next_mode] += 1
+        return BasicState(output_state)
+
+    def parallel_sample(self, n, m, A) -> BasicState:
+        if n == 0:
+            return BasicState("|" + "0," * (m - 1) + "0>")
+
+        if n > 1:
+            A = A[np.random.permutation(n), :]
+        w = _square(A[0, :])
+        mode_seq = [np.random.choice(np.arange(0, m), p=w / sum(w), size=1)[0]]
+        output_state = [0] * m
+        output_state[mode_seq[0]] = 1
+        for mode_limit in range(2, n + 1):
+            # permanents of sub-matrices using Laplace-type expansion (arXiv:1505.05486)
+            sub_perm = np.array(
+                xq.sub_permanents_cx(np.copy(np.reshape(A[0:mode_limit, mode_seq], (-1, mode_limit - 1))), False))
+            sub_perm /= _get_scale(sub_perm)
+            # generate next mode from there
+            perm_vector = np.dot(sub_perm.transpose(), A[0:mode_limit])
+            w = _square(perm_vector)
+            next_mode = np.random.choice(np.arange(0, m), p=w / sum(w), size=1)[0]
             mode_seq.append(next_mode)
             output_state[next_mode] += 1
         return BasicState(output_state)

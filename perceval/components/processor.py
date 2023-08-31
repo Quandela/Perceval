@@ -26,7 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from numpy import Inf
+import numpy as np
+from multiprocessing.dummy import Pool, Lock, Process
+from multiprocessing import cpu_count
 
 from .abstract_processor import AProcessor, ProcessorType
 from .source import Source
@@ -74,6 +76,9 @@ class Processor(AProcessor):
         else:
             self.backend = backend
         self._simulator = None
+
+        if isinstance(backend, ASamplingBackend):
+            self._lock = None
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -147,7 +152,7 @@ class Processor(AProcessor):
         """
         assert self.m is not None, "A circuit has to be set before the input distribution"
         self._input_state = svd
-        expected_photons = Inf
+        expected_photons = np.Inf
         for sv in svd:
             for state in sv:
                 expected_photons = min(expected_photons, state.n)
@@ -188,7 +193,7 @@ class Processor(AProcessor):
             return modes_with_photons >= self._min_detected_photons
         return output_state.n >= self._min_detected_photons
 
-    def samples(self, count: int, progress_callback=None) -> Dict:
+    def samples(self, count: int, useGPU=True, progress_callback=None) -> Dict:
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         pre_physical_perf = 1
         # Rework input map so that it contains only states with enough photons
@@ -220,13 +225,13 @@ class Processor(AProcessor):
                 sampled_components = []
                 for bs in bs_list:
                     self.backend.set_input_state(bs)
-                    sampled_components.append(self.backend.sample())
+                    sampled_components.append(self.backend.sample(useGPU))
                 sampled_state = sampled_components.pop()
                 for component in sampled_components:
                     sampled_state = sampled_state.merge(component)
             else:
                 self.backend.set_input_state(selected_bs)
-                sampled_state = self.backend.sample()
+                sampled_state = self.backend.sample(useGPU)
 
             # Post-processing
             if not self._state_selected_physical(sampled_state):
@@ -246,6 +251,120 @@ class Processor(AProcessor):
         physical_perf = pre_physical_perf * (count + not_selected) / (count + not_selected + not_selected_physical)
         logical_perf = count / (count + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+
+
+    def parallel_samples(self, count: int, progress_callback=None) -> Dict:
+        assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
+        pre_physical_perf = 1
+        # Rework input map so that it contains only states with enough photons
+        input_svd = SVDistribution()
+        for sv, p in self._inputs_map.items():
+            if self._state_preselected_physical(sv):
+                if len(sv) > 1:
+                    raise RuntimeError("Cannot sample on a superposed state")
+                input_svd[sv] = p
+            else:
+                pre_physical_perf -= p
+
+        self.backend.set_circuit(self.linear_circuit())
+        output = BSSamples()
+        selected_inputs = []
+        not_selected_physical = 0
+        not_selected = 0
+        selected_bss = []
+        is_looping = True
+
+        thread_nbr = 4
+
+        pool = Pool(thread_nbr)
+        self._lock = Lock()
+
+        while len(output) < count:
+            for idx in range(thread_nbr):
+                if idx == len(selected_inputs):
+                    selected_inputs = input_svd.sample(thread_nbr)
+                selected_bss.append(selected_inputs[idx][0])
+
+            temp_outputs = pool.map(self.process_sample, selected_bss)
+
+            for i in range(thread_nbr):
+                if len(output) == count:
+                    is_looping = False
+                    break
+
+                if temp_outputs[i][0] is not None:
+                    output.append(temp_outputs[i][0])
+                elif temp_outputs[i][1] == "NotSelectedPhysical":
+                    not_selected_physical += 1
+                elif temp_outputs[i][1] == "NotSelected":
+                    not_selected += 1
+
+            if progress_callback:
+                exec_request = progress_callback(len(output) / count, "sampling")
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    break
+
+            if not is_looping:
+                break
+
+        pool.close()
+        pool.join()
+
+        physical_perf = pre_physical_perf * (count + not_selected) / (count + not_selected + not_selected_physical)
+        logical_perf = count / (count + not_selected)
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+
+    def process_sample(self, selected_bs):
+        assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
+
+        # Sampling
+        if selected_bs.has_annotations:
+            bs_list = selected_bs.separate_states()
+            sampled_components = []
+            for bs in bs_list:
+
+                with self._lock:
+                    self.backend.set_input_state(bs)
+                    n = self._input_state.n
+                    m = self._input_state.m
+                    A = self._prepare_us(n, m)
+
+                    sampled_components.append(self.backend.parallel_sample(n, m, A))
+
+            sampled_state = sampled_components.pop()
+            for component in sampled_components:
+                sampled_state = sampled_state.merge(component)
+
+        else:
+            with self._lock:
+                self.backend.set_input_state(selected_bs)
+                n = self._input_state.n
+                m = self._input_state.m
+                A = self._prepare_us(n, m)
+
+            sampled_state = self.backend.parallel_sample(n, m, A)
+
+        # Post-processing
+        if not self._state_selected_physical(sampled_state):
+            return None, "NotSelectedPhysical"
+
+        if self._state_selected(sampled_state):
+            return self.postprocess_output(sampled_state), "Selected"
+        else :
+            return None, "NotSelected"
+
+
+    def _prepare_us(self,n , m):
+        # prepare Us that is a m*n matrix
+        us = np.zeros((n, m), dtype=np.complex128)
+        # build Us while transposing it
+        rowidx = 0
+        for ik in range(m):
+            extract = self.backend._umat[:, ik]
+            for _ in range(self._input_state[ik]):
+                us[rowidx, :] = extract
+                rowidx += 1
+        return us
 
     def probs(self, progress_callback: Callable = None) -> Dict:
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
