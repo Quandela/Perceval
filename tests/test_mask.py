@@ -26,32 +26,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import warnings
 
-from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
-from ._clifford2017 import Clifford2017Backend
-from ._naive import NaiveBackend
-from ._slos import SLOSBackend
-from ._mps import MPSBackend
+import exqalibur as xq
 
-
-BACKEND_LIST = {
-    "CliffordClifford2017": Clifford2017Backend,
-    "MPS": MPSBackend,
-    "Naive": NaiveBackend,
-    "SLOS": SLOSBackend
-}
+def test_mask():
+    mask = xq.FSMask(6, 4, ["    11"])
+    assert mask.match(xq.FockState("|0,0,1,1,1,1>"))
+    # no partial masking (we don't accept lower number of photons)
+    assert not mask.match(xq.FockState("|0,0,1,1,1,0>"), False)
+    # partial masking (we accept lower number of photons)
+    assert mask.match(xq.FockState("|0,0,1,1,1,0>"), True)
 
 
-class BackendFactory:
-    @staticmethod
-    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name](**kwargs)
-        warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
-        return BACKEND_LIST['SLOS'](**kwargs)
-
-    @staticmethod
-    def list():
-        return list(BACKEND_LIST.keys())
+def test_mask_multiple():
+    mask = xq.FSMask(6, 4, ["   011", "   110"])
+    assert mask.match(xq.FockState("|0,0,1,0,1,1>"))
+    assert mask.match(xq.FockState("|0,0,1,1,1,0>"))
+    assert not mask.match(xq.FockState("|0,0,1,1,1,1>"))
