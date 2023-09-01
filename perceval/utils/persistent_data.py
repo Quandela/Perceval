@@ -28,12 +28,13 @@
 # SOFTWARE.
 
 import os
+import shutil
 import warnings
+from typing import Union
 from platformdirs import PlatformDirs
 
 from .metadata import PMetadata
 from ._enums import FileFormat
-
 
 
 class PersistentData:
@@ -93,6 +94,14 @@ class PersistentData:
         """
         return os.path.join(self._directory, element_name)
 
+    def has_file(self, filename: str) -> bool:
+        """Find if persistant data has file
+
+        :param filename: name of the file to find (with extension)
+        :return: True is the file exists, else False
+        """
+        return os.path.exists(os.path.join(self._directory, filename))
+
     def delete_file(self, filename: str):
         """Delete a file in persistent data directory
         if file doesn't exist, raise a user warning
@@ -105,7 +114,7 @@ class PersistentData:
             return
         os.remove(file_path)
 
-    def write_file(self, filename: str, data: bytes, file_format: FileFormat):
+    def write_file(self, filename: str, data: Union[bytes, str], file_format: FileFormat):
         """Write data into a file in persistent data directory
 
         :param filename: name of the file to write in (with extension)
@@ -122,7 +131,7 @@ class PersistentData:
         else:
             raise NotImplementedError(f"format {format} is not supported")
 
-    def read_file(self, filename: str, file_format: FileFormat) -> bytes:
+    def read_file(self, filename: str, file_format: FileFormat) -> Union[bytes, str]:
         """Read data from a file in persistent data directory
 
         :param filename: name of the file to read (with extension)
@@ -140,11 +149,17 @@ class PersistentData:
             data = data.removesuffix(b'\n').removesuffix(b' ')
         elif file_format == FileFormat.TEXT:
             with open(file_path, "r+t", encoding="UTF-8") as file:
-                data = file.read()
+                data = str(file.read())
             data = data.removesuffix('\n').rstrip()
         else:
             raise NotImplementedError(f"format {format} is not supported")
         return data
+
+    def clear_all_data(self):
+        """Delete persistent data directory and recreate it
+        """
+        shutil.rmtree(self._directory)
+        self._create_directory()
 
     @property
     def directory(self) -> str:

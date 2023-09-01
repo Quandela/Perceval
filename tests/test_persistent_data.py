@@ -29,9 +29,8 @@
 
 import os
 import re
-import shutil
-import pytest
 import platform
+import pytest
 
 from perceval.utils import PersistentData, FileFormat
 
@@ -49,23 +48,24 @@ def test_directory():
         assert re.match(r"^\/Users\/.+\/Library\/Application Support\/perceval-quandela$", persistent_data.directory) is not None
     else:
         raise OSError("My god where are you ?")
-    shutil.rmtree(persistent_data.directory)
+    persistent_data.clear_all_data()
 
 
 def test_basic_methods():
     persistent_data = PersistentData()
-    shutil.rmtree(persistent_data.directory)
-    persistent_data = PersistentData()
+    persistent_data.clear_all_data()
 
     assert os.path.exists(persistent_data.directory)
     assert persistent_data.is_writable()
     assert persistent_data.is_readable()
 
+    assert not persistent_data.has_file("toto")
     persistent_data.write_file("toto", b"", FileFormat.BINARY)
     assert os.path.exists(os.path.join(persistent_data.directory, "toto"))
+    assert persistent_data.has_file("toto")
 
     persistent_data.delete_file("toto")
-    assert not os.path.exists(os.path.join(persistent_data.directory, "toto"))
+    assert not persistent_data.has_file("toto")
     with pytest.warns(UserWarning):
         persistent_data.delete_file("toto")
     with pytest.raises(FileNotFoundError):
@@ -91,7 +91,7 @@ def test_basic_methods():
     with pytest.raises(TypeError):
         persistent_data.write_file("toto", b"DEADBEEFDEADBEEF", FileFormat.TEXT)
 
-    shutil.rmtree(persistent_data.directory)
+    persistent_data.clear_all_data()
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
@@ -123,4 +123,4 @@ def test_access():
 
     os.chmod(parent_directory, 0o777)
 
-    shutil.rmtree(directory)
+    persistent_data.clear_all_data()

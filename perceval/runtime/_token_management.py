@@ -28,6 +28,11 @@
 # SOFTWARE.
 
 import os
+import warnings
+
+from ..utils import PersistentData, FileFormat
+
+_TOKEN_FILE_NAME = "token"
 
 
 class TokenProvider:
@@ -41,13 +46,12 @@ class TokenProvider:
 
     _CACHED_TOKEN = None
 
-    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN", file_path: str = None):
+    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
         """
         :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
         :param file_path: Path to search for a file containing a token (default None)
         """
         self._env_var = env_var
-        self._file_path = file_path
 
     def _from_environment_variable(self) -> str:
         if not self._env_var:
@@ -56,15 +60,14 @@ class TokenProvider:
         return TokenProvider._CACHED_TOKEN
 
     def _from_file(self) -> str:
-        if not self._file_path or not os.path.isfile(self._file_path):
-            return None
-        try:
-            with open(self._file_path, "r") as f:
-                TokenProvider._CACHED_TOKEN = f.read().strip()
-                return TokenProvider._CACHED_TOKEN
-        except IOError:
-            pass
-        return None
+        token = None
+        persistent_data = PersistentData()
+        if persistent_data.has_file(_TOKEN_FILE_NAME):
+            try:
+                token = persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
+            except OSError:
+                warnings.warn("Cannot read token persistent file")
+        return token
 
     def get_token(self) -> str:
         """Search for a token to provide
@@ -86,3 +89,15 @@ class TokenProvider:
     def force_token(token: str):
         """Force a token to be used (and provided to callers)"""
         TokenProvider._CACHED_TOKEN = token
+
+
+def save_token(token: str):
+    """Save provided token into persistent data, replace any token previously saved
+
+    :param token: token to save
+    """
+    persistent_data = PersistentData()
+    if persistent_data.is_writable():
+        persistent_data.write_file(_TOKEN_FILE_NAME, token, FileFormat.TEXT)
+    else:
+        warnings.warn(UserWarning("Can't save token"))
