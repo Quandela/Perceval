@@ -113,21 +113,26 @@ class GenericInterferometer(Circuit):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):
                     continue
-                self.add((j, j+1), self._pattern_generator(idx), merge=True)
+                self.add((j, j+1), self._pattern_generator(idx), merge=True, x_grid=i)
                 self._depth_per_mode[j] += 1
                 self._depth_per_mode[j+1] += 1
                 idx += 1
 
     def _build_triangle(self):
         idx = 0
+        # record the physical position of each block for aligning purpose
+        pos_mode = [0] * self.m
         for i in range(1, self.m):
             for j in range(i, 0, -1):
                 if self._depth is not None and (self._depth_per_mode[j-1] == self._depth
                                                 or self._depth_per_mode[j] == self._depth):
                     continue
-                self.add((j-1, j), self._pattern_generator(idx), merge=True)
+                pos_component = max(pos_mode[j-1], pos_mode[j])
+                self.add((j-1, j), self._pattern_generator(idx), merge=True, x_grid=pos_component)
                 self._depth_per_mode[j-1] += 1
                 self._depth_per_mode[j] += 1
+                pos_mode[j-1] = pos_component+1
+                pos_mode[j] = pos_component+1
                 idx += 1
 
     def _find_param_index(self, col: int, lin: int, even_col_size: int, odd_col_size: int) -> int:
