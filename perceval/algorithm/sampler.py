@@ -40,8 +40,8 @@ from perceval.utils import BasicState
 class Sampler(AAlgorithm):
     """
     Base algorithm able to retrieve some sampling results via 3 methods
-    - samples(count) : returns a list of sampled states
-    - sample_count(count) : return a table (output state) : (sampled count)
+    - samples(max_samples) : returns a list of sampled states
+    - sample_count(max_samples) : return a table (output state) : (sampled count)
                             the sum of 'sampled counts' can slightly differ from requested 'count'
     - probs() : returns a probability distribution of output states
 
@@ -56,10 +56,18 @@ class Sampler(AAlgorithm):
         'sample_count': {'probs': probs_to_sample_count, 'samples': samples_to_sample_count},
         'samples': {'probs': probs_to_samples, 'sample_count': sample_count_to_samples}
     }
+    _MAX_SHOTS_NAMED_PARAM = "max_shots_per_call"
 
-    def __init__(self, processor: AProcessor):
+    def __init__(self, processor: AProcessor, **kwargs):
+        if (processor.is_remote and self._MAX_SHOTS_NAMED_PARAM not in kwargs) or \
+            (self._MAX_SHOTS_NAMED_PARAM in kwargs and kwargs[self._MAX_SHOTS_NAMED_PARAM] < 1):
+            raise RuntimeError(f'Please input a `{self._MAX_SHOTS_NAMED_PARAM}` positive value when creating a Sampler '
+                               'using a RemoteProcessor')
         super().__init__(processor)
         self._iterator = []
+        self._max_shots = kwargs.get(self._MAX_SHOTS_NAMED_PARAM)
+
+    @property
 
     def _get_primitive_converter(self, method: str):
         available_primitives = self._processor.available_commands
@@ -92,9 +100,8 @@ class Sampler(AAlgorithm):
 
         delta_parameters = {}
         # adapt the parameters list
-        command_param_names = ['max_shots'] if method == 'probs' else ['max_shots', 'max_samples']
+        command_param_names = [] if method == 'probs' else ['max_samples']
         if not method_is_probs and primitive_is_probs:
-            delta_parameters['max_shots'] = None
             delta_parameters['max_samples'] = None
         elif method_is_probs and not primitive_is_probs:
             delta_parameters['max_samples'] = self.PROBS_SIMU_SAMPLE_COUNT
@@ -107,6 +114,7 @@ class Sampler(AAlgorithm):
             payload = self._processor.prepare_job_payload(primitive)
             if self._iterator:
                 payload['payload']['iterator'] = self._iterator
+            payload['payload']['max_shots'] = self._max_shots
             job_name = self.default_job_name if self.default_job_name is not None else method
             return RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
                              command_param_names=command_param_names,
@@ -164,16 +172,16 @@ class Sampler(AAlgorithm):
         for iter_params in iterations:
             self.add_iteration(**iter_params)
 
-    def _probs_wrapper(self, max_shots: int = None, progress_callback: Callable = None):
-        precision = None if max_shots is None else min(1e-6, 1/max_shots)
+    def _probs_wrapper(self, progress_callback: Callable = None):
+        precision = None if self._max_shots is None else min(1e-6, 1/self._max_shots)
         return self._processor.probs(precision, progress_callback)
 
-    def _samples_wrapper(self, max_shots: int = None, max_samples: int = None, progress_callback: Callable = None):
-        if max_samples is None and max_shots is None:
+    def _samples_wrapper(self, max_samples: int = None, progress_callback: Callable = None):
+        if max_samples is None and self._max_shots is None:
             raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
-        return self._processor.samples(max_samples, max_shots, progress_callback)
+        return self._processor.samples(max_samples, self._max_shots, progress_callback)
 
 
     # Local iteration methods mimic remote iterations for interchangeability purpose

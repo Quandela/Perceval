@@ -48,9 +48,9 @@ def test_sampler():
         probs = sampler.probs()
         assert probs['results'][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1)
         assert probs['results'][pcvl.BasicState([1, 0, 0, 1])] == pytest.approx(0)
-        samples = sampler.samples(max_samples=4)
+        samples = sampler.samples(4)
         assert len(samples['results']) == 4
-        sample_count = sampler.sample_count(max_samples=100)
+        sample_count = sampler.sample_count(100)
         assert 90 < sum(list(sample_count['results'].values())) < 110
 
 
