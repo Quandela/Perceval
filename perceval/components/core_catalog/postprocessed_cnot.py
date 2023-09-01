@@ -60,14 +60,13 @@ data (dual rail) ─────┤     ├───── data (dual rail)
         return (Circuit(6, name="PostProcessed CNOT")
                 .add(0, PERM([0, 2, 3, 4, 1]))  # So that both heralded modes are on the bottom of the gate
                 .add((0, 1), BS.H(theta_13), x_grid=1)
-                .add((0, 1), PERM([1, 0]))
                 .add((3, 4), BS.H())
                 .add((2, 3), PERM([1, 0]))
                 .add((2, 3), BS.H(theta_13), x_grid=1)
                 .add((2, 3), PERM([1, 0]))
                 .add((4, 5), BS.H(theta_13), x_grid=1)
                 .add((3, 4), BS.H())
-                .add(0, PERM([4, 0, 1, 2, 3])))  # So that both heralded modes are on the bottom of the gate
+                .add(1, PERM([3, 0, 1, 2])))  # So that both heralded modes are on the bottom of the gate
 
     def build_processor(self, **kwargs):
         p = self._init_processor(**kwargs)
