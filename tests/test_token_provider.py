@@ -26,8 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import pytest
+import platform
 
-from perceval.runtime._token_management import TokenProvider, save_token
+from perceval.runtime._token_management import TokenProvider, save_token, _TOKEN_FILE_NAME
 from perceval import PersistentData
 
 import os
@@ -67,7 +69,7 @@ def test_token_provider_from_file():
 
     provider = TokenProvider()
     assert provider.get_token() is None
-    provider.save_token(TOKEN_FROM_FILE)
+    save_token(TOKEN_FROM_FILE)
     assert provider.get_token() == TOKEN_FROM_FILE
 
     provider.clear_cache()
@@ -85,3 +87,34 @@ def test_token_provider_from_file():
     persistent_data.clear_all_data()
 
     assert provider.get_token() is None
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
+def test_token_file_access():
+    persistent_data = PersistentData()
+    directory = persistent_data.directory
+
+    os.chmod(directory, 0o000)
+
+    with pytest.warns(UserWarning):
+        save_token(TOKEN_FROM_FILE)
+
+    with pytest.warns(UserWarning):
+        provider = TokenProvider()
+        assert provider.get_token() is None
+
+    os.chmod(directory, 0o777)
+
+    token_file = os.path.join(directory,_TOKEN_FILE_NAME)
+    save_token(TOKEN_FROM_FILE)
+    provider = TokenProvider()
+    assert provider.get_token() == TOKEN_FROM_FILE
+
+    os.chmod(token_file, 0o000)
+
+    with pytest.warns(UserWarning):
+        assert provider.get_token() is None
+
+    os.chmod(token_file, 0o777)
+
+    persistent_data.clear_all_data()

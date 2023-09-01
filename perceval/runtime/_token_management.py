@@ -30,7 +30,9 @@
 import os
 import warnings
 
-from perceval import PersistentData, FileFormat
+from ..utils import PersistentData, FileFormat
+
+_TOKEN_FILE_NAME = "token"
 
 
 class TokenProvider:
@@ -44,13 +46,12 @@ class TokenProvider:
 
     _CACHED_TOKEN = None
 
-    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN", file_path: str = "token"):
+    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
         """
         :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
         :param file_path: Path to search for a file containing a token (default None)
         """
         self._env_var = env_var
-        self._file_name = file_path
 
     def _from_environment_variable(self) -> str:
         if not self._env_var:
@@ -61,11 +62,11 @@ class TokenProvider:
     def _from_file(self) -> str:
         token = None
         persistent_data = PersistentData()
-        if persistent_data.has_file(self._file_name):
+        if persistent_data.has_file(_TOKEN_FILE_NAME):
             try:
-                token = persistent_data.read_file(self._file_name, FileFormat.TEXT)
+                token = persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
             except OSError:
-                pass
+                warnings.warn("Cannot read token persistent file")
         return token
 
     def get_token(self) -> str:
@@ -74,17 +75,6 @@ class TokenProvider:
         :return: A token, or None if no token was found
         """
         return TokenProvider._CACHED_TOKEN or self._from_environment_variable() or self._from_file()
-
-    def save_token(self, token: str):
-        """Save provided token into persistent data, replace any token previously saved
-
-        :param token: token to save
-        """
-        persistent_data = PersistentData()
-        if persistent_data.is_writable():
-            persistent_data.write_file(self._file_name, token, FileFormat.TEXT)
-        else:
-            warnings.warn(UserWarning("Can't save token"))
 
     @staticmethod
     def clear_cache():
@@ -106,5 +96,8 @@ def save_token(token: str):
 
     :param token: token to save
     """
-    token_provider = TokenProvider()
-    token_provider.save_token(token)
+    persistent_data = PersistentData()
+    if persistent_data.is_writable():
+        persistent_data.write_file(_TOKEN_FILE_NAME, token, FileFormat.TEXT)
+    else:
+        warnings.warn(UserWarning("Can't save token"))
