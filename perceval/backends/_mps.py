@@ -81,11 +81,12 @@ class MPSBackend(AProbAmpliBackend):
         for r, c in C:
             assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
                 "MPS backend can not be used with components of using more than 2 modes"
-        if self._cutoff is None:
-            self._cutoff = C.m  # sets the value of cut-off at circuit creation if no _cutoff = Num of modes of circuit
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
+        # if self._cutoff is None:
+        self._cutoff = input_state.n + 1  # sets the value of cut-off to max number of photons : default
+
         self._compile()
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
@@ -110,7 +111,6 @@ class MPSBackend(AProbAmpliBackend):
         # Inserting the last gamma into MPS outside the loop as there is no sv after that.
 
         # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
-        # todo: find out why is the desired result is always at [0,0]
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     def _compile(self) -> bool:
@@ -251,18 +251,17 @@ class MPSBackend(AProbAmpliBackend):
         v, s, w = np.linalg.svd(theta)
         # svd of the tensor after component is applied to extract the MPS form
         # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
-        # Here:: U->v [v.shape=(d x $\chi$, d x $\chi$)],
+        # Here:: U->v [v.shape=(d x $\chi$, d x $\chi$)], (1st in the new MPS chain)
         # S->s [s.shape=(d x $\chi$)], V->w [w.shape=(d x $\chi$, d x $\chi$)]
 
-        # todo: not sure about indices and their sizes
         v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
         w = w.reshape(self._d * self._cutoff, self._d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
         s = s[:self._cutoff]  # restricting the size of SV matrices to cut_off -> truncation
 
         self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
-        # todo : _s_min is too low, do we really need this? ask Rawad. Maybe another value
+        # todo : _s_min is too low, is this appropriate or we set up another hardcoded value? Rawad?
 
-        # todo: below - seems weird, investigate
+        # updating self._gamma[k] :: uses v from SVD above
         if k > 0:
             rank = np.nonzero(self._sv[k - 1])[0][-1] + 1
             self._gamma[k, :rank] = v[:rank] / self._sv[k - 1, :rank][:, np.newaxis, np.newaxis]
@@ -270,6 +269,7 @@ class MPSBackend(AProbAmpliBackend):
         else:
             self._gamma[k] = v
 
+        # updating self._gamma[k+1] :: uses w from SVD above
         if k < self._input_state.m - 2:
             rank = np.nonzero(self._sv[k + 1])[0][-1] + 1
             self._gamma[k + 1, :, :rank] = (w[:, :rank] / self._sv[k + 1, :rank][:, np.newaxis])
@@ -311,8 +311,6 @@ class MPSBackend(AProbAmpliBackend):
         """
         if self._res[self._current_input]["sv"].any():
             sv = self._res[self._current_input]["sv"]
-            # todo: clarify with Eric -
-            #  would this not be the same as else ? Also, by the time this is called "sv" is set in _res
         else:
             sv = self._sv
         sv_diag = np.zeros((self._cutoff, self._cutoff))
