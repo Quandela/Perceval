@@ -56,7 +56,6 @@ def _assert_cnot(backend: AProbAmpliBackend):
     assert pytest.approx(backend.probability(s10)) == 1 / 9
 
 
-
 def test_clifford_bs():
     cliff_bs = Clifford2017Backend()
     cliff_bs.set_circuit(BS.H())

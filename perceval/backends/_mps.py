@@ -56,12 +56,9 @@ class MPSBackend(AProbAmpliBackend):
         self._current_input = None
         self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
         # _res stores output of the state compilation in MPS.
-        # It is a Nested DefaultDict. The outermost dict has "input_states"
-        # as keys with values=DefaultDict. We can do multiple computation
-        # for different input_states.
-        # The 2nd (nested inside) DefaultDict has 2 keys "gamma" and "sv". They
-        # represent the matrices $\Gamma$ and $\lambda$ of the MPS for a
-        # given input_state. Their values are numpy arrays containing the full MPS.
+        # It is a Nested DefaultDict.
+        # 1st layer: Each "input_states" has the full MPS
+        # 2nd layer: $\Gamma$ or $\lambda$ keys and their numpy arrays
 
     @property
     def name(self) -> str:
@@ -71,6 +68,7 @@ class MPSBackend(AProbAmpliBackend):
         """
         Cut-off defines the Bond dimension (Schmidt rank of the decomposition of the
         state) of an MPS; in other words, how well approximated the state is.
+        Default value is the total number of photons + 1.
         """
         assert isinstance(cutoff_val, int), "cutoff must be an integer"
         self._cutoff = cutoff_val
@@ -84,33 +82,30 @@ class MPSBackend(AProbAmpliBackend):
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
-        # if self._cutoff is None:
-        self._cutoff = input_state.n + 1  # sets the value of cut-off to max number of photons : default
-
+        self._cutoff = input_state.n + 1  # sets the default value of cut-off to max number of photons
         self._compile()
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
         """
-        This takes in the expected output states, reads the input and from
-        self._res extracts the corresponding gamma and diagonal sv matrices.
-        All of this goes to mps_in_list -> each element in order is gamma-sv-gamma-sv-...
-        Returns the full contraction -> multidot of all -> which I expect to be the tensor
-        containing the prob amplitude coefficients |psi> = c_tensor |pure statevectors>
+        Computes the probability for a given input output state from a circuit with m modes and
+        n photons computed using MPS
         """
+        # self._res extracts $\Gamma$ and diagonal SV matrices corresponding to given output_state; this is
+        # stored in list of matrices and multidot performs a full matrix lultplication overall of them
+        # in a single statement. Optimized by numpy
+
         m = self._input_state.m
         mps_in_list = []
         self._current_input = tuple(self._input_state)
         for k in range(m - 1):
             mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][k, :, :, output_state[k]])
-            # _res[1ST LEVEL: selects dict -> given input state][2ND LEVEL: selects "gamma" matrix key of that]
-            # [3RD LEVEL: gamma is np.array -> first chooses kth mode gamma and then selects the segment
-            # corresponding to the number of photon in that mode of the output_state being considered.
+            # _res[1ST LEVEL: selects given input state][2ND LEVEL: selects "gamma" matrix key of that]
+            # [3RD LEVEL: for a gamma -> chooses kth mode and then segment
+            # with #photons equal to that in output_state considered]
             mps_in_list.append(self._sv_diag(k))
-            # alternately takes in each gamma and singular value matrices (diagonal) -> puts them in a list
+
         mps_in_list.append(self._res[tuple(self._input_state)]["gamma"][m - 1, :, :, output_state[m - 1]])
         # Inserting the last gamma into MPS outside the loop as there is no sv after that.
-
-        # multi_dot is optimised by numpy to find the best way to take products of 2 or more arrays in a single command
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     def _compile(self) -> bool:
@@ -121,10 +116,6 @@ class MPSBackend(AProbAmpliBackend):
             return False
         self._compiled_input = copy.copy((var, self._input_state))
         self._current_input = None  # todo: ERIC - do I need to set it to None again?
-
-        # TODO : ERIC I am not sure what to do here I had the following comment here
-        #  allow any StateVector as in stepper, or a list as in SLOS?
-        # self._input_state *= BasicState([0] * (self._input_state.m - self._input_state.m))
 
         self._n = self._input_state.n  # total number of photons
         self._d = self._n + 1  # possible num of photons in each mode {0,1,2,...,n}
@@ -148,9 +139,8 @@ class MPSBackend(AProbAmpliBackend):
         # This initialization of MPS (gamma and sv) fixes the input state to be completely separable
         # and a pure BasicState (no superposition); hence would have only 1 non-zero element whose value = 1.
         # It is simply written based on this choice as the SVD of such a structure would exactly look like this
-
         # todo: maybe make the initialization of MPS more generic - to include mixed/superposed states as input
-        # Suggestions - ITensors(Julia), Qiskit
+        # methods currently available in ITensors(Julia), Qiskit
 
         for r, c in C:
             # r -> tuple -> lists the modes where the component c is connected
