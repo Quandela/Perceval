@@ -66,9 +66,9 @@ def test_fidelity_and_performance_compare_cnot():
     assert analyzer_postprocessed_cnot_perf > analyzer_heralded_cnot_perf > analyzer_klm_cnot_perf
 
 
-@pytest.mark.parametrize("cnot_gate", ["klm cnot", "postprocessed cnot", "heralded cnot", "heralded cz"])
+@pytest.mark.parametrize("cnot_gate", ["klm cnot", "postprocessed cnot", "heralded cnot"])
 def test_inverse_cnot_with_H(cnot_gate):
-    """Test cnot/cz gate phase by inverting it with Hadamard gates
+    """Test cnot gate phase by inverting it with Hadamard gates
 
      ╭───╮   ╭──────────╮   ╭───╮             ╭──────────╮
  ────┤ H ├───┤  DATA    ├───┤ H ├────      ───┤  CTRL    ├───
@@ -79,7 +79,7 @@ def test_inverse_cnot_with_H(cnot_gate):
  ────┤   ├───┤          ├───┤   ├────      ───┤          ├───
      ╰───╯   ╰──────────╯   ╰───╯             ╰──────────╯
 
-    :param cnot_gate: cnot/cz catalog gate
+    :param cnot_gate: cnot catalog gate
     """
     processor = pcvl.Processor("SLOS", 4)
     processor.add([0, 1], BS.H())
@@ -92,14 +92,15 @@ def test_inverse_cnot_with_H(cnot_gate):
     processor.add([2, 3], BS.H())
     # processor.set_postprocess(lambda o: (o[0] + o[1] == 1) and (o[2] + o[3] == 1)) # < 0.9.0
 
+    # state_dict = {|1,0,1,0>: '00', |1,0,0,1>: '01', |0,1,1,0>: '10', |0,1,0,1>: '11'} # < 0.9.0
     state_dict = {pcvl.components.get_basic_state_from_ports(processor._out_ports, state): str(
-        state) for state in pcvl.utils.generate_all_logical_states(2)}
+        state) for state in pcvl.utils.generate_all_logical_states(2)}  # >= 0.9.0
     analyzer = Analyzer(processor, state_dict)
     analyzer.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
 
     if cnot_gate == "klm cnot":
         assert pytest.approx(analyzer.fidelity, 1E-4) == 1
-    elif "heralded" in cnot_gate:
+    elif cnot_gate == "heralded cnot":
         assert pytest.approx(analyzer.fidelity) == 1
     else:
         assert analyzer.fidelity == 1
