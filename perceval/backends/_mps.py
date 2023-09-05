@@ -45,7 +45,8 @@ class MPSBackend(AProbAmpliBackend):
     updated step-by-step by a circuit propagation algorithm.
 
     Approximate the probability amplitudes with a cutoff -> bond Dimension in an MPS.
-    - For now only supports Phase shifters and Beam Splitters
+    - For now only supports components for up to 2 modes
+    (Phase shifters and Beam Splitters already implemented)
     """
 
     def __init__(self):
@@ -82,7 +83,6 @@ class MPSBackend(AProbAmpliBackend):
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
-        self._cutoff = input_state.n + 1  # sets the default value of cut-off to max number of photons
         self._compile()
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
@@ -115,10 +115,14 @@ class MPSBackend(AProbAmpliBackend):
             # checks if a given input state for a circuit is already computed
             return False
         self._compiled_input = copy.copy((var, self._input_state))
-        self._current_input = None  # todo: ERIC - do I need to set it to None again?
+        self._current_input = None
+        # self._cutoff = None
 
         self._n = self._input_state.n  # total number of photons
         self._d = self._n + 1  # possible num of photons in each mode {0,1,2,...,n}
+
+        if self._cutoff is None:
+            self._cutoff = self._d  # sets the default value of cut-off to max number of photons
         self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
         # choosing a cut-off smaller than the limit as the size of matrix increases
         # exponentially with cutoff
