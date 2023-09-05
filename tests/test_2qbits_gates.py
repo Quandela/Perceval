@@ -45,7 +45,7 @@ def test_fidelity_and_performance_compare_cnot():
     analyzer_klm_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
     analyzer_klm_cnot_perf = pcvl.simple_float(analyzer_klm_cnot.performance)[1]
 
-    assert pytest.approx(analyzer_klm_cnot.fidelity, 10E-5) == 1
+    assert pytest.approx(analyzer_klm_cnot.fidelity, 1E-4) == 1
 
     # Postprocessed CNOT
     postprocessed_cnot = catalog["postprocessed cnot"].build_processor()
@@ -66,24 +66,40 @@ def test_fidelity_and_performance_compare_cnot():
     assert analyzer_postprocessed_cnot_perf > analyzer_heralded_cnot_perf > analyzer_klm_cnot_perf
 
 
-# We could use H gates on both size of a CZ gate to check CZ phase
-# but since our heralded CNOT is built this way, we don't need to
-@pytest.mark.parametrize("cnot_gate", ["klm cnot", "postprocessed cnot", "heralded cnot"])
-def test_cnot_phase(cnot_gate):
+@pytest.mark.parametrize("cnot_gate", ["klm cnot", "postprocessed cnot", "heralded cnot", "heralded cz"])
+def test_inverse_cnot_with_H(cnot_gate):
+    """Test cnot/cz gate phase by inverting it with Hadamard gates
+
+     ╭───╮   ╭──────────╮   ╭───╮             ╭──────────╮
+ ────┤ H ├───┤  DATA    ├───┤ H ├────      ───┤  CTRL    ├───
+ ────┤   ├───┤          ├───┤   ├────      ───┤          ├───
+     ╰───╯   │  CNOT    │   ╰───╯      <=>    │  CNOT    │
+     ╭───╮   │          │   ╭───╮             │          │
+ ────┤ H ├───┤  CTRL    ├───┤ H ├────      ───┤  DATA    ├───
+ ────┤   ├───┤          ├───┤   ├────      ───┤          ├───
+     ╰───╯   ╰──────────╯   ╰───╯             ╰──────────╯
+
+    :param cnot_gate: cnot/cz catalog gate
+    """
     processor = pcvl.Processor("SLOS", 4)
-    processor.add([2, 3], PERM([1, 0]))
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
     # Commented lines are use to compare with a26b0bd (0.8.1 before cnot fix)
     # processor.add([0, 1, 2, 3], catalog["postprocessed cnot"].as_processor().build()) # < 0.9.0
     # processor.clear_postprocess() # < 0.9.0
-    processor.add([0, 1, 2, 3], catalog[cnot_gate].build_processor())  # >= 0.9.0
+    processor.add([2, 3, 0, 1], catalog[cnot_gate].build_processor())  # >= 0.9.0
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
     # processor.set_postprocess(lambda o: (o[0] + o[1] == 1) and (o[2] + o[3] == 1)) # < 0.9.0
 
-    processor.with_input(BasicState([1, 0, 1, 0]))
-    sampler = Sampler(processor)
-    nb_sample = 10
-    samples = sampler.samples(nb_sample)
-    assert samples['results'].count(BasicState([0, 1, 0, 1])) == nb_sample
+    state_dict = {pcvl.components.get_basic_state_from_ports(processor._out_ports, state): str(
+        state) for state in pcvl.utils.generate_all_logical_states(2)}
+    analyzer = Analyzer(processor, state_dict)
+    analyzer.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+
+    if cnot_gate == "klm cnot":
+        assert pytest.approx(analyzer.fidelity, 1E-4) == 1
+    elif "heralded" in cnot_gate:
+        assert pytest.approx(analyzer.fidelity) == 1
+    else:
+        assert analyzer.fidelity == 1
