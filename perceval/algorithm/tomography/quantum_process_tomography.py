@@ -119,7 +119,7 @@ def thresh(X, eps=10 ** (-6)):
 #               .add(0, PERM([4, 0, 1, 2, 3])))
 #     return c_cnot
 #
-# ##### Important matrices ######################################################################################
+# ##### Important matrices Class Process tomography ######################################################################################
 def pauli(j):
     """
     computes the j-th Pauli operator (I,X,Y,Z)
@@ -239,6 +239,7 @@ def measurement_circuit(j, nqubit):
     return meas_circuit
 
 
+# ##### P and Stokes are part of QST ##############################################################################
 def P(k, n):
     # set of subsets of size k in {0,...,n-1}
     s = {i for i in range(n)}
@@ -326,6 +327,8 @@ def stokes_parameter(num_state, operator_circuit, i, heralded_modes=[], post_pro
 def quantum_state_tomography_mult(state, operator_circuit, nqubit, heralded_modes=[], post_process=False,
                                   renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
     """
+    Suffix mult not necesary- works for both single and multi qubit.
+
     Computes the density matrix of a state after the operator_circuit
 
     :param state: list of length of number of qubits representing the preparation circuit
@@ -356,6 +359,7 @@ def quantum_state_tomography_mult(state, operator_circuit, nqubit, heralded_mode
     return density_matrix
 
 
+# ##### IDK ######################################################################################
 def beta_mult_qubit(j, k, m, n, nqubit):
     d = 2 ** nqubit
     b = ErhoE(m, rho(j, nqubit), n, nqubit)
@@ -449,6 +453,7 @@ def compute_matrix(j):
 
 
 def matrix_basis(nqubit):  # create a matrix basis from all the tensor products states
+    # needed for rho_j and to compute epsilon rho_j
     d = 2 ** nqubit
     B = []
     for j in range(d ** 2):
@@ -467,6 +472,7 @@ def matrix_basis(nqubit):  # create a matrix basis from all the tensor products 
 
 
 def matrix_to_vector(matrix):  # concatenate a matrix d*d into a vector d**2
+    # simply flatten() -> rows after row
     n = len(matrix[0])
     x = np.zeros((n ** 2), dtype='complex_')
     for i in range(n ** 2):
@@ -488,6 +494,7 @@ def vector_to_matrix(vector):  # expand a vector d**2 into a matrix d*d
 
 
 def decomp(matrix, basis):  # linear decomposition of any matrix upon a basis
+    # decomposition used in rho_j creation - process tomography
     n = len(matrix[0])
     y = matrix_to_vector(matrix)
     L = []
@@ -502,6 +509,8 @@ def decomp(matrix, basis):  # linear decomposition of any matrix upon a basis
 
 
 def lambda_mult_ideal(operator, nqubit):
+    # not simulating perceval circuit, but simply a mathematical result for ideal gate
+    # to compute process fidelity
     d = 2 ** nqubit
     L = np.zeros((d ** 2, d ** 2), dtype='complex_')
     for j in range(d ** 2):
@@ -520,6 +529,7 @@ def chi_mult_ideal(operator, nqubit):
     return vector_to_matrix(X)
 
 
+# ##### Fidelity calculations ######################################################################################
 def process_fidelity(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
                      brightness=1, g2=0, indistinguishability=1, loss=0):
     """
@@ -596,12 +606,14 @@ def map_reconstructed(rho, operator_circuit, nqubit, heralded_modes=[], post_pro
     for m in range(d ** 2):
         for n in range(d ** 2):
             eps += X[m, n] * np.linalg.multi_dot([E(m, nqubit), rho, np.transpose(np.conjugate(E(n, nqubit)))])
+    #Eqn 2.4 the exact sum
     return eps
 
 
 def average_fidelity_with_reconstruction(operator, operator_circuit, heralded_modes=[], post_process=False,
                                          renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
     """
+    not so important-computes avg fideltiy in a longer way
     Computes the average fidelity of an operator and its perceval circuit by recontruction of the whole map
 
     :param operator: matrix for the operator
@@ -708,6 +720,7 @@ def average_fidelity(operator, operator_circuit, heralded_modes=[], post_process
 def mixture(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1, g2=0,
             indistinguishability=1, loss=0):
     """
+    ## for CNOT gate - not so important
     Computes the mixture created by a perceval circuit
 
     :param operator_circuit: perceval circuit for the operator
@@ -767,7 +780,9 @@ def is_physical(matrix, eigen_tolerance=10 ** (-6)):
         return True
     return False, s
 
-
+# FIDELITY OPTIMIZER MAKES IMPROVEMENTS. MAYBE NEEDED, NOT WORKING
+###################
+# from here onward -> connected to some formula to calculate fidelity in Ascella paper. Stephen and Rawad
 def int_to_vector(i, nqubit):
     if nqubit == 1:
         if i == 0:
