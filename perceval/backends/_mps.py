@@ -123,6 +123,7 @@ class MPSBackend(AProbAmpliBackend):
         if self._cutoff is None or self._cutoff < self._d:
             self._cutoff = self._d
             # sets the default value of cut-off to max number of photons (also min computation value needed)
+            # todo: discuss with theory team (Rawad) if this is sufficient or a necessity.
         self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
         # choosing a cut-off smaller than the limit as the size of matrix increases
         # exponentially with cutoff
@@ -143,7 +144,7 @@ class MPSBackend(AProbAmpliBackend):
         # This initialization of MPS (gamma and sv) fixes the input state to be completely separable
         # and a pure BasicState (no superposition); hence would have only 1 non-zero element whose value = 1.
         # It is simply written based on this choice as the SVD of such a structure would exactly look like this
-        # todo: maybe make the initialization of MPS more generic - to include mixed/superposed states as input
+        # todo: initialization of MPS could be more generic - to include mixed/superposed states as input
         # methods currently available in ITensors(Julia), Qiskit
 
         for r, c in C:
@@ -253,7 +254,7 @@ class MPSBackend(AProbAmpliBackend):
         s = s[:self._cutoff]  # restricting the size of SV matrices to cut_off -> truncation
 
         self._sv[k] = np.where(s > self._s_min, s, 0)  # updating corresponding sv after the action of BS
-        # todo : _s_min is too low, is this appropriate or we set up another hardcoded value? Rawad?
+        # todo : _s_min seems to too low, is this appropriate? Need to discuss with theory team (Rawad)
 
         # updating self._gamma[k] :: uses v from SVD above
         if k > 0:
