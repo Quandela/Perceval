@@ -281,12 +281,8 @@ class StateVector(defaultdict):
             for key in to_remove:
                 del self[key]
             norm = norm**0.5
-            nkey = len(self.keys())
             for key in self.keys():
-                if nkey == 1:
-                    self[key] = 1
-                else:
-                    self[key] /= norm
+                self[key] /= norm
             self._normalized = True
 
     def __str__(self, nsimplify=True):
