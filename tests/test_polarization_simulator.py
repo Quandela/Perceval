@@ -118,7 +118,7 @@ def test_polarization_circuit_0():
         res = psimu.probs(BasicState("|{P:H}>"))
         assert len(res) == 1
         assert res[BasicState("|1>")] == pytest.approx(1)
-        assert str(psimu.evolve(BasicState("|{P:H}>"))) == '|{P:V}>'
-        assert str(psimu.evolve(BasicState("|{P:V}>"))) == '|{P:H}>'
+        assert str(psimu.evolve(BasicState("|{P:H}>"))) == 'I*|{P:V}>'
+        assert str(psimu.evolve(BasicState("|{P:V}>"))) == 'I*|{P:H}>'
         assert str(psimu.evolve(BasicState("|{P:D}>"))) == 'sqrt(2)*I/2*|{P:H}>+sqrt(2)*I/2*|{P:V}>'
         # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
