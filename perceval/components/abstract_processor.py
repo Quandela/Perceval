@@ -457,7 +457,7 @@ class AProcessor(ABC):
                     has_found_port = True
                     break
             if not has_found_port:
-                raise KeyError(f"Port is not at location '{location.name}'")
+                raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
 
         if location in (PortLocation.IN_OUT, PortLocation.OUTPUT):
             has_found_port = False
@@ -467,7 +467,7 @@ class AProcessor(ABC):
                     has_found_port = True
                     break
             if not has_found_port:
-                raise KeyError(f"Port is not at location '{location.name}'")
+                raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
         return self
 
     @property

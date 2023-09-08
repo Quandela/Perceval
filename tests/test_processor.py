@@ -164,7 +164,7 @@ def test_add_remove_ports():
 
     processor.remove_port(2, pcvl.PortLocation.OUTPUT)
 
-    with pytest.raises(KeyError):
+    with pytest.raises(pcvl.components.UnavailableModeException):
         processor.remove_port(2, pcvl.PortLocation.OUTPUT)
 
     with pytest.raises(pcvl.components.UnavailableModeException):
@@ -191,7 +191,7 @@ def test_add_remove_ports():
     processor.remove_port(2, pcvl.PortLocation.INPUT)
     processor.remove_port(4, pcvl.PortLocation.INPUT)
 
-    with pytest.raises(KeyError):
+    with pytest.raises(pcvl.components.UnavailableModeException):
         processor.remove_port(2, pcvl.PortLocation.INPUT)
 
     for i in range(6):
