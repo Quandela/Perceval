@@ -26,42 +26,34 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from deprecated import deprecated
-from perceval.components import Circuit, Unitary, Port
+from perceval.components import Circuit, Port, BS
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.utils import Encoding, Matrix, PostSelect
+from perceval.components.core_catalog.postprocessed_ccz import PostProcessedCCZItem
+from perceval.utils import Encoding, PostSelect
 
 
 class ToffoliItem(CatalogItem):
-    description = r"""Toffoli gate (CCNOT) with 6 heralded modes"""
-    str_repr = r"""                       ╭─────╮
-ctrl0 (dual rail) ─────┤     ├───── ctrl0 (dual rail)
-                  ─────┤     ├─────
-                       │     │
-ctrl1 (dual rail) ─────┤     ├───── ctrl1 (dual rail)
-                  ─────┤     ├─────
-                       │     │
-data (dual rail)  ─────┤     ├───── data (dual rail)
-                  ─────┤     ├─────
-                       ╰─────╯"""
+    description = r"""Toffoli gate CCNOT gate with 6 heralded modes and a post-selection function (built using Heralded CCZ and H)."""
+    str_repr = r"""                               ╭──────────╮
+ctrl0 (dual rail) ─────────────┤          ├───────────── ctrl0 (dual rail)
+                  ─────────────┤          ├─────────────
+ctrl1 (dual rail) ─────────────┤          ├───────────── ctrl1 (dual rail)
+                  ─────────────┤ Heralded ├─────────────
+                       ╭───╮   │    CZ    │   ╭───╮
+data (dual rail)  ─────┤ H ├───┤          ├───┤ H ├───── data  (dual rail)
+                  ─────┤   ├───┤          ├───┤   ├─────
+                       ╰───╯   ╰──────────╯   ╰───╯"""
 
     def __init__(self):
         super().__init__("toffoli")
 
     def build_circuit(self, **kwargs):
-        U = Unitary(Matrix([[3.12177488e-17 + 5.09824529e-01j, 0, 0, 0, 0, 0, 0, 0, 0, 5.26768603e-17 + 8.60278414e-01j, 0, 0],
-                            [0, 5.09824529e-01, 0, 3.21169328e-01 + 5.56281593e-01j, 0, 0, 3.30393706e-01, -1.65196853e-01 - 2.86129342e-01j, -1.65196853e-01 + 2.86129342e-01j, 0, 0, 0],
-                            [0, 0, -5.09824529e-01 + 6.24354977e-17j, 0, 0, 0, 0, 0, 0, 0, -8.60278414e-01 + 1.05353721e-16j, 0],
-                            [0, 0, 0, 5.09824529e-01, -2.27101009e-01 - 3.93350487e-01j, 2.27101009e-01 + 3.93350487e-01j, -1.65196853e-01 + 2.86129342e-01j, 3.30393706e-01, -1.65196853e-01 - 2.86129342e-01j, 0, 0, 0],
-                            [0, -2.27101009e-01 - 3.93350487e-01j, 0, 0, 5.09824529e-01, 2.36888256e-17, 1.16811815e-01 + 2.02323998e-01j, 1.16811815e-01 - 2.02323998e-01j, -2.33623630e-01, 0, 0, 6.08308700e-01],
-                            [0, 2.27101009e-01 + 3.93350487e-01j, 0, 0, 2.36888256e-17, 5.09824529e-01, -1.16811815e-01 - 2.02323998e-01j, -1.16811815e-01 + 2.02323998e-01j, 2.33623630e-01, 0, 0, 6.08308700e-01],
-                            [0, 3.30393706e-01, 0, -1.65196853e-01 - 2.86129342e-01j, 1.16811815e-01 - 2.02323998e-01j, -1.16811815e-01 + 2.02323998e-01j, -5.09824529e-01, 0, -3.21169328e-01 + 5.56281593e-01j, 0, 0, 0],
-                            [0, -1.65196853e-01 + 2.86129342e-01j, 0, 3.30393706e-01, 1.16811815e-01 + 2.02323998e-01j, -1.16811815e-01 - 2.02323998e-01j, -3.21169328e-01 + 5.56281593e-01j, -5.09824529e-01, 0, 0, 0, 0],
-                            [0, -1.65196853e-01 - 2.86129342e-01j, 0, -1.65196853e-01 + 2.86129342e-01j, -2.33623630e-01, 2.33623630e-01, 0, -3.21169328e-01 + 5.56281593e-01j, -5.09824529e-01, 0, 0, 0],
-                            [8.60278414e-01, 0, 0, 0, 0, 0, 0, 0, 0, -5.09824529e-01, 0, 0],
-                            [0, 0, 8.60278414e-01, 0, 0, 0, 0, 0, 0, 0, -5.09824529e-01, 0],
-                            [0, 0, 0, 0, 6.08308700e-01, 6.08308700e-01, 0, 0, 0, 0, 0, -5.09824529e-01]]))
-        return (Circuit(12, name="Toffoli").add(0, U))
+        c = Circuit(12, name="Toffoli")
+        c.add(4, BS.H())
+        postprocessed_ccz = PostProcessedCCZItem()
+        c.add(0, postprocessed_ccz.build_circuit(), merge=True)
+        c.add(4, BS.H())
+        return c
 
     def build_processor(self, **kwargs):
         p = self._init_processor(**kwargs)
