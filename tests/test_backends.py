@@ -56,7 +56,6 @@ def _assert_cnot(backend: AProbAmpliBackend):
     assert pytest.approx(backend.probability(s10)) == 1 / 9
 
 
-
 def test_clifford_bs():
     cliff_bs = Clifford2017Backend()
     cliff_bs.set_circuit(BS.H())
@@ -205,10 +204,6 @@ def test_probampli_backends():
                 BasicState("|0,2,0>"): 0.25,
                 BasicState("|0,0,2>"): 0.25,
             })
-
-        if backend_type == MPSBackend:
-            warnings.warn("MPS backend is currently broken for input states with multiple photons per mode")
-            continue
 
         backend.set_circuit(BS())
         check_output_distribution(
