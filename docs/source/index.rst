@@ -93,6 +93,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Reinforcement learning
    notebooks/QUBO
    notebooks/Graph States and representation
+   notebooks/gedik_qudit
 
 .. toctree::
    :caption: Code Reference
