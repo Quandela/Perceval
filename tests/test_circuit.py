@@ -371,3 +371,27 @@ def test_getitem2_value():
 def test_getitem3_parameter():
     c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
     assert c.getitem((0, 0), True).describe() == "PS(phi=phi1)"
+
+
+def test_x_grid_1_setting_values():
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    with pytest.raises(ValueError):
+        c.add(1, comp.BS(), x_grid=1)
+    # reinitialize the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    with pytest.raises(ValueError):
+        c.add(2, comp.BS(), x_grid=1)
+    # reinitialize again the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    c.add(0, comp.BS(), x_grid=3)
+    c.add(2, comp.BS(), x_grid=3)

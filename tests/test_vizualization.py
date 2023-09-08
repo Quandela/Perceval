@@ -36,6 +36,9 @@ import perceval as pcvl
 from perceval.components.unitary_components import *
 from perceval.components.non_unitary_components import *
 from perceval.rendering import pdisplay_to_file, Format
+from perceval.rendering.pdisplay import pdisplay_circuit
+from perceval import catalog
+
 from pathlib import Path
 import re
 import sympy as sp
