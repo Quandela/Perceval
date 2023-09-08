@@ -448,6 +448,28 @@ class AProcessor(ABC):
             self._out_ports[port] = port_range
         return self
 
+    def remove_port(self, m, location: PortLocation = PortLocation.IN_OUT):
+        if location in (PortLocation.IN_OUT, PortLocation.INPUT):
+            has_found_port = False
+            for current_port, current_port_range in self._in_ports.items():
+                if m in current_port_range:
+                    del self._in_ports[current_port]
+                    has_found_port = True
+                    break
+            if not has_found_port:
+                raise KeyError(f"Port is not at location '{location.name}'")
+
+        if location in (PortLocation.IN_OUT, PortLocation.OUTPUT):
+            has_found_port = False
+            for current_port, current_port_range in self._out_ports.items():
+                if m in current_port_range:
+                    del self._out_ports[current_port]
+                    has_found_port = True
+                    break
+            if not has_found_port:
+                raise KeyError(f"Port is not at location '{location.name}'")
+        return self
+
     @property
     def _closed_photonic_modes(self):
         output = [False] * self.circuit_size
