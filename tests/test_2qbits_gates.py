@@ -28,11 +28,12 @@
 # SOFTWARE.
 
 import pytest
+import numpy as np
 
 import perceval as pcvl
-from perceval import BasicState
-from perceval.components import catalog, BS, PERM
-from perceval.algorithm import Analyzer, Sampler
+from perceval import BasicState, generate_all_logical_states, SimulatorFactory
+from perceval.components import catalog, BS, get_basic_state_from_ports
+from perceval.algorithm import Analyzer
 
 
 def test_fidelity_and_performance_compare_cnot():
@@ -66,8 +67,62 @@ def test_fidelity_and_performance_compare_cnot():
     assert analyzer_postprocessed_cnot_perf > analyzer_heralded_cnot_perf > analyzer_klm_cnot_perf
 
 
+def check_cz_with_heralds(processor, herald_states, error=1E-6):
+    """Check if the cz is correct
+
+    :param processor: CZ processor to check, we assume that ctrl is on [0,1]
+    and data on [2,3]
+    :param herald_states: Basic state corresponding to the heralded or ancillary modes
+    at the end of the circuit
+    :param error: Tolerance for the real part of the prob_amplitude (when not expecting 0), defaults to 1E-6
+    This param represent whether this cz gate is balanced
+    """
+    ports = [pcvl.Port(pcvl.Encoding.DUAL_RAIL, "")] * 2
+    states = [get_basic_state_from_ports(ports, state) * herald_states for state in generate_all_logical_states(2)]
+    ccz = processor
+    sim = SimulatorFactory().build(ccz)
+    value = None
+    for i_state in states:
+        for o_state in states:
+            pa = sim.prob_amplitude(i_state, o_state)
+            if i_state == o_state:
+                if value is None:
+                    value = np.real(pa)
+                if i_state != BasicState("|0,1,0,1>") * herald_states:
+                    assert pytest.approx(np.real(pa), error) == value
+                else:
+                    assert pytest.approx(np.real(pa), error) == -value
+                assert pytest.approx(np.imag(pa)) == 0
+            else:
+                assert pytest.approx(np.imag(pa)) == 0
+                assert pytest.approx(np.real(pa)) == 0
+
+
+def test_cz_phase():
+    check_cz_with_heralds(catalog["heralded cz"].build_processor(), BasicState("|1,1>"), 1E-3)
+
+    processor = pcvl.Processor("SLOS", 4)
+    processor.add(2, BS.H())
+    processor.add(0, catalog["heralded cnot"].build_processor())
+    processor.add(2, BS.H())
+    check_cz_with_heralds(processor, BasicState("|1,1>"), 1E-3)
+
+    processor = pcvl.Processor("SLOS", 4)
+    processor.add(2, BS.H())
+    processor.add(0, catalog["klm cnot"].build_processor())
+    processor.add(2, BS.H())
+    check_cz_with_heralds(processor, BasicState("|0,1,0,1>"), 1E-2)
+
+    processor = pcvl.Processor("SLOS", 4)
+    processor.add(2, BS.H())
+    processor.add(0, catalog["postprocessed cnot"].build_processor())
+    processor.add(2, BS.H())
+    check_cz_with_heralds(processor, BasicState("|0,0>"))
+
+
+@pytest.mark.skip(reason="redundant with overhead test")
 @pytest.mark.parametrize("cnot_gate", ["klm cnot", "postprocessed cnot", "heralded cnot"])
-def test_inverse_cnot_with_H(cnot_gate):
+def test_inverse_cnot(cnot_gate):
     """Test cnot gate phase by inverting it with Hadamard gates
 
      ╭───╮   ╭──────────╮   ╭───╮             ╭──────────╮
