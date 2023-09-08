@@ -30,6 +30,7 @@
 import numpy as np
 import perceval as pcvl
 from perceval.components import catalog, BS, PS, PERM, Unitary
+from perceval.components import ACircuit, Circuit
 import itertools
 from scipy.stats import unitary_group
 from perceval.simulators import Simulator
@@ -178,66 +179,96 @@ def ErhoE(m, rhoj, n, nqubit):
 
 
 # ##### preparation circuit ######################################################################################
-def prep_circ_single_qubit(j):
+class PreparationCircuit:
     """
-    Prepares one photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
+    Builds a preparation circuit to prepares one photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
 
-    :param j: int between 0 and 3
-    :return: 2 modes perceval circuit
+    :param j: jth Pauli Matrix I,X,Y,Z. Value of j between 0 and 3
+    :param nqubit: Number of Qubits
     """
-    prep_circuit = pcvl.Circuit(2)
-    if j == 1:
-        prep_circuit.add(0, PERM([1, 0]))
-    if j // 2 == 1:
-        prep_circuit.add(0, BS.H())
-    if j == 3:
-        prep_circuit.add(1, PS(np.pi / 2))
-    return prep_circuit  # todo: ask how to choose which circuit
+    def __init__(self, j: int, nqubit: int) -> Circuit:
+        self._nqubit = nqubit
+        self._j = j
+        self._prep_circuit = Circuit(2*nqubit, name="Preparation Circ")
 
+    def _prep_circ_single_qubit(self, j:int) -> Circuit:
+        """
+        Prepares one photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
 
-def prep_circuit_multi_qubit(j, nqubit):
-    """
-    Prepares each photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
+        :param j: int between 0 and 3
+        :return: 2 modes perceval circuit
+        """
+        prep_circuit = pcvl.Circuit(2)
+        if j == 1:
+            return self._prep_circuit.add(0, PERM([1, 0]))
+        if j == 2:
+            return self._prep_circuit.add(0, BS.H())
+        if j == 3:
+            return self._prep_circuit.add(0, BS.H()).add(1, PS(np.pi / 2))
 
-    :param j: int between 0 and 4**nqubit-1
-    :param nqubit: number of qubits
-    :return: 2*nqubit modes perceval circuit
-    """
-    prep_circuit = pcvl.Circuit(2 * nqubit)
-    for m in range(len(j)):
-        prep_circuit.add(2 * m, prep_circ_single_qubit(j[m]), merge=True)
-    return prep_circuit
+    def _prep_circ_multi_qubit(self, j:int):
+        """
+        Prepares each photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
+
+        :param j: int between 0 and 4**nqubit-1
+        :param nqubit: number of qubits
+        :return: 2*nqubit modes perceval circuit
+        """
+        for m in range(len(j)):
+            return self._prep_circuit.add(2 * m, self._prep_circ_single_qubit(j[m]), merge=True)
+
+    def build_preparation_circuit(self):
+        if self._nqubit == 1:
+            self._prep_circ_single_qubit(self._j)
+        else:
+            self._prep_circ_multi_qubit(self._j)
+        return self._prep_circuit
 
 
 # ##### measurement circuit ######################################################################################
-def meas_circ_single_qubit(j):
+class MeasurementCircuit:
     """
-    Measures the photon in the pauli basis I,X,Y,Z
+    Builds a measurement circuit in the Pauli Basis (I,X,Y,Z) to perform tomography experiments.
 
-    :param j: int between 0 and 3
-    :return: 2 modes perceval circuit
+    :param j: jth Pauli Matrix I,X,Y,Z. Value of j between 0 and 3
+    :param nqubit: Number of Qubits
     """
-    meas_circuit = pcvl.Circuit(2)
-    if j == 1:
-        meas_circuit.add(0, BS.H())
-    if j == 2:
-        meas_circuit.add(0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
-    return meas_circuit
+    def __init__(self, j: int, nqubit: int) -> Circuit:
+        self._nqubit = nqubit
+        self._j = j
+        self._meas_circuit = Circuit(2*nqubit, name="Measurement Circ")
 
+    def _meas_circ_single_qubit(self, j: int) -> Circuit:
+        """
+        Measures the photon in the pauli basis I,X,Y,Z
 
-def measurement_circuit(j, nqubit):
-    """
-     Measures each photon in the pauli basis
+        :param j: int between 0 and 3
+        :return: 2 modes perceval circuit
+        """
+        if j == 1:
+            return self._meas_circuit.add(0, BS.H())
+        elif j == 2:
+            return self._meas_circuit.add(0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
+        else:
+            return self._meas_circuit
 
-    :param j: int between 0 and 4**nqubit-1
-    :param nqubit: number of qubits
-    :return: 2*nqubit modes perceval circuit
-    """
-    meas_circuit = pcvl.Circuit(2 * nqubit)
-    for m in range(len(j)):
-        meas_circuit.add(2 * m, meas_circ_single_qubit(j[m]), merge=True)
-    return meas_circuit
+    def _meas_circ_multi_qubit(self, j):
+        """
+         Measures each photon in the pauli basis
 
+        :param j: int between 0 and 4**nqubit-1
+        :param nqubit: number of qubits
+        :return: 2*nqubit modes perceval circuit
+        """
+        for m in range(len(j)):
+            return self._meas_circuit.add(2 * m, self.meas_circ_single_qubit(j[m]), merge=True)
+
+    def build_measurement_circuit(self):
+        if self._nqubit == 1:
+            self._meas_circ_single_qubit(self._j)
+        else:
+            self._meas_circ_multi_qubit(self._j)
+        return self._meas_circuit
 
 # ##### P and Stokes are part of QST ##############################################################################
 def P(k, n):
@@ -265,9 +296,11 @@ def stokes_parameter(num_state, operator_circuit, i, heralded_modes=[], post_pro
     :return: float
     """
     nqubit = len(i)
+    ###QPT CIRCUIT : TODO: make all circuits in one place in one class
     qpt_circuit = pcvl.Circuit(2 * nqubit + len(heralded_modes))
     # state preparation
-    qpt_circuit.add(0, prep_circuit_multi_qubit(num_state, nqubit))
+    qpt_circuit.add(0,
+                    prep_circuit_multi_qubit(num_state, nqubit))
     # unknown operator
     qpt_circuit.add(0, operator_circuit)
     # measurement operator
