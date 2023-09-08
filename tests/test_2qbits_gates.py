@@ -31,40 +31,37 @@ import pytest
 import numpy as np
 
 import perceval as pcvl
-from perceval import BasicState, generate_all_logical_states, SimulatorFactory
+from perceval import BasicState, generate_all_logical_states, SimulatorFactory, Processor
 from perceval.components import catalog, BS, get_basic_state_from_ports
 from perceval.algorithm import Analyzer
 
 
-def test_fidelity_and_performance_compare_cnot():
+def test_fidelity_and_performance_cnot():
     # Tests the performance and the fidelity of different CNOT in perceval
-    # KLM CNOT
-    klm_cnot = catalog["klm cnot"].build_processor()
-    state_dict = {pcvl.components.get_basic_state_from_ports(klm_cnot._out_ports, state): str(
+    ports = [pcvl.Port(pcvl.Encoding.DUAL_RAIL, "")] * 2
+    state_dict = {pcvl.components.get_basic_state_from_ports(ports, state): str(
         state) for state in pcvl.utils.generate_all_logical_states(2)}
-    analyzer_klm_cnot = Analyzer(klm_cnot, state_dict)
-    analyzer_klm_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-    analyzer_klm_cnot_perf = pcvl.simple_float(analyzer_klm_cnot.performance)[1]
+    expected = {"00": "00", "01": "01", "10": "11", "11": "10"}
+
+    # KLM CNOT
+    analyzer_klm_cnot = Analyzer(catalog["klm cnot"].build_processor(), state_dict)
+    analyzer_klm_cnot.compute(expected=expected)
 
     assert pytest.approx(analyzer_klm_cnot.fidelity, 1E-4) == 1
 
     # Postprocessed CNOT
-    postprocessed_cnot = catalog["postprocessed cnot"].build_processor()
-    analyzer_postprocessed_cnot = Analyzer(postprocessed_cnot, state_dict)
-    analyzer_postprocessed_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-    analyzer_postprocessed_cnot_perf = pcvl.simple_float(analyzer_postprocessed_cnot.performance)[1]
+    analyzer_postprocessed_cnot = Analyzer(catalog["postprocessed cnot"].build_processor(), state_dict)
+    analyzer_postprocessed_cnot.compute(expected=expected)
 
     assert analyzer_postprocessed_cnot.fidelity == 1
 
     # CNOT using CZ : called - Heralded CNOT
-    heralded_cnot = catalog["heralded cnot"].build_processor()
-    analyzer_heralded_cnot = Analyzer(heralded_cnot, state_dict)
-    analyzer_heralded_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
-    analyzer_heralded_cnot_perf = pcvl.simple_float(analyzer_heralded_cnot.performance)[1]
+    analyzer_heralded_cnot = Analyzer(catalog["heralded cnot"].build_processor(), state_dict)
+    analyzer_heralded_cnot.compute(expected=expected)
 
     assert pytest.approx(analyzer_heralded_cnot.fidelity) == 1
 
-    assert analyzer_postprocessed_cnot_perf > analyzer_heralded_cnot_perf > analyzer_klm_cnot_perf
+    assert analyzer_postprocessed_cnot.performance > analyzer_heralded_cnot.performance > analyzer_klm_cnot.performance
 
 
 def check_cz_with_heralds(processor, herald_states, error=1E-6):
@@ -79,41 +76,45 @@ def check_cz_with_heralds(processor, herald_states, error=1E-6):
     """
     ports = [pcvl.Port(pcvl.Encoding.DUAL_RAIL, "")] * 2
     states = [get_basic_state_from_ports(ports, state) * herald_states for state in generate_all_logical_states(2)]
-    ccz = processor
-    sim = SimulatorFactory().build(ccz)
+    sim = SimulatorFactory().build(processor)
+    data_state = BasicState("|0,1,0,1>") * herald_states
     value = None
     for i_state in states:
         for o_state in states:
             pa = sim.prob_amplitude(i_state, o_state)
+            rpa = np.real(pa)
+            ipa = np.imag(pa)
             if i_state == o_state:
                 if value is None:
                     value = np.real(pa)
-                if i_state != BasicState("|0,1,0,1>") * herald_states:
-                    assert pytest.approx(np.real(pa), error) == value
+                if i_state != data_state:
+                    assert pytest.approx(rpa, error) == value
+                    assert rpa > 0
                 else:
-                    assert pytest.approx(np.real(pa), error) == -value
-                assert pytest.approx(np.imag(pa)) == 0
+                    assert pytest.approx(rpa, error) == -value
+                    assert rpa < 0
+                assert pytest.approx(ipa) == 0
             else:
-                assert pytest.approx(np.imag(pa)) == 0
-                assert pytest.approx(np.real(pa)) == 0
+                assert pytest.approx(rpa) == 0
+                assert pytest.approx(ipa) == 0
 
 
 def test_cz_phase():
     check_cz_with_heralds(catalog["heralded cz"].build_processor(), BasicState("|1,1>"), 1E-3)
 
-    processor = pcvl.Processor("SLOS", 4)
+    processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["heralded cnot"].build_processor())
     processor.add(2, BS.H())
     check_cz_with_heralds(processor, BasicState("|1,1>"), 1E-3)
 
-    processor = pcvl.Processor("SLOS", 4)
+    processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["klm cnot"].build_processor())
     processor.add(2, BS.H())
     check_cz_with_heralds(processor, BasicState("|0,1,0,1>"), 1E-2)
 
-    processor = pcvl.Processor("SLOS", 4)
+    processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["postprocessed cnot"].build_processor())
     processor.add(2, BS.H())
@@ -136,7 +137,7 @@ def test_inverse_cnot(cnot_gate):
 
     :param cnot_gate: cnot catalog gate
     """
-    processor = pcvl.Processor("SLOS", 4)
+    processor = Processor("SLOS", 4)
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
     # Commented lines are use to compare with a26b0bd (0.8.1 before cnot fix)
