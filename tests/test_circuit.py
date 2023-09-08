@@ -31,8 +31,8 @@ import pytest
 from pathlib import Path
 from collections import Counter
 
-from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
-from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
+from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor, GenericInterferometer
+from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
@@ -269,11 +269,11 @@ def _gen_bs(i: int):
 
 # noinspection PyTypeChecker
 def test_generator():
-    c = Circuit.generic_interferometer(5, _gen_bs)
+    c = GenericInterferometer(5, _gen_bs)
     assert len(c.get_parameters()) == 5*4/2
-    c = Circuit.generic_interferometer(5, _gen_bs, depth=1)
+    c = GenericInterferometer(5, _gen_bs, depth=1)
     assert len(c.get_parameters()) == 2
-    c = Circuit.generic_interferometer(5, _gen_bs, depth=2)
+    c = GenericInterferometer(5, _gen_bs, depth=2)
     assert len(c.get_parameters()) == 4
 
 
@@ -371,3 +371,27 @@ def test_getitem2_value():
 def test_getitem3_parameter():
     c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
     assert c.getitem((0, 0), True).describe() == "PS(phi=phi1)"
+
+
+def test_x_grid_1_setting_values():
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    with pytest.raises(ValueError):
+        c.add(1, comp.BS(), x_grid=1)
+    # reinitialize the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    with pytest.raises(ValueError):
+        c.add(2, comp.BS(), x_grid=1)
+    # reinitialize again the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    c.add(0, comp.BS(), x_grid=3)
+    c.add(2, comp.BS(), x_grid=3)

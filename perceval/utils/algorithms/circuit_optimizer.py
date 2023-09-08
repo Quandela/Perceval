@@ -30,7 +30,7 @@
 from typing import Callable, Tuple, Union
 
 import exqalibur as xq
-from perceval.components import ACircuit, Circuit, BS, PS, catalog
+from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
 from perceval.utils import Matrix, P
 from perceval.serialization import serialize_binary, deserialize_circuit
 
@@ -98,7 +98,7 @@ class CircuitOptimizer:
         >>>    return Circuit(2) // PS(P(f"phi_1_{i}")) // BS() // PS(P(f"phi_2_{i}")) // BS()
         >>> def ps(i):
         >>>    return PS(P(f"phi_3_{i}"))
-        >>> template = Circuit.generic_interferometer(12, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
+        >>> template = GenericInterferometer(12, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
         >>> random_unitary = Matrix.random_unitary(12)
         >>> result_circuit, fidelity = CircuitOptimizer().optimize(random_unitary, template)
         """
@@ -137,7 +137,7 @@ class CircuitOptimizer:
 
         if template_component_generator_func is None:
             template_component_generator_func = catalog["mzi phase first"].generate
-        template = Circuit.generic_interferometer(
+        template = GenericInterferometer(
             target.shape[0],
             template_component_generator_func,
             phase_shifter_fun_gen=_gen_ps,

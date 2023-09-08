@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-from perceval import Circuit, P, Matrix
+from perceval import Circuit, P, Matrix, GenericInterferometer, InterferometerShape
 import perceval.components.unitary_components as comp
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
@@ -124,8 +124,8 @@ def test_transfer_complex_5():
                     // (0, comp.PS(phi=P("φ_a%d" % idx)))
                     // comp.BS()
                     // (0, comp.PS(phi=P("φ_b%d" % idx))))
-        C1 = Circuit.decomposition(M, ub(0), shape="triangle")
-    C2 = Circuit.generic_interferometer(8, ub, shape="triangle")
+        C1 = Circuit.decomposition(M, ub(0), shape=InterferometerShape.TRIANGLE)
+    C2 = GenericInterferometer(8, ub, shape=InterferometerShape.TRIANGLE)
     C2.transfer_from(C1)
     def ub_varbs(idx):
         return (Circuit(2)
@@ -133,5 +133,5 @@ def test_transfer_complex_5():
                 // (0, comp.PS(phi=0))
                 // comp.BS(theta=P("theta%d" % (2*idx+1)))
                 // (0, comp.PS(phi=0)))
-    C3 = Circuit.generic_interferometer(8, ub_varbs, shape="triangle")
+    C3 = GenericInterferometer(8, ub_varbs, shape=InterferometerShape.TRIANGLE)
     C3.transfer_from(C1, force=True)

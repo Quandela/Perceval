@@ -80,9 +80,8 @@ class ICircuitRenderer(ABC):
                        shift: int = 0,
                        recursive: bool = False,
                        precision: float = 1e-6,
-                       nsimplify: bool = True):
-        """
-        Renders the input circuit
+                       nsimplify: bool = True) -> None:
+        """Renders the input circuit
         """
         if not isinstance(circuit, Circuit):
             variables = circuit.get_variables(map_param_kid)
@@ -90,22 +89,31 @@ class ICircuitRenderer(ABC):
             self.append_circuit([p + shift for p in range(circuit.m)], circuit, description)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
-            for _, (r, c) in enumerate(circuit._components):
-                shiftr = [p+shift for p in r]
-                if c.is_composite() and c._components:
-                    if recursive:
-                        self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
-                        self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
-                                            precision=precision, nsimplify=nsimplify)
-                        self.close_subblock(shiftr)
+            grouped_components = circuit.group_components_by_xgrid()
+            for group in grouped_components:
+                # each component of the group is to be rendered at the same horizontal position, use built-in
+                # extend_pos method for that
+                pos = None
+                if len(group) > 1:
+                    pos = -1
+                    for r, _ in group:
+                        pos = max(pos, self.max_pos(r[0], r[-1]))
+                for r, c in group:
+                    shiftr = [p+shift for p in r]
+                    if c.is_composite() and c._components:
+                        if recursive:
+                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
+                            self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
+                                                precision=precision, nsimplify=nsimplify)
+                            self.close_subblock(shiftr)
+                        else:
+                            component_vars = c.get_variables(map_param_kid)
+                            description = format_parameters(component_vars, precision, nsimplify)
+                            self.append_subcircuit(shiftr, c, description)
                     else:
                         component_vars = c.get_variables(map_param_kid)
                         description = format_parameters(component_vars, precision, nsimplify)
-                        self.append_subcircuit(shiftr, c, description)
-                else:
-                    component_vars = c.get_variables(map_param_kid)
-                    description = format_parameters(component_vars, precision, nsimplify)
-                    self.append_circuit(shiftr, c, description)
+                        self.append_circuit(shiftr, c, description, pos=pos)
 
         self.extend_pos(0, circuit.m - 1)
 
@@ -116,7 +124,7 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def max_pos(self, start, end, header) -> int:
+    def max_pos(self, start, end) -> int:
         """
         Returns the highest horizontal position on the circuit graph, between start and end modes (in AU)
         """
@@ -219,15 +227,18 @@ class TextRenderer(ICircuitRenderer):
         for k in range(self._nsize):
             self._h[self._hc*k+2] += "──"
 
-    def max_pos(self, start, end, header):
+    def max_pos(self, start, end, header=False):
         maxpos = 0
         for nl in range(start*self._hc+(not header and 1 or 0), end*self._hc+4+(header and 1 or 0)):
             if len(self._h[nl]) > maxpos:
                 maxpos = len(self._h[nl])
         return maxpos
 
-    def extend_pos(self, start, end, internal=False, header=False, char=" "):
-        maxpos = self.max_pos(start, end, header)
+    def extend_pos(self, start, end, internal=False, header=False, char=" ", pos=None):
+        if pos is None:
+            maxpos = self.max_pos(start, end, header)
+        else:
+            maxpos = pos
         for i in range(start*self._hc+(not header and 1 or 0), end*self._hc+4+((header and not internal) and 1 or 0)):
             if internal:
                 self._h[i] += char*(maxpos-len(self._h[i]))
@@ -265,11 +276,11 @@ class TextRenderer(ICircuitRenderer):
         self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
         self.close_subblock(lines)
 
-    def append_circuit(self, lines, circuit, content):
+    def append_circuit(self, lines, circuit, content, pos=None):
         # opening the box
         start = lines[0]
         end = lines[-1]
-        self.extend_pos(start, end)
+        self.extend_pos(start, end, pos=pos)
         # put variables on the right number of lines
         content = circuit.name + (content and "\n"+content or "")
         lcontents = content.split("\n")
@@ -441,8 +452,11 @@ class CanvasRenderer(ICircuitRenderer):
     def max_pos(self, start, end, _=None):
         return max(self._chart[start:end+1])
 
-    def extend_pos(self, start, end):
-        maxpos = self.max_pos(start, end)
+    def extend_pos(self, start, end, pos=None):
+        if pos is None:
+            maxpos = self.max_pos(start, end)
+        else:
+            maxpos = pos
         for p in range(start, end+1):
             if self._chart[p] != maxpos:
                 self._canvas.set_offset((CanvasRenderer.affix_all_size+self._chart[p]*50, p*50),
@@ -452,12 +466,12 @@ class CanvasRenderer(ICircuitRenderer):
                     self._canvas.add_mline([0, 25, (maxpos-self._chart[p])*50, 25], **style)
             self._chart[p] = maxpos
 
-    def _add_shape(self, lines, circuit, content, w, shape_fn=None):
+    def _add_shape(self, lines, circuit, content, w, shape_fn=None, pos=None):
         if shape_fn is None:
             shape_fn = self._skin.get_shape(circuit)
         start = lines[0]
         end = lines[-1]
-        self.extend_pos(start, end)
+        self.extend_pos(start, end, pos=pos)
         max_pos = self.max_pos(start, end)
         self._canvas.set_offset((CanvasRenderer.affix_all_size + 50 * max_pos, 50 * start), 50 * w,
                                 50 * (end - start + 1))
@@ -520,9 +534,9 @@ class CanvasRenderer(ICircuitRenderer):
                 p.fixed = False
         # END Mode tracking + herald positionning algo
 
-    def append_circuit(self, lines, circuit, content):
+    def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
-        self._add_shape(lines, circuit, content, w)
+        self._add_shape(lines, circuit, content, w, pos=pos)
         self._update_mode_style(lines, circuit, w)
         for i in range(lines[0], lines[-1] + 1):
             self._chart[i] += w

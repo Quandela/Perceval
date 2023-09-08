@@ -36,12 +36,13 @@ from typing import Any, Dict, List, Union, Callable
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
-from .port import LogicalState, Herald, PortLocation, APort
+from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
+from perceval.utils import LogicalState
 
 
 class ProcessorType(Enum):
@@ -511,7 +512,7 @@ class AProcessor(ABC):
         return pos
 
     def _with_logical_input(self, input_state: LogicalState):
-        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         self.with_input(input_state)
 
     @abstractmethod

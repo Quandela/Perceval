@@ -28,12 +28,12 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import List
+from enum import Enum
 
-from perceval.utils import BasicState
-from perceval.utils import Encoding
+from perceval.utils import BasicState, Encoding, LogicalState
 from .abstract_component import AComponent
+
 
 def _port_size(encoding: Encoding):
     if encoding == Encoding.DUAL_RAIL:
@@ -67,6 +67,20 @@ class APort(AComponent):
         Returns True if the photonic mode is closed by the port
         """
 
+    @staticmethod
+    @abstractmethod
+    def has_basic_state_equivalent() -> bool:
+        """
+        Returns True if the port has a basic state equivalent
+        """
+
+    @staticmethod
+    @abstractmethod
+    def has_logical_state_equivalent() -> bool:
+        """
+        Returns True if the port has a logical state equivalent
+        """
+
 
 class Port(APort):
     def __init__(self, encoding, name):
@@ -80,6 +94,30 @@ class Port(APort):
 
     def is_output_photonic_mode_closed(self):
         return False
+
+    @staticmethod
+    def has_basic_state_equivalent() -> bool:
+        return True
+
+    @staticmethod
+    def has_logical_state_equivalent() -> bool:
+        return True
+
+    def to_basic_state(self, qubit_state: int) -> BasicState:
+        """Return the equivalent BasicState from the qubit state
+
+        :param state: qubit state (0 or 1)
+        :raises NotImplementedError: QUBIT and POLARIZATION encoding not currently supported
+        :return: The corresponding BasicState
+        """
+        if qubit_state not in [0, 1]:
+            raise ValueError("state should be 0 or 1")
+        if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
+            return BasicState([int(qubit_state)])
+        elif self.encoding == Encoding.DUAL_RAIL:
+            return BasicState("|0,1>") if qubit_state else BasicState("|1,0>")
+        elif self.encoding == Encoding.QUDIT or self.encoding == Encoding.POLARIZATION:
+            raise NotImplementedError
 
 
 class QuditPort(Port):
@@ -111,6 +149,19 @@ class Herald(APort):
     def expected(self):
         return self._value
 
+    @staticmethod
+    def has_basic_state_equivalent() -> bool:
+        return True
+
+    @staticmethod
+    def has_logical_state_equivalent() -> bool:
+        return False
+
+    def to_basic_state(self) -> BasicState:
+        """Return the equivalent BasicState from _value
+        """
+        return BasicState([self._value])
+
 
 class ADetector(APort, ABC):
     def __init__(self, name=''):
@@ -126,6 +177,14 @@ class ADetector(APort, ABC):
 
     def is_output_photonic_mode_closed(self):
         return True
+
+    @staticmethod
+    def has_basic_state_equivalent() -> bool:
+        return False
+
+    @staticmethod
+    def has_logical_state_equivalent() -> bool:
+        return False
 
 
 class CounterDetector(ADetector):
@@ -158,31 +217,25 @@ class DigitalConverterDetector(ADetector):
         return component in self._connections
 
 
-class LogicalState(list):
-    def __init__(self, state: List[int]):
-        assert state.count(0) + state.count(1) == len(state), "A logical state should only contain 0s and 1s"
-        super().__init__(state)
+def get_basic_state_from_ports(ports: List[APort], state: LogicalState, add_herald_and_ancillary: bool = False) -> BasicState:
+    """Convert a LogicalState to a BasicState by taking in account a port list
 
-    def to_basic_state(self, port_list: List[APort]) -> BasicState:
-        result = []
-        index = 0
-        for port in port_list:
-            if isinstance(port, Herald):
-                continue
-            if index >= len(self):
-                raise ValueError('Logical state and port list do not match (state too short)')
-            if isinstance(port, Port):
-                if port.encoding == Encoding.RAW or port.encoding == Encoding.TIME:
-                    result += [self[index]]
-                    index += 1
-                elif port.encoding == Encoding.DUAL_RAIL:
-                    result += [1, 0] if self[index] == 0 else [0, 1]
-                    index += 1
-                elif port.encoding == Encoding.QUDIT or port.encoding == Encoding.POLARIZATION:
-                    raise NotImplementedError
-        if index != len(self):
-            raise ValueError('Logical state and port list do not match (state too long)')
-        return BasicState(result)
-
-    def __str__(self):
-        return '|' + ','.join([str(x) for x in self]) + '>_L'
+    :param ports: port list.
+    :param state: LogicalState to convert to BasicState.
+    :param add_herald_and_ancillary: add the herald and ancillary port to the basic state. Default to False
+    :raises ValueError: ports and state are not consistent
+    :return: corresponding LogicalState.
+    """
+    basic_state = BasicState()
+    i = 0
+    for port in ports:
+        if not port.has_basic_state_equivalent():
+            continue
+        if port.has_logical_state_equivalent():
+            basic_state *= port.to_basic_state(state[i])
+            i += 1
+        elif add_herald_and_ancillary:
+            basic_state *= port.to_basic_state()
+    if len(state) != i:
+        raise IndexError('Logical state and port list size do not match')
+    return basic_state

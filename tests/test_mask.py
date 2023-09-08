@@ -27,17 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
+import exqalibur as xq
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
+def test_mask():
+    mask = xq.FSMask(6, 4, ["    11"])
+    assert mask.match(xq.FockState("|0,0,1,1,1,1>"))
+    # no partial masking (we don't accept lower number of photons)
+    assert not mask.match(xq.FockState("|0,0,1,1,1,0>"), False)
+    # partial masking (we accept lower number of photons)
+    assert mask.match(xq.FockState("|0,0,1,1,1,0>"), True)
 
-catalog = Catalog('perceval.components.core_catalog')
+
+def test_mask_multiple():
+    mask = xq.FSMask(6, 4, ["   011", "   110"])
+    assert mask.match(xq.FockState("|0,0,1,0,1,1>"))
+    assert mask.match(xq.FockState("|0,0,1,1,1,0>"))
+    assert not mask.match(xq.FockState("|0,0,1,1,1,1>"))

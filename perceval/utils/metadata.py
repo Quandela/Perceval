@@ -27,17 +27,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
+import re
+from importlib.metadata import metadata
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
 
-catalog = Catalog('perceval.components.core_catalog')
+class PMetadata():
+    _NAME = "perceval"
+    _PACKAGE_NAME = "perceval-quandela"
+    _METADATA = metadata(_PACKAGE_NAME)
+    _REGEX = re.compile(r"(\d+\.\d+(?:\.\d+)*)")
+
+    @staticmethod
+    def short_version() -> str:
+        return PMetadata._REGEX.findall(PMetadata._METADATA["version"])[0]
+
+    @staticmethod
+    def version() -> str:
+        return PMetadata._METADATA["version"]
+
+    @staticmethod
+    def package_name() -> str:
+        return PMetadata._PACKAGE_NAME
+
+    @staticmethod
+    def author() -> str:
+        return PMetadata._METADATA["author"]
+
+    @staticmethod
+    def name() -> str:
+        return PMetadata._NAME

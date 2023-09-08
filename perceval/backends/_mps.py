@@ -91,7 +91,7 @@ class MPSBackend(AProbAmpliBackend):
         n photons computed using MPS
         """
         # self._res extracts $\Gamma$ and diagonal SV matrices corresponding to given output_state; this is
-        # stored in list of matrices and multidot performs a full matrix lultplication overall of them
+        # stored in list of matrices and multidot performs a full matrix multiplication overall of them
         # in a single statement. Optimized by numpy
 
         m = self._input_state.m

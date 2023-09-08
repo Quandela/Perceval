@@ -27,17 +27,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
+import perceval as pcvl
+from perceval.components import catalog
+from perceval.algorithm import Analyzer
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
+STATES = {
+    pcvl.BasicState([1, 0, 1, 0]): "00",
+    pcvl.BasicState([1, 0, 0, 1]): "01",
+    pcvl.BasicState([0, 1, 1, 0]): "10",
+    pcvl.BasicState([0, 1, 0, 1]): "11"
+}
 
-catalog = Catalog('perceval.components.core_catalog')
+
+def test_performance_compare_cnot():
+    # Tests the performance of different CNOT in perceval
+    # KLM CNOT
+    klm_cnot = catalog["klm cnot"].build_processor()
+    analyzer_klm_cnot = Analyzer(klm_cnot, STATES)
+    analyzer_klm_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+    analyzer_klm_cnot_perf = pcvl.simple_float(analyzer_klm_cnot.performance)[1]
+
+    # Postprocessed CNOT
+    postprocessed_cnot = catalog["postprocessed cnot"].build_processor()
+    analyzer_postprocessed_cnot = Analyzer(postprocessed_cnot, STATES)
+    analyzer_postprocessed_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+    analyzer_postprocessed_cnot_perf = pcvl.simple_float(analyzer_postprocessed_cnot.performance)[1]
+
+    # CNOT using CZ : called - Heralded CNOT
+    heralded_cnot = catalog["heralded cnot"].build_processor()
+    analyzer_heralded_cnot = Analyzer(heralded_cnot, STATES)
+    analyzer_heralded_cnot.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
+    analyzer_heralded_cnot_perf = pcvl.simple_float(analyzer_heralded_cnot.performance)[1]
+
+    assert analyzer_postprocessed_cnot_perf > analyzer_heralded_cnot_perf > analyzer_klm_cnot_perf

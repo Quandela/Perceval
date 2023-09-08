@@ -27,17 +27,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
+from enum import Enum
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
 
-catalog = Catalog('perceval.components.core_catalog')
+class Encoding(Enum):
+    DUAL_RAIL = 0
+    POLARIZATION = 1
+    QUDIT = 2
+    TIME = 3
+    RAW = 4
+
+
+class InterferometerShape(Enum):
+    RECTANGLE = 0
+    TRIANGLE = 1
+
+
+class FileFormat(Enum):
+    BINARY = 0
+    TEXT = 1

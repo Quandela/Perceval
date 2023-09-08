@@ -46,10 +46,10 @@ See also:
     - Quandela cloud documentation: https://cloud.quandela.com/webide/documentation (requires a free account to access)
 """
 
-from pkg_resources import get_distribution
-import importlib
+from importlib import import_module
+from .utils import PMetadata
 
-__version__ = get_distribution("perceval-quandela").version
+__version__ = PMetadata.version()
 
 from .components import *
 from .backends import *
@@ -61,7 +61,7 @@ from .simulators import Simulator, SimulatorFactory, DelaySimulator, LossSimulat
 
 def register_plugin(name, silent=False):
     try:
-        plugin = importlib.import_module(name)
+        plugin = import_module(name)
         assert plugin.register(silent) is True
     except Exception as e:
         raise RuntimeError("cannot import %s: %s" % (name, str(e)))
