@@ -35,6 +35,8 @@ import itertools
 from scipy.stats import unitary_group
 from perceval.simulators import Simulator
 from perceval.backends import SLOSBackend
+from typing import List
+
 
 # ##### threshold ######################################################################################
 def thresh(X, eps=10 ** (-6)):
@@ -48,79 +50,7 @@ def thresh(X, eps=10 ** (-6)):
                 X[i, j] -= 1j * np.imag(X[i, j])
     return X
 
-# ##### gates ######################################################################################
-# def cz_heralded():
-#     # perceval circuit (w/o postselection or herald) for 6 modes heralded CZ
-#     theta1 = 2 * np.pi * 54.74 / 180
-#     theta2 = 2 * np.pi * 17.63 / 180
-#     last_modes_cz = (pcvl.Circuit(4)
-#                      .add(0, PS(np.pi))
-#                      .add(3, PS(np.pi))
-#                      .add((1, 2), PERM([1, 0]))
-#                      .add((0, 1), BS.H(theta=theta1))
-#                      .add((2, 3), BS.H(theta=theta1))
-#                      .add((1, 2), PERM([1, 0]))
-#                      .add((0, 1), BS.H(theta=-theta1))
-#                      .add((2, 3), BS.H(theta=theta2)))
-#     c_hcz = (pcvl.Circuit(6, name="Heralded CZ")
-#              .add((1, 2), PERM([1, 0]))
-#              .add((2, 3, 4, 5), last_modes_cz, merge=True)
-#              .add((1, 2), PERM([1, 0])))
-#     return c_hcz
-#
-#
-# def cnot_from_cz():
-#     # building a CNOT from the heralded CZ using CX=(IxH)CZ(IxH)
-#     cnot = pcvl.Circuit(6, name="Heralded CNOT")
-#     cnot.add(2, BS.H())
-#     cnot.add(0, cz_heralded())
-#     cnot.add(2, BS.H())
-#     return cnot
 
-
-# def heralded_cnot():
-#     # perceval circuit (w/o postselection or herald) for 8 modes heralded CNOT
-#     R1 = 0.228
-#     R2 = 0.758
-#     theta1 = BS.r_to_theta(R1)
-#     theta2 = BS.r_to_theta(R2)
-#     c_hcnot = (pcvl.Circuit(8, name="Heralded CNOT")
-#                .add(1, PERM([2, 4, 3, 0, 1]))
-#                .add(4, BS.H())
-#                .add(3, PERM([1, 3, 0, 4, 2]))
-#                .add(3, BS.H())
-#                .add(3, PERM([2, 0, 1]))
-#                .add(2, BS.H(theta=theta1))
-#                .add(4, BS.H(theta=theta1))
-#                .add(3, PERM([1, 2, 0]))
-#                .add(3, BS.H())
-#                .add(1, PERM([2, 0, 3, 1, 6, 5, 4]))
-#                .add(2, BS.H(theta=theta2))
-#                .add(2, PERM([1, 0]))
-#                .add(4, BS.H(theta=theta2))
-#                .add(4, PERM([1, 2, 0]))
-#                .add(4, BS.H())
-#                .add(1, PERM([4, 3, 0, 2, 1])))
-#     return c_hcnot
-#
-#
-# def post_processed_cnot():
-#     # perceval circuit (w/o postselection or herald) for 6 modes postprocessed CNOT
-#     theta_13 = BS.r_to_theta(1 / 3)
-#     c_cnot = (pcvl.Circuit(6, name="PostProcessed CNOT")
-#               .add(0, PERM([0, 2, 3, 4, 1]))
-#               .add((0, 1), BS.H(theta_13))
-#               .add((0, 1), PERM([1, 0]))
-#               .add((3, 4), BS.H())
-#               .add((2, 3), PERM([1, 0]))
-#               .add((2, 3), BS.H(theta_13))
-#               .add((2, 3), PERM([1, 0]))
-#               .add((4, 5), BS.H(theta_13))
-#               .add((3, 4), BS.H())
-#               .add(0, PERM([4, 0, 1, 2, 3])))
-#     return c_cnot
-#
-# ##### Important matrices Class Process tomography ######################################################################################
 def pauli(j):
     """
     computes the j-th Pauli operator (I,X,Y,Z)
@@ -187,6 +117,7 @@ class PreparationCircuit:
     :param nqubit: Number of Qubits
     """
     def __init__(self, j: int, nqubit: int) -> Circuit:
+        # todo: fix input type for j and its documentation
         self._nqubit = nqubit
         self._j = j
         self._prep_circuit = Circuit(2*nqubit, name="Preparation Circ")
@@ -206,7 +137,7 @@ class PreparationCircuit:
         if j == 3:
             return self._prep_circuit.add(0, BS.H()).add(1, PS(np.pi / 2))
 
-    def _prep_circ_multi_qubit(self, j:int):
+    def _prep_circ_multi_qubit(self, j: List):
         """
         Prepares each photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
 
@@ -234,6 +165,7 @@ class MeasurementCircuit:
     :param nqubit: Number of Qubits
     """
     def __init__(self, j: int, nqubit: int) -> Circuit:
+        # todo: fix input type for j and its documentation
         self._nqubit = nqubit
         self._j = j
         self._meas_circuit = Circuit(2*nqubit, name="Measurement Circ")
@@ -252,7 +184,7 @@ class MeasurementCircuit:
         else:
             return self._meas_circuit
 
-    def _meas_circ_multi_qubit(self, j):
+    def _meas_circ_multi_qubit(self, j: List):
         """
          Measures each photon in the pauli basis
 
@@ -284,7 +216,7 @@ def stokes_parameter(num_state, operator_circuit, i, heralded_modes=[], post_pro
 
     :param num_state: list of length of number of qubits representing the preparation circuit
     :param operator_circuit: perceval circuit for the operator
-    :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we are measuring
+    :param i:
     :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
     :param post_process: bool for postselection on the outcome or not
     :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
@@ -812,119 +744,3 @@ def is_physical(matrix, eigen_tolerance=10 ** (-6)):
     if b:
         return True
     return False, s
-
-# FIDELITY OPTIMIZER MAKES IMPROVEMENTS. MAYBE NEEDED, NOT WORKING
-###################
-# from here onward -> connected to some formula to calculate fidelity in Ascella paper. Stephen and Rawad
-def int_to_vector(i, nqubit):
-    if nqubit == 1:
-        if i == 0:
-            return np.array([[1], [0]], dtype='complex_')
-        return np.array([[0], [1]], dtype='complex_')
-    vec = int_to_vector(i // (2 ** (nqubit - 1)), 1)
-    i = i % (2 ** (nqubit - 1))
-    for k in range(nqubit - 2, -1, -1):
-        vec = np.kron(vec, int_to_vector(i // (2 ** k), 1))
-        i = i % (2 ** k)
-    return vec
-
-
-def alpha(i, j, k, l, U):
-    nqubit = int(np.log2(len(U)))
-    vec_i, vec_j, vec_k, vec_l = int_to_vector(i, nqubit), int_to_vector(j, nqubit), int_to_vector(k, nqubit), \
-        int_to_vector(l, nqubit)
-    Udag = np.transpose(np.conjugate(U))
-    idag, ldag = np.transpose(np.conjugate(vec_i)), np.transpose(np.conjugate(vec_l))
-    x = np.linalg.multi_dot([idag, Udag, vec_k])[0, 0]
-    y = np.linalg.multi_dot([ldag, U, vec_j])[0, 0]
-    return x * y
-
-
-def int_to_list(i, nqubit):
-    l = []
-    for k in range(nqubit - 1, -1, -1):
-        l.append(i // (4 ** k))
-        i = i % (4 ** k)
-    return l
-
-
-"""def fast_average_fidelity_2(operator,operator_circuit,heralded_modes=[],post_process=False,brightness=1,g2=0,
-indistinguishability=1,loss=0):
-    nqubit=int(np.log2(len(operator)))
-    d=2**nqubit
-    C=1/(d*(d+1))
-    basis=matrix_basis(nqubit)
-    M=np.zeros((d**2,d**2),dtype='complex_')
-    for i0 in range(d):
-        for j0 in range(d):
-            for i1 in range(d):
-                for j1 in range(d):
-                    a=alpha(i1,j1,i0,j0,operator)+alpha(i1,j1,j0,i0,operator)
-                    if a!=0:
-                        meas=np.dot(int_to_vector(i0,nqubit),np.conjugate(np.transpose(int_to_vector(j0,nqubit))))
-                        state=np.dot(int_to_vector(i1,nqubit),np.conjugate(np.transpose(int_to_vector(j1,nqubit))))
-                        mu,nu=decomp(meas,basis),decomp(state,basis)
-                        for l in range(d**2):
-                            for k in range(d**2):
-                                M[l,k]+=a*mu[k]*nu[l]
-    t=0
-    for x in range(d**2):
-        y0,z0=M[x,0],M[0,x]
-        ybool,zbool=True,True
-        for y in range(1,d):
-            if M[x,y]!=y0:
-                ybool=False
-            if M[y,x]!=z0:
-                zbool=False
-        if ybool:
-            return False
-
-    return C*M
-
-def fast_average_fidelity(operator,operator_circuit,heralded_modes=[],post_process=False,brightness=1,g2=0,indistinguishability=1,loss=0):
-    nqubit=int(np.log2(len(operator)))
-    d=2**nqubit
-    C=1/(d*(d+1))
-    s=0
-    basis=matrix_basis(nqubit)
-    memory={}
-    for i0 in range(d):
-        for j0 in range(d):
-            for i1 in range(d):
-                for j1 in range(d):
-                    a=alpha(i1,j1,i0,j0,operator)+alpha(i1,j1,j0,i0,operator)
-                    if a!=0:
-                        print(a)
-                        meas=np.dot(int_to_vector(i0,nqubit),np.conjugate(np.transpose(int_to_vector(j0,nqubit))))
-                        state=np.dot(int_to_vector(i1,nqubit),np.conjugate(np.transpose(int_to_vector(j1,nqubit))))
-                        mu,nu=decomp(meas,basis),decomp(state,basis)
-                        #print(mu,nu)
-                        t=0
-                        id_present=True #check if you can use CPTP property
-                        x=nu[0]
-                        for l0 in range(1,d):
-                            if nu[l0]!=x:
-                                id_present=False
-                        start=0
-                        if id_present:
-                            start=d
-                            t+=nu[l]*np.trace(meas)
-                        for l in range(start,d**2):
-                            if nu[l]!=0:
-                                for k in range(d**2):
-                                    if mu[k]!=0:
-                                        print(l,k)
-                                        if (l,k) not in memory.keys():
-                                            state1=int_to_list(l,nqubit)
-                                            meas1=int_to_list(k,nqubit)
-                                            num_meas=[]
-                                            for u in meas1:
-                                                if u==0 or u==1:
-                                                    num_meas.append((0,int((-1)**u)))
-                                                else:
-                                                    num_meas.append((u-1,1))
-                                            num_meas=[(u,1) for u in meas1]
-                                            memory[(l,k)]=qpt_circuit(state1,operator_circuit,num_meas,nqubit,heralded_modes=[],post_process=False,brightness=1,g2=0,indistinguishability=1,loss=0)
-                                        t+=mu[k]*nu[l]*memory[(l,k)]
-                    s+=a*t
-    return np.real(C*s),memory"""
