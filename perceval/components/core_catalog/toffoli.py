@@ -27,19 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.components import Circuit, Port, BS
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog.postprocessed_ccz import PostProcessedCCZItem
 from perceval.utils import Encoding, PostSelect
 
 
 class ToffoliItem(CatalogItem):
-    description = r"""Toffoli gate CCNOT gate with 6 heralded modes and a post-selection function (built using Heralded CCZ and H)."""
+    description = r"""Toffoli gate CCNOT gate with 6 heralded modes and a post-selection function (built using post-processed CCZ and H)."""
     str_repr = r"""                               ╭──────────╮
 ctrl0 (dual rail) ─────────────┤          ├───────────── ctrl0 (dual rail)
                   ─────────────┤          ├─────────────
 ctrl1 (dual rail) ─────────────┤          ├───────────── ctrl1 (dual rail)
-                  ─────────────┤ Heralded ├─────────────
-                       ╭───╮   │    CZ    │   ╭───╮
+                  ─────────────┤   CCZ    ├─────────────
+                       ╭───╮   │          │   ╭───╮
 data (dual rail)  ─────┤ H ├───┤          ├───┤ H ├───── data  (dual rail)
                   ─────┤   ├───┤          ├───┤   ├─────
                        ╰───╯   ╰──────────╯   ╰───╯"""
