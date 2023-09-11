@@ -104,9 +104,10 @@ class CircuitOptimizer:
         """
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
-        assert template.m == target.shape[0], \
-            f"Template circuit and target size should be the same ({template.m} != {target.m})"
-        assert not target.is_symbolic(), "Target must not contain variables"
+
+        if template.m != target.shape[0]:
+            raise ValueError(f"Template circuit and target size should be the same ({template.m} != {target.shape[0]})")
+
 
         optimizer = xq.CircuitOptimizer(serialize_binary(target), serialize_binary(template))
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
