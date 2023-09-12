@@ -35,6 +35,8 @@ jobs:
     name: Run PyTest on ${{ matrix.os }} and publish coverage
     if: always()
     runs-on: ${{ matrix.os }}
+    permissions:
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
