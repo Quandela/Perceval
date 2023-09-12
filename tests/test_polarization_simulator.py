@@ -110,15 +110,15 @@ def test_polarization_evolve():
     assert str(sv_out) == "sqrt(2)/2*|{P:H}>-sqrt(2)/2*|{P:V}>"
 
 
-def test_polarization_circuit_0():
+@pytest.mark.parametrize("backend_name", ["Naive", "SLOS", "MPS"])
+def test_polarization_circuit_0(backend_name):
     c = HWP(np.pi/4)
-    for backend_name in ["Naive", "SLOS", "MPS"]:
-        psimu = PolarizationSimulator(Simulator(BackendFactory.get_backend(backend_name)))
-        psimu.set_circuit(c)
-        res = psimu.probs(BasicState("|{P:H}>"))
-        assert len(res) == 1
-        assert res[BasicState("|1>")] == pytest.approx(1)
-        assert str(psimu.evolve(BasicState("|{P:H}>"))) == 'I*|{P:V}>'
-        assert str(psimu.evolve(BasicState("|{P:V}>"))) == 'I*|{P:H}>'
-        assert str(psimu.evolve(BasicState("|{P:D}>"))) == 'sqrt(2)*I/2*|{P:H}>+sqrt(2)*I/2*|{P:V}>'
-        # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
+    psimu = PolarizationSimulator(Simulator(BackendFactory.get_backend(backend_name)))
+    psimu.set_circuit(c)
+    res = psimu.probs(BasicState("|{P:H}>"))
+    assert len(res) == 1
+    assert res[BasicState("|1>")] == pytest.approx(1)
+    assert str(psimu.evolve(BasicState("|{P:H}>"))) == 'I*|{P:V}>'
+    assert str(psimu.evolve(BasicState("|{P:V}>"))) == 'I*|{P:H}>'
+    assert str(psimu.evolve(BasicState("|{P:D}>"))) == 'sqrt(2)*I/2*|{P:H}>+sqrt(2)*I/2*|{P:V}>'
+    # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
