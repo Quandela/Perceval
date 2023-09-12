@@ -71,7 +71,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest
+        pytest --junitxml=pytest.xml --cov-report=term-missing:skip-covered --cov=perceval tests/ | tee pytest-coverage.txt
 
   perceval-docs-test:
     name: Build docs on ubuntu
@@ -121,3 +121,16 @@ jobs:
         name: docs
         path: docs/build/html
         retention-days: 1
+
+    - name: 'Create svg pytest coverage'
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs
+        path: docs/build/html
+        retention-days: 1
+
+    - name: Pytest coverage comment
+      uses: MishaKav/pytest-coverage-comment@main
+      with:
+        pytest-coverage-path: /tmp/pytest-coverage.txt
+        junitxml-path: /tmp/pytest.xml
