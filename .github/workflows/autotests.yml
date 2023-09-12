@@ -78,8 +78,8 @@ jobs:
     - name: Pytest coverage comment
       uses: MishaKav/pytest-coverage-comment@main
       with:
-        pytest-coverage-path: /coverage/pytest-coverage.txt
-        junitxml-path: /coverage/pytest.xml
+        pytest-coverage-path: tests/coverage/pytest-coverage.txt
+        junitxml-path: tests/coverage/pytest.xml
 
   perceval-docs-test:
     name: Build docs
