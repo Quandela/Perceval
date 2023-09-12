@@ -32,7 +32,7 @@ env:
 
 jobs:
   perceval-autotests:
-    name: Run PyTest on ${{ matrix.os }}
+    name: Run PyTest on ${{ matrix.os }} and publish coverage
     if: always()
     runs-on: ${{ matrix.os }}
     strategy:
@@ -71,10 +71,18 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --junitxml=pytest.xml --cov-report=term-missing:skip-covered --cov=perceval tests/ | tee pytest-coverage.txt
+        mkdir tests/coverage
+        pytest --junitxml=tests/coverage/pytest.xml --cov-report=term-missing:skip-covered --cov=perceval tests/ | tee tests/coverage/pytest-coverage.txt
+
+
+    - name: Pytest coverage comment
+      uses: MishaKav/pytest-coverage-comment@main
+      with:
+        pytest-coverage-path: /coverage/pytest-coverage.txt
+        junitxml-path: /coverage/pytest.xml
 
   perceval-docs-test:
-    name: Build docs on ubuntu
+    name: Build docs
     needs:
     - perceval-autotests
     runs-on: ubuntu-latest
@@ -121,16 +129,3 @@ jobs:
         name: docs
         path: docs/build/html
         retention-days: 1
-
-    - name: 'Create svg pytest coverage'
-      uses: actions/upload-artifact@v3
-      with:
-        name: docs
-        path: docs/build/html
-        retention-days: 1
-
-    - name: Pytest coverage comment
-      uses: MishaKav/pytest-coverage-comment@main
-      with:
-        pytest-coverage-path: /tmp/pytest-coverage.txt
-        junitxml-path: /tmp/pytest.xml
