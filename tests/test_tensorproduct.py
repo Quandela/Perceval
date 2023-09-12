@@ -38,7 +38,7 @@ bs = BasicState([6, 7])
 def _assert_sv_approx_eq(sv1: StateVector, sv2: StateVector, error_msg="Assertion error"):
     sv1.normalize()
     sv2.normalize()
-    for state in sv1:
+    for state in sv1.keys():
         assert state in sv2, error_msg
         assert sv1[state] == pytest.approx(sv2[state]), error_msg
 

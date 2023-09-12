@@ -37,7 +37,8 @@ from math import sqrt
 def _approx_eq_sv(sv1, sv2):
     if len(sv1) != len(sv2):
         return False
-    for bs1, pa1 in sv1.items():
+    sv2.normalize()
+    for bs1, pa1 in sv1:
         if bs1 not in sv2:
             return False
         if pa1 != pytest.approx(sv2[bs1]):

@@ -34,8 +34,10 @@ import perceval as pcvl
 import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 
-import numpy as np
-import sympy as sp
+import exqalibur as xq
+pcvl.StateVector = xq.StateVector
+
+import math
 
 from test_circuit import strip_line_12
 
@@ -113,21 +115,18 @@ def test_state_identical_annots():
     st2 = pcvl.BasicState("|0,1,{P:V}1>")
     assert str(st1) == str(st2)
 
-    st3 = pcvl.BasicState("|{a:1}2{a:0},0>")
-    st4 = pcvl.BasicState("|2{a:0}{a:1},0>")
+    st3 = pcvl.BasicState("|{a:1}2{a:0},0,0>")
+    st4 = pcvl.BasicState("|2{a:0}{a:1},0,0>")
     assert str(st3) == str(st4)
 
-    sv = pcvl.StateVector()
-    sv[st1] = 0.5
-    sv[st3] += 1
-    sv[st4] -= 1
+    sv = 0.5*st1 + st3 - st4
     assert str(sv) == str(st1)
 
 
 def test_state_invalid_superposition():
     st1 = pcvl.StateVector("|0,1>")
     st2 = pcvl.StateVector("|1,0,0>")
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         st1+st2
 
 
@@ -136,13 +135,6 @@ def test_state_superposition():
     st2 = pcvl.StateVector("|1,0>")
     assert str(2*st1) == str(st1)
     assert str(st1+1j*st2) == 'sqrt(2)/2*|0,1>+sqrt(2)*I/2*|1,0>'
-    assert (str(pcvl.StateVector("|0,1>")+sp.S("ε")*pcvl.StateVector("|1,0>")) ==
-            '(Abs(ε)**2 + 1)**(-0.5)*|0,1>+ε/(Abs(ε)**2 + 1)**0.5*|1,0>')
-
-
-def test_state_superposition_sub():
-    assert (str(pcvl.StateVector("|0,1>")-sp.S("ε")*pcvl.StateVector("|1,0>")) ==
-            '(Abs(ε)**2 + 1)**(-0.5)*|0,1>-ε/(Abs(ε)**2 + 1)**0.5*|1,0>')
 
 
 def test_state_superposition_bs():
@@ -152,7 +144,7 @@ def test_state_superposition_bs():
 
 def test_init_state_vector():
     st = pcvl.StateVector()
-    st[pcvl.BasicState("|1,0>")] = 1
+    st += pcvl.BasicState("|1,0>")
     assert str(st) == "|1,0>"
 
 
@@ -281,28 +273,27 @@ def test_svd_sample():
 def test_svd_anonymize_annots():
     svd = pcvl.SVDistribution({
         pcvl.StateVector("|{_:0},{_:0},{_:1}>") + pcvl.StateVector("|{_:0},{_:2},{_:1}>"): 0.1,
-        pcvl.StateVector("|{_:1},{_:2},{_:3}>") + pcvl.StateVector("|{_:0},{_:0},{_:8}>"): 0.1,
-        pcvl.StateVector("|{_:2},{_:2},{_:3}>") + pcvl.StateVector("|{_:2},{_:4},{_:3}>"): 0.1,
+        pcvl.StateVector("|{_:3},{_:4},{_:4}>"): 0.1,
+        pcvl.StateVector("|{_:0},{_:0},{_:1}>") + pcvl.StateVector("|{_:0},{_:4},{_:1}>"): 0.1,
         pcvl.BasicState("|{_:4},{_:4},{_:2}>"): 0.1,
         pcvl.BasicState("|{_:1},{_:3},{_:3}>"): 0.1,
         pcvl.BasicState("|{_:0},{_:2},{_:3}>"): 0.5,
     })
     svd2 = pcvl.anonymize_annotations(svd)
 
-    assert len(svd2) == 5
+    assert len(svd2) == 4
     assert str(svd2) == """{
   |{a:0},{a:1},{a:2}>: 0.5
   sqrt(2)/2*|{a:0},{a:0},{a:1}>+sqrt(2)/2*|{a:0},{a:2},{a:1}>: 0.2
-  sqrt(2)/2*|{a:0},{a:1},{a:2}>+sqrt(2)/2*|{a:3},{a:3},{a:4}>: 0.1
+  |{a:0},{a:1},{a:1}>: 0.2
   |{a:0},{a:0},{a:1}>: 0.1
-  |{a:0},{a:1},{a:1}>: 0.1
 }"""
 
 
 def test_statevector_sample():
     sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
     counter = Counter()
-    for s in range(20):
+    for _ in range(20):
         counter[sv.sample()] += 1
     states = [str(s) for s in counter]
     assert len(states) == 2 and "|1,0>" in states and "|0,1>" in states
@@ -319,7 +310,7 @@ def test_statevector_samples():
 
 def test_statevector_measure_1():
     sv = pcvl.StateVector("|0,1>")+pcvl.StateVector("|1,0>")
-    map_measure_sv = sv.measure(0)
+    map_measure_sv = sv.measure([0])
     assert len(map_measure_sv) == 2 and\
            pcvl.BasicState("|0>") in map_measure_sv and\
            pcvl.BasicState("|1>") in map_measure_sv
@@ -343,7 +334,7 @@ def test_statevector_measure_2():
 
 def test_statevector_measure_3():
     sv = pcvl.StateVector("|0,1,1>")+pcvl.StateVector("|1,1,0>")
-    map_measure_sv = sv.measure(1)
+    map_measure_sv = sv.measure([1])
     assert len(map_measure_sv) == 1 and\
            pcvl.BasicState("|1>") in map_measure_sv
     assert pytest.approx(1) == map_measure_sv[pcvl.BasicState("|1>")][0]
@@ -351,10 +342,10 @@ def test_statevector_measure_3():
 
 
 def test_statevector_equality():
-    gamma = np.pi / 2
+    gamma = math.pi / 2
     st1 = pcvl.StateVector("|{P:H},{P:H}>")
     st2 = pcvl.StateVector("|{P:H},{P:V}>")
-    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+    input_state = math.cos(gamma) * st1 + math.sin(gamma) * st2
     assert input_state == st2
 
 

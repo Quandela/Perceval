@@ -153,5 +153,5 @@ class StateGenerator:
                 sv = sv - StateVector(bs)
             else:
                 sv = sv + StateVector(bs)
-
+        sv.normalize()
         return sv

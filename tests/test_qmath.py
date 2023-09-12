@@ -34,7 +34,7 @@ from time import time
 
 
 def almost_equal_sv_distribution(lhsvd, rhsvd):
-    lhkeys, rhkeys = [[[svkeys for svkeys in svdkeys] for svdkeys in svd.keys()] for svd in [lhsvd, rhsvd]]
+    lhkeys, rhkeys = [[{svkeys for svkeys in svdkeys.keys()} for svdkeys in svd.keys()] for svd in [lhsvd, rhsvd]]
     # check if all the basic state are here
     assert lhkeys == rhkeys
     # search correct key in both dict (since the keys can be different because of pointing float error causing different probabilities)

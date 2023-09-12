@@ -90,7 +90,7 @@ def test_backend_factory_default():
 
 def test_backend_identity():
     for backend_name in ["SLOS", "Naive"]:
-        backend = BackendFactory.get_backend(backend_name)
+        backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
         backend.set_circuit(Circuit(2))  # Identity circuit, 2 modes
         check_output_distribution(backend, BasicState([0, 0]), {BasicState("|0,0>"): 1})
         check_output_distribution(backend, BasicState([0, 1]), {BasicState("|0,1>"): 1})

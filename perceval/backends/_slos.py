@@ -214,6 +214,6 @@ class SLOSBackend(AProbAmpliBackend):
         res = StateVector()
         iprodnfact = istate.prodnfact()
         for output_state, pa in zip(allstate_iterator(self._input_state, self._mask), c):
-            res[output_state] = pa * np.sqrt(output_state.prodnfact() / iprodnfact)
+            res += output_state * (pa * np.sqrt(output_state.prodnfact() / iprodnfact))
         res.normalize()
         return res

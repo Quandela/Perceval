@@ -209,9 +209,7 @@ def test_simulator_probs_sv():
     assert len(result) == 1
     assert result[BasicState("|1,0>")] == pytest.approx(1)
 
-    input_state = StateVector()
-    input_state[BasicState("|{_:0},{_:1}>")] += 1
-    input_state[BasicState([1, 1])] += 1
+    input_state = BasicState("|{_:0},{_:1}>") + BasicState([1, 1])
     simulator.set_circuit(c)
     result = simulator.probs(input_state)
     assert len(result) == 3
@@ -252,7 +250,10 @@ def test_evolve_distinguishable():
     simulator.set_circuit(BS.H())
     sv2 = BasicState("|{a:0},{a:0}{a:1}>")
     sv2_out = simulator.evolve(sv2)
-    assert str(sv2_out) == "1/2*|2{a:0}{a:1},0>-1/2*|2{a:0},{a:1}>-1/2*|{a:1},2{a:0}>+1/2*|0,2{a:0}{a:1}>"
+    assert pytest.approx(sv2_out[BasicState('|2{a:0}{a:1},0>')]) == 1/2
+    assert pytest.approx(sv2_out[BasicState('|2{a:0},{a:1}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|{a:1},2{a:0}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|0,2{a:0}{a:1}>')]) == 1/2
     sv2_out_out = simulator.evolve(sv2_out)
     assert str(sv2_out_out) == "|{a:0},{a:0}{a:1}>"
 
@@ -263,7 +264,7 @@ def test_statevector_polar_evolve():
     st1 = StateVector("|{P:H},{P:H}>")
     st2 = StateVector("|{P:H},{P:V}>")
     gamma = np.pi / 2
-    input_state = np.cos(gamma) * st1 + np.sin(gamma) * st2
+    input_state = st1 * np.cos(gamma) + st2 * np.sin(gamma)
 
     sum_p = 0
     for _, p in simulator.probs(input_state).items():
