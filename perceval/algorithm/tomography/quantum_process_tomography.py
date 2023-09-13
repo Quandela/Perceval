@@ -30,6 +30,7 @@
 import numpy as np
 import perceval as pcvl
 from perceval.components import catalog, BS, PS, PERM, Unitary
+from perceval.components.source import Source
 from perceval.components import ACircuit, Circuit
 import itertools
 from scipy.stats import unitary_group
@@ -116,37 +117,41 @@ class PreparationCircuit:
     :param j: jth Pauli Matrix I,X,Y,Z. Value of j between 0 and 3
     :param nqubit: Number of Qubits
     """
-    def __init__(self, j: int, nqubit: int) -> Circuit:
-        # todo: fix input type for j and its documentation
+
+    def __init__(self, j: List, nqubit: int) -> Circuit:
+        # todo: fix input name for j and its documentation
         self._nqubit = nqubit
         self._j = j
-        self._prep_circuit = Circuit(2*nqubit, name="Preparation Circ")
+        self._prep_circuit = Circuit(2 * nqubit, name="Preparation Circ")
 
-    def _prep_circ_single_qubit(self, j:int) -> Circuit:
+    def _prep_circ_single_qubit(self, some_name: int) -> Circuit: #todo: Arman - can you help me choose name?
         """
         Prepares one photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
 
-        :param j: int between 0 and 3
+        :param some_name: int between 0 and 3 #todo: SOME NAME DOESNT HELP OR DO ANYTHING FOR SINGLE QUBIT :-(
+        #todo: need to keep j as list for both single/multi but maybe assert here that it is always single element?
         :return: 2 modes perceval circuit
         """
-        prep_circuit = pcvl.Circuit(2)
-        if j == 1:
+        print("I AM HERE AND MY j is", some_name)
+        if some_name[0] == 1:
+            print("i CAN NOW REACH here")
             return self._prep_circuit.add(0, PERM([1, 0]))
-        if j == 2:
+        if some_name == 2:
             return self._prep_circuit.add(0, BS.H())
-        if j == 3:
+        if some_name == 3:
             return self._prep_circuit.add(0, BS.H()).add(1, PS(np.pi / 2))
 
     def _prep_circ_multi_qubit(self, j: List):
         """
         Prepares each photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
 
-        :param j: int between 0 and 4**nqubit-1
+        :param j: List of int between 0 and 4**nqubit-1 todo: verify
         :param nqubit: number of qubits
         :return: 2*nqubit modes perceval circuit
         """
         for m in range(len(j)):
-            return self._prep_circuit.add(2 * m, self._prep_circ_single_qubit(j[m]), merge=True)
+            #todo do they neede to be added or worked in what manner
+            return self._prep_circuit.add(2 * m, self._prep_circ_single_qubit(some_name=j[m]), merge=True)
 
     def build_preparation_circuit(self):
         if self._nqubit == 1:
@@ -159,27 +164,30 @@ class PreparationCircuit:
 # ##### measurement circuit ######################################################################################
 class MeasurementCircuit:
     """
+    # todo: fix input name for j and its documentation
     Builds a measurement circuit in the Pauli Basis (I,X,Y,Z) to perform tomography experiments.
 
     :param j: jth Pauli Matrix I,X,Y,Z. Value of j between 0 and 3
     :param nqubit: Number of Qubits
     """
-    def __init__(self, j: int, nqubit: int) -> Circuit:
+
+    def __init__(self, j: List, nqubit: int) -> Circuit:
         # todo: fix input type for j and its documentation
         self._nqubit = nqubit
         self._j = j
-        self._meas_circuit = Circuit(2*nqubit, name="Measurement Circ")
+        self._meas_circuit = Circuit(2 * nqubit, name="Measurement Circ")
 
-    def _meas_circ_single_qubit(self, j: int) -> Circuit:
+    def _meas_circ_single_qubit(self, some_other_name: int) -> Circuit:
+        #todo: Arman could you help me fogure out name?
         """
         Measures the photon in the pauli basis I,X,Y,Z
 
-        :param j: int between 0 and 3
+        :param some_other_name: int between 0 and 3
         :return: 2 modes perceval circuit
         """
-        if j == 1:
+        if some_other_name == 1:
             return self._meas_circuit.add(0, BS.H())
-        elif j == 2:
+        elif some_other_name == 2:
             return self._meas_circuit.add(0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
         else:
             return self._meas_circuit
@@ -193,7 +201,7 @@ class MeasurementCircuit:
         :return: 2*nqubit modes perceval circuit
         """
         for m in range(len(j)):
-            return self._meas_circuit.add(2 * m, self.meas_circ_single_qubit(j[m]), merge=True)
+            return self._meas_circuit.add(2 * m, self.meas_circ_single_qubit(some_other_name=j[m]), merge=True)
 
     def build_measurement_circuit(self):
         if self._nqubit == 1:
@@ -202,126 +210,137 @@ class MeasurementCircuit:
             self._meas_circ_multi_qubit(self._j)
         return self._meas_circuit
 
+
 # ##### P and Stokes are part of QST ##############################################################################
-def P(k, n):
-    # set of subsets of size k in {0,...,n-1}
-    s = {i for i in range(n)}
-    return list(itertools.combinations(s, k))
 
+class QuantumStateTomography:
+    def __init__(self):
+        pass
 
-def stokes_parameter(num_state, operator_circuit, i, heralded_modes=[], post_process=False, renormalization=None,
-                     brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the Stokes parameter S_i for state num_state after operator_circuit
+    def tomography_circuit(self, num_state: List, i: List, heralded_modes: List, nqubit: int,
+                           operator_circuit: Circuit) -> Circuit:
+        tomography_circuit = pcvl.Circuit(2 * nqubit + len(heralded_modes))
+        # state preparation
+        pc = PreparationCircuit(num_state, nqubit)
+        tomography_circuit.add(0, pc.build_preparation_circuit())
+        # unknown operator
+        tomography_circuit.add(0, operator_circuit)
+        # measurement operator
+        mc = MeasurementCircuit(i, nqubit)
+        tomography_circuit.add(0, mc.build_measurement_circuit())
+        return tomography_circuit
 
-    :param num_state: list of length of number of qubits representing the preparation circuit
-    :param operator_circuit: perceval circuit for the operator
-    :param i:
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: float
-    """
-    nqubit = len(i)
-    ###QPT CIRCUIT : TODO: make all circuits in one place in one class
-    qpt_circuit = pcvl.Circuit(2 * nqubit + len(heralded_modes))
-    # state preparation
-    qpt_circuit.add(0,
-                    prep_circuit_multi_qubit(num_state, nqubit))
-    # unknown operator
-    qpt_circuit.add(0, operator_circuit)
-    # measurement operator
-    qpt_circuit.add(0, measurement_circuit(i, nqubit))
+    def probs_finding_state_kth_qbit(self, k, n):
+        # todo: MISNOMER; not a probability - it simply is forming nCk or C(n,k) terms whose products are summed
+        #  or something - see equation in ntoes again and decide
+        # set of subsets of size k in {0,...,n-1}
+        s = {i for i in range(n)}
+        return list(itertools.combinations(s, k))
 
-    source = pcvl.Source(emission_probability=brightness, multiphoton_component=g2,
-                         indistinguishability=indistinguishability, losses=loss)
-    simulator = Simulator(SLOSBackend())
-    simulator.set_circuit(qpt_circuit)
+    def stokes_parameter(self, num_state, operator_circuit, i, heralded_modes=[], post_process=False,
+                         renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the Stokes parameter S_i for state num_state after operator_circuit
 
-    # postselection if no renormalization
-    if renormalization is None:
-        ps = pcvl.PostSelect()
-        if post_process:
-            for m in range(nqubit):
-                ps.eq([2 * m, 2 * m + 1], 1)
-        for m in heralded_modes:
-            ps.eq([m[0]], m[1])
-        simulator.set_postselection(ps)
+        :param num_state: list of length of number of qubits representing the preparation circuit todo: why a list?
+        :param operator_circuit: perceval circuit for the operator
+        :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we are measuring
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: float
+        """
+        nqubit = len(i)
+        # todo: Arman doubt: i can be different than num_state, nqubit is always with i?
+        # QPT CIRCUIT : TODO: what is this circuit supposed to look like?
+        qpt_circuit = self.tomography_circuit(num_state, i, heralded_modes, nqubit, operator_circuit)
 
-    # input state accounting the heralded modes
-    input_state = pcvl.BasicState("|1,0>")
-    for _ in range(1, nqubit):
-        input_state *= pcvl.BasicState("|1,0>")
-    for m in heralded_modes:
-        input_state *= pcvl.BasicState([m[1]])
-    input_distribution = source.generate_distribution(expected_input=input_state)
+        source = Source(emission_probability=brightness, multiphoton_component=g2,
+                        indistinguishability=indistinguishability, losses=loss)
+        simulator = Simulator(SLOSBackend())  # todo: Arman do we need to always use SLOS? or user can choose?
+        simulator.set_circuit(qpt_circuit)
 
-    simulator.set_min_detected_photon_filter(0)
-    output_distribution = simulator.probs_svd(input_distribution)["results"]
-
-    s = 0  # calculation of the Stokes parameter
-    for k in range(nqubit + 1):
-        for J in P(k, nqubit):
-            eta = 1
-            if 0 not in J:
-                measurement_state = pcvl.BasicState("|1,0>")
-            else:
-                measurement_state = pcvl.BasicState("|0,1>")
-                if i[0] != 0:
-                    eta *= -1
-            for j in range(1, nqubit):
-                if j not in J:
-                    measurement_state *= pcvl.BasicState("|1,0>")
-                else:
-                    measurement_state *= pcvl.BasicState("|0,1>")
-                    if i[j] != 0:
-                        eta *= -1
+        if renormalization is None:  # postselection if no renormalization
+            ps = pcvl.PostSelect()
+            if post_process:
+                for m in range(nqubit):
+                    ps.eq([2 * m, 2 * m + 1], 1)
             for m in heralded_modes:
-                measurement_state *= pcvl.BasicState([m[1]])
-            s += eta * output_distribution[measurement_state]
-    if renormalization is None:
-        return s
-    return s / renormalization
+                ps.eq([m[0]], m[1])
+            simulator.set_postselection(ps)
 
+        input_state = pcvl.BasicState("|1,0>")  # input state accounting the heralded modes
+        for _ in range(1, nqubit):
+            input_state *= pcvl.BasicState("|1,0>")
+        for m in heralded_modes:
+            input_state *= pcvl.BasicState([m[1]])
+        input_distribution = source.generate_distribution(expected_input=input_state)
 
-def quantum_state_tomography_mult(state, operator_circuit, nqubit, heralded_modes=[], post_process=False,
-                                  renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Suffix mult not necesary- works for both single and multi qubit.
+        simulator.set_min_detected_photon_filter(0)
+        output_distribution = simulator.probs_svd(input_distribution)["results"]
 
-    Computes the density matrix of a state after the operator_circuit
+        stokes_param = 0  # calculation of the Stokes parameter begins here
+        for k in range(nqubit + 1):
+            for J in self.probs_finding_state_kth_qbit(k, nqubit):
+                eta = 1
+                if 0 not in J:
+                    measurement_state = pcvl.BasicState("|1,0>")
+                else:
+                    measurement_state = pcvl.BasicState("|0,1>")
+                    if i[0] != 0:
+                        eta *= -1
+                for j in range(1, nqubit):
+                    if j not in J:
+                        measurement_state *= pcvl.BasicState("|1,0>")
+                    else:
+                        measurement_state *= pcvl.BasicState("|0,1>")
+                        if i[j] != 0:
+                            eta *= -1
+                for m in heralded_modes:
+                    measurement_state *= pcvl.BasicState([m[1]])
+                stokes_param += eta * output_distribution[measurement_state]
 
-    :param state: list of length of number of qubits representing the preparation circuit
-    :param operator_circuit: perceval circuit for the operator
-    :param nqubit: number of qubits
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: 2**nqubitx2**nqubit array
-    """
-    d = 2 ** nqubit
-    density_matrix = np.zeros((d, d), dtype='complex_')
-    for j in range(d ** 2):
-        i = [0] * nqubit
-        j1 = j
-        for k in range(nqubit - 1, -1, -1):
-            i[k] = j1 // (4 ** k)
-            j1 = j1 % (4 ** k)
-        i.reverse()
-        density_matrix += stokes_parameter(state, operator_circuit, i, heralded_modes, post_process, renormalization,
-                                           brightness, g2, indistinguishability, loss) * E(j, nqubit)
-    density_matrix = ((1 / 2) ** nqubit) * density_matrix
-    return density_matrix
+        if renormalization is None:
+            return stokes_param
+        return stokes_param / renormalization
+
+    def perform_quantum_state_tomography(self, state, operator_circuit, nqubit, heralded_modes=[], post_process=False,
+                                 renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the density matrix of a state after the operator_circuit
+
+        :param state: list of length of number of qubits representing the preparation circuit
+        :param operator_circuit: perceval circuit for the operator
+        :param nqubit: number of qubits
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: 2**nqubitx2**nqubit array
+        """
+        d = 2 ** nqubit
+        density_matrix = np.zeros((d, d), dtype='complex_')
+        for j in range(d ** 2):
+            i = [0] * nqubit
+            j1 = j
+            for k in range(nqubit - 1, -1, -1):
+                i[k] = j1 // (4 ** k)
+                j1 = j1 % (4 ** k)
+            i.reverse()
+            density_matrix += self.stokes_parameter(state, operator_circuit, i, heralded_modes, post_process,
+                                               renormalization,
+                                               brightness, g2, indistinguishability, loss) * E(j, nqubit)
+        density_matrix = ((1 / 2) ** nqubit) * density_matrix
+        return density_matrix
 
 
 # ##### IDK ######################################################################################
@@ -364,9 +383,10 @@ def lambd_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=F
         for i in range(nqubit - 1, -1, -1):
             l.append(state // (4 ** i))
             state = state % (4 ** i)
-        EPS.append(
-            quantum_state_tomography_mult(l, operator_circuit, nqubit, heralded_modes, post_process, renormalization,
-                                          brightness, g2, indistinguishability, loss))
+        qst = QuantumStateTomography()
+        # todo: fix instance params
+        EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
+                                                        renormalization, brightness, g2, indistinguishability, loss))
     basis = matrix_basis(nqubit)
     L = np.zeros((d ** 2, d ** 2), dtype='complex_')
     for j in range(d ** 2):
@@ -571,7 +591,7 @@ def map_reconstructed(rho, operator_circuit, nqubit, heralded_modes=[], post_pro
     for m in range(d ** 2):
         for n in range(d ** 2):
             eps += X[m, n] * np.linalg.multi_dot([E(m, nqubit), rho, np.transpose(np.conjugate(E(n, nqubit)))])
-    #Eqn 2.4 the exact sum
+    # Eqn 2.4 the exact sum
     return eps
 
 
@@ -667,9 +687,10 @@ def average_fidelity(operator, operator_circuit, heralded_modes=[], post_process
         for i in range(nqubit - 1, -1, -1):
             l.append(state // (4 ** i))
             state = state % (4 ** i)
-        EPS.append(
-            quantum_state_tomography_mult(l, operator_circuit, nqubit, heralded_modes, post_process, renormalization,
-                                          brightness, g2, indistinguishability, loss))
+        qst = QuantumStateTomography()
+        # todo: fix instance params
+        EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
+                                                        renormalization, brightness, g2, indistinguishability, loss))
 
     basis = matrix_basis(nqubit)
     for j in range(d ** 2):
