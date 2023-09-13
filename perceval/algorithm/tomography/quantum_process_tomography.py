@@ -262,6 +262,8 @@ class QuantumStateTomography:
 
         source = Source(emission_probability=brightness, multiphoton_component=g2,
                         indistinguishability=indistinguishability, losses=loss)
+        # todo: remove source parameters from each function and simply pass Source with set params in code.
+
         simulator = Simulator(SLOSBackend())  # todo: Arman do we need to always use SLOS? or user can choose?
         simulator.set_circuit(qpt_circuit)
 
