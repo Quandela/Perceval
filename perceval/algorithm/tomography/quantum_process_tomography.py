@@ -41,6 +41,7 @@ from typing import List
 
 # ##### threshold ######################################################################################
 def thresh(X, eps=10 ** (-6)):
+    # todo: function not in use, why?
     """ Threshold function to cancel computational errors in $\chi$
      """
     for i in range(len(X)):
@@ -195,10 +196,11 @@ class MeasurementCircuit:
 
 
 class QuantumStateTomography:
-    def __init__(self):
-        pass
+    def __init__(self, source: Source, backend):
+        self._source = source
+        self._backend = backend  # maybe use SLOSBackend() as default. This was present in code. todo: fix
 
-    def tomography_circuit(self, num_state: List, i: List, heralded_modes: List, nqubit: int,
+    def _tomography_circuit(self, num_state: List, i: List, heralded_modes: List, nqubit: int,
                            operator_circuit: Circuit) -> Circuit:
         tomography_circuit = pcvl.Circuit(2 * nqubit + len(heralded_modes))
         # state preparation
@@ -218,8 +220,8 @@ class QuantumStateTomography:
         s = {i for i in range(n)}
         return list(itertools.combinations(s, k))
 
-    def stokes_parameter(self, num_state, operator_circuit, i, heralded_modes=[], post_process=False,
-                         renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
+    def _stokes_parameter(self, num_state, operator_circuit, i, heralded_modes=[], post_process=False,
+                         renormalization=None):
         """
         Computes the Stokes parameter S_i for state num_state after operator_circuit
 
@@ -230,22 +232,14 @@ class QuantumStateTomography:
         :param post_process: bool for postselection on the outcome or not
         :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
         doing postselection which to non CP maps
-        :param brightness source brightness
-        :param g2 SPS g2
-        :param indistinguishability photon indistinguishability
-        :param loss known losses in source
         :return: float
         """
         nqubit = len(i)
         # todo: Arman doubt: i can be different than num_state, nqubit is always with i?
         # QPT CIRCUIT : TODO: what is this circuit supposed to look like?
-        qpt_circuit = self.tomography_circuit(num_state, i, heralded_modes, nqubit, operator_circuit)
+        qpt_circuit = self._tomography_circuit(num_state, i, heralded_modes, nqubit, operator_circuit)
 
-        source = Source(emission_probability=brightness, multiphoton_component=g2,
-                        indistinguishability=indistinguishability, losses=loss)
-        # todo: remove source parameters from each function and simply pass Source with set params in code.
-
-        simulator = Simulator(SLOSBackend())  # todo: Arman do we need to always use SLOS? or user can choose?
+        simulator = Simulator(self._backend)
         simulator.set_circuit(qpt_circuit)
 
         if renormalization is None:  # postselection if no renormalization
@@ -262,7 +256,7 @@ class QuantumStateTomography:
             input_state *= pcvl.BasicState("|1,0>")
         for m in heralded_modes:
             input_state *= pcvl.BasicState([m[1]])
-        input_distribution = source.generate_distribution(expected_input=input_state)
+        input_distribution = self._source.generate_distribution(expected_input=input_state)
 
         simulator.set_min_detected_photon_filter(0)
         output_distribution = simulator.probs_svd(input_distribution)["results"]
@@ -293,7 +287,7 @@ class QuantumStateTomography:
         return stokes_param / renormalization
 
     def perform_quantum_state_tomography(self, state, operator_circuit, nqubit, heralded_modes=[], post_process=False,
-                                 renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
+                                 renormalization=None):
         """
         Computes the density matrix of a state after the operator_circuit
 
@@ -304,11 +298,7 @@ class QuantumStateTomography:
         :param post_process: bool for postselection on the outcome or not
         :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
         doing postselection which to non CP maps
-        :param brightness source brightness
-        :param g2 SPS g2
-        :param indistinguishability photon indistinguishability
-        :param loss known losses in source
-        :return: 2**nqubitx2**nqubit array
+        :return: 2**nqubit x 2**nqubit array
         """
         d = 2 ** nqubit
         density_matrix = np.zeros((d, d), dtype='complex_')
@@ -319,9 +309,8 @@ class QuantumStateTomography:
                 i[k] = j1 // (4 ** k)
                 j1 = j1 % (4 ** k)
             i.reverse()
-            density_matrix += self.stokes_parameter(state, operator_circuit, i, heralded_modes, post_process,
-                                               renormalization,
-                                               brightness, g2, indistinguishability, loss) * E(j, nqubit)
+            density_matrix += self._stokes_parameter(state, operator_circuit, i, heralded_modes, post_process,
+                                               renormalization) * E(j, nqubit)
         density_matrix = ((1 / 2) ** nqubit) * density_matrix
         return density_matrix
 
@@ -366,10 +355,11 @@ def lambd_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=F
         for i in range(nqubit - 1, -1, -1):
             l.append(state // (4 ** i))
             state = state % (4 ** i)
-        qst = QuantumStateTomography()
+        source = Source() # todo: add params correctly
+        qst = QuantumStateTomography(source)
         # todo: fix instance params
         EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
-                                                        renormalization, brightness, g2, indistinguishability, loss))
+                                                        renormalization))
     basis = matrix_basis(nqubit)
     L = np.zeros((d ** 2, d ** 2), dtype='complex_')
     for j in range(d ** 2):
@@ -477,8 +467,7 @@ def decomp(matrix, basis):  # linear decomposition of any matrix upon a basis
 
 
 def lambda_mult_ideal(operator, nqubit):
-    # not simulating perceval circuit, but simply a mathematical result for ideal gate
-    # to compute process fidelity
+    # no simulation, simply a mathematical result for ideal gate to compute process fidelity
     d = 2 ** nqubit
     L = np.zeros((d ** 2, d ** 2), dtype='complex_')
     for j in range(d ** 2):
@@ -493,6 +482,7 @@ def lambda_mult_ideal(operator, nqubit):
 
 
 def chi_mult_ideal(operator, nqubit):
+    # no simulation, simply a mathematical result for ideal gate to compute process fidelity
     X = np.dot(np.linalg.pinv(beta_matrix_mult_qubit(nqubit)), lambda_mult_ideal(operator, nqubit))
     return vector_to_matrix(X)
 
