@@ -110,108 +110,89 @@ def ErhoE(m, rhoj, n, nqubit):
 
 
 # ##### preparation circuit ######################################################################################
-class PreparationCircuit:
-    """
-    Builds a preparation circuit to prepares one photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
+class StatePreparationCircuit:
+    # todo: choose how to create inheritance or connection with ACircuit/AProcessor. Also
+    #  for MeasurementCircuit or maybe TomographyCircuit?
 
-    :param j: jth Pauli Matrix I,X,Y,Z. Value of j between 0 and 3
+    """
+    Builds a preparation circuit to prepares one photon in each of the following
+    logical Qubit state states: |0>,|1>,|+>,|+i>
+
+    :param prep_state_basis_indxs: List of 'n'(=nqubit) elements indexing to choose jth
+    Pauli Matrix {j:0=I, j:1=X, j:2=Y, j:3=Z} at nth Qubit [number of elements = between (0 -> 4**nqubits-1)]
     :param nqubit: Number of Qubits
     """
 
-    def __init__(self, j: List, nqubit: int) -> Circuit:
-        # todo: fix input name for j and its documentation
+    def __init__(self, prep_state_basis_indxs: List, nqubit: int):
         self._nqubit = nqubit
-        self._j = j
-        self._prep_circuit = Circuit(2 * nqubit, name="Preparation Circ")
+        self._prep_state_basis_indxs = prep_state_basis_indxs
+        self._prep_circuit = Circuit(2 * nqubit, name="Preparation Circuit")
+        # assert len(self._prep_state_basis_indxs) == (4**self._nqubit - 1), "Not indexing all Qubits in the basis"
 
-    def _prep_circ_single_qubit(self, some_name: int) -> Circuit: #todo: Arman - can you help me choose name?
+    def _prep_circ_qubit_by_qubit(self, prep_circuit_indx: int) -> Circuit:
         """
-        Prepares one photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
+        Prepares a photon in any of the following Logical states: |0>,|1>,|+>,|+i>
 
-        :param some_name: int between 0 and 3 #todo: SOME NAME DOESNT HELP OR DO ANYTHING FOR SINGLE QUBIT :-(
-        #todo: need to keep j as list for both single/multi but maybe assert here that it is always single element?
-        :return: 2 modes perceval circuit
+        :param prep_circuit_indx: int between 0 and 3 for states (|0>,|1>,|+>,|+i>)
+        :return: 2 mode Preparation Circuit
         """
-        print("I AM HERE AND MY j is", some_name)
-        if some_name[0] == 1:
-            print("i CAN NOW REACH here")
-            return self._prep_circuit.add(0, PERM([1, 0]))
-        if some_name == 2:
-            return self._prep_circuit.add(0, BS.H())
-        if some_name == 3:
-            return self._prep_circuit.add(0, BS.H()).add(1, PS(np.pi / 2))
+        if prep_circuit_indx == 1:
+            return pcvl.Circuit(2) // (0, PERM([1, 0]))
+        if prep_circuit_indx == 2:
+            return pcvl.Circuit(2) // (0, BS.H())
+        if prep_circuit_indx == 3:
+            return pcvl.Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
 
-    def _prep_circ_multi_qubit(self, j: List):
+    def build_preparation_circuit(self) -> Circuit:
         """
-        Prepares each photon in each of the following states: |1,0>,|0,1>,|+>,|+i>
-
-        :param j: List of int between 0 and 4**nqubit-1 todo: verify
-        :param nqubit: number of qubits
-        :return: 2*nqubit modes perceval circuit
+        Builds a circuit to prepare photons in chosen input basis for tomography experiment
         """
-        for m in range(len(j)):
-            #todo do they neede to be added or worked in what manner
-            return self._prep_circuit.add(2 * m, self._prep_circ_single_qubit(some_name=j[m]), merge=True)
-
-    def build_preparation_circuit(self):
-        if self._nqubit == 1:
-            self._prep_circ_single_qubit(self._j)
-        else:
-            self._prep_circ_multi_qubit(self._j)
+        for m in range(len(self._prep_state_basis_indxs)):
+            print('M',m, self._prep_state_basis_indxs[m])
+            self._prep_circuit.add(2 * m, self._prep_circ_qubit_by_qubit(self._prep_state_basis_indxs[m]), merge=True)
         return self._prep_circuit
 
 
 # ##### measurement circuit ######################################################################################
 class MeasurementCircuit:
     """
-    # todo: fix input name for j and its documentation
     Builds a measurement circuit in the Pauli Basis (I,X,Y,Z) to perform tomography experiments.
 
-    :param j: jth Pauli Matrix I,X,Y,Z. Value of j between 0 and 3
+    :param meas_basis_pauli_indxs: List of 'n'(=nqubit) elements indexing to choose jth
+    Pauli Matrix {j:0=I, j:1=X, j:2=Y, j:3=Z} for measurement basis at nth Qubit
+    [number of elements = between (0 -> 4**nqubits-1)]
     :param nqubit: Number of Qubits
     """
 
-    def __init__(self, j: List, nqubit: int) -> Circuit:
-        # todo: fix input type for j and its documentation
+    def __init__(self, meas_basis_pauli_indxs: List, nqubit: int):
         self._nqubit = nqubit
-        self._j = j
+        self._meas_basis_pauli_indxs = meas_basis_pauli_indxs
         self._meas_circuit = Circuit(2 * nqubit, name="Measurement Circ")
 
-    def _meas_circ_single_qubit(self, some_other_name: int) -> Circuit:
-        #todo: Arman could you help me fogure out name?
+    def _meas_circ_single_qubit(self, pauli_meas_circ_indx: int) -> Circuit:
         """
-        Measures the photon in the pauli basis I,X,Y,Z
+        Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
 
-        :param some_other_name: int between 0 and 3
-        :return: 2 modes perceval circuit
+        :param pauli_meas_circ_indx: int between 0 and 3
+        :return: 2 modes Measurement Circuit
         """
-        if some_other_name == 1:
-            return self._meas_circuit.add(0, BS.H())
-        elif some_other_name == 2:
-            return self._meas_circuit.add(0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
+        if pauli_meas_circ_indx == 1:
+            return pcvl.Circuit(2) // (0, BS.H())
+        elif pauli_meas_circ_indx == 2:
+            return pcvl.Circuit(2) // (0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
         else:
-            return self._meas_circuit
+            return pcvl.Circuit(2)
 
-    def _meas_circ_multi_qubit(self, j: List):
+    def build_measurement_circuit(self) -> Circuit:
         """
-         Measures each photon in the pauli basis
-
-        :param j: int between 0 and 4**nqubit-1
-        :param nqubit: number of qubits
-        :return: 2*nqubit modes perceval circuit
+        Builds the circuit to perform measurement of photons in the Pauli basis
         """
-        for m in range(len(j)):
-            return self._meas_circuit.add(2 * m, self.meas_circ_single_qubit(some_other_name=j[m]), merge=True)
-
-    def build_measurement_circuit(self):
-        if self._nqubit == 1:
-            self._meas_circ_single_qubit(self._j)
-        else:
-            self._meas_circ_multi_qubit(self._j)
+        for m in range(len(self._meas_basis_pauli_indxs)):
+            self._meas_circuit.add(2 * m, self._meas_circ_single_qubit(self._meas_basis_pauli_indxs[m]), merge=True)
         return self._meas_circuit
 
-
 # ##### P and Stokes are part of QST ##############################################################################
+
 
 class QuantumStateTomography:
     def __init__(self):
@@ -221,7 +202,7 @@ class QuantumStateTomography:
                            operator_circuit: Circuit) -> Circuit:
         tomography_circuit = pcvl.Circuit(2 * nqubit + len(heralded_modes))
         # state preparation
-        pc = PreparationCircuit(num_state, nqubit)
+        pc = StatePreparationCircuit(num_state, nqubit)
         tomography_circuit.add(0, pc.build_preparation_circuit())
         # unknown operator
         tomography_circuit.add(0, operator_circuit)
@@ -230,10 +211,10 @@ class QuantumStateTomography:
         tomography_circuit.add(0, mc.build_measurement_circuit())
         return tomography_circuit
 
-    def probs_finding_state_kth_qbit(self, k, n):
-        # todo: MISNOMER; not a probability - it simply is forming nCk or C(n,k) terms whose products are summed
-        #  or something - see equation in ntoes again and decide
-        # set of subsets of size k in {0,...,n-1}
+    def _list_subset_k_from_n(self, k, n):
+        # list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
+        # todo: I do not know where to put it or what to call it, it simply is a utility function.
+        #  Should we put it in overall utils?or have a specific util for tomograph?
         s = {i for i in range(n)}
         return list(itertools.combinations(s, k))
 
@@ -288,7 +269,7 @@ class QuantumStateTomography:
 
         stokes_param = 0  # calculation of the Stokes parameter begins here
         for k in range(nqubit + 1):
-            for J in self.probs_finding_state_kth_qbit(k, nqubit):
+            for J in self._list_subset_k_from_n(k, nqubit):
                 eta = 1
                 if 0 not in J:
                     measurement_state = pcvl.BasicState("|1,0>")
