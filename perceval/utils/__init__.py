@@ -45,3 +45,5 @@ from ._enums import Encoding, InterferometerShape, FileFormat
 from .persistent_data import PersistentData
 from .metadata import PMetadata
 from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+from ._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, vector_to_matrix, \
+    decomp
