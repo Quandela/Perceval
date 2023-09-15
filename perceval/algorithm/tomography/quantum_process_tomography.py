@@ -323,22 +323,20 @@ class QuantumProcessTomography:
     def __init__(self):
         print("initiating process tomography")
 
-    def beta_mult_qubit(j, k, m, n, nqubit):
+    def beta_mult_qubit(self, j, k, m, n, nqubit):
         d = 2 ** nqubit
         b = ErhoE(m, rho(j, nqubit), n, nqubit)
         return b[k // d, k % d]
 
-
-    def beta_matrix_mult_qubit(nqubit):
+    def beta_matrix_mult_qubit(self, nqubit):
         d = 2 ** nqubit
         M = np.zeros((d ** 4, d ** 4), dtype='complex_')
         for i in range(d ** 4):
             for j in range(d ** 4):
-                M[i, j] = beta_mult_qubit(i // (d ** 2), i % (d ** 2), j // (d ** 2), j % (d ** 2), nqubit)
+                M[i, j] = self.beta_mult_qubit(i // (d ** 2), i % (d ** 2), j // (d ** 2), j % (d ** 2), nqubit)
         return M
 
-
-    def lambd_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None,
+    def lambd_mult_qubit(self, operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None,
                          brightness=1, g2=0, indistinguishability=1, loss=0):
         """
         Computes the lambda vector of the operator
@@ -377,8 +375,7 @@ class QuantumProcessTomography:
                 L[j, k] = eps_rhoj[k // d, k % d]
         return matrix_to_vector(L)
 
-
-    def chi_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1,
+    def chi_mult_qubit(self, operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1,
                        g2=0, indistinguishability=1, loss=0):
         """
         Computes the chi matrix of the operator
@@ -396,13 +393,12 @@ class QuantumProcessTomography:
         :return: 2**(2*nqubit)x2**(2*nqubit) array
         """
         Binv = np.linalg.pinv(beta_matrix_mult_qubit(nqubit))
-        L = lambd_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
+        L = self.lambd_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
                              indistinguishability, loss)
         X = np.dot(Binv, L)
         return vector_to_matrix(X)
 
-
-    def lambda_mult_ideal(operator, nqubit):
+    def lambda_mult_ideal(self, operator, nqubit):
         # no simulation, simply a mathematical result for ideal gate to compute process fidelity
         d = 2 ** nqubit
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
@@ -416,64 +412,238 @@ class QuantumProcessTomography:
             L1[i] = L[i // (d ** 2), i % (d ** 2)]
         return L1
 
-
-    def chi_mult_ideal(operator, nqubit):
+    def chi_mult_ideal(self, operator, nqubit):
         # no simulation, simply a mathematical result for ideal gate to compute process fidelity
-        X = np.dot(np.linalg.pinv(beta_matrix_mult_qubit(nqubit)), lambda_mult_ideal(operator, nqubit))
+        X = np.dot(np.linalg.pinv(self.beta_matrix_mult_qubit(nqubit)), self.lambda_mult_ideal(operator, nqubit))
         return vector_to_matrix(X)
 
 
 # ##### Fidelity calculations ######################################################################################
-def process_fidelity(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
-                     brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the process fidelity of an operator and its perceval circuit
+class FidelityTomography:
+    def __init__(self):
+        print("I am going to compute fidelity based on tomography process")
 
-    :param operator: matrix for the operator
-    :param operator_circuit: perceval circuit for the operator
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: float between 0 and 1
-    """
-    nqubit = int(np.log2(len(operator)))
-    X0 = chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
-                        indistinguishability, loss)
-    X1 = chi_mult_ideal(operator, nqubit)
-    return np.real(np.trace(np.dot(X0, X1)))
+    def process_fidelity(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
+                         brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the process fidelity of an operator and its perceval circuit
 
-
-def random_fidelity(nqubit, brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the process and the average fidelity of a random non-entangling operator
-
-    :param nqubit: number of qubits
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-
-    """
-    L = []
-    for i in range(nqubit):
-        L.append(unitary_group.rvs(2))
-    print('test matrices :', L)
-    M = L[0]
-    CU = pcvl.Circuit(2 * nqubit).add(0, Unitary(pcvl.Matrix(L[0])))
-    for i in range(1, nqubit):
-        M = np.kron(M, L[i])
-        CU.add(2 * i, Unitary(pcvl.Matrix(L[i])))
-    pf = process_fidelity(M, CU, brightness=brightness, g2=g2, indistinguishability=indistinguishability, loss=loss)
-    afq = average_fidelity(M, CU, brightness=brightness, g2=g2, indistinguishability=indistinguishability, loss=loss)
-    print('process fidelity :', pf, '\n',
-          'average fidelity :', afq)
+        :param operator: matrix for the operator
+        :param operator_circuit: perceval circuit for the operator
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: float between 0 and 1
+        """
+        nqubit = int(np.log2(len(operator)))
+        X0 = chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
+                            indistinguishability, loss)
+        X1 = chi_mult_ideal(operator, nqubit)
+        return np.real(np.trace(np.dot(X0, X1)))
 
 
+    def random_fidelity(nqubit, brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the process and the average fidelity of a random non-entangling operator
+
+        :param nqubit: number of qubits
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+
+        """
+        L = []
+        for i in range(nqubit):
+            L.append(unitary_group.rvs(2))
+        print('test matrices :', L)
+        M = L[0]
+        CU = pcvl.Circuit(2 * nqubit).add(0, Unitary(pcvl.Matrix(L[0])))
+        for i in range(1, nqubit):
+            M = np.kron(M, L[i])
+            CU.add(2 * i, Unitary(pcvl.Matrix(L[i])))
+        pf = process_fidelity(M, CU, brightness=brightness, g2=g2, indistinguishability=indistinguishability, loss=loss)
+        afq = average_fidelity(M, CU, brightness=brightness, g2=g2, indistinguishability=indistinguishability, loss=loss)
+        print('process fidelity :', pf, '\n',
+              'average fidelity :', afq)
+
+    def average_fidelity_with_reconstruction(operator, operator_circuit, heralded_modes=[], post_process=False,
+                                             renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        not so important-computes avg fideltiy in a longer way
+        Computes the average fidelity of an operator and its perceval circuit by recontruction of the whole map
+
+        :param operator: matrix for the operator
+        :param operator_circuit: perceval circuit for the operator
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+            :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: float between 0 and 1
+        """
+        nqubit = int(np.log2(len(operator)))
+        Udag = np.transpose(np.conjugate(operator))
+        d = 2 ** nqubit
+        f = 1 / (d + 1)
+        for j in range(d ** 2):
+            Uj = E(j, nqubit)
+            Ujdag = np.transpose(np.conjugate(Uj))
+            eps_Uj = map_reconstructed(Uj, operator_circuit, nqubit, heralded_modes, post_process, renormalization,
+                                       brightness, g2, indistinguishability, loss)
+            a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
+            f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
+        return np.real(f)
+
+    def error_process_matrix(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
+                             brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the error matrix for an operation from the chi matrix
+
+        :param operator: matrix for the operator
+        :param operator_circuit: perceval circuit for the operator
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+            :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: matrix
+        """
+        nqubit = int(np.log2(len(operator)))
+        d = 2 ** nqubit
+        X = chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
+                           indistinguishability, loss)
+        V = np.zeros((d ** 2, d ** 2), dtype='complex_')
+        for m in range(d ** 2):
+            for n in range(d ** 2):
+                Emdag = np.transpose(np.conjugate(E(m, nqubit)))
+                En = E(n, nqubit)
+                Udag = np.transpose(np.conjugate(operator))
+                V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
+        return np.linalg.multi_dot([V, X, np.conjugate(np.transpose(V))])
+
+    def average_fidelity(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
+                         brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the average fidelity of an operator and its perceval circuit
+
+        :param operator: matrix for the operator
+        :param operator_circuit: perceval circuit for the operator
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+            :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: float between 0 and 1
+        """
+        nqubit = int(np.log2(len(operator)))
+        Udag = np.transpose(np.conjugate(operator))
+        d = 2 ** nqubit
+        f = 1 / (d + 1)
+
+        # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
+        EPS = []
+        for state in range(d ** 2):
+            l = []
+            for i in range(nqubit - 1, -1, -1):
+                l.append(state // (4 ** i))
+                state = state % (4 ** i)
+            qst = QuantumStateTomography()
+            # todo: fix instance params
+            EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
+                                                            renormalization, brightness, g2, indistinguishability,
+                                                            loss))
+
+        basis = matrix_basis(nqubit)
+        for j in range(d ** 2):
+            Uj = E(j, nqubit)
+            mu = decomp(Uj, basis)
+            eps_Uj = sum([mu[i] * EPS[i] for i in range(d ** 2)])  # compute the map on a basis
+            Ujdag = np.transpose(np.conjugate(Uj))
+            a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
+            f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
+        return np.real(f)
+
+    def mixture(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1,
+                g2=0,
+                indistinguishability=1, loss=0):
+        """
+        ## for CNOT gate - not so important
+        Computes the mixture created by a perceval circuit
+
+        :param operator_circuit: perceval circuit for the operator
+        :param nqubit: number of qubits
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+
+        :return: float between 0 and 1
+        """
+        d = 2 ** nqubit
+        X = chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
+                           indistinguishability, loss)
+        t = np.trace(np.dot(X, X))
+        return np.real((d * t + 1) / (d + 1))
+
+    def is_physical(matrix, eigen_tolerance=10 ** (-6)):
+        """
+        Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+        :param matrix: square matrix
+        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+        :return: bool and string
+        """
+        # check if trace preserving
+        b = True
+        s = ""
+        if not np.isclose(np.trace(matrix), 1):
+            b = False
+            print("trace :", np.trace(matrix))
+            s += "|trace not 1|"
+        # check if hermitian
+        n = len(matrix)
+        for i in range(n):
+            for j in range(i, n):
+                if not np.isclose(matrix[i][j], np.conjugate(matrix[j][i])):
+                    b = False
+                    s += "|not hermitian|"
+        # check if completely positive with Choi–Jamiołkowski isomorphism
+        M = np.kron(matrix, np.eye((n), dtype='complex_'))
+        I = np.eye((n), dtype='complex_')
+        omega = sum([np.kron(I[:, i], I[:, i]) for i in range(n)])
+        rho = np.dot(omega, np.conjugate(np.transpose(omega)))
+        choi = np.dot(M, rho)
+        eigenvalues = np.linalg.eigvalsh(choi)
+        if np.any(eigenvalues < -eigen_tolerance):
+            b = False
+            print("smallest eigenvalue :", eigenvalues[0])
+            s += "|not CP|"
+        if b:
+            return True
+        return False, s
+
+
+# ####################################################################################################################
+# MY GUESS IS THAT THIS SHOULD BE USED FOR VISUALIZAITON TODO: verify and implement
 def map_reconstructed(rho, operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None,
                       brightness=1, g2=0, indistinguishability=1, loss=0):
     """
@@ -502,175 +672,3 @@ def map_reconstructed(rho, operator_circuit, nqubit, heralded_modes=[], post_pro
             eps += X[m, n] * np.linalg.multi_dot([E(m, nqubit), rho, np.transpose(np.conjugate(E(n, nqubit)))])
     # Eqn 2.4 the exact sum
     return eps
-
-
-def average_fidelity_with_reconstruction(operator, operator_circuit, heralded_modes=[], post_process=False,
-                                         renormalization=None, brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    not so important-computes avg fideltiy in a longer way
-    Computes the average fidelity of an operator and its perceval circuit by recontruction of the whole map
-
-    :param operator: matrix for the operator
-    :param operator_circuit: perceval circuit for the operator
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-        :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: float between 0 and 1
-    """
-    nqubit = int(np.log2(len(operator)))
-    Udag = np.transpose(np.conjugate(operator))
-    d = 2 ** nqubit
-    f = 1 / (d + 1)
-    for j in range(d ** 2):
-        Uj = E(j, nqubit)
-        Ujdag = np.transpose(np.conjugate(Uj))
-        eps_Uj = map_reconstructed(Uj, operator_circuit, nqubit, heralded_modes, post_process, renormalization,
-                                   brightness, g2, indistinguishability, loss)
-        a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
-        f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
-    return np.real(f)
-
-
-def error_process_matrix(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
-                         brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the error matrix for an operation from the chi matrix
-
-    :param operator: matrix for the operator
-    :param operator_circuit: perceval circuit for the operator
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-        :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: matrix
-    """
-    nqubit = int(np.log2(len(operator)))
-    d = 2 ** nqubit
-    X = chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
-                       indistinguishability, loss)
-    V = np.zeros((d ** 2, d ** 2), dtype='complex_')
-    for m in range(d ** 2):
-        for n in range(d ** 2):
-            Emdag = np.transpose(np.conjugate(E(m, nqubit)))
-            En = E(n, nqubit)
-            Udag = np.transpose(np.conjugate(operator))
-            V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
-    return np.linalg.multi_dot([V, X, np.conjugate(np.transpose(V))])
-
-
-def average_fidelity(operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None,
-                     brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the average fidelity of an operator and its perceval circuit
-
-    :param operator: matrix for the operator
-    :param operator_circuit: perceval circuit for the operator
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-        :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: float between 0 and 1
-    """
-    nqubit = int(np.log2(len(operator)))
-    Udag = np.transpose(np.conjugate(operator))
-    d = 2 ** nqubit
-    f = 1 / (d + 1)
-
-    # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
-    EPS = []
-    for state in range(d ** 2):
-        l = []
-        for i in range(nqubit - 1, -1, -1):
-            l.append(state // (4 ** i))
-            state = state % (4 ** i)
-        qst = QuantumStateTomography()
-        # todo: fix instance params
-        EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
-                                                        renormalization, brightness, g2, indistinguishability, loss))
-
-    basis = matrix_basis(nqubit)
-    for j in range(d ** 2):
-        Uj = E(j, nqubit)
-        mu = decomp(Uj, basis)
-        eps_Uj = sum([mu[i] * EPS[i] for i in range(d ** 2)])  # compute the map on a basis
-        Ujdag = np.transpose(np.conjugate(Uj))
-        a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
-        f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
-    return np.real(f)
-
-
-def mixture(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1, g2=0,
-            indistinguishability=1, loss=0):
-    """
-    ## for CNOT gate - not so important
-    Computes the mixture created by a perceval circuit
-
-    :param operator_circuit: perceval circuit for the operator
-    :param nqubit: number of qubits
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-
-    :return: float between 0 and 1
-    """
-    d = 2 ** nqubit
-    X = chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
-                       indistinguishability, loss)
-    t = np.trace(np.dot(X, X))
-    return np.real((d * t + 1) / (d + 1))
-
-
-def is_physical(matrix, eigen_tolerance=10 ** (-6)):
-    """
-    Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
-
-    :param matrix: square matrix
-    :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-    :return: bool and string
-    """
-    # check if trace preserving
-    b = True
-    s = ""
-    if not np.isclose(np.trace(matrix), 1):
-        b = False
-        print("trace :", np.trace(matrix))
-        s += "|trace not 1|"
-    # check if hermitian
-    n = len(matrix)
-    for i in range(n):
-        for j in range(i, n):
-            if not np.isclose(matrix[i][j], np.conjugate(matrix[j][i])):
-                b = False
-                s += "|not hermitian|"
-    # check if completely positive with Choi–Jamiołkowski isomorphism
-    M = np.kron(matrix, np.eye((n), dtype='complex_'))
-    I = np.eye((n), dtype='complex_')
-    omega = sum([np.kron(I[:, i], I[:, i]) for i in range(n)])
-    rho = np.dot(omega, np.conjugate(np.transpose(omega)))
-    choi = np.dot(M, rho)
-    eigenvalues = np.linalg.eigvalsh(choi)
-    if np.any(eigenvalues < -eigen_tolerance):
-        b = False
-        print("smallest eigenvalue :", eigenvalues[0])
-        s += "|not CP|"
-    if b:
-        return True
-    return False, s
