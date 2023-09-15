@@ -37,6 +37,9 @@ from scipy.stats import unitary_group
 from perceval.simulators import Simulator
 from perceval.backends import SLOSBackend
 from typing import List
+from perceval.utils._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
+    vector_to_matrix, decomp
+
 
 
 # ##### threshold ######################################################################################
@@ -316,175 +319,108 @@ class QuantumStateTomography:
 
 
 # ##### IDK ######################################################################################
-def beta_mult_qubit(j, k, m, n, nqubit):
-    d = 2 ** nqubit
-    b = ErhoE(m, rho(j, nqubit), n, nqubit)
-    return b[k // d, k % d]
+class QuantumProcessTomography:
+    def __init__(self):
+        print("initiating process tomography")
+
+    def beta_mult_qubit(j, k, m, n, nqubit):
+        d = 2 ** nqubit
+        b = ErhoE(m, rho(j, nqubit), n, nqubit)
+        return b[k // d, k % d]
 
 
-def beta_matrix_mult_qubit(nqubit):
-    d = 2 ** nqubit
-    M = np.zeros((d ** 4, d ** 4), dtype='complex_')
-    for i in range(d ** 4):
-        for j in range(d ** 4):
-            M[i, j] = beta_mult_qubit(i // (d ** 2), i % (d ** 2), j // (d ** 2), j % (d ** 2), nqubit)
-    return M
+    def beta_matrix_mult_qubit(nqubit):
+        d = 2 ** nqubit
+        M = np.zeros((d ** 4, d ** 4), dtype='complex_')
+        for i in range(d ** 4):
+            for j in range(d ** 4):
+                M[i, j] = beta_mult_qubit(i // (d ** 2), i % (d ** 2), j // (d ** 2), j % (d ** 2), nqubit)
+        return M
 
 
-def lambd_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None,
-                     brightness=1, g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the lambda vector of the operator
+    def lambd_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None,
+                         brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the lambda vector of the operator
 
-    :param operator_circuit: perceval circuit for the operator
-    :param nqubit: number of qubits
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: 2**(4*nqubit) vector
-    """
-    d = 2 ** nqubit
-    EPS = []
-    for state in range(d ** 2):
-        l = []
-        for i in range(nqubit - 1, -1, -1):
-            l.append(state // (4 ** i))
-            state = state % (4 ** i)
-        source = Source() # todo: add params correctly
-        qst = QuantumStateTomography(source)
-        # todo: fix instance params
-        EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
-                                                        renormalization))
-    basis = matrix_basis(nqubit)
-    L = np.zeros((d ** 2, d ** 2), dtype='complex_')
-    for j in range(d ** 2):
-        rhoj = rho(j, nqubit)
-        mu = decomp(rhoj, basis)
-        eps_rhoj = sum([mu[i] * EPS[i] for i in range(d ** 2)])
-        for k in range(d ** 2):
-            L[j, k] = eps_rhoj[k // d, k % d]
-    return matrix_to_vector(L)
-
-
-def chi_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1,
-                   g2=0, indistinguishability=1, loss=0):
-    """
-    Computes the chi matrix of the operator
-
-    :param operator_circuit: perceval circuit for the operator
-    :param nqubit: number of qubits
-    :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-    :param post_process: bool for postselection on the outcome or not
-    :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-    doing postselection which to non CP maps
-    :param brightness source brightness
-    :param g2 SPS g2
-    :param indistinguishability photon indistinguishability
-    :param loss known losses in source
-    :return: 2**(2*nqubit)x2**(2*nqubit) array
-    """
-    Binv = np.linalg.pinv(beta_matrix_mult_qubit(nqubit))
-    L = lambd_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
-                         indistinguishability, loss)
-    X = np.dot(Binv, L)
-    return vector_to_matrix(X)
+        :param operator_circuit: perceval circuit for the operator
+        :param nqubit: number of qubits
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: 2**(4*nqubit) vector
+        """
+        d = 2 ** nqubit
+        EPS = []
+        for state in range(d ** 2):
+            l = []
+            for i in range(nqubit - 1, -1, -1):
+                l.append(state // (4 ** i))
+                state = state % (4 ** i)
+            source = Source() # todo: add params correctly
+            qst = QuantumStateTomography(source)
+            # todo: fix instance params
+            EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
+                                                            renormalization))
+        basis = matrix_basis(nqubit)
+        L = np.zeros((d ** 2, d ** 2), dtype='complex_')
+        for j in range(d ** 2):
+            rhoj = rho(j, nqubit)
+            mu = decomp(rhoj, basis)
+            eps_rhoj = sum([mu[i] * EPS[i] for i in range(d ** 2)])
+            for k in range(d ** 2):
+                L[j, k] = eps_rhoj[k // d, k % d]
+        return matrix_to_vector(L)
 
 
-def state_to_dens_matrix(state):
-    return np.dot(state, np.conjugate(np.transpose(state)))
+    def chi_mult_qubit(operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None, brightness=1,
+                       g2=0, indistinguishability=1, loss=0):
+        """
+        Computes the chi matrix of the operator
+
+        :param operator_circuit: perceval circuit for the operator
+        :param nqubit: number of qubits
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
+        doing postselection which to non CP maps
+        :param brightness source brightness
+        :param g2 SPS g2
+        :param indistinguishability photon indistinguishability
+        :param loss known losses in source
+        :return: 2**(2*nqubit)x2**(2*nqubit) array
+        """
+        Binv = np.linalg.pinv(beta_matrix_mult_qubit(nqubit))
+        L = lambd_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization, brightness, g2,
+                             indistinguishability, loss)
+        X = np.dot(Binv, L)
+        return vector_to_matrix(X)
 
 
-def compute_matrix(j):
-    if j == 0:
-        return np.eye((2), dtype='complex_')
-    if j == 1:
-        return np.array([[0, 1], [1, 0]], dtype='complex_')
-    if j == 2:
-        return (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype='complex_')
-    if j == 3:
-        return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
+    def lambda_mult_ideal(operator, nqubit):
+        # no simulation, simply a mathematical result for ideal gate to compute process fidelity
+        d = 2 ** nqubit
+        L = np.zeros((d ** 2, d ** 2), dtype='complex_')
+        for j in range(d ** 2):
+            rhoj = rho(j, nqubit)
+            eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
+            for k in range(d ** 2):
+                L[j, k] = eps_rhoj[k // d, k % d]
+        L1 = np.zeros((d ** 4, 1), dtype='complex_')
+        for i in range(d ** 4):
+            L1[i] = L[i // (d ** 2), i % (d ** 2)]
+        return L1
 
 
-def matrix_basis(nqubit):  # create a matrix basis from all the tensor products states
-    # needed for rho_j and to compute epsilon rho_j
-    d = 2 ** nqubit
-    B = []
-    for j in range(d ** 2):
-        v = np.zeros((d, 1), dtype='complex_')
-        v[0] = 1
-        k = []
-        for m in range(nqubit - 1, -1, -1):
-            k.append(j // (4 ** m))
-            j = j % (4 ** m)
-        k.reverse()
-        M = compute_matrix(k[0])
-        for i in k[1:]:
-            M = np.kron(compute_matrix(i), M)
-        B.append(state_to_dens_matrix(np.dot(M, v)))
-    return B
-
-
-def matrix_to_vector(matrix):  # concatenate a matrix d*d into a vector d**2
-    # simply flatten() -> rows after row
-    n = len(matrix[0])
-    x = np.zeros((n ** 2), dtype='complex_')
-    for i in range(n ** 2):
-        x[i] = matrix[i // n, i % n]
-    return x
-
-
-def vector_to_matrix(vector):  # expand a vector d**2 into a matrix d*d
-    n = len(vector)
-    d = int(np.sqrt(n))
-    M = np.zeros((d, d), dtype='complex_')
-    for i in range(d):
-        for j in range(d):
-            if len(vector.shape) == 2:
-                M[i, j] = vector[i * d + j][0]
-            elif len(vector.shape) == 1:
-                M[i, j] = vector[i * d + j]
-    return M
-
-
-def decomp(matrix, basis):  # linear decomposition of any matrix upon a basis
-    # decomposition used in rho_j creation - process tomography
-    n = len(matrix[0])
-    y = matrix_to_vector(matrix)
-    L = []
-    for m in basis:
-        L.append(matrix_to_vector(m))
-    A = np.zeros((n ** 2, n ** 2), dtype='complex_')
-    for i in range(n ** 2):
-        for j in range(n ** 2):
-            A[i, j] = L[j][i]
-    x = np.dot(np.linalg.inv(A), y)
-    return x
-
-
-def lambda_mult_ideal(operator, nqubit):
-    # no simulation, simply a mathematical result for ideal gate to compute process fidelity
-    d = 2 ** nqubit
-    L = np.zeros((d ** 2, d ** 2), dtype='complex_')
-    for j in range(d ** 2):
-        rhoj = rho(j, nqubit)
-        eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
-        for k in range(d ** 2):
-            L[j, k] = eps_rhoj[k // d, k % d]
-    L1 = np.zeros((d ** 4, 1), dtype='complex_')
-    for i in range(d ** 4):
-        L1[i] = L[i // (d ** 2), i % (d ** 2)]
-    return L1
-
-
-def chi_mult_ideal(operator, nqubit):
-    # no simulation, simply a mathematical result for ideal gate to compute process fidelity
-    X = np.dot(np.linalg.pinv(beta_matrix_mult_qubit(nqubit)), lambda_mult_ideal(operator, nqubit))
-    return vector_to_matrix(X)
+    def chi_mult_ideal(operator, nqubit):
+        # no simulation, simply a mathematical result for ideal gate to compute process fidelity
+        X = np.dot(np.linalg.pinv(beta_matrix_mult_qubit(nqubit)), lambda_mult_ideal(operator, nqubit))
+        return vector_to_matrix(X)
 
 
 # ##### Fidelity calculations ######################################################################################
