@@ -14,11 +14,11 @@ Alternatively, if you are interested in contributing to the project - you can cl
 
 .. code-block:: bash
 
-   (.venv) $ git clone https://github.com/quandela/Perceval
-   (.venv) $ cd Perceval
-   (.venv) $ python setup.py install # or develop for developers
+   (venv) $ git clone https://github.com/quandela/Perceval
+   (venv) $ cd Perceval
+   (venv) $ python setup.py install # or develop for developers
 
-At this point you can directly use Perceval. For following the tutorial below, we do recommend running it in a
+At this point you can directly use Perceval. To follow the tutorial below, we do recommend running the code in a
 jupyter notebook, or in the Python console of your favorite IDE (Spyder, Pycharm) but you can also run it in a
 terminal python console.
 
@@ -26,18 +26,16 @@ terminal python console.
 First Circuit
 -------------
 
-Import the library and the components from the unitary components library:
+To begin, let's import the library, the unitary components and the simulator
 
 >>> import perceval as pcvl
 >>> import perceval.components.unitary_components as comp
->>> from pcvl.simulators import Simulator
+>>> from perceval.simulators import Simulator
 
-Defines a circuit as a simple beam-splitter, it is a 2-mode circuit
+As a first circuit, you can try to display a single component, like a beam splitter for exemple.
 
->>> c = comp.BS()
->>> c.m
-2
->>> pcvl.pdisplay(c)
+>>> component = comp.BS()
+>>> pcvl.pdisplay(component)
 
 .. tip::
 
@@ -54,43 +52,56 @@ Defines a circuit as a simple beam-splitter, it is a 2-mode circuit
          - .. image:: _static/img/jupyter-notebook.png
          - .. image:: _static/img/ide-screenshot.png
 
-Check the definition of the circuit, and the values of these parameters:
+You can also access really easily to different aspects of the component, such as the number of modes of your circuit,
 
->>> pcvl.pdisplay(c.definition())
+>>> components.m
+2
+
+or the matrix definition of it
+
+>>> pcvl.pdisplay(component.definition())
 ⎡exp(I*(phi_tl + phi_tr))*cos(theta/2)    I*exp(I*(phi_bl + phi_tr))*sin(theta/2)⎤
 ⎣I*exp(I*(phi_br + phi_tl))*sin(theta/2)  exp(I*(phi_bl + phi_br))*cos(theta/2)  ⎦
->>> c.get_parameters(all_params=True)
-[Parameter(name='theta', value=pi/2, min_v=0.0, max_v=12.566370614359172), Parameter(name='phi_tl', value=0, min_v=0.0, max_v=6.283185307179586), Parameter(name='phi_bl', value=0, min_v=0.0, max_v=6.283185307179586), Parameter(name='phi_tr', value=0, min_v=0.0, max_v=6.283185307179586), Parameter(name='phi_br', value=0, min_v=0.0, max_v=6.283185307179586)]
 
-Display the unitary matrix for these fixed parameters, and check it is unitary:
+The parameters above (here with default values) are accessible with
 
->>> pcvl.pdisplay(c.U)
-⎡sqrt(2)/2    sqrt(2)*I/2⎤
-⎣sqrt(2)*I/2  sqrt(2)/2  ⎦
->>> c.U.is_unitary()
+>>> components.get_parameters(all_params=True)
+[Parameter(name='theta', value=pi/2, min_v=0.0, max_v=12.566370614359172),
+Parameter(name='phi_tl', value=0, min_v=0.0, max_v=6.283185307179586),
+Parameter(name='phi_bl', value=0, min_v=0.0, max_v=6.283185307179586),
+Parameter(name='phi_tr', value=0, min_v=0.0, max_v=6.283185307179586),
+Parameter(name='phi_br', value=0, min_v=0.0, max_v=6.283185307179586)]
+
+You can also check if the matrix is unitary
+
+>>> component.U.is_unitary()
 True
 
-Let us decide to send one photon on the lower left branch of the beam splitter. It is corresponding to the following
-input state:
+Simulation
+----------
+
+The following part will allow you to simulate the behavior of photons crossing the circuit
+
+First of all, let's choose an input state for our simulation. The following line instanciate an input state that represent one photon going in the second mode. And you can check the number of photons of your input state
 
 >>> input_state = pcvl.BasicState("|0,1>")
 >>> input_state.n
 1
 
-Define a simulator for the circuit:
+Then you have to choose a backend for the simulation and create a Simulator
 
 >>> backend = pcvl.BackendFactory().get_backend()
 >>> simulator = Simulator(backend)
->>> simulator.set_circuit(c)
+>>> simulator.set_circuit(component)
 
-Get the output state of the circuit for this input_state:
+Now you can get the state vector at the output of your component:
 
 >>> print(simulator.evolve(input_state))
 sqrt(2)*I/2*|1,0>+sqrt(2)/2*|0,1>
 
-Sample some output states:
+You can also get output samples by using the backend of your choice (here the Naive one)
 
->>> p = pcvl.Processor("Naive", c)
+>>> p = pcvl.Processor("Naive", component)
 >>> p.with_input(input_state)
 >>> sampler = pcvl.algorithm.Sampler(p)
 >>> samples = sampler.samples(10)
@@ -108,23 +119,13 @@ Sample some output states:
 |0,1>
 |0,1>
 
-Get the actual probability associated to each output state:
 
->>> probs = sampler.probs()
->>> pcvl.pdisplay(probs['results'])
-+-------+-------------+
-| state | probability |
-+-------+-------------+
-| |1,0> |     1/2     |
-| |0,1> |     1/2     |
-+-------+-------------+
+You can also get the full probability distribution for any input state.
 
-Get the full probability distribution for multiple input states:
-
->>> ca = pcvl.algorithm.Analyzer(p,
-...                           [pcvl.BasicState([0, 1]), pcvl.BasicState([1, 0]), pcvl.BasicState([1, 1])], # the input states
-...                           "*" # all possible output states that can be generated with 1 or 2 photons
-...                          )
+>>> distrib = pcvl.algorithm.Analyzer(p,
+...                           [pcvl.BasicState([0, 1]),
+...                             pcvl.BasicState([1, 0]),
+...                             pcvl.BasicState([1, 1])],)
 >>> pcvl.pdisplay(ca)
 +-------+-------+-------+-------+-------+-------+
 |       | |1,0> | |0,1> | |2,0> | |1,1> | |0,2> |
