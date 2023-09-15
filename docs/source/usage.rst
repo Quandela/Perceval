@@ -30,6 +30,7 @@ Import the library and the components from the unitary components library:
 
 >>> import perceval as pcvl
 >>> import perceval.components.unitary_components as comp
+>>> from pcvl.simulators import Simulator
 
 Defines a circuit as a simple beam-splitter, it is a 2-mode circuit
 
@@ -79,7 +80,8 @@ input state:
 Define a simulator for the circuit:
 
 >>> backend = pcvl.BackendFactory().get_backend()
->>> simulator = backend(c)
+>>> simulator = Simulator(backend)
+>>> simulator.set_circuit(c)
 
 Get the output state of the circuit for this input_state:
 
