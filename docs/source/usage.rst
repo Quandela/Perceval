@@ -22,5 +22,5 @@ Tutorial
 --------
 
 At this point you can directly use Perceval.
-If you want to learn how to build Linear Optical circuits, manipulate vector states or run quantum algorithm remotely,
+If you want to learn how to build Linear Optical circuits, manipulate vector states or run quantum algorithms remotely,
 you should follow the example notebooks. You can start with the :ref:`Detailed Walkthrough` tutorial.
