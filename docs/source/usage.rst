@@ -37,21 +37,6 @@ As a first circuit, you can try to display a single component, like a beam split
 >>> component = comp.BS()
 >>> pcvl.pdisplay(component)
 
-.. tip::
-
-    The outcome of this last command will depend on your environment - see :ref:`Visualization`.
-
-    .. list-table::
-       :header-rows: 1
-       :width: 100%
-
-       * - Text Console
-         - Jupyter Notebook
-         - Within IDE (Pycharm, Spyder)
-       * - .. image:: _static/img/terminal-screenshot.png
-         - .. image:: _static/img/jupyter-notebook.png
-         - .. image:: _static/img/ide-screenshot.png
-
 You can also access really easily to different aspects of the component, such as the number of modes of your circuit,
 
 >>> components.m

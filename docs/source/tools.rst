@@ -92,6 +92,19 @@ Then, add ``pcvl.pdisplay()`` of your circuit.
   :align: center
   :width: 75%
 
+.. tip::
+
+    The outcome of this last command will depend on your environment.
+
+    .. list-table::
+       :header-rows: 1
+       :width: 100%
+
+       * - Text Console
+         - Jupyter Notebook
+       * - .. image:: _static/img/terminal-screenshot.jpg
+         - .. image:: _static/img/jupyter-screenshot.jpg
+
 Also, you can change the display of the circuit using a different skin which can itself be configured.
 Indeed, a boolean can be set to obtain a more compact display (if the circuit is too wide for example).
 
