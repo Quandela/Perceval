@@ -36,12 +36,12 @@ def state_to_dens_matrix(state):
 
 def compute_matrix(j):
     if j == 0:
-        return np.eye((2), dtype='complex_')
-    if j == 1:
+        return np.eye(2, dtype='complex_')
+    elif j == 1:
         return np.array([[0, 1], [1, 0]], dtype='complex_')
-    if j == 2:
+    elif j == 2:
         return (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype='complex_')
-    if j == 3:
+    elif j == 3:
         return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
 
 
