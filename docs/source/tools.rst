@@ -102,8 +102,10 @@ Then, add ``pcvl.pdisplay()`` of your circuit.
 
        * - Text Console
          - Jupyter Notebook
+         - IDE (Pycharm, Spyder, etc)
        * - .. image:: _static/img/terminal-screenshot.jpg
          - .. image:: _static/img/jupyter-screenshot.jpg
+         - .. image:: _static/img/ide-screenshot.jpg
 
 Also, you can change the display of the circuit using a different skin which can itself be configured.
 Indeed, a boolean can be set to obtain a more compact display (if the circuit is too wide for example).
