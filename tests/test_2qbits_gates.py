@@ -131,7 +131,7 @@ def test_cz_and_cnot_phases_and_modulus():
 
 @pytest.mark.skip(reason="redundant with overhead test")
 @pytest.mark.parametrize("cnot_gate", ["klm cnot", "postprocessed cnot", "heralded cnot"])
-def test_inverse_cnot(cnot_gate):
+def test_inverted_cnot(cnot_gate):
     """Test cnot gate phase by inverting it with Hadamard gates
 
      ╭───╮   ╭──────────╮   ╭───╮             ╭──────────╮

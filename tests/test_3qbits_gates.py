@@ -102,7 +102,7 @@ def test_ccz_and_toffoli_phases_and_modulus():
 
 
 @pytest.mark.skip(reason="redundant with overhead test")
-def test_inverse_sub_cnot():
+def test_inverted_sub_cnot():
     """Heralding ctrl one after the other to do the same test as test_inverse_cnot_with_H
     in tests/test_2qbits_gates.py
     """
