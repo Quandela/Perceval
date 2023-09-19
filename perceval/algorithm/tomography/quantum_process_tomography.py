@@ -37,8 +37,78 @@ from scipy.stats import unitary_group
 from perceval.simulators import Simulator
 from perceval.backends import SLOSBackend
 from typing import List
-from perceval.utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
+from _tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
     vector_to_matrix, decomp
+
+
+def pauli(j):
+    """
+    computes the j-th Pauli operator (I,X,Y,Z)
+
+    :param j: int between 0 and 3
+    :return: 2x2 unitary and hermitian array
+    """
+    assert j < 3, f'Pauli Index should be less than 3'
+    if j == 0:  # I
+        return np.eye(2, dtype='complex_')
+    elif j == 1:  # Pauli X
+        return np.array([[0, 1], [1, 0]], dtype='complex_')
+    elif j == 2:  # Pauli Y
+        return np.array([[0, -1j], [1j, 0]], dtype='complex_')
+    else:  # Pauli Z
+        return np.array([[1, 0], [0, -1]], dtype='complex_')
+
+
+def fixed_basis_ops(j, nqubit):
+    """
+    computes the fixed sets of operators (tensor products of pauli gates) for quantum process tomography
+
+    :param j: int between 0 and 4**nqubit-1
+    :param nqubit: number of qubits
+    :return: 2**nqubitx2**nqubit array
+    """
+    if nqubit == 1:
+        return pauli(j)
+
+    E = pauli(j // (4 ** (nqubit - 1)))
+    j = j % (4 ** (nqubit - 1))
+    for i in range(nqubit - 2, -1, -1):
+        E = np.kron(E, pauli(j // (4 ** i)))
+        j = j % (4 ** i)
+    return E
+
+
+def canonical_basis_ops(j, nqubit):
+    """
+    Computes the matrices of the canonical basis
+
+    :param j: int between 0 and 4**nqubit-1
+    :param nqubit: number of qubits
+    :return: 2**nqubitx2**nqubit array
+    """
+    d = 2 ** nqubit
+    R = np.zeros((d, d), dtype='complex_')
+    R[j // d, j % d] = 1
+    return R
+
+
+def krauss_repr_ops(m, rhoj, n, nqubit):
+    # computes the Krauss representation of the operator given by ErhoE, where E are fixed set
+    # of operators and rho is the one in canonical basis
+    return np.dot(fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(fixed_basis_ops(n, nqubit)))))
+
+
+def thresh(X, eps=10 ** (-6)):
+    # todo: function not in use, why here?
+    """ Threshold function to cancel computational errors in $\chi$
+     """
+    for i in range(len(X)):
+        for j in range(len(X)):
+            if np.abs(np.real(X[i, j])) < eps:
+                X[i, j] -= np.real(X[i, j])
+            if np.abs(np.imag(X[i, j])) < eps:
+                X[i, j] -= 1j * np.imag(X[i, j])
+    return X
 
 
 class StatePreparationCircuit(Circuit):
@@ -83,7 +153,6 @@ class StatePreparationCircuit(Circuit):
         return self
 
 
-# ##### measurement circuit ######################################################################################
 class MeasurementCircuit(Circuit):
     """
     Builds a measurement circuit in the Pauli Basis (I,X,Y,Z) to perform tomography experiments.
@@ -125,87 +194,75 @@ class MeasurementCircuit(Circuit):
         return self
 
 
-class Tomography:
-    def __init__(self):
-        print("perhaps i will be used as an abstract tomography class")
-        # todo: see if this will work (check notes) guess for params: SOURCE, BACKEND, Nqubits,
-        #  methods? nope! only params - is it even a good idea?
-
-        """
-        maybe use this to initiate stuff, then state tomography and process
-        tomography can inherited and do their stuff
-        """
-
-
 class QuantumStateTomography:
-    def __init__(self, operator: Circuit, nqubit: int, source: Source=Source(), backend=SLOSBackend()):
+    def __init__(self, operator: Circuit, nqubit: int, source: Source = Source(), backend=SLOSBackend(),
+                 heralded_modes: List = [], post_process=False, renormalization=None):
         self._source = source  # default - ideal source
         self._backend = backend  # default - SLOSBackend()
         self._operator = operator
         self._nqubit = nqubit
+        self._post_process = post_process
+        self._renormalization = renormalization
+        self._heralded_modes = heralded_modes
 
-    def _tomography_circuit(self, num_state: List, i: List, heralded_modes: List) -> Circuit:
-        tomography_circuit = pcvl.Circuit(2 * self._nqubit + len(heralded_modes))
-        # state preparation
-        pc = StatePreparationCircuit(num_state, self._nqubit)
+    def _tomography_circuit(self, num_state: List, i: List) -> Circuit:
+        # todo: rename/refactor "num_state" and "i" parameter
+        tomography_circuit = pcvl.Circuit(2 * self._nqubit + len(self._heralded_modes))
+
+        pc = StatePreparationCircuit(num_state, self._nqubit)  # state preparation
         tomography_circuit.add(0, pc.build_preparation_circuit())
-        # unknown operator
-        tomography_circuit.add(0, self._operator)
-        # measurement operator
-        mc = MeasurementCircuit(i, self._nqubit)
+
+        tomography_circuit.add(0, self._operator)  # unknown operator
+
+        mc = MeasurementCircuit(i, self._nqubit)  # measurement operator
         tomography_circuit.add(0, mc.build_measurement_circuit())
+
         return tomography_circuit
 
     def _list_subset_k_from_n(self, k, n):
         # list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
-        # todo: I do not know where to put it or what to call it, it simply is a utility function.
-        #  Should we put it in overall utils?or have a specific util for tomograph?
+        # used only in the method _stokes_parameter
+        #  Should we put it in overall utils? or have a specific util for tomograph?
         s = {i for i in range(n)}
         return list(itertools.combinations(s, k))
 
-    def _stokes_parameter(self, num_state, i, heralded_modes=[], post_process=False,
-                         renormalization=None):
+    def _stokes_parameter(self, num_state, i):
         """
         Computes the Stokes parameter S_i for state num_state after operator_circuit
 
-        :param num_state: list of length of number of qubits representing the preparation circuit todo: why a list?
-        :param operator_circuit: perceval circuit for the operator
-        :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we are measuring
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
+        :param num_state: list of length of number of qubits representing the preparation circuit
+        :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we are
+        measuring
         :return: float
         """
-        nqubit = len(i)  # todo: verify in Arman's code - who sets nqubits to fix the param
-        # todo: Arman doubt: i can be different than num_state, nqubit is always with i?
-        qpt_circuit = self._tomography_circuit(num_state, i, heralded_modes)
+        tomography_circ = self._tomography_circuit(num_state, i)
 
         simulator = Simulator(self._backend)  # todo: change to Processor
-        simulator.set_circuit(qpt_circuit)
+        simulator.set_circuit(tomography_circ)
 
-        if renormalization is None:  # postselection if no renormalization
+        if self._renormalization is None:  # postselection if no renormalization
             ps = pcvl.PostSelect()
-            if post_process:
-                for m in range(nqubit):
+            if self._post_process:
+                for m in range(self._nqubit):
                     ps.eq([2 * m, 2 * m + 1], 1)
-            for m in heralded_modes:
+            for m in self._heralded_modes:
                 ps.eq([m[0]], m[1])
             simulator.set_postselection(ps)
 
         input_state = pcvl.BasicState("|1,0>")  # input state accounting the heralded modes
-        for _ in range(1, nqubit):
+        for _ in range(1, self._nqubit):
             input_state *= pcvl.BasicState("|1,0>")
-        for m in heralded_modes:
+        for m in self._heralded_modes:
             input_state *= pcvl.BasicState([m[1]])
         input_distribution = self._source.generate_distribution(expected_input=input_state)
 
         simulator.set_min_detected_photon_filter(0)
         output_distribution = simulator.probs_svd(input_distribution)["results"]
 
-        stokes_param = 0  # calculation of the Stokes parameter begins here
-        for k in range(nqubit + 1):
-            for J in self._list_subset_k_from_n(k, nqubit):
+        # calculation of the Stokes parameter begins here
+        stokes_param = 0
+        for k in range(self._nqubit + 1):
+            for J in self._list_subset_k_from_n(k, self._nqubit):
                 eta = 1
                 if 0 not in J:
                     measurement_state = pcvl.BasicState("|1,0>")
@@ -213,148 +270,73 @@ class QuantumStateTomography:
                     measurement_state = pcvl.BasicState("|0,1>")
                     if i[0] != 0:
                         eta *= -1
-                for j in range(1, nqubit):
+                for j in range(1, self._nqubit):
                     if j not in J:
                         measurement_state *= pcvl.BasicState("|1,0>")
                     else:
                         measurement_state *= pcvl.BasicState("|0,1>")
                         if i[j] != 0:
                             eta *= -1
-                for m in heralded_modes:
+                for m in self._heralded_modes:
                     measurement_state *= pcvl.BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
 
-        if renormalization is None:
+        if self._renormalization is None:
             return stokes_param
-        return stokes_param / renormalization
+        return stokes_param / self._renormalization
 
-    def perform_quantum_state_tomography(self, state, operator_circuit, nqubit, heralded_modes=[], post_process=False,
-                                 renormalization=None):
-        # TODO: needs SOURCE here
+    def perform_quantum_state_tomography(self, state):
         """
         Computes the density matrix of a state after the operator_circuit
 
         :param state: list of length of number of qubits representing the preparation circuit
-        :param operator_circuit: perceval circuit for the operator
-        :param nqubit: number of qubits
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
         :return: 2**nqubit x 2**nqubit array
         """
-        d = 2 ** nqubit
+        d = 2 ** self._nqubit
         density_matrix = np.zeros((d, d), dtype='complex_')
         for j in range(d ** 2):
-            i = [0] * nqubit
+            i = [0] * self._nqubit
             j1 = j
-            for k in range(nqubit - 1, -1, -1):
+            for k in range(self._nqubit - 1, -1, -1):
                 i[k] = j1 // (4 ** k)
                 j1 = j1 % (4 ** k)
             i.reverse()
-            density_matrix += self._stokes_parameter(state, operator_circuit, i, heralded_modes, post_process,
-                                               renormalization) * self.E(j, nqubit)
-        density_matrix = ((1 / 2) ** nqubit) * density_matrix
+            density_matrix += self._stokes_parameter(state, i) * fixed_basis_ops(j, self._nqubit)
+        density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
         return density_matrix
 
 
 class QuantumProcessTomography:
     # TODO: what if i pass QST object here? how are parameters handled. what i want to do is create a obj for QST,
     #  perform that, then ask to do QPT, then fidelity with that.
-    def __init__(self, nqubit: int, operator: Circuit, source: Source = Source(), post_process=False):
-        self._operator = operator
+    def __init__(self, nqubit: int, operator: Circuit, density_matrix: np.ndarray, heralded_modes=[],
+                 post_process=False, renormalization=None):
         self._nqubit = nqubit
+        self._operator = operator
+        self._density_matrix = density_matrix
+        self._heralded_modes = heralded_modes
         self._post_process = post_process
-        # todo: verify if source is needed here
-        print("initiating process tomography")
+        self._renormalization = renormalization
 
-    # ##### threshold ######################################################################################
-    def pauli(self, j):
-        """
-        computes the j-th Pauli operator (I,X,Y,Z)
-
-        :param j: int between 0 and 3
-        :return: 2x2 unitary and hermitian array
-        """
-        assert j < 3, f'Pauli Index should be less than 3'
-        if j == 0:  # I
-            return np.eye(2, dtype='complex_')
-        elif j == 1:  # Pauli X
-            return np.array([[0, 1], [1, 0]], dtype='complex_')
-        elif j == 2:  # Pauli Y
-            return np.array([[0, -1j], [1j, 0]], dtype='complex_')
-        else:  # Pauli Z
-            return np.array([[1, 0], [0, -1]], dtype='complex_')
-
-    def basis_operator(self, j):
-        """
-        computes the fixed sets of operators (tensor products of pauli gates) for quantum process tomography
-
-        :param j: int between 0 and 4**nqubit-1
-        :param nqubit: number of qubits
-        :return: 2**nqubitx2**nqubit array
-        """
-        if self._nqubit == 1:
-            return self.pauli(j)
-
-        E = self.pauli(j // (4 ** (self._nqubit - 1)))
-        j = j % (4 ** (self._nqubit - 1))  # todo: ask about how values of "j" and how they are modified here
-        for i in range(self._nqubit - 2, -1, -1):
-            E = np.kron(E, self.pauli(j // (4 ** i)))
-            j = j % (4 ** i)
-        return E
-
-    def thresh(X, eps=10 ** (-6)):
-        # todo: function not in use, why?
-        """ Threshold function to cancel computational errors in $\chi$
-         """
-        for i in range(len(X)):
-            for j in range(len(X)):
-                if np.abs(np.real(X[i, j])) < eps:
-                    X[i, j] -= np.real(X[i, j])
-                if np.abs(np.imag(X[i, j])) < eps:
-                    X[i, j] -= 1j * np.imag(X[i, j])
-        return X
-
-    def rho(self, j, nqubit):  # canonical basis
-        """
-        Computes the matrices of the canonical basis
-
-        :param j: int between 0 and 4**nqubit-1
-        :param nqubit: number of qubits
-        :return: 2**nqubitx2**nqubit array
-        """
+    @staticmethod
+    def _beta_mult_qubit(j, k, m, n, nqubit):
         d = 2 ** nqubit
-        R = np.zeros((d, d), dtype='complex_')
-        R[j // d, j % d] = 1
-        return R  # todo: ask Arman to confirm which rho is this
-
-    def ErhoE(self, m, rhoj, n, nqubit):
-        return np.dot(QuantumStateTomography.E(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(QuantumStateTomography.E(n, nqubit)))))
-
-    def beta_mult_qubit(self, j, k, m, n, nqubit):
-        d = 2 ** nqubit
-        b = self.ErhoE(m, self.rho(j, nqubit), n, nqubit)
+        b = krauss_repr_ops(m, canonical_basis_ops(j, nqubit), n, nqubit)
         return b[k // d, k % d]
 
-    def beta_matrix_mult_qubit(self, nqubit):
-        d = 2 ** nqubit
+    def _beta_matrix_mult_qubit(self):
+        d = 2 ** self._nqubit
         M = np.zeros((d ** 4, d ** 4), dtype='complex_')
         for i in range(d ** 4):
             for j in range(d ** 4):
-                M[i, j] = self.beta_mult_qubit(i // (d ** 2), i % (d ** 2), j // (d ** 2), j % (d ** 2), nqubit)
+                M[i, j] = QuantumProcessTomography._beta_mult_qubit(i // (d ** 2), i % (d ** 2),
+                                                                    j // (d ** 2), j % (d ** 2), self._nqubit)
         return M
 
-    def lambd_mult_qubit(self, heralded_modes=[], renormalization=None):
+    def _lambda_mult_qubit(self):
         """
         Computes the lambda vector of the operator
 
-        :param operator_circuit: perceval circuit for the operator
-        :param nqubit: number of qubits
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
         :return: 2**(4*nqubit) vector
         """
         d = 2 ** self._nqubit
@@ -364,45 +346,23 @@ class QuantumProcessTomography:
             for i in range(self._nqubit - 1, -1, -1):
                 l.append(state // (4 ** i))
                 state = state % (4 ** i)
-            source = Source() # todo: add params correctly
-            qst = QuantumStateTomography(source)
-            # todo: fix instance params
-            # todo: pass post_process from this to QST object?
-            EPS.append(qst.perform_quantum_state_tomography(l, self._operator, self._nqubit, heralded_modes, self._post_process,
-                                                            renormalization))
+            EPS.append(self._density_matrix)
         basis = matrix_basis(self._nqubit)
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for j in range(d ** 2):
-            rhoj = self.rho(j, self._nqubit)
+            rhoj = canonical_basis_ops(j, self._nqubit)
             mu = decomp(rhoj, basis)
             eps_rhoj = sum([mu[i] * EPS[i] for i in range(d ** 2)])
             for k in range(d ** 2):
                 L[j, k] = eps_rhoj[k // d, k % d]
         return matrix_to_vector(L)
 
-    def chi_mult_qubit(self, heralded_modes=[], renormalization=None):
-        """
-        Computes the chi matrix of the operator
-
-        :param operator_circuit: perceval circuit for the operator
-        :param nqubit: number of qubits
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
-        :return: 2**(2*nqubit)x2**(2*nqubit) array
-        """
-        Binv = np.linalg.pinv(self.beta_matrix_mult_qubit(self._nqubit))
-        L = self.lambd_mult_qubit(self._operator, self._nqubit, heralded_modes, self._post_process, renormalization)
-        X = np.dot(Binv, L)
-        return vector_to_matrix(X)
-
     def _lambda_mult_ideal(self):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         d = 2 ** self._nqubit
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for j in range(d ** 2):
-            rhoj = self.rho(j, self._nqubit)
+            rhoj = canonical_basis_ops(j, self._nqubit)
             eps_rhoj = np.linalg.multi_dot([self._operator, rhoj, np.conjugate(np.transpose(self._operator))])
             for k in range(d ** 2):
                 L[j, k] = eps_rhoj[k // d, k % d]
@@ -411,34 +371,39 @@ class QuantumProcessTomography:
             L1[i] = L[i // (d ** 2), i % (d ** 2)]
         return L1
 
+    def chi_mult_qubit(self):
+        """
+        Computes the chi matrix of the operator
+
+        :return: 2**(2*nqubit)x2**(2*nqubit) array
+        """
+        Binv = np.linalg.pinv(self._beta_matrix_mult_qubit())
+        L = self._lambda_mult_qubit()
+        X = np.dot(Binv, L)
+        return vector_to_matrix(X)
+
     def chi_mult_ideal(self):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        X = np.dot(np.linalg.pinv(self.beta_matrix_mult_qubit(self._nqubit)), self._lambda_mult_ideal(self._operator,
-                                                                                                      self._nqubit))
+        X = np.dot(np.linalg.pinv(self._beta_matrix_mult_qubit()), self._lambda_mult_ideal())
         return vector_to_matrix(X)
 
 
 class FidelityTomography:
-    def __init__(self, qpt: QuantumProcessTomography):
+    def __init__(self, qpt: QuantumProcessTomography, operator, nqubit):
         self._qpt = qpt  # Default source => brightness=1, g2=0, indistinguishability=1, loss=0
+        self._operator = operator
+        self._nqubit = nqubit
         print("I am going to compute fidelity based on tomography process")
 
-    def process_fidelity(self, operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None):
+    def process_fidelity(self, chi_computed):
         """
         Computes the process fidelity of an operator and its perceval circuit
 
-        :param operator: matrix for the operator
-        :param operator_circuit: perceval circuit for the operator
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
+        :param chi_computed: chi matrix computed from process tomography of shape [2**(2*nqubit) x 2**(2*nqubit)]
         :return: float between 0 and 1
         """
-        nqubit = int(np.log2(len(operator)))
-        qpt = self._qpt
-        X0 = qpt.chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization)
-        X1 = qpt.chi_mult_ideal(operator, nqubit)
+        X0 = chi_computed # qpt.chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization)
+        X1 = QuantumProcessTomography.chi_mult_ideal(self._operator, self._nqubit) # todo: fix params
         return np.real(np.trace(np.dot(X0, X1)))
 
     def random_fidelity(self, nqubit):
