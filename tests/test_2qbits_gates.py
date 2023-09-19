@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-import numpy as np
+import cmath as cm
 
 import perceval as pcvl
 from perceval import BasicState, generate_all_logical_states, SimulatorFactory, Processor
@@ -64,61 +64,69 @@ def test_fidelity_and_performance_cnot():
     assert analyzer_postprocessed_cnot.performance > analyzer_heralded_cnot.performance > analyzer_klm_cnot.performance
 
 
-def check_cz_with_heralds(processor, herald_states, error=1E-6):
+def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
     """Check if the cz is correct
 
     :param processor: CZ processor to check, we assume that ctrl is on [0,1]
     and data on [2,3]
     :param herald_states: Basic state corresponding to the heralded or ancillary modes
     at the end of the circuit
-    :param error: Tolerance for the real part of the prob_amplitude (when not expecting 0), defaults to 1E-6
+    :param error: Tolerance for the modulus of the prob_amplitude (when not expecting 0), defaults to 1E-6
     This param represent whether this cz gate is balanced
     """
     ports = [pcvl.Port(pcvl.Encoding.DUAL_RAIL, "")] * 2
     states = [get_basic_state_from_ports(ports, state) * herald_states for state in generate_all_logical_states(2)]
     sim = SimulatorFactory().build(processor)
     data_state = BasicState("|0,1,0,1>") * herald_states
-    value = None
+    modulus_value = None
+    phase_value = None
     for i_state in states:
         for o_state in states:
             pa = sim.prob_amplitude(i_state, o_state)
-            rpa = np.real(pa)
-            ipa = np.imag(pa)
+            modulus = abs(pa)
+            phase = cm.phase(pa)
             if i_state == o_state:
-                if value is None:
-                    value = np.real(pa)
+                if modulus_value is None:
+                    modulus_value = modulus
+                assert pytest.approx(modulus, error) == modulus_value
+                assert modulus != 0
+
                 if i_state != data_state:
-                    assert pytest.approx(rpa, error) == value
-                    assert rpa > 0
+                    if phase_value is None:
+                        phase_value = phase
+                    assert pytest.approx(phase) == phase_value
                 else:
-                    assert pytest.approx(rpa, error) == -value
-                    assert rpa < 0
-                assert pytest.approx(ipa) == 0
+                    assert pytest.approx(phase) == phase_value + cm.pi
+
             else:
-                assert pytest.approx(rpa) == 0
-                assert pytest.approx(ipa) == 0
+                assert pytest.approx(modulus) == 0
+    return modulus_value
 
 
-def test_cz_phase():
-    check_cz_with_heralds(catalog["heralded cz"].build_processor(), BasicState("|1,1>"), 1E-3)
+def test_cz_and_cnot_phases_and_modulus():
+    # Testing phases and modulus of CCZ
+    check_cz_with_heralds_or_ancillaries(catalog["heralded cz"].build_processor(), BasicState("|1,1>"), 1E-3)
 
+    # Testing phases and modulus of heralded cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["heralded cnot"].build_processor())
     processor.add(2, BS.H())
-    check_cz_with_heralds(processor, BasicState("|1,1>"), 1E-3)
+    check_cz_with_heralds_or_ancillaries(processor, BasicState("|1,1>"), 1E-3)
 
+    # Testing phases and modulus of klm cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["klm cnot"].build_processor())
     processor.add(2, BS.H())
-    check_cz_with_heralds(processor, BasicState("|0,1,0,1>"), 1E-2)
+    check_cz_with_heralds_or_ancillaries(processor, BasicState("|0,1,0,1>"), 1E-2)
 
+    # Testing phases and modulus of postprocessed cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["postprocessed cnot"].build_processor())
     processor.add(2, BS.H())
-    check_cz_with_heralds(processor, BasicState("|0,0>"))
+    check_cz_with_heralds_or_ancillaries(processor, BasicState("|0,0>"))
 
 
 @pytest.mark.skip(reason="redundant with overhead test")

@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
-import numpy as np
+import cmath as cm
 
 from perceval import BasicState, Port, Processor, Encoding, PostSelect
 from perceval.algorithm import Analyzer
@@ -36,53 +36,60 @@ from perceval.simulators import SimulatorFactory
 from perceval.components import catalog, BS, get_basic_state_from_ports
 
 
-def check_czz_with_heralds(processor, herald_states, error=1E-6):
-    """Check if the CZZ is correct
+def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_states, error=1E-6):
+    """Check if the CCZ is correct
 
-    :param processor: CZZ processor to check, we assume that ctrl is on [0,1]
+    :param processor: CCZ processor to check, we assume that ctrl is on [0,1]
     and data on [2,3]
     :param herald_states: Basic state corresponding to the heralded or ancillary modes
     at the end of the circuit
-    :param error: Tolerance for the real part of the prob_amplitude (when not expecting 0), defaults to 1E-6
-    This param represent whether this CZZ gate is balanced
+    :param error: Tolerance for the modulus of the prob_amplitude (when not expecting 0), defaults to 1E-6
+    This param represent whether this CCZ gate is balanced
     """
     ports = [Port(Encoding.DUAL_RAIL, "")] * 3
     states = [get_basic_state_from_ports(ports, state) * herald_states for state in generate_all_logical_states(3)]
     sim = SimulatorFactory().build(processor)
     data_state = BasicState("|0,1,0,1,0,1>") * herald_states
-    value = None
+    modulus_value = None
+    phase_value = None
     for i_state in states:
         for o_state in states:
-            pa = sim.prob_amplitude(i_state,o_state)
-            rpa = np.real(pa)
-            ipa = np.imag(pa)
+            pa = sim.prob_amplitude(i_state, o_state)
+            modulus = abs(pa)
+            phase = cm.phase(pa)
             if i_state == o_state:
+                if modulus_value is None:
+                    modulus_value = modulus
+                assert pytest.approx(modulus) == modulus_value
+                assert modulus != 0
+
                 if i_state != data_state:
-                    if value is None:
-                        value = pa
-                    assert pytest.approx(rpa, error) == value
-                    assert rpa > 0
+                    if phase_value is None:
+                        phase_value = phase
+                    assert pytest.approx(phase) == phase_value
                 else:
-                    assert pytest.approx(rpa, error) == -value
-                    assert rpa < 0
-                assert pytest.approx(ipa) == 0
+                    assert pytest.approx(phase) == phase_value + cm.pi
+
             else:
-                assert pytest.approx(rpa) == 0
-                assert pytest.approx(ipa) == 0
+                assert pytest.approx(modulus) == 0
+    return modulus_value
 
 
-def test_ccz_phase():
-    check_czz_with_heralds(catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
+def test_ccz_and_toffoli_phases_and_modulus():
+    # Testing phases and modulus of CCZ
+    modulus_ccz = check_ccz_with_heralds_or_ancillaries_and_get_performance(
+        catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
 
+    # Testing phases and modulus of Toffoli by transforming it in a CCZ gate with Hadamard gates
     ccz = Processor("SLOS", 6)
     ccz.add(4, BS.H()) \
         .add(0, catalog["toffoli"].build_processor()) \
         .add(4, BS.H())
-    check_czz_with_heralds(ccz, BasicState("|0,0,0,0,0,0>"))
+    modulus_ccz_with_toffoli = check_ccz_with_heralds_or_ancillaries_and_get_performance(
+        ccz, BasicState("|0,0,0,0,0,0>"))
+    assert modulus_ccz == modulus_ccz_with_toffoli
 
-
-@pytest.mark.skip(reason="redundant with overhead test")
-def test_toffoli_gate_fidelity():
+    # Testing truth table of Toffoli (redundant with above test)
     toffoli = catalog['toffoli'].build_processor()
     state_dict = {get_basic_state_from_ports(toffoli._out_ports, state): str(
         state) for state in generate_all_logical_states(3)}
@@ -90,18 +97,8 @@ def test_toffoli_gate_fidelity():
     a_toffoli.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",
                                 "100": "100", "101": "101", "110": "111", "111": "110"})
     assert a_toffoli.fidelity == 1
-
-    inv_ctrl_toffoli = Processor("SLOS", 6)
-    inv_ctrl_toffoli.add([2, 3, 0, 1, 4, 5], catalog["toffoli"].build_processor())
-    inv_ctrl_toffoli.clear_postselection()
-    inv_ctrl_toffoli.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
-
-    state_dict = {get_basic_state_from_ports(inv_ctrl_toffoli._out_ports, state): str(
-        state) for state in generate_all_logical_states(3)}
-    a_inv_ctrl_toffoli = Analyzer(inv_ctrl_toffoli, input_states=state_dict)
-    a_inv_ctrl_toffoli.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",
-                                         "100": "100", "101": "101", "110": "111", "111": "110"})
-    assert a_inv_ctrl_toffoli.fidelity == 1
+    # Checking that Toffoli performance is the modulus**2 of the CCZ gate (since Toffoli comes from CCZ gate)
+    assert a_toffoli.performance == pytest.approx(modulus_ccz**2)
 
 
 @pytest.mark.skip(reason="redundant with overhead test")
