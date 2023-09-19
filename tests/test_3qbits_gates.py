@@ -39,6 +39,17 @@ from perceval.components import catalog, BS, get_basic_state_from_ports
 def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_states, error=1E-6):
     """Check if the CCZ is correct
 
+    Meaning checking that the CCZ gate probability amplitude matrix should be:
+    ⎡r*exp(iθ)  0           0           0           0           0           0           0             ⎤
+    ⎢0          r*exp(iθ)   0           0           0           0           0           0             ⎥
+    ⎢0          0           r*exp(iθ)   0           0           0           0           0             ⎥
+    ⎢0          0           0           r*exp(iθ)   0           0           0           0             ⎥
+    ⎢0          0           0           0           r*exp(iθ)   0           0           0             ⎥
+    ⎢0          0           0           0           0           r*exp(iθ)   0           0             ⎥
+    ⎢0          0           0           0           0           0           r*exp(iθ)   0             ⎥
+    ⎣0          0           0           0           0           0           0           r*exp(i(θ+φ)) ⎦
+    With r the modulus (r!=0), θ the phase and φ the rotation angle of our gate (for CCZ is φ=π)
+
     :param processor: CCZ processor to check, we assume that ctrl is on [0,1]
     and data on [2,3]
     :param herald_states: Basic state corresponding to the heralded or ancillary modes

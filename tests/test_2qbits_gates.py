@@ -67,6 +67,13 @@ def test_fidelity_and_performance_cnot():
 def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
     """Check if the cz is correct
 
+    Meaning checking that the CZ gate probability amplitude matrix should be:
+    ⎡r*exp(iθ)  0           0           0             ⎤
+    ⎢0          r*exp(iθ)   0           0             ⎥
+    ⎢0          0           r*exp(iθ)   0             ⎥
+    ⎣0          0           0           r*exp(i(θ+φ)) ⎦
+    With r the modulus (r!=0), θ the phase and φ the rotation angle of our gate (for CZ is φ=π)
+
     :param processor: CZ processor to check, we assume that ctrl is on [0,1]
     and data on [2,3]
     :param herald_states: Basic state corresponding to the heralded or ancillary modes
