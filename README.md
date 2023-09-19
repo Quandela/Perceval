@@ -52,7 +52,7 @@ or simply from GitHub:
 
 ```bash
 git clone https://github.com/quandela/Perceval
-python setup.py install # [or 'develop' for developers]
+pip install .
 ```
 
 # Running tests and benchmarks

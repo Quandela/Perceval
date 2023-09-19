@@ -16,7 +16,7 @@ Alternatively, if you are interested in contributing to the project - you can cl
 
    (venv) $ git clone https://github.com/quandela/Perceval
    (venv) $ cd Perceval
-   (venv) $ python setup.py install # or develop for developers
+   (venv) $ pip install .
 
 Tutorial
 --------
