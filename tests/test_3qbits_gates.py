@@ -87,7 +87,7 @@ def test_ccz_and_toffoli_phases_and_modulus():
         .add(4, BS.H())
     modulus_ccz_with_toffoli = check_ccz_with_heralds_or_ancillaries_and_get_performance(
         ccz, BasicState("|0,0,0,0,0,0>"))
-    assert modulus_ccz == modulus_ccz_with_toffoli
+    assert modulus_ccz == pytest.approx(modulus_ccz_with_toffoli)
 
     # Testing truth table of Toffoli (redundant with above test)
     toffoli = catalog['toffoli'].build_processor()
@@ -103,7 +103,7 @@ def test_ccz_and_toffoli_phases_and_modulus():
 
 @pytest.mark.skip(reason="redundant with overhead test")
 def test_inverted_sub_cnot():
-    """Heralding ctrl one after the other to do the same test as test_inverse_cnot_with_H
+    """Heralding ctrl one after the other to do the same test as test_inverted_cnot
     in tests/test_2qbits_gates.py
     """
     toffoli = catalog["toffoli"].build_processor()
