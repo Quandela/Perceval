@@ -358,21 +358,21 @@ class QuantumProcessTomography:
         self._renormalization = renormalization
 
     @staticmethod
-    def _beta_mult_qubit(j, k, m, n, nqubit):
+    def _beta_ndarray(j, k, m, n, nqubit):
         d = 2 ** nqubit
         b = krauss_repr_ops(m, canonical_basis_ops(j, nqubit), n, nqubit)
         return b[k // d, k % d]
 
-    def _beta_matrix_mult_qubit(self):
+    def _beta_matrix(self):
         d = 2 ** self._nqubit
         M = np.zeros((d ** 4, d ** 4), dtype='complex_')
         for i in range(d ** 4):
             for j in range(d ** 4):
-                M[i, j] = QuantumProcessTomography._beta_mult_qubit(i // (d ** 2), i % (d ** 2),
+                M[i, j] = QuantumProcessTomography._beta_ndarray(i // (d ** 2), i % (d ** 2),
                                                                     j // (d ** 2), j % (d ** 2), self._nqubit)
         return M
 
-    def _lambda_mult_qubit(self):
+    def _lambda_vector(self):
         """
         Computes the lambda vector of the operator
 
@@ -396,7 +396,7 @@ class QuantumProcessTomography:
                 L[j, k] = eps_rhoj[k // d, k % d]
         return matrix_to_vector(L)
 
-    def _lambda_mult_ideal(self):
+    def _lambda_target(self):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         d = 2 ** self._nqubit
         operator = self._operator
@@ -411,21 +411,21 @@ class QuantumProcessTomography:
             L1[i] = L[i // (d ** 2), i % (d ** 2)]
         return L1
 
-    def chi_mult_qubit(self):
+    def chi_matrix(self):
         """
-        Computes the chi matrix of the operator
+        Computes the chi matrix of the operator_circuit
 
         :return: 2**(2*nqubit)x2**(2*nqubit) array
         """
-        Binv = np.linalg.pinv(self._beta_matrix_mult_qubit())
-        L = self._lambda_mult_qubit()
+        Binv = np.linalg.pinv(self._beta_matrix())
+        L = self._lambda_vector()
         X = np.dot(Binv, L)
         return vector_to_matrix(X)
 
-    def chi_mult_ideal(self):
+    def chi_target(self):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        beta = self._beta_matrix_mult_qubit()
-        lambd = self._lambda_mult_ideal()
+        beta = self._beta_matrix()
+        lambd = self._lambda_target()
         X = np.dot(np.linalg.pinv(beta), lambd)
         return vector_to_matrix(X)
 
