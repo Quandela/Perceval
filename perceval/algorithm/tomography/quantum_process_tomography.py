@@ -37,7 +37,7 @@ from scipy.stats import unitary_group
 from perceval.simulators import Simulator
 from perceval.backends import SLOSBackend
 from typing import List
-from _tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
+from ._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
     vector_to_matrix, decomp
 
 
@@ -48,7 +48,7 @@ def pauli(j):
     :param j: int between 0 and 3
     :return: 2x2 unitary and hermitian array
     """
-    assert j < 3, f'Pauli Index should be less than 3'
+    # assert j < 3, f'Pauli Index should be less than 3'
     if j == 0:  # I
         return np.eye(2, dtype='complex_')
     elif j == 1:  # Pauli X
@@ -96,6 +96,46 @@ def krauss_repr_ops(m, rhoj, n, nqubit):
     # computes the Krauss representation of the operator given by ErhoE, where E are fixed set
     # of operators and rho is the one in canonical basis
     return np.dot(fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(fixed_basis_ops(n, nqubit)))))
+
+
+def is_physical(chi, eigen_tolerance=10 ** (-6)):
+    """
+    Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+    :param chi: chi of a quantum map computed from Quantum Process Tomography
+    :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+    :return: bool and string
+    """
+    d2 = len(chi)
+    nqubit = int(np.log2(d2) / 2)
+    # check if trace preserving
+    b = True
+    s = ""
+    if not np.isclose(np.trace(chi), 1):
+        b = False
+        print("trace :", np.trace(chi))
+        s += "|trace not 1|"
+    # check if hermitian
+    for i in range(d2):
+        for j in range(i, d2):
+            if not np.isclose(chi[i][j], np.conjugate(chi[j][i])):
+                b = False
+                s += "|not hermitian|"
+    # check if completely positive with Choi–Jamiołkowski isomorphism
+    choi = 0
+    for n in range(d2):
+        P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, nqubit)))])))
+        for m in range(d2):
+            choi += chi[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, nqubit)))]), P_n)
+    choi /= 2 ** nqubit
+    eigenvalues = np.linalg.eigvalsh(choi)
+    if np.any(eigenvalues < -eigen_tolerance):
+        b = False
+        print("smallest eigenvalue :", eigenvalues[0])
+        s += "|not CP|"
+    if b:
+        return True
+    return False, s
 
 
 def thresh(X, eps=10 ** (-6)):
@@ -195,11 +235,11 @@ class MeasurementCircuit(Circuit):
 
 
 class QuantumStateTomography:
-    def __init__(self, operator: Circuit, nqubit: int, source: Source = Source(), backend=SLOSBackend(),
+    def __init__(self, operator_circuit: Circuit, nqubit: int, source: Source = Source(), backend=SLOSBackend(),
                  heralded_modes: List = [], post_process=False, renormalization=None):
         self._source = source  # default - ideal source
         self._backend = backend  # default - SLOSBackend()
-        self._operator = operator
+        self._operator_circuit = operator_circuit
         self._nqubit = nqubit
         self._post_process = post_process
         self._renormalization = renormalization
@@ -212,9 +252,9 @@ class QuantumStateTomography:
         pc = StatePreparationCircuit(num_state, self._nqubit)  # state preparation
         tomography_circuit.add(0, pc.build_preparation_circuit())
 
-        tomography_circuit.add(0, self._operator)  # unknown operator
+        tomography_circuit.add(0, self._operator_circuit)  # unknown operator_circuit
 
-        mc = MeasurementCircuit(i, self._nqubit)  # measurement operator
+        mc = MeasurementCircuit(i, self._nqubit)  # measurement operator_circuit
         tomography_circuit.add(0, mc.build_measurement_circuit())
 
         return tomography_circuit
@@ -307,13 +347,12 @@ class QuantumStateTomography:
 
 
 class QuantumProcessTomography:
-    # TODO: what if i pass QST object here? how are parameters handled. what i want to do is create a obj for QST,
-    #  perform that, then ask to do QPT, then fidelity with that.
-    def __init__(self, nqubit: int, operator: Circuit, density_matrix: np.ndarray, heralded_modes=[],
+    def __init__(self, nqubit: int, operator, operator_circuit: Circuit, qst, heralded_modes=[],
                  post_process=False, renormalization=None):
         self._nqubit = nqubit
         self._operator = operator
-        self._density_matrix = density_matrix
+        self._operator_circuit = operator_circuit
+        self._qst = qst
         self._heralded_modes = heralded_modes
         self._post_process = post_process
         self._renormalization = renormalization
@@ -346,7 +385,7 @@ class QuantumProcessTomography:
             for i in range(self._nqubit - 1, -1, -1):
                 l.append(state // (4 ** i))
                 state = state % (4 ** i)
-            EPS.append(self._density_matrix)
+            EPS.append(self._qst.perform_quantum_state_tomography(l))
         basis = matrix_basis(self._nqubit)
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for j in range(d ** 2):
@@ -360,6 +399,7 @@ class QuantumProcessTomography:
     def _lambda_mult_ideal(self):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         d = 2 ** self._nqubit
+        operator = self._operator
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for j in range(d ** 2):
             rhoj = canonical_basis_ops(j, self._nqubit)
@@ -384,27 +424,25 @@ class QuantumProcessTomography:
 
     def chi_mult_ideal(self):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        X = np.dot(np.linalg.pinv(self._beta_matrix_mult_qubit()), self._lambda_mult_ideal())
+        beta = self._beta_matrix_mult_qubit()
+        lambd = self._lambda_mult_ideal()
+        X = np.dot(np.linalg.pinv(beta), lambd)
         return vector_to_matrix(X)
 
 
 class FidelityTomography:
-    def __init__(self, qpt: QuantumProcessTomography, operator, nqubit):
-        self._qpt = qpt  # Default source => brightness=1, g2=0, indistinguishability=1, loss=0
+    def __init__(self, operator, nqubit):
         self._operator = operator
         self._nqubit = nqubit
-        print("I am going to compute fidelity based on tomography process")
 
-    def process_fidelity(self, chi_computed):
+    def process_fidelity(self, chi_computed, chi_ideal):
         """
         Computes the process fidelity of an operator and its perceval circuit
 
         :param chi_computed: chi matrix computed from process tomography of shape [2**(2*nqubit) x 2**(2*nqubit)]
         :return: float between 0 and 1
         """
-        X0 = chi_computed # qpt.chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization)
-        X1 = QuantumProcessTomography.chi_mult_ideal(self._operator, self._nqubit) # todo: fix params
-        return np.real(np.trace(np.dot(X0, X1)))
+        return np.real(np.trace(np.dot(chi_computed, chi_ideal)))
 
     def random_fidelity(self, nqubit):
         """
@@ -428,191 +466,49 @@ class FidelityTomography:
         print('process fidelity :', pf, '\n',
               'average fidelity :', afq)
 
-    def average_fidelity_with_reconstruction(self, operator, operator_circuit, heralded_modes=[], post_process=False,
-                                             renormalization=None):
+    def error_process_matrix(self, computed_chi):
         """
-        not so important-computes avg fideltiy in a longer way
-        Computes the average fidelity of an operator and its perceval circuit by recontruction of the whole map
+        Computes the error matrix for an operation from the computed chi matrix
 
-        :param operator: matrix for the operator
-        :param operator_circuit: perceval circuit for the operator
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
-        :return: float between 0 and 1
-        """
-        nqubit = int(np.log2(len(operator)))
-        Udag = np.transpose(np.conjugate(operator))
-        d = 2 ** nqubit
-        f = 1 / (d + 1)
-        for j in range(d ** 2):
-            Uj = QuantumProcessTomography.E(j, nqubit)
-            Ujdag = np.transpose(np.conjugate(Uj))
-            eps_Uj = self.map_reconstructed(Uj, operator_circuit, nqubit, heralded_modes, post_process, renormalization)
-            a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
-            f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
-        return np.real(f)
-
-    def error_process_matrix(self, operator, operator_circuit, heralded_modes=[], post_process=False,
-                             renormalization=None):
-        """
-        Computes the error matrix for an operation from the chi matrix
-
-        :param operator: matrix for the operator
-        :param operator_circuit: perceval circuit for the operator
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
-            :param brightness source brightness
-        :param g2 SPS g2
-        :param indistinguishability photon indistinguishability
-        :param loss known losses in source
+        :param computed_chi:
         :return: matrix
         """
-        nqubit = int(np.log2(len(operator)))
-        d = 2 ** nqubit
-        qpt = QuantumProcessTomography()
-        X = qpt.chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization)
+        d = 2 ** self._nqubit
         V = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for m in range(d ** 2):
             for n in range(d ** 2):
-                Emdag = np.transpose(np.conjugate(QuantumProcessTomography.E(m, nqubit)))
-                En = QuantumProcessTomography.E(n, nqubit)
-                Udag = np.transpose(np.conjugate(operator))
+                Emdag = np.transpose(np.conjugate(fixed_basis_ops(m, self._nqubit)))
+                En = fixed_basis_ops(n, self._nqubit)
+                Udag = np.transpose(np.conjugate(self._operator))
                 V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
-        return np.linalg.multi_dot([V, X, np.conjugate(np.transpose(V))])
+        return np.linalg.multi_dot([V, computed_chi, np.conjugate(np.transpose(V))])
 
-    def average_fidelity(self, operator, operator_circuit, heralded_modes=[], post_process=False, renormalization=None):
+    def average_fidelity(self, qst):
         """
         Computes the average fidelity of an operator and its perceval circuit
 
-        :param operator: matrix for the operator
-        :param operator_circuit: perceval circuit for the operator
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
-            :param brightness source brightness
-        :param g2 SPS g2
-        :param indistinguishability photon indistinguishability
-        :param loss known losses in source
+        :param qst: QuantumStateTomgraphy object on which tomography is performed
         :return: float between 0 and 1
         """
-        nqubit = int(np.log2(len(operator)))
-        Udag = np.transpose(np.conjugate(operator))
-        d = 2 ** nqubit
+        Udag = np.transpose(np.conjugate(self._operator))
+        d = 2 ** self._nqubit
         f = 1 / (d + 1)
 
         # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
         EPS = []
         for state in range(d ** 2):
             l = []
-            for i in range(nqubit - 1, -1, -1):
+            for i in range(self._nqubit - 1, -1, -1):
                 l.append(state // (4 ** i))
                 state = state % (4 ** i)
-            qst = QuantumStateTomography()
-            # todo: fix instance params
-            EPS.append(qst.perform_quantum_state_tomography(l, operator_circuit, nqubit, heralded_modes, post_process,
-                                                            renormalization))
+            EPS.append(qst.perform_quantum_state_tomography())
 
-        basis = matrix_basis(nqubit)
+        basis = matrix_basis(self._nqubit)
         for j in range(d ** 2):
-            Uj = QuantumProcessTomography.E(j, nqubit)
+            Uj = fixed_basis_ops(j, self._nqubit)
             mu = decomp(Uj, basis)
             eps_Uj = sum([mu[i] * EPS[i] for i in range(d ** 2)])  # compute the map on a basis
             Ujdag = np.transpose(np.conjugate(Uj))
-            a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
+            a = np.linalg.multi_dot([self._operator, Ujdag, Udag, eps_Uj])
             f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
         return np.real(f)
-
-    def mixture(self, operator_circuit, nqubit, heralded_modes=[], post_process=False, renormalization=None):
-        """
-        ## for CNOT gate - not so important
-        Computes the mixture created by a perceval circuit
-
-        :param operator_circuit: perceval circuit for the operator
-        :param nqubit: number of qubits
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
-        :param brightness source brightness
-        :param g2 SPS g2
-        :param indistinguishability photon indistinguishability
-        :param loss known losses in source
-
-        :return: float between 0 and 1
-        """
-        d = 2 ** nqubit
-        qpt = QuantumProcessTomography()
-        X = qpt.chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization)
-        t = np.trace(np.dot(X, X))
-        return np.real((d * t + 1) / (d + 1))
-
-    def is_physical(matrix, eigen_tolerance=10 ** (-6)):
-        """
-        Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
-
-        :param matrix: square matrix
-        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-        :return: bool and string
-        """
-        # check if trace preserving
-        b = True
-        s = ""
-        if not np.isclose(np.trace(matrix), 1):
-            b = False
-            print("trace :", np.trace(matrix))
-            s += "|trace not 1|"
-        # check if hermitian
-        n = len(matrix)
-        for i in range(n):
-            for j in range(i, n):
-                if not np.isclose(matrix[i][j], np.conjugate(matrix[j][i])):
-                    b = False
-                    s += "|not hermitian|"
-        # check if completely positive with Choi–Jamiołkowski isomorphism
-        M = np.kron(matrix, np.eye((n), dtype='complex_'))
-        I = np.eye((n), dtype='complex_')
-        omega = sum([np.kron(I[:, i], I[:, i]) for i in range(n)])
-        rho = np.dot(omega, np.conjugate(np.transpose(omega)))
-        choi = np.dot(M, rho)
-        eigenvalues = np.linalg.eigvalsh(choi)
-        if np.any(eigenvalues < -eigen_tolerance):
-            b = False
-            print("smallest eigenvalue :", eigenvalues[0])
-            s += "|not CP|"
-        if b:
-            return True
-        return False, s
-
-    def map_reconstructed(self, rho, operator_circuit, nqubit, heralded_modes=[], post_process=False,
-                          renormalization=None):
-        """
-        Computes the image of a density matrix by the operator using the chi matrix
-
-        :param rho: any density matrix
-        :param operator_circuit: perceval circuit for the operator
-        :param nqubit: number of qubits
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param post_process: bool for postselection on the outcome or not
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just
-        doing postselection which to non CP maps
-            :param brightness source brightness
-        :param g2 SPS g2
-        :param indistinguishability photon indistinguishability
-        :param loss known losses in source
-
-        :return: float between 0 and 1
-        """
-        d = 2 ** nqubit
-        qpt = QuantumProcessTomography()
-        X = qpt.chi_mult_qubit(operator_circuit, nqubit, heralded_modes, post_process, renormalization)
-        eps = np.zeros((d, d), dtype='complex_')
-        for m in range(d ** 2):
-            for n in range(d ** 2):
-                eps += X[m, n] * np.linalg.multi_dot([QuantumProcessTomography.E(m, nqubit), rho, np.transpose(np.conjugate(QuantumProcessTomography.E(n, nqubit)))])
-        # Eqn 2.4 the exact sum
-        return eps
