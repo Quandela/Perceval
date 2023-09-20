@@ -53,7 +53,7 @@ def test_fidelity_and_performance_cnot():
     analyzer_postprocessed_cnot = Analyzer(catalog["postprocessed cnot"].build_processor(), state_dict)
     analyzer_postprocessed_cnot.compute(expected=expected)
 
-    assert analyzer_postprocessed_cnot.fidelity == 1
+    assert pytest.approx(analyzer_postprocessed_cnot.fidelity) == 1
 
     # CNOT using CZ : called - Heralded CNOT
     analyzer_heralded_cnot = Analyzer(catalog["heralded cnot"].build_processor(), state_dict)
@@ -72,7 +72,7 @@ def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
     ⎢0          r*exp(iθ)   0           0             ⎥
     ⎢0          0           r*exp(iθ)   0             ⎥
     ⎣0          0           0           r*exp(i(θ+φ)) ⎦
-    With r the modulus (r!=0), θ the phase and φ the rotation angle of our gate (for CZ is φ=π)
+    With r the modulus (r!=0), θ the global phase and φ the rotation angle of our gate (for CZ is φ=π)
 
     :param processor: CZ processor to check, we assume that ctrl is on [0,1]
     and data on [2,3]

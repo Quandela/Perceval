@@ -48,7 +48,7 @@ def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_
     ⎢0          0           0           0           0           r*exp(iθ)   0           0             ⎥
     ⎢0          0           0           0           0           0           r*exp(iθ)   0             ⎥
     ⎣0          0           0           0           0           0           0           r*exp(i(θ+φ)) ⎦
-    With r the modulus (r!=0), θ the phase and φ the rotation angle of our gate (for CCZ is φ=π)
+    With r the modulus (r!=0), θ the global phase and φ the rotation angle of our gate (for CCZ is φ=π)
 
     :param processor: CCZ processor to check, we assume that ctrl is on [0,1]
     and data on [2,3]
@@ -71,7 +71,7 @@ def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_
             if i_state == o_state:
                 if modulus_value is None:
                     modulus_value = modulus
-                assert pytest.approx(modulus) == modulus_value
+                assert pytest.approx(modulus, error) == modulus_value
                 assert modulus != 0
 
                 if i_state != data_state:
