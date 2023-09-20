@@ -501,7 +501,7 @@ class FidelityTomography:
             for i in range(self._nqubit - 1, -1, -1):
                 l.append(state // (4 ** i))
                 state = state % (4 ** i)
-            EPS.append(qst.perform_quantum_state_tomography(state))
+            EPS.append(qst.perform_quantum_state_tomography(l))
 
         basis = matrix_basis(self._nqubit)
         for j in range(d ** 2):
