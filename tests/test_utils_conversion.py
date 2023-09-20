@@ -81,10 +81,12 @@ def test_probs_to_sample_count():
     bsd[b1] = 0.25
     bsd[b2] = 0.15
     bsd[b3] = 0.5
-    output = probs_to_sample_count(bsd, 1000)
+    count = 1000
+    output = probs_to_sample_count(bsd, count)
     assert output[b0] < output[b2]
     assert output[b2] < output[b1]
     assert output[b1] < output[b3]
+    assert sum(list(output.values())) == count
 
 
 def test_sample_count_to_samples():

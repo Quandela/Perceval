@@ -32,7 +32,7 @@ import math
 
 from perceval import Source, StateVector
 from perceval.rendering.pdisplay import pdisplay_state_distrib
-from test_circuit import strip_line_12
+from _test_utils import strip_line_12
 
 
 def _check_svdistribution(output, expected):

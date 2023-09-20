@@ -55,7 +55,8 @@ def exponentiation_by_squaring(base, power: int):
 
         # Divide the power by 2
         power = power // 2
-        # Multiply base to itself
-        temp_base = temp_base * temp_base
+        if power != 0:
+            # Multiply base to itself
+            temp_base = temp_base * temp_base
 
     return result
