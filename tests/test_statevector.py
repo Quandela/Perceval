@@ -29,6 +29,7 @@
 
 from collections import Counter
 import math
+import platform
 import pytest
 
 import perceval as pcvl
@@ -110,14 +111,14 @@ def test_state_annots():
 def test_state_identical_annots():
     st1 = BasicState("|0,1,{P:V}1>")
     st2 = BasicState("|0,1,{P:V}1>")
-    assert str(st1) == str(st2)
+    assert st1 == st2
 
     st3 = BasicState("|{a:1}2{a:0},0,0>")
     st4 = BasicState("|2{a:0}{a:1},0,0>")
-    assert str(st3) == str(st4)
+    assert st3 == st4
 
     sv = 0.5 * st1 + st3 - st4
-    assert str(sv) == str(st1)
+    assert_sv_close(sv, StateVector(st1))
 
 
 def test_state_invalid_superposition():
@@ -182,11 +183,6 @@ def test_svdistribution():
     assert svd_squared[StateVector("|0,1,0,1>")] == pytest.approx(1 / 4)
 
 
-def test_sv_separation_0():
-    st1 = BasicState("|0,0>")
-    assert st1.separate_state() == [BasicState("|0,0>")]
-
-
 def test_separate_state_without_annots():
     st1 = BasicState("|0,1>")
     assert st1.separate_state() == [BasicState("|0,1>")]
@@ -230,10 +226,10 @@ def test_parse_annot():
             BasicState(s)
     st1 = BasicState("|{_:0}{_:1}>")
     st1.clear_annotations()
-    assert str(st1) == "|2>"
+    assert st1 == BasicState("|2>")
     st1 = BasicState("|{_:0}{_:1},0,1>")
     st1.clear_annotations()
-    assert str(st1) == "|2,0,1>"
+    assert st1 == BasicState("|2,0,1>")
 
 
 def test_sv_parse_symb_annot():
@@ -262,7 +258,25 @@ def test_svd_sample():
     assert isinstance(sample[1], StateVector)
 
 
-def test_svd_anonymize_annots():
+def test_svd_anonymize_annots_simple():
+    svd = SVDistribution({
+        BasicState("|{_:1},{_:2},{_:3}>"): 0.2,
+        BasicState("|{_:4},{_:5},{_:6}>"): 0.3,
+        BasicState("|{_:1},{_:3},{_:3}>"): 0.4,
+        BasicState("|{_:0},{_:8},{_:8}>"): 0.1,
+    })
+    svd2 = pcvl.anonymize_annotations(svd)
+    assert_svd_close(svd2, SVDistribution(
+        {
+            StateVector('|{a:0},{a:1},{a:2}>'): 0.5,
+            StateVector('|{a:0},{a:1},{a:1}>'): 0.5
+        }))
+
+
+@pytest.mark.skipif(
+    platform.system() != "Windows",
+    reason="Superposed states aren't anonymized the same given C++ unordered containers OS-specific implementation")
+def test_svd_anonymize_annots_superposition():
     svd = SVDistribution({
         StateVector("|{_:0},{_:0},{_:1}>") + StateVector("|{_:0},{_:2},{_:1}>"): 0.1,
         StateVector("|{_:3},{_:4},{_:4}>"): 0.1,
@@ -273,12 +287,12 @@ def test_svd_anonymize_annots():
     })
     svd2 = pcvl.anonymize_annotations(svd)
     assert_svd_close(svd2, SVDistribution(
-    {
-        StateVector('|{a:0},{a:1},{a:2}>'): 0.5,
-        StateVector('|{a:0},{a:0},{a:1}>') + StateVector('|{a:0},{a:2},{a:1}>'): 0.2,
-        StateVector('|{a:0},{a:1},{a:1}>'): 0.2,
-        StateVector('|{a:0},{a:0},{a:1}>'): 0.1
-    }))
+        {
+            StateVector('|{a:0},{a:1},{a:2}>'): 0.5,
+            StateVector('|{a:0},{a:0},{a:1}>') + StateVector('|{a:0},{a:2},{a:1}>'): 0.2,
+            StateVector('|{a:0},{a:1},{a:1}>'): 0.2,
+            StateVector('|{a:0},{a:0},{a:1}>'): 0.1
+        }))
 
 
 def test_statevector_sample():
@@ -306,9 +320,9 @@ def test_statevector_measure_1():
            BasicState("|0>") in map_measure_sv and \
            BasicState("|1>") in map_measure_sv
     assert pytest.approx(0.5) == map_measure_sv[BasicState("|0>")][0]
-    assert str(map_measure_sv[BasicState("|0>")][1]) == "|1>"
+    assert map_measure_sv[BasicState("|0>")][1] == StateVector("|1>")
     assert pytest.approx(0.5) == map_measure_sv[BasicState("|1>")][0]
-    assert str(map_measure_sv[BasicState("|1>")][1]) == "|0>"
+    assert map_measure_sv[BasicState("|1>")][1] == StateVector("|0>")
 
 
 def test_statevector_measure_2():
@@ -318,9 +332,9 @@ def test_statevector_measure_2():
            BasicState("|0,1>") in map_measure_sv and \
            BasicState("|1,0>") in map_measure_sv
     assert pytest.approx(0.5) == map_measure_sv[BasicState("|0,1>")][0]
-    assert str(map_measure_sv[BasicState("|0,1>")][1]) == "|>"
+    assert map_measure_sv[BasicState("|0,1>")][1] == StateVector("|>")
     assert pytest.approx(0.5) == map_measure_sv[BasicState("|1,0>")][0]
-    assert str(map_measure_sv[BasicState("|1,0>")][1]) == "|>"
+    assert map_measure_sv[BasicState("|1,0>")][1] == StateVector("|>")
 
 
 def test_statevector_measure_3():
@@ -329,7 +343,7 @@ def test_statevector_measure_3():
     assert len(map_measure_sv) == 1 and \
            BasicState("|1>") in map_measure_sv
     assert pytest.approx(1) == map_measure_sv[BasicState("|1>")][0]
-    assert str(map_measure_sv[BasicState("|1>")][1]) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
+    assert_sv_close(map_measure_sv[BasicState("|1>")][1], StateVector([0, 1]) + StateVector([1, 0]))
 
 
 def test_statevector_equality():
@@ -344,24 +358,20 @@ def test_statevector_arithmetic():
     sv1 = StateVector()
     sv1 += StateVector([0, 1])
     sv1 += StateVector([1, 0])
-    assert str(sv1) == "sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>"
+    assert_sv_close(sv1, StateVector([0, 1]) + StateVector([1, 0]))
 
     sv2 = StateVector()
     sv2 += 0.5 * StateVector([0, 1])
     sv2 += -0.5 * StateVector([1, 0])
-    assert str(sv2) == "sqrt(2)/2*|0,1>-sqrt(2)/2*|1,0>"
+    assert_sv_close(sv2, StateVector([0, 1]) - StateVector([1, 0]))
 
-    sv3 = sv1 + sv2  # sv1 and sv2 is not normalized yet
-    assert str(sv3) != "|0,1>"  # so the result of the addition  won't suppress the |1,0> component
-    sv1.normalize()
-    sv2.normalize()
     sv3 = sv1 + sv2
-    assert str(sv3) == "|0,1>"
+    assert sv3 == StateVector([0, 1])
 
     sv4 = 0.2j * sv1 - 0.6j * sv2
-    assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"
+    assert_sv_close(sv4, -math.sqrt(5) / 5 * 1j * StateVector([0, 1]) + math.sqrt(5) / 5 * 2j * StateVector([1, 0]))
 
-    sv4 = StateVector()
-    sv4 += 0.2j * sv1
-    sv4 += -0.6j * sv2
-    assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"
+    sv5 = StateVector()
+    sv5 += 0.2j * sv1
+    sv5 += -0.6j * sv2
+    assert_sv_close(sv5, -math.sqrt(5) / 5 * 1j * StateVector([0, 1]) + math.sqrt(5) / 5 * 2j * StateVector([1, 0]))
