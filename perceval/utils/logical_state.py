@@ -31,7 +31,7 @@ from typing import List
 
 
 class LogicalState(list):
-    def __init__(self, state: list[int] or str = None):
+    def __init__(self, state: List[int] or str = None):
         """Represent a Logical state
 
         :param state: Can be either None, a list or a str, defaults to None
