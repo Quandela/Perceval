@@ -6,9 +6,7 @@ Basic State
 
 Describes the Fock state of :math:`n` photons over :math:`m` modes where photons can be annotated. If none is annotated, then all photons in the state are indistinguishable.
 
-See reference :class:`perceval.utils.BasicState` for detailed information.
-
-See the section :ref:`State and StateVector`
+For detailed information, see the code reference of :class:`perceval.utils.BasicState` here :ref:`State and StateVector`
 
 A Fock state, called BasicState in Perceval coding language, is represented by ``|n_1,n_2,...,n_m>`` notation where ``n_k`` is the number of photons in mode ``k``.
 
