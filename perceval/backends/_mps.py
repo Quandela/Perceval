@@ -59,7 +59,7 @@ class MPSBackend(AProbAmpliBackend):
         # _res stores output of the state compilation in MPS.
         # It is a Nested DefaultDict.
         # 1st layer: Each "input_states" has the full MPS
-        # 2nd layer: $\Gamma$ or $\lambda$ keys and their numpy arrays
+        # 2nd layer: gamma or lambda keys and their numpy arrays
 
     @property
     def name(self) -> str:
@@ -90,7 +90,7 @@ class MPSBackend(AProbAmpliBackend):
         Computes the probability for a given input output state from a circuit with m modes and
         n photons computed using MPS
         """
-        # self._res extracts $\Gamma$ and diagonal SV matrices corresponding to given output_state; this is
+        # self._res extracts gamma and diagonal SV matrices corresponding to given output_state; this is
         # stored in list of matrices and multidot performs a full matrix multiplication overall of them
         # in a single statement. Optimized by numpy
 
@@ -127,18 +127,18 @@ class MPSBackend(AProbAmpliBackend):
         self._cutoff = min(self._cutoff, self._d ** (self._input_state.m//2))
         # choosing a cut-off smaller than the limit as the size of matrix increases
         # exponentially with cutoff
-        # this is the Schmidt's rank or bond dimension ($\chi$ in Thibaud's notes)
+        # this is the Schmidt's rank or bond dimension (chi in Thibaud's notes)
 
         self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
-        # Gamma matrices of the MPS - array shape (m, $\chi$, $\chi$, d)
+        # Gamma matrices of the MPS - array shape (m, chi, chi, d)
         # Each Gamma matrix of MPS, in theory, have 3 indices.
         # The first index 'm' here is used to represent modes - all gammas of MPS stored in a single array
         for i in range(self._input_state.m):
             self._gamma[i, 0, 0, self._input_state[i]] = 1
 
         self._sv = np.zeros((self._input_state.m, self._cutoff))
-        # sv matrices store singular values - array shape (m, $\chi$)
-        # sv are vectors of length $\chi$. Similar to gamma, the first index 'm' indexes mode.
+        # sv matrices store singular values - array shape (m, chi)
+        # sv are vectors of length chi. Similar to gamma, the first index 'm' indexes mode.
         self._sv[:, 0] = 1  # first column set to 1
 
         # This initialization of MPS (gamma and sv) fixes the input state to be completely separable
@@ -177,14 +177,14 @@ class MPSBackend(AProbAmpliBackend):
 
     def update_state_1_mode(self, k, u):
         """
-        tensor contraction between the corresponding mode's "$\Gamma$" of the MPS
+        tensor contraction between the corresponding mode's gamma of the MPS
         and the transition matrix "U" of phase shifter for that mode [_transition_matrix_1_mode].
         """
         self._gamma[k] = np.tensordot(self._gamma[k], self._transition_matrix_1_mode(u), axes=(2, 0))
         # gamma[k] -> takes the kth slice from first dimension -> selects gamma of kth mode
-        # gamma[k].shape=($\chi$, $\chi$, d) and _transition_matrix_1_mode(u).shape=(d, d).
+        # gamma[k].shape=(chi, chi, d) and _transition_matrix_1_mode(u).shape=(d, d).
         # The contraction is on the free index 'd'.
-        # Assigns the result to the same gamma[k] returning the shape ($\chi$, $\chi$, d)
+        # Assigns the result to the same gamma[k] returning the shape (chi, chi, d)
 
     def _transition_matrix_1_mode(self, u):
         """
@@ -205,49 +205,49 @@ class MPSBackend(AProbAmpliBackend):
 
     def update_state_2_mode(self, k, u):
         """
-        takes the gamma->kth and (k+1)th + corresponding $\lambda$-s -> contracts the entire thing
+        takes the gamma->kth and (k+1)th + corresponding lambda-s -> contracts the entire thing
         with 2 mode beam splitter, performs some reshaping and then svd to re-build the corresponding
         segment of MPS.
         """
 
         if 0 < k < self._input_state.m - 2:  # BS anywhere except the first and the last mode
-            # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
-            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=($\chi$,$\chi$,d)
-            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=($\chi$, d, $\chi$, d)
-            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # theta.shape=($\chi$, d, d, $\chi$)
+            # all gamma[k,:].shape=(chi, chi, d) and _sv_diag(k).shape=(chi, chi)
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=(chi,chi,d)
+            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=(chi, d, chi)
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=(chi, d, chi, d)
+            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # theta.shape=(chi, d, d, chi)
             # contraction of the corresponding matrices of MPS finished until here
             theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))
-            # input->theta.shape=($\chi$, d, d, $\chi$) and big_u.shape(d,d,d,d)
-            # output->theta.shape($\chi$, $\chi$, d, d)
+            # input->theta.shape=(chi, d, d, chi) and big_u.shape(d,d,d,d)
+            # output->theta.shape(chi, chi, d, d)
 
         elif k == 0:
             # BS connected between the first 2 modes -> Edge of circuit
-            # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
-            theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=($\chi$, d, $\chi$, d)
-            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # theta.shape=($\chi$, d, d, $\chi$)
+            # all gamma[k,:].shape=(chi, chi, d) and _sv_diag(k).shape=(chi, chi)
+            theta = np.tensordot(self._gamma[k, :], self._sv_diag(k), axes=(1, 0))  # theta.shape=(chi, d, chi)
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=(chi, d, chi, d)
+            theta = np.tensordot(theta, self._sv_diag(k + 1), axes=(2, 0))  # theta.shape=(chi, d, d, chi)
             theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 2], [0, 1]))
-            # input->theta.shape=($\chi$, d, d, $\chi$) and big_u.shape(d,d,d,d)
-            # output->theta.shape($\chi$, $\chi$, d, d)
+            # input->theta.shape=(chi, d, d, chi) and big_u.shape(d,d,d,d)
+            # output->theta.shape(chi, chi, d, d)
 
         elif k == self._input_state.m - 2:
             # BS connected between the last 2 modes -> Edge of circuit
-            # all gamma[k,:].shape=($\chi$, $\chi$, d) and _sv_diag(k).shape=($\chi$, $\chi$)
-            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=($\chi$,$\chi$,d)
-            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=($\chi$, d, $\chi$)
-            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=($\chi$, d, $\chi$, d)
+            # all gamma[k,:].shape=(chi, chi, d) and _sv_diag(k).shape=(chi, chi)
+            theta = np.tensordot(self._sv_diag(k - 1), self._gamma[k, :], axes=(1, 0))  # theta.shape=(chi,chi,d)
+            theta = np.tensordot(theta, self._sv_diag(k), axes=(1, 0))  # theta.shape=(chi, d, chi)
+            theta = np.tensordot(theta, self._gamma[k + 1, :], axes=(2, 0))  # theta.shape=(chi, d, chi, d)
             theta = np.tensordot(theta, self._transition_matrix_2_mode(u), axes=([1, 3], [0, 1]))
-            # input->theta.shape = ($\chi$, d, $\chi$, d) and big_u.shape(d, d, d, d)
-            # output->theta.shape($\chi$, $\chi$, d, d)
+            # input->theta.shape = (chi, d, chi, d) and big_u.shape(d, d, d, d)
+            # output->theta.shape(chi, chi, d, d)
 
-        theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)  # resulting theta.shape(d, $\chi$, d, $\chi$)
-        theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)  # theta.shape (d x $\chi$, d x $\chi$)
+        theta = theta.swapaxes(1, 2).swapaxes(0, 1).swapaxes(2, 3)  # resulting theta.shape(d, chi, d, chi)
+        theta = theta.reshape(self._d * self._cutoff, self._d * self._cutoff)  # theta.shape (d x chi, d x chi)
         v, s, w = np.linalg.svd(theta)
         # svd of the tensor after component is applied to extract the MPS form
         # in standard notation SVD is written as M=USV, but we keep 'u' for unitary,
-        # Here:: U->v [v.shape=(d x $\chi$, d x $\chi$)], (1st in the new MPS chain)
-        # S->s [s.shape=(d x $\chi$)], V->w [w.shape=(d x $\chi$, d x $\chi$)]
+        # Here:: U->v [v.shape=(d x chi, d x chi)], (1st in the new MPS chain)
+        # S->s [s.shape=(d x chi)], V->w [w.shape=(d x chi, d x chi)]
 
         v = v.reshape(self._d, self._cutoff, self._d * self._cutoff).swapaxes(0, 1).swapaxes(1, 2)[:, :self._cutoff]
         w = w.reshape(self._d * self._cutoff, self._d, self._cutoff).swapaxes(1, 2)[:self._cutoff]
