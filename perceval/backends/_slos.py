@@ -193,19 +193,19 @@ class SLOSBackend(AProbAmpliBackend):
     def prob_distribution(self) -> BSDistribution:
         istate = self._input_state
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
+        c = abs(c) ** 2 / istate.prodnfact()
+        xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        iprodnfact = istate.prodnfact()
-        for output_state, unnormed_pa in zip(allstate_iterator(self._input_state, self._mask), c):
-            bsd.add(output_state, (abs(unnormed_pa) ** 2) * output_state.prodnfact() / iprodnfact)
+        for output_state, probability in zip(allstate_iterator(self._input_state, self._mask), c):
+            bsd.add(output_state, probability)
         return bsd
 
     def all_prob(self, input_state: BasicState):
         """SLOS specific signature, to enhance optimization in some computations"""
         self.set_input_state(input_state)
-        c = np.copy(self._state_mapping[self._input_state].coefs).reshape(self._fsas[self._input_state.n].count())
+        c = np.copy(self._state_mapping[input_state].coefs).reshape(self._fsas[input_state.n].count())
         c = abs(c)**2 / self._input_state.prodnfact()
-        for idx, (output_state, _) in enumerate(zip(allstate_iterator(self._input_state, self._mask), c)):
-            c[idx] = c[idx] * output_state.prodnfact()
+        xq.all_prob_normalize_output(c, self._fsas[input_state.n])
         return c
 
     def evolve(self) -> StateVector:

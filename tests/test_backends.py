@@ -62,10 +62,11 @@ def test_clifford_bs():
     cliff_bs.set_circuit(BS.H())
     cliff_bs.set_input_state(BasicState([0, 1]))
     counts = BSCount()
-    for _ in range(10000):
-        counts[cliff_bs.sample()] += 1
-    assert 4750 < counts[BasicState("|0,1>")] < 5250
-    assert 4750 < counts[BasicState("|1,0>")] < 5250
+    n_samples = 10000
+    for s in cliff_bs.samples(n_samples):
+        counts[s] += 1
+    assert n_samples*0.475 < counts[BasicState("|0,1>")] < n_samples*0.525
+    assert n_samples*0.475 < counts[BasicState("|1,0>")] < n_samples*0.525
 
 
 def check_output_distribution(backend: AProbAmpliBackend, input_state: BasicState, expected: dict):

@@ -62,6 +62,10 @@ class ABackend(ABC):
 class ASamplingBackend(ABackend):
     @abstractmethod
     def sample(self):
+        """Request one sample from the circuit given an input state"""
+
+    @abstractmethod
+    def samples(self, count: int):
         """Request samples from the circuit given an input state"""
 
 

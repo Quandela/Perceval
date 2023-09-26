@@ -90,7 +90,7 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
         else:
             output_array = xq.FSArray(m, n)
         for output_state in output_array:
-            yield BasicState(output_state)
+            yield output_state
 
 
 def tensorproduct(states: List[Union[StateVector, BasicState]]):
