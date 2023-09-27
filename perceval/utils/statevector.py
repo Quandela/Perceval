@@ -226,9 +226,9 @@ class StateVector(defaultdict):
         return BasicState(keys[idx])
 
     def samples(self, shots: int) -> List[BasicState]:
-        r"""Generate a list of samples.
+        """Generate a list of samples.
         It does not perform a measure - so do not change the value of statevector.
-        This function is more efficient than run :math:$shots$ times :method:sample
+        This function is more efficient than run :math:`shots` times :meth:`sample`
 
         :param shots: the number of samples
         :return: a list of BasicState
@@ -551,7 +551,7 @@ class BSCount(defaultdict):
 
 
 class BSSamples(list):
-    r"""Container that stores Basic states event in the order
+    r"""Container that stores samples in a time ordered way
     """
     def __setitem__(self, index, item):
         assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
