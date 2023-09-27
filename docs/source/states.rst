@@ -1,7 +1,7 @@
 States
 ======
 
-For detailed information, see the code reference of :class:`perceval.utils.statevector` here : :ref:`State and StateVector`
+For detailed information, see the code reference of ``perceval.utils.statevector`` here : :ref:`State and StateVector`
 
 Basic State
 -----------
