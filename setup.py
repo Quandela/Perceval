@@ -30,9 +30,9 @@ setuptools.setup(
     install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.2.1', 'multipledispatch',
                       'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec', 'platformdirs'],
     extras_require={
-        "qiskit": ["qiskit", "seaborn"],
-        "qutip": ["qutip"],
-        "myqlm": ["myqlm"]
+        "qiskit_bridge": ["qiskit", "seaborn"],
+        "qutip_bridge": ["qutip"],
+        "myqlm_bridge": ["myqlm>=1.9.3"]
     },
     setup_requires=["scmver"],
     python_requires=">=3.8",
