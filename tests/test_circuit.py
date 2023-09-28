@@ -36,7 +36,7 @@ from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
-from _test_utils import strip_line_12, assert_sv_close
+from _test_utils import strip_line_12
 import sympy as sp
 import numpy as np
 

@@ -76,6 +76,10 @@ def assert_svd_close(lhsvd, rhsvd):
         assert found_in_rh, f"sv not found {lh_sv}"
 
 
+def  dict2svd(d: dict):
+    return SVDistribution({StateVector(k): v for k, v in d.items()})
+
+
 if __name__ == "__main__":
     sv1 = StateVector([0, 1]) + StateVector([1, 0])
     sv1_bis = 1.0000001*StateVector([0, 1]) + 0.9999999*StateVector([1, 0])
