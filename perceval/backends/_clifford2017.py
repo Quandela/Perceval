@@ -35,21 +35,21 @@ from ._abstract_backends import ASamplingBackend
 
 class Clifford2017Backend(ASamplingBackend):
     def __init__(self):
-        self._opti_clifford = xq.Clifford2017()
+        self._clifford = xq.Clifford2017()
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
-        self._opti_clifford.set_unitary(self._umat)
+        self._clifford.set_unitary(self._umat)
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
-        self._opti_clifford.set_input_state(input_state)
+        self._clifford.set_input_state(input_state)
 
     def sample(self):
-        return self._opti_clifford.sample()
+        return self._clifford.sample()
 
     def samples(self, count: int):
-        return self._opti_clifford.samples(count)
+        return self._clifford.samples(count)
 
     @property
     def name(self) -> str:

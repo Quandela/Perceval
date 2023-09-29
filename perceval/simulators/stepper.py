@@ -90,18 +90,18 @@ class Stepper(ISimulator):
         # now rebuild the new state vector
         nsv = StateVector()
         # May be faster in c++ (impossible to use comprehension here due to successive additions)
-        for state, _ in sv:
+        for state, sv_pa in sv:
             if state[:self._C.m].n >= self._min_detected_photons:  # Useless to compute if the mode will not be selected
                 for output_state, prob_ampli in self._result_dict[key][state[min_r:max_r]].items():
-                    nsv += state.set_slice(slice(min_r, max_r), output_state) * (prob_ampli * sv[state])
+                    nsv += state.set_slice(slice(min_r, max_r), output_state) * (prob_ampli * sv_pa)
             else:
-                nsv[state] = sv[state]
+                nsv += state*sv_pa
         return nsv
 
     def probs(self, input_state) -> BSDistribution:
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)
