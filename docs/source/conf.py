@@ -41,17 +41,24 @@
 #
 import os
 import sys
+import git
+from datetime import datetime
+
 sys.path.insert(0, os.path.relpath('../'))
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'perceval'
-copyright = '2022, Quandela'
+copyright = f"{datetime.now().year}, Quandela"
 author = 'Jean Senellart'
 
+repo = git.Repo('../..')
+tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
+latest_tag = f"{tags[-1]}"
+
 # The full version, including alpha/beta/rc tags
-release = '0.9.0'
+release = latest_tag[1:]
 
 
 # -- General configuration ---------------------------------------------------
@@ -66,7 +73,22 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinxcontrib.bibtex',
     'nbsphinx',
+    'sphinx_multiversion',
 ]
+
+# Whitelist pattern for tags (set to None to ignore all tags)
+smv_tag_whitelist = r'^v\d+\.\d+.*$|latest'
+
+# Whitelist pattern for branches (set to None to ignore all branches)
+smv_branch_whitelist = None
+
+# Whitelist pattern for remotes (set to None to use local branches only)
+smv_remote_whitelist = None
+
+# Pattern for released versions
+smv_released_pattern = r'v.*'
+
+smv_latest_version = latest_tag
 
 bibtex_bibfiles = ['references.bib']
 bibtex_reference_style = 'author_year'
