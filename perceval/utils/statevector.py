@@ -226,9 +226,9 @@ class StateVector(defaultdict):
         return BasicState(keys[idx])
 
     def samples(self, shots: int) -> List[BasicState]:
-        r"""Generate a list of samples.
+        """Generate a list of samples.
         It does not perform a measure - so do not change the value of statevector.
-        This function is more efficient than run :math:$shots$ times :method:sample
+        This function is more efficient than run :math:`shots` times :meth:`sample`
 
         :param shots: the number of samples
         :return: a list of BasicState
@@ -281,12 +281,8 @@ class StateVector(defaultdict):
             for key in to_remove:
                 del self[key]
             norm = norm**0.5
-            nkey = len(self.keys())
             for key in self.keys():
-                if nkey == 1:
-                    self[key] = 1
-                else:
-                    self[key] /= norm
+                self[key] /= norm
             self._normalized = True
 
     def __str__(self, nsimplify=True):
@@ -428,6 +424,9 @@ class SVDistribution(ProbabilityDistribution):
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
+    """
+    Anonymize the annotations in a StateVector
+    """
     m = sv.m
     annot_map = {}
     result = StateVector()
@@ -446,6 +445,9 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
 
 @dispatch(SVDistribution, annot_tag=str)
 def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
+    """
+    Anonymize the annotations in a SVDistribution
+    """
     sv_dist = defaultdict(lambda: 0)
     for k, p in svd.items():
         state = anonymize_annotations(k, annot_tag=annot_tag)
@@ -454,7 +456,8 @@ def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
 
 
 class BSDistribution(ProbabilityDistribution):
-
+    r"""Time-Independant probabilistic distribution of Basic States
+    """
     def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()
         if d is not None:
@@ -500,6 +503,9 @@ class BSDistribution(ProbabilityDistribution):
 
     @staticmethod
     def tensor_product(bsd1, bsd2, merge_modes: bool = False, prob_threshold: float = 0):
+        """
+        Compute the tensor product of two BasicState Distribution
+        """
         if len(bsd1) == 0:
             return bsd2
         new_dist = BSDistribution()
@@ -516,6 +522,8 @@ class BSDistribution(ProbabilityDistribution):
 
 
 class BSCount(defaultdict):
+    r"""Container that counts basic state events
+    """
     def __init__(self, d: Optional[Dict] = None):
         super().__init__(int)
         if d is not None:
@@ -543,6 +551,8 @@ class BSCount(defaultdict):
 
 
 class BSSamples(list):
+    r"""Container that stores samples in a time ordered way
+    """
     def __setitem__(self, index, item):
         assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
         super().__setitem__(index, item)

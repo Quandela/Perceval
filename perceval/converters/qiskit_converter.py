@@ -42,7 +42,7 @@ class QiskitConverter(AGateConverter):
         super().__init__(catalog, backend_name, source)
 
     def count_qubits(self, gate_circuit) -> int:
-        return gate_circuit.qregs[0].size  # number of qbits
+        return gate_circuit.qregs[0].size  # number of qubits
 
     def convert(self, qc, use_postselection: bool = True) -> Processor:
         r"""Convert a qiskit quantum circuit into a `Processor`.
@@ -74,13 +74,13 @@ class QiskitConverter(AGateConverter):
                 # one mode gate
                 ins = self._create_generic_1_qubit_gate(instruction[0].to_matrix())
                 ins._name = instruction[0].name
-                self._converted_processor.add(instruction[1][0].index * 2, ins.copy())
+                self._converted_processor.add(qc.find_bit(instruction[1][0])[0] * 2, ins.copy())
             else:
                 if instruction[0].num_qubits > 2:
                     # only 2 qubit gates
-                    raise ValueError(f"Gates with number of Qbits higher than 2 not implemented")
-                c_idx = instruction[1][0].index * 2
-                c_data = instruction[1][1].index * 2
+                    raise ValueError("Gates with number of Qubits higher than 2 not implemented")
+                c_idx = qc.find_bit(instruction[1][0])[0] * 2
+                c_data = qc.find_bit(instruction[1][1])[0] * 2
                 c_first = min(c_idx, c_data)
 
                 self._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, c_idx, c_data, c_first,

@@ -39,8 +39,9 @@ practitioners.
 
 Perceval requires:
 
-* Python 3.7 or above
+* Python 3.8 or above
 
+## PIP
 We recommend installing it with `pip`:
 
 ```bash
@@ -48,11 +49,29 @@ pip install --upgrade pip
 pip install perceval-quandela
 ```
 
-or simply from GitHub:
+If you are looking to use our qiskit, qutip or myqlm bridges you can specify it:
+```bash
+pip install perceval-quandela[qiskit_bridge] #install qiskit and seaborn
+pip install perceval-quandela[qutip_bridge] #install qutip
+pip install perceval-quandela[myqlm_bridge] #install myqlm
+pip install perceval-quandela[qiskit_bridge, qutip_bridge, myqlm_bridge] #install all above
+```
 
+## GitHub
 ```bash
 git clone https://github.com/quandela/Perceval
-python setup.py install # [or 'develop' for developers]
+```
+then to install Perceval:
+```bash
+pip install .
+```
+Or for developpers:
+```bash
+pip install -e .
+```
+Or to use converters:
+```bash
+pip install .[qiskit_bridge, qutip_bridge, myqlm_bridge]
 ```
 
 # Running tests and benchmarks
@@ -60,6 +79,7 @@ python setup.py install # [or 'develop' for developers]
 Unit tests files are part of the repository in `tests/` and can be run with:
 
 ```
+pip install -r tests/requirements.txt
 pytest tests/
 ```
 

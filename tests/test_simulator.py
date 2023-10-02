@@ -31,7 +31,7 @@ import numpy as np
 
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
-from perceval.components import Circuit, BS
+from perceval.components import Circuit, BS, PS
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
 
 
@@ -274,3 +274,12 @@ def test_statevector_polar_evolve():
     for _, p in simulator.probs(st2).items():
         sum_p += p
     assert pytest.approx(1) == sum_p
+
+
+def test_evovle_phase():
+    input_state = StateVector([2, 0]) + StateVector([1, 1])
+    c = Circuit(2).add(1, PS(phi=np.pi/3))
+    simu = Simulator(SLOSBackend())
+    simu.set_circuit(c)
+    output_sv = simu.evolve(input_state)
+    assert output_sv[BasicState([1, 1])] == pytest.approx(complex(np.sqrt(2)/4, np.sqrt(6)/4))

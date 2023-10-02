@@ -104,6 +104,7 @@ class Analyzer(AAlgorithm):
         """
         probs_res = {}
         logical_perf = []
+        has_an_empty_PD = False
         if expected is not None:
             normalize = True
             self.error_rate = 0
@@ -118,6 +119,8 @@ class Analyzer(AAlgorithm):
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()
             probs = probs_output['results']
+            if len(probs) == 0:
+                has_an_empty_PD = True
             probs_res[i_state] = probs
             if 'logical_perf' in probs_output:
                 logical_perf.append(probs_output['logical_perf'])
@@ -151,11 +154,18 @@ class Analyzer(AAlgorithm):
         self.performance = min(logical_perf)
         output = {'results': self._distribution, 'input_states': self.input_states_list,
                   'output_states': self.output_states_list, 'performance': self.performance}
+
+        if has_an_empty_PD:
+            output['performance'] = 0
         if expected is not None:
-            self.error_rate /= len(self.input_states_list)
-            output['error_rate'] = self.error_rate
-            self.fidelity = 1 - self.error_rate
-            output['fidelity'] = self.fidelity
+            if has_an_empty_PD:
+                output['error_rate'] = None
+                output['fidelity'] = None
+            else:
+                self.error_rate /= len(self.input_states_list)
+                output['error_rate'] = self.error_rate
+                self.fidelity = 1 - self.error_rate
+                output['fidelity'] = self.fidelity
         return output
 
     @property

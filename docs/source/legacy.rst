@@ -42,7 +42,7 @@ To version 0.9
 >>>
 >>> from perceval.backends import SLOSBackend
 >>> slos = SLOSBackend() # This is equivalent to using the BackendFactory
->>> slos_with_mask = SLOSBackend(mask="0    0", n=2) # You can also use the specifics of each backend when creating one
+>>> slos_with_mask = SLOSBackend(mask=["0    0"], n=2) # You can also use the specifics of each backend when creating one
 >>>
 >>> slos.set_circuit(circuit) # Set a circuit first
 >>> slos.set_input_state(input_state) # Input state has to be a Fock state (all indistinguishable photons)
