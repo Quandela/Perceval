@@ -38,7 +38,7 @@ try:
     from qat.lang.AQASM import Program, H, X, Y, Z, I, S, T, PH, RX, RY, RZ, SWAP, CNOT, CSIGN, AbstractGate
     from qat.core.circuit_builder.matrix_util import circ_to_np
 except ModuleNotFoundError as e:
-    assert e.name == "myqlm"
+    assert e.name == "qat"
     pytest.skip("need `myqlm` module", allow_module_level=True)
 
 from perceval import BasicState, StateVector
