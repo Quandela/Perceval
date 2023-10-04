@@ -350,7 +350,7 @@ class QuantumProcessTomography:
     def __init__(self, nqubit: int, operator, operator_circuit: Circuit, qst, heralded_modes=[],
                  post_process=False, renormalization=None):
         self._nqubit = nqubit
-        self._operator = operator
+        # self._operator = operator
         self._operator_circuit = operator_circuit
         self._qst = qst
         self._heralded_modes = heralded_modes
@@ -396,14 +396,13 @@ class QuantumProcessTomography:
                 L[j, k] = eps_rhoj[k // d, k % d]
         return matrix_to_vector(L)
 
-    def _lambda_target(self):
+    def _lambda_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         d = 2 ** self._nqubit
-        operator = self._operator
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for j in range(d ** 2):
             rhoj = canonical_basis_ops(j, self._nqubit)
-            eps_rhoj = np.linalg.multi_dot([self._operator, rhoj, np.conjugate(np.transpose(self._operator))])
+            eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
             for k in range(d ** 2):
                 L[j, k] = eps_rhoj[k // d, k % d]
         L1 = np.zeros((d ** 4, 1), dtype='complex_')
@@ -422,17 +421,16 @@ class QuantumProcessTomography:
         X = np.dot(Binv, L)
         return vector_to_matrix(X)
 
-    def chi_target(self):
+    def chi_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         beta = self._beta_matrix()
-        lambd = self._lambda_target()
+        lambd = self._lambda_target(operator)
         X = np.dot(np.linalg.pinv(beta), lambd)
         return vector_to_matrix(X)
 
 
 class FidelityTomography:
-    def __init__(self, operator, nqubit):
-        self._operator = operator
+    def __init__(self, nqubit):
         self._nqubit = nqubit
 
     def process_fidelity(self, chi_computed, chi_ideal):
@@ -440,6 +438,7 @@ class FidelityTomography:
         Computes the process fidelity of an operator and its perceval circuit
 
         :param chi_computed: chi matrix computed from process tomography of shape [2**(2*nqubit) x 2**(2*nqubit)]
+        :param chi_ideal: Ideal chi matrix for the corresponding operator
         :return: float between 0 and 1
         """
         return np.real(np.trace(np.dot(chi_computed, chi_ideal)))
@@ -466,7 +465,7 @@ class FidelityTomography:
         print('process fidelity :', pf, '\n',
               'average fidelity :', afq)
 
-    def error_process_matrix(self, computed_chi):
+    def error_process_matrix(self, computed_chi, operator):
         """
         Computes the error matrix for an operation from the computed chi matrix
 
@@ -479,18 +478,18 @@ class FidelityTomography:
             for n in range(d ** 2):
                 Emdag = np.transpose(np.conjugate(fixed_basis_ops(m, self._nqubit)))
                 En = fixed_basis_ops(n, self._nqubit)
-                Udag = np.transpose(np.conjugate(self._operator))
+                Udag = np.transpose(np.conjugate(operator))
                 V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
         return np.linalg.multi_dot([V, computed_chi, np.conjugate(np.transpose(V))])
 
-    def average_fidelity(self, qst):
+    def average_fidelity(self, qst, operator):
         """
         Computes the average fidelity of an operator and its perceval circuit
 
         :param qst: QuantumStateTomgraphy object on which tomography is performed
         :return: float between 0 and 1
         """
-        Udag = np.transpose(np.conjugate(self._operator))
+        Udag = np.transpose(np.conjugate(operator))
         d = 2 ** self._nqubit
         f = 1 / (d + 1)
 
@@ -509,6 +508,20 @@ class FidelityTomography:
             mu = decomp(Uj, basis)
             eps_Uj = sum([mu[i] * EPS[i] for i in range(d ** 2)])  # compute the map on a basis
             Ujdag = np.transpose(np.conjugate(Uj))
-            a = np.linalg.multi_dot([self._operator, Ujdag, Udag, eps_Uj])
+            a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
             f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
         return np.real(f)
+
+
+#  todo: find out how perceval spitting out output and if heralds are taken into consideration.
+# pdisplay(analyzer_obj) plots the truth table of input-output state. Here only a single combination
+# is used and hence is a 2D graph, however if different combinations of outputs and inputs were to
+# change basis - then to plot the desired result, a 3D representation will be needed. This is what tomography
+# needs. TODO: find out pdisplay for analyzer, first implementation should be similar.
+
+# todo: lack of documentation about converter in tools on perceval documentation. verify wbefore the next version
+#  release
+
+
+# Notes: from Analyzer
+# Analyzer computes post selected output. Q: CAN IT BE TURNED OFF?
