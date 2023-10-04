@@ -78,6 +78,11 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
         for output_state in output_array:
             yield BasicState(output_state)
 
+def number_to_basicstate(m, n_max):
+    """
+    Iterator on all possible output state on m modes with at most n_max photons
+    """
+
 
 class StateVector(defaultdict):
     """
