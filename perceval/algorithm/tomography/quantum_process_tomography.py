@@ -288,6 +288,9 @@ class QuantumStateTomography:
             for m in self._heralded_modes:
                 ps.eq([m[0]], m[1])
             simulator.set_postselection(ps)
+            # todo: do not do the stuff in between L 283 -> L290.
+            #  no magical renorm or selection - simply raw output
+            # keep renorm==1. Add methods to renormalize - user knows what they are doing.
 
         input_state = pcvl.BasicState("|1,0>")  # input state accounting the heralded modes
         for _ in range(1, self._nqubit):
