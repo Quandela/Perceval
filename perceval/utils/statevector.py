@@ -82,8 +82,8 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
     """
     m = input_state.m
     ns = input_state.n
-    if not isinstance(ns, list):
-        ns = [ns]
+    ns = [ns] if isinstance(ns, int) else list(ns)
+
     for n in ns:
         if mask is not None:
             output_array = xq.FSArray(m, n, mask)

@@ -34,7 +34,7 @@ import pytest
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval.utils import BasicState, StateVector, SVDistribution
+from perceval.utils import BasicState, StateVector, SVDistribution, allstate_iterator
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_sv_close, assert_svd_close
 
@@ -375,3 +375,17 @@ def test_statevector_arithmetic():
     sv5 += 0.2j * sv1
     sv5 += -0.6j * sv2
     assert_sv_close(sv5, -math.sqrt(5) / 5 * 1j * StateVector([0, 1]) + math.sqrt(5) / 5 * 2j * StateVector([1, 0]))
+
+
+def test_allstate_iterator():
+    in_bs = BasicState([1,0,0,0])
+    iteration_result = list(allstate_iterator(in_bs))
+    assert len(iteration_result) == 4
+    assert BasicState([1, 0, 0, 0]) in iteration_result
+    assert BasicState([0, 1, 0, 0]) in iteration_result
+    assert BasicState([0, 0, 1, 0]) in iteration_result
+    assert BasicState([0, 0, 0, 1]) in iteration_result
+
+    in_sv = StateVector([0]+[0]*5) + StateVector([1]+[0]*5) + StateVector([2]+[0]*5)
+    iteration_result = list(allstate_iterator(in_sv))
+    assert len(iteration_result) == 28  # (C2,7 + C1,6 + C0,6 = 21 + 6 + 1)
