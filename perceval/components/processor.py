@@ -149,7 +149,7 @@ class Processor(AProcessor):
         self._input_state = svd
         expected_photons = Inf
         for sv in svd:
-            for state in sv:
+            for state in sv.keys():
                 expected_photons = min(expected_photons, state.n)
                 if state.m != self.circuit_size:
                     raise ValueError(

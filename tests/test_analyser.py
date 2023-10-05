@@ -34,7 +34,7 @@ from perceval.rendering.pdisplay import pdisplay_analyzer
 import sympy as sp
 import pytest
 
-from test_circuit import strip_line_12
+from _test_utils import strip_line_12
 
 
 def test_analyzer_on_qrng():
