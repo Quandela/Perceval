@@ -385,9 +385,12 @@ def test_statevector_arithmetic():
     assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"
 
 
-def test_bs_iterator():
-    l=[[0,0,0], [1,0,0], [0,1,0], [0,0,1], [2,0,0], [1,1,0], [1,0,1], [0,2,0], [0,1,1], [0,0,2]]
+def test_max_photon_state_iterator():
+    l=[[0,0,0],
+       [1,0,0], [0,1,0], [0,0,1],
+       [2,0,0], [1,1,0], [1,0,1], [0,2,0], [0,1,1], [0,0,2]
+       ]
     i=0
-    for bs in pcvl.utils.bs_iterator(3,2):
+    for bs in pcvl.utils.max_photon_state_iterator(3,2):
         assert bs == pcvl.BasicState(l[i])
         i+=1

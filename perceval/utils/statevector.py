@@ -78,7 +78,7 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
         for output_state in output_array:
             yield BasicState(output_state)
 
-def bs_iterator(m: int, n_max: int):
+def max_photon_state_iterator(m: int, n_max: int):
     """
     Iterator on all possible output state on m modes with at most n_max photons
 
