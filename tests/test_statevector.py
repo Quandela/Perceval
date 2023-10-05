@@ -383,3 +383,5 @@ def test_statevector_arithmetic():
     sv4 += 0.2j*sv1
     sv4 += -0.6j*sv2
     assert str(sv4) == "-sqrt(5)*I/5*|0,1>+2*sqrt(5)*I/5*|1,0>"
+
+def test_bs_iterator():
