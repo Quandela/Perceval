@@ -36,12 +36,9 @@ from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
+from _test_utils import strip_line_12
 import sympy as sp
 import numpy as np
-
-
-def strip_line_12(s: str) -> str:
-    return s.strip().replace("            ", "")
 
 
 def test_helloword():
@@ -295,14 +292,6 @@ def test_iterator():
         assert float(l_comp[i][1].param("theta")) == 1/(i+1) and l_comp[i][0] == comps[i]
 
 
-def test_evolve():
-    for backend_name in ["SLOS", "Naive", "MPS"]:
-        backend = BackendFactory.get_backend(backend_name)
-        backend.set_circuit(comp.BS.H())
-        backend.set_input_state(BasicState("|1,0>"))
-        assert str(backend.evolve()) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
-
-
 def _generate_simple_circuit():
     return (comp.Unitary(U=Matrix.random_unitary(3), name="U1")
             // (0, comp.PS(sp.pi / 2))
@@ -371,3 +360,27 @@ def test_getitem2_value():
 def test_getitem3_parameter():
     c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
     assert c.getitem((0, 0), True).describe() == "PS(phi=phi1)"
+
+
+def test_x_grid_1_setting_values():
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    with pytest.raises(ValueError):
+        c.add(1, comp.BS(), x_grid=1)
+    # reinitialize the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    with pytest.raises(ValueError):
+        c.add(2, comp.BS(), x_grid=1)
+    # reinitialize again the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    c.add(0, comp.BS(), x_grid=3)
+    c.add(2, comp.BS(), x_grid=3)

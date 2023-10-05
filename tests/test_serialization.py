@@ -168,7 +168,8 @@ def test_bssamples_serialization():
 def test_sv_serialization():
     sv = (1+1j) * StateVector("|0,1>") + (1-1j) * StateVector("|1,0>")
     sv_serialized = serialize(sv)
-    assert sv_serialized == ":PCVL:StateVector:(0.5,0.5)*|0,1>+(0.5,-0.5)*|1,0>"
+    assert sv_serialized == ":PCVL:StateVector:(0.5,0.5)*|0,1>+(0.5,-0.5)*|1,0>" \
+        or sv_serialized == ":PCVL:StateVector:(0.5,-0.5)*|1,0>+(0.5,0.5)*|0,1>"  # Order does not matter
     sv_deserialized = deserialize(sv_serialized)
     assert sv == sv_deserialized
 

@@ -36,12 +36,13 @@ from typing import Any, Dict, List, Union, Callable
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
-from .port import LogicalState, Herald, PortLocation, APort
+from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
+from perceval.utils import LogicalState
 
 
 class ProcessorType(Enum):
@@ -447,6 +448,24 @@ class AProcessor(ABC):
             self._out_ports[port] = port_range
         return self
 
+    @staticmethod
+    def _find_and_remove_port_from_list(m, port_list):
+        for current_port, current_port_range in port_list.items():
+            if m in current_port_range:
+                del port_list[current_port]
+                return True
+        return False
+
+    def remove_port(self, m, location: PortLocation = PortLocation.IN_OUT):
+        if location in (PortLocation.IN_OUT, PortLocation.INPUT):
+            if not AProcessor._find_and_remove_port_from_list(m, self._in_ports):
+                raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
+
+        if location in (PortLocation.IN_OUT, PortLocation.OUTPUT):
+            if not AProcessor._find_and_remove_port_from_list(m, self._out_ports):
+                raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
+        return self
+
     @property
     def _closed_photonic_modes(self):
         output = [False] * self.circuit_size
@@ -511,7 +530,7 @@ class AProcessor(ABC):
         return pos
 
     def _with_logical_input(self, input_state: LogicalState):
-        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         self.with_input(input_state)
 
     @abstractmethod

@@ -48,13 +48,15 @@ def exponentiation_by_squaring(base, power: int):
 
     power -= 1
 
-    while power > 0:
+    while True:
         # If power is odd
         if power % 2 == 1:
             result = result * temp_base
 
         # Divide the power by 2
         power = power // 2
+        if power == 0:
+            break
         # Multiply base to itself
         temp_base = temp_base * temp_base
 

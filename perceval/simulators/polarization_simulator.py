@@ -26,10 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from multipledispatch import dispatch
 from .simulator_interface import ASimulatorDecorator
-
-from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector, SVDistribution
+from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector, SVDistribution, BSDistribution
 from perceval.components import Unitary
 
 
@@ -61,18 +60,31 @@ class PolarizationSimulator(ASimulatorDecorator):
     def _prepare_circuit(self, circuit):
         self._upol = circuit.compute_unitary(use_polarization=True)
 
-    def _postprocess_results(self, results):
-        output = type(results)()
-        keep_annots = isinstance(results, StateVector)
+    def _split_odd_even(self, fs):
+        s_odd = BasicState()
+        s_even = BasicState()
+        for i in range(0, fs.m, 2):
+            s_even *= fs[slice(i, i + 1)]
+            s_odd *= fs[slice(i + 1, i + 2)]
+        return s_odd, s_even
+
+    @dispatch(StateVector)
+    def _postprocess_results(self, results) -> StateVector:
+        output = StateVector()
+        for out_state, out_amplitude in results:
+            s_odd, s_even = self._split_odd_even(out_state)
+            # Keep annotations
+            s_even.inject_annotation(Annotation("P:H"))
+            s_odd.inject_annotation(Annotation("P:V"))
+            reduced_out_state = s_odd.merge(s_even)
+            output += out_amplitude * reduced_out_state
+        return output
+
+    @dispatch(BSDistribution)
+    def _postprocess_results(self, results) -> BSDistribution:
+        output = BSDistribution()
         for out_state, output_prob in results.items():
-            s_odd = BasicState()
-            s_even = BasicState()
-            for i in range(0, out_state.m, 2):
-                s_even *= out_state[slice(i, i+1)]
-                s_odd *= out_state[slice(i+1, i+2)]
-            if keep_annots:
-                s_even.inject_annotation(Annotation("P:H"))
-                s_odd.inject_annotation(Annotation("P:V"))
+            s_odd, s_even = self._split_odd_even(out_state)
             reduced_out_state = s_odd.merge(s_even)
             output[reduced_out_state] += output_prob
         return output

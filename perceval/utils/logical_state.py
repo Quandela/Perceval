@@ -26,27 +26,45 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import pytest
-import perceval as pcvl
+
+from typing import List
 
 
-def test_toffoli_gate_fidelity():
-    p = pcvl.components.catalog['toffoli'].build_processor()
-    normal_list_states = {}
-    for i in range(8):
-        state = format(i, '#05b')[2:]
-        associated_fock_state = "|"
-        for b in state:
-            if b == '0':
-                associated_fock_state += "1,0,"
-            elif b == '1':
-                associated_fock_state += "0,1,"
-            else:
-                raise ValueError()
-        associated_fock_state = associated_fock_state[:-1]
-        associated_fock_state += ">"
-        normal_list_states[pcvl.BasicState(associated_fock_state)] = state
-    ca = pcvl.algorithm.Analyzer(p, input_states=normal_list_states)
-    ca.compute(expected={"000": "000", "001": "001","010": "010", "011": "011","100": "100", "101": "101", "110": "111", "111": "110"})
-    pcvl.pdisplay(ca)
-    assert ca.fidelity == 1
+class LogicalState(list):
+    def __init__(self, state: List[int] or str = None):
+        """Represent a Logical state
+
+        :param state: Can be either None, a list or a str, defaults to None
+        :raises ValueError: Must have only 0 and 1 in a state
+        :raises TypeError: Supports only None, list or str as state type
+        """
+        if state is None:
+            super().__init__([])
+            return
+        if isinstance(state, str):
+            state = [int(elem) for elem in state]
+        if isinstance(state, list):
+            if state.count(0) + state.count(1) != len(state):
+                raise ValueError("A logical state should only contain 0s and 1s")
+            super().__init__(state)
+            return
+        raise TypeError(f"LogicalState can be initialise with None, list or str, here {type(state)}")
+
+    def __add__(self, other):
+        temp = self.copy()
+        temp.extend(other)
+        return temp
+
+    def __str__(self):
+        if not self:
+            return ""
+        return ''.join([str(x) for x in self])
+
+
+def generate_all_logical_states(n : int) -> List[LogicalState]:
+    format_str = f"#0{n+2}b"
+    logical_state_list = []
+    for i in range(2**n):
+        states = format(i, format_str)[2:]
+        logical_state_list.append(LogicalState([int(state) for state in states]))
+    return logical_state_list

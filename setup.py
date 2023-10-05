@@ -10,9 +10,8 @@ package_list = [dirname(p).replace('\\', '.') for p in glob('perceval/**/__init_
 
 setuptools.setup(
     name="perceval-quandela",
-    version="0.0.1",
-    author="Perceval@Quandela.com",
-    author_email="Perceval@Quandela.com",
+    author="quandela",
+    author_email="perceval@quandela.com",
     description="A powerful Quantum Photonic Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -28,9 +27,14 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.2.1', 'multipledispatch',
-                      'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec'],
+    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.3.0', 'multipledispatch',
+                      'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec', 'platformdirs'],
+    extras_require={
+        "qiskit_bridge": ["qiskit", "seaborn"],
+        "qutip_bridge": ["qutip"],
+        "myqlm_bridge": ["myqlm>=1.9.3"]
+    },
     setup_requires=["scmver"],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     scmver=True
 )

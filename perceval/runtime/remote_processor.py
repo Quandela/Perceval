@@ -29,16 +29,16 @@
 import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
-from pkg_resources import get_distribution
 
+from perceval.backends import SLOSBackend
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components.linear_circuit import Circuit, ACircuit
-from perceval.components.source import Source
-from perceval.components.port import PortLocation, APort, LogicalState
-from perceval.utils import BasicState
+from perceval.components import ACircuit, Processor, Source
+from perceval.components.port import PortLocation, APort
+from perceval.utils import BasicState, StateVector, LogicalState, PMetadata
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
+from ._token_management import TokenProvider
 
 __process_id__ = uuid.uuid4()
 
@@ -46,9 +46,14 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
 
 class RemoteProcessor(AProcessor):
-    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL, m: int = None):
+    def __init__(self, name: str, token: str = None, url: str = QUANDELA_CLOUD_URL, m: int = None):
         super().__init__()
         self.name = name
+        if token is None:
+            provider = TokenProvider()
+            token = provider.get_token()
+        if token is None:
+            raise ConnectionError("No token found")
 
         self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}
@@ -151,7 +156,7 @@ class RemoteProcessor(AProcessor):
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
         j = {
             'platform_name': self.name,
-            'pcvl_version': get_distribution("perceval-quandela").version,
+            'pcvl_version': PMetadata.short_version(),
             'process_id': str(__process_id__)
         }
         payload = {
@@ -196,3 +201,64 @@ class RemoteProcessor(AProcessor):
     def source(self, source: Source):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
+
+    def _compute_sample_of_interest_probability(self, transmittance: float = 0.06) -> float:
+        # TODO retrieve transmittance from the cloud worker
+        losses = 1 - transmittance
+        n = self._input_state.n
+        photon_filter = n
+        if self._min_detected_photons is not None:
+            photon_filter = self._min_detected_photons
+            if photon_filter > n:
+                return 0
+        if photon_filter < 2:
+            return 1
+
+        source = Source(losses=losses)
+        input_dist = source.generate_distribution(self._input_state)
+        del input_dist[StateVector([0]*self.m)]
+        input_dist.normalize()
+
+        # p_n = 0
+        # for state, prob in input_dist.items():
+        #     if state.n[0] >= photon_filter:
+        #         p_n += prob
+        #
+        # import perceval as pcvl
+        # pcvl.pdisplay(input_dist)
+        #
+        # lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True))
+        # lp.min_detected_photons_filter(1)
+        # lp.thresholded_output(self._thresholded_output)
+        # lp.with_input(self._input_state)
+        # probs = lp.probs()
+        # p_above_filter = 0
+        # for state, prob in probs['results'].items():
+        #     if state.n >= photon_filter:
+        #         p_above_filter += prob
+
+        ## SIMU WITH NOISY SOURCE
+        lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True), source)
+        lp.min_detected_photons_filter(1)
+        lp.thresholded_output(self._thresholded_output)
+        lp.with_input(self._input_state)
+        probs = lp.probs()
+        p_above_filter_ns = 0
+        for state, prob in probs['results'].items():
+            if state.n >= photon_filter:
+                p_above_filter_ns += prob
+
+        # print(p_above_filter * p_n, " = source + perfect sim")
+        print(p_above_filter_ns, " = noisy sim")
+        # return p_above_filter * p_n
+        return p_above_filter_ns
+
+    def estimate_required_shots(self, nsamples: int) -> int:
+        p_interest = self._compute_sample_of_interest_probability()
+        if p_interest == 0:
+            return None
+        return round(nsamples / p_interest)
+
+    def estimate_expected_samples(self, nshots: int) -> int:
+        p_interest = self._compute_sample_of_interest_probability()
+        return round(nshots * p_interest)

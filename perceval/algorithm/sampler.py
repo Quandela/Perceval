@@ -67,8 +67,6 @@ class Sampler(AAlgorithm):
         self._iterator = []
         self._max_shots = kwargs.get(self._MAX_SHOTS_NAMED_PARAM)
 
-    @property
-
     def _get_primitive_converter(self, method: str):
         available_primitives = self._processor.available_commands
         if method in available_primitives:

@@ -31,10 +31,10 @@ from perceval.simulators.polarization_simulator import PolarizationSimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends import NaiveBackend, BackendFactory
 from perceval.components import Circuit, BS, PBS, PERM, PS, PR, HWP
-from perceval.utils import BasicState
-
+from perceval.utils import BasicState, StateVector
+from _test_utils import assert_sv_close
 import pytest
-import numpy as np
+import math
 
 
 def _oracle(mark):
@@ -46,7 +46,7 @@ def _oracle(mark):
     # Mode b
     if PC_state == 1:
         oracle_circuit //= HWP(0)
-    oracle_circuit.add(0, PR(np.pi/2))
+    oracle_circuit.add(0, PR(math.pi/2))
     if LC_state == 1:
         oracle_circuit //= HWP(0)
     # Mode a
@@ -59,19 +59,19 @@ def _oracle(mark):
 
 def _hwp(xsi):
     hwp = Circuit(m=1)
-    hwp.add(0, HWP(xsi)).add(0, PS(-np.pi / 2))
+    hwp.add(0, HWP(xsi)).add(0, PS(-math.pi / 2))
     return hwp
 
 
 def _grover_circuit(mark):
     init_circuit = (Circuit(m=2, name="Initialization")
-                    // _hwp(np.pi / 8)
+                    // _hwp(math.pi / 8)
                     // BS.Ry()
-                    // PS(-np.pi))
+                    // PS(-math.pi))
 
     inversion_circuit = (Circuit(m=2, name='Inversion')
                          // BS.Ry()
-                         // _hwp(np.pi / 4)
+                         // _hwp(math.pi / 4)
                          // BS.Ry())
 
     detection_circuit = Circuit(m=4, name='Detection')
@@ -104,21 +104,22 @@ def test_grover():
 def test_polarization_evolve():
     psimu = PolarizationSimulator(Simulator(NaiveBackend()))
     input_state = BasicState("|{P:H}>")
-    circuit = PR(delta=np.pi/4)
+    circuit = PR(delta=math.pi/4)
     psimu.set_circuit(circuit)
     sv_out = psimu.evolve(input_state)
-    assert str(sv_out) == "sqrt(2)/2*|{P:H}>-sqrt(2)/2*|{P:V}>"
+    expected = StateVector("|{P:H}>") - StateVector("|{P:V}>")
+    assert_sv_close(sv_out, expected)
 
 
-def test_polarization_circuit_0():
-    c = HWP(np.pi/4)
-    for backend_name in ["Naive", "SLOS", "MPS"]:
-        psimu = PolarizationSimulator(Simulator(BackendFactory.get_backend(backend_name)))
-        psimu.set_circuit(c)
-        res = psimu.probs(BasicState("|{P:H}>"))
-        assert len(res) == 1
-        assert res[BasicState("|1>")] == pytest.approx(1)
-        assert str(psimu.evolve(BasicState("|{P:H}>"))) == '|{P:V}>'
-        assert str(psimu.evolve(BasicState("|{P:V}>"))) == '|{P:H}>'
-        assert str(psimu.evolve(BasicState("|{P:D}>"))) == 'sqrt(2)*I/2*|{P:H}>+sqrt(2)*I/2*|{P:V}>'
-        # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
+@pytest.mark.parametrize("backend_name", ["Naive", "SLOS", "MPS"])
+def test_polarization_circuit_0(backend_name):
+    c = HWP(math.pi/4)
+    psimu = PolarizationSimulator(Simulator(BackendFactory.get_backend(backend_name)))
+    psimu.set_circuit(c)
+    res = psimu.probs(BasicState("|{P:H}>"))
+    assert len(res) == 1
+    assert res[BasicState("|1>")] == pytest.approx(1)
+    assert_sv_close(psimu.evolve(BasicState("|{P:H}>")), complex(0,1)*StateVector('|{P:V}>'))
+    assert_sv_close(psimu.evolve(BasicState("|{P:V}>")), complex(0,1)*StateVector('|{P:H}>'))
+    assert_sv_close(psimu.evolve(BasicState("|{P:D}>")), complex(0,1)*(StateVector('|{P:H}>') + StateVector('|{P:V}>')))
+    # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore

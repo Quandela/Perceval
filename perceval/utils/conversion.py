@@ -30,6 +30,7 @@
 from .statevector import BSDistribution, BSCount, BSSamples
 
 import numpy as np
+import random
 
 
 def _deduce_count(count: int, **kwargs) -> int:
@@ -70,6 +71,9 @@ def probs_to_sample_count(probs: BSDistribution, count: int = None, **kwargs) ->
     results = BSCount()
     for state in perturbed_dist:
         results.add(state, int(np.round(perturbed_dist[state] * count)))
+    diff = count - sum(list(results.values()))
+    if diff != 0:
+        results[random.choice(list(results.keys()))] += diff
     return results
 
 

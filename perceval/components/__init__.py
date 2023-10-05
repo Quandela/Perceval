@@ -34,7 +34,7 @@ from .generic_interferometer import GenericInterferometer
 from .processor import Processor
 from .source import Source
 
-from .port import Port, Herald, PortLocation, LogicalState
+from .port import Port, Herald, PortLocation, get_basic_state_from_ports
 from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog

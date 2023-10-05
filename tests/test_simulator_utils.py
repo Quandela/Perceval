@@ -26,23 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-import pytest
-
+from _test_utils import assert_sv_close
 from perceval.utils import StateVector
 from perceval.simulators._simulator_utils import _merge_sv
 from math import sqrt
-
-
-def _approx_eq_sv(sv1, sv2):
-    if len(sv1) != len(sv2):
-        return False
-    for bs1, pa1 in sv1.items():
-        if bs1 not in sv2:
-            return False
-        if pa1 != pytest.approx(sv2[bs1]):
-            return False
-    return True
 
 
 def test_merge_sv():
@@ -55,7 +42,7 @@ def test_merge_sv():
     sv2 = a2 * StateVector([1, 0]) + b2 * StateVector([0, 1])
 
     sv_res = _merge_sv(sv1, sv2)
-    assert _approx_eq_sv(
+    assert_sv_close(
         sv_res,
         a1*a2 * StateVector([2, 0]) + (a1*b2 + b1*a2) * StateVector([1, 1]) + b1*b2 * StateVector([0, 2])
     )

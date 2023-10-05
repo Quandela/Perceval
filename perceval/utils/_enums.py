@@ -41,3 +41,8 @@ class Encoding(Enum):
 class InterferometerShape(Enum):
     RECTANGLE = 0
     TRIANGLE = 1
+
+
+class FileFormat(Enum):
+    BINARY = 0
+    TEXT = 1

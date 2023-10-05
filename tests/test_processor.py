@@ -100,7 +100,7 @@ def test_processor_probs():
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
 
-    qpu.thresholded_output(False) # With perfect detection, we get our results back
+    qpu.thresholded_output(False)  # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[BasicState("|2,0>")]) == 0.5
@@ -120,7 +120,7 @@ def test_processor_samples():
     # With annotations
     proc.with_input(SVDistribution({BasicState("|{_:0},{_:1}>"): 1}))
     samples = proc.samples(500)
-    assert samples["results"].count(BasicState([1,1])) > 50
+    assert samples["results"].count(BasicState([1, 1])) > 50
 
 
 def test_processor_samples_max_shots():
@@ -152,3 +152,69 @@ def test_processor_composition():
     p.add((0, 1), p_bs)  # Composing with a processor on modes [0,1] should work
     with pytest.raises(AssertionError):
         p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
+
+
+def test_add_remove_ports():
+    processor = pcvl.Processor("SLOS", 6)
+    p0 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q0")
+    p1 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q1")
+    p2 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q2")
+    processor.add_port(0, p0, pcvl.PortLocation.OUTPUT)
+    processor.add_port(2, p1)
+    processor.add_port(4, p2, pcvl.PortLocation.INPUT)
+
+    with pytest.raises(pcvl.components.UnavailableModeException):
+        processor.add_port(4, p2, pcvl.PortLocation.INPUT)
+
+    assert processor.in_port_names == ["", "", "q1", "q1", "q2", "q2"]
+    assert processor.out_port_names == ["q0", "q0", "q1", "q1", "", ""]
+
+    assert processor.get_input_port(0) is None
+    assert processor.get_input_port(1) is None
+    assert processor.get_input_port(2) is p1
+    assert processor.get_input_port(3) is p1
+    assert processor.get_input_port(4) is p2
+    assert processor.get_input_port(5) is p2
+
+    assert processor.get_output_port(0) is p0
+    assert processor.get_output_port(1) is p0
+    assert processor.get_output_port(2) is p1
+    assert processor.get_output_port(3) is p1
+    assert processor.get_output_port(4) is None
+    assert processor.get_output_port(5) is None
+
+    processor.remove_port(2, pcvl.PortLocation.OUTPUT)
+
+    with pytest.raises(pcvl.components.UnavailableModeException):
+        processor.remove_port(2, pcvl.PortLocation.OUTPUT)
+
+    with pytest.raises(pcvl.components.UnavailableModeException):
+        processor.add_port(2, p1)
+
+    assert processor.in_port_names == ["", "", "q1", "q1", "q2", "q2"]
+    assert processor.out_port_names == ["q0", "q0", "", "", "", ""]
+
+    assert processor.get_input_port(0) is None
+    assert processor.get_input_port(1) is None
+    assert processor.get_input_port(2) is p1
+    assert processor.get_input_port(3) is p1
+    assert processor.get_input_port(4) is p2
+    assert processor.get_input_port(5) is p2
+
+    assert processor.get_output_port(0) is p0
+    assert processor.get_output_port(1) is p0
+    assert processor.get_output_port(2) is None
+    assert processor.get_output_port(3) is None
+    assert processor.get_output_port(4) is None
+    assert processor.get_output_port(5) is None
+
+    processor.remove_port(0, pcvl.PortLocation.OUTPUT)
+    processor.remove_port(2, pcvl.PortLocation.INPUT)
+    processor.remove_port(4, pcvl.PortLocation.INPUT)
+
+    with pytest.raises(pcvl.components.UnavailableModeException):
+        processor.remove_port(2, pcvl.PortLocation.INPUT)
+
+    for i in range(6):
+        assert processor.get_input_port(i) is None
+        assert processor.get_output_port(i) is None

@@ -36,6 +36,9 @@ import perceval as pcvl
 from perceval.components.unitary_components import *
 from perceval.components.non_unitary_components import *
 from perceval.rendering import pdisplay_to_file, Format
+from perceval.rendering.pdisplay import pdisplay_circuit
+from perceval import catalog
+
 from pathlib import Path
 import re
 import sympy as sp
@@ -311,7 +314,7 @@ def test_svg_decomposition_symb_compact(tmp_path, save_figs):
 
 
 def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
-    p = pcvl.components.catalog['heralded cnot'].build_processor()
+    p = pcvl.components.catalog['klm cnot'].build_processor()
     c = pcvl.Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
     pc = pcvl.Processor('SLOS', c)
     pc.add_herald(1, 0)
