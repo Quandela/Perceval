@@ -86,7 +86,7 @@ def bs_iterator(m: int, n_max: int):
     :param n_max: maximum number of photons
     :return: list of BasicState
     """
-    output_array = FSArray(m,nmax)
+    output_array = FSArray(m,n_max)
     for output_state in output_array:
         yield BasicState(output_state)
 
