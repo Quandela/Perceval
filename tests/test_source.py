@@ -30,19 +30,9 @@
 import pytest
 import math
 
-from perceval import Source, StateVector
+from perceval.components import Source
 from perceval.rendering.pdisplay import pdisplay_state_distrib
-from test_circuit import strip_line_12
-
-
-def _check_svdistribution(output, expected):
-    assert len(output) == len(expected), "size of svdistribution differs"
-    for k, v in expected.items():
-        svo = StateVector(k)
-        if pytest.approx(v) != output[svo]:
-            print(pdisplay_state_distrib(output))
-            print("==> different value than expected for %s: %f (expected %f)" % (k, output[svo], v))
-            assert False
+from _test_utils import strip_line_12, assert_svd_close, dict2svd
 
 
 def test_tag():
@@ -71,27 +61,27 @@ def test_source_pure():
             +-------+-------------+
             |  |1>  |      1      |
             +-------+-------------+""")
-    _check_svdistribution(svd, {"|1>": 1})
+    assert_svd_close(svd, dict2svd({"|1>": 1}))
 
 
 def test_source_emission():
     s = Source(emission_probability=0.4)
     svd = s.probability_distribution()
-    _check_svdistribution(svd, {"|0>": 0.6, "|1>": 0.4})
+    assert_svd_close(svd, dict2svd({"|0>": 0.6, "|1>": 0.4}))
 
 
 def test_source_emission_g2():
     s = Source(emission_probability=0.4, multiphoton_component=0.1, multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
-    _check_svdistribution(svd, {"|0>": 3/5, "|2>": 0.008336953374561418, "|1>": 0.391663})
+    assert_svd_close(svd, dict2svd({"|0>": 3/5, "|2>": 0.008336953374561418, "|1>": 0.391663}))
 
 
 def test_source_emission_g2_losses_indistinguishable():
     s = Source(emission_probability=0.4, multiphoton_component=0.1, losses=0.08, indistinguishability=0.9,
                multiphoton_model="indistinguishable")
     svd = s.probability_distribution()
-    _check_svdistribution(svd, {"|0>": 0.631386, "|2{_:0}>": 0.006694286297288383, "|{_:0}{_:1}>": 3.62111e-4,
-                                "|{_:0}>": 0.343035, "|{_:1}>": 0.01852243527847053})
+    assert_svd_close(svd, dict2svd({"|0>": 0.631386, "|2{_:0}>": 0.006694286297288383, "|{_:0}{_:1}>": 3.62111e-4,
+                                    "|{_:0}>": 0.343035, "|{_:1}>": 0.01852243527847053}))
 
 
 def test_source_indistinguishability():
@@ -114,9 +104,9 @@ def test_source_multiple_photons_per_mode():
     s = Source()
     for nphotons in range(2,10):
         svd = s.probability_distribution(nphotons)
-        _check_svdistribution(svd, {f"|{nphotons}>": 1})
+        assert_svd_close(svd, dict2svd({f"|{nphotons}>": 1}))
 
     ep = 0.41
     s = Source(emission_probability=ep)
     svd = s.probability_distribution(2)
-    _check_svdistribution(svd, {"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2})
+    assert_svd_close(svd, dict2svd({"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2}))

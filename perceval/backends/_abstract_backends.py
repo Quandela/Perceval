@@ -62,6 +62,10 @@ class ABackend(ABC):
 class ASamplingBackend(ABackend):
     @abstractmethod
     def sample(self):
+        """Request one sample from the circuit given an input state"""
+
+    @abstractmethod
+    def samples(self, count: int):
         """Request samples from the circuit given an input state"""
 
 
@@ -82,6 +86,6 @@ class AProbAmpliBackend(ABackend):
     def evolve(self) -> StateVector:
         res = StateVector()
         for output_state in allstate_iterator(self._input_state):
-            res[output_state] = self.prob_amplitude(output_state)
+            res += output_state * self.prob_amplitude(output_state)
         res.normalize()
         return res

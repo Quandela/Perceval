@@ -60,13 +60,10 @@ def test_set_variable():
 
 def test_fixed_0():
     p = Parameter("alpha", 2)
+    assert p.fixed
     assert p.defined
-    try:
-        p.set_value(1)
-    except RuntimeError:
-        pass
-    else:
-        raise Exception("Cannot set a fixed parameter")
+    with pytest.raises(RuntimeError):
+        p.set_value(1)  # Cannot set value to a fixed parameter
 
 
 def test_fixed_1():

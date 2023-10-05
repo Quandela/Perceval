@@ -69,15 +69,14 @@ class StatevectorConverter:
         ancillae = np.sort(self.ancillae)
         l_a = len(ancillae)
         new_sv = StateVector()
-        for state in sv:
-            bs = BasicState(state)
+        for bs, pa in sv:
             new_bs = StateVector()
             previous = -1
             for i in range(l_a):
                 # recreate each BasicState without the ancilla modes
                 new_bs = new_bs * bs[previous + 1:ancillae[i]]
                 previous = ancillae[i]
-            new_sv = new_sv + sv[bs] * (new_bs * bs[ancillae[l_a - 1] + 1:])
+            new_sv += (new_bs * bs[ancillae[l_a - 1] + 1:]) * pa
 
         if len(sv) != len(new_sv):
             raise ValueError(
@@ -109,8 +108,7 @@ class StatevectorConverter:
             l_n_qbt = l_bs // step
 
         ampli = np.zeros(2 ** l_n_qbt, dtype=complex)
-        for state in sv:
-            bs = BasicState(state)
+        for bs, pa in sv:
             n = 0
             for i in range(l_n_qbt):
                 # check the value of each qubit
@@ -121,10 +119,9 @@ class StatevectorConverter:
                     # i-th qubit = 0
                     if bs[step * i: step * i + step] != zero:
                         raise ValueError("The StateVector doesn't represent a n-qubit")
-            ampli[n] = sv[bs]
+            ampli[n] = pa
         norm = np.sqrt(np.sum(abs(ampli) ** 2))
         ampli = ampli / norm
-
         return ampli
 
     def to_qiskit(self, sv):
@@ -167,6 +164,6 @@ class StatevectorConverter:
                 else:
                     state_i = state_i * one
 
-            pcvl_sv += q_sv[i] * state_i
+            pcvl_sv += complex(q_sv[i]) * state_i
 
         return pcvl_sv

@@ -111,7 +111,7 @@ class CircuitOptimizer:
         if target.is_symbolic():
             raise TypeError("Target must be numeric")
 
-        optimizer = xq.CircuitOptimizer(serialize_binary(target), serialize_binary(template))
+        optimizer = xq.CircuitOptimizer(target, serialize_binary(template))
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
