@@ -386,4 +386,7 @@ def test_statevector_arithmetic():
 
 def test_bs_iterator():
     l=[[0,0,0], [1,0,0], [0,1,0], [0,0,1], [2,0,0], [1,1,0], [1,0,1], [0,2,0], [0,1,1], [0,0,2]]
-    assert pcvl.utils.bs_iterator(3,2) == [pcvl.BasicState(x) for x in l]
+    i=0
+    for bs in pcvl.utils.bs_iterator(3,2):
+        assert bs == pcvl.BasicState(l[i])
+        i+=1
