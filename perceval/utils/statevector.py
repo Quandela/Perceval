@@ -86,9 +86,10 @@ def bs_iterator(m: int, n_max: int):
     :param n_max: maximum number of photons
     :return: list of BasicState
     """
-    output_array = FSArray(m,n_max)
-    for output_state in output_array:
-        yield BasicState(output_state)
+    for n in range(n_max+1):
+        output_array = FSArray(m,n)
+        for output_state in output_array:
+            yield BasicState(output_state)
 
 
 class StateVector(defaultdict):
