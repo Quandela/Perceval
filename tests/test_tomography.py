@@ -29,46 +29,52 @@
 
 import pytest
 import numpy as np
+from scipy.stats import unitary_group
 import perceval as pcvl
 from perceval.components import catalog
+from perceval.components import Unitary
 from perceval.algorithm.tomography.quantum_process_tomography import QuantumStateTomography, QuantumProcessTomography, \
     FidelityTomography
 
 
-# operator
-def operotor_to_test():
-    return np.array([[1, 0, 0, 0],
-                 [0, 1, 0, 0],
-                 [0, 0, 0, 1],
-                 [0, 0, 1, 0]], dtype='complex_')
-
-
-def test_process_tomography():
-    # set operator circuit, num qubits
-    cnot = catalog["klm cnot"].as_circuit().build()   # .build_circuit()
-
-    p = pcvl.Processor("Naive", cnot)
-    states = {
-        pcvl.BasicState([1,0,1,0,0,1,0,1]): "00",
-        pcvl.BasicState([1,0,0,1,0,1,0,1]): "01",
-        pcvl.BasicState([0,1,1,0,0,1,0,1]): "10",
-        pcvl.BasicState([0,1,0,1,0,1,0,1]): "11"
-    }
-    ca = pcvl.algorithm.Analyzer(p,states)
-    pcvl.pdisplay(ca)
-
-    herald = [(4, 0), (5, 1), (6, 0), (7, 1)]
-
+def fidelity_op_process_tomography(op, op_circ, nqubit, herald):
     # create QST object
-    qst = QuantumStateTomography(operator_circuit=cnot, nqubit=2, heralded_modes=herald)
+    qst = QuantumStateTomography(operator_circuit=op_circ, nqubit=nqubit, heralded_modes=herald)
     # create process tomography object and passing qst object as a parameter
-    qpt = QuantumProcessTomography(nqubit=2, operator=operotor_to_test(), operator_circuit=cnot, qst=qst,
-                                   heralded_modes=herald)
-
+    qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, qst=qst, heralded_modes=herald)
+    #
     # compute Chi matrix
+    chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
-    chi_op_ideal = qpt.chi_target(operotor_to_test())
     # Compute fidelity
-    fidelity = FidelityTomography(nqubit=2)
-    cnot_fidelity = fidelity.process_fidelity(chi_op, chi_op_ideal)
+    op_fidelity = FidelityTomography(nqubit).process_fidelity(chi_op, chi_op_ideal)
+    return op_fidelity
+
+
+def test_fidelity_cnot_operator():
+    # set operator circuit, num qubits
+    cnot_circ = catalog["klm cnot"].build_circuit()
+    cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
+
+    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_circ, nqubit=2, herald=[(4, 0), (5, 1), (6, 0), (7, 1)])
+
     assert cnot_fidelity == pytest.approx(1, 1e-3)  # computed fidelity is around 0.99967
+
+
+def test_fidelity_random_op():
+    # process tomography to compute fidelity of a random 2 qubit gate operation
+    nqubit = 2
+    L = []
+    for i in range(nqubit):
+        L.append(unitary_group.rvs(2))
+
+    random_op = L[0]
+    random_op_circ = pcvl.Circuit(2 * nqubit).add(0, Unitary(pcvl.Matrix(L[0])))
+
+    for i in range(1, nqubit):
+        random_op = np.kron(random_op, L[i])
+        random_op_circ.add(2 * i, Unitary(pcvl.Matrix(L[i])))
+
+    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_circ, 2, herald=[])
+
+    assert random_op_fidelity == pytest.approx(1, 1e-6)

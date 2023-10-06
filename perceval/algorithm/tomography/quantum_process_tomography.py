@@ -29,11 +29,10 @@
 
 import numpy as np
 import perceval as pcvl
-from perceval.components import BS, PS, PERM, Unitary
+from perceval.components import BS, PS, PERM
 from perceval.components.source import Source
 from perceval.components import Circuit
 import itertools
-from scipy.stats import unitary_group
 from perceval.simulators import Simulator
 from perceval.backends import SLOSBackend
 from typing import List
@@ -245,16 +244,16 @@ class QuantumStateTomography:
         self._renormalization = renormalization
         self._heralded_modes = heralded_modes
 
-    def _tomography_circuit(self, num_state: List, i: List) -> Circuit:
-        # todo: rename/refactor "num_state" and "i" parameter
+    def _tomography_circuit(self, prep_state_basis_indxs: List, meas_basis_pauli_indxs: List) -> Circuit:
+
         tomography_circuit = pcvl.Circuit(2 * self._nqubit + len(self._heralded_modes))
 
-        pc = StatePreparationCircuit(num_state, self._nqubit)  # state preparation
+        pc = StatePreparationCircuit(prep_state_basis_indxs, self._nqubit)  # state preparation
         tomography_circuit.add(0, pc.build_preparation_circuit())
 
         tomography_circuit.add(0, self._operator_circuit)  # unknown operator_circuit
 
-        mc = MeasurementCircuit(i, self._nqubit)  # measurement operator_circuit
+        mc = MeasurementCircuit(meas_basis_pauli_indxs, self._nqubit)  # measurement operator_circuit
         tomography_circuit.add(0, mc.build_measurement_circuit())
 
         return tomography_circuit
@@ -266,16 +265,16 @@ class QuantumStateTomography:
         s = {i for i in range(n)}
         return list(itertools.combinations(s, k))
 
-    def _stokes_parameter(self, num_state, i):
+    def _stokes_parameter(self, prep_state_basis_indxs, meas_basis_pauli_indxs):
         """
-        Computes the Stokes parameter S_i for state num_state after operator_circuit
+        Computes the Stokes parameter S_i for state prep_state_basis_indxs after operator_circuit
 
-        :param num_state: list of length of number of qubits representing the preparation circuit
+        :param prep_state_basis_indxs: list of length of number of qubits representing the preparation circuit
         :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we are
         measuring
         :return: float
         """
-        tomography_circ = self._tomography_circuit(num_state, i)
+        tomography_circ = self._tomography_circuit(prep_state_basis_indxs, meas_basis_pauli_indxs)
 
         simulator = Simulator(self._backend)  # todo: change to Processor
         simulator.set_circuit(tomography_circ)
@@ -311,19 +310,19 @@ class QuantumStateTomography:
                     measurement_state = pcvl.BasicState("|1,0>")
                 else:
                     measurement_state = pcvl.BasicState("|0,1>")
-                    if i[0] != 0:
+                    if meas_basis_pauli_indxs[0] != 0:
                         eta *= -1
                 for j in range(1, self._nqubit):
                     if j not in J:
                         measurement_state *= pcvl.BasicState("|1,0>")
                     else:
                         measurement_state *= pcvl.BasicState("|0,1>")
-                        if i[j] != 0:
+                        if meas_basis_pauli_indxs[j] != 0:
                             eta *= -1
                 for m in self._heralded_modes:
                     measurement_state *= pcvl.BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
-
+        # TODO: fix renormalization
         if self._renormalization is None:
             return stokes_param
         return stokes_param / self._renormalization
@@ -344,16 +343,15 @@ class QuantumStateTomography:
                 i[k] = j1 // (4 ** k)
                 j1 = j1 % (4 ** k)
             i.reverse()
-            density_matrix += self._stokes_parameter(state, i) * fixed_basis_ops(j, self._nqubit)
+            density_matrix += self._stokes_parameter(prep_state_basis_indxs=state, meas_basis_pauli_indxs=i) * fixed_basis_ops(j, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
         return density_matrix
 
 
 class QuantumProcessTomography:
-    def __init__(self, nqubit: int, operator, operator_circuit: Circuit, qst, heralded_modes=[],
-                 post_process=False, renormalization=None):
+    def __init__(self, nqubit: int, operator_circuit: Circuit, qst, heralded_modes=[], post_process=False,
+                 renormalization=None):
         self._nqubit = nqubit
-        # self._operator = operator
         self._operator_circuit = operator_circuit
         self._qst = qst
         self._heralded_modes = heralded_modes
@@ -371,8 +369,8 @@ class QuantumProcessTomography:
         M = np.zeros((d ** 4, d ** 4), dtype='complex_')
         for i in range(d ** 4):
             for j in range(d ** 4):
-                M[i, j] = QuantumProcessTomography._beta_ndarray(i // (d ** 2), i % (d ** 2),
-                                                                    j // (d ** 2), j % (d ** 2), self._nqubit)
+                M[i, j] = QuantumProcessTomography._beta_ndarray(i // (d ** 2), i % (d ** 2), j // (d ** 2),
+                                                                 j % (d ** 2), self._nqubit)
         return M
 
     def _lambda_vector(self):
@@ -445,28 +443,6 @@ class FidelityTomography:
         :return: float between 0 and 1
         """
         return np.real(np.trace(np.dot(chi_computed, chi_ideal)))
-
-    def random_fidelity(self, nqubit):
-        """
-        Computes the process and the average fidelity of a random non-entangling operator
-        Does not take any input from user; create a random circuit and tests fidelity
-        #todo: perhaps use it in a test
-
-        :param nqubit: number of qubits
-        """
-        L = []
-        for i in range(nqubit):
-            L.append(unitary_group.rvs(2))
-        print('test matrices :', L)
-        M = L[0]
-        CU = pcvl.Circuit(2 * nqubit).add(0, Unitary(pcvl.Matrix(L[0])))
-        for i in range(1, nqubit):
-            M = np.kron(M, L[i])
-            CU.add(2 * i, Unitary(pcvl.Matrix(L[i])))
-        pf = self.process_fidelity(M, CU)
-        afq = self.average_fidelity(M, CU)
-        print('process fidelity :', pf, '\n',
-              'average fidelity :', afq)
 
     def error_process_matrix(self, computed_chi, operator):
         """
