@@ -138,8 +138,7 @@ def is_physical(chi, eigen_tolerance=10 ** (-6)):
 
 
 def thresh(X, eps=10 ** (-6)):
-    # todo: function not in use, why here?
-    """ Threshold function to cancel computational errors in $\chi$
+    """ Threshold function to cancel computational errors in chi matrix
      """
     for i in range(len(X)):
         for j in range(len(X)):
