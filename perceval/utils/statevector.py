@@ -146,9 +146,14 @@ class SVDistribution(ProbabilityDistribution):
         if sv is not None:
             if isinstance(sv, (BasicState, StateVector)):
                 self[sv] = 1
+                self.m = sv.m
             elif isinstance(sv, dict):
+                self.m = sv[sv.keys()[0]].m
                 for k, v in sv.items():
-                    self[k] = v
+                    if k.m == self.m:
+                        self[k] = v
+                    else:
+                        raise ValueError("Number of modes not consistent")
             else:
                 raise TypeError(f"Unexpected type initializing SVDistribution {type(sv)}")
 
@@ -201,6 +206,10 @@ class SVDistribution(ProbabilityDistribution):
         probs = list(d.values())
         results = random.choices(states, k=count, weights=probs)
         return list(results)
+
+    @property
+    def m(self):
+        return self.m
 
 
 @dispatch(StateVector, annot_tag=str)
