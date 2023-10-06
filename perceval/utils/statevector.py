@@ -249,9 +249,14 @@ class BSDistribution(ProbabilityDistribution):
         if d is not None:
             if isinstance(d, BasicState):
                 self[d] = 1
+                self.m = d.m
             elif isinstance(d, dict):
+                self.m = d[d.keys()[0]].m
                 for k, v in d.items():
-                    self[BasicState(k)] = v
+                    if k.m == self.m:
+                        self[BasicState(k)] = v
+                    else:
+                        raise ValueError("number of modes not consistent")
             else:
                 raise TypeError(f"Unexpected type initializing BSDistribution {type(d)}")
 
@@ -305,6 +310,11 @@ class BSDistribution(ProbabilityDistribution):
                     bs = bs1 * bs2
                 new_dist[bs] += proba1 * proba2
         return new_dist
+
+    @property
+    def m(self):
+        return self.m
+
 
 
 class BSCount(defaultdict):
