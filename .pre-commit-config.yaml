@@ -29,5 +29,5 @@ repos:
         name: jupyter-nb-clear-metadata
         files: \.ipynb$
         stages: [commit]
-        language: system
-        entry: python3 -m jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace
+        language: python
+        entry: jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace
