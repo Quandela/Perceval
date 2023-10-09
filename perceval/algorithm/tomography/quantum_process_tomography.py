@@ -278,27 +278,34 @@ class QuantumStateTomography:
         simulator = Simulator(self._backend)  # todo: change to Processor
         simulator.set_circuit(tomography_circ)
 
-        if self._renormalization is None:  # postselection if no renormalization
+        if self._renormalization is None:
+            # postselection if no renormalization # IMPORTANT FOR TOMOGRAPHY
             ps = pcvl.PostSelect()
+            # Arman sets manual postselection here to prevent Perceval from any default normalization
             if self._post_process:
                 for m in range(self._nqubit):
                     ps.eq([2 * m, 2 * m + 1], 1)
             for m in self._heralded_modes:
                 ps.eq([m[0]], m[1])
             simulator.set_postselection(ps)
-            # todo: do not do the stuff in between L 283 -> L290.
+            # todo: try with not doing the stuff in between L 283 -> L290.
             #  no magical renorm or selection - simply raw output
             # keep renorm==1. Add methods to renormalize - user knows what they are doing.
+            # todo: check logical performance (chat with Eric) - maybe multiply with logical performance
+            #  value for denormalized output.
 
         input_state = pcvl.BasicState("|1,0>")  # input state accounting the heralded modes
         for _ in range(1, self._nqubit):
             input_state *= pcvl.BasicState("|1,0>")
-        for m in self._heralded_modes:
+        for m in self._heralded_modes: # setting input for heralded modes
             input_state *= pcvl.BasicState([m[1]])
         input_distribution = self._source.generate_distribution(expected_input=input_state)
 
         simulator.set_min_detected_photon_filter(0)
+        # does not work on real QPU, - need atleast one for QPU
         output_distribution = simulator.probs_svd(input_distribution)["results"]
+        # from what I understand - this output_distribution should not have
+        # any predefined normalization
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0
@@ -321,6 +328,7 @@ class QuantumStateTomography:
                 for m in self._heralded_modes:
                     measurement_state *= pcvl.BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
+
         # TODO: fix renormalization
         if self._renormalization is None:
             return stokes_param

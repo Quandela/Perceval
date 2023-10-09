@@ -29,7 +29,6 @@
 
 import pytest
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import unitary_group
 import perceval as pcvl
 from perceval.components import catalog
@@ -42,7 +41,7 @@ def fidelity_op_process_tomography(op, op_circ, nqubit, herald):
     # create QST object
     qst = QuantumStateTomography(operator_circuit=op_circ, nqubit=nqubit, heralded_modes=herald)
     # create process tomography object and passing qst object as a parameter
-    qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, qst=qst, heralded_modes=herald)
+    qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, qst=qst)
     #
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
@@ -57,7 +56,8 @@ def test_fidelity_cnot_operator():
     cnot_circ = catalog["klm cnot"].build_circuit()
     cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
-    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_circ, nqubit=2, herald=[(4, 0), (5, 1), (6, 0), (7, 1)])
+    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_circ, nqubit=2,
+                                                   herald=[(4, 0), (5, 1), (6, 0), (7, 1)])
 
     assert cnot_fidelity == pytest.approx(1, 1e-3)  # computed fidelity is around 0.99967
 
@@ -79,44 +79,3 @@ def test_fidelity_random_op():
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_circ, 2, herald=[])
 
     assert random_op_fidelity == pytest.approx(1, 1e-6)
-
-
-def test_display_tomography():
-    # set operator circuit, num qubits
-    # Todo: move to pdisplay of perceval, fix input basis, make it generic
-    cnot_circ = catalog["klm cnot"].build_circuit()
-    cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
-
-    # create QST object
-    qst = QuantumStateTomography(operator_circuit=cnot_circ, nqubit=2, heralded_modes=[(4, 0), (5, 1), (6, 0), (7, 1)])
-    # create process tomography object and passing qst object as a parameter
-    qpt = QuantumProcessTomography(nqubit=2, operator_circuit=cnot_op, qst=qst,
-                                   heralded_modes=[(4, 0), (5, 1), (6, 0), (7, 1)])
-    #
-    # compute Chi matrix
-    chi_op = qpt.chi_matrix()
-
-    xx = np.linspace(0, len(chi_op), len(chi_op))
-    yy = np.linspace(0, len(chi_op), len(chi_op))
-    x, y = np.meshgrid(xx, yy)
-    z = np.zeros(len(chi_op) * len(chi_op))  # z coordinates of each bar
-    dx = np.ones(len(chi_op) * len(chi_op)) * 0.75  # Width of each bar
-    dy = np.ones(len(chi_op) * len(chi_op)) * 0.75  # Depth of each bar
-
-    fig = plt.figure(figsize=(6, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.bar3d(x.flatten(), y.flatten(), z, dx, dy, chi_op.real.flatten())
-    ax.set_xlabel("basis")
-    ax.set_ylabel("basis")
-    ax.set_zlabel("chi real")
-    ax.set_box_aspect(aspect=None, zoom=0.8)
-    plt.show()
-
-    fig = plt.figure(figsize=(6, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.bar3d(x.flatten(), y.flatten(), z, dx, dy, chi_op.imag.flatten())
-    ax.set_xlabel("basis")
-    ax.set_ylabel("basis")
-    ax.set_zlabel("chi imag")
-    ax.set_box_aspect(aspect=None, zoom=0.8)
-    plt.show()

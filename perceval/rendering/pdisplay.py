@@ -28,6 +28,8 @@
 # SOFTWARE.
 import copy
 import os
+import numpy
+import matplotlib.pyplot as plt
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -40,6 +42,7 @@ with warnings.catch_warnings():
     import drawsvg
 
 from perceval.algorithm.analyzer import Analyzer
+from perceval.algorithm.tomography.quantum_process_tomography import QuantumProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
@@ -220,9 +223,50 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     return s_states
 
 
+def pdisplay_tomography_chi(qpt):
+    chi_op = qpt.chi_matrix()
+
+    size_x = len(chi_op[0])  # number of elements along x
+    size_y = len(chi_op[:, 0])  # number of elements along y
+    x, y = numpy.meshgrid(numpy.arange(0, size_x, 1), numpy.arange(0, size_y, 1))
+    # todo: fix labels, show basis for x and y
+    # Cartesian positions for each histogram bar
+    x_pos = x.flatten()
+    y_pos = y.flatten()
+    z_pos = numpy.zeros(size_x * size_y)
+
+    # Size of each bar. Height = value of the Matrix (Chi or density) plotted
+    dx = numpy.ones(size_x * size_y) * 0.5  # Width of each bar
+    dy = numpy.copy(dx)  # Depth of each bar
+
+    fig = plt.figure(figsize=(6, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.bar3d(x_pos, y_pos, z_pos, dx, dy, chi_op.real.flatten())
+    ax.set_xlabel("basis")
+    ax.set_ylabel("basis")
+    ax.set_zlabel("chi real")
+    ax.set_box_aspect(aspect=None, zoom=0.8)
+    plt.show()  # todo: update to use renderer and not fig, make it generic
+    # fig = plt.figure(figsize=(6, 8)) # todo: add real and imag, color?
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.bar3d(x.flatten(), y.flatten(), z_pos, dx, dy, chi_op.imag.flatten())
+    # ax.set_xlabel("basis")
+    # ax.set_ylabel("basis")
+    # ax.set_zlabel("chi imag")
+    # ax.set_box_aspect(aspect=None, zoom=0.8)
+    # plt.show()
+
+    return fig  # plt.show()
+
+
 @dispatch(object)
 def _pdisplay(_, **kwargs):
     return None
+
+
+@dispatch(QuantumProcessTomography)
+def _pdisplay(qpt, **kwargs):
+    return pdisplay_tomography_chi(qpt)
 
 
 @dispatch((ACircuit, nl.TD))
