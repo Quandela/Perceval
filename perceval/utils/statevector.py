@@ -143,8 +143,8 @@ class SVDistribution(ProbabilityDistribution):
     """
     def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
         super().__init__()
-        self.n_max = 0
-        self.m = None
+        self._n_max = 0
+        self._m = None
         if sv is not None:
             if isinstance(sv, (BasicState, StateVector)):
                 self[sv] = 1
@@ -160,17 +160,17 @@ class SVDistribution(ProbabilityDistribution):
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
 
         # number of modes verification
-        if self.m is None:
-            self.m = key.m
-        assert self.m == key.m, "Number of modes is not consistent"
+        if self._m is None:
+            self._m = key.m
+        assert self._m == key.m, "Number of modes is not consistent"
 
         key.normalize()
         super().__setitem__(key, value)
 
         # Update max number of photons :
         n_max = max(key.n)
-        if n_max >= self.n_max:
-            self.n_max = n_max
+        if n_max >= self._n_max:
+            self._n_max = n_max
 
     def __getitem__(self, key):
         if isinstance(key, BasicState):
@@ -217,11 +217,11 @@ class SVDistribution(ProbabilityDistribution):
 
     @property
     def m(self):
-        return self.m
+        return self._m
 
     @property
     def n_max(self):
-        return self.n_max
+        return self._n_max
 
 
 @dispatch(StateVector, annot_tag=str)
