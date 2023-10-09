@@ -150,7 +150,7 @@ class SVDistribution(ProbabilityDistribution):
                 self[sv] = 1
             elif isinstance(sv, dict):
                 for k, v in sv.items():
-                        self[k] = v
+                    self[k] = v
             else:
                 raise TypeError(f"Unexpected type initializing SVDistribution {type(sv)}")
 
@@ -158,13 +158,16 @@ class SVDistribution(ProbabilityDistribution):
         if isinstance(key, BasicState):
             key = StateVector(key)
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
+
+        # number of modes verification
         if self.m is None:
             self.m = key.m
         assert self.m == key.m, "Number of modes is not consistent"
+
         key.normalize()
         super().__setitem__(key, value)
 
-        #Update max number of photons :
+        # Update max number of photons :
         n_max = max(key.n)
         if n_max >= self.n_max:
             self.n_max = n_max
