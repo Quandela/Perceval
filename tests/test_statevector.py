@@ -185,7 +185,9 @@ def test_svdistribution():
     assert svd.n_max == 1
     assert svd_squared.m == 4
     assert svd_squared.n_max == 2
-
+    with pytest.raises(AssertionError):
+        svd[StateVector("|1>")] = 1/7
+        new_svd = SVDistribution({StateVector("|1>"): .5, StateVector("|1,1>"): .5})
 
 def test_separate_state_without_annots():
     st1 = BasicState("|0,1>")
