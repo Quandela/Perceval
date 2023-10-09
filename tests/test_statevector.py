@@ -159,6 +159,10 @@ def test_bsdistribution():
     assert len(bsd_mult) == 2
     assert bsd_mult[bs1 * bs1] == pytest.approx(0.4)
     assert bsd_mult[bs1 * bs2] == pytest.approx(0.6)
+    assert bsd.m == 2
+    assert bsd_squared.m == 4
+    with pytest.raises(AssertionError):
+        BSDistribution({BasicState("|1>"): .5, BasicState("|1,1>"): .5})
 
 
 def test_svdistribution():
