@@ -213,6 +213,10 @@ class SVDistribution(ProbabilityDistribution):
     def m(self):
         return self.m
 
+    @property
+    def n_max(self):
+        return self.n_max
+
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
