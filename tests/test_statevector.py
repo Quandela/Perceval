@@ -162,7 +162,7 @@ def test_bsdistribution():
     assert bsd.m == 2
     assert bsd_squared.m == 4
     with pytest.raises(AssertionError):
-        BSDistribution({BasicState("|1>"): .5, BasicState("|1,1>"): .5})
+        pcvl.BSDistribution({BasicState("|1>"): .5, BasicState("|1,1>"): .5})
 
 
 def test_svdistribution():
