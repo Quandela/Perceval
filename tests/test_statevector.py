@@ -193,6 +193,7 @@ def test_svdistribution():
         svd[StateVector("|1>")] = 1/7
         SVDistribution({StateVector("|1>"): .5, StateVector("|1,1>"): .5})
 
+
 def test_separate_state_without_annots():
     st1 = BasicState("|0,1>")
     assert st1.separate_state() == [BasicState("|0,1>")]
