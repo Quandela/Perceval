@@ -258,22 +258,21 @@ class BSDistribution(ProbabilityDistribution):
     """
     def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()
+        self._m = None
         if d is not None:
             if isinstance(d, BasicState):
                 self[d] = 1
-                self.m = d.m
             elif isinstance(d, dict):
-                self.m = d[d.keys()[0]].m
                 for k, v in d.items():
-                    if k.m == self.m:
-                        self[BasicState(k)] = v
-                    else:
-                        raise ValueError("number of modes not consistent")
+                    self[BasicState(k)] = v
             else:
                 raise TypeError(f"Unexpected type initializing BSDistribution {type(d)}")
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        if self._m is None:
+            self._m = key.m
+        assert key.m == self._m, "Number of modes is not consistent"
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
