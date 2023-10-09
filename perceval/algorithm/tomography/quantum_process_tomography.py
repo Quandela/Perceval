@@ -348,14 +348,10 @@ class QuantumStateTomography:
 
 
 class QuantumProcessTomography:
-    def __init__(self, nqubit: int, operator_circuit: Circuit, qst, heralded_modes=[], post_process=False,
-                 renormalization=None):
+    def __init__(self, nqubit: int, operator_circuit: Circuit, qst):
         self._nqubit = nqubit
         self._operator_circuit = operator_circuit
         self._qst = qst
-        self._heralded_modes = heralded_modes
-        self._post_process = post_process
-        self._renormalization = renormalization
 
     @staticmethod
     def _beta_ndarray(j, k, m, n, nqubit):
