@@ -169,7 +169,7 @@ class SVDistribution(ProbabilityDistribution):
 
         # Update max number of photons :
         n_max = max(key.n)
-        if n_max >= self._n_max:
+        if n_max > self._n_max:
             self._n_max = n_max
 
     def __getitem__(self, key):
