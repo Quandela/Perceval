@@ -181,6 +181,10 @@ def test_svdistribution():
     assert svd_squared[StateVector("|1,0,0,1>")] == pytest.approx(1 / 4)
     assert svd_squared[StateVector("|0,1,1,0>")] == pytest.approx(1 / 4)
     assert svd_squared[StateVector("|0,1,0,1>")] == pytest.approx(1 / 4)
+    assert svd.m == 2
+    assert svd.n_max == 1
+    assert svd_squared.m == 4
+    assert svd_squared.n_max == 2
 
 
 def test_separate_state_without_annots():
