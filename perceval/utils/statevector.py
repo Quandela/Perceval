@@ -324,7 +324,7 @@ class BSDistribution(ProbabilityDistribution):
 
     @property
     def m(self):
-        return self.m
+        return self._m
 
 
 
