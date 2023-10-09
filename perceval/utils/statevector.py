@@ -171,6 +171,7 @@ class SVDistribution(ProbabilityDistribution):
         n_max = max(key.n)
         if n_max >= self.n_max:
             self.n_max = n_max
+
     def __getitem__(self, key):
         if isinstance(key, BasicState):
             key = StateVector(key)
