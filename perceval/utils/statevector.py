@@ -143,10 +143,10 @@ class SVDistribution(ProbabilityDistribution):
     """
     def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
         super().__init__()
+        self.n_max = 0
         if sv is not None:
             if isinstance(sv, (BasicState, StateVector)):
                 self[sv] = 1
-                self.m = sv.m
             elif isinstance(sv, dict):
                 self.m = sv[sv.keys()[0]].m
                 for k, v in sv.items():
@@ -163,7 +163,9 @@ class SVDistribution(ProbabilityDistribution):
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         key.normalize()
         super().__setitem__(key, value)
-
+        n_max = max(key.n)
+        if n_max >= self.n_max:
+            self.n_max = n_max
     def __getitem__(self, key):
         if isinstance(key, BasicState):
             key = StateVector(key)
