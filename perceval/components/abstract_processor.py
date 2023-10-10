@@ -31,7 +31,7 @@ from abc import ABC, abstractmethod
 import copy
 from deprecated import deprecated
 from enum import Enum
-from typing import Any, Dict, List, Union, Callable
+from typing import Any, Dict, List, Union, Callable, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -71,7 +71,7 @@ class AProcessor(ABC):
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: List[AComponent] = []  # Any type of components, not only unitary ones
+        self._components: List[Tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
 
         self._n_moi = None  # Number of modes of interest (moi)
 
@@ -371,8 +371,8 @@ class AProcessor(ABC):
         if not self._is_unitary:
             raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
-        for component in self._components:
-            circuit.add(component[0], component[1], merge=flatten)
+        for pos_m, component in self._components:
+            circuit.add(pos_m, component, merge=flatten)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> List:

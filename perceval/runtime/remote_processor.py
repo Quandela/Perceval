@@ -202,7 +202,10 @@ class RemoteProcessor(AProcessor):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
 
-    def _compute_sample_of_interest_probability(self, transmittance: float = 0.06) -> float:
+    def _compute_sample_of_interest_probability(self,
+                                                transmittance: float = 0.06,
+                                                param_values: dict = None
+                                                ) -> float:
         # TODO retrieve transmittance from the cloud worker
         losses = 1 - transmittance
         n = self._input_state.n
@@ -214,31 +217,12 @@ class RemoteProcessor(AProcessor):
         if photon_filter < 2:
             return 1
 
-        source = Source(losses=losses)
-        input_dist = source.generate_distribution(self._input_state)
-        del input_dist[StateVector([0]*self.m)]
-        input_dist.normalize()
-
-        # p_n = 0
-        # for state, prob in input_dist.items():
-        #     if state.n[0] >= photon_filter:
-        #         p_n += prob
-        #
-        # import perceval as pcvl
-        # pcvl.pdisplay(input_dist)
-        #
-        # lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True))
-        # lp.min_detected_photons_filter(1)
-        # lp.thresholded_output(self._thresholded_output)
-        # lp.with_input(self._input_state)
-        # probs = lp.probs()
-        # p_above_filter = 0
-        # for state, prob in probs['results'].items():
-        #     if state.n >= photon_filter:
-        #         p_above_filter += prob
-
-        ## SIMU WITH NOISY SOURCE
-        lp = Processor(SLOSBackend(), self.linear_circuit(flatten=True), source)
+        # Simulation with a noisy source (only losses)
+        c = self.linear_circuit(flatten=True).copy()
+        if param_values:
+            for n, v in param_values.items():
+                c.param(n).set_value(v)
+        lp = Processor(SLOSBackend(), c, Source(losses=losses))
         lp.min_detected_photons_filter(1)
         lp.thresholded_output(self._thresholded_output)
         lp.with_input(self._input_state)
@@ -247,18 +231,32 @@ class RemoteProcessor(AProcessor):
         for state, prob in probs['results'].items():
             if state.n >= photon_filter:
                 p_above_filter_ns += prob
-
-        # print(p_above_filter * p_n, " = source + perfect sim")
-        print(p_above_filter_ns, " = noisy sim")
-        # return p_above_filter * p_n
         return p_above_filter_ns
 
-    def estimate_required_shots(self, nsamples: int) -> int:
-        p_interest = self._compute_sample_of_interest_probability()
+    def estimate_required_shots(self, nsamples: int, param_values: dict = None) -> int:
+        """
+        Compute an estimate number of required shots given the platform and the user request.
+        The circuit, input state, minimum photon filter are taken into account.
+
+        :param nsamples: Number of expected samples of interest
+        :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
+            for this computation to run.
+        :return: Estimate of the number of shots the user needs to acquire enough samples of interest
+        """
+        p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
         if p_interest == 0:
             return None
         return round(nsamples / p_interest)
 
-    def estimate_expected_samples(self, nshots: int) -> int:
-        p_interest = self._compute_sample_of_interest_probability()
+    def estimate_expected_samples(self, nshots: int, param_values: dict = None) -> int:
+        """
+        Compute an estimate number of samples the user can expect given the platform and the user request.
+        The circuit, input state, minimum photon filter are taken into account.
+
+        :param nshots: Number of shots the user is willing to consume
+        :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
+            for this computation to run.
+        :return: Estimate of the number of samples of interest the user can expect back
+        """
+        p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
         return round(nshots * p_interest)
