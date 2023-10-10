@@ -248,15 +248,6 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_siz
     ax1 = fig.add_subplot(121, projection='3d')  # to plot the real part
     ax2 = fig.add_subplot(122, projection='3d')  # to plot the imaginary part
 
-    # z-axis data formatting
-    ax1.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
-    ax2.set_zticks(numpy.linspace(min(data_z_im), max(data_z_im), 5))
-    ax2.tick_params(axis='z', which='major', pad=15)
-    ax1.zaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.3f}"))
-    formatter = ticker.ScalarFormatter(useMathText=True)
-    formatter.set_scientific(True)
-    ax2.zaxis.set_major_formatter(formatter)
-
     # labels on x- and y- axes
     def generate_basis_names():
         pauli_name_idx = ['I', 'X', 'Y', 'Z']
@@ -268,22 +259,32 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_siz
 
     x_basis_name = generate_basis_names()
     y_basis_name = x_basis_name.copy()
-    ax1.set_xticks(numpy.arange(size_x) + 1)
-    ax1.set_yticks(numpy.arange(size_y) + 1)
-    ax1.set_xticklabels(x_basis_name, fontsize=6)
-    ax1.set_yticklabels(y_basis_name, fontsize=6)
 
-    # Title
-    ax1.set_title("Re[$\\chi$]")
-    ax2.set_title("Im[$\\chi$]")
+    formatter = ticker.ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
 
-    # The plot
-    ax1.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, alpha=0.5, color='b')
-    ax2.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, alpha=0.5, color='r')
-    ax1.set_zlim(data_z_re.min(), data_z_re.max())
-    ax2.set_zlim(data_z_im.min(), data_z_im.max())
+    axes = [ax1, ax2]
+    for ax in axes:
+        ax.tick_params(axis='z', which='major', pad=12)
+        ax.zaxis.set_major_formatter(formatter)
+        ax.set_xticks(numpy.arange(size_x) + 1)
+        ax.set_yticks(numpy.arange(size_y) + 1)
+        ax.set_xticklabels(x_basis_name, fontsize=6)
+        ax.set_yticklabels(y_basis_name, fontsize=6)
+
+        if ax == ax1:
+            ax.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
+            ax.set_zlim(data_z_re.min(), data_z_re.max())
+            ax.set_title("Re[$\\chi$]")
+            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, alpha=0.5, color='b')
+        elif ax == ax2:
+            ax.set_zticks(numpy.linspace(min(data_z_im), max(data_z_im), 5))
+            ax.set_zlim(data_z_im.min(), data_z_im.max())
+            ax.set_title("Im[$\\chi$]")
+            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, alpha=0.5, color='r')
+
+    # Dsiplay the plot
     plt.show()
-
     return fig
 
 
