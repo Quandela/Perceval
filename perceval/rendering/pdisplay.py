@@ -30,6 +30,8 @@ import copy
 import os
 import numpy
 import matplotlib.pyplot as plt
+from matplotlib import ticker
+from itertools import product
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -223,40 +225,67 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     return s_states
 
 
-def pdisplay_tomography_chi(qpt):
+def pdisplay_tomography_chi(qpt, plot_size: tuple = (10, 10)):
     chi_op = qpt.chi_matrix()
+    num_qubit = qpt._nqubit
 
     size_x = len(chi_op[0])  # number of elements along x
     size_y = len(chi_op[:, 0])  # number of elements along y
     x, y = numpy.meshgrid(numpy.arange(0, size_x, 1), numpy.arange(0, size_y, 1))
-    # todo: fix labels, show basis for x and y
+
     # Cartesian positions for each histogram bar
     x_pos = x.flatten()
     y_pos = y.flatten()
     z_pos = numpy.zeros(size_x * size_y)
 
-    # Size of each bar. Height = value of the Matrix (Chi or density) plotted
+    # Size of each bar.
     dx = numpy.ones(size_x * size_y) * 0.5  # Width of each bar
     dy = numpy.copy(dx)  # Depth of each bar
+    data_z_re = chi_op.real.flatten()  # Height = value of the Chi Matrix plotted - Real part
+    data_z_im = chi_op.imag.flatten()  # Height = value of the Chi Matrix plotted - Imaginary part
 
-    fig = plt.figure(figsize=(6, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.bar3d(x_pos, y_pos, z_pos, dx, dy, chi_op.real.flatten())
-    ax.set_xlabel("basis")
-    ax.set_ylabel("basis")
-    ax.set_zlabel("chi real")
-    ax.set_box_aspect(aspect=None, zoom=0.8)
-    plt.show()  # todo: update to use renderer and not fig, make it generic
-    # fig = plt.figure(figsize=(6, 8)) # todo: add real and imag, color?
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.bar3d(x.flatten(), y.flatten(), z_pos, dx, dy, chi_op.imag.flatten())
-    # ax.set_xlabel("basis")
-    # ax.set_ylabel("basis")
-    # ax.set_zlabel("chi imag")
-    # ax.set_box_aspect(aspect=None, zoom=0.8)
-    # plt.show()
+    # Configuring the figure params
+    fig = plt.figure(figsize=plot_size)
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax2 = fig.add_subplot(122, projection='3d')
 
-    return fig  # plt.show()
+    # z-axis data formatting
+    ax1.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
+    ax2.set_zticks(numpy.linspace(min(data_z_im), max(data_z_im), 5))
+    ax2.tick_params(axis='z', which='major', pad=15)
+    ax1.zaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.3f}"))
+    formatter = ticker.ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    ax2.zaxis.set_major_formatter(formatter)
+
+    # labels on x- and y- axes
+    def generate_basis_names():
+        pauli_name_idx = ['I', 'X', 'Y', 'Z']
+        pauli_pnc = list(product(pauli_name_idx, repeat=2))
+        basis = []
+        for val in pauli_pnc:
+            basis.append(''.join(val))
+        return basis
+
+    x_basis_name = generate_basis_names()
+    y_basis_name = x_basis_name.copy()
+    ax1.set_xticks(numpy.arange(size_x) + 1)
+    ax1.set_yticks(numpy.arange(size_y) + 1)
+    ax1.set_xticklabels(x_basis_name, fontsize=6)
+    ax1.set_yticklabels(y_basis_name, fontsize=6)
+
+    # Title
+    ax1.set_title("Re[$\\chi$]")
+    ax2.set_title("Im[$\\chi$]")
+
+    # The plot
+    ax1.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, shade=True)
+    ax2.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, shade=True)
+    ax1.set_zlim(data_z_re.min(), data_z_re.max())
+    ax2.set_zlim(data_z_im.min(), data_z_im.max())
+    plt.show()
+
+    return fig
 
 
 @dispatch(object)
