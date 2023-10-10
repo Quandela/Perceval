@@ -38,11 +38,8 @@ from perceval.algorithm.tomography.quantum_process_tomography import QuantumStat
 
 
 def fidelity_op_process_tomography(op, op_circ, nqubit, herald):
-    # create QST object
-    qst = QuantumStateTomography(operator_circuit=op_circ, nqubit=nqubit, heralded_modes=herald)
-    # create process tomography object and passing qst object as a parameter
-    qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, qst=qst)
-    #
+    # create process tomography object
+    qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, heralded_modes=herald)
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
