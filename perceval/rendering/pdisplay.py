@@ -225,9 +225,8 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     return s_states
 
 
-def pdisplay_tomography_chi(qpt, plot_size: tuple = (10, 10)):
+def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_size: tuple = (10, 10)):
     chi_op = qpt.chi_matrix()
-    num_qubit = qpt._nqubit
 
     size_x = len(chi_op[0])  # number of elements along x
     size_y = len(chi_op[:, 0])  # number of elements along y
@@ -246,8 +245,8 @@ def pdisplay_tomography_chi(qpt, plot_size: tuple = (10, 10)):
 
     # Configuring the figure params
     fig = plt.figure(figsize=plot_size)
-    ax1 = fig.add_subplot(121, projection='3d')
-    ax2 = fig.add_subplot(122, projection='3d')
+    ax1 = fig.add_subplot(121, projection='3d')  # to plot the real part
+    ax2 = fig.add_subplot(122, projection='3d')  # to plot the imaginary part
 
     # z-axis data formatting
     ax1.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
@@ -279,8 +278,8 @@ def pdisplay_tomography_chi(qpt, plot_size: tuple = (10, 10)):
     ax2.set_title("Im[$\\chi$]")
 
     # The plot
-    ax1.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, shade=True)
-    ax2.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, shade=True)
+    ax1.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, alpha=0.5, color='b')
+    ax2.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, alpha=0.5, color='r')
     ax1.set_zlim(data_z_re.min(), data_z_re.max())
     ax2.set_zlim(data_z_im.min(), data_z_im.max())
     plt.show()
@@ -295,7 +294,7 @@ def _pdisplay(_, **kwargs):
 
 @dispatch(QuantumProcessTomography)
 def _pdisplay(qpt, **kwargs):
-    return pdisplay_tomography_chi(qpt)
+    return pdisplay_tomography_chi(qpt, **kwargs)
 
 
 @dispatch((ACircuit, nl.TD))
