@@ -56,16 +56,10 @@ class Sampler(AAlgorithm):
         'sample_count': {'probs': probs_to_sample_count, 'samples': samples_to_sample_count},
         'samples': {'probs': probs_to_samples, 'sample_count': sample_count_to_samples}
     }
-    _MAX_SHOTS_NAMED_PARAM = "max_shots_per_call"
 
     def __init__(self, processor: AProcessor, **kwargs):
-        if (processor.is_remote and self._MAX_SHOTS_NAMED_PARAM not in kwargs) or \
-            (self._MAX_SHOTS_NAMED_PARAM in kwargs and kwargs[self._MAX_SHOTS_NAMED_PARAM] < 1):
-            raise RuntimeError(f'Please input a `{self._MAX_SHOTS_NAMED_PARAM}` positive value when creating a Sampler '
-                               'using a RemoteProcessor')
-        super().__init__(processor)
+        super().__init__(processor, **kwargs)
         self._iterator = []
-        self._max_shots = kwargs.get(self._MAX_SHOTS_NAMED_PARAM)
 
     def _get_primitive_converter(self, method: str):
         available_primitives = self._processor.available_commands
