@@ -27,7 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .sampler import Sampler
-from .analyzer import Analyzer
-from .qrng import QRNG
-from .tomography.abstract_tomography import ATomography
+from perceval.algorithm.abstract_algorithm import AAlgorithm
+from perceval.components import AProcessor
+
+
+class ATomography(AAlgorithm):
+    def __init__(self, processor: AProcessor):
+        super().__init__(processor)
