@@ -257,7 +257,8 @@ class QuantumStateTomography:
 
         return tomography_circuit
 
-    def _list_subset_k_from_n(self, k, n):
+    @staticmethod
+    def _list_subset_k_from_n(k, n):
         # list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
         # used only in the method _stokes_parameter
         #  Should we put it in overall utils? or have a specific util for tomograph?
@@ -356,10 +357,16 @@ class QuantumStateTomography:
 
 
 class QuantumProcessTomography:
-    def __init__(self, nqubit: int, operator_circuit: Circuit, heralded_modes):
+    def __init__(self, nqubit: int, operator_circuit: Circuit, source: Source = Source(), backend=SLOSBackend(),
+                 heralded_modes: List = [], post_process=False, renormalization=None):
         self._nqubit = nqubit
         self._operator_circuit = operator_circuit
+        self._source = source  # default - ideal source
+        self._backend = backend  # default - SLOSBackend()
         self._heralded_modes = heralded_modes
+        self._post_process = post_process
+        self._renormalization = renormalization
+
         self._qst = QuantumStateTomography(operator_circuit=self._operator_circuit, nqubit=2,
                                            heralded_modes=self._heralded_modes)
 
