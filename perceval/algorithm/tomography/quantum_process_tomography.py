@@ -28,13 +28,13 @@
 # SOFTWARE.
 
 import numpy as np
-import perceval as pcvl
-from perceval.components import BS, PS, PERM
+from itertools import combinations
+from perceval.components import Circuit, AProcessor, BS, PS, PERM
 from perceval.components.source import Source
-from perceval.components import Circuit
-import itertools
 from perceval.simulators import Simulator
 from perceval.backends import SLOSBackend
+from perceval.utils import BasicState
+from perceval.utils.postselect import PostSelect
 from typing import List
 from ._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
     vector_to_matrix, decomp
@@ -174,13 +174,13 @@ class StatePreparationCircuit(Circuit):
         """
         assert 0 <= state_prep_circ_indx <= 3, f'Invalid index for circuit to prepare state'
         if state_prep_circ_indx == 1:
-            return pcvl.Circuit(2) // (0, PERM([1, 0]))
+            return Circuit(2) // (0, PERM([1, 0]))
         elif state_prep_circ_indx == 2:
-            return pcvl.Circuit(2) // (0, BS.H())
+            return Circuit(2) // (0, BS.H())
         elif state_prep_circ_indx == 3:
-            return pcvl.Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
+            return Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
         else:
-            return pcvl.Circuit(2)
+            return Circuit(2)
 
     def build_preparation_circuit(self):
         """
@@ -217,11 +217,11 @@ class MeasurementCircuit(Circuit):
         assert 0 <= pauli_meas_circ_indx <= 3, f'Invalid index for measurement circuit'
 
         if pauli_meas_circ_indx == 1:
-            return pcvl.Circuit(2) // (0, BS.H())
+            return Circuit(2) // (0, BS.H())
         elif pauli_meas_circ_indx == 2:
-            return pcvl.Circuit(2) // (0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
+            return Circuit(2) // (0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
         else:
-            return pcvl.Circuit(2)
+            return Circuit(2)
 
     def build_measurement_circuit(self):
         """
@@ -245,7 +245,7 @@ class QuantumStateTomography:
 
     def _tomography_circuit(self, prep_state_basis_indxs: List, meas_basis_pauli_indxs: List) -> Circuit:
 
-        tomography_circuit = pcvl.Circuit(2 * self._nqubit + len(self._heralded_modes))
+        tomography_circuit = Circuit(2 * self._nqubit + len(self._heralded_modes))
 
         pc = StatePreparationCircuit(prep_state_basis_indxs, self._nqubit)  # state preparation
         tomography_circuit.add(0, pc.build_preparation_circuit())
@@ -262,7 +262,7 @@ class QuantumStateTomography:
         # used only in the method _stokes_parameter
         #  Should we put it in overall utils? or have a specific util for tomograph?
         s = {i for i in range(n)}
-        return list(itertools.combinations(s, k))
+        return list(combinations(s, k))
 
     def _stokes_parameter(self, prep_state_basis_indxs, meas_basis_pauli_indxs):
         """
@@ -280,7 +280,7 @@ class QuantumStateTomography:
 
         if self._renormalization is None:
             # postselection if no renormalization # IMPORTANT FOR TOMOGRAPHY
-            ps = pcvl.PostSelect()
+            ps = PostSelect()
             # Arman sets manual postselection here to prevent Perceval from any default normalization
             if self._post_process:
                 for m in range(self._nqubit):
@@ -294,11 +294,11 @@ class QuantumStateTomography:
             # todo: check logical performance (chat with Eric) - maybe multiply with logical performance
             #  value for denormalized output.
 
-        input_state = pcvl.BasicState("|1,0>")  # input state accounting the heralded modes
+        input_state = BasicState("|1,0>")  # input state accounting the heralded modes
         for _ in range(1, self._nqubit):
-            input_state *= pcvl.BasicState("|1,0>")
+            input_state *= BasicState("|1,0>")
         for m in self._heralded_modes: # setting input for heralded modes
-            input_state *= pcvl.BasicState([m[1]])
+            input_state *= BasicState([m[1]])
         input_distribution = self._source.generate_distribution(expected_input=input_state)
 
         simulator.set_min_detected_photon_filter(0)
@@ -313,20 +313,20 @@ class QuantumStateTomography:
             for J in self._list_subset_k_from_n(k, self._nqubit):
                 eta = 1
                 if 0 not in J:
-                    measurement_state = pcvl.BasicState("|1,0>")
+                    measurement_state = BasicState("|1,0>")
                 else:
-                    measurement_state = pcvl.BasicState("|0,1>")
+                    measurement_state = BasicState("|0,1>")
                     if meas_basis_pauli_indxs[0] != 0:
                         eta *= -1
                 for j in range(1, self._nqubit):
                     if j not in J:
-                        measurement_state *= pcvl.BasicState("|1,0>")
+                        measurement_state *= BasicState("|1,0>")
                     else:
-                        measurement_state *= pcvl.BasicState("|0,1>")
+                        measurement_state *= BasicState("|0,1>")
                         if meas_basis_pauli_indxs[j] != 0:
                             eta *= -1
                 for m in self._heralded_modes:
-                    measurement_state *= pcvl.BasicState([m[1]])
+                    measurement_state *= BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
 
         # TODO: fix renormalization
