@@ -29,7 +29,9 @@
 
 from .statevector import BSDistribution, BSCount, BSSamples
 
+import math
 import numpy as np
+import random
 
 
 # Conversion functions (samples <=> probs <=> sample_count)
@@ -55,7 +57,17 @@ def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
     results = BSCount()
     for state in perturbed_dist:
-        results.add(state, int(np.round(perturbed_dist[state] * count)))
+        results.add(state, round(perturbed_dist[state] * count))
+    # Artificially deal with the rounding errors
+    diff = count - sum(list(results.values()))
+    if diff > 0:
+        results[random.choice(list(results.keys()))] += diff
+    elif diff < 0:
+        while diff < 0:
+            k = random.choice(list(results.keys()))
+            current_diff = max(-results[k], diff)
+            diff -= current_diff
+            results[k] += current_diff
     return results
 
 

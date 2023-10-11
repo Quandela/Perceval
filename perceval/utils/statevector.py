@@ -42,21 +42,35 @@ import numpy as np
 from .format import simple_complex
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
-from exqalibur import FockState, FSArray
+import exqalibur as xq
 
 
-def _fockstate_add(self, other):
-    return StateVector(self) + other
+def _sv__str__(self, nsimplify=True):
+    if not self.keys():
+        return "|>"
+    self_copy = copy(self)
+    self_copy.normalize()
+    ls = []
+    for key, value in self_copy:
+        if value == 1:
+            ls.append(str(key))
+        else:
+            if isinstance(value, sp.Expr):
+                ls.append(str(value) + "*" + str(key))
+            else:
+                if nsimplify:
+                    value = simple_complex(value)[1]
+                    if value[1:].find("-") != -1 or value.find("+") != -1:
+                        value = f"({value})"
+                else:
+                    value = str(value)
+                ls.append(value + "*" + str(key))
+    return "+".join(ls).replace("+-", "-")
 
 
-def _fockstate_sub(self, other):
-    return StateVector(self) - other
-
-
-# Define BasicState as exqalibur FockState + redefine some methods
-BasicState = FockState
-BasicState.__add__ = _fockstate_add
-BasicState.__sub__ = _fockstate_sub
+BasicState = xq.FockState
+StateVector = xq.StateVector
+StateVector.__str__ = _sv__str__
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
@@ -68,15 +82,15 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
     """
     m = input_state.m
     ns = input_state.n
-    if not isinstance(ns, list):
-        ns = [ns]
+    ns = [ns] if isinstance(ns, int) else list(ns)
+
     for n in ns:
         if mask is not None:
-            output_array = FSArray(m, n, mask)
+            output_array = xq.FSArray(m, n, mask)
         else:
-            output_array = FSArray(m, n)
+            output_array = xq.FSArray(m, n)
         for output_state in output_array:
-            yield BasicState(output_state)
+            yield output_state
 
 def max_photon_state_iterator(m: int, n_max: int):
     """
@@ -87,241 +101,9 @@ def max_photon_state_iterator(m: int, n_max: int):
     :return: list of BasicState
     """
     for n in range(n_max+1):
-        output_array = FSArray(m,n)
+        output_array = xq.FSArray(m,n)
         for output_state in output_array:
-            yield BasicState(output_state)
-
-
-class StateVector(defaultdict):
-    """
-    A StateVector is a (complex) linear combination of Basic States
-    """
-
-    def __init__(self,
-                 bs: Union[BasicState, List[int], str, None] = None,
-                 photon_annotations: Dict[int, List] = None):
-        r"""Init of a StateVector from a BasicState, or from BasicState constructor
-        :param bs: a BasicState, or `BasicState` constructor,
-                    None used for internal purpose
-        :param photon_annotations: photon annotation dictionary
-        """
-        super(StateVector, self).__init__(float)
-        self.m = None
-        if bs is not None:
-            if not isinstance(bs, BasicState):
-                bs = BasicState(bs, photon_annotations or {})
-            else:
-                assert photon_annotations is None, "cannot add photon annotations to BasicState"
-            self[bs] = 1
-        self._normalized = True
-        self._has_symbolic = False
-
-    def __eq__(self, other):
-        if not isinstance(other, StateVector):
-            return False
-        self.normalize()
-        other.normalize()
-        return super().__eq__(other)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __rmul__(self, other):
-        r"""Multiply a StateVector by a numeric value, right side
-        """
-        return self*other
-
-    def __getitem__(self, key):
-        if isinstance(key, int):
-            return list(self.keys())[key]
-        assert isinstance(key, BasicState), "StateVector keys should be Basic States"
-        return super().__getitem__(key)
-
-    def __setitem__(self, key, value):
-        assert isinstance(key, BasicState), "StateVector keys should be Basic States"
-        self._normalized = False
-        if self.m is None:
-            self.m = key.m
-        return super().__setitem__(key, value)
-
-    def __len__(self):
-        self.normalize()
-        return super().__len__()
-
-    def __iter__(self):
-        self.normalize()
-        return super().__iter__()
-
-    def __mul__(self, other):
-        r"""Multiply a StateVector by a numeric value prior in a linear combination,
-        or computes the tensor product between two StateVectors
-        """
-        if isinstance(other, (StateVector, BasicState)):
-            if isinstance(other, BasicState):
-                other = StateVector(other)
-            sv = StateVector()
-            if not other:
-                return self
-            if not self:
-                return other
-            sv.update({l_state * r_state: self[l_state] * other[r_state] for r_state in other for l_state in self})
-            sv.m = self.m + other.m
-            sv._has_symbolic = (other._has_symbolic or self._has_symbolic)
-            sv._normalized = (other._normalized and self._normalized)
-            return sv
-
-        assert isinstance(other, (int, float, complex, np.number, sp.Expr)), "normalization factor has to be numeric"
-        copy_state = StateVector(None)
-        # multiplying - the outcome is a non-normalized StateVector
-        for state, amplitude in self.items():
-            copy_state[state] = amplitude*other
-        if other != 1:
-            copy_state._normalized = False
-        copy_state.m = self.m
-        if isinstance(other, sp.Expr):
-            self._has_symbolic = True
-        return copy_state
-
-    def __pow__(self, power: int):
-        return exponentiation_by_squaring(self, power)
-
-    def __copy__(self):
-        sv_copy = StateVector(None)
-        for k, v in self.items():
-            sv_copy[copy(k)] = v
-        sv_copy._has_symbolic = self._has_symbolic
-        sv_copy._normalized = self._normalized
-        sv_copy.m = self.m
-        return sv_copy
-
-    def __add__(self, other):
-        r"""Add two StateVectors"""
-        assert isinstance(other, (StateVector, BasicState)), "addition requires states"
-        if self.m is None:
-            self.m = other.m
-        assert other.m == self.m, "invalid mix of different modes"
-        copy_state = copy(self)
-        if not isinstance(other, StateVector):
-            other = StateVector(other)
-        # multiplying - the outcome is a non-normalized StateVector
-        for state, amplitude in other.items():
-            if state not in copy_state:
-                copy_state[state] = amplitude
-            else:
-                copy_state[state] += amplitude
-        copy_state._normalized = False
-        copy_state.m = self.m
-        if other._has_symbolic:
-            copy_state._has_symbolic = True
-        return copy_state
-
-    def __sub__(self, other):
-        r"""Sub two StateVectors"""
-        if isinstance(other, BasicState):
-            other = StateVector(other)
-        return self + -1 * other
-
-    def sample(self) -> BasicState:
-        r"""Sample a single BasicState from the statevector.
-        It does not perform a measure - so do not change the value of the statevector
-
-        :return: a BasicState
-        """
-        p = random.random()
-        idx = 0
-        keys = list(self.keys())
-        self.normalize()
-        while idx < len(keys)-1:
-            p = p - abs(self[keys[idx]])**2
-            if p < 0:
-                break
-            idx += 1
-        return BasicState(keys[idx])
-
-    def samples(self, shots: int) -> List[BasicState]:
-        """Generate a list of samples.
-        It does not perform a measure - so do not change the value of statevector.
-        This function is more efficient than run :math:`shots` times :meth:`sample`
-
-        :param shots: the number of samples
-        :return: a list of BasicState
-        """
-        self.normalize()
-        weight = [abs(self[key])**2 for key in self.keys()]
-        rng = np.random.default_rng()
-        return [BasicState(x) for x in rng.choice(list(self.keys()), shots, p=weight)]
-
-    def measure(self, modes: Union[int, List[int]]) -> Dict[BasicState, Tuple[float, StateVector]]:
-        r"""perform a measure on one or multiple modes and collapse the remaining statevector. The resulting
-        statevector are not normalised by default.
-
-        :param modes: the mode to measure
-        :return: a dictionary - key is the possible measures, values are pairs (probability, BasicState vector)
-        """
-        self.normalize()
-        if isinstance(modes, int):
-            modes = [modes]
-        map_measure_sv = defaultdict(lambda: [0, StateVector()])
-        for s, pa in self.items():
-            out = []
-            remaining_state = []
-            p = abs(pa)**2
-            for i in range(self.m):
-                if i in modes:
-                    out.append(s[i])
-                else:
-                    remaining_state.append(s[i])
-            map_measure_sv[BasicState(out)][0] += p
-            map_measure_sv[BasicState(out)][1] += pa*StateVector(remaining_state)
-        return {k: tuple(v) for k, v in map_measure_sv.items()}
-
-    @property
-    def n(self):
-        r"""list the possible values of n in the different states"""
-        return list(set([st.n for st in self.keys()]))
-
-    def normalize(self):
-        r"""Normalize a state vector"""
-        if not self._normalized:
-            norm = 0
-            to_remove = []
-            for key in self.keys():
-                if (isinstance(self[key], (complex, float, int))
-                        and abs(self[key]) < global_params["min_complex_component"]) or self[key] == 0:
-                    to_remove.append(key)
-                else:
-                    norm += abs(self[key])**2
-            for key in to_remove:
-                del self[key]
-            norm = norm**0.5
-            for key in self.keys():
-                self[key] /= norm
-            self._normalized = True
-
-    def __str__(self, nsimplify=True):
-        if not self.keys():
-            return "|>"
-        self_copy = copy(self)
-        self_copy.normalize()
-        ls = []
-        for key, value in self_copy.items():
-            if value == 1:
-                ls.append(str(key))
-            else:
-                if isinstance(value, sp.Expr):
-                    ls.append(str(value) + "*" + str(key))
-                else:
-                    if nsimplify:
-                        value = simple_complex(value)[1]
-                        if value[1:].find("-") != -1 or value.find("+") != -1:
-                            value = f"({value})"
-                    else:
-                        value = str(value)
-                    ls.append( value + "*" + str(key))
-        return "+".join(ls).replace("+-", "-")
-
-    def __hash__(self):
-        return self.__str__(nsimplify=False).__hash__()
+            yield output_state
 
 
 def tensorproduct(states: List[Union[StateVector, BasicState]]):
@@ -430,20 +212,18 @@ class SVDistribution(ProbabilityDistribution):
             d = {sv: p for sv, p in self.items() if max(sv.n) != 0}
         states = list(d.keys())
         probs = list(d.values())
-        rng = np.random.default_rng()
-        results = rng.choice(states, count, p=np.array(probs) / sum(probs))
+        results = random.choices(states, k=count, weights=probs)
         return list(results)
 
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
-    """
-    Anonymize the annotations in a StateVector
-    """
+    # This algo anonymizes annotations but is not enough to have superposed states exactly the same given the storage
+    # order of BasicStates inside the StateVector
     m = sv.m
     annot_map = {}
     result = StateVector()
-    for bs, pa in sv.items():
+    for bs, pa in sv:
         s = [""] * m
         for i in range(bs.n):
             mode = bs.photon2mode(i)
@@ -458,9 +238,6 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
 
 @dispatch(SVDistribution, annot_tag=str)
 def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
-    """
-    Anonymize the annotations in a SVDistribution
-    """
     sv_dist = defaultdict(lambda: 0)
     for k, p in svd.items():
         state = anonymize_annotations(k, annot_tag=annot_tag)

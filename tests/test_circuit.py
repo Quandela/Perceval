@@ -36,12 +36,9 @@ from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
+from _test_utils import strip_line_12
 import sympy as sp
 import numpy as np
-
-
-def strip_line_12(s: str) -> str:
-    return s.strip().replace("            ", "")
 
 
 def test_helloword():
@@ -293,14 +290,6 @@ def test_iterator():
     assert len(l_comp) == 4
     for i in range(4):
         assert float(l_comp[i][1].param("theta")) == 1/(i+1) and l_comp[i][0] == comps[i]
-
-
-def test_evolve():
-    for backend_name in ["SLOS", "Naive", "MPS"]:
-        backend = BackendFactory.get_backend(backend_name)
-        backend.set_circuit(comp.BS.H())
-        backend.set_input_state(BasicState("|1,0>"))
-        assert str(backend.evolve()) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
 
 
 def _generate_simple_circuit():

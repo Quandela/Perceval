@@ -168,7 +168,7 @@ class Source:
             if isinstance(photons, int):
                 svd.add(StateVector([photons]), prob)
             else:
-                svd.add(StateVector([len(photons)], {0: photons}), prob)
+                svd.add(StateVector(BasicState([len(photons)], {0: photons})), prob)
         return svd
 
     def generate_distribution(self, expected_input: BasicState):

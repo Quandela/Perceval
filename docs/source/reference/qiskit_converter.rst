@@ -33,7 +33,7 @@ See also:
 
 `Qiskit tutorial <https://qiskit.org/documentation/tutorials/circuits/1_getting_started_with_qiskit.html>`_
 
-:ref:`Qiskit conversion and decomposition example<Decomposing Qiskit circuits>`
+:ref:`Qiskit conversion and decomposition example<Conversion from Qiskit Circuit>`
 
 Class reference
 ---------------

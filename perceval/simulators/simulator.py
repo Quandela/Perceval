@@ -245,7 +245,7 @@ class Simulator(ISimulator):
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
         for sv, prob in input_dist.items():
             if min(sv.n) >= self._min_detected_photons:
-                decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv.items()]))
+                decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]))
             else:
                 self._physical_perf -= prob
         input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
@@ -375,7 +375,7 @@ class Simulator(ISimulator):
             input_state = StateVector(input_state)
 
         # Decay input to a list of basic states without annotations and evolve each of them
-        decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state.items()]
+        decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state]
         input_list = [copy(state) for t in decomposed_input for state in t[1]]
         for state in input_list:
             state.clear_annotations()
