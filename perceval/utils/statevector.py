@@ -92,6 +92,19 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
         for output_state in output_array:
             yield output_state
 
+def max_photon_state_iterator(m: int, n_max: int):
+    """
+    Iterator on all possible output state on m modes with at most n_max photons
+
+    :param m: number of modes
+    :param n_max: maximum number of photons
+    :return: list of BasicState
+    """
+    for n in range(n_max+1):
+        output_array = xq.FSArray(m,n)
+        for output_state in output_array:
+            yield output_state
+
 
 def tensorproduct(states: List[Union[StateVector, BasicState]]):
     r""" Computes states[0] * states[1] * ...
