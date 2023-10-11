@@ -377,6 +377,17 @@ def test_statevector_arithmetic():
     assert_sv_close(sv5, -math.sqrt(5) / 5 * 1j * StateVector([0, 1]) + math.sqrt(5) / 5 * 2j * StateVector([1, 0]))
 
 
+def test_max_photon_state_iterator():
+    l = [[0, 0, 0],
+         [1, 0, 0], [0, 1, 0], [0, 0, 1],
+         [2, 0, 0], [1, 1, 0], [1, 0, 1], [0, 2, 0], [0, 1, 1], [0, 0, 2]
+         ]
+    i = 0
+    for bs in pcvl.utils.max_photon_state_iterator(3,2):
+        assert bs == pcvl.BasicState(l[i])
+        i += 1
+
+
 def test_allstate_iterator():
     in_bs = BasicState([1,0,0,0])
     iteration_result = list(allstate_iterator(in_bs))
