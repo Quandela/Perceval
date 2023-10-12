@@ -289,4 +289,4 @@ def test_simulator_evolve_svd():
                                 StateVector([2, 0]): 0.8})
     b = SLOSBackend(Circuit(2))
     sim = Simulator(b)
-    assert input_svd == sim.evolve(input_svd)
+    assert input_svd == sim.evolve_svd(input_svd)
