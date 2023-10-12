@@ -412,4 +412,4 @@ class Simulator(ISimulator):
             new_sv = self.evolve(sv)
             new_svd[new_sv] = p
 
-        return new_SVD
+        return new_svd
