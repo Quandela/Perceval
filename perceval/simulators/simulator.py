@@ -398,3 +398,18 @@ class Simulator(ISimulator):
 
         result_sv.normalize()
         return result_sv
+
+
+    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState]) -> SVDistribution:
+        """Compute the SVDistribution evolved through a Linear Optical circuit"""
+        if not isinstance(svd, SVDistribution):
+            return SVDistribution(self.evolve(svd))
+
+        # If it's actually an SVD
+
+        new_svd = SVDistribution()
+        for sv, p in svd.items():
+            new_sv = self.evolve(sv)
+            new_svd[new_sv] = p
+
+        return new_SVD
