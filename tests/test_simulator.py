@@ -275,10 +275,18 @@ def test_statevector_polar_evolve():
     assert pytest.approx(1) == sum_p
 
 
-def test_evovle_phase():
+def test_evolve_phase():
     input_state = StateVector([2, 0]) + StateVector([1, 1])
     c = Circuit(2).add(1, PS(phi=math.pi/3))
     simu = Simulator(SLOSBackend())
     simu.set_circuit(c)
     output_sv = simu.evolve(input_state)
     assert output_sv[BasicState([1, 1])] == pytest.approx(complex(math.sqrt(2)/4, math.sqrt(6)/4))
+
+
+def test_simulator_evolve_svd():
+    input_svd = SVDistribution({StateVector([1, 1]): 0.2,
+                                StateVector([2, 0]): 0.8})
+    b = SLOSBackend(Circuit(2))
+    sim = Simulator(b)
+    assert input_svd == sim.evolve(input_svd)
