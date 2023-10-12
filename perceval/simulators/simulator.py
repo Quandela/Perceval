@@ -216,7 +216,6 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
 
-
     def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
         decomposed_input = []
         """decomposed input:
@@ -257,20 +256,21 @@ class Simulator(ISimulator):
             """First, recombine evolved state vectors given a single input"""
             result_sv = StateVector()
             for probampli, instate_list in sv_data:
-                prob_sv = abs(probampli)**2
+                prob_sv = abs(probampli) ** 2
                 evolved_in_s = StateVector()
                 for annot, in_s in instate_list.items():
                     cached_res = _inject_annotation(self._evolve[in_s], annot)
-                    evolved_in_s = _merge_sv(evolved_in_s, cached_res, prob_threshold=p_threshold / (10 * prob_sv * prob0))
+                    evolved_in_s = _merge_sv(evolved_in_s, cached_res,
+                                             prob_threshold=p_threshold / (10 * prob_sv * prob0))
                     if len(evolved_in_s) == 0:
                         break
                     self.DEBUG_merge_count += 1
                 if evolved_in_s:
-                    result_sv += probampli*evolved_in_s
+                    result_sv += probampli * evolved_in_s
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                res[bs] += p*prob0
+                res[bs] += p * prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
@@ -315,7 +315,7 @@ class Simulator(ISimulator):
             for in_s in bs_data:
                 probs_in_s = BSDistribution.tensor_product(probs_in_s, cache[in_s],
                                                            merge_modes=True,
-                                                           prob_threshold=p_threshold / (10*prob0))
+                                                           prob_threshold=p_threshold / (10 * prob0))
                 if len(probs_in_s) == 0:
                     break
                 self.DEBUG_merge_count += 1
@@ -330,7 +330,6 @@ class Simulator(ISimulator):
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         return res
-
 
     def probs_svd(self, input_dist: SVDistribution, progress_callback: Optional[Callable] = None):
         """
@@ -398,7 +397,6 @@ class Simulator(ISimulator):
 
         result_sv.normalize()
         return result_sv
-
 
     def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState]) -> SVDistribution:
         """Compute the SVDistribution evolved through a Linear Optical circuit"""
