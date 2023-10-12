@@ -162,7 +162,8 @@ class SVDistribution(ProbabilityDistribution):
         # number of modes verification
         if self._m is None:
             self._m = key.m
-        assert self._m == key.m, "Number of modes is not consistent"
+        if self._m != key.m:
+            raise ValueError("Number of modes is not consistent")
 
         key.normalize()
         super().__setitem__(key, value)
@@ -272,7 +273,8 @@ class BSDistribution(ProbabilityDistribution):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
         if self._m is None:
             self._m = key.m
-        assert key.m == self._m, "Number of modes is not consistent"
+        if self._m != key.m:
+            raise ValueError("Number of modes is not consistent")
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
