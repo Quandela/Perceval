@@ -46,7 +46,11 @@ class DensityMatrix:
         self._n_max = svd.n_max
         self.size = comb(self.m + self._n_max, self.m)
 
-        self.index = max_photon_state_iterator(self._m, self._n_max)
+        self.index = dict()
+        k = 0
+        for key in max_photon_state_iterator(self._m, self._n_max):
+            self.index[key] = k
+            k+=1
 
     def __getitem__(self, key):
         pass
