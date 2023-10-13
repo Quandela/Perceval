@@ -27,20 +27,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
 
-import random
-import warnings
-from abc import ABC, abstractmethod
-from collections import defaultdict
-from copy import copy
-from multipledispatch import dispatch
-from typing import Dict, List, Union, Tuple, Optional
-import sympy as sp
-import numpy as np
+from statevector import *
+from math import comb
 
 
 class DensityMatrix:
+    """Density operator representing a mixed state"""
+    def __init__(self, svd: Union[SVDistribution, StateVector, BasicState]):
 
-    def __init__(self):
+        if isinstance(svd, (StateVector, BasicState)):
+            svd = SVDistribution(svd)
+
+        if not isinstance(svd, SVDistribution):
+            raise TypeError("svd must be a BasicState, a StateVector or a SVDistribution")
+
+        self._m = svd.m
+        self._n_max = svd.n_max
+        self.size = comb(self.m + self._n_max, self.m)
+
+        self.index = max_photon_state_iterator(self._m, self._n_max)
+
+    def __getitem__(self, key):
         pass
+    @property
+    def n_max(self):
+        return self._n_max
+
+    @property
+    def m(self):
+        return self._m
