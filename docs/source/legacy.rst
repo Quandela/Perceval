@@ -7,6 +7,70 @@ code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 0.10
+---------------------------------
+The main changes between versions 0.9 and 0.10 comes from the migration of the :code:`StateVector` code into our C++ library, Exqalibur.
+
+StateVector
+^^^^^^^^^^^
+
+Iterate through a State Vector
+++++++++++++++++++++++++++++++
+State Vector is still a hash map (state, amplitude) but works a bit differently than a python dictionary.
+
+State Vector keys, :code:`states`, are obtained with method :code:`keys`:
+
+From version 0.8
+
+>>> for state in state_vector:
+>>>   assert state in state_vector
+
+To version 0.9
+
+>>> for state in state_vector.keys():
+>>>   assert state in state_vector
+
+State Vector items, :code:`(states, amplitude)`, are obtained by iterate directly through the state vector object:
+
+From version 0.9
+
+>>> for state, amplitude in state_vector.items():
+>>>   assert state_vector[state] == amplitude
+
+To version 0.10
+
+>>> for state, amplitude in state_vector:
+>>>   assert state_vector[state] == amplitude
+
+Using numpy with a State Vector
++++++++++++++++++++++++++++++++
+
+Our C++ module (Exqalibur) interact badly with Numpy.
+
+That's why the right multiplication by a numpy object and a StateVector is broken and will raise a ValueError:
+
+From version 0.9
+
+>>> import numpy
+>>> sv1 = numpy.int16(4) * state_vector
+>>> sv2 = state_vector * numpy.int16(4)
+>>> assert sv1 == sv2
+
+
+To version 0.10
+
+>>> import numpy
+>>> # sv1 = numpy.int16(4) * state_vector # will raise a ValueError
+>>> sv2 = state_vector * numpy.int16(4)
+
+.. note:: StateVector will interact badly with any numpy object representing a number
+
+AnnotatedBasicState
+^^^^^^^^^^^^^^^^^^^
+:code:`AnnotatedBasicState` has been deprecated since Perceval 0.7.0, it's time to say goodbye.
+
+See :ref:`AnnotatedBasicState was deprecated`
+
 Breaking changes in Perceval 0.9
 --------------------------------
 
