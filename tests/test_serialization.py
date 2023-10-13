@@ -133,6 +133,10 @@ def test_svdistribution_serialization():
     svd2 = deserialize(serialize(svd))
     assert svd == svd2
 
+    svd_empty = SVDistribution()
+    deserialized_svd_empty = deserialize(serialize(svd_empty))
+    assert deserialized_svd_empty == svd_empty
+
 
 def test_bsdistribution_serialization():
     bsd = BSDistribution()
@@ -142,6 +146,10 @@ def test_bsdistribution_serialization():
     deserialized_bsd = deserialize(serialize(bsd))
     assert bsd == deserialized_bsd
 
+    bsd_empty = BSDistribution()
+    deserialized_bsd_empty = deserialize(serialize(bsd_empty))
+    assert bsd_empty == deserialized_bsd_empty
+
 
 def test_bscount_serialization():
     bsc = BSCount()
@@ -150,6 +158,10 @@ def test_bscount_serialization():
     bsc.add(BasicState([1, 1]), 10558)
     deserialized_bsc = deserialize(serialize(bsc))
     assert bsc == deserialized_bsc
+
+    bsc_empty = BSCount()
+    deserialized_bsc_empty = deserialize(serialize(bsc_empty))
+    assert deserialized_bsc_empty == bsc_empty
 
 
 def test_bssamples_serialization():
@@ -163,6 +175,10 @@ def test_bssamples_serialization():
             samples.append(BasicState([0, 0, 1]))
     deserialized_samples = deserialize(serialize(samples))
     assert deserialized_samples == samples
+
+    empty_samples = BSSamples()
+    deserialized_empty_samples = deserialize(serialize(empty_samples))
+    assert empty_samples == deserialized_empty_samples
 
 
 def test_sv_serialization():
