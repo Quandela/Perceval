@@ -4,27 +4,25 @@ my_function () {
     jupyter nbconvert --execute --to notebook --inplace "$notebook"
     jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace "$notebook"
 }
-cd nb_dir
-nb_dir="docs/source/notebooks/"
-notebook=$nb_dir
+nb_dir="docs/source/notebooks"
 for entry in `ls $nb_dir | grep \.ipynb`; do
-    if [[ $entry =~ ".ipynb" ]]
+    notebook=$nb_dir/$entry
+    if [[ $notebook =~ ".ipynb" ]]
     then
-        notebook+=$entry
-        if [ "$notebook" = "docs/source/notebooks/Boson Sampling.ipynb" ]
+        if [ "$notebook" = "docs/source/notebooks/BS-based_implementation.ipynb" ]
         then
             echo $notebook is ignore
-        elif [ "$notebook" = "docs/source/notebooks/BS-based implementation notebook.ipynb" ]
+        elif [ "$notebook" = "docs/source/notebooks/Boson_sampling.ipynb" ]
         then
             echo $notebook is ignore
-        elif [ "$notebook" = "docs/source/notebooks/Remote computing.ipynb" ]
+        elif [ "$notebook" = "docs/source/notebooks/Gedik_qudit.ipynb" ]
+        then
+            echo $notebook is ignore
+        elif [ "$notebook" = "docs/source/notebooks/Remote_computing.ipynb" ]
         then
             echo $notebook is ignore
         else
             my_function
         fi
-        notebook=$nb_dir
-    else
-        notebook+="${entry} "
     fi
 done
