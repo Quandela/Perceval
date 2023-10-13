@@ -2,7 +2,7 @@ Legacy
 ======
 
 Perceval has evolved quickly from the initial release, some evolution are introducing breaking changes for existing code.
-While we are trying hard to avoid unncessary API changes, some of necessary to bring new features and keep a consistent
+While we are trying hard to avoid unnecessary API changes, some of necessary to bring new features and keep a consistent
 code base.
 
 This section lists the major breaking changes introduced.
@@ -32,7 +32,7 @@ From version 0.8
 
 >>> backend_name = "SLOS"
 >>> backend_type = pcvl.BackendFactory.get_backend(backend_name) # In 0.8, the BackendFactory would only be a mapping between a name and a type
->>> backend_obj = backend_type(circuit) # You'd have to instanciate the backend on the next line using the type
+>>> backend_obj = backend_type(circuit) # You'd have to instantiate the backend on the next line using the type
 >>> pa = backend_obj.probampli(input_state, output_state) # You can then start simulating
 
 To version 0.9
@@ -141,7 +141,7 @@ Even though this filtering works well with QPU simulators and actual QPU acquisi
 simulations was impacted by a threshold detection rule when they use perfect detectors. In this case, you could retrieve
 unexpected results.
 
-Perceval introcudes :code:`min_detected_photons_filter` to improve its behavior. Updating to Perceval 0.8 and using
+Perceval introduces :code:`min_detected_photons_filter` to improve its behavior. Updating to Perceval 0.8 and using
 :code:`min_detected_photons_filter` as you would have used :code:`mode_post_selection`, will not change results
 for threshold detections, and will improve them for perfect simulations (less states will be rejected, improving
 *physical performance*).
@@ -248,7 +248,7 @@ and imperfect simulated sources will return results closer to the actual photoni
 Backward compatibility with pre-0.7.3 sources is broken.
 
 * :code:`brightness` was replaced by :code:`emission_probability`. Balanced losses from the source output to the circuit
-  output can be modelled with :code:`losses` paramater.
+  output can be modelled with :code:`losses` parameter.
 
 * :code:`purity` and :code:`purity_model` were respectively replaced by :code:`multiphoton_component` and
   :code:`multiphoton_model`.
