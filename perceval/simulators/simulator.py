@@ -256,21 +256,20 @@ class Simulator(ISimulator):
             """First, recombine evolved state vectors given a single input"""
             result_sv = StateVector()
             for probampli, instate_list in sv_data:
-                prob_sv = abs(probampli) ** 2
+                prob_sv = abs(probampli)**2
                 evolved_in_s = StateVector()
                 for annot, in_s in instate_list.items():
                     cached_res = _inject_annotation(self._evolve[in_s], annot)
-                    evolved_in_s = _merge_sv(evolved_in_s, cached_res,
-                                             prob_threshold=p_threshold / (10 * prob_sv * prob0))
+                    evolved_in_s = _merge_sv(evolved_in_s, cached_res, prob_threshold=p_threshold / (10 * prob_sv * prob0))
                     if len(evolved_in_s) == 0:
                         break
                     self.DEBUG_merge_count += 1
                 if evolved_in_s:
-                    result_sv += probampli * evolved_in_s
+                    result_sv += probampli*evolved_in_s
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                res[bs] += p * prob0
+                res[bs] += p*prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
@@ -315,7 +314,7 @@ class Simulator(ISimulator):
             for in_s in bs_data:
                 probs_in_s = BSDistribution.tensor_product(probs_in_s, cache[in_s],
                                                            merge_modes=True,
-                                                           prob_threshold=p_threshold / (10 * prob0))
+                                                           prob_threshold=p_threshold / (10*prob0))
                 if len(probs_in_s) == 0:
                     break
                 self.DEBUG_merge_count += 1
