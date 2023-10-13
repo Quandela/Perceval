@@ -78,6 +78,8 @@ def serialize_bssamples(bss: BSSamples) -> str:
 def deserialize_bssamples(serialized_bss: str) -> BSSamples:
     parts = serialized_bss.split('/')
     assert len(parts) == 2, f"Bad serialized BSSamples: {serialized_bss}"
+    if not parts[0]:
+        return BSSamples()
     bs_set = [deserialize_state(bs) for bs in parts[0].split(';')]
     order = [int(x) for x in parts[1].split(';')]
     output = BSSamples()
