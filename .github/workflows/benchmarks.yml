@@ -73,7 +73,7 @@ jobs:
     runs-on: ${{ needs.setup.outputs.runner }}
     steps:
       - name: checkout on perceval's ref
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.setup.outputs.commit_ref }}
           fetch-depth: 0
@@ -81,7 +81,7 @@ jobs:
       # install python, already DL on MiniMac_arm64
       - if:  ${{ needs.setup.outputs.runner != 'MiniMac_arm64' }}
         name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ needs.setup.outputs.python_v }}
 
@@ -109,7 +109,7 @@ jobs:
           path: ${{ needs.setup.outputs.folder_file_json }}
 
       - name: checkout in Initial commit to avoid bug
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: 217f0c716956da75eac217e9bc089f881bd5a2aa
 
