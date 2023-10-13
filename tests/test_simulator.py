@@ -49,20 +49,20 @@ class MockBackend(AProbAmpliBackend):
     def prob_distribution(self) -> BSDistribution:
         n = self._input_state.n
         m = self._input_state.m
-        output_state = [0] * m
-        output_state[(n - 1) % m] = n
+        output_state = [0]*m
+        output_state[(n-1) % m] = n
         return BSDistribution(BasicState(output_state))
 
     def evolve(self) -> StateVector:
         n = self._input_state.n
         m = self._input_state.m
         output_state = [0] * m
-        output_state[(n - 1) % m] = n
+        output_state[(n-1) % m] = n
         return StateVector(output_state)
 
 
 def test_simulator_probs_mock():
-    input_state = BasicState([1, 1, 1])
+    input_state = BasicState([1,1,1])
     simulator = Simulator(MockBackend())
     simulator.set_circuit(Circuit(3))
     output_dist = simulator.probs(input_state)
@@ -85,9 +85,9 @@ def test_simulator_probs_mock():
 
 def test_simulator_probs_svd_indistinguishable():
     svd = SVDistribution()
-    svd[StateVector([1, 0]) + StateVector([0, 1])] = 0.3
-    svd[StateVector([1, 1]) + 1j * StateVector([0, 1])] = 0.3
-    svd[StateVector('|2,0>') + StateVector([1, 1])] = 0.4
+    svd[StateVector([1,0]) + StateVector([0,1])] = 0.3
+    svd[StateVector([1,1]) + 1j*StateVector([0,1])] = 0.3
+    svd[StateVector('|2,0>') + StateVector([1,1])] = 0.4
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
     res = simulator.probs_svd(svd)['results']
@@ -118,19 +118,19 @@ def test_simulator_probs_svd_superposed():
     superposed_state = StateVector("|0,{_:0},{_:1},0>") + StateVector("|0,{_:1},{_:0},0>")
     in_svd = SVDistribution({superposed_state: 1})
     circuit = Circuit(4)
-    circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1 / 3), phi_tl=-np.pi / 2, phi_bl=np.pi, phi_tr=np.pi / 2))
-    circuit.add(2, BS.H(BS.r_to_theta(1 / 3))).add(1, BS.H())
+    circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1/3), phi_tl=-np.pi / 2, phi_bl=np.pi, phi_tr=np.pi / 2))
+    circuit.add(2, BS.H(BS.r_to_theta(1/3))).add(1, BS.H())
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)
     res = sim.probs_svd(in_svd)['results']
     assert len(res) == 7
-    assert res[BasicState("|2,0,0,0>")] == pytest.approx(2 / 9)
-    assert res[BasicState("|0,0,0,2>")] == pytest.approx(2 / 9)
-    assert res[BasicState("|1,0,1,0>")] == pytest.approx(1 / 9)
-    assert res[BasicState("|1,1,0,0>")] == pytest.approx(1 / 9)
-    assert res[BasicState("|0,1,1,0>")] == pytest.approx(1 / 9)
-    assert res[BasicState("|0,1,0,1>")] == pytest.approx(1 / 9)
-    assert res[BasicState("|0,0,1,1>")] == pytest.approx(1 / 9)
+    assert res[BasicState("|2,0,0,0>")] == pytest.approx(2/9)
+    assert res[BasicState("|0,0,0,2>")] == pytest.approx(2/9)
+    assert res[BasicState("|1,0,1,0>")] == pytest.approx(1/9)
+    assert res[BasicState("|1,1,0,0>")] == pytest.approx(1/9)
+    assert res[BasicState("|0,1,1,0>")] == pytest.approx(1/9)
+    assert res[BasicState("|0,1,0,1>")] == pytest.approx(1/9)
+    assert res[BasicState("|0,0,1,1>")] == pytest.approx(1/9)
 
 
 def test_simulator_probs_distinguishable():
@@ -215,17 +215,17 @@ def test_simulator_probs_sv():
     simulator.set_circuit(c)
     result = simulator.probs(input_state)
     assert len(result) == 3
-    assert result[BasicState("|2,0>")] == pytest.approx(3 / 8)
-    assert result[BasicState("|0,2>")] == pytest.approx(3 / 8)
-    assert result[BasicState("|1,1>")] == pytest.approx(1 / 4)
+    assert result[BasicState("|2,0>")] == pytest.approx(3/8)
+    assert result[BasicState("|0,2>")] == pytest.approx(3/8)
+    assert result[BasicState("|1,1>")] == pytest.approx(1/4)
 
     simulator.set_circuit(BS())
     s_boson = StateVector("|{Q:0},{Q:1}>") + StateVector("|{Q:1},{Q:0}>")
     s_fermion = StateVector("|{Q:0},{Q:1}>") - StateVector("|{Q:1},{Q:0}>")
     result_boson = simulator.probs(s_boson)
     assert len(result_boson) == 2
-    assert result_boson[BasicState("|2,0>")] == pytest.approx(1 / 2)
-    assert result_boson[BasicState("|0,2>")] == pytest.approx(1 / 2)
+    assert result_boson[BasicState("|2,0>")] == pytest.approx(1/2)
+    assert result_boson[BasicState("|0,2>")] == pytest.approx(1/2)
     result_fermion = simulator.probs(s_fermion)
     assert len(result_fermion) == 1
     assert result_fermion[BasicState("|1,1>")] == pytest.approx(1)
@@ -242,7 +242,7 @@ def test_evolve_indistinguishable():
     simulator.set_circuit(BS.H())
     sv1 = BasicState([1, 1])
     sv1_out = simulator.evolve(sv1)
-    assert_sv_close(sv1_out, math.sqrt(2) / 2 * StateVector([2, 0]) - math.sqrt(2) / 2 * StateVector([0, 2]))
+    assert_sv_close(sv1_out, math.sqrt(2)/2*StateVector([2, 0]) - math.sqrt(2)/2*StateVector([0, 2]))
     sv1_out_out = simulator.evolve(sv1_out)
     assert_sv_close(sv1_out_out, StateVector([1, 1]))
 
@@ -252,10 +252,10 @@ def test_evolve_distinguishable():
     simulator.set_circuit(BS.H())
     sv2 = StateVector("|{a:0},{a:0}{a:1}>")
     sv2_out = simulator.evolve(sv2)
-    assert pytest.approx(sv2_out[BasicState('|2{a:0}{a:1},0>')]) == 1 / 2
-    assert pytest.approx(sv2_out[BasicState('|2{a:0},{a:1}>')]) == -1 / 2
-    assert pytest.approx(sv2_out[BasicState('|{a:1},2{a:0}>')]) == -1 / 2
-    assert pytest.approx(sv2_out[BasicState('|0,2{a:0}{a:1}>')]) == 1 / 2
+    assert pytest.approx(sv2_out[BasicState('|2{a:0}{a:1},0>')]) == 1/2
+    assert pytest.approx(sv2_out[BasicState('|2{a:0},{a:1}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|{a:1},2{a:0}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|0,2{a:0}{a:1}>')]) == 1/2
     sv2_out_out = simulator.evolve(sv2_out)
     assert_sv_close(sv2_out_out, sv2)
 
@@ -275,13 +275,13 @@ def test_statevector_polar_evolve():
     assert pytest.approx(1) == sum_p
 
 
-def test_evolve_phase():
+def test_evovle_phase():
     input_state = StateVector([2, 0]) + StateVector([1, 1])
-    c = Circuit(2).add(1, PS(phi=math.pi / 3))
+    c = Circuit(2).add(1, PS(phi=math.pi/3))
     simu = Simulator(SLOSBackend())
     simu.set_circuit(c)
     output_sv = simu.evolve(input_state)
-    assert output_sv[BasicState([1, 1])] == pytest.approx(complex(math.sqrt(2) / 4, math.sqrt(6) / 4))
+    assert output_sv[BasicState([1, 1])] == pytest.approx(complex(math.sqrt(2)/4, math.sqrt(6)/4))
 
 
 def test_simulator_evolve_svd():
