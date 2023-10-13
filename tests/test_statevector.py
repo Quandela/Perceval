@@ -159,6 +159,10 @@ def test_bsdistribution():
     assert len(bsd_mult) == 2
     assert bsd_mult[bs1 * bs1] == pytest.approx(0.4)
     assert bsd_mult[bs1 * bs2] == pytest.approx(0.6)
+    assert bsd.m == 2
+    assert bsd_squared.m == 4
+    with pytest.raises(ValueError):
+        pcvl.BSDistribution({BasicState("|1>"): .5, BasicState("|1,1>"): .5})
 
 
 def test_svdistribution():
@@ -181,6 +185,13 @@ def test_svdistribution():
     assert svd_squared[StateVector("|1,0,0,1>")] == pytest.approx(1 / 4)
     assert svd_squared[StateVector("|0,1,1,0>")] == pytest.approx(1 / 4)
     assert svd_squared[StateVector("|0,1,0,1>")] == pytest.approx(1 / 4)
+    assert svd.m == 2
+    assert svd.n_max == 1
+    assert svd_squared.m == 4
+    assert svd_squared.n_max == 2
+    with pytest.raises(ValueError):
+        svd[StateVector("|1>")] = 1/7
+        SVDistribution({StateVector("|1>"): .5, StateVector("|1,1>"): .5})
 
 
 def test_separate_state_without_annots():

@@ -156,6 +156,8 @@ class SVDistribution(ProbabilityDistribution):
     """
     def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
         super().__init__()
+        self._n_max = 0
+        self._m = None
         if sv is not None:
             if isinstance(sv, (BasicState, StateVector)):
                 self[sv] = 1
@@ -169,8 +171,20 @@ class SVDistribution(ProbabilityDistribution):
         if isinstance(key, BasicState):
             key = StateVector(key)
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
+
+        # number of modes verification
+        if self._m is None:
+            self._m = key.m
+        if self._m != key.m:
+            raise ValueError("Number of modes is not consistent")
+
         key.normalize()
         super().__setitem__(key, value)
+
+        # Update max number of photons :
+        n_max = max(key.n)
+        if n_max > self._n_max:
+            self._n_max = n_max
 
     def __getitem__(self, key):
         if isinstance(key, BasicState):
@@ -215,6 +229,14 @@ class SVDistribution(ProbabilityDistribution):
         results = random.choices(states, k=count, weights=probs)
         return list(results)
 
+    @property
+    def m(self):
+        return self._m
+
+    @property
+    def n_max(self):
+        return self._n_max
+
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
@@ -250,6 +272,7 @@ class BSDistribution(ProbabilityDistribution):
     """
     def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()
+        self._m = None
         if d is not None:
             if isinstance(d, BasicState):
                 self[d] = 1
@@ -261,6 +284,10 @@ class BSDistribution(ProbabilityDistribution):
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        if self._m is None:
+            self._m = key.m
+        if self._m != key.m:
+            raise ValueError("Number of modes is not consistent")
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
@@ -309,6 +336,11 @@ class BSDistribution(ProbabilityDistribution):
                     bs = bs1 * bs2
                 new_dist[bs] += proba1 * proba2
         return new_dist
+
+    @property
+    def m(self):
+        return self._m
+
 
 
 class BSCount(defaultdict):
