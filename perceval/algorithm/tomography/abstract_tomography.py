@@ -34,3 +34,5 @@ from perceval.components import AProcessor
 class ATomography(AAlgorithm):
     def __init__(self, processor: AProcessor):
         super().__init__(processor)
+        # Todo: implement is_physical here and then have
+        #  QPT and QST use it to test on denisty or chi matrix

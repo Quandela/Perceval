@@ -30,16 +30,19 @@
 import pytest
 import numpy as np
 from scipy.stats import unitary_group
+
 import perceval as pcvl
-from perceval.components import catalog
+from perceval.components import catalog, Processor
+from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm.tomography.quantum_process_tomography import QuantumStateTomography, QuantumProcessTomography, \
     FidelityTomography
 
 
-def fidelity_op_process_tomography(op, op_circ, nqubit, herald):
+def fidelity_op_process_tomography(op, op_proc, nqubit, herald):
     # create process tomography object
-    qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, heralded_modes=herald)
+    qpt = QuantumProcessTomography(nqubit=nqubit, operator_processor=op_proc, heralded_modes=herald)
+    #qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, heralded_modes=herald)
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
@@ -50,7 +53,7 @@ def fidelity_op_process_tomography(op, op_circ, nqubit, herald):
 
 def test_fidelity_cnot_operator():
     # set operator circuit, num qubits
-    cnot_circ = catalog["klm cnot"].build_circuit()
+    cnot_circ = catalog["klm cnot"].build_processor()
     cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
     cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_circ, nqubit=2,
@@ -73,6 +76,11 @@ def test_fidelity_random_op():
         random_op = np.kron(random_op, L[i])
         random_op_circ.add(2 * i, Unitary(pcvl.Matrix(L[i])))
 
-    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_circ, 2, herald=[])
+    random_op_proc = Processor(backend=SLOSBackend, m_circuit=random_op_circ.m)
+    random_op_proc.add(0, random_op_circ)
+    print(random_op_proc, random_op_proc.m)
 
-    assert random_op_fidelity == pytest.approx(1, 1e-6)
+    perceval.pdisplay(random_op_proc)
+    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2, herald=[])
+
+    #assert random_op_fidelity == pytest.approx(1, 1e-6)

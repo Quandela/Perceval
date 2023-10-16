@@ -29,15 +29,14 @@
 
 import numpy as np
 from itertools import combinations
-from perceval.components import Circuit, AProcessor, BS, PS, PERM
-from perceval.components.source import Source
-from perceval.simulators import Simulator
-from perceval.backends import SLOSBackend
-from perceval.utils import BasicState
+
+from perceval.components import Circuit, Processor, BS, PS, PERM, Port
+from perceval.algorithm.tomography.abstract_tomography import ATomography
+from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
-from ._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, matrix_to_vector, \
-    vector_to_matrix, decomp
+from perceval.algorithm.tomography._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, \
+    matrix_to_vector, vector_to_matrix, decomp
 
 
 def pauli(j):
@@ -232,30 +231,18 @@ class MeasurementCircuit(Circuit):
         return self
 
 
-class QuantumStateTomography:
-    def __init__(self, operator_circuit: Circuit, nqubit: int, source: Source = Source(), backend=SLOSBackend(),
-                 heralded_modes: List = [], post_process=False, renormalization=None):
-        self._source = source  # default - ideal source
-        self._backend = backend  # default - SLOSBackend()
-        self._operator_circuit = operator_circuit
+class QuantumStateTomography(ATomography):
+    def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
+                 renormalization=None):
+        super().__init__(processor=operator_processor)
         self._nqubit = nqubit
+        self._operator_processor = operator_processor
+        self._source = operator_processor.source  # default - ideal source
+        self._backend = operator_processor.backend  # default - SLOSBackend()
         self._post_process = post_process
         self._renormalization = renormalization
-        self._heralded_modes = heralded_modes
-
-    def _tomography_circuit(self, prep_state_basis_indxs: List, meas_basis_pauli_indxs: List) -> Circuit:
-
-        tomography_circuit = Circuit(2 * self._nqubit + len(self._heralded_modes))
-
-        pc = StatePreparationCircuit(prep_state_basis_indxs, self._nqubit)  # state preparation
-        tomography_circuit.add(0, pc.build_preparation_circuit())
-
-        tomography_circuit.add(0, self._operator_circuit)  # unknown operator_circuit
-
-        mc = MeasurementCircuit(meas_basis_pauli_indxs, self._nqubit)  # measurement operator_circuit
-        tomography_circuit.add(0, mc.build_measurement_circuit())
-
-        return tomography_circuit
+        self._heralded_modes = heralded_modes  # user defined heralded modes
+        # TODO:ask with Stephen if they are always similar to default in Perceval
 
     @staticmethod
     def _list_subset_k_from_n(k, n):
@@ -265,48 +252,66 @@ class QuantumStateTomography:
         s = {i for i in range(n)}
         return list(combinations(s, k))
 
+    def _input_state_dist_config(self):
+        input_state = BasicState("|1,0>")
+        for _ in range(1, self._nqubit):
+            # setting the input state for the gate qubit modes
+            input_state *= BasicState("|1,0>")
+        for m in self._heralded_modes:
+            # setting the input for heralded modes # todo: herald
+            input_state *= BasicState([m[1]])
+        input_distribution = self._source.generate_distribution(expected_input=input_state)
+        return input_distribution
+
+    def _tomography_processor(self, prep_state_basis_indxs, meas_basis_pauli_indxs):
+
+        pc = StatePreparationCircuit(prep_state_basis_indxs, self._nqubit)  # state preparation circuit
+        mc = MeasurementCircuit(meas_basis_pauli_indxs, self._nqubit)  # measurement basis circuit
+
+        p = Processor(self._backend, self._nqubit*2, self._source)  # A Processor with corresponding backend and source
+        qname = 'q'
+        for i in range(self._nqubit):
+            p.add_port(i*2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))  # set ports correctly
+
+        p.add(0, pc.build_preparation_circuit())  # Add state preparation circuit to the left of the operator
+        p.add(0, self._operator_processor)  # including the operator (as a processor)
+        p.add(0, mc.build_measurement_circuit())  # Add measurement basis circuit to the right of the operator
+
+        # Clear any inbuilt post-selection and heralding from perceval
+        # - important for tomography to get output without inbuilt normalization of perceval
+
+        p.clear_postselection()
+        inbuilt_herald_ports = self._operator_processor.heralds  # to remove inbuilt heralds from Perceval processor
+        for h_pos in inbuilt_herald_ports.keys():
+            p.remove_port(h_pos)
+
+        if self._post_process is True:
+            # perhaps in future a post_process setup will be needed
+            raise ValueError("Setting a postprocess is not implemented yet")
+
+        if self._renormalization is None:
+            # postselection on heralded modes if no renormalization
+            ps = PostSelect()
+            for m in self._heralded_modes:
+                ps.eq([m[0]], m[1])
+            p.set_postselection(ps)
+
+        p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
+        p.with_input(self._input_state_dist_config())
+
+        output_distribution = p.probs()["results"]
+        return output_distribution
+
     def _stokes_parameter(self, prep_state_basis_indxs, meas_basis_pauli_indxs):
         """
         Computes the Stokes parameter S_i for state prep_state_basis_indxs after operator_circuit
 
         :param prep_state_basis_indxs: list of length of number of qubits representing the preparation circuit
-        :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we are
-        measuring
+        :param meas_basis_pauli_indxs: list of length of number of qubits representing the measurement circuit and the
+         eigenvector we are measuring
         :return: float
         """
-        tomography_circ = self._tomography_circuit(prep_state_basis_indxs, meas_basis_pauli_indxs)
-
-        simulator = Simulator(self._backend)  # todo: change to Processor
-        simulator.set_circuit(tomography_circ)
-
-        if self._renormalization is None:
-            # postselection if no renormalization # IMPORTANT FOR TOMOGRAPHY
-            ps = PostSelect()
-            # Arman sets manual postselection here to prevent Perceval from any default normalization
-            if self._post_process:
-                for m in range(self._nqubit):
-                    ps.eq([2 * m, 2 * m + 1], 1)
-            for m in self._heralded_modes:
-                ps.eq([m[0]], m[1])
-            simulator.set_postselection(ps)
-            # todo: try with not doing the stuff in between L 283 -> L290.
-            #  no magical renorm or selection - simply raw output
-            # keep renorm==1. Add methods to renormalize - user knows what they are doing.
-            # todo: check logical performance (chat with Eric) - maybe multiply with logical performance
-            #  value for denormalized output.
-
-        input_state = BasicState("|1,0>")  # input state accounting the heralded modes
-        for _ in range(1, self._nqubit):
-            input_state *= BasicState("|1,0>")
-        for m in self._heralded_modes: # setting input for heralded modes
-            input_state *= BasicState([m[1]])
-        input_distribution = self._source.generate_distribution(expected_input=input_state)
-
-        simulator.set_min_detected_photon_filter(0)
-        # does not work on real QPU, - need atleast one for QPU
-        output_distribution = simulator.probs_svd(input_distribution)["results"]
-        # from what I understand - this output_distribution should not have
-        # any predefined normalization
+        output_distribution = self._tomography_processor(prep_state_basis_indxs, meas_basis_pauli_indxs)
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0
@@ -327,19 +332,20 @@ class QuantumStateTomography:
                         if meas_basis_pauli_indxs[j] != 0:
                             eta *= -1
                 for m in self._heralded_modes:
+                    # Todo: Discuss with Stephen on how much liberty does
+                    #  the user needs for heralded modes
                     measurement_state *= BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
 
-        # TODO: fix renormalization
         if self._renormalization is None:
             return stokes_param
         return stokes_param / self._renormalization
 
-    def perform_quantum_state_tomography(self, state):
+    def perform_quantum_state_tomography(self, state_index):
         """
         Computes the density matrix of a state after the operator_circuit
 
-        :param state: list of length of number of qubits representing the preparation circuit
+        :param state_index: list of length of number of qubits to index the corresponding preparation circuit
         :return: 2**nqubit x 2**nqubit array
         """
         d = 2 ** self._nqubit
@@ -351,24 +357,27 @@ class QuantumStateTomography:
                 i[k] = j1 // (4 ** k)
                 j1 = j1 % (4 ** k)
             i.reverse()
-            density_matrix += self._stokes_parameter(prep_state_basis_indxs=state, meas_basis_pauli_indxs=i) * fixed_basis_ops(j, self._nqubit)
+            density_matrix += self._stokes_parameter(prep_state_basis_indxs=state_index, meas_basis_pauli_indxs=i) * \
+                              fixed_basis_ops(j, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
         return density_matrix
 
 
-class QuantumProcessTomography:
-    def __init__(self, nqubit: int, operator_circuit: Circuit, source: Source = Source(), backend=SLOSBackend(),
-                 heralded_modes: List = [], post_process=False, renormalization=None):
+class QuantumProcessTomography(ATomography):
+    def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
+                 renormalization=None):
+        super().__init__(processor=operator_processor)
         self._nqubit = nqubit
-        self._operator_circuit = operator_circuit
-        self._source = source  # default - ideal source
-        self._backend = backend  # default - SLOSBackend()
+        self._operator_processor = operator_processor
+        self._backend = operator_processor.backend  # default - SLOSBackend()
         self._heralded_modes = heralded_modes
         self._post_process = post_process
         self._renormalization = renormalization
 
-        self._qst = QuantumStateTomography(operator_circuit=self._operator_circuit, nqubit=2,
-                                           heralded_modes=self._heralded_modes)
+        self._qst = QuantumStateTomography(nqubit=self._nqubit,
+                                           operator_processor=self._operator_processor,
+                                           heralded_modes=self._heralded_modes, post_process=self._post_process,
+                                           renormalization=self._renormalization)
 
     @staticmethod
     def _beta_ndarray(j, k, m, n, nqubit):
@@ -393,12 +402,13 @@ class QuantumProcessTomography:
         """
         d = 2 ** self._nqubit
         EPS = []
-        for state in range(d ** 2):
-            l = []
+        for state_counter in range(d ** 2):
+            state_index = []  # indexes the preparation and measurement state from basis
             for i in range(self._nqubit - 1, -1, -1):
-                l.append(state // (4 ** i))
-                state = state % (4 ** i)
-            EPS.append(self._qst.perform_quantum_state_tomography(l))
+                state_index.append(state_counter // (4 ** i))
+                state_counter = state_counter % (4 ** i)
+            EPS.append(self._qst.perform_quantum_state_tomography(state_index))
+
         basis = matrix_basis(self._nqubit)
         L = np.zeros((d ** 2, d ** 2), dtype='complex_')
         for j in range(d ** 2):
@@ -486,12 +496,12 @@ class FidelityTomography:
 
         # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
         EPS = []
-        for state in range(d ** 2):
-            l = []
+        for state_counter in range(d ** 2):
+            state_index = []
             for i in range(self._nqubit - 1, -1, -1):
-                l.append(state // (4 ** i))
-                state = state % (4 ** i)
-            EPS.append(qst.perform_quantum_state_tomography(l))
+                state_index.append(state_counter // (4 ** i))
+                state_counter = state_counter % (4 ** i)
+            EPS.append(qst.perform_quantum_state_tomography(state_index))
 
         basis = matrix_basis(self._nqubit)
         for j in range(d ** 2):
@@ -503,16 +513,5 @@ class FidelityTomography:
             f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
         return np.real(f)
 
-
-#  todo: find out how perceval spitting out output and if heralds are taken into consideration.
-# pdisplay(analyzer_obj) plots the truth table of input-output state. Here only a single combination
-# is used and hence is a 2D graph, however if different combinations of outputs and inputs were to
-# change basis - then to plot the desired result, a 3D representation will be needed. This is what tomography
-# needs. TODO: find out pdisplay for analyzer, first implementation should be similar.
-
 # todo: lack of documentation about converter in tools on perceval documentation. verify wbefore the next version
 #  release
-
-
-# Notes: from Analyzer
-# Analyzer computes post selected output. Q: CAN IT BE TURNED OFF?
