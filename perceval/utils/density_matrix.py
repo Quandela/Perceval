@@ -63,7 +63,9 @@ class DensityMatrix:
     def __getitem__(self, key):
         """key must be a BasicState tuple"""
         key1,key2 = key
-        i,j = self.index[key1], self.index[key2]
+        if not (isinstance(key1, BasicState) and isinstance(key2, BasicState)):
+            raise TypeError("Expected BasicState tuple")
+        i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
     @property
