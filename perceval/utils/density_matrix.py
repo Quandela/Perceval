@@ -30,6 +30,7 @@
 
 from statevector import *
 from math import comb
+from numpy import conj
 
 
 class DensityMatrix:
@@ -52,10 +53,18 @@ class DensityMatrix:
             self.index[key] = k
             k+=1
 
+        self.mat = np.zeros((self.size, self.size), dtype=complex)
+        for sv, p in svd.items():
+            for bst1 in sv.keys():
+                for bst2 in sv.keys():
+                    i, j = self.index[bst1], self.index[bst2]
+                    self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
+
     def __getitem__(self, key):
+        """key must be a BasicState tuple"""
         key1,key2 = key
-        i,j = index[key1], index[key2]
-        return self.mat[i,j]
+        i,j = self.index[key1], self.index[key2]
+        return self.mat[i, j]
 
     @property
     def n_max(self):
