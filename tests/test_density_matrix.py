@@ -26,3 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval import StateVector, BasicState, DensityMatrix
+
+
+def test_density_matrix():
+    sv = StateVector({BasicState([0]): 1, BasicState([1]): 1}).normalize()
+    dm = DensityMatrix(sv)
+    assert dm.mat.shape() == (2, 2)
