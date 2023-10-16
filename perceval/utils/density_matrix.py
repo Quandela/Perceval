@@ -53,7 +53,10 @@ class DensityMatrix:
             k+=1
 
     def __getitem__(self, key):
-        pass
+        key1,key2 = key
+        i,j = index[key1], index[key2]
+        return self.mat[i,j]
+
     @property
     def n_max(self):
         return self._n_max
