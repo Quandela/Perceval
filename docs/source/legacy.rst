@@ -20,12 +20,12 @@ State Vector is still a hash map (state, amplitude) but works a bit differently 
 
 State Vector keys, :code:`states`, are obtained with method :code:`keys`:
 
-From version 0.8
+From version 0.9
 
 >>> for state in state_vector:
 >>>   assert state in state_vector
 
-To version 0.9
+To version 0.10
 
 >>> for state in state_vector.keys():
 >>>   assert state in state_vector
@@ -42,12 +42,11 @@ To version 0.10
 >>> for state, amplitude in state_vector:
 >>>   assert state_vector[state] == amplitude
 
-Using numpy with a State Vector
-+++++++++++++++++++++++++++++++
+Using :code:`numpy` scalars in StateVector arithmetic
++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Our C++ module (Exqalibur) interact badly with Numpy.
-
-That's why the right multiplication by a numpy object and a StateVector is broken and will raise a ValueError:
+Exqalibur C++ package may interact badly with :code:`numpy` types depending on the operand order in some arithmetic operations.
+Multiplying a :code:`numpy` scalar (left operand) with a StateVector (right operand) fails as :code:`numpy` has the priority on an operation it's unable to perform correctly.
 
 From version 0.9
 
@@ -63,7 +62,7 @@ To version 0.10
 >>> # sv1 = numpy.int16(4) * state_vector # will raise a ValueError
 >>> sv2 = state_vector * numpy.int16(4)
 
-.. note:: StateVector will interact badly with any numpy object representing a number
+.. note:: StateVector will interact badly with any :code:`numpy` scalar type
 
 AnnotatedBasicState
 ^^^^^^^^^^^^^^^^^^^
