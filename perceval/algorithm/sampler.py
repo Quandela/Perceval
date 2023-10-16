@@ -87,18 +87,23 @@ class Sampler(AAlgorithm):
     def _create_job(self, method: str):
         assert self._input_available(), "Missing input state"
         primitive, converter = self._get_primitive_converter(method)
-        method_is_probs = method.find('sample') == -1
-        primitive_is_probs = primitive.find('sample') == -1
+        if primitive is None:
+            raise RuntimeError(
+                f"cannot find a compatible primitive to execute {method} in {self._processor.available_commands}")
+        method_is_probs = (method.find('sample') == -1)
+        primitive_is_probs = (primitive.find('sample') == -1)
 
-        delta_parameters = {}
+        delta_parameters = {"command": {}, "mapping": {}}
         # adapt the parameters list
-        command_param_names = [] if method == 'probs' else ['max_samples']
+        command_param_names = [] if primitive_is_probs else ['max_samples']
         if not method_is_probs and primitive_is_probs:
-            delta_parameters['max_samples'] = None
+            delta_parameters["mapping"]['max_samples'] = None  # Is to be filled be job._handle_params
+            delta_parameters["mapping"]['max_shots'] = self._max_shots
         elif method_is_probs and not primitive_is_probs:
-            delta_parameters['max_samples'] = self.PROBS_SIMU_SAMPLE_COUNT
-        assert primitive is not None, \
-            f"cannot find primitive to execute {method} in {self._processor.available_commands}"
+            delta_parameters["command"]['max_samples'] = self.PROBS_SIMU_SAMPLE_COUNT
+        elif not method_is_probs and not primitive_is_probs:
+            delta_parameters["command"]['max_samples'] = None  # Is to be filled be job._handle_params
+
         if self._processor.is_remote:
             job_context = None
             if converter:
@@ -115,6 +120,7 @@ class Sampler(AAlgorithm):
             func_name = f"_{primitive}_iterate_locally" if self._iterator else f"_{primitive}_wrapper"
             return LocalJob(getattr(self, func_name),
                             result_mapping_function=converter,
+                            command_param_names=command_param_names,
                             delta_parameters=delta_parameters)
 
     @property
