@@ -171,6 +171,8 @@ class Sampler(AAlgorithm):
             self.add_iteration(**iter_params)
 
     def _probs_wrapper(self, progress_callback: Callable = None):
+        # max_shots is used as the invert of the precision set in the probs computation
+        # Rationale: mimic the fact that the more shots, the more accurate probability distributions are.
         precision = None if self._max_shots is None else min(1e-6, 1/self._max_shots)
         return self._processor.probs(precision, progress_callback)
 

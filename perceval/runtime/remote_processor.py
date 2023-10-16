@@ -30,11 +30,10 @@ import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
 
-from perceval.backends import SLOSBackend
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source
 from perceval.components.port import PortLocation, APort
-from perceval.utils import BasicState, StateVector, LogicalState, PMetadata
+from perceval.utils import BasicState, LogicalState, PMetadata
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -222,7 +221,7 @@ class RemoteProcessor(AProcessor):
         if param_values:
             for n, v in param_values.items():
                 c.param(n).set_value(v)
-        lp = Processor(SLOSBackend(), c, Source(losses=losses))
+        lp = Processor("SLOS", c, Source(losses=losses))
         lp.min_detected_photons_filter(1)
         lp.thresholded_output(self._thresholded_output)
         lp.with_input(self._input_state)
