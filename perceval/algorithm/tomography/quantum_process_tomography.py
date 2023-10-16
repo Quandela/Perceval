@@ -63,7 +63,7 @@ def fixed_basis_ops(j, nqubit):
 
     :param j: int between 0 and 4**nqubit-1
     :param nqubit: number of qubits
-    :return: 2**nqubitx2**nqubit array
+    :return: 2**nqubit x 2**nqubit array
     """
     if nqubit == 1:
         return pauli(j)
@@ -82,7 +82,7 @@ def canonical_basis_ops(j, nqubit):
 
     :param j: int between 0 and 4**nqubit-1
     :param nqubit: number of qubits
-    :return: 2**nqubitx2**nqubit array
+    :return: 2**nqubit x 2**nqubit array
     """
     d = 2 ** nqubit
     R = np.zeros((d, d), dtype='complex_')
@@ -94,46 +94,6 @@ def krauss_repr_ops(m, rhoj, n, nqubit):
     # computes the Krauss representation of the operator given by ErhoE, where E are fixed set
     # of operators and rho is the one in canonical basis
     return np.dot(fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(fixed_basis_ops(n, nqubit)))))
-
-
-def is_physical(chi, eigen_tolerance=10 ** (-6)):
-    """
-    Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
-
-    :param chi: chi of a quantum map computed from Quantum Process Tomography
-    :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-    :return: bool and string
-    """
-    d2 = len(chi)
-    nqubit = int(np.log2(d2) / 2)
-    # check if trace preserving
-    b = True
-    s = ""
-    if not np.isclose(np.trace(chi), 1):
-        b = False
-        print("trace :", np.trace(chi))
-        s += "|trace not 1|"
-    # check if hermitian
-    for i in range(d2):
-        for j in range(i, d2):
-            if not np.isclose(chi[i][j], np.conjugate(chi[j][i])):
-                b = False
-                s += "|not hermitian|"
-    # check if completely positive with Choi–Jamiołkowski isomorphism
-    choi = 0
-    for n in range(d2):
-        P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, nqubit)))])))
-        for m in range(d2):
-            choi += chi[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, nqubit)))]), P_n)
-    choi /= 2 ** nqubit
-    eigenvalues = np.linalg.eigvalsh(choi)
-    if np.any(eigenvalues < -eigen_tolerance):
-        b = False
-        print("smallest eigenvalue :", eigenvalues[0])
-        s += "|not CP|"
-    if b:
-        return True
-    return False, s
 
 
 def thresh(X, eps=10 ** (-6)):
@@ -450,6 +410,39 @@ class QuantumProcessTomography(ATomography):
         lambd = self._lambda_target(operator)
         X = np.dot(np.linalg.pinv(beta), lambd)
         return vector_to_matrix(X)
+
+    def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
+        """
+        Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+        :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
+        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+        :return: bool and string
+        """
+        ATomography.is_physical(chi_matrix)  # Todo: fix tmrw how inheriting is done; i am sure there is a better way
+        d2 = len(chi_matrix)
+        # nqubit = int(np.log2(d2) / 2)
+        # # check if trace preserving
+        b = True
+        s = ""
+
+        # check if completely positive with Choi–Jamiołkowski isomorphism
+        choi = 0
+        nqubit = 2 # TODO :: GET RID OF THIS
+        for n in range(d2):
+            P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, nqubit)))])))
+            for m in range(d2):
+                choi += chi_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, nqubit)))]),
+                                           P_n)
+        choi /= 2 ** nqubit
+        eigenvalues = np.linalg.eigvalsh(choi)
+        if np.any(eigenvalues < -eigen_tolerance):
+            b = False
+            print("smallest eigenvalue :", eigenvalues[0])
+            s += "|not CP|"
+        if b:
+            return True
+        return False, s
 
 
 class FidelityTomography:

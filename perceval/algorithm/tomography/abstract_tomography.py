@@ -28,7 +28,10 @@
 # SOFTWARE.
 
 from perceval.algorithm.abstract_algorithm import AAlgorithm
+from perceval.algorithm.tomography._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, \
+    matrix_to_vector, vector_to_matrix, decomp
 from perceval.components import AProcessor
+import numpy
 
 
 class ATomography(AAlgorithm):
@@ -36,3 +39,33 @@ class ATomography(AAlgorithm):
         super().__init__(processor)
         # Todo: implement is_physical here and then have
         #  QPT and QST use it to test on denisty or chi matrix
+
+    def is_physical(input_matrix, eigen_tolerance=10 ** (-6)):
+        """
+        Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+        :param input_matrix: chi of a quantum map computed from Quantum Process Tomography
+        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+        :return: bool and string
+        """
+        d2 = len(input_matrix)
+        nqubit = int(numpy.log2(d2) / 2)
+        # check if trace preserving
+        b = True
+        s = ""
+        if not numpy.isclose(numpy.trace(input_matrix), 1):
+            b = False
+            print("trace :", numpy.trace(input_matrix))
+            s += "|trace not 1|"
+
+        # check if hermitian
+        for i in range(d2):
+            for j in range(i, d2):
+                if not numpy.isclose(input_matrix[i][j], numpy.conjugate(input_matrix[j][i])):
+                    b = False
+                    s += "|not hermitian|"
+        # todo: find if density matrix is CP too and needs that check
+
+        if b:
+            return True
+        return False, s

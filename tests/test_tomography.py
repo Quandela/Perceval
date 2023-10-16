@@ -31,6 +31,7 @@ import pytest
 import numpy as np
 from scipy.stats import unitary_group
 
+import perceval
 import perceval as pcvl
 from perceval.components import catalog, Processor
 from perceval.backends import SLOSBackend
@@ -51,16 +52,17 @@ def fidelity_op_process_tomography(op, op_proc, nqubit, herald):
 
 def test_fidelity_cnot_operator():
     # set operator circuit, num qubits
-    cnot_circ = catalog["klm cnot"].build_processor()
+    cnot_p = catalog["klm cnot"].build_processor()
     cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
-    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_circ, nqubit=2,
+    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_p, nqubit=2,
                                                    herald=[(4, 0), (5, 1), (6, 0), (7, 1)])
 
     assert cnot_fidelity == pytest.approx(1, 1e-3)  # computed fidelity is around 0.99967
 
 
 def test_fidelity_random_op():
+    # TODO: tes tfailing - fix
     # process tomography to compute fidelity of a random 2 qubit gate operation
     nqubit = 2
     L = []
@@ -77,6 +79,10 @@ def test_fidelity_random_op():
     random_op_proc = Processor(backend=SLOSBackend, m_circuit=random_op_circ.m)
     random_op_proc.add(0, random_op_circ)
     print(random_op_proc, random_op_proc.m)
+
+    # random_U = perceval.Matrix.random_unitary(4)
+    # random_op_proc = Processor(backend=SLOSBackend, m_circuit=4)
+    # random_op_proc.add(0, random_U)
 
     pcvl.pdisplay(random_op_proc)
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2, herald=[])
