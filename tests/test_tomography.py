@@ -35,14 +35,12 @@ import perceval as pcvl
 from perceval.components import catalog, Processor
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
-from perceval.algorithm.tomography.quantum_process_tomography import QuantumStateTomography, QuantumProcessTomography, \
-    FidelityTomography
+from perceval.algorithm.tomography.quantum_process_tomography import QuantumProcessTomography, FidelityTomography
 
 
 def fidelity_op_process_tomography(op, op_proc, nqubit, herald):
     # create process tomography object
     qpt = QuantumProcessTomography(nqubit=nqubit, operator_processor=op_proc, heralded_modes=herald)
-    #qpt = QuantumProcessTomography(nqubit=nqubit, operator_circuit=op_circ, heralded_modes=herald)
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
@@ -80,7 +78,7 @@ def test_fidelity_random_op():
     random_op_proc.add(0, random_op_circ)
     print(random_op_proc, random_op_proc.m)
 
-    perceval.pdisplay(random_op_proc)
+    pcvl.pdisplay(random_op_proc)
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2, herald=[])
 
     #assert random_op_fidelity == pytest.approx(1, 1e-6)
