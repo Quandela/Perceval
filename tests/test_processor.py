@@ -28,8 +28,8 @@
 # SOFTWARE.
 
 import pytest
-from perceval.components import Circuit, Processor, BS, Source, catalog
-from perceval.utils import BasicState, StateVector, SVDistribution
+from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
+from perceval.utils import BasicState, StateVector, SVDistribution, Encoding
 from perceval.backends import Clifford2017Backend
 
 
@@ -155,16 +155,16 @@ def test_processor_composition():
 
 
 def test_add_remove_ports():
-    processor = pcvl.Processor("SLOS", 6)
-    p0 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q0")
-    p1 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q1")
-    p2 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q2")
-    processor.add_port(0, p0, pcvl.PortLocation.OUTPUT)
+    processor = Processor("SLOS", 6)
+    p0 = Port(Encoding.DUAL_RAIL, "q0")
+    p1 = Port(Encoding.DUAL_RAIL, "q1")
+    p2 = Port(Encoding.DUAL_RAIL, "q2")
+    processor.add_port(0, p0, PortLocation.OUTPUT)
     processor.add_port(2, p1)
-    processor.add_port(4, p2, pcvl.PortLocation.INPUT)
+    processor.add_port(4, p2, PortLocation.INPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
-        processor.add_port(4, p2, pcvl.PortLocation.INPUT)
+    with pytest.raises(UnavailableModeException):
+        processor.add_port(4, p2, PortLocation.INPUT)
 
     assert processor.in_port_names == ["", "", "q1", "q1", "q2", "q2"]
     assert processor.out_port_names == ["q0", "q0", "q1", "q1", "", ""]
@@ -183,12 +183,12 @@ def test_add_remove_ports():
     assert processor.get_output_port(4) is None
     assert processor.get_output_port(5) is None
 
-    processor.remove_port(2, pcvl.PortLocation.OUTPUT)
+    processor.remove_port(2, PortLocation.OUTPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
-        processor.remove_port(2, pcvl.PortLocation.OUTPUT)
+    with pytest.raises(UnavailableModeException):
+        processor.remove_port(2, PortLocation.OUTPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
+    with pytest.raises(UnavailableModeException):
         processor.add_port(2, p1)
 
     assert processor.in_port_names == ["", "", "q1", "q1", "q2", "q2"]
@@ -208,12 +208,12 @@ def test_add_remove_ports():
     assert processor.get_output_port(4) is None
     assert processor.get_output_port(5) is None
 
-    processor.remove_port(0, pcvl.PortLocation.OUTPUT)
-    processor.remove_port(2, pcvl.PortLocation.INPUT)
-    processor.remove_port(4, pcvl.PortLocation.INPUT)
+    processor.remove_port(0, PortLocation.OUTPUT)
+    processor.remove_port(2, PortLocation.INPUT)
+    processor.remove_port(4, PortLocation.INPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
-        processor.remove_port(2, pcvl.PortLocation.INPUT)
+    with pytest.raises(UnavailableModeException):
+        processor.remove_port(2, PortLocation.INPUT)
 
     for i in range(6):
         assert processor.get_input_port(i) is None
