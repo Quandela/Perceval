@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 
-from statevector import *
+from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
 
