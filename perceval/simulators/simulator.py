@@ -397,8 +397,14 @@ class Simulator(ISimulator):
         result_sv.normalize()
         return result_sv
 
-    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState]) -> SVDistribution:
-        """Compute the SVDistribution evolved through a Linear Optical circuit"""
+    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState], progress_callback: Optional[Callable] = None) -> SVDistribution:
+        """
+        Compute the SVDistribution evolved through a Linear Optical circuit
+
+        :param svd: The input StateVector distribution
+        :param progress_callback: A function with the signature `func(progress: float, message: str)`
+        :return: The output StateVector Distribution
+        """
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
 
