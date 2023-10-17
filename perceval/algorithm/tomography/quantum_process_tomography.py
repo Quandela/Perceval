@@ -212,7 +212,7 @@ class QuantumStateTomography(ATomography):
             # setting the input state for the gate qubit modes
             input_state *= BasicState("|1,0>")
         for m in self._heralded_modes:
-            # setting the input for heralded modes # todo: herald
+            # setting the input for heralded modes # todo: herald from processor?
             input_state *= BasicState([m[1]])
         input_distribution = self._source.generate_distribution(expected_input=input_state)
         return input_distribution
@@ -324,7 +324,7 @@ class QuantumStateTomography(ATomography):
         :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
         :return: list with findings of the tests
         """
-        # Todo: discuss implementation of usage with Stephen.
+        # Todo: discuss implementation of usage of is_physical() with Stephen.
         # density matrix is CP, Hermitian, trace can be between 0 and 1
 
         res = super().is_physical(density_matrix, eigen_tolerance)
