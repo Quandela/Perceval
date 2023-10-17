@@ -27,5 +27,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .sampler import Sampler
-from .analyzer import Analyzer
+from .abstract_tomography import ATomography
+from .quantum_process_tomography import QuantumProcessTomography, QuantumStateTomography, FidelityTomography
