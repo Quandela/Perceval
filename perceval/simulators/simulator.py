@@ -198,7 +198,7 @@ class Simulator(ISimulator):
         result.normalize()
         return result
 
-    def post_select_on_statevector(self, sv: StateVector) -> BSDistribution:
+    def _post_select_on_statevector(self, sv: StateVector) -> BSDistribution:
         self._logical_perf = 1
         if not self._postselect.has_condition:
             sv.normalize()
@@ -427,9 +427,11 @@ class Simulator(ISimulator):
 
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd):
-            new_sv = self.post_select_on_statevector(self.evolve(sv))
-            new_svd[new_sv] = p
-
+            if min(sv.n) >= self._min_detected_photons:
+                new_sv = self._post_select_on_statevector(self.evolve(sv))
+                new_svd[new_sv] = p
+            else:
+                self._physical_perf -= p
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
