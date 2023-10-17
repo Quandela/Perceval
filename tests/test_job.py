@@ -44,11 +44,11 @@ def quadratic_count_down(n, speed=0.1, progress_callback=None):
 
 
 def test_run_sync_0():
-    assert (pcvl.LocalJob(quadratic_count_down)(5) == [0, 1, 4, 9, 16])
+    assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])(5) == [0, 1, 4, 9, 16])
 
 
 def test_run_sync_1():
-    job = pcvl.LocalJob(quadratic_count_down)
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
     assert job.execute_sync(5) == [0, 1, 4, 9, 16]
     assert job.is_complete
     assert job.status.success
@@ -59,8 +59,8 @@ def test_run_sync_1():
 
 
 def test_run_async():
-    job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.3) is job
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    assert job.execute_async(5, 0.3) is job
     assert not job.is_complete
     counter = 0
     while not job.is_complete:
@@ -77,8 +77,8 @@ def test_run_async():
 
 
 def test_run_async_fail():
-    job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.01) is job
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    assert job.execute_async(5, 0.01) is job
     counter = 0
     while not job.is_complete:
         counter += 1
@@ -92,8 +92,8 @@ def test_run_async_fail():
 
 
 def test_run_async_cancel():
-    job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.3) is job
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    assert job.execute_async(5, 0.3) is job
     job.cancel()
     while job.is_running:
         time.sleep(0.1)

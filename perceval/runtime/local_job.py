@@ -35,8 +35,22 @@ from .job_status import JobStatus, RunningStatus
 
 
 class LocalJob(Job):
-    def __init__(self, fn: Callable, result_mapping_function: Callable = None, delta_parameters = None):
-        super().__init__(result_mapping_function=result_mapping_function, delta_parameters=delta_parameters)
+    def __init__(self,
+                 fn: Callable,
+                 result_mapping_function: Callable = None,
+                 delta_parameters: dict = None,
+                 command_param_names: list = None):
+        """
+        Runs a task locally (i.e. on the computer running Perceval)
+
+        :param fn: Function to be called by the job
+        :param result_mapping_function: Optional results post-processing function (e.g. can be used to convert results)
+        :param delta_parameters: mapping of {'param_name': param_value}
+        :param command_param_names: names of `fn` parameters which can be mapped from the *args of __call__
+        """
+        super().__init__(result_mapping_function=result_mapping_function,
+                         delta_parameters=delta_parameters,
+                         command_param_names=command_param_names)
         self._fn = fn
         self._status = JobStatus()
         self._worker = None
@@ -55,20 +69,20 @@ class LocalJob(Job):
 
     def _progress_cb(self, progress: float, phase: Optional[str] = None):
         self._status.update_progress(progress, phase)
-
         if self._cancel_requested:
             return {'cancel_requested': True}
         if self._user_cb is not None:
             return self._user_cb(progress, phase)
-        else:
-            return None
+        return None
 
     def execute_sync(self, *args, **kwargs):
-        assert self._status.waiting, "job as already been executed"
-        if 'progress_callback' not in kwargs:
-            kwargs['progress_callback'] = self._progress_cb
-        args, kwargs = self._adapt_parameters(args, kwargs)
-        self._call_fn_safe(*args, **kwargs)
+        assert self._status.waiting, "job has already been executed"
+
+        if 'progress_callback' in kwargs:
+            self._user_cb = kwargs['progress_callback']
+        self._delta_parameters['command']['progress_callback'] = self._progress_cb
+        self._handle_params(args, kwargs)
+        self._call_fn_safe(**self._delta_parameters['command'])
         return self.get_results()
 
     def _call_fn_safe(self, *args, **kwargs):
@@ -89,12 +103,13 @@ class LocalJob(Job):
 
     def execute_async(self, *args, **kwargs) -> Job:
         assert self._status.waiting, "job has already been executed"
-        # we are launching the function in a separate thread
-        if 'progress_callback' not in kwargs:
-            kwargs['progress_callback'] = self._progress_cb
-        args, kwargs = self._adapt_parameters(args, kwargs)
+        if 'progress_callback' in kwargs:
+            self._user_cb = kwargs['progress_callback']
+        self._delta_parameters['command']['progress_callback'] = self._progress_cb
+        self._handle_params(args, kwargs)
         self._status.start_run()
-        self._worker = threading.Thread(target=self._call_fn_safe, args=args, kwargs=kwargs)
+        # we are launching the function in a separate thread
+        self._worker = threading.Thread(target=self._call_fn_safe, kwargs=self._delta_parameters['command'])
         self._worker.start()
         return self
 
@@ -110,9 +125,8 @@ class LocalJob(Job):
         if self._result_mapping_function:
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
-                                                                         **self._delta_parameters)
+                                                                         **self._delta_parameters['mapping'])
             elif 'results_list' in self._results:
                 for res in self._results["results_list"]:
-                    res["results"] = self._result_mapping_function(res['results'],
-                                                                   **self._delta_parameters)
+                    res["results"] = self._result_mapping_function(res['results'], **self._delta_parameters['mapping'])
         return self._results

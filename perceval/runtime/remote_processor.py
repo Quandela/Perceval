@@ -31,7 +31,7 @@ from typing import Dict, List
 from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Source
+from perceval.components import ACircuit, Processor, Source
 from perceval.components.port import PortLocation, APort
 from perceval.utils import BasicState, LogicalState, PMetadata
 from perceval.serialization import deserialize, serialize
@@ -200,3 +200,62 @@ class RemoteProcessor(AProcessor):
     def source(self, source: Source):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
+
+    def _compute_sample_of_interest_probability(self,
+                                                transmittance: float = 0.06,
+                                                param_values: dict = None
+                                                ) -> float:
+        # TODO retrieve transmittance from the cloud worker
+        losses = 1 - transmittance
+        n = self._input_state.n
+        photon_filter = n
+        if self._min_detected_photons is not None:
+            photon_filter = self._min_detected_photons
+            if photon_filter > n:
+                return 0
+        if photon_filter < 2:
+            return 1
+
+        # Simulation with a noisy source (only losses)
+        c = self.linear_circuit(flatten=True).copy()
+        if param_values:
+            for n, v in param_values.items():
+                c.param(n).set_value(v)
+        lp = Processor("SLOS", c, Source(losses=losses))
+        lp.min_detected_photons_filter(1)
+        lp.thresholded_output(self._thresholded_output)
+        lp.with_input(self._input_state)
+        probs = lp.probs()
+        p_above_filter_ns = 0
+        for state, prob in probs['results'].items():
+            if state.n >= photon_filter:
+                p_above_filter_ns += prob
+        return p_above_filter_ns
+
+    def estimate_required_shots(self, nsamples: int, param_values: dict = None) -> int:
+        """
+        Compute an estimate number of required shots given the platform and the user request.
+        The circuit, input state, minimum photon filter are taken into account.
+
+        :param nsamples: Number of expected samples of interest
+        :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
+            for this computation to run.
+        :return: Estimate of the number of shots the user needs to acquire enough samples of interest
+        """
+        p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
+        if p_interest == 0:
+            return None
+        return round(nsamples / p_interest)
+
+    def estimate_expected_samples(self, nshots: int, param_values: dict = None) -> int:
+        """
+        Compute an estimate number of samples the user can expect given the platform and the user request.
+        The circuit, input state, minimum photon filter are taken into account.
+
+        :param nshots: Number of shots the user is willing to consume
+        :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
+            for this computation to run.
+        :return: Estimate of the number of samples of interest the user can expect back
+        """
+        p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
+        return round(nshots * p_interest)

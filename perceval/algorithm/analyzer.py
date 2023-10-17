@@ -36,7 +36,7 @@ from perceval.components import AProcessor
 
 
 class Analyzer(AAlgorithm):
-    def __init__(self, processor: AProcessor, input_states, output_states=None, mapping=None):
+    def __init__(self, processor: AProcessor, input_states, output_states=None, mapping=None, **kwargs):
         """
             Initialization of a processor analyzer
             `simulator` is a simulator instance initialized for the circuit
@@ -48,8 +48,8 @@ class Analyzer(AAlgorithm):
         """
         if mapping is None:
             mapping = {}
-        super().__init__(processor)
-        self._sampler = Sampler(processor)
+        super().__init__(processor, **kwargs)
+        self._sampler = Sampler(processor, **kwargs)
         self._mapping = mapping
         self.performance = None
         self.error_rate = None

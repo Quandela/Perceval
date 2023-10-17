@@ -33,22 +33,26 @@ import perceval as pcvl
 from perceval.components import BS, PS, Processor, Source, catalog
 
 
-def test_sampler():
+# To speed up the tests, lower the sample count required to compute a probability distribution
+Sampler.PROBS_SIMU_SAMPLE_COUNT = 1000
+
+
+@pytest.mark.parametrize("backend_name", ["SLOS", "CliffordClifford2017"])  # MPS cannot be used with >2-modes components
+def test_sampler_standard(backend_name):
     TRANSMITTANCE = 0.9
     imperfect_source = Source(emission_probability=TRANSMITTANCE)
-    for backend_name in ['CliffordClifford2017', 'Naive', 'SLOS']:  # MPS cannot be used with >2-modes components
-        p = catalog['postprocessed cnot'].build_processor(backend=backend_name)
-        p.source = imperfect_source
-        p.min_detected_photons_filter(0)
-        p.with_input(pcvl.BasicState([1, 0, 1, 0]))
-        sampler = Sampler(p)
-        probs = sampler.probs()
-        assert probs['results'][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1)
-        assert probs['results'][pcvl.BasicState([1, 0, 0, 1])] == pytest.approx(0)
-        samples = sampler.samples(4)
-        assert len(samples['results']) == 4
-        sample_count = sampler.sample_count(100)
-        assert 90 < sum(list(sample_count['results'].values())) < 110
+    p = catalog['postprocessed cnot'].build_processor(backend=backend_name)
+    p.source = imperfect_source
+    p.min_detected_photons_filter(0)
+    p.with_input(pcvl.BasicState([1, 0, 1, 0]))
+    sampler = Sampler(p)
+    probs = sampler.probs()
+    assert probs['results'][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1)
+    assert probs['results'][pcvl.BasicState([1, 0, 0, 1])] == pytest.approx(0)
+    samples = sampler.samples(4)
+    assert len(samples['results']) == 4
+    sample_count = sampler.sample_count(100)
+    assert 90 < sum(list(sample_count['results'].values())) < 110
 
 
 def test_sampler_missing_input_state():
@@ -100,25 +104,42 @@ def test_sampler_iteration_bad_params():
     with pytest.raises(AssertionError):
         sampler.add_iteration(input_state=pcvl.BasicState([1, 0, 0]))  # input state too large
 
-def test_sampler_iterator():
+
+@pytest.mark.parametrize("backend_name", ["SLOS", "CliffordClifford2017"])
+def test_sampler_iterator(backend_name):
     c = BS() // PS(phi=pcvl.P("phi1")) // BS()
-    for backend_name in ["SLOS", "CliffordClifford2017"]:
-        p = pcvl.Processor(backend_name, c)
-        sampler = Sampler(p)
-        iteration_list = [
-            {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
-            {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
-            {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1}
-        ]
-        sampler.add_iteration_list(iteration_list)
-        rl = sampler.probs()['results_list']
-        assert len(rl) == len(iteration_list)
-        # Test that the results changes given the iteration parameters (avoid Clifford as sampling adds randomness)
-        if backend_name == "SLOS":
-            assert rl[0]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.7701511529340699)
-            assert rl[1]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.38639895265345636)
-            assert rl[2]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0)
-        res = sampler.samples(10)
-        assert len(res['results_list']) == len(iteration_list)
-        res = sampler.sample_count(100)
-        assert len(res['results_list']) == len(iteration_list)
+    p = pcvl.Processor(backend_name, c)
+    sampler = Sampler(p)
+    iteration_list = [
+        {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+        {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1}
+    ]
+    sampler.add_iteration_list(iteration_list)
+    rl = sampler.probs()['results_list']
+    assert len(rl) == len(iteration_list)
+    # Test that the results changes given the iteration parameters (avoid Clifford as sampling adds randomness)
+    if backend_name == "SLOS":
+        assert rl[0]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.7701511529340699)
+        assert rl[1]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.38639895265345636)
+        assert rl[2]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0)
+    res = sampler.samples(max_samples=10)
+    assert len(res['results_list']) == len(iteration_list)
+    res = sampler.sample_count(max_samples=100)
+    assert len(res['results_list']) == len(iteration_list)
+
+
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "CliffordClifford2017"])
+def test_sampler_shots(backend_name):
+    p = Processor(backend_name, BS(theta=0.8))
+    p.with_input(pcvl.BasicState([1, 1]))
+    p.thresholded_output(True)
+    sampler = Sampler(p)  # Without a max_shots_per_call value
+    samples = sampler.samples(max_samples=100)
+    assert len(samples['results']) == 100  # You get the number of samples you asked for
+
+    sampler = Sampler(p, max_shots_per_call=10)
+    samples = sampler.samples(max_samples=100)
+    assert len(samples['results']) <= 10
+    samples = sampler.samples()
+    assert len(samples['results']) <= 10

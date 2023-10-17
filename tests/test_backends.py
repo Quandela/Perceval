@@ -185,7 +185,7 @@ def test_slos_cnot_with_mask():
     non_post_selected_probability = 0
     slos_cnot.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
     for output_state, prob in slos_cnot.prob_distribution().items():
-        if output_state[0] or output_state[5]:
+        if output_state[4] or output_state[5]:
             non_post_selected_probability += prob
     assert pytest.approx(non_post_selected_probability) == 0
 
