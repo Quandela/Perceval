@@ -316,6 +316,36 @@ class QuantumStateTomography(ATomography):
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
         return density_matrix
 
+    def is_physical(self, density_matrix, eigen_tolerance=10 ** (-6)):
+        """
+        Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+        :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
+        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+        :return: list with findings of the tests
+        """
+        # Todo: discuss implementation of usage with Stephen.
+        # density matrix is CP, Hermitian, trace can be between 0 and 1
+
+        res = super().is_physical(density_matrix, eigen_tolerance)
+        d2 = len(density_matrix)
+
+        # check if completely positive with Choi–Jamiołkowski isomorphism
+        choi = 0
+        for n in range(d2):
+            P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, self._nqubit)))])))
+            for m in range(d2):
+                choi += density_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, self._nqubit)))]), P_n)
+        choi /= 2 ** self._nqubit
+        eigenvalues = np.linalg.eigvalsh(choi)
+        if np.any(eigenvalues < -eigen_tolerance):
+            res.append("|not Completely Positive|smallest eigenvalue :"+str(eigenvalues[0]))
+        else:
+            res.append("|Completely Positive|")
+
+        return res
+
+
 
 class QuantumProcessTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
@@ -400,37 +430,29 @@ class QuantumProcessTomography(ATomography):
 
     def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
         """
-        Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+        Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
         :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
         :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-        :return: bool and string
+        :return: list with findings of the tests
         """
-        super().is_physical(Processor, chi_matrix)  # Todo: fix tmrw how inheriting is done; i am sure there is a better way
+        res = super().is_physical(chi_matrix, eigen_tolerance)
         d2 = len(chi_matrix)
-        # nqubit = int(np.log2(d2) / 2)
-        # # check if trace preserving
-        b = True
-        s = ""
 
         # check if completely positive with Choi–Jamiołkowski isomorphism
         choi = 0
-        nqubit = 2 # TODO :: GET RID OF THIS
         for n in range(d2):
-            P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, nqubit)))])))
+            P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, self._nqubit)))])))
             for m in range(d2):
-                choi += chi_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, nqubit)))]),
-                                           P_n)
-        choi /= 2 ** nqubit
+                choi += chi_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, self._nqubit)))]), P_n)
+        choi /= 2 ** self._nqubit
         eigenvalues = np.linalg.eigvalsh(choi)
         if np.any(eigenvalues < -eigen_tolerance):
-            b = False
-            print("smallest eigenvalue :", eigenvalues[0])
-            s += "|not CP|"
-        if b:
-            return True
-        return False, s
+            res.append("|not Completely Positive|smallest eigenvalue :"+str(eigenvalues[0]))
+        else:
+            res.append("|Completely Positive|")
 
+        return res
 
 class FidelityTomography:
     def __init__(self, nqubit):
