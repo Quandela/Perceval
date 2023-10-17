@@ -28,16 +28,17 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from typing import Dict, Callable
 
 from .job_status import JobStatus, RunningStatus
 
 
 class Job(ABC):
-    def __init__(self, result_mapping_function: Callable = None, delta_parameters=None):
+    def __init__(self, result_mapping_function: Callable = None, delta_parameters=None, command_param_names=None):
         self._results = None
         self._result_mapping_function = result_mapping_function
-        self._delta_parameters = delta_parameters or {}
+        self._delta_parameters = delta_parameters or {"command": {}, "mapping": {}}
+        self._param_names = command_param_names or []
         self._name = "Job"
 
     @property
@@ -50,28 +51,35 @@ class Job(ABC):
             raise TypeError("A job name must be a string")
         self._name = new_name if len(new_name) > 0 else "unnamed"
 
-    def _adapt_parameters(self, args, kwargs):
-        r"""adapt the parameters according to delta_parameters map passed to the Job
-            change delta parameters to reintegrate the missing parameters"""
-        new_delta_parameters = {}
+    def _handle_params(self, args, kwargs):
+        """Handle args and kwargs parameters from __call__, execute_sync or execute_async
+        Split parameters between the command and the post-process function (mapping),
+        See: self._delta_parameters and self._param_names
+        """
         args = list(args)
-        for k, v in self._delta_parameters.items():
-            if v is None:
-                if k in kwargs:
-                    new_delta_parameters[k] = kwargs[k]
-                    del kwargs[k]
-                else:
-                    new_delta_parameters[k] = args.pop(0)
-            else:
-                kwargs[k] = v
-        self._delta_parameters = new_delta_parameters
-        return tuple(args), kwargs
+        if len(args) > len(self._param_names):
+            self._delta_parameters['mapping']['max_samples'] = args.pop()
+        for idx, unnamed_arg in enumerate(args):
+            param_name = self._param_names[idx]
+            if param_name in kwargs:  # Parameter exists twice (in args and in kwargs)
+                raise RuntimeError(f'Parameter named {param_name} was passed twice (in *args and **kwargs)')
+            self._delta_parameters['command'][param_name] = unnamed_arg
+        for k, v in self._delta_parameters['command'].items():
+            if v is None and k in kwargs:
+                self._delta_parameters['command'][k] = kwargs[k]
+                del kwargs[k]
+        for k, v in self._delta_parameters['mapping'].items():
+            if v is None and k in kwargs:
+                self._delta_parameters['mapping'][k] = kwargs[k]
+                del kwargs[k]
+        if kwargs:
+            raise RuntimeError(f"Unused parameters in user call ({list(kwargs.keys())})")
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def __call__(self, *args, **kwargs) -> Dict:
         return self.execute_sync(*args, **kwargs)
 
     @abstractmethod
-    def get_results(self) -> Any:
+    def get_results(self) -> Dict:
         pass
 
     @property
@@ -100,7 +108,7 @@ class Job(ABC):
         return self.status.running
 
     @abstractmethod
-    def execute_sync(self, *args, **kwargs) -> Any:
+    def execute_sync(self, *args, **kwargs) -> Dict:
         pass
 
     @abstractmethod

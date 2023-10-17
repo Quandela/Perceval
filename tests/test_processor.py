@@ -28,35 +28,35 @@
 # SOFTWARE.
 
 import pytest
-import perceval as pcvl
-import perceval.components.unitary_components as comp
-from perceval.backends import Clifford2017Backend, SLOSBackend
+from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
+from perceval.utils import BasicState, StateVector, SVDistribution, Encoding
+from perceval.backends import Clifford2017Backend
 
 
-def test_processor_generator_0():
-    p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
-    p.with_input(pcvl.BasicState([0, 1, 1, 0]))
-    assert p.source_distribution == {pcvl.StateVector([0, 1, 1, 0]): 1}
+def test_processor_input_generation_0():
+    p = Processor("Naive", Circuit(4))  # Init with perfect source
+    p.with_input(BasicState([0, 1, 1, 0]))
+    assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
 
 
-def test_processor_generator_1():
-    p = pcvl.Processor("Naive", pcvl.Circuit(4), pcvl.Source(emission_probability=0.2))
-    p.with_input(pcvl.BasicState([0, 1, 1, 0]))
+def test_processor_input_generation_1():
+    p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
+    p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
-        pcvl.StateVector([0, 1, 1, 0]): 0.04,
-        pcvl.StateVector([0, 1, 0, 0]): 0.16,
-        pcvl.StateVector([0, 0, 1, 0]): 0.16,
-        pcvl.StateVector([0, 0, 0, 0]): 0.64
+        StateVector([0, 1, 1, 0]): 0.04,
+        StateVector([0, 1, 0, 0]): 0.16,
+        StateVector([0, 0, 1, 0]): 0.16,
+        StateVector([0, 0, 0, 0]): 0.64
     }
     assert pytest.approx(p.source_distribution) == expected
 
 
-def test_processor_generator_2():
-    source = pcvl.Source(emission_probability=0.2,
-                         multiphoton_component=0.1, multiphoton_model="indistinguishable",
-                         indistinguishability=0.9)
-    p = pcvl.Processor("Naive", pcvl.Circuit(4), source)
-    p.with_input(pcvl.BasicState([0, 1, 1, 0]))
+def test_processor_input_generation_2():
+    source = Source(emission_probability=0.2,
+                    multiphoton_component=0.1, multiphoton_model="indistinguishable",
+                    indistinguishability=0.9)
+    p = Processor("Naive", Circuit(4), source)
+    p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
                 '|0,0,2{_:0},0>': 0.0015490319977879558,
@@ -85,16 +85,16 @@ def test_processor_generator_2():
 
 
 def test_processor_identity_sv():
-    p = pcvl.Processor("Naive", pcvl.Circuit(4))  # Init with perfect source
-    sv = pcvl.BasicState([0, 1, 1, 0]) + pcvl.BasicState([1, 0, 0, 1])
+    p = Processor("Naive", Circuit(4))  # Init with perfect source
+    sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}
 
 
 def test_processor_probs():
-    source = pcvl.Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
-    qpu = pcvl.Processor("Naive", comp.BS(), source)
-    qpu.with_input(pcvl.BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
+    source = Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
+    qpu = Processor("Naive", BS(), source)
+    qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
     qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
     probs = qpu.probs()
     # By default, all states are filtered and physical performance drops to 0
@@ -103,47 +103,68 @@ def test_processor_probs():
     qpu.thresholded_output(False)  # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
-    assert pytest.approx(bsd_out[pcvl.BasicState("|2,0>")]) == 0.5
-    assert pytest.approx(bsd_out[pcvl.BasicState("|0,2>")]) == 0.5
+    assert pytest.approx(bsd_out[BasicState("|2,0>")]) == 0.5
+    assert pytest.approx(bsd_out[BasicState("|0,2>")]) == 0.5
     assert pytest.approx(probs['physical_perf']) == 1
 
 
 def test_processor_samples():
-    proc = pcvl.Processor(Clifford2017Backend(), comp.BS())
+    proc = Processor(Clifford2017Backend(), BS())
 
     # Without annotations
-    proc.with_input(pcvl.BasicState("|1,1>"))
+    proc.with_input(BasicState("|1,1>"))
     samples = proc.samples(500)
-    assert samples["results"].count(pcvl.BasicState([1, 1])) == 0
+    assert samples["results"].count(BasicState([1, 1])) == 0
+    assert len(samples["results"]) == 500
 
     # With annotations
-    proc.with_input(pcvl.SVDistribution({pcvl.BasicState("|{_:0},{_:1}>"): 1}))
+    proc.with_input(SVDistribution({BasicState("|{_:0},{_:1}>"): 1}))
     samples = proc.samples(500)
-    assert samples["results"].count(pcvl.BasicState([1, 1])) > 50
+    assert samples["results"].count(BasicState([1, 1])) > 50
+
+
+def test_processor_samples_max_shots():
+    p = Processor(Clifford2017Backend(), 4)  # Identity circuit with perfect source
+    p.with_input(BasicState([1, 1, 1, 1]))
+    for (max_samples, max_shots) in [(10, 10), (2, 50), (17, 2), (0, 11), (10, 0)]:
+        # In this trivial case, 1 shot = 1 sample, so test this pair of parameters work as a dual threshold system
+        samples = p.samples(max_samples, max_shots)
+        assert len(samples['results']) == min(max_samples, max_shots)
+
+    p = Processor(Clifford2017Backend(), 4, Source(losses=.92))
+    p.add(0, catalog['postprocessed cnot'].build_processor())
+    p.with_input(BasicState([0, 1, 0, 1]))
+    max_samples = 100
+    result_len = {}
+    for max_shots in [400, 1_000, 10_000]:
+        result_len[max_shots] = len(p.samples(max_samples, max_shots)['results'])
+    assert result_len[400] < result_len[1_000]
+    assert result_len[1_000] < result_len[10_000]
+    assert result_len[10_000] == max_samples  # 10k shots is enough to get the expected sample count
 
 
 def test_processor_composition():
-    p = pcvl.catalog['postprocessed cnot'].build_processor()  # Circuit with [0,1] and [2,3] post-selection conditions
-    p.add((0, 1), comp.BS())  # Composing with a component on modes [0,1] should work
+    p = catalog['postprocessed cnot'].build_processor()  # Circuit with [0,1] and [2,3] post-selection conditions
+    p.add((0, 1), BS())  # Composing with a component on modes [0,1] should work
     with pytest.raises(AssertionError):
-        p.add((1, 2), comp.BS())  # Composing with a component on modes [1,2] should fail
-    p_bs = pcvl.Processor("SLOS", comp.BS())
+        p.add((1, 2), BS())  # Composing with a component on modes [1,2] should fail
+    p_bs = Processor("SLOS", BS())
     p.add((0, 1), p_bs)  # Composing with a processor on modes [0,1] should work
     with pytest.raises(AssertionError):
         p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
 
 
 def test_add_remove_ports():
-    processor = pcvl.Processor("SLOS", 6)
-    p0 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q0")
-    p1 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q1")
-    p2 = pcvl.Port(pcvl.Encoding.DUAL_RAIL, "q2")
-    processor.add_port(0, p0, pcvl.PortLocation.OUTPUT)
+    processor = Processor("SLOS", 6)
+    p0 = Port(Encoding.DUAL_RAIL, "q0")
+    p1 = Port(Encoding.DUAL_RAIL, "q1")
+    p2 = Port(Encoding.DUAL_RAIL, "q2")
+    processor.add_port(0, p0, PortLocation.OUTPUT)
     processor.add_port(2, p1)
-    processor.add_port(4, p2, pcvl.PortLocation.INPUT)
+    processor.add_port(4, p2, PortLocation.INPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
-        processor.add_port(4, p2, pcvl.PortLocation.INPUT)
+    with pytest.raises(UnavailableModeException):
+        processor.add_port(4, p2, PortLocation.INPUT)
 
     assert processor.in_port_names == ["", "", "q1", "q1", "q2", "q2"]
     assert processor.out_port_names == ["q0", "q0", "q1", "q1", "", ""]
@@ -162,12 +183,12 @@ def test_add_remove_ports():
     assert processor.get_output_port(4) is None
     assert processor.get_output_port(5) is None
 
-    processor.remove_port(2, pcvl.PortLocation.OUTPUT)
+    processor.remove_port(2, PortLocation.OUTPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
-        processor.remove_port(2, pcvl.PortLocation.OUTPUT)
+    with pytest.raises(UnavailableModeException):
+        processor.remove_port(2, PortLocation.OUTPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
+    with pytest.raises(UnavailableModeException):
         processor.add_port(2, p1)
 
     assert processor.in_port_names == ["", "", "q1", "q1", "q2", "q2"]
@@ -187,12 +208,12 @@ def test_add_remove_ports():
     assert processor.get_output_port(4) is None
     assert processor.get_output_port(5) is None
 
-    processor.remove_port(0, pcvl.PortLocation.OUTPUT)
-    processor.remove_port(2, pcvl.PortLocation.INPUT)
-    processor.remove_port(4, pcvl.PortLocation.INPUT)
+    processor.remove_port(0, PortLocation.OUTPUT)
+    processor.remove_port(2, PortLocation.INPUT)
+    processor.remove_port(4, PortLocation.INPUT)
 
-    with pytest.raises(pcvl.components.UnavailableModeException):
-        processor.remove_port(2, pcvl.PortLocation.INPUT)
+    with pytest.raises(UnavailableModeException):
+        processor.remove_port(2, PortLocation.INPUT)
 
     for i in range(6):
         assert processor.get_input_port(i) is None

@@ -29,5 +29,4 @@
 
 from .sampler import Sampler
 from .analyzer import Analyzer
-from .qrng import QRNG
 from .tomography.abstract_tomography import ATomography

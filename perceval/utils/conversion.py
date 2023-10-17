@@ -34,6 +34,19 @@ import numpy as np
 import random
 
 
+def _deduce_count(count: int, **kwargs) -> int:
+    if count is not None:
+        return count
+    max_shots = kwargs.get("max_shots", None)
+    max_samples = kwargs.get("max_samples", None)
+    if max_shots is not None and max_samples is not None:
+        return min(max_samples, max_shots)  # Not accurate in terms of shot limit
+    count = max_shots or max_samples
+    if count is None:
+        raise RuntimeError("kwargs does not contain sample count information")
+    return count
+
+
 # Conversion functions (samples <=> probs <=> sample_count)
 def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
     results = BSCount()
@@ -47,7 +60,8 @@ def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
     return sample_count_to_probs(samples_to_sample_count(sample_list))
 
 
-def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
+def probs_to_sample_count(probs: BSDistribution, count: int = None, **kwargs) -> BSCount:
+    count = _deduce_count(count, **kwargs)
     perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
     prob_sum = sum(prob for prob in perturbed_dist.values())
@@ -71,7 +85,8 @@ def probs_to_sample_count(probs: BSDistribution, count: int) -> BSCount:
     return results
 
 
-def probs_to_samples(probs: BSDistribution, count: int) -> BSSamples:
+def probs_to_samples(probs: BSDistribution, count: int = None, **kwargs) -> BSSamples:
+    count = _deduce_count(count, **kwargs)
     return probs.sample(count)
 
 
@@ -87,7 +102,9 @@ def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
     return bsd
 
 
-def sample_count_to_samples(sample_count: BSCount, count: int=None) -> BSSamples:
-    if count is None:
+def sample_count_to_samples(sample_count: BSCount, count: int = None, **kwargs) -> BSSamples:
+    try:
+        count = _deduce_count(count, **kwargs)
+    except RuntimeError:
         count = sum([v for v in sample_count.values()])
     return sample_count_to_probs(sample_count).sample(count)
