@@ -339,7 +339,8 @@ class QuantumStateTomography(ATomography):
         choi /= 2 ** self._nqubit
         eigenvalues = np.linalg.eigvalsh(choi)
         if np.any(eigenvalues < -eigen_tolerance):
-            res.append("|not Completely Positive|smallest eigenvalue :"+str(eigenvalues[0]))
+            val = np.round(eigenvalues[0], 5)
+            res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
         else:
             res.append("|Completely Positive|")
 
@@ -448,11 +449,13 @@ class QuantumProcessTomography(ATomography):
         choi /= 2 ** self._nqubit
         eigenvalues = np.linalg.eigvalsh(choi)
         if np.any(eigenvalues < -eigen_tolerance):
-            res.append("|not Completely Positive|smallest eigenvalue :"+str(eigenvalues[0]))
+            val = np.round(eigenvalues[0], 5)
+            res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
         else:
             res.append("|Completely Positive|")
 
         return res
+
 
 class FidelityTomography:
     def __init__(self, nqubit):

@@ -87,4 +87,20 @@ def test_fidelity_random_op():
     pcvl.pdisplay(random_op_proc)
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2, herald=[])
 
-    #assert random_op_fidelity == pytest.approx(1, 1e-6)
+    assert random_op_fidelity == pytest.approx(1, 1e-6)
+
+
+@pytest.mark.parametrize(("renorm", "expected"),
+                         [(None, "|not Completely Positive|smallest eigenvalue :-0.00214"),
+                          (0.0515, "|Completely Positive|")])
+def test_chi_cnot_is_physical(renorm, expected):
+    cnot_p = catalog["klm cnot"].build_processor()
+    herald = [(4, 0), (5, 1), (6, 0), (7, 1)]
+    qpt = QuantumProcessTomography(nqubit=2, operator_processor=cnot_p, heralded_modes=herald, renormalization=renorm)
+
+    chi_op = qpt.chi_matrix()
+    res_is_physical = qpt.is_physical(chi_op)
+
+    assert res_is_physical[0] == "|trace 1|"
+    assert res_is_physical[1] == "|hermitian|"
+    assert res_is_physical[2] == expected
