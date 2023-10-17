@@ -194,15 +194,9 @@ class MeasurementCircuit(Circuit):
 class QuantumStateTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
                  renormalization=None):
-        super().__init__(processor=operator_processor)
-        self._nqubit = nqubit
-        self._operator_processor = operator_processor
+        super().__init__(nqubit, operator_processor, heralded_modes, post_process, renormalization)
         self._source = operator_processor.source  # default - ideal source
         self._backend = operator_processor.backend  # default - SLOSBackend()
-        self._post_process = post_process
-        self._renormalization = renormalization
-        self._heralded_modes = heralded_modes  # user defined heralded modes
-        # TODO:ask with Stephen if they are always similar to default in Perceval
 
     @staticmethod
     def _list_subset_k_from_n(k, n):
@@ -326,14 +320,7 @@ class QuantumStateTomography(ATomography):
 class QuantumProcessTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
                  renormalization=None):
-        super().__init__(processor=operator_processor)
-        self._nqubit = nqubit
-        self._operator_processor = operator_processor
-        self._backend = operator_processor.backend  # default - SLOSBackend()
-        self._heralded_modes = heralded_modes
-        self._post_process = post_process
-        self._renormalization = renormalization
-
+        super().__init__(nqubit, operator_processor, heralded_modes, post_process, renormalization)
         self._qst = QuantumStateTomography(nqubit=self._nqubit,
                                            operator_processor=self._operator_processor,
                                            heralded_modes=self._heralded_modes, post_process=self._post_process,
@@ -419,7 +406,7 @@ class QuantumProcessTomography(ATomography):
         :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
         :return: bool and string
         """
-        ATomography.is_physical(chi_matrix)  # Todo: fix tmrw how inheriting is done; i am sure there is a better way
+        super().is_physical(Processor, chi_matrix)  # Todo: fix tmrw how inheriting is done; i am sure there is a better way
         d2 = len(chi_matrix)
         # nqubit = int(np.log2(d2) / 2)
         # # check if trace preserving

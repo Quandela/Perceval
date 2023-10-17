@@ -30,17 +30,24 @@
 from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.algorithm.tomography._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, \
     matrix_to_vector, vector_to_matrix, decomp
-from perceval.components import AProcessor
+from perceval.components import Processor
+from typing import List
 import numpy
 
 
 class ATomography(AAlgorithm):
-    def __init__(self, processor: AProcessor):
-        super().__init__(processor)
-        # Todo: implement is_physical here and then have
-        #  QPT and QST use it to test on denisty or chi matrix
+    def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
+                 renormalization=None):
+        super().__init__(processor=operator_processor)
+        self._nqubit = nqubit
+        self._operator_processor = operator_processor
+        self._backend = operator_processor.backend  # default - SLOSBackend()
+        self._heralded_modes = heralded_modes
+        # TODO:ask with Stephen if they are always similar to default in Perceval
+        self._post_process = post_process
+        self._renormalization = renormalization
 
-    def is_physical(input_matrix, eigen_tolerance=10 ** (-6)):
+    def is_physical(self, input_matrix, eigen_tolerance=10 ** (-6)):
         """
         Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
@@ -48,6 +55,7 @@ class ATomography(AAlgorithm):
         :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
         :return: bool and string
         """
+        # todo: fix implementation and one in QST for density matrix
         d2 = len(input_matrix)
         nqubit = int(numpy.log2(d2) / 2)
         # check if trace preserving
