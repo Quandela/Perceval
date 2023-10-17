@@ -36,6 +36,7 @@ from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
+import numpy as np
 
 
 class Simulator(ISimulator):
@@ -195,6 +196,20 @@ class Simulator(ISimulator):
                 result[state] = prob
             else:
                 self._logical_perf -= prob
+        result.normalize()
+        return result
+
+    def post_select_on_statevector(self, sv: StateVector) -> BSDistribution:
+        self._logical_perf = 1
+        if not self._postselect.has_condition:
+            sv.normalize()
+            return sv
+        result = StateVector()
+        for state, ampli in sv.items():
+            if self._postselect(state):
+                result[state] = ampli
+            else:
+                self._logical_perf -= np.mod(ampli)**2
         result.normalize()
         return result
 
