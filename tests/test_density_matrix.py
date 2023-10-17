@@ -27,9 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval import StateVector, BasicState, DensityMatrix
+import numpy as np
+from numpy import sqrt
 
 
 def test_density_matrix():
     sv = StateVector({BasicState([0]): 1, BasicState([1]): 1}).normalize()
     dm = DensityMatrix(sv)
-    assert dm.mat.shape() == (2, 2)
+    assert dm.mat == np.array([[0.5, 0.5],
+                               [0.5, 0.5]])
