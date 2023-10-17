@@ -28,7 +28,6 @@
 # SOFTWARE.
 from perceval import StateVector, BasicState, DensityMatrix
 import numpy as np
-from numpy import sqrt
 
 
 def test_density_matrix():
