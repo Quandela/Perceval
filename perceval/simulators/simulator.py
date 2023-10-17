@@ -409,7 +409,7 @@ class Simulator(ISimulator):
             result_sv += evolved_in_s * probampli
 
         result_sv.normalize()
-        return result_sv
+        return self._post_select_on_statevector(result_sv)
 
     def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState], progress_callback: Optional[Callable] = None) -> SVDistribution:
         """
