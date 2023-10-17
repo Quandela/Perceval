@@ -427,7 +427,7 @@ class Simulator(ISimulator):
 
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd):
-            new_sv = self.evolve(sv)
+            new_sv = self.post_select_on_statevector(self.evolve(sv))
             new_svd[new_sv] = p
 
             if progress_callback:
