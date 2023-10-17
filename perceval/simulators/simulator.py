@@ -403,7 +403,8 @@ class Simulator(ISimulator):
 
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
-        :return: The output StateVector Distribution
+        :return: The output StateVectorDistribution
+
         """
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
@@ -411,8 +412,13 @@ class Simulator(ISimulator):
         # If it's actually an SVD
 
         new_svd = SVDistribution()
-        for sv, p in svd.items():
+        for idx, (sv, p) in enumerate(svd):
             new_sv = self.evolve(sv)
             new_svd[new_sv] = p
+
+            if progress_callback:
+                exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    raise RuntimeError("Cancel requested")
 
         return new_svd
