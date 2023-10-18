@@ -86,8 +86,8 @@ class DensityMatrix:
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
+                    i, j = self.index[bst1], self.index[bst2]
                     if i >= j:
-                        i, j = self.index[bst1], self.index[bst2]
                         self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
 
     def __getitem__(self, key):
