@@ -31,10 +31,14 @@
 from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
+from scipy.sparse import csr_array
 
 
 class DensityMatrix:
-    """Density operator representing a mixed state"""
+    """
+    Density operator representing a mixed state
+    Does not support annotations
+    """
     def __init__(self, svd: Union[SVDistribution, StateVector, BasicState]):
 
         if isinstance(svd, (StateVector, BasicState)):
@@ -53,7 +57,7 @@ class DensityMatrix:
             self.index[key] = k
             k+=1
 
-        self.mat = np.zeros((self.size, self.size), dtype=complex)
+        self.mat = csr_array((self.size, self.size), dtype=complex)
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
