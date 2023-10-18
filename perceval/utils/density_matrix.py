@@ -39,7 +39,13 @@ class DensityMatrix:
     Density operator representing a mixed state
     Does not support annotations
     """
-    def __init__(self, svd: Union[SVDistribution, StateVector, BasicState]):
+    def __init__(self, svd: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
+        """
+        Constructor for the DensityMatrix Class
+
+        :param svd: SVDistribution, StateVector or Basic State representing a mixed state
+        :param index: iterator on all Fock states accessible from this mixed states through a unitary evolution
+        """
 
         if isinstance(svd, (StateVector, BasicState)):
             svd = SVDistribution(svd)
@@ -50,12 +56,14 @@ class DensityMatrix:
         self._m = svd.m
         self._n_max = svd.n_max
         self.size = comb(self.m + self._n_max, self.m)
-
-        self.index = dict()
-        k = 0
-        for key in max_photon_state_iterator(self._m, self._n_max):
-            self.index[key] = k
-            k+=1
+        if index is None or len(index != self.size):
+            self.index = dict()
+            k = 0
+            for key in max_photon_state_iterator(self._m, self._n_max):
+                self.index[key] = k
+                k+=1
+        else:
+            self.index = index
 
         self.mat = dok_array((self.size, self.size), dtype=complex)
         for sv, p in svd.items():
@@ -82,3 +90,20 @@ class DensityMatrix:
     @property
     def m(self):
         return self._m
+
+
+class DensityMatrixData(csr_array):
+
+    def __getitem__(self, key):
+        row, col = key
+        if row >= col:
+            return super().__getitem__(key)
+        else:
+            return conj(super().__getitem__(key))
+
+    def __setitem__(self, key, value):
+        row, col = key
+        if row >= col:
+            super().__setitem__(key, value)
+        else:
+            return conj(super().__setitem__((col,row), value))
