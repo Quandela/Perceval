@@ -34,6 +34,23 @@ from numpy import conj
 from scipy.sparse import csr_array, lil_array, dok_array
 
 
+class DensityMatrixData(csr_array):
+
+    def __getitem__(self, key):
+        row, col = key
+        if row >= col:
+            return super().__getitem__(key)
+        else:
+            return conj(super().__getitem__(key))
+
+    def __setitem__(self, key, value):
+        row, col = key
+        if row >= col:
+            super().__setitem__(key, value)
+        else:
+            return conj(super().__setitem__((col,row), value))
+
+
 class DensityMatrix:
     """
     Density operator representing a mixed state
@@ -65,12 +82,13 @@ class DensityMatrix:
         else:
             self.index = index
 
-        self.mat = dok_array((self.size, self.size), dtype=complex)
+        self.mat = DensityMatrixData((self.size, self.size), dtype=complex)
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
-                    i, j = self.index[bst1], self.index[bst2]
-                    self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
+                    if i >= j:
+                        i, j = self.index[bst1], self.index[bst2]
+                        self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
 
     def __getitem__(self, key):
         """key must be a BasicState tuple"""
@@ -90,20 +108,3 @@ class DensityMatrix:
     @property
     def m(self):
         return self._m
-
-
-class DensityMatrixData(csr_array):
-
-    def __getitem__(self, key):
-        row, col = key
-        if row >= col:
-            return super().__getitem__(key)
-        else:
-            return conj(super().__getitem__(key))
-
-    def __setitem__(self, key, value):
-        row, col = key
-        if row >= col:
-            super().__setitem__(key, value)
-        else:
-            return conj(super().__setitem__((col,row), value))
