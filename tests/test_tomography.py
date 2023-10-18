@@ -36,7 +36,7 @@ import perceval as pcvl
 from perceval.components import catalog, Processor
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
-from perceval.algorithm.tomography.quantum_process_tomography import QuantumProcessTomography, FidelityTomography
+from perceval.algorithm.tomography.quantum_process_tomography import QuantumProcessTomography
 
 
 def fidelity_op_process_tomography(op, op_proc, nqubit, herald):
@@ -46,7 +46,7 @@ def fidelity_op_process_tomography(op, op_proc, nqubit, herald):
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
     # Compute fidelity
-    op_fidelity = FidelityTomography(nqubit).process_fidelity(chi_op, chi_op_ideal)
+    op_fidelity = qpt.process_fidelity(chi_op, chi_op_ideal)
     return op_fidelity
 
 

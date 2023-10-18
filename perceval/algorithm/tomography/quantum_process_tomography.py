@@ -347,7 +347,6 @@ class QuantumStateTomography(ATomography):
         return res
 
 
-
 class QuantumProcessTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
                  renormalization=None):
@@ -429,38 +428,6 @@ class QuantumProcessTomography(ATomography):
         X = np.dot(np.linalg.pinv(beta), lambd)
         return vector_to_matrix(X)
 
-    def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
-        """
-        Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
-
-        :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
-        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-        :return: list with findings of the tests
-        """
-        res = super().is_physical(chi_matrix, eigen_tolerance)
-        d2 = len(chi_matrix)
-
-        # check if completely positive with Choi–Jamiołkowski isomorphism
-        choi = 0
-        for n in range(d2):
-            P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, self._nqubit)))])))
-            for m in range(d2):
-                choi += chi_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, self._nqubit)))]), P_n)
-        choi /= 2 ** self._nqubit
-        eigenvalues = np.linalg.eigvalsh(choi)
-        if np.any(eigenvalues < -eigen_tolerance):
-            val = np.round(eigenvalues[0], 5)
-            res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
-        else:
-            res.append("|Completely Positive|")
-
-        return res
-
-
-class FidelityTomography:
-    def __init__(self, nqubit):
-        self._nqubit = nqubit
-
     def process_fidelity(self, chi_computed, chi_ideal):
         """
         Computes the process fidelity of an operator and its perceval circuit
@@ -517,6 +484,33 @@ class FidelityTomography:
             a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
             f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
         return np.real(f)
+
+    def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
+        """
+        Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+        :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
+        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+        :return: list with findings of the tests
+        """
+        res = super().is_physical(chi_matrix, eigen_tolerance)
+        d2 = len(chi_matrix)
+
+        # check if completely positive with Choi–Jamiołkowski isomorphism
+        choi = 0
+        for n in range(d2):
+            P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, self._nqubit)))])))
+            for m in range(d2):
+                choi += chi_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, self._nqubit)))]), P_n)
+        choi /= 2 ** self._nqubit
+        eigenvalues = np.linalg.eigvalsh(choi)
+        if np.any(eigenvalues < -eigen_tolerance):
+            val = np.round(eigenvalues[0], 5)
+            res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
+        else:
+            res.append("|Completely Positive|")
+
+        return res
 
 # todo: lack of documentation about converter in tools on perceval documentation. verify wbefore the next version
 #  release

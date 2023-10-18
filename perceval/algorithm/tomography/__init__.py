@@ -28,4 +28,4 @@
 # SOFTWARE.
 
 from .abstract_tomography import ATomography
-from .quantum_process_tomography import QuantumProcessTomography, QuantumStateTomography, FidelityTomography
+from .quantum_process_tomography import QuantumProcessTomography, QuantumStateTomography
