@@ -97,7 +97,7 @@ def krauss_repr_ops(m, rhoj, n, nqubit):
 
 
 def thresh(X, eps=10 ** (-6)):
-    """ Threshold function to cancel computational errors in chi matrix
+    """ Threshold function to cancel computational errors in the given input matrix
      """
     for i in range(len(X)):
         for j in range(len(X)):
@@ -438,24 +438,7 @@ class QuantumProcessTomography(ATomography):
         """
         return np.real(np.trace(np.dot(chi_computed, chi_ideal)))
 
-    def error_process_matrix(self, computed_chi, operator):
-        """
-        Computes the error matrix for an operation from the computed chi matrix
-
-        :param computed_chi:
-        :return: matrix
-        """
-        d = 2 ** self._nqubit
-        V = np.zeros((d ** 2, d ** 2), dtype='complex_')
-        for m in range(d ** 2):
-            for n in range(d ** 2):
-                Emdag = np.transpose(np.conjugate(fixed_basis_ops(m, self._nqubit)))
-                En = fixed_basis_ops(n, self._nqubit)
-                Udag = np.transpose(np.conjugate(operator))
-                V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
-        return np.linalg.multi_dot([V, computed_chi, np.conjugate(np.transpose(V))])
-
-    def average_fidelity(self, qst, operator):
+    def average_fidelity(self, operator):
         """
         Computes the average fidelity of an operator and its perceval circuit
 
@@ -473,7 +456,7 @@ class QuantumProcessTomography(ATomography):
             for i in range(self._nqubit - 1, -1, -1):
                 state_index.append(state_counter // (4 ** i))
                 state_counter = state_counter % (4 ** i)
-            EPS.append(qst.perform_quantum_state_tomography(state_index))
+            EPS.append(self._qst.perform_quantum_state_tomography(state_index))
 
         basis = matrix_basis(self._nqubit)
         for j in range(d ** 2):
@@ -484,6 +467,23 @@ class QuantumProcessTomography(ATomography):
             a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
             f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
         return np.real(f)
+
+    def error_process_matrix(self, computed_chi, operator):
+        """
+        Computes the error matrix for an operation from the computed chi matrix
+
+        :param computed_chi:
+        :return: matrix
+        """
+        d = 2 ** self._nqubit
+        V = np.zeros((d ** 2, d ** 2), dtype='complex_')
+        for m in range(d ** 2):
+            for n in range(d ** 2):
+                Emdag = np.transpose(np.conjugate(fixed_basis_ops(m, self._nqubit)))
+                En = fixed_basis_ops(n, self._nqubit)
+                Udag = np.transpose(np.conjugate(operator))
+                V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
+        return np.linalg.multi_dot([V, computed_chi, np.conjugate(np.transpose(V))])
 
     def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
         """
