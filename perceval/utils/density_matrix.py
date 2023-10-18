@@ -31,7 +31,7 @@
 from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
-from scipy.sparse import csr_array
+from scipy.sparse import csr_array, lil_array
 
 
 class DensityMatrix:
@@ -57,7 +57,7 @@ class DensityMatrix:
             self.index[key] = k
             k+=1
 
-        self.mat = csr_array((self.size, self.size), dtype=complex)
+        self.mat = lil_array((self.size, self.size), dtype=complex)
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
