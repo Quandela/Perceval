@@ -35,6 +35,6 @@ setuptools.setup(
         "myqlm_bridge": ["myqlm>=1.9.3"]
     },
     setup_requires=["scmver"],
-    python_requires=">=3.8",
+    python_requires=">=3.8,<3.12",
     scmver=True
 )
