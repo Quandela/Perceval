@@ -44,6 +44,8 @@ In any cases, your new code **must**:
 and **should**:
 
 * add new tests
+
+    → you can use the coverage report to help you find untested code (see [README](README.md#running-tests-and-benchmarks) )
 * update the [documentation](docs/source/)
 
 ## Helping others

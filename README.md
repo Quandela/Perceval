@@ -80,7 +80,13 @@ Unit tests files are part of the repository in `tests/` and can be run with:
 
 ```
 pip install -r tests/requirements.txt
-pytest tests/
+pytest
+```
+
+Additionally, you can see a coverage report with the command:
+
+```
+pytest --cov=perceval
 ```
 
 Benchmark tests for computing-intensive functions are in `benchmark/` and can be run with:
