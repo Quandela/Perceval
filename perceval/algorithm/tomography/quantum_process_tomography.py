@@ -192,11 +192,12 @@ class MeasurementCircuit(Circuit):
 
 
 class QuantumStateTomography(ATomography):
-    def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
-                 renormalization=None):
-        super().__init__(nqubit, operator_processor, heralded_modes, post_process, renormalization)
+    def __init__(self, nqubit: int, operator_processor: Processor, post_process=False, renormalization=None):
+        super().__init__(nqubit, operator_processor, post_process, renormalization)
         self._source = operator_processor.source  # default - ideal source
         self._backend = operator_processor.backend  # default - SLOSBackend()
+        self._heralded_modes = [(key, value) for key, value in operator_processor.heralds.items()]
+
 
     @staticmethod
     def _list_subset_k_from_n(k, n):
@@ -212,7 +213,7 @@ class QuantumStateTomography(ATomography):
             # setting the input state for the gate qubit modes
             input_state *= BasicState("|1,0>")
         for m in self._heralded_modes:
-            # setting the input for heralded modes # todo: herald from processor?
+            # setting the input for heralded modes of the given processor
             input_state *= BasicState([m[1]])
         input_distribution = self._source.generate_distribution(expected_input=input_state)
         return input_distribution
@@ -286,8 +287,6 @@ class QuantumStateTomography(ATomography):
                         if meas_basis_pauli_indxs[j] != 0:
                             eta *= -1
                 for m in self._heralded_modes:
-                    # Todo: Discuss with Stephen on how much liberty does
-                    #  the user needs for heralded modes
                     measurement_state *= BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
 
@@ -324,7 +323,7 @@ class QuantumStateTomography(ATomography):
         :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
         :return: list with findings of the tests
         """
-        # Todo: discuss implementation of usage of is_physical() with Stephen.
+        # Todo: density matrix is always hermitian and CP, trace maybe between 0 and 1 - output that
         # density matrix is CP, Hermitian, trace can be between 0 and 1
 
         res = super().is_physical(density_matrix, eigen_tolerance)
@@ -348,13 +347,11 @@ class QuantumStateTomography(ATomography):
 
 
 class QuantumProcessTomography(ATomography):
-    def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
+    def __init__(self, nqubit: int, operator_processor: Processor, post_process=False,
                  renormalization=None):
-        super().__init__(nqubit, operator_processor, heralded_modes, post_process, renormalization)
-        self._qst = QuantumStateTomography(nqubit=self._nqubit,
-                                           operator_processor=self._operator_processor,
-                                           heralded_modes=self._heralded_modes, post_process=self._post_process,
-                                           renormalization=self._renormalization)
+        super().__init__(nqubit, operator_processor, post_process, renormalization)
+        self._qst = QuantumStateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
+                                           post_process=self._post_process, renormalization=self._renormalization)
 
     @staticmethod
     def _beta_ndarray(j, k, m, n, nqubit):

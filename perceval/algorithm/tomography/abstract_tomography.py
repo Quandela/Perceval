@@ -35,14 +35,11 @@ import numpy
 
 
 class ATomography(AAlgorithm):
-    def __init__(self, nqubit: int, operator_processor: Processor, heralded_modes: List = [], post_process=False,
-                 renormalization=None):
+    def __init__(self, nqubit: int, operator_processor: Processor, post_process=False, renormalization=None):
         super().__init__(processor=operator_processor)
         self._nqubit = nqubit
         self._operator_processor = operator_processor
         self._backend = operator_processor.backend  # default - SLOSBackend()
-        self._heralded_modes = heralded_modes
-        # TODO:ask with Stephen if they are always similar to default in Perceval
         self._post_process = post_process
         self._renormalization = renormalization
 
