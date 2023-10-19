@@ -292,8 +292,6 @@ def test_simulator_evolve_svd():
     sim = Simulator(b)
     sv1 = BasicState([2,0])-BasicState([0,2])
     sv2 = BasicState([1,0])+BasicState([0,1])
-    print(SVDistribution({sv1: 0.2, sv2: 0.8}))
-    print(sim.evolve_svd(input_svd)['result'])
 
     assert_svd_close(sim.evolve_svd(input_svd)['result'], SVDistribution({sv1: 0.2, sv2: 0.8}))
 
