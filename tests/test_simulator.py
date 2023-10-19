@@ -32,9 +32,9 @@ import numpy as np
 
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
-from perceval.components import Circuit, BS, PS, PERM
+from perceval.components import Circuit, BS, PS
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
-from _test_utils import assert_sv_close
+from _test_utils import assert_sv_close, assert_svd_close
 
 
 class MockBackend(AProbAmpliBackend):
@@ -288,16 +288,19 @@ def test_simulator_evolve_svd():
     input_svd = SVDistribution({StateVector([1, 1]): 0.2,
                                 StateVector([2, 0]): 0.8})
     b = SLOSBackend()
-    b.set_circuit(Circuit(2).add(0, PERM([1, 0])))
+    b.set_circuit(Circuit(2).add(0, BS.H()))
     sim = Simulator(b)
-    assert sim.evolve_svd(input_svd) == SVDistribution({StateVector([1, 1]): 0.2,
-                                                        StateVector([0, 2]): 0.8})
+    assert sim.evolve_svd(input_svd)['result'] == SVDistribution({(BasicState([2,0])
+                                                        -BasicState([0,2])).normalize(): 0.2,
+                                                        (0.5*BasicState([2,0])
+                                                        +0.707*BasicState([1,1])
+                                                        +0.5*BasicState([0,2])): 0.8})
     ps = PostSelect("[0] == 1")
     sv = BasicState([0,1]) + BasicState([1,0])
     sv.normalize()
     input_svd_2 = SVDistribution({sv: 0.2,
                                   StateVector([1,0]): 0.8})
     sim.set_postselection(ps)
-    output_svd_2 = sim.evolve_svd(input_svd_2)
+    output_svd_2 = sim.evolve_svd(input_svd_2)["result"]
     assert len(output_svd_2) == 1
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
