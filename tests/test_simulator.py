@@ -275,7 +275,7 @@ def test_statevector_polar_evolve():
     assert pytest.approx(1) == sum_p
 
 
-def test_evovle_phase():
+def test_evolve_phase():
     input_state = StateVector([2, 0]) + StateVector([1, 1])
     c = Circuit(2).add(1, PS(phi=math.pi/3))
     simu = Simulator(SLOSBackend())
