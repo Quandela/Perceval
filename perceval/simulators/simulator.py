@@ -437,4 +437,4 @@ class Simulator(ISimulator):
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
 
-        return new_svd
+        return new_svd.normalize()
