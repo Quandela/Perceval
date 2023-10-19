@@ -204,9 +204,9 @@ class Simulator(ISimulator):
             sv.normalize()
             return sv
         result = StateVector()
-        for state, ampli in sv.items():
+        for state, ampli in sv:
             if self._postselect(state):
-                result[state] = ampli
+                result += ampli*state
             else:
                 self._logical_perf -= abs(ampli)**2
         result.normalize()
@@ -429,7 +429,8 @@ class Simulator(ISimulator):
         for idx, (sv, p) in enumerate(svd.items()):
             if min(sv.n) >= self._min_detected_photons:
                 new_sv = self.evolve(sv)
-                new_svd[new_sv] += p
+                if sv is not StateVector('|>'):
+                    new_svd[new_sv] += p
             else:
                 self._physical_perf -= p
             if progress_callback:
