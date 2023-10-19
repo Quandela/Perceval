@@ -35,6 +35,10 @@ from scipy.sparse import csr_array, lil_array, dok_array
 
 
 class DensityMatrixData(csr_array):
+    """
+    class representing square hermitian sparse matrix
+    used to store the DensityMatrix objects data
+    """
 
     def __getitem__(self, key):
         row, col = key
@@ -48,7 +52,7 @@ class DensityMatrixData(csr_array):
         if row >= col:
             super().__setitem__(key, value)
         else:
-            return conj(super().__setitem__((col,row), value))
+            super().__setitem__((col,row), value))
 
 
 class DensityMatrix:
