@@ -292,3 +292,11 @@ def test_simulator_evolve_svd():
     sim = Simulator(b)
     assert sim.evolve_svd(input_svd) == SVDistribution({StateVector([1, 1]): 0.2,
                                                         StateVector([0, 2]): 0.8})
+    ps = PostSelect("[0] == 1")
+    input_svd_2 = SVDistribution({StateVector({BasicState[0,1]: 1,
+                                               BasicState[1,0]: 1}).normalize(): 0.2,
+                                  StateVector([1,0]): 0.8})
+    sim.set_post_selection(ps)
+    output_svd_2 = sim.evolve_svd(input_svd_2)
+    assert len(output_svd_2) == 1
+    assert output_svd_2[StateVector[1,0]] == pytest.approx(1)

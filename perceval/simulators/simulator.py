@@ -436,5 +436,5 @@ class Simulator(ISimulator):
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
-
-        return new_svd.normalize()
+        new_svd.normalize()
+        return new_svd
