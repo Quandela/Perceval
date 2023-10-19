@@ -293,7 +293,7 @@ def test_simulator_evolve_svd():
     svd_expected = SVDistribution({(math.sqrt(2)/2)*BasicState([2,0])-(math.sqrt(2)/2)*BasicState([0,2]): 0.2,
                                    0.5*BasicState([2,0])+0.5*BasicState([0,2])+(math.sqrt(2)/2)*BasicState([1,1]): 0.8})
 
-    assert_svd_close(sim.evolve_svd(input_svd)['result'], svd_expected)
+    assert_svd_close(sim.evolve_svd(input_svd)['results'], svd_expected)
 
     ps = PostSelect("[0] == 1")
     sv = BasicState([0, 1]) + BasicState([1, 0])
@@ -301,6 +301,6 @@ def test_simulator_evolve_svd():
     input_svd_2 = SVDistribution({sv: 0.2,
                                   StateVector([1,0]): 0.8})
     sim.set_postselection(ps)
-    output_svd_2 = sim.evolve_svd(input_svd_2)["result"]
+    output_svd_2 = sim.evolve_svd(input_svd_2)["results"]
     assert len(output_svd_2) == 1
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
