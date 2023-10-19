@@ -417,19 +417,22 @@ class Simulator(ISimulator):
 
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
-        :return: The output StateVectorDistribution
-
+        :return: A dictionary of the form { "results": SVDistribution, "physical_perf": float, "logical_perf": float }
+        * results is the post-selected output SVDistribution
+        * physical_perf is the performance computed from the detected photon filter
+        * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
 
         # If it's actually an SVD
-
+        intermediary_logical_perf = 1
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
             if min(sv.n) >= self._min_detected_photons:
                 new_sv = self.evolve(sv)
-                if sv is not StateVector('|>'):
+                intermediary_logical_perf -= p*self._logical_perf
+                if new_sv.m != 0:
                     new_svd[new_sv] += p
             else:
                 self._physical_perf -= p
@@ -437,5 +440,8 @@ class Simulator(ISimulator):
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
+        self._logical_perf = intermediary_logical_perf
         new_svd.normalize()
-        return new_svd
+        return {'result': self._post_select_on_distribution(res),
+                'physical_perf': self._physical_perf,
+                'logical_perf': self._logical_perf}

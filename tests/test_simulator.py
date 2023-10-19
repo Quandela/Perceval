@@ -300,4 +300,4 @@ def test_simulator_evolve_svd():
     sim.set_postselection(ps)
     output_svd_2 = sim.evolve_svd(input_svd_2)
     assert len(output_svd_2) == 1
-    assert output_svd_2[StateVector[1,0]] == pytest.approx(1)
+    assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
