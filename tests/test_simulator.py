@@ -286,14 +286,14 @@ def test_evolve_phase():
 
 def test_simulator_evolve_svd():
     input_svd = SVDistribution({StateVector([1, 1]): 0.2,
-                                StateVector([1, 0]): 0.8})
+                                StateVector([2, 0]): 0.8})
     b = SLOSBackend()
     b.set_circuit(Circuit(2).add(0, BS.H()))
     sim = Simulator(b)
-    sv1 = BasicState([2,0])-BasicState([0,2])
-    sv2 = BasicState([1,0])+BasicState([0,1])
+    svd_expected = SVDistribution({(math.sqrt(2)/2)*BasicState([2,0])-(math.sqrt(2)/2)*BasicState([0,2]): 0.2,
+                                   0.5*BasicState([2,0])+0.5*BasicState([0,2])+(math.sqrt(2)/2)*BasicState([1,1]): 0.8})
 
-    assert_svd_close(sim.evolve_svd(input_svd)['result'], SVDistribution({sv1: 0.2, sv2: 0.8}))
+    assert_svd_close(sim.evolve_svd(input_svd)['result'], svd_expected)
 
     ps = PostSelect("[0] == 1")
     sv = BasicState([0, 1]) + BasicState([1, 0])
