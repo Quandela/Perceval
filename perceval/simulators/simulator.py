@@ -442,6 +442,6 @@ class Simulator(ISimulator):
                     raise RuntimeError("Cancel requested")
         self._logical_perf = intermediary_logical_perf
         new_svd.normalize()
-        return {'result': self._post_select_on_distribution(new_svd),
+        return {'result': new_svd,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
