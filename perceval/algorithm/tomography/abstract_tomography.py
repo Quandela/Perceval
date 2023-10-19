@@ -72,3 +72,5 @@ class ATomography(AAlgorithm):
             res.append("|hermitian|")
 
         return res
+
+    # TODO: have at least one @abstract method in this parent class

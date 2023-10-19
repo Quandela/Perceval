@@ -61,7 +61,6 @@ def test_fidelity_cnot_operator():
 
 
 def test_fidelity_random_op():
-    # TODO: tes tfailing - fix
     # process tomography to compute fidelity of a random 2 qubit gate operation
     nqubit = 2
     L = []
@@ -75,7 +74,7 @@ def test_fidelity_random_op():
         random_op = np.kron(random_op, L[i])
         random_op_circ.add(2 * i, Unitary(pcvl.Matrix(L[i])))
 
-    random_op_proc = Processor(backend=SLOSBackend, m_circuit=random_op_circ.m)
+    random_op_proc = Processor(backend=SLOSBackend(), m_circuit=random_op_circ.m)
     random_op_proc.add(0, random_op_circ)
     print(random_op_proc, random_op_proc.m)
 
@@ -84,7 +83,7 @@ def test_fidelity_random_op():
     # random_op_proc.add(0, random_U)
 
     pcvl.pdisplay(random_op_proc)
-    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2, herald=[])
+    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2)
 
     assert random_op_fidelity == pytest.approx(1, 1e-6)
 
