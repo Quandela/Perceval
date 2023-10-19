@@ -428,7 +428,7 @@ class Simulator(ISimulator):
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
             if min(sv.n) >= self._min_detected_photons:
-                new_sv = self._post_select_on_statevector(self.evolve(sv))
+                new_sv = self.self.evolve(sv)
                 new_svd[new_sv] += p
             else:
                 self._physical_perf -= p

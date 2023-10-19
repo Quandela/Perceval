@@ -292,3 +292,4 @@ def test_simulator_evolve_svd():
     sim = Simulator(b)
     assert sim.evolve_svd(input_svd) == SVDistribution({StateVector([1, 1]): 0.2,
                                                         StateVector([0, 2]): 0.8})
+    ps = PostSelect("[0] == 1")
