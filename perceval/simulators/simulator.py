@@ -377,6 +377,7 @@ class Simulator(ISimulator):
         if not isinstance(input_state, StateVector):
             input_state = StateVector(input_state)
 
+
         # Decay input to a list of basic states without annotations and evolve each of them
         decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state]
         input_list = [copy(state) for t in decomposed_input for state in t[1]]
@@ -388,6 +389,9 @@ class Simulator(ISimulator):
         for probampli, instate_list in decomposed_input:
             reslist = []
             for in_s in instate_list:
+                if in_s.n == 0:
+                    reslist.append(in_s)
+                    continue
                 annotation = in_s.get_photon_annotation(0)
                 in_s.clear_annotations()
                 reslist.append(_inject_annotation(self._evolve[in_s], annotation))
