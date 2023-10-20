@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import numpy as np
+import math
 
 
 def state_to_dens_matrix(state):
@@ -64,26 +65,18 @@ def matrix_basis(nqubit):  # create a matrix basis from all the tensor products 
     return B
 
 
-def matrix_to_vector(matrix):  # concatenate a matrix d*d into a vector d**2
-    # simply flatten() -> rows after row
-    n = len(matrix[0])
-    x = np.zeros((n ** 2), dtype='complex_')
-    for i in range(n ** 2):
-        x[i] = matrix[i // n, i % n]
-    return x
+def matrix_to_vector(matrix):
+    # Returns a vector (size=>d**2) given a matrix (shape=>d*d) -> concatenates row wise
+    return np.ndarray.flatten(matrix)
 
 
-def vector_to_matrix(vector):  # expand a vector d**2 into a matrix d*d
-    n = len(vector)
-    d = int(np.sqrt(n))
-    M = np.zeros((d, d), dtype='complex_')
-    for i in range(d):
-        for j in range(d):
-            if len(vector.shape) == 2:
-                M[i, j] = vector[i * d + j][0]
-            elif len(vector.shape) == 1:
-                M[i, j] = vector[i * d + j]
-    return M
+def vector_to_sq_matrix(vector):
+    # expand a vector d**2 into a matrix d*d
+    size = math.sqrt(len(vector))
+    if not size.is_integer():
+        raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
+    # todo: ugly to do sqrt, remove it and implement param 'd' somewhere consistently
+    return np.reshape(vector, (int(size), int(size)))
 
 
 def decomp(matrix, basis):  # linear decomposition of any matrix upon a basis

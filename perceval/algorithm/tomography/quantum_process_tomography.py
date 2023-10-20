@@ -31,12 +31,12 @@ import numpy as np
 from itertools import combinations
 
 from perceval.components import Circuit, Processor, BS, PS, PERM, Port
-from perceval.algorithm.tomography.abstract_tomography import ATomography
+from .abstract_tomography import ATomography
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
-from perceval.algorithm.tomography._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, \
-    matrix_to_vector, vector_to_matrix, decomp
+from ._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, \
+    matrix_to_vector, vector_to_sq_matrix, decomp
 
 
 def pauli(j):
@@ -191,7 +191,7 @@ class MeasurementCircuit(Circuit):
         return self
 
 
-class QuantumStateTomography(ATomography):
+class StateTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, post_process=False, renormalization=None):
         super().__init__(nqubit, operator_processor, post_process, renormalization)
         self._source = operator_processor.source  # default - ideal source
@@ -204,7 +204,7 @@ class QuantumStateTomography(ATomography):
         # list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
         # used only in the method _stokes_parameter
         #  Should we put it in overall utils? or have a specific util for tomograph?
-        s = {i for i in range(n)}
+        s = tuple(range(n))
         return list(combinations(s, k))
 
     def _input_state_dist_config(self):
@@ -218,7 +218,7 @@ class QuantumStateTomography(ATomography):
         input_distribution = self._source.generate_distribution(expected_input=input_state)
         return input_distribution
 
-    def _tomography_processor(self, prep_state_basis_indxs, meas_basis_pauli_indxs):
+    def _compute_probs(self, prep_state_basis_indxs, meas_basis_pauli_indxs):
 
         pc = StatePreparationCircuit(prep_state_basis_indxs, self._nqubit)  # state preparation circuit
         mc = MeasurementCircuit(meas_basis_pauli_indxs, self._nqubit)  # measurement basis circuit
@@ -266,7 +266,7 @@ class QuantumStateTomography(ATomography):
          eigenvector we are measuring
         :return: float
         """
-        output_distribution = self._tomography_processor(prep_state_basis_indxs, meas_basis_pauli_indxs)
+        output_distribution = self._compute_probs(prep_state_basis_indxs, meas_basis_pauli_indxs)
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0
@@ -346,11 +346,11 @@ class QuantumStateTomography(ATomography):
         return res
 
 
-class QuantumProcessTomography(ATomography):
+class ProcessTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, post_process=False,
                  renormalization=None):
         super().__init__(nqubit, operator_processor, post_process, renormalization)
-        self._qst = QuantumStateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
+        self._qst = StateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
                                            post_process=self._post_process, renormalization=self._renormalization)
 
     @staticmethod
@@ -364,7 +364,7 @@ class QuantumProcessTomography(ATomography):
         M = np.zeros((d ** 4, d ** 4), dtype='complex_')
         for i in range(d ** 4):
             for j in range(d ** 4):
-                M[i, j] = QuantumProcessTomography._beta_ndarray(i // (d ** 2), i % (d ** 2), j // (d ** 2),
+                M[i, j] = ProcessTomography._beta_ndarray(i // (d ** 2), i % (d ** 2), j // (d ** 2),
                                                                  j % (d ** 2), self._nqubit)
         return M
 
@@ -413,17 +413,19 @@ class QuantumProcessTomography(ATomography):
 
         :return: 2**(2*nqubit)x2**(2*nqubit) array
         """
-        Binv = np.linalg.pinv(self._beta_matrix())
+        beta_inv = np.linalg.pinv(self._beta_matrix())
         L = self._lambda_vector()
-        X = np.dot(Binv, L)
-        return vector_to_matrix(X)
+        X = np.dot(beta_inv, L)
+        # here X is a vector
+        return vector_to_sq_matrix(X)
 
     def chi_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        beta = self._beta_matrix()
+        beta_inv = np.linalg.pinv(self._beta_matrix())
         lambd = self._lambda_target(operator)
-        X = np.dot(np.linalg.pinv(beta), lambd)
-        return vector_to_matrix(X)
+        X = np.dot(beta_inv, lambd)
+        # here X is a matrix
+        return vector_to_sq_matrix(X[:, 0])
 
     def process_fidelity(self, chi_computed, chi_ideal):
         """
@@ -508,6 +510,5 @@ class QuantumProcessTomography(ATomography):
             res.append("|Completely Positive|")
 
         return res
-
-# todo: lack of documentation about converter in tools on perceval documentation. verify wbefore the next version
-#  release
+    # todo: yes, in the class. given the nqubit, the fock space gets fixed and at many differnet locations he is
+    #  creating matrices and ndarrays of size d/d**2/4*d/or whatever. So having "d" would greatly remove all of that

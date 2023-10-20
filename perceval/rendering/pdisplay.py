@@ -44,7 +44,7 @@ with warnings.catch_warnings():
     import drawsvg
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.algorithm.tomography.quantum_process_tomography import QuantumProcessTomography
+from perceval.algorithm import ProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
@@ -293,7 +293,7 @@ def _pdisplay(_, **kwargs):
     return None
 
 
-@dispatch(QuantumProcessTomography)
+@dispatch(ProcessTomography)
 def _pdisplay(qpt, **kwargs):
     return pdisplay_tomography_chi(qpt, **kwargs)
 

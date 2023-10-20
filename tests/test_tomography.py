@@ -31,17 +31,16 @@ import pytest
 import numpy as np
 from scipy.stats import unitary_group
 
-import perceval
 import perceval as pcvl
 from perceval.components import catalog, Processor
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
-from perceval.algorithm.tomography.quantum_process_tomography import QuantumProcessTomography
+from perceval.algorithm import ProcessTomography, StateTomography
 
 
 def fidelity_op_process_tomography(op, op_proc, nqubit):
     # create process tomography object
-    qpt = QuantumProcessTomography(nqubit=nqubit, operator_processor=op_proc)
+    qpt = ProcessTomography(nqubit=nqubit, operator_processor=op_proc)
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
@@ -76,13 +75,7 @@ def test_fidelity_random_op():
 
     random_op_proc = Processor(backend=SLOSBackend(), m_circuit=random_op_circ.m)
     random_op_proc.add(0, random_op_circ)
-    print(random_op_proc, random_op_proc.m)
 
-    # random_U = perceval.Matrix.random_unitary(4)
-    # random_op_proc = Processor(backend=SLOSBackend, m_circuit=4)
-    # random_op_proc.add(0, random_U)
-
-    pcvl.pdisplay(random_op_proc)
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2)
 
     assert random_op_fidelity == pytest.approx(1, 1e-6)
@@ -94,7 +87,7 @@ def test_fidelity_random_op():
 def test_chi_cnot_is_physical(renorm, expected):
     cnot_p = catalog["klm cnot"].build_processor()
 
-    qpt = QuantumProcessTomography(nqubit=2, operator_processor=cnot_p, renormalization=renorm)
+    qpt = ProcessTomography(nqubit=2, operator_processor=cnot_p, renormalization=renorm)
 
     chi_op = qpt.chi_matrix()
     res_is_physical = qpt.is_physical(chi_op)
