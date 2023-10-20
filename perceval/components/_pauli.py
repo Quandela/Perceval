@@ -27,18 +27,50 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
-from ._pauli import PauliType, get_pauli_circuit, get_pauli_gate
+import numpy as np
+from enum import Enum
+from .linear_circuit import Circuit
+from .unitary_components import BS, PS, PERM
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
 
-catalog = Catalog('perceval.components.core_catalog')
+class PauliType(Enum):
+    I = 0
+    X = 1
+    Y = 2
+    Z = 3
+
+
+def get_pauli_circuit(pauli_type: PauliType):
+    """
+    Create a LO circuit corresponding to one of the Pauli operators (I,X,Y,Z)
+
+    :param pauli_type: PauliType
+    :return: 2 mode perceval circuit
+    """
+    assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
+
+    if pauli_type.name == 'I':
+        return Circuit(2)
+    elif pauli_type.name == 'X':
+        return Circuit(2) // (0, PERM([1, 0]))
+    elif pauli_type.name == 'Y':
+        return Circuit(2) // (0, BS.H())
+    else:
+        return Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
+
+
+def get_pauli_gate(pauli_type: PauliType):
+    """
+    Computes one of the Pauli operators (I,X,Y,Z)
+
+    :param pauli_type: PauliType
+    :return: 2x2 unitary and hermitian array
+    """
+    if pauli_type.name == 'I':
+        return np.eye(2, dtype='complex_')
+    elif pauli_type.name == 'X':
+        return np.array([[0, 1], [1, 0]], dtype='complex_')
+    elif pauli_type.name == 'Y':
+        return np.array([[0, -1j], [1j, 0]], dtype='complex_')
+    else:
+        return np.array([[1, 0], [0, -1]], dtype='complex_')

@@ -30,31 +30,12 @@
 import numpy as np
 from itertools import combinations
 
-from perceval.components import Circuit, Processor, BS, PS, PERM, Port
+from perceval.components import Circuit, Processor, BS, PS, PERM, Port, PauliType, get_pauli_circuit, get_pauli_gate
 from .abstract_tomography import ATomography
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
-from ._tomography_utils import state_to_dens_matrix, compute_matrix, matrix_basis, \
-    matrix_to_vector, vector_to_sq_matrix, decomp
-
-
-def pauli(j):
-    """
-    computes the j-th Pauli operator (I,X,Y,Z)
-
-    :param j: int between 0 and 3
-    :return: 2x2 unitary and hermitian array
-    """
-    # assert j < 3, f'Pauli Index should be less than 3'
-    if j == 0:  # I
-        return np.eye(2, dtype='complex_')
-    elif j == 1:  # Pauli X
-        return np.array([[0, 1], [1, 0]], dtype='complex_')
-    elif j == 2:  # Pauli Y
-        return np.array([[0, -1j], [1j, 0]], dtype='complex_')
-    else:  # Pauli Z
-        return np.array([[1, 0], [0, -1]], dtype='complex_')
+from ._tomography_utils import matrix_basis, matrix_to_vector, vector_to_sq_matrix, decomp
 
 
 def fixed_basis_ops(j, nqubit):
@@ -66,12 +47,14 @@ def fixed_basis_ops(j, nqubit):
     :return: 2**nqubit x 2**nqubit array
     """
     if nqubit == 1:
-        return pauli(j)
+        return get_pauli_gate(PauliType(j))
 
-    E = pauli(j // (4 ** (nqubit - 1)))
+    indx = j // (4 ** (nqubit - 1))  # todo: fix 'indx' and 'val' in counting
+    E = get_pauli_gate(PauliType(indx))
     j = j % (4 ** (nqubit - 1))
     for i in range(nqubit - 2, -1, -1):
-        E = np.kron(E, pauli(j // (4 ** i)))
+        val = j // (4 ** i)
+        E = np.kron(E, get_pauli_gate(PauliType(val)))
         j = j % (4 ** i)
     return E
 
@@ -131,22 +114,14 @@ class StatePreparationCircuit(Circuit):
         :param state_prep_circ_indx: int between 0 and 3 for states (|0>,|1>,|+>,|+i>)
         :return: 2 mode Preparation Circuit
         """
-        assert 0 <= state_prep_circ_indx <= 3, f'Invalid index for circuit to prepare state'
-        if state_prep_circ_indx == 1:
-            return Circuit(2) // (0, PERM([1, 0]))
-        elif state_prep_circ_indx == 2:
-            return Circuit(2) // (0, BS.H())
-        elif state_prep_circ_indx == 3:
-            return Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
-        else:
-            return Circuit(2)
+        pass
 
     def build_preparation_circuit(self):
         """
         Builds a circuit to prepare photons in chosen input basis for tomography experiment
         """
         for m in range(len(self._prep_state_basis_indxs)):
-            self.add(2 * m, self._state_prep_circ_single_qubit(self._prep_state_basis_indxs[m]), merge=True)
+            self.add(2 * m, get_pauli_circuit(PauliType(self._prep_state_basis_indxs[m])), merge=True)
         return self
 
 
@@ -510,5 +485,9 @@ class ProcessTomography(ATomography):
             res.append("|Completely Positive|")
 
         return res
+
+    # TODO: SIZE OF MATRICES TO IMPLEMENT ::::
+    #  Stephen Wein - yeah, the density matrix is always d^2 but the chi matrix (or choi matrix) will be d^4
+
     # todo: yes, in the class. given the nqubit, the fock space gets fixed and at many differnet locations he is
     #  creating matrices and ndarrays of size d/d**2/4*d/or whatever. So having "d" would greatly remove all of that

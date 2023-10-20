@@ -31,11 +31,11 @@ import numpy as np
 import math
 
 
-def state_to_dens_matrix(state):
+def _state_to_dens_matrix(state):
     return np.dot(state, np.conjugate(np.transpose(state)))
 
 
-def compute_matrix(j):
+def _compute_matrix(j):
     if j == 0:
         return np.eye(2, dtype='complex_')
     elif j == 1:
@@ -58,10 +58,10 @@ def matrix_basis(nqubit):  # create a matrix basis from all the tensor products 
             k.append(j // (4 ** m))
             j = j % (4 ** m)
         k.reverse()
-        M = compute_matrix(k[0])
+        M = _compute_matrix(k[0])
         for i in k[1:]:
-            M = np.kron(compute_matrix(i), M)
-        B.append(state_to_dens_matrix(np.dot(M, v)))
+            M = np.kron(_compute_matrix(i), M)
+        B.append(_state_to_dens_matrix(np.dot(M, v)))
     return B
 
 
