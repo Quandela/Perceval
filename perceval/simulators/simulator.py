@@ -389,6 +389,7 @@ class Simulator(ISimulator):
         if not isinstance(input_state, StateVector):
             input_state = StateVector(input_state)
 
+
         # Decay input to a list of basic states without annotations and evolve each of them
         decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state]
         input_list = [copy(state) for t in decomposed_input for state in t[1]]
