@@ -29,3 +29,4 @@
 
 from .sampler import Sampler
 from .analyzer import Analyzer
+from .tomography.quantum_process_tomography import ProcessTomography, StateTomography
