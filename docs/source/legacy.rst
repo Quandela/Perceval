@@ -16,6 +16,7 @@ StateVector
 
 Iterate through a State Vector
 ++++++++++++++++++++++++++++++
+
 State Vector is still a hash map (state, amplitude) but works a bit differently than a python dictionary.
 
 State Vector keys, :code:`states`, are obtained with method :code:`keys`:
@@ -55,7 +56,6 @@ From version 0.9
 >>> sv2 = state_vector * numpy.int16(4)
 >>> assert sv1 == sv2
 
-
 To version 0.10
 
 >>> import numpy
@@ -63,6 +63,29 @@ To version 0.10
 >>> sv2 = state_vector * numpy.int16(4)
 
 .. note:: StateVector will interact badly with any :code:`numpy` scalar type
+
+Shots in algorithms
+^^^^^^^^^^^^^^^^^^^
+
+When instanciating an algorithm class (:code:`Sampler`, :code:`Analyzer`) with a :code:`RemoteProcessor`, the user now has to
+pass a positive integer value for the named parameter :code:`max_shots_per_call`. Please note that this parameter
+name *has to* be typed in order to avoid potential signature errors.
+
+>>> p = RemoteProcessor("sim:platform")
+>>> sampler = Sampler(p, max_shots_per_call=10_000_000)
+
+This parameter is also handled by local simulations.
+
+.. note:: Probability amplitude back-ends used for sampling (e.g. using **SLOS** for a :code:`sample_count` call) cannot
+    estimate accurately the sample to shots ratio when converting probabilities to samples.
+
+:code:`samples` and :code:`sample_count` parameter was renamed from :code:`count` to :code:`max_samples`
+
+>>> sampler.samples(500)  # still works
+>>> # sampler.samples(count=500)  # will not work anymore
+>>> sampler.samples(max_samples=500)  # works
+
+For additional information, see: :ref:`Remote computing on Quandela Cloud`
 
 AnnotatedBasicState
 ^^^^^^^^^^^^^^^^^^^
