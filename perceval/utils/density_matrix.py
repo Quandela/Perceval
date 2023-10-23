@@ -31,28 +31,27 @@
 from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
+import numpy as np
 from scipy.sparse import csr_array, lil_array, dok_array
 
 
-class DensityMatrixData(csr_array):
+class DensityMatrixData:
     """
     class representing square hermitian sparse matrix
     used to store the DensityMatrix objects data
     """
 
-    def __getitem__(self, key):
-        row, col = key
-        if super().__getitem__(self, key) == 0:
-            return conj(super().__getitem__(self, (col, row)))
+    def __init__(self, size):
+        if size >= 20000:
+            self.data = dok_array((size, size), dtype=complex)
         else:
-            return super().__getitem__(self, key)
+            self.data = np.zeros((size, size), dtype=complex)
+
+    def __getitem__(self, key):
+        return self.data[key]
 
     def __setitem__(self, key, value):
-        row, col = key
-        if row >= col:
-            super().__setitem__(key, value)
-        else:
-            super().__setitem__((col,row), value)
+        self.data[key] = value
 
 
 class DensityMatrix:
@@ -79,20 +78,25 @@ class DensityMatrix:
         self.size = comb(self.m + self._n_max, self.m)
         if index is None or len(index != self.size):
             self.index = dict()
+            self.reverse_index = []
             k = 0
             for key in max_photon_state_iterator(self._m, self._n_max):
                 self.index[key] = k
+                self.reverse_index.append(key)
                 k+=1
         else:
             self.index = index
 
-        self.mat = DensityMatrixData((self.size, self.size), dtype=complex)
+        print("index constructed")
+        k = 0
+        self.mat = DensityMatrixData(self.size)
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
                     i, j = self.index[bst1], self.index[bst2]
-                    if i >= j:
-                        self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
+                    self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
+            print(k)
+            k+=1
 
     def __getitem__(self, key):
         """key must be a BasicState tuple"""
@@ -112,3 +116,13 @@ class DensityMatrix:
     @property
     def m(self):
         return self._m
+
+def index_to_basic_state(i, m, n_max):
+
+    if i <= comb(n_max + m - 1 , n_max-1):
+        return index_to_Basic_State(i, m, n_max - 1)
+    else:
+        pass
+
+def basic_state_to_index(bs):
+    pass
