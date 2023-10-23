@@ -36,7 +36,7 @@ from perceval.components import catalog, Processor
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography._tomography_utils import is_physical
+from perceval.algorithm.tomography import is_physical
 
 def fidelity_op_process_tomography(op, op_proc, nqubit):
     # create process tomography object

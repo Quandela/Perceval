@@ -200,5 +200,3 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
         res.append("|Completely Positive|")
 
     return res
-
-    return res

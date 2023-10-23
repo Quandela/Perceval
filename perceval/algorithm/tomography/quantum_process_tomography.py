@@ -29,13 +29,12 @@
 
 import numpy as np
 
-from perceval.components import Circuit, Processor, BS, Port, PauliType, get_pauli_circuit, get_pauli_gate
-# from .abstract_tomography import ATomography
+from perceval.components import Circuit, Processor, BS, Port, get_pauli_circuit
 from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
-from ._tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _decomp, _get_fixed_basis_ops, \
+from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _decomp, _get_fixed_basis_ops, \
     _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
 
 
@@ -114,8 +113,6 @@ class StateTomography(AAlgorithm):
         self._backend = operator_processor.backend  # default - SLOSBackend()
         self._post_process = post_process
         self._renormalization = renormalization
-
-        # super().__init__(nqubit, operator_processor, post_process, renormalization)
         self._source = operator_processor.source  # default - ideal source
         self._backend = operator_processor.backend  # default - SLOSBackend()
         self._heralded_modes = [(key, value) for key, value in operator_processor.heralds.items()]
@@ -235,8 +232,6 @@ class ProcessTomography(AAlgorithm):
         self._backend = operator_processor.backend  # default - SLOSBackend()
         self._post_process = post_process
         self._renormalization = renormalization
-
-        # super().__init__(nqubit, operator_processor, post_process, renormalization)
         self._size_hilbert = 2 ** nqubit
         self._qst = StateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
                                            post_process=self._post_process, renormalization=self._renormalization)
