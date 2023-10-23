@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import numpy as np
-from itertools import combinations
+from itertools import combinations, product
 
 from perceval.components import Circuit, Processor, BS, Port, PauliType, get_pauli_circuit, get_pauli_gate
 from .abstract_tomography import ATomography
@@ -49,8 +49,13 @@ def fixed_basis_ops(j, nqubit):
     if nqubit == 1:
         return get_pauli_gate(PauliType(j))
 
+    # pauli_indices = generate_pauli_indx(nqubit)
+    # print(pauli_indices)
+    # for val in pauli_indices:
+
     indx = j // (4 ** (nqubit - 1))  # todo: fix 'indx' and 'val' in counting
     E = get_pauli_gate(PauliType(indx))
+
     j = j % (4 ** (nqubit - 1))
     for i in range(nqubit - 2, -1, -1):
         val = j // (4 ** i)
@@ -79,6 +84,13 @@ def krauss_repr_ops(m, rhoj, n, nqubit):
     return np.dot(fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(fixed_basis_ops(n, nqubit)))))
 
 
+def generate_pauli_indx(n):
+    S = [PauliType(member.value) for member in PauliType]  # todo : maybe a better way exists
+    # tkaes Cartesian product of elements of set S with itself repeating 'n' times
+    output_set = [list(p) for p in product(S, repeat=n)]
+    return output_set
+
+
 def thresh(X, eps=10 ** (-6)):
     # todo : to be removed
     """ Threshold function to cancel computational errors in the given input matrix
@@ -97,6 +109,8 @@ class StatePreparationCircuit(Circuit):
     Builds a preparation circuit to prepares a photon in each of the following
     logical Qubit state states: |0>,|1>,|+>,|+i>
 
+    Pauli Gates are used to acheieve this
+
     :param prep_state_basis_indxs: List of 'n'(=nqubit) elements indexing to choose jth
     state from any of the following Logical states: |0>,|1>,|+>,|+i>
     :param nqubit: Number of Qubits
@@ -113,13 +127,14 @@ class StatePreparationCircuit(Circuit):
         Builds a circuit to prepare photons in chosen input basis for tomography experiment
         """
         for m in range(len(self._prep_state_basis_indxs)):
-            self.add(2 * m, get_pauli_circuit(PauliType(self._prep_state_basis_indxs[m])), merge=True)
+            self.add(2 * m, get_pauli_circuit(self._prep_state_basis_indxs[m]), merge=True)
         return self
 
 
 class MeasurementCircuit(Circuit):
     """
     Builds a measurement circuit in the Pauli Basis (I,X,Y,Z) to perform tomography experiments.
+    # Todo : understand why this is different; New note in Arman's code says - it is a circuit that MEASURES PHOTONS IN THE PAULI BASIS
 
     :param meas_basis_pauli_indxs: List of 'n'(=nqubit) elements indexing to choose jth
     Pauli Matrix {j:0=I, j:1=X, j:2=Y, j:3=Z} for measurement basis at nth Qubit
@@ -270,15 +285,12 @@ class StateTomography(ATomography):
         :return: 2**nqubit x 2**nqubit array
         """
         density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype='complex_')
-        for j in range(self._size_hilbert ** 2):
-            i = [0] * self._nqubit
-            j1 = j
-            for k in range(self._nqubit - 1, -1, -1):
-                i[k] = j1 // (4 ** k)
-                j1 = j1 % (4 ** k)
-            i.reverse()
-            density_matrix += self._stokes_parameter(prep_state_basis_indxs=state_index, meas_basis_pauli_indxs=i) * \
-                              fixed_basis_ops(j, self._nqubit)
+
+        pauli_indices = generate_pauli_indx(self._nqubit)
+        for indx, elem in enumerate(pauli_indices):
+            to_list = [p.value for p in elem]
+            density_matrix += self._stokes_parameter(state_index, to_list) * fixed_basis_ops(indx, self._nqubit)
+        # todo: see how to get rid of list form and indx
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
         return density_matrix
 
@@ -342,11 +354,8 @@ class ProcessTomography(ATomography):
         :return: 2**(4*nqubit) vector
         """
         EPS = []
-        for state_counter in range(self._size_hilbert ** 2):
-            state_index = []  # indexes the preparation and measurement state from basis
-            for i in range(self._nqubit - 1, -1, -1):
-                state_index.append(state_counter // (4 ** i))
-                state_counter = state_counter % (4 ** i)
+        pauli_indices = generate_pauli_indx(self._nqubit)
+        for state_index in pauli_indices:
             EPS.append(self._qst.perform_quantum_state_tomography(state_index))
 
         basis = matrix_basis(self._nqubit)
@@ -380,16 +389,14 @@ class ProcessTomography(ATomography):
         """
         beta_inv = np.linalg.pinv(self._beta_matrix())
         L = self._lambda_vector()
-        X = np.dot(beta_inv, L)
-        # here X is a vector
+        X = np.dot(beta_inv, L)  # X is a vector here
         return vector_to_sq_matrix(X)
 
     def chi_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         beta_inv = np.linalg.pinv(self._beta_matrix())
         lambd = self._lambda_target(operator)
-        X = np.dot(beta_inv, lambd)
-        # here X is a matrix
+        X = np.dot(beta_inv, lambd)  # X is a matrix here
         return vector_to_sq_matrix(X[:, 0])
 
     def process_fidelity(self, chi_computed, chi_ideal):

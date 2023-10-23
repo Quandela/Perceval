@@ -66,6 +66,7 @@ def get_pauli_gate(pauli_type: PauliType):
     :param pauli_type: PauliType
     :return: 2x2 unitary and hermitian array
     """
+    # todo: change to Matrix of perceval and not use numpy
     if pauli_type == PauliType.I:
         return np.eye(2, dtype='complex_')
     elif pauli_type == PauliType.X:
