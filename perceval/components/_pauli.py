@@ -49,11 +49,11 @@ def get_pauli_circuit(pauli_type: PauliType):
     """
     assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
 
-    if pauli_type.name == 'I':
+    if pauli_type == PauliType.I:
         return Circuit(2)
-    elif pauli_type.name == 'X':
+    elif pauli_type == PauliType.X:
         return Circuit(2) // (0, PERM([1, 0]))
-    elif pauli_type.name == 'Y':
+    elif pauli_type == PauliType.Y:
         return Circuit(2) // (0, BS.H())
     else:
         return Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
@@ -66,11 +66,11 @@ def get_pauli_gate(pauli_type: PauliType):
     :param pauli_type: PauliType
     :return: 2x2 unitary and hermitian array
     """
-    if pauli_type.name == 'I':
+    if pauli_type == PauliType.I:
         return np.eye(2, dtype='complex_')
-    elif pauli_type.name == 'X':
+    elif pauli_type == PauliType.X:
         return np.array([[0, 1], [1, 0]], dtype='complex_')
-    elif pauli_type.name == 'Y':
+    elif pauli_type == PauliType.Y:
         return np.array([[0, -1j], [1j, 0]], dtype='complex_')
     else:
         return np.array([[1, 0], [0, -1]], dtype='complex_')

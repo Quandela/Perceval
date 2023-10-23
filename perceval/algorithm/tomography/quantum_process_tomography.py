@@ -30,7 +30,7 @@
 import numpy as np
 from itertools import combinations
 
-from perceval.components import Circuit, Processor, BS, PS, PERM, Port, PauliType, get_pauli_circuit, get_pauli_gate
+from perceval.components import Circuit, Processor, BS, Port, PauliType, get_pauli_circuit, get_pauli_gate
 from .abstract_tomography import ATomography
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
@@ -80,6 +80,7 @@ def krauss_repr_ops(m, rhoj, n, nqubit):
 
 
 def thresh(X, eps=10 ** (-6)):
+    # todo : to be removed
     """ Threshold function to cancel computational errors in the given input matrix
      """
     for i in range(len(X)):
@@ -107,15 +108,6 @@ class StatePreparationCircuit(Circuit):
         self._nqubit = nqubit
         self._prep_state_basis_indxs = prep_state_basis_indxs
 
-    def _state_prep_circ_single_qubit(self, state_prep_circ_indx: int) -> Circuit:
-        """
-        Prepares a photon in any of the following Logical states: |0>,|1>,|+>,|+i>
-
-        :param state_prep_circ_indx: int between 0 and 3 for states (|0>,|1>,|+>,|+i>)
-        :return: 2 mode Preparation Circuit
-        """
-        pass
-
     def build_preparation_circuit(self):
         """
         Builds a circuit to prepare photons in chosen input basis for tomography experiment
@@ -141,7 +133,7 @@ class MeasurementCircuit(Circuit):
         self._nqubit = nqubit
         self._meas_basis_pauli_indxs = meas_basis_pauli_indxs
 
-    def _meas_circ_single_qubit(self, pauli_meas_circ_indx: int) -> Circuit:
+    def _meas_circ(self, pauli_meas_circ_indx: int) -> Circuit:
         """
         Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
 
@@ -162,7 +154,7 @@ class MeasurementCircuit(Circuit):
         Builds the circuit to perform measurement of photons in the Pauli basis
         """
         for m in range(len(self._meas_basis_pauli_indxs)):
-            self.add(2 * m, self._meas_circ_single_qubit(self._meas_basis_pauli_indxs[m]), merge=True)
+            self.add(2 * m, self._meas_circ(self._meas_basis_pauli_indxs[m]), merge=True)
         return self
 
 
@@ -172,6 +164,7 @@ class StateTomography(ATomography):
         self._source = operator_processor.source  # default - ideal source
         self._backend = operator_processor.backend  # default - SLOSBackend()
         self._heralded_modes = [(key, value) for key, value in operator_processor.heralds.items()]
+        self._size_hilbert = 2 ** nqubit
 
 
     @staticmethod
@@ -276,9 +269,8 @@ class StateTomography(ATomography):
         :param state_index: list of length of number of qubits to index the corresponding preparation circuit
         :return: 2**nqubit x 2**nqubit array
         """
-        d = 2 ** self._nqubit
-        density_matrix = np.zeros((d, d), dtype='complex_')
-        for j in range(d ** 2):
+        density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype='complex_')
+        for j in range(self._size_hilbert ** 2):
             i = [0] * self._nqubit
             j1 = j
             for k in range(self._nqubit - 1, -1, -1):
@@ -294,7 +286,7 @@ class StateTomography(ATomography):
         """
         Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
-        :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
+        :param density_matrix: density_matrix of a quantum map computed from Quantum State Tomography
         :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
         :return: list with findings of the tests
         """
@@ -310,7 +302,7 @@ class StateTomography(ATomography):
             P_n = np.conjugate(np.transpose(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(n, self._nqubit)))])))
             for m in range(d2):
                 choi += density_matrix[m, n] * np.dot(np.transpose([matrix_to_vector(np.transpose(fixed_basis_ops(m, self._nqubit)))]), P_n)
-        choi /= 2 ** self._nqubit
+        choi /= self._size_hilbert
         eigenvalues = np.linalg.eigvalsh(choi)
         if np.any(eigenvalues < -eigen_tolerance):
             val = np.round(eigenvalues[0], 5)
@@ -325,6 +317,7 @@ class ProcessTomography(ATomography):
     def __init__(self, nqubit: int, operator_processor: Processor, post_process=False,
                  renormalization=None):
         super().__init__(nqubit, operator_processor, post_process, renormalization)
+        self._size_hilbert = 2 ** nqubit
         self._qst = StateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
                                            post_process=self._post_process, renormalization=self._renormalization)
 
@@ -335,12 +328,11 @@ class ProcessTomography(ATomography):
         return b[k // d, k % d]
 
     def _beta_matrix(self):
-        d = 2 ** self._nqubit
-        M = np.zeros((d ** 4, d ** 4), dtype='complex_')
-        for i in range(d ** 4):
-            for j in range(d ** 4):
-                M[i, j] = ProcessTomography._beta_ndarray(i // (d ** 2), i % (d ** 2), j // (d ** 2),
-                                                                 j % (d ** 2), self._nqubit)
+        M = np.zeros((self._size_hilbert ** 4, self._size_hilbert ** 4), dtype='complex_')
+        for i in range(self._size_hilbert ** 4):
+            for j in range(self._size_hilbert ** 4):
+                M[i, j] = ProcessTomography._beta_ndarray(i // (self._size_hilbert ** 2), i % (self._size_hilbert ** 2), j // (self._size_hilbert ** 2),
+                                                                 j % (self._size_hilbert ** 2), self._nqubit)
         return M
 
     def _lambda_vector(self):
@@ -349,9 +341,8 @@ class ProcessTomography(ATomography):
 
         :return: 2**(4*nqubit) vector
         """
-        d = 2 ** self._nqubit
         EPS = []
-        for state_counter in range(d ** 2):
+        for state_counter in range(self._size_hilbert ** 2):
             state_index = []  # indexes the preparation and measurement state from basis
             for i in range(self._nqubit - 1, -1, -1):
                 state_index.append(state_counter // (4 ** i))
@@ -359,27 +350,26 @@ class ProcessTomography(ATomography):
             EPS.append(self._qst.perform_quantum_state_tomography(state_index))
 
         basis = matrix_basis(self._nqubit)
-        L = np.zeros((d ** 2, d ** 2), dtype='complex_')
-        for j in range(d ** 2):
+        L = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
+        for j in range(self._size_hilbert ** 2):
             rhoj = canonical_basis_ops(j, self._nqubit)
             mu = decomp(rhoj, basis)
-            eps_rhoj = sum([mu[i] * EPS[i] for i in range(d ** 2)])
-            for k in range(d ** 2):
-                L[j, k] = eps_rhoj[k // d, k % d]
+            eps_rhoj = sum([mu[i] * EPS[i] for i in range(self._size_hilbert ** 2)])
+            for k in range(self._size_hilbert ** 2):
+                L[j, k] = eps_rhoj[k // self._size_hilbert, k % self._size_hilbert]
         return matrix_to_vector(L)
 
     def _lambda_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        d = 2 ** self._nqubit
-        L = np.zeros((d ** 2, d ** 2), dtype='complex_')
-        for j in range(d ** 2):
+        L = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
+        for j in range(self._size_hilbert ** 2):
             rhoj = canonical_basis_ops(j, self._nqubit)
             eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
-            for k in range(d ** 2):
-                L[j, k] = eps_rhoj[k // d, k % d]
-        L1 = np.zeros((d ** 4, 1), dtype='complex_')
-        for i in range(d ** 4):
-            L1[i] = L[i // (d ** 2), i % (d ** 2)]
+            for k in range(self._size_hilbert ** 2):
+                L[j, k] = eps_rhoj[k // self._size_hilbert, k % self._size_hilbert]
+        L1 = np.zeros((self._size_hilbert ** 4, 1), dtype='complex_')
+        for i in range(self._size_hilbert ** 4):
+            L1[i] = L[i // (self._size_hilbert ** 2), i % (self._size_hilbert ** 2)]
         return L1
 
     def chi_matrix(self):
@@ -416,16 +406,15 @@ class ProcessTomography(ATomography):
         """
         Computes the average fidelity of an operator and its perceval circuit
 
-        :param qst: QuantumStateTomgraphy object on which tomography is performed
+        :param operator: Gate matrix whose fidelity is to be calculated
         :return: float between 0 and 1
         """
         Udag = np.transpose(np.conjugate(operator))
-        d = 2 ** self._nqubit
-        f = 1 / (d + 1)
+        f = 1 / (self._size_hilbert + 1)
 
         # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
         EPS = []
-        for state_counter in range(d ** 2):
+        for state_counter in range(self._size_hilbert ** 2):
             state_index = []
             for i in range(self._nqubit - 1, -1, -1):
                 state_index.append(state_counter // (4 ** i))
@@ -433,13 +422,13 @@ class ProcessTomography(ATomography):
             EPS.append(self._qst.perform_quantum_state_tomography(state_index))
 
         basis = matrix_basis(self._nqubit)
-        for j in range(d ** 2):
+        for j in range(self._size_hilbert ** 2):
             Uj = fixed_basis_ops(j, self._nqubit)
             mu = decomp(Uj, basis)
-            eps_Uj = sum([mu[i] * EPS[i] for i in range(d ** 2)])  # compute the map on a basis
+            eps_Uj = sum([mu[i] * EPS[i] for i in range(self._size_hilbert ** 2)])  # compute the map on a basis
             Ujdag = np.transpose(np.conjugate(Uj))
             a = np.linalg.multi_dot([operator, Ujdag, Udag, eps_Uj])
-            f += (1 / ((d + 1) * (d ** 2))) * np.trace(a)
+            f += (1 / ((self._size_hilbert + 1) * (self._size_hilbert ** 2))) * np.trace(a)
         return np.real(f)
 
     def error_process_matrix(self, computed_chi, operator):
@@ -449,14 +438,13 @@ class ProcessTomography(ATomography):
         :param computed_chi:
         :return: matrix
         """
-        d = 2 ** self._nqubit
-        V = np.zeros((d ** 2, d ** 2), dtype='complex_')
-        for m in range(d ** 2):
-            for n in range(d ** 2):
+        V = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
+        for m in range(self._size_hilbert ** 2):
+            for n in range(self._size_hilbert ** 2):
                 Emdag = np.transpose(np.conjugate(fixed_basis_ops(m, self._nqubit)))
                 En = fixed_basis_ops(n, self._nqubit)
                 Udag = np.transpose(np.conjugate(operator))
-                V[m, n] = (1 / d) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
+                V[m, n] = (1 / self._size_hilbert) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
         return np.linalg.multi_dot([V, computed_chi, np.conjugate(np.transpose(V))])
 
     def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
