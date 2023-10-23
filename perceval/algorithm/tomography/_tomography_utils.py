@@ -155,3 +155,50 @@ def _list_subset_k_from_n(k, n):
     #  Should we put it in overall utils? or have a specific util for tomograph?
     s = tuple(range(n))
     return list(combinations(s, k))
+
+
+def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
+    """
+    Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
+
+    :param input_matrix: chi of a quantum map computed from Quantum Process Tomography
+    :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
+    :return: bool and string
+    """
+    d2 = len(input_matrix)
+    res = []
+
+    # check if trace preserving
+    if not np.isclose(np.trace(input_matrix), 1):
+        res.append("|trace not 1| value:"+str(np.trace(input_matrix)))
+    else:
+        res.append("|trace 1|")
+
+    # check if hermitian
+    hermiticity = np.zeros_like(input_matrix).real
+    for i in range(d2):
+        for j in range(i, d2):
+            if not np.isclose(input_matrix[i][j], np.conjugate(input_matrix[j][i])):
+                hermiticity[i][j] = 1
+    if np.any(hermiticity == 1):
+        res.append("|not hermitian|")
+    else:
+        res.append("|hermitian|")
+
+    # check if completely positive with Choi–Jamiołkowski isomorphism
+    choi = 0
+    for n in range(d2):
+        P_n = np.conjugate(np.transpose(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])))
+        for m in range(d2):
+            choi += input_matrix[m, n] * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, nqubit)))]), P_n)
+    choi /= 2 ** nqubit
+    eigenvalues = np.linalg.eigvalsh(choi)
+    if np.any(eigenvalues < -eigen_tolerance):
+        val = np.round(eigenvalues[0], 5)
+        res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
+    else:
+        res.append("|Completely Positive|")
+
+    return res
+
+    return res

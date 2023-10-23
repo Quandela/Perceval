@@ -36,7 +36,7 @@ from perceval.components import catalog, Processor
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-
+from perceval.algorithm.tomography._tomography_utils import is_physical
 
 def fidelity_op_process_tomography(op, op_proc, nqubit):
     # create process tomography object
@@ -90,7 +90,7 @@ def test_chi_cnot_is_physical(renorm, expected):
     qpt = ProcessTomography(nqubit=2, operator_processor=cnot_p, renormalization=renorm)
 
     chi_op = qpt.chi_matrix()
-    res_is_physical = qpt.is_physical(chi_op)
+    res_is_physical = is_physical(chi_op, nqubit=2)
 
     assert res_is_physical[0] == "|trace 1|"
     assert res_is_physical[1] == "|hermitian|"

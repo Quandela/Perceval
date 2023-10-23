@@ -30,7 +30,8 @@
 import numpy as np
 
 from perceval.components import Circuit, Processor, BS, Port, PauliType, get_pauli_circuit, get_pauli_gate
-from .abstract_tomography import ATomography
+# from .abstract_tomography import ATomography
+from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
@@ -105,9 +106,16 @@ class MeasurementCircuit(Circuit):
         return self
 
 
-class StateTomography(ATomography):
+class StateTomography(AAlgorithm):
     def __init__(self, nqubit: int, operator_processor: Processor, post_process=False, renormalization=None):
-        super().__init__(nqubit, operator_processor, post_process, renormalization)
+        super().__init__(processor=operator_processor)
+        self._nqubit = nqubit
+        self._operator_processor = operator_processor
+        self._backend = operator_processor.backend  # default - SLOSBackend()
+        self._post_process = post_process
+        self._renormalization = renormalization
+
+        # super().__init__(nqubit, operator_processor, post_process, renormalization)
         self._source = operator_processor.source  # default - ideal source
         self._backend = operator_processor.backend  # default - SLOSBackend()
         self._heralded_modes = [(key, value) for key, value in operator_processor.heralds.items()]
@@ -202,7 +210,7 @@ class StateTomography(ATomography):
 
     def perform_quantum_state_tomography(self, state_index):
         """
-        Computes the density matrix of a state after the operator_circuit
+        Computes the density matrix of a state after the operator_circuit. Size d^2 x d^2
 
         :param state_index: list of length of number of qubits to index the corresponding preparation circuit
         :return: 2**nqubit x 2**nqubit array
@@ -217,55 +225,34 @@ class StateTomography(ATomography):
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
         return density_matrix
 
-    def is_physical(self, density_matrix, eigen_tolerance=10 ** (-6)):
-        """
-        Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
-        :param density_matrix: density_matrix of a quantum map computed from Quantum State Tomography
-        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-        :return: list with findings of the tests
-        """
-        # Todo: density matrix is always hermitian and CP, trace maybe between 0 and 1 - output that
-        # density matrix is CP, Hermitian, trace can be between 0 and 1
-
-        res = super().is_physical(density_matrix, eigen_tolerance)
-        d2 = len(density_matrix)
-
-        # check if completely positive with Choi–Jamiołkowski isomorphism
-        choi = 0
-        for n in range(d2):
-            P_n = np.conjugate(np.transpose(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, self._nqubit)))])))
-            for m in range(d2):
-                choi += density_matrix[m, n] * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, self._nqubit)))]), P_n)
-        choi /= self._size_hilbert
-        eigenvalues = np.linalg.eigvalsh(choi)
-        if np.any(eigenvalues < -eigen_tolerance):
-            val = np.round(eigenvalues[0], 5)
-            res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
-        else:
-            res.append("|Completely Positive|")
-
-        return res
-
-
-class ProcessTomography(ATomography):
+class ProcessTomography(AAlgorithm):
     def __init__(self, nqubit: int, operator_processor: Processor, post_process=False,
                  renormalization=None):
-        super().__init__(nqubit, operator_processor, post_process, renormalization)
+        super().__init__(processor=operator_processor)
+        self._nqubit = nqubit
+        self._operator_processor = operator_processor
+        self._backend = operator_processor.backend  # default - SLOSBackend()
+        self._post_process = post_process
+        self._renormalization = renormalization
+
+        # super().__init__(nqubit, operator_processor, post_process, renormalization)
         self._size_hilbert = 2 ** nqubit
         self._qst = StateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
                                            post_process=self._post_process, renormalization=self._renormalization)
 
     @staticmethod
     def _beta_ndarray(j, k, m, n, nqubit):
+        # Returns an ndarray for - beta^{mn}_{jk}, a rank 4 tensor where each index can take values between 0 and d^2-1
         d = 2 ** nqubit
         b = _krauss_repr_ops(m, _get_canonical_basis_ops(j, nqubit), n, nqubit)
         return b[k // d, k % d]
 
     def _beta_matrix(self):
-        M = np.zeros((self._size_hilbert ** 4, self._size_hilbert ** 4), dtype='complex_')
-        for i in range(self._size_hilbert ** 4):
-            for j in range(self._size_hilbert ** 4):
+        num_meas = self._size_hilbert ** 4  # Total number of measurements need for process tomography
+        M = np.zeros((num_meas, num_meas), dtype='complex_')
+        for i in range(num_meas):
+            for j in range(num_meas):
                 M[i, j] = ProcessTomography._beta_ndarray(i // (self._size_hilbert ** 2), i % (self._size_hilbert ** 2), j // (self._size_hilbert ** 2),
                                                                  j % (self._size_hilbert ** 2), self._nqubit)
         return M
@@ -306,7 +293,7 @@ class ProcessTomography(ATomography):
 
     def chi_matrix(self):
         """
-        Computes the chi matrix of the operator_circuit
+        Computes the chi matrix of the operator_circuit. Size d^4 x d^4
 
         :return: 2**(2*nqubit)x2**(2*nqubit) array
         """
@@ -363,7 +350,8 @@ class ProcessTomography(ATomography):
 
     def error_process_matrix(self, computed_chi, operator):
         """
-        Computes the error matrix for an operation from the computed chi matrix
+        Computes the error matrix for an operation from the computed chi
+        Size d^4 x d^4
 
         :param computed_chi:
         :return: matrix
@@ -376,36 +364,3 @@ class ProcessTomography(ATomography):
                 Udag = np.transpose(np.conjugate(operator))
                 V[m, n] = (1 / self._size_hilbert) * np.trace(np.linalg.multi_dot([Emdag, En, Udag]))
         return np.linalg.multi_dot([V, computed_chi, np.conjugate(np.transpose(V))])
-
-    def is_physical(self, chi_matrix, eigen_tolerance=10 ** (-6)):
-        """
-        Verifies if chi matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
-
-        :param chi_matrix: chi_matrix of a quantum map computed from Quantum Process Tomography
-        :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-        :return: list with findings of the tests
-        """
-        res = super().is_physical(chi_matrix, eigen_tolerance)
-        d2 = len(chi_matrix)
-
-        # check if completely positive with Choi–Jamiołkowski isomorphism
-        choi = 0
-        for n in range(d2):
-            P_n = np.conjugate(np.transpose(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, self._nqubit)))])))
-            for m in range(d2):
-                choi += chi_matrix[m, n] * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, self._nqubit)))]), P_n)
-        choi /= 2 ** self._nqubit
-        eigenvalues = np.linalg.eigvalsh(choi)
-        if np.any(eigenvalues < -eigen_tolerance):
-            val = np.round(eigenvalues[0], 5)
-            res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
-        else:
-            res.append("|Completely Positive|")
-
-        return res
-
-    # TODO: SIZE OF MATRICES TO IMPLEMENT ::::
-    #  Stephen Wein - yeah, the density matrix is always d^2 but the chi matrix (or choi matrix) will be d^4
-
-    # todo: yes, in the class. given the nqubit, the fock space gets fixed and at many differnet locations he is
-    #  creating matrices and ndarrays of size d/d**2/4*d/or whatever. So having "d" would greatly remove all of that
