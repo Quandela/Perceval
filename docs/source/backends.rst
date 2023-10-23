@@ -128,7 +128,7 @@ complexity of :math:`\mathrm{n\rho_\theta^n}` for a number of modes :math:`m=\th
 photons :math:`n`, where:
 
 .. math::
-    \rho_\theta = \frac{(2\theta+1)^{2\theta+1}}{(4\theta)^{4\theta}(\theta+1)^{\theta+1}}
+    \rho_\theta = \frac{(2\theta+1)^{2\theta+1}}{(4\theta)^{\theta}(\theta+1)^{\theta+1}}
 
 For example, if we were to work with dual rail path encoding (ignoring for now the number of auxiliary modes required),
 we would typically work with :math:`\theta=2`, and the average performance is then
