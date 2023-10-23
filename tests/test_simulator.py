@@ -282,3 +282,6 @@ def test_evovle_phase():
     simu.set_circuit(c)
     output_sv = simu.evolve(input_state)
     assert output_sv[BasicState([1, 1])] == pytest.approx(complex(math.sqrt(2)/4, math.sqrt(6)/4))
+
+    input_state2 = StateVector([0, 0])
+    assert simu.evolve(input_state2) == StateVector([0,0])
