@@ -92,7 +92,7 @@ class DensityMatrix:
 
         print("index constructed")
         k = 0
-        self.mat = dok_array((self.size,self.size), dtype=complex)
+        self.mat = dok_array((self.size, self.size), dtype=complex)
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
@@ -113,17 +113,19 @@ class DensityMatrix:
         """
                 gives back an SVDistribution from the density_matrix
         """
-        val, vec = scipy.sparse.linalg.eigsh(self.mat, self.size)
+        val, vec = scipy.sparse.linalg.eigsh(self.mat, self.size - 2)
         dic = {}
-        for i in range(self.size):
+        n = val.shape
+        for i in range(n[0]):
             if val[i] >= threshold:
                 sv = StateVector()
-                for j in range(self.size):
+                for j in range(n[0]):
                     if vec[i][j] >= threshold:
-                        sv += vec[i][j]*self.reverse_index[j]
+                        sv += complex(vec[i][j])*self.reverse_index[j]
                     else:
                         continue
-                dic[sv] = val[i]
+                if sv.m != 0:
+                    dic[sv] = val[i]
             else:
                 continue
         return SVDistribution(dic)
