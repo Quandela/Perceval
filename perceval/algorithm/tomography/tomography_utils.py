@@ -30,27 +30,18 @@
 import numpy as np
 import math
 from itertools import product, combinations
-from perceval.components import PauliType, get_pauli_gate
+from perceval.components import PauliType, get_pauli_gate, get_pauli_circuit
+
+# todo: nomenclature fixing for ops (canonical and fixed) - they do not make much logical sense without the notes
 
 
 def _state_to_dens_matrix(state):
     return np.dot(state, np.conjugate(np.transpose(state)))
 
 
-def _compute_matrix(j):
-    if j == 0:
-        return np.eye(2, dtype='complex_')
-    elif j == 1:
-        return np.array([[0, 1], [1, 0]], dtype='complex_')
-    elif j == 2:
-        return (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype='complex_')
-    elif j == 3:
-        return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
-
-
-def _matrix_basis(nqubit):  # create a matrix basis from all the tensor products states
+def _matrix_basis(nqubit, d):  # create a matrix basis from all the tensor products states
     # needed for rho_j and to compute epsilon rho_j
-    d = 2 ** nqubit
+
     B = []
     for j in range(d ** 2):
         v = np.zeros((d, 1), dtype='complex_')
@@ -60,9 +51,9 @@ def _matrix_basis(nqubit):  # create a matrix basis from all the tensor products
             k.append(j // (4 ** m))
             j = j % (4 ** m)
         k.reverse()
-        M = _compute_matrix(k[0])
+        M = get_pauli_circuit(PauliType(k[0])).compute_unitary()
         for i in k[1:]:
-            M = np.kron(_compute_matrix(i), M)
+            M = np.kron(get_pauli_circuit(PauliType(i)).compute_unitary(), M)
         B.append(_state_to_dens_matrix(np.dot(M, v)))
     return B
 
@@ -98,20 +89,17 @@ def _decomp(matrix, basis):  # linear decomposition of any matrix upon a basis
 
 def _get_fixed_basis_ops(j, nqubit):
     """
-    computes the fixed sets of operators (tensor products of pauli gates) for quantum process tomography
+    computes the set of operators (tensor products of pauli gates) in fixed basis for tomography
 
-    :param j: int between 0 and 4**nqubit-1
+    :param j: Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
     :param nqubit: number of qubits
-    :return: 2**nqubit x 2**nqubit array
+    :return: Operators in a fixed basis (size_hilbert x size_hilbert) array
     """
     if nqubit == 1:
         return get_pauli_gate(PauliType(j))
 
-    # pauli_indices = generate_pauli_index(nqubit)
-    # print(pauli_indices)
-    # for val in pauli_indices:
-
     index = j // (4 ** (nqubit - 1))  # todo: fix 'index' and 'val' in counting
+    # a sort of mapping - not sure it is the same everywhere. todo: decide on how to make it readable
     fix_basis_op = get_pauli_gate(PauliType(index))
 
     j = j % (4 ** (nqubit - 1))
@@ -124,11 +112,11 @@ def _get_fixed_basis_ops(j, nqubit):
 
 def _get_canonical_basis_ops(j, nqubit):
     """
-    Computes the matrices of the canonical basis
+    computes the set of operators in canonical basis for tomography
 
-    :param j: int between 0 and 4**nqubit-1
+    :param j: Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
     :param nqubit: number of qubits
-    :return: 2**nqubit x 2**nqubit array
+    :return:  Operators in a canonical basis (size_hilbert x size_hilbert) array
     """
     d = 2 ** nqubit
     canonical_op = np.zeros((d, d), dtype='complex_')
@@ -137,7 +125,7 @@ def _get_canonical_basis_ops(j, nqubit):
 
 
 def _krauss_repr_ops(m, rhoj, n, nqubit):
-    # computes the Krauss representation of the operator
+    # computes the Krauss representation of an operator
     # Returns (fixed_basis_op x (canonical_basis_op x fixed_basis_op)). x: dot product here
     return np.dot(_get_fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(_get_fixed_basis_ops(n, nqubit)))))
 
@@ -163,7 +151,7 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
 
     :param input_matrix: chi of a quantum map computed from Quantum Process Tomography
     :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-    :return: bool and string
+    :return: information about the tests
     """
     d2 = len(input_matrix)
     res = []

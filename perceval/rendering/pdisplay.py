@@ -225,7 +225,8 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     return s_states
 
 
-def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_size: tuple = (10, 10)):
+def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_size: tuple = (18, 10),
+                            elevation: int = 30, azimuthal: int = 45, font_size: int = 10):
     chi_op = qpt.chi_matrix()
 
     size_x = len(chi_op[0])  # number of elements along x
@@ -250,10 +251,14 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_siz
 
     # labels on x- and y- axes
     def generate_basis_names():
-        pauli_name_idx = ['I', 'X', 'Y', 'Z']
-        pauli_pnc = list(product(pauli_name_idx, repeat=2))
+        from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
+        pauli_indices = _generate_pauli_index(qpt._nqubit)
+        pauli_names = []
+        for subset in pauli_indices:
+            pauli_names.append([member.name for member in subset])
+
         basis = []
-        for val in pauli_pnc:
+        for val in pauli_names:
             basis.append(''.join(val))
         return basis
 
@@ -265,25 +270,35 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_siz
 
     axes = [ax1, ax2]
     for ax in axes:
-        ax.tick_params(axis='z', which='major', pad=12)
+        # Change the camera position
+        ax.view_init(elev=elevation, azim=azimuthal)
+
+        ax.tick_params(axis='z', which='major', pad=font_size)
         ax.zaxis.set_major_formatter(formatter)
         ax.set_xticks(numpy.arange(size_x) + 1)
         ax.set_yticks(numpy.arange(size_y) + 1)
-        ax.set_xticklabels(x_basis_name, fontsize=6)
-        ax.set_yticklabels(y_basis_name, fontsize=6)
+        ax.set_xticklabels(x_basis_name)
+        ax.set_yticklabels(y_basis_name)
+
+        ax.tick_params('z', labelsize=font_size)
+        ax.tick_params('x', labelsize=font_size)
+        ax.tick_params('y', labelsize=font_size)
 
         if ax == ax1:
             ax.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
             ax.set_zlim(data_z_re.min(), data_z_re.max())
-            ax.set_title("Re[$\\chi$]")
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, alpha=0.5, color='b')
+            ax.set_title("Re[$\\chi$]", fontsize=2*font_size)
+            colors = plt.cm.bwr(data_z_re / max(data_z_re))
+            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, shade=True, color=colors)
         elif ax == ax2:
             ax.set_zticks(numpy.linspace(min(data_z_im), max(data_z_im), 5))
             ax.set_zlim(data_z_im.min(), data_z_im.max())
-            ax.set_title("Im[$\\chi$]")
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, alpha=0.5, color='r')
+            ax.set_title("Im[$\\chi$]", fontsize=2*font_size)
+            colors = plt.cm.bwr(data_z_im / max(data_z_im))
+            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, shade=True, color=colors)
 
-    # Dsiplay the plot
+    # Display the plot
+    plt.tight_layout()
     plt.show()
     return fig
 
