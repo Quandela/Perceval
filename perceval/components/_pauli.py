@@ -31,6 +31,7 @@ import numpy as np
 from enum import Enum
 from .linear_circuit import Circuit
 from .unitary_components import BS, PS, PERM
+from perceval.utils import Matrix
 
 
 class PauliType(Enum):
@@ -61,17 +62,17 @@ def get_pauli_circuit(pauli_type: PauliType):
 
 def get_pauli_gate(pauli_type: PauliType):
     """
-    Computes one of the Pauli operators (I,X,Y,Z)
+    Computes one of the Pauli operators (I,X,Y,Z).
+    They are also the gate matrix
 
     :param pauli_type: PauliType
     :return: 2x2 unitary and hermitian array
     """
-    # todo: change to Matrix of perceval and not use numpy
     if pauli_type == PauliType.I:
-        return np.eye(2, dtype='complex_')
+        return Matrix.eye(2)
     elif pauli_type == PauliType.X:
-        return np.array([[0, 1], [1, 0]], dtype='complex_')
+        return Matrix([[0, 1], [1, 0]])
     elif pauli_type == PauliType.Y:
-        return np.array([[0, -1j], [1j, 0]], dtype='complex_')
+        return Matrix([[0, -1j], [1j, 0]])
     else:
-        return np.array([[1, 0], [0, -1]], dtype='complex_')
+        return Matrix([[1, 0], [0, -1]])
