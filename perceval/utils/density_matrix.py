@@ -26,13 +26,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import scipy.sparse.linalg
 
 from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
 import numpy as np
 from scipy.sparse import csr_array, lil_array, dok_array
+import exqalibur as xq
 
 
 class DensityMatrixData:
@@ -44,8 +45,10 @@ class DensityMatrixData:
     def __init__(self, size):
         if size >= 20000:
             self.data = dok_array((size, size), dtype=complex)
+            self.sparse = True
         else:
             self.data = np.zeros((size, size), dtype=complex)
+            self.sparse = False
 
     def __getitem__(self, key):
         return self.data[key]
@@ -89,7 +92,7 @@ class DensityMatrix:
 
         print("index constructed")
         k = 0
-        self.mat = DensityMatrixData(self.size)
+        self.mat = dok_array((self.size,self.size), dtype=complex)
         for sv, p in svd.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
@@ -106,8 +109,26 @@ class DensityMatrix:
         i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
-    def to_svd(self):
-        pass
+    def to_svd(self, threshold = 1e-6):
+        """
+                gives back an SVDistribution from the density_matrix
+        """
+        val, vec = scipy.sparse.linalg.eigsh(self.mat, self.size)
+        dic = {}
+        for i in range(self.size):
+            if val[i] >= threshold:
+                sv = StateVector()
+                for j in range(self.size):
+                    if vec[i][j] >= threshold:
+                        sv += vec[i][j]*self.reverse_index[j]
+                    else:
+                        continue
+                dic[sv] = val[i]
+            else:
+                continue
+        return SVDistribution(dic)
+
+
 
     @property
     def n_max(self):
@@ -116,13 +137,3 @@ class DensityMatrix:
     @property
     def m(self):
         return self._m
-
-def index_to_basic_state(i, m, n_max):
-
-    if i <= comb(n_max + m - 1 , n_max-1):
-        return index_to_Basic_State(i, m, n_max - 1)
-    else:
-        pass
-
-def basic_state_to_index(bs):
-    pass
