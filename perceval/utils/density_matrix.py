@@ -109,13 +109,14 @@ class DensityMatrix:
         i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
-    def to_svd(self, threshold=1e-6):
+    def to_svd(self, threshold=1e-6, n=0):
         """
                 gives back an SVDistribution from the density_matrix
         """
-        val, vec = scipy.sparse.linalg.eigsh(self.mat, self.size - 2)
+        if n == 0:
+            n = self.size - 2
+        val, vec = scipy.sparse.linalg.eigsh(self.mat, n)
         dic = {}
-        n = val.shape[0]
         for i in range(n):
             if val[i] >= threshold:
                 sv = StateVector()
