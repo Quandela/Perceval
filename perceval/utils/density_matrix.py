@@ -109,21 +109,19 @@ class DensityMatrix:
         i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
-    def to_svd(self, threshold = 1e-6):
+    def to_svd(self, threshold=1e-6):
         """
                 gives back an SVDistribution from the density_matrix
         """
         val, vec = scipy.sparse.linalg.eigsh(self.mat, self.size - 2)
         dic = {}
-        n = val.shape
-        for i in range(n[0]):
+        n = val.shape[0]
+        for i in range(n):
             if val[i] >= threshold:
                 sv = StateVector()
-                for j in range(n[0]):
-                    if vec[i][j] >= threshold:
-                        sv += complex(vec[i][j])*self.reverse_index[j]
-                    else:
-                        continue
+                for j in range(n):
+                    sv += complex(vec[j][i])*self.reverse_index[j]
+                sv.normalize()
                 if sv.m != 0:
                     dic[sv] = val[i]
             else:
