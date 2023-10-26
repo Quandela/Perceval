@@ -229,7 +229,7 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     # labels on x- and y- axes
 
 
-def _generate_basis_names(nqubit):
+def _generate_pauli_captions(nqubit):
     from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
     pauli_indices = _generate_pauli_index(nqubit)
     pauli_names = []
@@ -281,23 +281,24 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT, precision
     chi_op = qpt.chi_matrix()
 
     fig = plt.figure()
-    basis_name = _generate_basis_names(qpt._nqubit)
+    pauli_captions = _generate_pauli_captions(qpt._nqubit)
     significant_digit = int(math.log10(1 / precision))
 
     # Real plot
     ax1 = fig.add_subplot(121, projection='3d')
     ax1.set_title("Re[$\\chi$]")
     real_chi = numpy.round(chi_op.real, significant_digit)
-    _get_sub_figure(ax1, real_chi, basis_name)
+    _get_sub_figure(ax1, real_chi, pauli_captions)
 
     # Imag plot
     ax2 = fig.add_subplot(122, projection='3d')
     ax2.set_title("Im[$\\chi$]")
     imag_chi = numpy.round(chi_op.imag, significant_digit)
-    _get_sub_figure(ax2, imag_chi, basis_name)
+    _get_sub_figure(ax2, imag_chi, pauli_captions)
 
     plt.show()
 
+    # TODO: return something better
     return "Tomography"
 
 
