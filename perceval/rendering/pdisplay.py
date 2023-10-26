@@ -146,16 +146,16 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
     if output_format != Format.TEXT:
         marker = output_format == Format.HTML and "$" or ""
         if isinstance(matrix, sp.Matrix):
-            return marker+sp.latex(matrix)+marker
+            return marker + sp.latex(matrix) + marker
         rows = []
         for j in range(matrix.shape[0]):
             row = []
             for v in matrix[j, :]:
                 row.append(sp.S(simp(v)))
             rows.append(row)
-        return marker+sp.latex(Matrix(rows, use_symbolic=True))+marker
+        return marker + sp.latex(Matrix(rows, use_symbolic=True)) + marker
     if matrix.shape[0] == 1:
-        return (mlstr("[")+mlstr("  ").join([simp(v) for v in matrix[0, :]])+"]")._s
+        return (mlstr("[") + mlstr("  ").join([simp(v) for v in matrix[0, :]]) + "]")._s
     else:
         s = mlstr("")
         for j in range(matrix.shape[1]):
@@ -163,9 +163,9 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
                 s += "  "
             s += "\n".join([simp(v) for v in matrix[:, j]])
         h = s.height
-        left_bracket = "⎡\n"+"⎢\n"*(h-2)+"⎣"
-        right_bracket = "⎤\n"+"⎥\n"*(h-2)+"⎦"
-        return (mlstr(left_bracket)+s+right_bracket)._s
+        left_bracket = "⎡\n" + "⎢\n" * (h - 2) + "⎣"
+        right_bracket = "⎤\n" + "⎥\n" * (h - 2) + "⎦"
+        return (mlstr(left_bracket) + s + right_bracket)._s
 
 
 _TABULATE_FMT_MAPPING = {
@@ -225,79 +225,39 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     return s_states
 
 
-def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_size: tuple = (18, 10),
-                            elevation: int = 30, azimuthal: int = 45, font_size: int = 10):
+def _get_sub_figure(ax, array):
+    size = array.itemsize * 2
+    x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
+    y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
+    z = numpy.zeros(size * size)  # z coordinates of each bar
+    dx = numpy.ones(size * size) * 0.5  # Width of each bar
+    dy = numpy.copy(dx)  # Depth of each bar
+    dz = array.ravel()  # length along z-axis of each bar (height)
+
+    cmap = plt.cm.get_cmap('cool_r')
+    # get range of colorbars so we can normalize
+    max_height = numpy.max(dz)
+    min_height = numpy.min(dz)
+    # scale each z to [0,1], and get their rgb values
+    rgba = [cmap((k - min_height) / max_height) for k in dz]
+
+    ax.bar3d(x, y, z, dx, dy, dz, color=rgba, alpha=0.7)
+
+
+def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT):
+    if output_format != Format.MPLOT:
+        raise TypeError("Tomography plot only support MPLOT")
+
     chi_op = qpt.chi_matrix()
 
-    size_x = len(chi_op[0])  # number of elements along x
-    size_y = len(chi_op[:, 0])  # number of elements along y
-    x, y = numpy.meshgrid(numpy.arange(0, size_x, 1), numpy.arange(0, size_y, 1))
+    fig = plt.figure()
 
-    # Cartesian positions for each histogram bar
-    x_pos = x.flatten()
-    y_pos = y.flatten()
-    z_pos = numpy.zeros(size_x * size_y)
+    ax1 = fig.add_subplot(121, projection='3d')
+    _get_sub_figure(ax1, chi_op.real)
 
-    # Size of each bar.
-    dx = numpy.ones(size_x * size_y) * 0.5  # Width of each bar
-    dy = numpy.copy(dx)  # Depth of each bar
-    data_z_re = chi_op.real.flatten()  # Height = value of the Chi Matrix plotted - Real part
-    data_z_im = chi_op.imag.flatten()  # Height = value of the Chi Matrix plotted - Imaginary part
+    ax2 = fig.add_subplot(122, projection='3d')
+    _get_sub_figure(ax2, chi_op.imag)
 
-    # Configuring the figure params
-    fig = plt.figure(figsize=plot_size)
-    ax1 = fig.add_subplot(121, projection='3d')  # to plot the real part
-    ax2 = fig.add_subplot(122, projection='3d')  # to plot the imaginary part
-
-    # labels on x- and y- axes
-    def generate_basis_names():
-        from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
-        pauli_indices = _generate_pauli_index(qpt._nqubit)
-        pauli_names = []
-        for subset in pauli_indices:
-            pauli_names.append([member.name for member in subset])
-
-        basis = []
-        for val in pauli_names:
-            basis.append(''.join(val))
-        return basis
-
-    x_basis_name = generate_basis_names()
-    y_basis_name = x_basis_name.copy()
-
-    formatter = ticker.ScalarFormatter(useMathText=True)
-    formatter.set_scientific(True)
-
-    axes = [ax1, ax2]
-    for ax in axes:
-        # Change the camera position
-        ax.view_init(elev=elevation, azim=azimuthal)
-
-        ax.tick_params(axis='z', which='major', pad=font_size)
-        ax.zaxis.set_major_formatter(formatter)
-        ax.set_xticks(numpy.arange(size_x) + 1)
-        ax.set_yticks(numpy.arange(size_y) + 1)
-        ax.set_xticklabels(x_basis_name)
-        ax.set_yticklabels(y_basis_name)
-
-        ax.tick_params('z', labelsize=font_size)
-        ax.tick_params('x', labelsize=font_size)
-        ax.tick_params('y', labelsize=font_size)
-
-        if ax == ax1:
-            ax.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
-            ax.set_zlim(data_z_re.min(), data_z_re.max())
-            ax.set_title("Re[$\\chi$]", fontsize=2*font_size)
-            colors = plt.cm.bwr(data_z_re / max(data_z_re))
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, shade=True, color=colors)
-        elif ax == ax2:
-            ax.set_zticks(numpy.linspace(min(data_z_im), max(data_z_im), 5))
-            ax.set_zlim(data_z_im.min(), data_z_im.max())
-            ax.set_title("Im[$\\chi$]", fontsize=2*font_size)
-            colors = plt.cm.bwr(data_z_im / max(data_z_im))
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, shade=True, color=colors)
-
-    # Display the plot
     plt.tight_layout()
     plt.show()
     return fig
