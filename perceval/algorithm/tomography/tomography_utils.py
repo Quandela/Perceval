@@ -36,6 +36,7 @@ from perceval.components import PauliType, get_pauli_gate, get_pauli_circuit
 
 
 def _state_to_dens_matrix(state):
+    # computes the density matrix representation of a state r'$\rho = |\psi> <\psi|$' given a state r'$|\psi>$'
     return np.dot(state, np.conjugate(np.transpose(state)))
 
 
@@ -112,7 +113,7 @@ def _get_fixed_basis_ops(j, nqubit):
 
 def _get_canonical_basis_ops(j, nqubit):
     """
-    computes the set of operators in canonical basis for tomography
+    computes the set of operators in canonical (standard) basis for tomography
 
     :param j: Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
     :param nqubit: number of qubits
