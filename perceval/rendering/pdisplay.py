@@ -224,24 +224,52 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
+    # labels on x- and y- axes
 
-def _get_sub_figure(ax, array):
+
+def _generate_basis_names(nqubit):
+    from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
+    pauli_indices = _generate_pauli_index(nqubit)
+    pauli_names = []
+    for subset in pauli_indices:
+        pauli_names.append([member.name for member in subset])
+
+    basis = []
+    for val in pauli_names:
+        basis.append(''.join(val))
+    return basis
+
+
+def _get_sub_figure(ax, array, basis_name):
+    # Data
     size = array.itemsize * 2
     x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
     y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
     z = numpy.zeros(size * size)  # z coordinates of each bar
-    dx = numpy.ones(size * size) * 0.5  # Width of each bar
-    dy = numpy.copy(dx)  # Depth of each bar
+    dxy = numpy.ones(size * size) * 0.5  # Width/Lenght of each bar
     dz = array.ravel()  # length along z-axis of each bar (height)
 
-    cmap = plt.cm.get_cmap('cool_r')
+    # Colors
+    color_map = plt.cm.get_cmap('viridis_r')
     # get range of colorbars so we can normalize
     max_height = numpy.max(dz)
     min_height = numpy.min(dz)
     # scale each z to [0,1], and get their rgb values
-    rgba = [cmap((k - min_height) / max_height) for k in dz]
+    rgba = [color_map((k - min_height) / max_height) for k in dz]
 
-    ax.bar3d(x, y, z, dx, dy, dz, color=rgba, alpha=0.7)
+    # Caption
+    ax.tick_params(axis='z', which='major')
+    formatter = ticker.ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    ax.zaxis.set_major_formatter(formatter)
+    ax.set_xticks(numpy.arange(size) + 1)
+    ax.set_yticks(numpy.arange(size) + 1)
+    ax.set_xticklabels(basis_name)
+    ax.set_yticklabels(basis_name)
+
+    # Plot
+    ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
+    ax.view_init(elev=30, azim=45)
 
 
 def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT):
@@ -251,15 +279,21 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT):
     chi_op = qpt.chi_matrix()
 
     fig = plt.figure()
+    basis_name = _generate_basis_names(qpt._nqubit)
 
+    # Real plot
     ax1 = fig.add_subplot(121, projection='3d')
-    _get_sub_figure(ax1, chi_op.real)
+    ax1.set_title("Re[$\\chi$]")
+    _get_sub_figure(ax1, chi_op.real, basis_name)
 
+    # Imag plot
     ax2 = fig.add_subplot(122, projection='3d')
-    _get_sub_figure(ax2, chi_op.imag)
+    ax2.set_title("Im[$\\chi$]")
+    _get_sub_figure(ax2, chi_op.imag, basis_name)
 
     plt.tight_layout()
     plt.show()
+
     return fig
 
 
