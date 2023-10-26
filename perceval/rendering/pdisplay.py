@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+import math
 import copy
 import os
 import numpy
@@ -272,7 +274,7 @@ def _get_sub_figure(ax, array, basis_name):
     ax.view_init(elev=30, azim=45)
 
 
-def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT):
+def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT, precision=1E-6):
     if output_format != Format.MPLOT:
         raise TypeError("Tomography plot only support MPLOT")
 
@@ -280,21 +282,23 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT):
 
     fig = plt.figure()
     basis_name = _generate_basis_names(qpt._nqubit)
+    significant_digit = int(math.log10(1 / precision))
 
     # Real plot
     ax1 = fig.add_subplot(121, projection='3d')
     ax1.set_title("Re[$\\chi$]")
-    _get_sub_figure(ax1, chi_op.real, basis_name)
+    real_chi = numpy.round(chi_op.real, significant_digit)
+    _get_sub_figure(ax1, real_chi, basis_name)
 
     # Imag plot
     ax2 = fig.add_subplot(122, projection='3d')
     ax2.set_title("Im[$\\chi$]")
-    _get_sub_figure(ax2, chi_op.imag, basis_name)
+    imag_chi = numpy.round(chi_op.imag, significant_digit)
+    _get_sub_figure(ax2, imag_chi, basis_name)
 
-    plt.tight_layout()
     plt.show()
 
-    return fig
+    return "Tomography"
 
 
 @dispatch(object)
