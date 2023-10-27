@@ -113,7 +113,7 @@ class DensityMatrix:
         """
 
         factor = self.mat.trace()
-        self.mat = (1/factor)*dm.mat
+        self.mat = (1/factor)*self.mat
 
 
     @property
