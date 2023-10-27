@@ -35,28 +35,6 @@ import numpy as np
 from scipy.sparse import csr_array, lil_array, dok_array
 import exqalibur as xq
 
-
-class DensityMatrixData:
-    """
-    class representing square hermitian sparse matrix
-    used to store the DensityMatrix objects data
-    """
-
-    def __init__(self, size):
-        if size >= 20000:
-            self.data = dok_array((size, size), dtype=complex)
-            self.sparse = True
-        else:
-            self.data = np.zeros((size, size), dtype=complex)
-            self.sparse = False
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-
-
 class DensityMatrix:
     """
     Density operator representing a mixed state
@@ -138,3 +116,7 @@ class DensityMatrix:
     @property
     def m(self):
         return self._m
+
+    @property
+    def shape(self):
+        return self.size, self.size
