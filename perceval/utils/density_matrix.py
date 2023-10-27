@@ -40,22 +40,22 @@ class DensityMatrix:
     Density operator representing a mixed state
     Does not support annotations
     """
-    def __init__(self, svd: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
+    def __init__(self, mixed_state: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
         """
         Constructor for the DensityMatrix Class
 
-        :param svd: SVDistribution, StateVector or Basic State representing a mixed state
+        :param mixed_state: SVDistribution, StateVector or Basic State representing a mixed state
         :param index: iterator on all Fock states accessible from this mixed states through a unitary evolution
         """
 
-        if isinstance(svd, (StateVector, BasicState)):
-            svd = SVDistribution(svd)
+        if isinstance(mixed_state, (StateVector, BasicState)):
+            mixed_state = SVDistribution(mixed_state)
 
-        if not isinstance(svd, SVDistribution):
+        if not isinstance(mixed_state, SVDistribution):
             raise TypeError("svd must be a BasicState, a StateVector or a SVDistribution")
 
-        self._m = svd.m
-        self._n_max = svd.n_max
+        self._m = mixed_state.m
+        self._n_max = mixed_state.n_max
         self.size = comb(self.m + self._n_max, self.m)
         if index is None or len(index != self.size):
             self.index = dict()
@@ -71,7 +71,7 @@ class DensityMatrix:
         print("index constructed")
         k = 0
         self.mat = dok_array((self.size, self.size), dtype=complex)
-        for sv, p in svd.items():
+        for sv, p in mixed_state.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
                     i, j = self.index[bst1], self.index[bst2]
@@ -106,6 +106,20 @@ class DensityMatrix:
             else:
                 continue
         return SVDistribution(dic)
+
+    def __add__(self, other):
+        """
+        add two density Matrices together
+        """
+
+        if not isinstance(other, DensityMatrix):
+            raise TypeError("you can only add a Density Matrix to a Density Matrix")
+
+        if not self.size == other.size:
+            raise ValueError("You can't add Density Matrices with different dimensions")
+
+        if not self.m == other.m:
+            raise ValueError("You can't add Density Matrices acting on different numbers of mode")
 
     def normalize(self):
         """
