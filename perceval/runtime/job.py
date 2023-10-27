@@ -92,6 +92,10 @@ class Job(ABC):
         return self.status.completed
 
     @property
+    def is_maybe_complete(self) -> bool:
+        return self.status.maybe_completed
+
+    @property
     def is_failed(self) -> bool:
         return self.status.failed
 

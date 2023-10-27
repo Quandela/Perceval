@@ -27,9 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import time
+import pytest
+
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
-import time
 
 
 def quadratic_count_down(n, speed=0.1, progress_callback=None):
@@ -56,6 +58,13 @@ def test_run_sync_1():
     # should be ~ 0.5 s
     assert job.status.running_time < 1
     assert job.status.status == RunningStatus.SUCCESS
+
+    job.status.status = RunningStatus.UNKNOWN
+    with pytest.warns(UserWarning):
+        assert job.get_results() == [0, 1, 4, 9, 16]
+    job.status.status = RunningStatus.PARTIAL_COMPLETION
+    with pytest.warns(UserWarning):
+        assert job.get_results() == [0, 1, 4, 9, 16]
 
 
 def test_run_async():
@@ -89,6 +98,13 @@ def test_run_async_fail():
     assert "AssertionError" in job.status.stop_message
     # should be ~0.05 s
     assert job.status.running_time < 0.5
+
+    job.status.status = RunningStatus.UNKNOWN
+    with pytest.warns(UserWarning):
+        assert job.get_results() == None
+    job.status.status = RunningStatus.PARTIAL_COMPLETION
+    with pytest.warns(UserWarning):
+        assert job.get_results() == None
 
 
 def test_run_async_cancel():

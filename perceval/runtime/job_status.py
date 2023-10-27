@@ -41,7 +41,8 @@ class RunningStatus(Enum):
     CANCELED = 4
     SUSPENDED = 5
     CANCEL_REQUESTED = 6
-    UNKNOWN = 7
+    PARTIAL_COMPLETION = 7
+    UNKNOWN = 8
 
     @staticmethod
     def from_server_response(res: str):
@@ -53,7 +54,6 @@ class RunningStatus(Enum):
             except KeyError:
                 warnings.warn(f"Unknown job running status: {res}")
                 return RunningStatus.UNKNOWN
-
 
 class JobStatus:
     def __init__(self):
@@ -142,6 +142,10 @@ class JobStatus:
     @property
     def failed(self):
         return self._status in [RunningStatus.CANCELED, RunningStatus.ERROR]
+
+    @property
+    def maybe_completed(self):
+        return self._status in [RunningStatus.PARTIAL_COMPLETION, RunningStatus.UNKNOWN]
 
     @property
     def stop_message(self):
