@@ -4,7 +4,7 @@ Run quantum algorithms
 Perceval provides a processor-centric syntax to run an algorithm locally or remotely, on a simulator or an actual QPU.
 
 Build a processor
-------------------
+-----------------
 
 A :ref:`Processor` is a composite element aiming at simulating an actual QPU, in real world conditions.
 
@@ -24,41 +24,35 @@ To create a local processor, you just need to start with a :ref:`Circuit`, provi
 
 If omitted, the source is a perfect single photon source.
 
-The processor definition is then fine-tuned with ports (``add_port``) and herald (``add_herald``) definition as in the
-following heralded CNOT gate example:
+The processor definition is then fine-tuned with ports (:code:`add_port`) and herald (:code:`add_herald`) definition as
+in the following post-processed CNOT gate example:
 
 >>> import perceval as pcvl
 >>> from perceval.components import BS, PERM, Port
 >>> from perceval.utils import Encoding
->>> c_hcnot = (pcvl.Circuit(8, name="Heralded CNOT")
-...            .add((0, 1, 2), PERM([1, 2, 0]))
-...            .add((4, 5), BS.H())
-...            .add((5, 6, 7), PERM([1, 2, 0]))
-...            .add((3, 4), BS.H())
-...            .add((2, 3), BS.H(theta=self.theta1, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-...            .add((4, 5), BS.H(theta=self.theta1))
-...            .add((3, 4), BS.H())
-...            .add((5, 6, 7), PERM([2, 1, 0]))
-...            .add((1, 2), PERM([1, 0]))
-...            .add((2, 3), BS.H(theta=self.theta2))
-...            .add((4, 5), BS.H(theta=self.theta2, phi_bl=np.pi, phi_tr=np.pi/2, phi_tl=-np.pi/2))
-...            .add((5, 6), PERM([1, 0]))
-...            .add((4, 5), BS.H())
-...            .add((4, 5), PERM([1, 0]))
-...            .add((0, 1, 2), PERM([2, 1, 0])))
->>> processor_hcnot = pcvl.Processor("SLOS", c_hcnot)
->>> processor_hcnot.add_herald(0, 0)
-...                .add_herald(1, 1)
-...                .add_port(2, Port(Encoding.DUAL_RAIL, 'data'))
-...                .add_port(4, Port(Encoding.DUAL_RAIL, 'ctrl'))
-...                .add_herald(6, 0)
-...                .add_herald(7, 1)
->>> pcvl.pdisplay(processor_hcnot, recursive=True)
+>>> theta_13 = BS.r_to_theta(1 / 3)
+>>> c_cnot = (Circuit(6, name="PostProcessed CNOT")
+...          .add(0, PERM([0, 2, 3, 4, 1]))
+...          .add((0, 1), BS.H(theta_13))
+...          .add((3, 4), BS.H())
+...          .add((2, 3), PERM([1, 0]))
+...          .add((2, 3), BS.H(theta_13))
+...          .add((2, 3), PERM([1, 0]))
+...          .add((4, 5), BS.H(theta_13))
+...          .add((3, 4), BS.H())
+...          .add(1, PERM([3, 0, 1, 2])))
+>>> processor_cnot = pcvl.Processor("SLOS", c_cnot)
+>>> processor_cnot.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+...               .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
+...               .add_herald(4, 0) \
+...               .add_herald(5, 0)
+>>> p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))  # Add a post-selection checking for a logical output state
+>>> pcvl.pdisplay(processor_cnot, recursive=True)
 
-.. figure:: _static/img/heralded-cnot-processor.png
+.. figure:: _static/img/postprocessed-cnot-processor.png
     :align: center
 
-    Heralded CNOT gate rendering - heralded modes are not shown for readability
+    Post-processed CNOT gate rendering - ancillary modes are not shown for readability
 
 Processor composition
 ^^^^^^^^^^^^^^^^^^^^^
@@ -74,59 +68,78 @@ complex preconfigured processor from a gate-based circuit.
 Remote processors
 ^^^^^^^^^^^^^^^^^
 
-``RemoteProcessor`` class is the entry point for sending a computation on a remote platform (a simulator or a QPU).
-`Quandela Cloud <https://cloud.quandela.com>`_ is a publicly available cloud service with available QPUs and simulators.
-An access token on the selected service is required to connect to a remote platform (e.g an access token to Quandela
-Cloud with rights is required to follow this tutorial: :ref:`Remote computing with Perceval`).
+:code:`RemoteProcessor` class is the entry point for sending a computation on a remote platform (a simulator or a QPU).
+`Quandela Cloud <https://cloud.quandela.com>`_ is a public cloud service with available QPUs and simulators.
+An access token on the selected service is required to connect to a remote platform (e.g. an access token to Quandela
+Cloud with rights is required to follow this tutorial: :ref:`Remote computing on Quandela Cloud`).
 
-A given processor is only able to support some specific types of commands related to its hardware implementation. For
-instance, a real QPU is natively able to sample output detections, but not to compute probabilities of output states
+Once you have created a token suiting your needs (it needs to be given the rights to run jobs on target platforms), you
+may save it once and for all on your computer by running:
+
+>>> pcvl.save_token('YOUR_TOKEN')
+
+.. note:: We recommend you save your token only on a personal computer, not on shared/public ones.
+
+A token value can also be set to every :code:`RemoteProcessor` object
+
+>>> remote_simulator = RemoteProcessor("platform:name", "YOUR_TOKEN")
+
+For the rest of this page, let's assume a token is saved in your environment.
+
+A given remote platform is only able to support a specific set of commands.
+For instance, a real QPU is natively able to sample output detections, but not to compute probabilities of output states
 versus an input state. Hardware constraints might also enforce the coincidence counting type, or the type of detection
 (threshold detection or photon number resolving).
 
-When creating a ``RemoteProcessor``, you can query its capabilities
+When creating a :code:`RemoteProcessor`, you can query its capabilities
 
->>> token_qcloud = 'YOUR_API_KEY'
->>> remote_simulator = RemoteProcessor("sim:ascella", token_qcloud)
+>>> remote_simulator = RemoteProcessor("qpu:ascella")
 >>> print(remote_simulator.available_commands)
-['probs']
+['sample_count', 'samples']
 
-This means `sim:ascella` is only able to natively answer to `probs` commands (i.e. compute the probability of all output
-states given an input state).
+This means `sim:ascella` is only able to natively answer to `sample_count` and `samples` commands (i.e. return the
+results of a sample acquisition task).
 
 Work with algorithms
 --------------------
 
-All algorithms take either a local or a remote processor as parameter, in order to perform a task. A ``Processor`` runs
-simulations on the local computer while a ``RemoteProcessor`` turns Perceval into the client of a remote service like
-Quandela Cloud, and the computation is performed on the selected platform.
+All algorithms take either a local or a remote processor as parameter, in order to perform a task. A :code:`Processor`
+runs simulations on a local computer while a :code:`RemoteProcessor` turns Perceval into the client of a remote service
+such as `Quandela Cloud <https://cloud.quandela.com>`_, and the computation is performed remotely, on the selected platform.
 
 However, for user experience, an algorithm has the same behavior be it run locally or remotely: every call to an
-algorithm command returns a ``Job`` hiding this complexity.
+algorithm command returns a :code:`Job` object, hiding this complexity.
 
 >>> local_p = pcvl.Processor("CliffordClifford2017", pcvl.BS())
 >>> local_p.with_input(pcvl.BasicState('|1,1>'))
 >>> sampler = pcvl.algorithm.Sampler(local_p)
->>> local_job = sampler.sample_count(10000)
+>>> local_sample_job = sampler.sample_count
 
-Here, the computation has not started yet, but it's been prepared in ``local_job`` to run locally.
+Here, the computation has not started yet, but it's been prepared in :code:`local_sample_job` to run locally.
 
->>> token_qcloud = 'YOUR_API_KEY'
->>> remote_p = pcvl.RemoteProcessor("sim:clifford", token_qcloud)
+On a QPU, the acquisition is measured in **shots**. A shot is any coincidence with at least 1 detected photon.
+Shots act as credits on the Cloud services. Users have to set a maximum shots value they are willing to use for any
+given task.
+
+>>> remote_p = pcvl.RemoteProcessor("sim:clifford")
 >>> remote_p.set_circuit(pcvl.BS())
 >>> remote_p.with_input(pcvl.BasicState('|1,1>'))
->>> sampler = pcvl.algorithm.Sampler(remote_p)
->>> remote_job = sampler.sample_count(10000)
+>>> sampler = pcvl.algorithm.Sampler(remote_p, max_shots_per_call=500_000)
+>>> remote_sample_job = sampler.sample_count
 
-Here, the computation was set-up to run on `sim:clifford` platform when ``remote_job`` is executed.
+Here, the computation was set-up to run on `sim:clifford` platform when :code:`remote_sample_job` is executed.
+
+For more information about the shots and shots/samples ratio estimate, please read
+:ref:`Remote computing on Quandela Cloud`.
 
 Handle a Job object
 ^^^^^^^^^^^^^^^^^^^
 
-Both ``LocalJob`` and ``RemoteJob`` share the same interface.
+Both :code:`LocalJob` and ``RemoteJob`` share the same interface.
 
 * Execute a job synchronously
 
+>>> args = [10_000]  # for instance, the expected sample count
 >>> results = job.execute_sync(*args)  # Executes the job synchronously (blocks the execution until results are ready)
 >>> results = job(*args)  # Same as above
 
@@ -145,7 +158,7 @@ provides information on the progress.
 >>> results = job.get_results()  # Retrieve the results if any
 
 Typically, the results returned by an algorithm is a Python dictionary containing a ``'results'`` key, plus additional
-data.
+data (performance scores, etc.).
 
 * A job cancelation can be requested programmatically by the user
 
@@ -155,24 +168,23 @@ When a job is canceled, it may contain partial results. To retrieve them, call :
 
 * A remote job can be resumed as following:
 
->>> token_qcloud = "YOUR_API_KEY"  # A valid token is required
->>> remote_processor = pcvl.RemoteProcessor("any:worker", token_qcloud)
+>>> remote_processor = pcvl.RemoteProcessor("any:platform")
 >>> job = remote_processor.resume_job("job_id")  # You can find job IDs on Quandela Cloud's website
+>>> print(job.id)  # The ID field is also available in every remote job object
 
 Provided algorithms
 -------------------
 
-Algorithms provided with Perceval are available in the Python package ``perceval.algorithm``. They can be as simple as
-a ``Sampler`` algorithm, as specific as ``QRNG`` (certified random number generator), which would work only on some
-dedicated QPUs.
+Algorithms provided with Perceval are available in the Python package ``perceval.algorithm``. They can perform as simple
+tasks as the :code`Sampler`, or more complex computations. They're all meant to be generic and versatile.
 
 Sampler
 ^^^^^^^
 
-The ``Sampler`` is the simplest algorithm provided, yet an important gateway to using processors.
+The :code:`Sampler` is the simplest algorithm provided, yet an important gateway to using processors.
 
 All processors do not share the same capabilities. For instance, a QPU is able to sample, but not to sample output
-probabilities given an input. The ``Sampler`` algorithm allows the user to call any of the three main `primitives` on any
+probabilities given an input. The :code:`Sampler` allows users to call any of the three main `primitives` on any
 processor:
 
 >>> sampler = pcvl.algorithm.Sampler(processor)
@@ -187,7 +199,7 @@ When a `primitive` is not available on a processor, a conversion occurs automati
 Batch jobs
 ++++++++++
 
-The ``Sampler`` can setup a batch of different sampling tasks within a single job. Such a job enables you to gain
+The :code:`Sampler` can setup a batch of different sampling tasks within a single job. Such a job enables you to gain
 some time (overhead of job management) as well as tidy up your job list, especially when running on the Quandela Cloud
 (but it can still be used in a local simulation context).
 
