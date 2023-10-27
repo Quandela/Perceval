@@ -26,9 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import json
 import time
-from typing import Any
+import warnings
+from typing import Any, Dict
 from requests.exceptions import HTTPError, ConnectionError
 
 from .job import Job
@@ -176,18 +178,11 @@ class RemoteJob(Job):
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
             self._rpc_handler.cancel_job(self._id)
-            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancelation requested by user')
+            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
-    def get_results(self) -> Any:
-        job_status = self.status
-        if not job_status.completed:
-            raise RuntimeError('The job is still running, results are not available yet.')
-        if job_status.status == RunningStatus.ERROR:
-            raise RuntimeError(f'The job failed: {job_status.stop_message}')
-        response = self._rpc_handler.get_job_results(self._id)
-        results = deserialize(json.loads(response['results']))
+    def _assign_results(self, results: Dict) -> None:
         if "job_context" in results and 'result_mapping' in results["job_context"]:
             path_parts = results["job_context"]["result_mapping"]
             module = __import__(path_parts[0], fromlist=path_parts[1])
@@ -199,4 +194,25 @@ class RemoteJob(Job):
                     res["results"] = result_mapping_function(res["results"], **self._delta_parameters)
             else:
                 results["results"] = result_mapping_function(results["results"], **self._delta_parameters)
+
+    def get_results(self) -> Dict:
+        job_status = self.status
+        if not job_status.completed and not job_status.maybe_completed:
+            raise RuntimeError('The job is still running, results are not available yet.')
+
+        if not self.is_maybe_complete and job_status.status != RunningStatus.SUCCESS:
+            raise RuntimeError(f'The job failed: {job_status.stop_message}')
+
+        results = None
+        if job_status.status == RunningStatus.SUCCESS:
+            response = self._rpc_handler.get_job_results(self._id)
+            results = deserialize(json.loads(response)['results'])
+        elif self.is_maybe_complete:
+            warnings.warn("Partial or unknown job status, trying to get result anyway.")
+            try:
+                response = self._rpc_handler.get_job_results(self._id)
+                results = deserialize(json.loads(response)['results'])
+            except KeyError:
+                return {}
+        self._assign_results(results)
         return results

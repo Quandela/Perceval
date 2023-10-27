@@ -26,8 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import warnings
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Dict
 import threading
 
 from .job import Job
@@ -116,7 +117,7 @@ class LocalJob(Job):
     def cancel(self):
         self._cancel_requested = True
 
-    def _get_results(self):
+    def _assign_results(self):
         if self._result_mapping_function:
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
@@ -127,18 +128,18 @@ class LocalJob(Job):
             else:
                 raise KeyError("Cannot find either 'result' or 'results_list' in self._results")
 
-    def get_results(self) -> Any:
+    def get_results(self) -> Dict:
         if not self.is_complete and not self.is_maybe_complete:
             raise RuntimeError('The job is still running, results are not available yet.')
         job_status = self.status
         if job_status.status == RunningStatus.SUCCESS:
-            self._get_results()
+            self._assign_results()
         elif self.is_maybe_complete:
             warnings.warn("Partial or unknown job status, trying to get result anyway.")
             try:
-                self._get_results()
+                self._assign_results()
             except KeyError:
-                return None
+                return {}
         else:
             raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
         return self._results
