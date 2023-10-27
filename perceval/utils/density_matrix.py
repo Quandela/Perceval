@@ -107,6 +107,13 @@ class DensityMatrix:
                 continue
         return SVDistribution(dic)
 
+    def normalize(self):
+        """
+        Normalize the density matrix so that Tr(\rho) = 1
+        """
+
+        factor = self.mat.trace()
+        self.mat = (1/factor)*dm.mat
 
 
     @property
