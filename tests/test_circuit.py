@@ -78,7 +78,8 @@ def test_helloword():
         p = Processor(backend_name, c)
         ca = algo.Analyzer(p,
                            [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
-                           "*"  # all possible output states that can be generated with 1 or 2 photons
+                           [BasicState([0, 1]), BasicState([1, 0]), BasicState([2, 0]), BasicState([1, 1]),
+                            BasicState([0, 2])]  # all possible output states that can be generated with 1 or 2 photons
                            )
         assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
             +-------+-------+-------+-------+-------+-------+
