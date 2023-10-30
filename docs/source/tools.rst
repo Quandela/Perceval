@@ -31,7 +31,7 @@ You can use it several times and define other parameters dynamically:
 >>> c = BS(theta=alpha) // PS(pcvl.P("phi")) // BS(theta=alpha)
 
 .. note::
-  If you declare two parameters with the same name, they are not refering to the same variable, and to avoid confusion
+  If you declare two parameters with the same name, they are not referring to the same variable, and to avoid confusion
   you can not use them simultaneously in a same circuit - the following is incorrect:
 
   >>> c = BS(theta=pcvl.P("alpha")) // PS(pcvl.P("phi")) // BS(theta=pcvl.P("alpha"))
@@ -158,7 +158,7 @@ from the Perceval library.
 
 let's simulate the distribution obtained when we input two photons in a beam-splitter. We will use the Naive backend already stored in simulator_backend.
 
-We will simulate the behaviour of the circuit using the `Circuit Analyser` which has three arguments:
+We will simulate the behavior of the circuit using the `Circuit Analyzer` which has three arguments:
 
 - The first one is an instance of a processor containing the circuit to analyse.
 - The second one is the input state (we will use `input_state`).
@@ -172,7 +172,7 @@ Then, we display the result of `Circuit Analyzer` via ``pdisplay``.
 
 >>> pcvl.pdisplay(ca)
 
-.. figure:: _static/img/CircuitAnalyserHOM.png
+.. figure:: _static/img/CircuitAnalyzerHOM.png
   :align: center
   :width: 40%
 
