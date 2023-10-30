@@ -27,9 +27,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .remote_processor import RemoteProcessor
-from .session import ISession
+from perceval.runtime import ISession
+from perceval.runtime.remote_processor import QUANDELA_CLOUD_URL, RemoteProcessor
+from perceval.runtime.rpc_handler import RPCHandler
+
+
+class QuandelaSession(ISession):
+    def __init__(self, platform_name: str, token: str, url: str = None):
+        self._platform_name = platform_name
+        self._token = token
+        self._url = url or QUANDELA_CLOUD_URL
+
+    def build_remote_processor(self) -> RemoteProcessor:
+        return RemoteProcessor(rpc_handler=RPCHandler(self._platform_name, self._url, self._token))

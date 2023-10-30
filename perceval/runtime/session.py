@@ -27,9 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
+from abc import ABC, abstractmethod
 from .remote_processor import RemoteProcessor
-from .session import ISession
+
+
+class ISession(ABC):
+    @abstractmethod
+    def build_remote_processor(self) -> RemoteProcessor:
+        pass
