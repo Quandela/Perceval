@@ -158,7 +158,7 @@ class RemoteProcessor(AProcessor):
             'command': command,
             **kwargs
         }
-        if self._components and not circuitless:
+        if not circuitless:
             payload['circuit'] = serialize(self.linear_circuit())
         if self._input_state and not inputless:
             payload['input_state'] = serialize(self._input_state)
