@@ -41,3 +41,17 @@ class ISession(ABC):
         """
         Build a RemoteProcessor object given the session data
         """
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        self.stop()
+        return False  # Do not suppress an exception that would be raised in the scope
