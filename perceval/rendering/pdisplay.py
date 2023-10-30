@@ -298,9 +298,6 @@ def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT, precision
 
     plt.show()
 
-    # TODO: return something better
-    return "Tomography"
-
 
 @dispatch(object)
 def _pdisplay(_, **kwargs):
@@ -345,6 +342,22 @@ def _pdisplay(bsc, **kwargs):
     return pdisplay_state_distrib(bsc, **kwargs)
 
 
+@dispatch(float)
+def _pdisplay(f, **kwargs):
+    opts_simple = {}
+    if "precision" in kwargs:
+        opts_simple["precision"] = kwargs["precision"]
+    return simple_float(f, **opts_simple)[1]
+
+
+@dispatch(complex)
+def _pdisplay(c, **kwargs):
+    opts_simple = {}
+    if "precision" in kwargs:
+        opts_simple["precision"] = kwargs["precision"]
+    return simple_complex(c, **opts_simple)[1]
+
+
 def _default_output_format(o):
     """
     Deduces the best output format given the nature of the data to be displayed and the execution context
@@ -384,16 +397,9 @@ def pdisplay(o, output_format: Format = None, **opts):
     if output_format is None:
         output_format = _default_output_format(o)
     res = _pdisplay(o, output_format=output_format, **opts)
+
     if res is None:
-        opts_simple = {}
-        if "precision" in opts:
-            opts_simple["precision"] = opts["precision"]
-        if isinstance(o, (int, float)):
-            res = simple_float(o, **opts_simple)[1]
-        elif isinstance(o, complex):
-            res = simple_complex(o, **opts_simple)[1]
-        else:
-            raise RuntimeError("pdisplay not defined for type %s" % type(o))
+        return
 
     if isinstance(res, drawsvg.Drawing):
         return res
