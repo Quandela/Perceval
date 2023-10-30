@@ -67,7 +67,7 @@ To version 0.10
 Shots in algorithms
 ^^^^^^^^^^^^^^^^^^^
 
-When instanciating an algorithm class (:code:`Sampler`, :code:`Analyzer`) with a :code:`RemoteProcessor`, the user now has to
+When instantiating an algorithm class (:code:`Sampler`, :code:`Analyzer`) with a :code:`RemoteProcessor`, the user now has to
 pass a positive integer value for the named parameter :code:`max_shots_per_call`. Please note that this parameter
 name **has to** be typed in order to avoid potential signature errors.
 

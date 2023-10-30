@@ -160,7 +160,7 @@ provides information on the progress.
 Typically, the results returned by an algorithm is a Python dictionary containing a ``'results'`` key, plus additional
 data (performance scores, etc.).
 
-* A job cancelation can be requested programmatically by the user
+* A job cancellation can be requested programmatically by the user
 
 >>> job.cancel()  # Ask for job cancelation. The actual end of the execution may take some time
 
