@@ -27,12 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
+import pytest
+
 from perceval.components import GenericInterferometer, catalog, PS
 from perceval.backends import SLOSBackend
 from perceval.utils import BasicState, P
 
-import numpy as np
-import pytest
 
 
 size_identity = 6
@@ -104,7 +105,7 @@ def test_set_params_from_other():
     big_interferometer.remove_phase_layer()
 
     for (x, y) in [(1,1), (1,3), (3,1), (3,3), (2,3), (2,5), (1,7), (1,9), (3,7), (3,9)]:
-        assert float(big_interferometer[x, y].get_parameters()[0]) == pytest.approx(np.pi)
+        assert float(big_interferometer[x, y].get_parameters()[0]) == pytest.approx(math.pi)
     params_with_numerical_value = [p for p in big_interferometer.get_parameters() if p.defined]
     assert len(params_with_numerical_value) == len(small_interferometer.get_parameters())
 

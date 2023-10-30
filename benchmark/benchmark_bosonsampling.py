@@ -27,14 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
+
 import perceval as pcvl
 from perceval.components.unitary_components import BS, PS, Unitary
-import numpy as np
 
 def get_interferometer(n):
     def _gen_mzi(i: int):
         return pcvl.catalog["mzi phase last"].build_circuit(theta_a=0.42, theta_b=0.42,
-                                                            phi_a=np.pi+i*0.1, phi_b=np.pi/2)
+                                                            phi_a=math.pi+i*0.1, phi_b=math.pi/2)
     return pcvl.GenericInterferometer(n, _gen_mzi)
 
 
