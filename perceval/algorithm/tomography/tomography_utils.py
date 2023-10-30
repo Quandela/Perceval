@@ -65,7 +65,7 @@ def _matrix_to_vector(matrix):
 
 
 def _vector_to_sq_matrix(vector):
-    # expand a vector d**2 into a matrix d*d
+    # expand a vector of size d**2 into a matrix of size d*d
     size = math.sqrt(len(vector))
     if not size.is_integer():
         raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
@@ -121,7 +121,8 @@ def _get_canonical_basis_ops(j, nqubit):
     """
     d = 2 ** nqubit
     canonical_op = np.zeros((d, d), dtype='complex_')
-    canonical_op[j // d, j % d] = 1
+    quotient, remainder = divmod(j, d)
+    canonical_op[quotient, remainder] = 1
     return canonical_op
 
 
@@ -132,7 +133,8 @@ def _krauss_repr_ops(m, rhoj, n, nqubit):
 
 
 def _generate_pauli_index(n):
-    S = [PauliType(member.value) for member in PauliType]  # todo : maybe a better way exists
+    # generates all possible combinations of Pauli indices repeated n times
+    S = [PauliType(member.value) for member in PauliType]
     # takes Cartesian product of elements of set S with itself repeating 'n' times
     output_set = [list(p) for p in product(S, repeat=n)]
     return output_set
