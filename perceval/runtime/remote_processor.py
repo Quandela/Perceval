@@ -53,6 +53,15 @@ class RemoteProcessor(AProcessor):
                  url: str = QUANDELA_CLOUD_URL,
                  rpc_handler: RPCHandler = None,
                  m: int = None):
+        """
+        :param name: Platform name
+        :param token: Token value to authenticate the user
+        :param url: Base URL for the Cloud API to connect to
+        :param rpc_handler: Inject an already constructed Remote Procedure Call handler (alternative init);
+            when doing so, name, token and url are expected to be blank
+        :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
+            circuit added decides of the processor size
+        """
         super().__init__()
         if rpc_handler is not None:  # When a rpc_handler object is passed, name, token and url are expected to be None
             self._rpc_handler = rpc_handler

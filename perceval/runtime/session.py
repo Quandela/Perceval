@@ -32,6 +32,12 @@ from .remote_processor import RemoteProcessor
 
 
 class ISession(ABC):
+    """
+    A session binds an authenticated user to a single remote platform on a given Cloud provider
+    """
+
     @abstractmethod
     def build_remote_processor(self) -> RemoteProcessor:
-        pass
+        """
+        Build a RemoteProcessor object given the session data
+        """
