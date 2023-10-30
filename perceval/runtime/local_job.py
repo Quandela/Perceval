@@ -117,7 +117,7 @@ class LocalJob(Job):
     def cancel(self):
         self._cancel_requested = True
 
-    def _assign_results(self):
+    def _assign_and_get_results(self):
         if self._result_mapping_function:
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
@@ -127,19 +127,4 @@ class LocalJob(Job):
                     res["results"] = self._result_mapping_function(res['results'], **self._delta_parameters['mapping'])
             else:
                 raise KeyError("Cannot find either 'result' or 'results_list' in self._results")
-
-    def get_results(self) -> Dict:
-        if not self.is_complete and not self.is_maybe_complete:
-            raise RuntimeError('The job is still running, results are not available yet.')
-        job_status = self.status
-        if job_status.status == RunningStatus.SUCCESS:
-            self._assign_results()
-        elif self.is_maybe_complete:
-            warnings.warn("Partial or unknown job status, trying to get result anyway.")
-            try:
-                self._assign_results()
-            except KeyError:
-                return {}
-        else:
-            raise RuntimeError('The job failed with exception: ' + job_status.stop_message)
         return self._results

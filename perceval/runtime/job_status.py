@@ -133,11 +133,11 @@ class JobStatus:
 
     @property
     def completed(self):
-        return self._status in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED]
+        return self._status in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.PARTIAL_COMPLETION]
 
     @property
     def success(self):
-        return self._status == RunningStatus.SUCCESS
+        return self._status in [RunningStatus.SUCCESS, RunningStatus.PARTIAL_COMPLETION]
 
     @property
     def failed(self):
@@ -145,7 +145,7 @@ class JobStatus:
 
     @property
     def maybe_completed(self):
-        return self._status in [RunningStatus.PARTIAL_COMPLETION, RunningStatus.UNKNOWN]
+        return self._status in [RunningStatus.UNKNOWN]
 
     @property
     def stop_message(self):
