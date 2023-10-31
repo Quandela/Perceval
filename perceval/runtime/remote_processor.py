@@ -30,6 +30,7 @@ import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
 from pkg_resources import get_distribution
+from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components.linear_circuit import Circuit, ACircuit
@@ -46,11 +47,33 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 
 
 class RemoteProcessor(AProcessor):
-    def __init__(self, name: str, token: str, url: str = QUANDELA_CLOUD_URL, m: int = None):
+    def __init__(self,
+                 name: str = None,
+                 token: str = None,
+                 url: str = QUANDELA_CLOUD_URL,
+                 rpc_handler: RPCHandler = None,
+                 m: int = None):
+        """
+        :param name: Platform name
+        :param token: Token value to authenticate the user
+        :param url: Base URL for the Cloud API to connect to
+        :param rpc_handler: Inject an already constructed Remote Procedure Call handler (alternative init);
+            when doing so, name, token and url are expected to be blank
+        :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
+            circuit added decides of the processor size
+        """
         super().__init__()
-        self.name = name
+        if rpc_handler is not None:  # When a rpc_handler object is passed, name, token and url are expected to be None
+            self._rpc_handler = rpc_handler
+            self.name = rpc_handler.name
+            if name is not None and name != self.name:
+                warn(f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})")
+        else:
+            if name is None or token is None:
+                raise ValueError("Parameters 'name' and 'token' must have a value")
+            self.name = name
+            self._rpc_handler = RPCHandler(self.name, url, token)
 
-        self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
@@ -184,8 +207,6 @@ class RemoteProcessor(AProcessor):
     def _compose_processor(self, connector, processor, keep_port: bool):
         assert isinstance(processor, RemoteProcessor), "can not mix types of processors"
         assert self.name == processor.name, "can not compose processors with different targets"
-        assert self._rpc_handler.token == processor.get_rpc_handler().token, "can not compose processors with different tokens"
-        assert self._rpc_handler.url == processor.get_rpc_handler().url, "can not compose processors with different url"
         super()._compose_processor(connector, processor, keep_port)
 
     @property

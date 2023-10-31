@@ -27,9 +27,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
+from abc import ABC, abstractmethod
 from .remote_processor import RemoteProcessor
-from .session import ISession
+
+
+class ISession(ABC):
+    """
+    A session binds an authenticated user to a single remote platform on a given Cloud provider
+    """
+
+    @abstractmethod
+    def build_remote_processor(self) -> RemoteProcessor:
+        """
+        Build a RemoteProcessor object given the session data
+        """
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        self.stop()
+        return False  # Do not suppress an exception that would be raised in the scope
