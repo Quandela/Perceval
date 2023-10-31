@@ -258,7 +258,7 @@ class ProcessTomography(AAlgorithm):
         self._qst = StateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
                                     post_process=self._post_process, renormalization=self._renormalization)
 
-    def _beta_tensor(self, j, k, m, n, nqubit):
+    def _beta_tensor_elem(self, j, k, m, n, nqubit):
         # computes the elements of beta^{mn}_{jk}, a rank 4 tensor, each index of which can
         # take values between 0 and d^2-1  [d = _size_hilbert]
 
@@ -267,16 +267,22 @@ class ProcessTomography(AAlgorithm):
         return b[q, r]
 
     def _beta_as_matrix(self):
-        # compiles the 2D beta matrix by extracting elements of the rank 4 tensor computed by method _beta_tensor
+        # compiles the 2D beta matrix by extracting elements of the rank 4 tensor computed by method _beta_tensor_elem
 
         num_meas = self._size_hilbert ** 4  # Total number of measurements needed for process tomography
         beta_matrix = np.zeros((num_meas, num_meas), dtype='complex_')
         for a in range(num_meas):
+            j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
             for b in range(num_meas):
-                # j,k,m,n are indices for _beta_tensor
-                j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
+                # j,k,m,n are indices for _beta_tensor_elem
+                # todo: fix tue morning - cool idea to remove divmod
+                #
+                # the task that all these are doing is creating pair of indices i,j xhich is a product of
+                # a set with itself {0,1,2,...,n}x{0,1,2,...,n} = {(0,0),(0,1),(0,2),...,(0,n),...(n,n)}
+                # only n changes but is mostly d**2
+                #
                 m, n = divmod(b, self._size_hilbert ** 2)
-                beta_matrix[a, b] = self._beta_tensor(j, k, m, n, self._nqubit)
+                beta_matrix[a, b] = self._beta_tensor_elem(j, k, m, n, self._nqubit)
         return beta_matrix
 
     def _lambda_vector(self):
