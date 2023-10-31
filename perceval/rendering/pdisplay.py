@@ -33,7 +33,6 @@ import os
 import numpy
 import matplotlib.pyplot as plt
 from matplotlib import ticker
-from itertools import product
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -229,7 +228,7 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     # labels on x- and y- axes
 
 
-def _generate_pauli_captions(nqubit):
+def _generate_pauli_captions(nqubit: int):
     from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
     pauli_indices = _generate_pauli_index(nqubit)
     pauli_names = []
@@ -242,9 +241,9 @@ def _generate_pauli_captions(nqubit):
     return basis
 
 
-def _get_sub_figure(ax, array, basis_name):
+def _get_sub_figure(ax, array: numpy.array, basis_name: list):
     # Data
-    size = array.itemsize * 2
+    size = array.shape[0]
     x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
     y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
     z = numpy.zeros(size * size)  # z coordinates of each bar
@@ -266,6 +265,10 @@ def _get_sub_figure(ax, array, basis_name):
     ax.zaxis.set_major_formatter(formatter)
     ax.set_xticks(numpy.arange(size) + 1)
     ax.set_yticks(numpy.arange(size) + 1)
+    font_size = 6
+    ax.tick_params('z', labelsize=font_size)
+    ax.tick_params('x', labelsize=font_size)
+    ax.tick_params('y', labelsize=font_size)
     ax.set_xticklabels(basis_name)
     ax.set_yticklabels(basis_name)
 
@@ -274,7 +277,7 @@ def _get_sub_figure(ax, array, basis_name):
     ax.view_init(elev=30, azim=45)
 
 
-def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT, precision=1E-6):
+def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision=1E-6):
     if output_format != Format.MPLOT:
         raise TypeError("Tomography plot only support MPLOT")
 
@@ -342,20 +345,22 @@ def _pdisplay(bsc, **kwargs):
     return pdisplay_state_distrib(bsc, **kwargs)
 
 
+def _get_simple_number_kwargs(**kwargs):
+    new_kwargs = {}
+    keywords = ["precision", "nsimplify"]
+    for kw in keywords:
+        if kw in kwargs:
+            new_kwargs[kw] = kwargs[kw]
+    return new_kwargs
+
 @dispatch(float)
 def _pdisplay(f, **kwargs):
-    opts_simple = {}
-    if "precision" in kwargs:
-        opts_simple["precision"] = kwargs["precision"]
-    return simple_float(f, **opts_simple)[1]
+    return simple_float(f, **_get_simple_number_kwargs(**kwargs))[1]
 
 
 @dispatch(complex)
 def _pdisplay(c, **kwargs):
-    opts_simple = {}
-    if "precision" in kwargs:
-        opts_simple["precision"] = kwargs["precision"]
-    return simple_complex(c, **opts_simple)[1]
+    return simple_complex(c, **_get_simple_number_kwargs(**kwargs))[1]
 
 
 def _default_output_format(o):
