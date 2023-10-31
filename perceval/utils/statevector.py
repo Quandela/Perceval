@@ -197,6 +197,8 @@ class SVDistribution(ProbabilityDistribution):
         d = self
         if non_null:
             d = {sv: p for sv, p in self.items() if max(sv.n) != 0}
+        if not d:
+            raise RuntimeError("No state to sample from")
         states = list(d.keys())
         probs = list(d.values())
         results = random.choices(states, k=count, weights=probs)
@@ -264,6 +266,8 @@ class BSDistribution(ProbabilityDistribution):
         d = self
         if non_null:
             d = {bs: p for bs, p in self.items() if bs.n != 0}
+        if not d:
+            raise RuntimeError("No state to sample from")
         states = list(d.keys())
         probs = list(d.values())
         rng = np.random.default_rng()
