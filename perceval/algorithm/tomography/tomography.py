@@ -34,8 +34,8 @@ from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
-from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, _get_fixed_basis_ops, \
-    _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
+from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
+    _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
 
 
 class StatePreparationCircuit(Circuit):
@@ -78,12 +78,10 @@ class MeasurementCircuit(Circuit):
 
     @staticmethod
     def _meas_circ(pauli_meas_circ_index: int) -> Circuit:
-        """
-        Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
+        # Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
+        # param pauli_meas_circ_index: int between 0 and 3
+        # returns a 2 modes Measurement Circuit
 
-        :param pauli_meas_circ_index: int between 0 and 3
-        :return: 2 modes Measurement Circuit
-        """
         assert 0 <= pauli_meas_circ_index <= 3, f'Invalid index for measurement circuit'
 
         if pauli_meas_circ_index == 1:
@@ -134,15 +132,12 @@ class StateTomography(AAlgorithm):
         return input_distribution
 
     def _compute_probs(self, prep_state_indices, meas_pauli_basis_indices):
-        """
-        Adds preparation and measurement circuit to input processor (with the gate operation under study)
-        and computes the output probability distribution.
-
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-        circuit
-        :return: Output state probability distribution
-        """
+        # Adds preparation and measurement circuit to input processor (with the gate operation under study)
+        # and computes the output probability distribution.
+        # param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
+        # param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
+        # circuit
+        # return: Output state probability distribution
 
         pc = StatePreparationCircuit(prep_state_indices, self._nqubit)  # state preparation circuit object
         mc = MeasurementCircuit(meas_pauli_basis_indices, self._nqubit)  # measurement basis circuit object
@@ -183,14 +178,12 @@ class StateTomography(AAlgorithm):
         return output_distribution
 
     def _stokes_parameter(self, prep_state_indices, meas_pauli_basis_indices):
-        """
-        Computes the Stokes parameter S_i for state prep_state_indices after operator_circuit
+        # Computes the Stokes parameter S_i for state prep_state_indices after operator_circuit
+        # param prep_state_indices: list of length of number of qubits representing the preparation circuit
+        # param meas_pauli_basis_indices: list of length of number of qubits representing the measurement circuit and the
+        # eigenvector we are measuring
+        # returns the value of Stokes parameter for a given combination of input and output state -> a complex float
 
-        :param prep_state_indices: list of length of number of qubits representing the preparation circuit
-        :param meas_pauli_basis_indices: list of length of number of qubits representing the measurement circuit and the
-         eigenvector we are measuring
-        :return: float
-        """
         output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
 
         # calculation of the Stokes parameter begins here

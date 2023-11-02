@@ -32,7 +32,6 @@ import math
 from itertools import product, combinations
 from perceval.components import PauliType, get_pauli_gate, get_pauli_circuit
 
-count = 0
 
 def _state_to_dens_matrix(state):
     # computes the density matrix representation of a state r'$\rho = |\psi> <\psi|$' given a state r'$|\psi>$'
@@ -124,7 +123,8 @@ def _krauss_repr_ops(m, rhoj, n, nqubit):
     # param m,n = indices running between 0 -> d**2 - 1
     # param nqubit = number of quibts
 
-    return np.dot(_get_fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(_get_fixed_basis_ops(n, nqubit)))))
+    return np.dot(_get_fixed_basis_ops(m, nqubit), np.dot(rhoj,
+                                                          np.conjugate(np.transpose(_get_fixed_basis_ops(n, nqubit)))))
 
 
 def _generate_pauli_index(n):
@@ -150,17 +150,18 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
     Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
     :param input_matrix: chi of a quantum map computed from Quantum Process Tomography
+    :param nqubit: Number of qubits
     :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
     :return: information about the tests
     """
     d2 = len(input_matrix)
-    res = []
+    res = {}
 
     # check if trace preserving
     if not np.isclose(np.trace(input_matrix), 1):
-        res.append("|trace not 1| value:"+str(np.trace(input_matrix)))
+        res['Trace=1'] = False
     else:
-        res.append("|trace 1|")
+        res['Trace=1'] = True
 
     # check if hermitian
     hermiticity = np.zeros_like(input_matrix).real
@@ -169,22 +170,25 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
             if not np.isclose(input_matrix[i][j], np.conjugate(input_matrix[j][i])):
                 hermiticity[i][j] = 1
     if np.any(hermiticity == 1):
-        res.append("|not hermitian|")
+        res['Hermitian'] = False
     else:
-        res.append("|hermitian|")
+        res['Hermitian'] = True
 
     # check if completely positive with Choi–Jamiołkowski isomorphism
     choi = 0
     for n in range(d2):
-        P_n = np.conjugate(np.transpose(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])))
+        # there were 2 transpose to compute P_n, removed. I do not know if one is important and there is another error
+        # todo: find out about the comment in previous line
+        P_n = np.conjugate([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])
         for m in range(d2):
-            choi += input_matrix[m, n] * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, nqubit)))]), P_n)
+            choi += input_matrix[m, n] \
+                    * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, nqubit)))]), P_n)
     choi /= 2 ** nqubit
     eigenvalues = np.linalg.eigvalsh(choi)
     if np.any(eigenvalues < -eigen_tolerance):
         val = np.round(eigenvalues[0], 5)
-        res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
+        res['Completely Positive'] = False
     else:
-        res.append("|Completely Positive|")
+        res['Completely Positive'] = True
 
     return res
