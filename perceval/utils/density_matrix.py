@@ -36,6 +36,38 @@ from scipy.sparse import csr_array, lil_array, dok_array
 import exqalibur as xq
 
 
+class DiagonalBlockMatrix:
+    """
+    A DataType for large block diagonal matrices
+    Specially designed for Density matrices with no superposition between void and photons
+
+    """
+
+    def __init__(self, n_max, m):
+        """
+        initiate a zero matrix for n_max photons and m modes
+        """
+
+        self.data = []
+        self.block_indices = [0]
+        for k in range(n_max + 1):
+            dim = comb(k, m+k-1)
+            self.data.append(np.zeros(comb, comb), dtype=complex)
+            self.block_indices.append(self.block_indices[-1] + dim)
+
+    def __getitem__(self, item):
+        i, j = item
+        blocidx1, blocidx2 = 0, 0
+        while blocidx1 < i:
+            blocidx1 += 1
+        while blocidx2 < j:
+            blocidx2 +=1
+
+        if blocidx2 != blocidx1:
+            return 0j
+        else:
+            return self.data[blocidx1 - 1][i-blocidx1, j-blocidx1]
+
 class DensityMatrix:
     """
     Density operator representing a mixed state
@@ -59,7 +91,7 @@ class DensityMatrix:
         self._n_max = mixed_state.n_max
         self.size = comb(self.m + self._n_max, self.m)
 
-        if index is None or len(index != self.size):
+        if index is None:
             self.index = dict()
             self.reverse_index = []
             k = 0
@@ -70,7 +102,6 @@ class DensityMatrix:
         else:
             self.index = index
 
-        print("index constructed")
         k = 0
         self.mat = dok_array((self.size, self.size), dtype=complex)
         for sv, p in mixed_state.items():
