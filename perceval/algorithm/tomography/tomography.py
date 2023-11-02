@@ -34,7 +34,7 @@ from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.utils import BasicState, Encoding
 from perceval.utils.postselect import PostSelect
 from typing import List
-from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _decomp, _get_fixed_basis_ops, \
+from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, _get_fixed_basis_ops, \
     _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
 
 
@@ -262,7 +262,7 @@ class ProcessTomography(AAlgorithm):
         # computes the elements of beta^{mn}_{jk}, a rank 4 tensor, each index of which can
         # take values between 0 and d^2-1  [d = _size_hilbert]
 
-        b = _krauss_repr_ops(m, _get_canonical_basis_ops(j, nqubit), n, nqubit)
+        b = _krauss_repr_ops(m, _get_canonical_basis_ops(j, self._size_hilbert), n, nqubit)
         q, r = divmod(k, self._size_hilbert)  # quotient, remainder
         return b[q, r]
 
@@ -298,14 +298,13 @@ class ProcessTomography(AAlgorithm):
             # compute state of system for each preparation state - perform state tomography
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
 
-        basis = _matrix_basis(self._nqubit, self._size_hilbert)
         # this creates the fixed basis for the Pauli states prepared 0, 1, + and i
 
         lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
 
         for j in range(self._size_hilbert ** 2):
-            rhoj = _get_canonical_basis_ops(j, self._nqubit)
-            mu = _decomp(rhoj, basis)
+            rhoj = _get_canonical_basis_ops(j, self._size_hilbert)
+            mu = _coef_linear_decomp(rhoj, _matrix_basis(self._nqubit, self._size_hilbert))
             eps_rhoj = sum([mu[i] * density_matrices[i] for i in range(self._size_hilbert ** 2)])
             for k in range(self._size_hilbert ** 2):
                 quotient, remainder = divmod(k, self._size_hilbert)
@@ -316,7 +315,7 @@ class ProcessTomography(AAlgorithm):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
         for j in range(self._size_hilbert ** 2):
-            rhoj = _get_canonical_basis_ops(j, self._nqubit)
+            rhoj = _get_canonical_basis_ops(j, self._size_hilbert)
             eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
             for k in range(self._size_hilbert ** 2):
                 quotient, remainder = divmod(k, self._size_hilbert)
@@ -375,11 +374,9 @@ class ProcessTomography(AAlgorithm):
         for prep_state_indices in pauli_indices:
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
 
-        basis = _matrix_basis(self._nqubit, self._size_hilbert)
-
         for j in range(self._size_hilbert ** 2):
             Uj = _get_fixed_basis_ops(j, self._nqubit)
-            mu = _decomp(Uj, basis)
+            mu = _coef_linear_decomp(Uj, _matrix_basis(self._nqubit, self._size_hilbert))
             eps_Uj = sum([mu[i] * density_matrices[i] for i in range(self._size_hilbert ** 2)])
             # compute the map on a basis
             Ujdag = np.transpose(np.conjugate(Uj))
