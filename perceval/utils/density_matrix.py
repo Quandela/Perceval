@@ -35,6 +35,7 @@ import numpy as np
 from scipy.sparse import csr_array, lil_array, dok_array
 import exqalibur as xq
 
+
 class DensityMatrix:
     """
     Density operator representing a mixed state
@@ -57,6 +58,7 @@ class DensityMatrix:
         self._m = mixed_state.m
         self._n_max = mixed_state.n_max
         self.size = comb(self.m + self._n_max, self.m)
+
         if index is None or len(index != self.size):
             self.index = dict()
             self.reverse_index = []
@@ -113,7 +115,7 @@ class DensityMatrix:
         """
 
         if not isinstance(other, DensityMatrix):
-            raise TypeError("you can only add a Density Matrix to a Density Matrix")
+            raise TypeError("You can only add a Density Matrix to a Density Matrix")
 
         if not self.size == other.size:
             raise ValueError("You can't add Density Matrices with different dimensions")
