@@ -51,13 +51,15 @@ def get_pauli_circuit(pauli_type: PauliType):
     assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
 
     if pauli_type == PauliType.I:
-        return Circuit(2)
+        return Circuit(2, name="I")
     elif pauli_type == PauliType.X:
-        return Circuit(2) // (0, PERM([1, 0]))
+        return Circuit(2, name="X") // (0, PERM([1, 0]))
     elif pauli_type == PauliType.Y:
-        return Circuit(2) // (0, BS.H())
+        return Circuit(2, name="Y") // (0, BS.H())
+    elif pauli_type == PauliType.Z:
+        return Circuit(2, name="Z") // (0, BS.H()) // (1, PS(np.pi / 2))
     else:
-        return Circuit(2) // (0, BS.H()) // (1, PS(np.pi / 2))
+        raise NotImplementedError(f"{pauli_type}")
 
 
 def get_pauli_gate(pauli_type: PauliType):
@@ -74,5 +76,7 @@ def get_pauli_gate(pauli_type: PauliType):
         return Matrix([[0, 1], [1, 0]])
     elif pauli_type == PauliType.Y:
         return Matrix([[0, -1j], [1j, 0]])
-    else:
+    elif pauli_type == PauliType.Z:
         return Matrix([[1, 0], [0, -1]])
+    else:
+        raise NotImplementedError(f"{pauli_type}")

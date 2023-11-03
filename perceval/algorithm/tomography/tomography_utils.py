@@ -145,7 +145,7 @@ def _list_subset_k_from_n(k, n):
     return list(combinations(s, k))
 
 
-def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
+def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
     """
     Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
