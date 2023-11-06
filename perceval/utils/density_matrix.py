@@ -45,7 +45,7 @@ class DiagonalBlockMatrix:
 
     def __init__(self, n_max, m):
         """
-        initiate a zero matrix for n_max photons and m modes
+        initiate a zero square matrix for n_max photons and m modes
         """
 
         self.data = []
@@ -71,8 +71,8 @@ class DiagonalBlockMatrix:
         else:
             self.data[bloc_idx1 - 1][k, l] = value
 
-    def __mul__(self, other):
-        for i,x in enumerate(self.data):
+    def __rmul__(self, other):
+        for i, x in enumerate(self.data):
             self.data[i] = other*x
 
 
@@ -84,13 +84,20 @@ class DiagonalBlockMatrix:
             bloc_idx2 += 1
         return bloc_idx1, bloc_idx2, i-bloc_idx1, j-bloc_idx2
 
+    @property
+    def shape(self):
+        return
+
 
 class DensityMatrix:
     """
     Density operator representing a mixed state
     Does not support annotations
     """
-    def __init__(self, mixed_state: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
+    def __init__(self,
+                 mixed_state: Union[SVDistribution, StateVector, BasicState],
+                 index: Optional[dict] = None,
+                 data_struct: str = "sparse"):
         """
         Constructor for the DensityMatrix Class
 
@@ -104,9 +111,10 @@ class DensityMatrix:
         if not isinstance(mixed_state, SVDistribution):
             raise TypeError("svd must be a BasicState, a StateVector or a SVDistribution")
 
+        self._data_struct = data_struct
         self._m = mixed_state.m
         self._n_max = mixed_state.n_max
-        self.size = comb(self.m + self._n_max, self.m)
+        self._size = comb(self.m + self._n_max, self.m)
 
         if index is None:
             self.index = dict()
@@ -119,8 +127,8 @@ class DensityMatrix:
         else:
             self.index = index
 
+        self.mat = dok_array((self._size, self._size), dtype=complex)
         k = 0
-        self.mat = dok_array((self.size, self.size), dtype=complex)
         for sv, p in mixed_state.items():
             for bst1 in sv.keys():
                 for bst2 in sv.keys():
@@ -165,10 +173,10 @@ class DensityMatrix:
         if not isinstance(other, DensityMatrix):
             raise TypeError("You can only add a Density Matrix to a Density Matrix")
 
-        if not self.size == other.size:
+        if not self._size == other._size:
             raise ValueError("You can't add Density Matrices with different dimensions")
 
-        if not self.m == other.m:
+        if not self._m == other._m:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
 
     def normalize(self):
@@ -190,4 +198,4 @@ class DensityMatrix:
 
     @property
     def shape(self):
-        return self.size, self.size
+        return self._size, self._size
