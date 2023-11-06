@@ -71,6 +71,11 @@ class DiagonalBlockMatrix:
         else:
             self.data[bloc_idx1 - 1][k, l] = value
 
+    def __mul__(self, other):
+        for i,x in enumerate(self.data):
+            self.data[i] = other*x
+
+
     def get_indices(self, i, j):
         bloc_idx1, bloc_idx2 = 0, 0
         while bloc_idx1 < i:
@@ -168,7 +173,7 @@ class DensityMatrix:
 
     def normalize(self):
         """
-        Normalize the density matrix so that Tr(\rho) = 1
+        Normalize the density matrix so that Trace(\rho) = 1
         """
 
         factor = self.mat.trace()
