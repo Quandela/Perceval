@@ -113,20 +113,24 @@ class DensityMatrix:
         self._m = mixed_state.m
         self._n_max = mixed_state.n_max
         self._size = comb(self.m + self._n_max, self.m)
+
         self.index = dict()
         self.reverse_index = []
-
         self.set_index(index)
 
         self.mat = dok_array((self._size, self._size), dtype=complex)
-        k = 0
+
+        l=[]
         for sv, p in mixed_state.items():
-            for bst1 in sv.keys():
-                for bst2 in sv.keys():
-                    i, j = self.index[bst1], self.index[bst2]
-                    self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
-            print(k)
-            k+=1
+            vect = dok_array((self._size, 1), dtype=complex)
+            for bst in sv.keys():
+                idx = self.index[bst]
+                vect[idx,0] = sv[bst]
+            l.append((vect, p))
+
+        for x in l:
+            vect, p = x
+            self.mat += p*(vect @ conj(vect.T))
 
     def set_index(self, index):
         if index is None:
@@ -185,6 +189,7 @@ class DensityMatrix:
 
         if not self._m == other._m:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
+
 
     def normalize(self):
         """
