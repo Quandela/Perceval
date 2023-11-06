@@ -51,22 +51,34 @@ class DiagonalBlockMatrix:
         self.data = []
         self.block_indices = [0]
         for k in range(n_max + 1):
-            dim = comb(k, m+k-1)
-            self.data.append(np.zeros(comb, comb), dtype=complex)
+            dim = comb(m+k-1, k)
+            self.data.append(np.zeros((dim, dim), dtype=complex))
             self.block_indices.append(self.block_indices[-1] + dim)
 
     def __getitem__(self, item):
         i, j = item
-        blocidx1, blocidx2 = 0, 0
-        while blocidx1 < i:
-            blocidx1 += 1
-        while blocidx2 < j:
-            blocidx2 +=1
-
-        if blocidx2 != blocidx1:
+        bloc_idx1, bloc_idx2, k, l = self.get_indices(i,j)
+        if bloc_idx2 != bloc_idx1:
             return 0j
         else:
-            return self.data[blocidx1 - 1][i-blocidx1, j-blocidx1]
+            return self.data[bloc_idx1 - 1][k, l]
+
+    def __setitem__(self, key, value):
+        i, j = key
+        bloc_idx1, bloc_idx2, k, l = self.get_indices(i, j)
+        if bloc_idx2 != bloc_idx1:
+            raise IndexError(f"Can't affect non zero values at these indices: {(i,j)}")
+        else:
+            self.data[bloc_idx1 - 1][k, l] = value
+
+    def get_indices(self, i, j):
+        bloc_idx1, bloc_idx2 = 0, 0
+        while bloc_idx1 < i:
+            bloc_idx1 += 1
+        while bloc_idx2 < j:
+            bloc_idx2 += 1
+        return bloc_idx1, bloc_idx2, i-bloc_idx1, j-bloc_idx2
+
 
 class DensityMatrix:
     """
