@@ -28,3 +28,4 @@
 # SOFTWARE.
 
 from .tomography_utils import is_physical
+from .tomography import ProcessTomography, StateTomography
