@@ -96,8 +96,7 @@ class DensityMatrix:
     """
     def __init__(self,
                  mixed_state: Union[SVDistribution, StateVector, BasicState],
-                 index: Optional[dict] = None,
-                 data_struct: str = "sparse"):
+                 index: Optional[dict] = None):
         """
         Constructor for the DensityMatrix Class
 
@@ -111,21 +110,13 @@ class DensityMatrix:
         if not isinstance(mixed_state, SVDistribution):
             raise TypeError("svd must be a BasicState, a StateVector or a SVDistribution")
 
-        self._data_struct = data_struct
         self._m = mixed_state.m
         self._n_max = mixed_state.n_max
         self._size = comb(self.m + self._n_max, self.m)
+        self.index = dict()
+        self.reverse_index = []
 
-        if index is None:
-            self.index = dict()
-            self.reverse_index = []
-            k = 0
-            for key in max_photon_state_iterator(self._m, self._n_max):
-                self.index[key] = k
-                self.reverse_index.append(key)
-                k+=1
-        else:
-            self.index = index
+        self.set_index(index)
 
         self.mat = dok_array((self._size, self._size), dtype=complex)
         k = 0
@@ -136,6 +127,22 @@ class DensityMatrix:
                     self.mat[i, j] += p*sv[bst1]*conj(sv[bst2])
             print(k)
             k+=1
+
+    def set_index(self, index):
+        if index is None:
+            k = 0
+            for key in max_photon_state_iterator(self._m, self._n_max):
+                self.index[key] = k
+                self.reverse_index.append(key)
+                k+=1
+        else:
+            if len(index) == self._size:
+                self.index = index
+                self.reverse_index = [None]*self._size
+                for key in index.keys():
+                    self.reverse_index[index[key]] = key
+            else:
+                raise ValueError("the index size does not match the matrix size")
 
     def __getitem__(self, key):
         """key must be a BasicState tuple"""
