@@ -31,7 +31,7 @@ import numpy as np
 
 from .abstract_algorithm import AAlgorithm
 from .sampler import Sampler
-from perceval.utils import BasicState, allstate_iterator
+from perceval.utils import BasicState, allstate_iterator, Matrix
 from perceval.components import AProcessor
 
 
@@ -130,7 +130,7 @@ class Analyzer(AAlgorithm):
                 progress_callback((idx+1)/len(self.input_states_list))
 
         # Create a distribution matrix and compute performance / error rate if needed
-        self._distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
+        self._distribution = Matrix(np.zeros((len(self.input_states_list), len(self.output_states_list))))
         for iidx, i_state in enumerate(self.input_states_list):
             sum_p = 0
             for oidx, o_state in enumerate(self.output_states_list):

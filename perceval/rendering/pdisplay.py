@@ -177,15 +177,15 @@ _TABULATE_FMT_MAPPING = {
 }
 
 
-def pdisplay_analyzer(analyser: Analyzer, output_format: Format = Format.TEXT, nsimplify: bool = True,
+def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, nsimplify: bool = True,
                       precision: float = 1e-6):
-    distribution = analyser.distribution
+    distribution = analyzer.distribution
     d = []
-    for iidx, _ in enumerate(analyser.input_states_list):
+    for iidx, _ in enumerate(analyzer.input_states_list):
         d.append([simple_float(f, nsimplify=nsimplify, precision=precision)[1]
                   for f in list(distribution[iidx])])
-    return tabulate(d, headers=[analyser._mapping.get(o, str(o)) for o in analyser.output_states_list],
-                    showindex=[analyser._mapping.get(i, str(i)) for i in analyser.input_states_list],
+    return tabulate(d, headers=[analyzer._mapping.get(o, str(o)) for o in analyzer.output_states_list],
+                    showindex=[analyzer._mapping.get(i, str(i)) for i in analyzer.input_states_list],
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
@@ -305,6 +305,11 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 @dispatch(object)
 def _pdisplay(_, **kwargs):
     return None
+
+
+@dispatch(ProcessTomography)
+def _pdisplay(qpt, **kwargs):
+    return pdisplay_tomography_chi(qpt, **kwargs)
 
 
 @dispatch(ProcessTomography)

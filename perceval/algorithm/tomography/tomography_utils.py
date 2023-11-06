@@ -32,30 +32,25 @@ import math
 from itertools import product, combinations
 from perceval.components import PauliType, get_pauli_gate, get_pauli_circuit
 
-# todo: nomenclature fixing for ops (canonical and fixed) - they do not make much logical sense without the notes
-
 
 def _state_to_dens_matrix(state):
     # computes the density matrix representation of a state r'$\rho = |\psi> <\psi|$' given a state r'$|\psi>$'
     return np.dot(state, np.conjugate(np.transpose(state)))
 
 
-def _matrix_basis(nqubit, d):  # create a matrix basis from all the tensor products states
-    # needed for rho_j and to compute epsilon rho_j
+def _matrix_basis(nqubit, d):
+    # generate a list of basis matrices by choosing all combinations of the tensor products of basis states
 
     B = []
-    for j in range(d ** 2):
-        v = np.zeros((d, 1), dtype='complex_')
-        v[0] = 1
-        k = []
-        for m in range(nqubit - 1, -1, -1):
-            k.append(j // (4 ** m))
-            j = j % (4 ** m)
-        k.reverse()
-        M = get_pauli_circuit(PauliType(k[0])).compute_unitary()
-        for i in k[1:]:
-            M = np.kron(get_pauli_circuit(PauliType(i)).compute_unitary(), M)
+    pauli_indices = _generate_pauli_index(nqubit)
+    v = np.zeros((d, 1), dtype='complex_')
+    v[0] = 1
+
+    for elem in pauli_indices:
+        M1 = get_pauli_circuit(elem[1]).compute_unitary()
+        M = np.kron(get_pauli_circuit(elem[0]).compute_unitary(), M1)
         B.append(_state_to_dens_matrix(np.dot(M, v)))
+
     return B
 
 
@@ -65,7 +60,7 @@ def _matrix_to_vector(matrix):
 
 
 def _vector_to_sq_matrix(vector):
-    # expand a vector d**2 into a matrix d*d
+    # expand a vector of size d**2 into a matrix of size d*d
     size = math.sqrt(len(vector))
     if not size.is_integer():
         raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
@@ -73,66 +68,69 @@ def _vector_to_sq_matrix(vector):
     return np.reshape(vector, (int(size), int(size)))
 
 
-def _decomp(matrix, basis):  # linear decomposition of any matrix upon a basis
-    # decomposition used in rho_j creation - process tomography
-    n = len(matrix[0])
+def _coef_linear_decomp(matrix, basis):
+    # Solves the linear system of equations : Matrix = Mu x Basis to find Mu.
+    # "Matrix" can be linearly decomposed in any given "Basis"
+    # param basis : List of basis matrices
+
+    basis_vectors = np.column_stack([_matrix_to_vector(m) for m in basis])  # convert to list of basis vectors
     y = _matrix_to_vector(matrix)
-    L = []
-    for m in basis:
-        L.append(_matrix_to_vector(m))
-    A = np.zeros((n ** 2, n ** 2), dtype='complex_')
-    for i in range(n ** 2):
-        for j in range(n ** 2):
-            A[i, j] = L[j][i]
-    x = np.dot(np.linalg.inv(A), y)
-    return x
+
+    # Solve the equation Matrix = Mu x Basis
+    mu = np.linalg.solve(basis_vectors, y)
+    return mu
 
 
 def _get_fixed_basis_ops(j, nqubit):
-    """
-    computes the set of operators (tensor products of pauli gates) in fixed basis for tomography
+    # computes the set of operators (tensor products of pauli gates) in the fixed basis
+    # as an array of shape (size_hilbert x size_hilbert)
+    # :param j - Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
+    # :param nqubit - number of qubits
 
-    :param j: Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
-    :param nqubit: number of qubits
-    :return: Operators in a fixed basis (size_hilbert x size_hilbert) array
-    """
     if nqubit == 1:
         return get_pauli_gate(PauliType(j))
 
-    index = j // (4 ** (nqubit - 1))  # todo: fix 'index' and 'val' in counting
-    # a sort of mapping - not sure it is the same everywhere. todo: decide on how to make it readable
-    fix_basis_op = get_pauli_gate(PauliType(index))
+    q, r = divmod(j, (4 ** (nqubit - 1)))
+    fix_basis_op = get_pauli_gate(PauliType(q))
 
-    j = j % (4 ** (nqubit - 1))
-    for i in range(nqubit - 2, -1, -1):
-        val = j // (4 ** i)
-        fix_basis_op = np.kron(fix_basis_op, get_pauli_gate(PauliType(val)))
-        j = j % (4 ** i)
+    # I am not sure if i completely follow the logic behind what follows. I believe the idea is
+    # to keep val between 0-3 no matter the nqubits and value of j. todo: find a better implementation
+    # it seems similar to many other calls of creating combinations of operators in a basis
+    # but when I called similarly, values for computed fidelity was different
+
+    for i in reversed(range(nqubit - 1)):
+        qq, rr = divmod(r, 4**i)
+        fix_basis_op = np.kron(fix_basis_op, get_pauli_gate(PauliType(qq)))
+        r = r % (4 ** i)  # updating r for next loop - does not do much for nqubit=2 but would affect values >2
+
     return fix_basis_op
 
 
-def _get_canonical_basis_ops(j, nqubit):
-    """
-    computes the set of operators in canonical (standard) basis for tomography
+def _get_canonical_basis_ops(j, d):
+    # computes the set of operators defined in canonical (standard) basis. Array of size (d x d)
+    # param d = Size of Hilbert space = 2**nqubits
+    # param j = Number of measurements for state tomography = int between [0, d**2 - 1]
 
-    :param j: Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
-    :param nqubit: number of qubits
-    :return:  Operators in a canonical basis (size_hilbert x size_hilbert) array
-    """
-    d = 2 ** nqubit
-    canonical_op = np.zeros((d, d), dtype='complex_')
-    canonical_op[j // d, j % d] = 1
-    return canonical_op
+    quotient, remainder = divmod(j, d)
+    canonical_op = [[1 if i == quotient and j == remainder else 0 for j in range(d)] for i in range(d)]
+    return np.array(canonical_op, dtype='complex_')
 
 
 def _krauss_repr_ops(m, rhoj, n, nqubit):
-    # computes the Krauss representation of an operator
-    # Returns (fixed_basis_op x (canonical_basis_op x fixed_basis_op)). x: dot product here
-    return np.dot(_get_fixed_basis_ops(m, nqubit), np.dot(rhoj, np.conjugate(np.transpose(_get_fixed_basis_ops(n, nqubit)))))
+    # computes the Krauss representation of an operator = (fixed_basis_op x (canonical_basis_op x fixed_basis_op))
+    # x: dot product in the previous line
+    # param rhoj = canonical basis operators
+    # param m,n = indices running between 0 -> d**2 - 1
+    # param nqubit = number of quibts
+
+    return np.dot(_get_fixed_basis_ops(m, nqubit), np.dot(rhoj,
+                                                          np.conjugate(np.transpose(_get_fixed_basis_ops(n, nqubit)))))
 
 
 def _generate_pauli_index(n):
-    S = [PauliType(member.value) for member in PauliType]  # todo : maybe a better way exists
+    # generates all possible combinations of Pauli indices repeated n times
+
+    S = [PauliType(member.value) for member in PauliType]
     # takes Cartesian product of elements of set S with itself repeating 'n' times
     output_set = [list(p) for p in product(S, repeat=n)]
     return output_set
@@ -142,26 +140,28 @@ def _list_subset_k_from_n(k, n):
     # list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
     # used only in the method _stokes_parameter
     #  Should we put it in overall utils? or have a specific util for tomograph?
+
     s = tuple(range(n))
     return list(combinations(s, k))
 
 
-def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
+def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
     """
     Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
     :param input_matrix: chi of a quantum map computed from Quantum Process Tomography
+    :param nqubit: Number of qubits
     :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
     :return: information about the tests
     """
     d2 = len(input_matrix)
-    res = []
+    res = {}
 
     # check if trace preserving
     if not np.isclose(np.trace(input_matrix), 1):
-        res.append("|trace not 1| value:"+str(np.trace(input_matrix)))
+        res['Trace=1'] = False
     else:
-        res.append("|trace 1|")
+        res['Trace=1'] = True
 
     # check if hermitian
     hermiticity = np.zeros_like(input_matrix).real
@@ -170,22 +170,25 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=10 ** (-6)):
             if not np.isclose(input_matrix[i][j], np.conjugate(input_matrix[j][i])):
                 hermiticity[i][j] = 1
     if np.any(hermiticity == 1):
-        res.append("|not hermitian|")
+        res['Hermitian'] = False
     else:
-        res.append("|hermitian|")
+        res['Hermitian'] = True
 
     # check if completely positive with Choi–Jamiołkowski isomorphism
     choi = 0
     for n in range(d2):
-        P_n = np.conjugate(np.transpose(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])))
+        # there were 2 transpose to compute P_n, removed. I do not know if one is important and there is another error
+        # todo: find out about the comment in previous line
+        P_n = np.conjugate([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])
         for m in range(d2):
-            choi += input_matrix[m, n] * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, nqubit)))]), P_n)
+            choi += input_matrix[m, n] \
+                    * np.dot(np.transpose([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, nqubit)))]), P_n)
     choi /= 2 ** nqubit
     eigenvalues = np.linalg.eigvalsh(choi)
     if np.any(eigenvalues < -eigen_tolerance):
         val = np.round(eigenvalues[0], 5)
-        res.append("|not Completely Positive|smallest eigenvalue :"+str(val))
+        res['Completely Positive'] = False
     else:
-        res.append("|Completely Positive|")
+        res['Completely Positive'] = True
 
     return res

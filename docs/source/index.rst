@@ -77,7 +77,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :maxdepth: 2
    :hidden:
 
-   notebooks/walkthrough-cnot
+   notebooks/Walkthrough-cnot
    notebooks/Tutorial
 
 .. toctree::
@@ -130,7 +130,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :maxdepth: 2
    :hidden:
 
-   notebooks/gedik_qudit
+   notebooks/Gedik_qudit
 
 .. toctree::
    :caption: Code Reference

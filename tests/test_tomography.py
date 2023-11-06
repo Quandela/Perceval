@@ -32,11 +32,26 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Processor
+from perceval.components import catalog, Processor, Circuit, PauliType
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography import is_physical
+from perceval.algorithm.tomography.tomography_utils import is_physical, get_pauli_circuit
+
+
+@pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
+def test_density_matrix_state_tomography(pauli_gate):
+    p = Processor("Naive", Circuit(2) // get_pauli_circuit(pauli_gate))  # 1 qubit Pauli X gate
+    qst = StateTomography(nqubit=1, operator_processor=p)
+    density_matrix = qst.perform_state_tomography([PauliType.X])
+
+    res = is_physical(density_matrix, nqubit=1)
+
+    assert len(density_matrix) == 2
+    assert res['Trace=1'] is True
+    assert res["Hermitian"] is True
+    assert res["Completely Positive"] is True
+
 
 def fidelity_op_process_tomography(op, op_proc, nqubit):
     # create process tomography object
@@ -81,17 +96,15 @@ def test_fidelity_random_op():
     assert random_op_fidelity == pytest.approx(1, 1e-6)
 
 
-@pytest.mark.parametrize(("renorm", "expected"),
-                         [(None, "|not Completely Positive|smallest eigenvalue :-0.00214"),
-                          (0.0515, "|Completely Positive|")])
+@pytest.mark.parametrize(("renorm", "expected"), [(None, False), (0.0515, True)])
 def test_chi_cnot_is_physical(renorm, expected):
     cnot_p = catalog["klm cnot"].build_processor()
 
     qpt = ProcessTomography(nqubit=2, operator_processor=cnot_p, renormalization=renorm)
 
     chi_op = qpt.chi_matrix()
-    res_is_physical = is_physical(chi_op, nqubit=2)
+    res = is_physical(chi_op, nqubit=2)
 
-    assert res_is_physical[0] == "|trace 1|"
-    assert res_is_physical[1] == "|hermitian|"
-    assert res_is_physical[2] == expected
+    assert res['Trace=1'] is True  # if Chi has Trace = 1
+    assert res['Hermitian'] is True  # if Chi is Hermitian
+    assert res['Completely Positive'] == expected  # if input Chi is Completely Positive
