@@ -246,7 +246,7 @@ One direct benefit of this change is that the beam splitter definition is now th
 
 >>> import perceval as pcvl
 >>> from perceval.components.unitary_components import PS, BS, PERM
->>> import numpy as np
+>>> import math
 >>>
 >>> c = pcvl.Circuit(2) // PS(math.pi) // BS() // PERM([1, 0]) // (1, PS(math.pi))
 
