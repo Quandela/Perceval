@@ -358,7 +358,7 @@ def _get_simple_number_kwargs(**kwargs):
             new_kwargs[kw] = kwargs[kw]
     return new_kwargs
 
-@dispatch(float)
+@dispatch((int,float))
 def _pdisplay(f, **kwargs):
     return simple_float(f, **_get_simple_number_kwargs(**kwargs))[1]
 
