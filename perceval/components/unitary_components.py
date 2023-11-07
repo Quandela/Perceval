@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+import math
 from copy import copy
 from enum import Enum
 
@@ -80,14 +82,14 @@ class BS(ACircuit):
     def r_to_theta(r):
         """Compute theta given a reflectivity value
         """
-        return 2*np.arccos(np.sqrt(float(r)))
+        return 2*math.acos(math.sqrt(float(r)))
 
     @staticmethod
     def theta_to_r(theta):
         if isinstance(theta, Parameter) and not theta.defined:
             return sp.cos(theta.spv/2)**2
         else:
-            return np.cos(float(theta)/2)**2
+            return math.cos(float(theta)/2)**2
 
     @property
     def reflectivity(self):
@@ -107,16 +109,16 @@ class BS(ACircuit):
             u10_mul = sp.exp((phi_tl + phi_br)*sp.I)
             u11_mul = sp.exp((phi_br + phi_bl)*sp.I)
         else:
-            cos_theta = np.cos(float(self._theta)/2)
-            sin_theta = np.sin(float(self._theta)/2)
+            cos_theta = math.cos(float(self._theta)/2)
+            sin_theta = math.sin(float(self._theta)/2)
             phi_tl_tr = float(self._phi_tl) + float(self._phi_tr)
-            u00_mul = np.cos(phi_tl_tr) + 1j*np.sin(phi_tl_tr)
+            u00_mul = math.cos(phi_tl_tr) + 1j*math.sin(phi_tl_tr)
             phi_tr_bl = float(self._phi_tr) + float(self._phi_bl)
-            u01_mul = np.cos(phi_tr_bl) + 1j*np.sin(phi_tr_bl)
+            u01_mul = math.cos(phi_tr_bl) + 1j*math.sin(phi_tr_bl)
             phi_tl_br = float(self._phi_tl) + float(self._phi_br)
-            u10_mul = np.cos(phi_tl_br) + 1j*np.sin(phi_tl_br)
+            u10_mul = math.cos(phi_tl_br) + 1j*math.sin(phi_tl_br)
             phi_bl_br = float(self._phi_bl) + float(self._phi_br)
-            u11_mul = np.cos(phi_bl_br) + 1j*np.sin(phi_bl_br)
+            u11_mul = math.cos(phi_bl_br) + 1j*math.sin(phi_bl_br)
 
         umat = self._matrix_template(use_symbolic)
         umat[0, 0] *= u00_mul*cos_theta
@@ -169,7 +171,7 @@ class BS(ACircuit):
             if self._convention == BSConvention.Ry:
                 self._theta.set_value(- float(self._theta), force=True)
             elif self._convention == BSConvention.H:
-                self._theta.set_value(2*np.pi - float(self._theta), force=True)
+                self._theta.set_value(2*math.pi - float(self._theta), force=True)
         if h:
             self._phi_bl.set_value(-phi_br, force=True)
             self._phi_tr.set_value(-phi_tl, force=True)
@@ -197,7 +199,7 @@ class PS(ACircuit):
         if use_symbolic:
             return Matrix([[sp.exp(self._phi.spv*sp.I)]], True)
         else:
-            return Matrix([[np.cos(float(self._phi)) + 1j * np.sin(float(self._phi))]], False)
+            return Matrix([[math.cos(float(self._phi)) + 1j * math.sin(float(self._phi))]], False)
 
     def get_variables(self, map_param_kid=None):
         parameters = {}
@@ -245,11 +247,11 @@ class WP(ACircuit):
             delta = float(self._delta)
             xsi = float(self._xsi)
             return Matrix([[
-                            np.cos(delta)+1j*np.sin(delta)*np.cos(2*xsi),
-                            1j*np.sin(delta)*np.sin(2*xsi)
+                            math.cos(delta)+1j*math.sin(delta)*math.cos(2*xsi),
+                            1j*math.sin(delta)*math.sin(2*xsi)
                            ], [
-                            1j * np.sin(delta) * np.sin(2 * xsi),
-                            np.cos(delta) - 1j * np.sin(delta) * np.cos(2 * xsi)
+                            1j * math.sin(delta) * math.sin(2 * xsi),
+                            math.cos(delta) - 1j * math.sin(delta) * math.cos(2 * xsi)
                            ]], False)
 
     def get_variables(self, map_param_kid=None):
@@ -308,8 +310,8 @@ class PR(ACircuit):
                            [-sp.sin(delta), sp.cos(delta)]], True)
         else:
             delta = float(self._delta)
-            return Matrix([[np.cos(delta), np.sin(delta)],
-                           [-np.sin(delta), np.cos(delta)]], False)
+            return Matrix([[math.cos(delta), math.sin(delta)],
+                           [-math.sin(delta), math.cos(delta)]], False)
 
     def get_variables(self, map_param_kid=None):
         parameters = {}
