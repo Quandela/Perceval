@@ -129,6 +129,7 @@ class StateTomography(AAlgorithm):
             # setting the input for heralded modes of the given processor
             input_state *= BasicState([m[1]])
         input_distribution = self._source.generate_distribution(expected_input=input_state)
+        print(input_distribution)
         return input_distribution
 
     def _compute_probs(self, prep_state_indices, meas_pauli_basis_indices):
@@ -155,24 +156,31 @@ class StateTomography(AAlgorithm):
         # Clear any inbuilt post-selection and heralding from perceval
         # - important for tomography to get output without inbuilt normalization of perceval
 
-        p.clear_postselection()
-        inbuilt_herald_ports = self._operator_processor.heralds  # to remove inbuilt heralds from Perceval processor
-        for h_pos in inbuilt_herald_ports.keys():
-            p.remove_port(h_pos)
+        # p.clear_postselection()
+        # inbuilt_herald_ports = self._operator_processor.heralds  # to remove inbuilt heralds from Perceval processor
+        # for h_pos in inbuilt_herald_ports.keys():
+        #     p.remove_port(h_pos)
+        #
+        # if self._post_process is True:
+        #     # perhaps in future a post_process setup will be needed
+        #     raise ValueError("Setting a postprocess is not implemented yet")
+        #
+        # if self._renormalization is None:
+        #     # postselection on heralded modes if no renormalization
+        #     ps = PostSelect()
+        #     for m in self._heralded_modes:
+        #         ps.eq([m[0]], m[1])
+        #     p.set_postselection(ps)
+        #
+        # p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
+        # p.with_input(self._input_state_dist_config())
 
-        if self._post_process is True:
-            # perhaps in future a post_process setup will be needed
-            raise ValueError("Setting a postprocess is not implemented yet")
+        input_state = BasicState("|1,0>")
+        for _ in range(1, self._nqubit):
+            # setting the input state for the gate qubit modes
+            input_state *= BasicState("|1,0>")
 
-        if self._renormalization is None:
-            # postselection on heralded modes if no renormalization
-            ps = PostSelect()
-            for m in self._heralded_modes:
-                ps.eq([m[0]], m[1])
-            p.set_postselection(ps)
-
-        p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
-        p.with_input(self._input_state_dist_config())
+        p.with_input(input_state)
 
         output_distribution = p.probs()["results"]
         return output_distribution
@@ -204,8 +212,8 @@ class StateTomography(AAlgorithm):
                         measurement_state *= BasicState("|0,1>")
                         if meas_pauli_basis_indices[j] != 0:
                             eta *= -1
-                for m in self._heralded_modes:
-                    measurement_state *= BasicState([m[1]])
+                # for m in self._heralded_modes:
+                #     measurement_state *= BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
 
         if self._renormalization is None:
