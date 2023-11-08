@@ -284,13 +284,17 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     ax.view_init(elev=30, azim=45)
 
 
-def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision=1E-6):
-    if output_format != Format.MPLOT:
-        raise TypeError("Tomography plot only support MPLOT")
+def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision=1E-6,
+                            render_size=None):
+    if output_format == Format.TEXT or output_format == Format.LATEX:
+        raise TypeError(f"Tomography plot does not support {output_format}")
 
     chi_op = qpt.chi_matrix()
 
-    fig = plt.figure()
+    if render_size is not None and isinstance(render_size, tuple) and len(render_size) == 2:
+        fig = plt.figure(figsize=render_size)
+    else:
+        fig = plt.figure()
     pauli_captions = _generate_pauli_captions(qpt._nqubit)
     significant_digit = int(math.log10(1 / precision))
 
@@ -311,8 +315,8 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 
 
 @dispatch(object)
-def _pdisplay(_, **kwargs):
-    return None
+def _pdisplay(o, **kwargs):
+    raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
 
 
 @dispatch(ProcessTomography)
