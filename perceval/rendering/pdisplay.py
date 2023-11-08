@@ -240,7 +240,7 @@ def _generate_pauli_captions(nqubit: int):
 
     basis = []
     for val in pauli_names:
-        basis.append(' '.join(val))
+        basis.append(''.join(val))
     return basis
 
 
@@ -276,8 +276,8 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     ax.set_zlim(zmin=dz.min(), zmax=dz.max())
     ax.tick_params('z', which='both', labelsize=font_size)
     ax.grid(True, axis='z', which='major', linewidth=2)
-    interval = [v for v in ax.get_zticks() if v > 0][0]
-    ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
+    # interval = [v for v in ax.get_zticks() if v > 0][0]
+    # ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
 
     # Plot
     ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
