@@ -31,8 +31,7 @@ import math
 import copy
 import os
 import numpy
-import matplotlib.pyplot as plt
-from matplotlib import ticker
+
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -43,6 +42,10 @@ with warnings.catch_warnings():
         action='ignore',
         category=RuntimeWarning)
     import drawsvg
+
+import matplotlib.pyplot as plt
+from matplotlib import ticker
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
 from perceval.algorithm import ProcessTomography
@@ -237,11 +240,11 @@ def _generate_pauli_captions(nqubit: int):
 
     basis = []
     for val in pauli_names:
-        basis.append(''.join(val))
+        basis.append(' '.join(val))
     return basis
 
 
-def _get_sub_figure(ax, array: numpy.array, basis_name: list):
+def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     # Data
     size = array.shape[0]
     x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
@@ -259,18 +262,22 @@ def _get_sub_figure(ax, array: numpy.array, basis_name: list):
     rgba = [color_map((k - min_height) / max_height) for k in dz]
 
     # Caption
-    ax.tick_params(axis='z', which='major')
-    formatter = ticker.ScalarFormatter(useMathText=True)
-    formatter.set_scientific(True)
-    ax.zaxis.set_major_formatter(formatter)
+    font_size = 6
+
+    # XY
     ax.set_xticks(numpy.arange(size) + 1)
     ax.set_yticks(numpy.arange(size) + 1)
-    font_size = 6
-    ax.tick_params('z', labelsize=font_size)
-    ax.tick_params('x', labelsize=font_size)
-    ax.tick_params('y', labelsize=font_size)
+    ax.tick_params(axis='x', which='major', labelsize=font_size)
     ax.set_xticklabels(basis_name)
+    ax.tick_params(axis='y', which='major', labelsize=font_size)
     ax.set_yticklabels(basis_name)
+
+    # Z
+    ax.set_zlim(zmin=dz.min(), zmax=dz.max())
+    ax.tick_params('z', which='both', labelsize=font_size)
+    ax.grid(True, axis='z', which='major', linewidth=2)
+    interval = [v for v in ax.get_zticks() if v > 0][0]
+    ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
 
     # Plot
     ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
@@ -288,16 +295,17 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     significant_digit = int(math.log10(1 / precision))
 
     # Real plot
-    ax1 = fig.add_subplot(121, projection='3d')
-    ax1.set_title("Re[$\\chi$]")
+    ax = fig.add_subplot(121, projection='3d')
+    ax.set_title("Re[$\\chi$]")
     real_chi = numpy.round(chi_op.real, significant_digit)
-    _get_sub_figure(ax1, real_chi, pauli_captions)
+    _get_sub_figure(ax, real_chi, pauli_captions)
 
     # Imag plot
-    ax2 = fig.add_subplot(122, projection='3d')
-    ax2.set_title("Im[$\\chi$]")
+    ax = fig.add_subplot(122, projection='3d')
+    ax.set_title("Im[$\\chi$]")
     imag_chi = numpy.round(chi_op.imag, significant_digit)
-    _get_sub_figure(ax2, imag_chi, pauli_captions)
+    _get_sub_figure(ax, imag_chi, pauli_captions)
+
 
     plt.show()
 
