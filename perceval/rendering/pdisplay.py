@@ -26,12 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+import math
 import copy
 import os
 import numpy
-import matplotlib.pyplot as plt
-from matplotlib import ticker
-from itertools import product
+
 from multipledispatch import dispatch
 import sympy as sp
 from tabulate import tabulate
@@ -42,6 +42,10 @@ with warnings.catch_warnings():
         action='ignore',
         category=RuntimeWarning)
     import drawsvg
+
+import matplotlib.pyplot as plt
+from matplotlib import ticker
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
 from perceval.algorithm import ProcessTomography
@@ -146,16 +150,16 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
     if output_format != Format.TEXT:
         marker = output_format == Format.HTML and "$" or ""
         if isinstance(matrix, sp.Matrix):
-            return marker+sp.latex(matrix)+marker
+            return marker + sp.latex(matrix) + marker
         rows = []
         for j in range(matrix.shape[0]):
             row = []
             for v in matrix[j, :]:
                 row.append(sp.S(simp(v)))
             rows.append(row)
-        return marker+sp.latex(Matrix(rows, use_symbolic=True))+marker
+        return marker + sp.latex(Matrix(rows, use_symbolic=True)) + marker
     if matrix.shape[0] == 1:
-        return (mlstr("[")+mlstr("  ").join([simp(v) for v in matrix[0, :]])+"]")._s
+        return (mlstr("[") + mlstr("  ").join([simp(v) for v in matrix[0, :]]) + "]")._s
     else:
         s = mlstr("")
         for j in range(matrix.shape[1]):
@@ -163,9 +167,9 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
                 s += "  "
             s += "\n".join([simp(v) for v in matrix[:, j]])
         h = s.height
-        left_bracket = "⎡\n"+"⎢\n"*(h-2)+"⎣"
-        right_bracket = "⎤\n"+"⎥\n"*(h-2)+"⎦"
-        return (mlstr(left_bracket)+s+right_bracket)._s
+        left_bracket = "⎡\n" + "⎢\n" * (h - 2) + "⎣"
+        right_bracket = "⎤\n" + "⎥\n" * (h - 2) + "⎦"
+        return (mlstr(left_bracket) + s + right_bracket)._s
 
 
 _TABULATE_FMT_MAPPING = {
@@ -224,88 +228,100 @@ def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCou
     s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
+    # labels on x- and y- axes
 
-def pdisplay_tomography_chi(qpt, output_format: Format = Format.MPLOT,  plot_size: tuple = (18, 10),
-                            elevation: int = 30, azimuthal: int = 45, font_size: int = 10):
+
+def _generate_pauli_captions(nqubit: int):
+    from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
+    pauli_indices = _generate_pauli_index(nqubit)
+    pauli_names = []
+    for subset in pauli_indices:
+        pauli_names.append([member.name for member in subset])
+
+    basis = []
+    for val in pauli_names:
+        basis.append(''.join(val))
+    return basis
+
+
+def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
+    # Data
+    size = array.shape[0]
+    x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
+    y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
+    z = numpy.zeros(size * size)  # z coordinates of each bar
+    dxy = numpy.ones(size * size) * 0.5  # Width/Lenght of each bar
+    dz = array.ravel()  # length along z-axis of each bar (height)
+
+    # Colors
+    color_map = plt.cm.get_cmap('viridis_r')
+    # get range of colorbars so we can normalize
+    max_height = numpy.max(dz)
+    min_height = numpy.min(dz)
+    # scale each z to [0,1], and get their rgb values
+    rgba = [color_map((k - min_height) / max_height) for k in dz]
+
+    # Caption
+    font_size = 6
+
+    # XY
+    ax.set_xticks(numpy.arange(size) + 1)
+    ax.set_yticks(numpy.arange(size) + 1)
+    ax.tick_params(axis='x', which='major', labelsize=font_size)
+    ax.set_xticklabels(basis_name)
+    ax.tick_params(axis='y', which='major', labelsize=font_size)
+    ax.set_yticklabels(basis_name)
+
+    # Z
+    ax.set_zlim(zmin=dz.min(), zmax=dz.max())
+    ax.tick_params('z', which='both', labelsize=font_size)
+    ax.grid(True, axis='z', which='major', linewidth=2)
+    # interval = [v for v in ax.get_zticks() if v > 0][0]
+    # ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
+
+    # Plot
+    ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
+    ax.view_init(elev=30, azim=45)
+
+
+def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision=1E-6,
+                            render_size=None):
+    if output_format == Format.TEXT or output_format == Format.LATEX:
+        raise TypeError(f"Tomography plot does not support {output_format}")
+
     chi_op = qpt.chi_matrix()
 
-    size_x = len(chi_op[0])  # number of elements along x
-    size_y = len(chi_op[:, 0])  # number of elements along y
-    x, y = numpy.meshgrid(numpy.arange(0, size_x, 1), numpy.arange(0, size_y, 1))
+    if render_size is not None and isinstance(render_size, tuple) and len(render_size) == 2:
+        fig = plt.figure(figsize=render_size)
+    else:
+        fig = plt.figure()
+    pauli_captions = _generate_pauli_captions(qpt._nqubit)
+    significant_digit = int(math.log10(1 / precision))
 
-    # Cartesian positions for each histogram bar
-    x_pos = x.flatten()
-    y_pos = y.flatten()
-    z_pos = numpy.zeros(size_x * size_y)
+    # Real plot
+    ax = fig.add_subplot(121, projection='3d')
+    ax.set_title("Re[$\\chi$]")
+    real_chi = numpy.round(chi_op.real, significant_digit)
+    _get_sub_figure(ax, real_chi, pauli_captions)
 
-    # Size of each bar.
-    dx = numpy.ones(size_x * size_y) * 0.5  # Width of each bar
-    dy = numpy.copy(dx)  # Depth of each bar
-    data_z_re = chi_op.real.flatten()  # Height = value of the Chi Matrix plotted - Real part
-    data_z_im = chi_op.imag.flatten()  # Height = value of the Chi Matrix plotted - Imaginary part
+    # Imag plot
+    ax = fig.add_subplot(122, projection='3d')
+    ax.set_title("Im[$\\chi$]")
+    imag_chi = numpy.round(chi_op.imag, significant_digit)
+    _get_sub_figure(ax, imag_chi, pauli_captions)
 
-    # Configuring the figure params
-    fig = plt.figure(figsize=plot_size)
-    ax1 = fig.add_subplot(121, projection='3d')  # to plot the real part
-    ax2 = fig.add_subplot(122, projection='3d')  # to plot the imaginary part
 
-    # labels on x- and y- axes
-    def generate_basis_names():
-        from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
-        pauli_indices = _generate_pauli_index(qpt._nqubit)
-        pauli_names = []
-        for subset in pauli_indices:
-            pauli_names.append([member.name for member in subset])
-
-        basis = []
-        for val in pauli_names:
-            basis.append(''.join(val))
-        return basis
-
-    x_basis_name = generate_basis_names()
-    y_basis_name = x_basis_name.copy()
-
-    formatter = ticker.ScalarFormatter(useMathText=True)
-    formatter.set_scientific(True)
-
-    axes = [ax1, ax2]
-    for ax in axes:
-        # Change the camera position
-        ax.view_init(elev=elevation, azim=azimuthal)
-
-        ax.tick_params(axis='z', which='major', pad=font_size)
-        ax.zaxis.set_major_formatter(formatter)
-        ax.set_xticks(numpy.arange(size_x) + 1)
-        ax.set_yticks(numpy.arange(size_y) + 1)
-        ax.set_xticklabels(x_basis_name)
-        ax.set_yticklabels(y_basis_name)
-
-        ax.tick_params('z', labelsize=font_size)
-        ax.tick_params('x', labelsize=font_size)
-        ax.tick_params('y', labelsize=font_size)
-
-        if ax == ax1:
-            ax.set_zticks(numpy.linspace(min(data_z_re), max(data_z_re), 5))
-            ax.set_zlim(data_z_re.min(), data_z_re.max())
-            ax.set_title("Re[$\\chi$]", fontsize=2*font_size)
-            colors = plt.cm.bwr(data_z_re / max(data_z_re))
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_re, shade=True, color=colors)
-        elif ax == ax2:
-            ax.set_zticks(numpy.linspace(min(data_z_im), max(data_z_im), 5))
-            ax.set_zlim(data_z_im.min(), data_z_im.max())
-            ax.set_title("Im[$\\chi$]", fontsize=2*font_size)
-            colors = plt.cm.bwr(data_z_im / max(data_z_im))
-            ax.bar3d(x_pos, y_pos, z_pos, dx, dy, data_z_im, shade=True, color=colors)
-
-    # Display the plot
-    plt.tight_layout()
     plt.show()
-    return fig
 
 
 @dispatch(object)
-def _pdisplay(_, **kwargs):
-    return None
+def _pdisplay(o, **kwargs):
+    raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
+
+
+@dispatch(ProcessTomography)
+def _pdisplay(qpt, **kwargs):
+    return pdisplay_tomography_chi(qpt, **kwargs)
 
 
 @dispatch(ProcessTomography)
@@ -346,6 +362,24 @@ def _pdisplay(bsc, **kwargs):
     return pdisplay_state_distrib(bsc, **kwargs)
 
 
+def _get_simple_number_kwargs(**kwargs):
+    new_kwargs = {}
+    keywords = ["precision", "nsimplify"]
+    for kw in keywords:
+        if kw in kwargs:
+            new_kwargs[kw] = kwargs[kw]
+    return new_kwargs
+
+@dispatch((int,float))
+def _pdisplay(f, **kwargs):
+    return simple_float(f, **_get_simple_number_kwargs(**kwargs))[1]
+
+
+@dispatch(complex)
+def _pdisplay(c, **kwargs):
+    return simple_complex(c, **_get_simple_number_kwargs(**kwargs))[1]
+
+
 def _default_output_format(o):
     """
     Deduces the best output format given the nature of the data to be displayed and the execution context
@@ -381,20 +415,15 @@ def pdisplay(o, output_format: Format = None, **opts):
                             level is drawn, others are "black boxes"
         - max_v (int): Maximum number of displayed values in distributions
         - sort (bool): if True, sorts a distribution (descending order) before displaying
+        - render_size: In SVG circuit/processor rendering, acts as a zoom factor (float)
+                       In Tomography display, is the size of the output plot in inches (tuple of two floats)
     """
     if output_format is None:
         output_format = _default_output_format(o)
     res = _pdisplay(o, output_format=output_format, **opts)
+
     if res is None:
-        opts_simple = {}
-        if "precision" in opts:
-            opts_simple["precision"] = opts["precision"]
-        if isinstance(o, (int, float)):
-            res = simple_float(o, **opts_simple)[1]
-        elif isinstance(o, complex):
-            res = simple_complex(o, **opts_simple)[1]
-        else:
-            raise RuntimeError("pdisplay not defined for type %s" % type(o))
+        return
 
     if isinstance(res, drawsvg.Drawing):
         return res
