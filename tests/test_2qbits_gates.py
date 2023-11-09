@@ -47,7 +47,7 @@ def test_fidelity_and_performance_cnot():
     analyzer_klm_cnot = Analyzer(catalog["klm cnot"].build_processor(), state_dict)
     analyzer_klm_cnot.compute(expected=expected)
 
-    assert pytest.approx(analyzer_klm_cnot.fidelity, 1E-4) == 1
+    assert pytest.approx(analyzer_klm_cnot.fidelity) == 1
 
     # Postprocessed CNOT
     analyzer_postprocessed_cnot = Analyzer(catalog["postprocessed cnot"].build_processor(), state_dict)
@@ -126,7 +126,7 @@ def test_cz_and_cnot_phases_and_modulus():
     processor.add(2, BS.H())
     processor.add(0, catalog["klm cnot"].build_processor())
     processor.add(2, BS.H())
-    check_cz_with_heralds_or_ancillaries(processor, BasicState("|0,1,0,1>"), 1E-2)
+    check_cz_with_heralds_or_ancillaries(processor, BasicState("|0,1,0,1>"))
 
     # Testing phases and modulus of postprocessed cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
