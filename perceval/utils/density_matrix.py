@@ -32,8 +32,35 @@ from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
 import numpy as np
-from scipy.sparse import csr_array, lil_array, dok_array
+from scipy.sparse import dok_array
+from scipy.sparse.linalg import LinearOperator, eigsh
 import exqalibur as xq
+
+
+def _deflation(A, val, vec):
+    """
+    Defines the mat_vec function of the Linear operator after the deflation of all the vectors in eigen_vec_list
+    :param A: any kind of sparse matrix
+    :param val: the array of eigen_values
+    :param vec: the array of eigen_vector
+    """
+    if val.shape[0] != vec.shape[1]:
+        raise ValueError("inconsistent number of eigenvectors and eigenvalues")
+
+    if vec.shape[0] != A.shape[0]:
+        raise ValueError("the size of the matrix is inconsistent with this of the eigenvector")
+
+    def matrix_vector_multiplication(x):
+        """
+        The matrix vector multiplication function associated to the deflated operator
+        """
+        result = A @ x
+        for k in range(val.shape[0]):
+            result -= val[k]*(conj(vec[:, k].T)@x)*vec[:,k]
+
+        return result
+
+    return matrix_vector_multiplication
 
 
 class DiagonalBlockMatrix:
@@ -171,18 +198,27 @@ class DensityMatrix:
         i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
-    def to_svd(self, threshold=1e-6, n=0):
+    def to_svd(self, threshold=1e-8, batch_size=1):
         """
                 gives back an SVDistribution from the density_matrix
         """
-        if n == 0:
-            n = self.size - 2
-        val, vec = scipy.sparse.linalg.eigsh(self.mat, n)
+        val = np.array([])
+        vec = np.empty(shape=(self._size, 0), dtype=complex)
+        k=0
+        while (val > threshold).all():
+            if val.shape[0] > 0:
+                print(val[-1])
+            deflated_operator = LinearOperator((self._size, self._size), matvec=_deflation(self.mat, val, vec))
+            new_val, new_vec = scipy.sparse.linalg.eigsh(deflated_operator, batch_size)
+            val = np.concatenate((val,new_val))
+            vec = np.concatenate((vec, new_vec), axis=1)
+
         dic = {}
-        for i in range(n):
+        print(len(val))
+        for i in range(val.shape[0]):
             if val[i] >= threshold:
                 sv = StateVector()
-                for j in range(n):
+                for j in range(len(vec)):
                     sv += complex(vec[j][i])*self.reverse_index[j]
                 sv.normalize()
                 if sv.m != 0:
