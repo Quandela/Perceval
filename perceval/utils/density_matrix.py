@@ -113,15 +113,30 @@ class DensityMatrix:
         self._m = mixed_state.m
         self._n_max = mixed_state.n_max
         self._size = comb(self.m + self._n_max, self.m)
+        self.is_block_diagonal = True
+
+        self.block_index = [0]
+        space_size = 1
+        for n_photon in range(self._n_max):
+            self.block_index.append(self.block_index[-1] + space_size)
+            space_size = (space_size*(self._m+n_photon))//(n_photon+1)
+            print(space_size)
+
+        print("done1")
 
         self.index = dict()
         self.reverse_index = []
-        self.set_index(index)
+        self.set_index(index)  # index construction
+
+        print("done2")
 
         self.mat = dok_array((self._size, self._size), dtype=complex)
 
+        # matrix construction from svd
         l=[]
         for sv, p in mixed_state.items():
+            if len(sv.n) > 1:
+                self.is_block_diagonal = False
             vect = dok_array((self._size, 1), dtype=complex)
             for bst in sv.keys():
                 idx = self.index[bst]
