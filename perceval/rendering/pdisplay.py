@@ -415,6 +415,8 @@ def pdisplay(o, output_format: Format = None, **opts):
                             level is drawn, others are "black boxes"
         - max_v (int): Maximum number of displayed values in distributions
         - sort (bool): if True, sorts a distribution (descending order) before displaying
+        - render_size: In SVG circuit/processor rendering, acts as a zoom factor (float)
+                       In Tomography display, is the size of the output plot in inches (tuple of two floats)
     """
     if output_format is None:
         output_format = _default_output_format(o)
