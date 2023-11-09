@@ -28,10 +28,14 @@
 # SOFTWARE.
 from perceval import StateVector, BasicState, DensityMatrix
 import numpy as np
+import scipy
+from scipy.sparse import dok_array
+import pytest
 
 
 def test_density_matrix():
-    sv = StateVector({BasicState([0]): 1, BasicState([1]): 1}).normalize()
+    sv = BasicState([0]) + BasicState([1])
     dm = DensityMatrix(sv)
-    assert dm.mat == np.array([[0.5, 0.5],
-                               [0.5, 0.5]])
+    for i in range(2):
+        for j in range(2):
+            assert dm.mat[i, j] == pytest.approx(0.5)
