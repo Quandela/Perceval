@@ -188,8 +188,8 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
     eigenvalues = np.linalg.eigvalsh(choi)
     if np.any(eigenvalues < -eigen_tolerance):
         val = np.round(eigenvalues[0], 5)
-        res['Completely Positive'] = False
+        res['Completely Positive'] = (False, eigenvalues[0])
     else:
-        res['Completely Positive'] = True
+        res['Completely Positive'] = (True, eigenvalues[0])
 
     return res
