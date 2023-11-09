@@ -32,7 +32,6 @@ import numpy as np
 from perceval.components import Circuit, Processor, BS, Port, get_pauli_circuit
 from perceval.algorithm.abstract_algorithm import AAlgorithm
 from perceval.utils import BasicState, Encoding
-from perceval.utils.postselect import PostSelect
 from typing import List
 from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
     _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
@@ -107,29 +106,14 @@ class StateTomography(AAlgorithm):
     - Computes parameters required to do state tomography
     - Performs Tomography experiment - Computes and Returns density matrices for each input state
     """
-    def __init__(self, nqubit: int, operator_processor: Processor, post_process=False, renormalization=None):
+    def __init__(self, operator_processor: Processor, renormalization=None):
         super().__init__(processor=operator_processor)
-        self._nqubit = nqubit
         self._operator_processor = operator_processor  # Gate operation under study
-        self._backend = operator_processor.backend  # default - SLOSBackend()
-        self._source = operator_processor.source  # default - ideal source
-        self._post_process = post_process
-        self._renormalization = renormalization
-        self._heralded_modes = [(key, value) for key, value in operator_processor.heralds.items()]
-        self._size_hilbert = 2 ** nqubit
-        # Todo: I need to put this number somewhere, i forgot. find [number of elements = between (0 -> 4**nqubits-1)]
+        self._nqubit = int(operator_processor.m / 2)  # nqubit
+        self._size_hilbert = 2 ** self._nqubit
 
-    def _input_state_dist_config(self):
-        # Configures the input state for the Processor
-        input_state = BasicState("|1,0>")
-        for _ in range(1, self._nqubit):
-            # setting the input state for the gate qubit modes
-            input_state *= BasicState("|1,0>")
-        for m in self._heralded_modes:
-            # setting the input for heralded modes of the given processor
-            input_state *= BasicState([m[1]])
-        input_distribution = self._source.generate_distribution(expected_input=input_state)
-        return input_distribution
+        self._renormalization = renormalization
+        # Todo: I need to put this number somewhere, i forgot. find [number of elements = between (0 -> 4**nqubits-1)]
 
     def _compute_probs(self, prep_state_indices, meas_pauli_basis_indices):
         # Adds preparation and measurement circuit to input processor (with the gate operation under study)
@@ -142,7 +126,7 @@ class StateTomography(AAlgorithm):
         pc = StatePreparationCircuit(prep_state_indices, self._nqubit)  # state preparation circuit object
         mc = MeasurementCircuit(meas_pauli_basis_indices, self._nqubit)  # measurement basis circuit object
 
-        p = Processor(self._backend, self._nqubit*2, self._source)
+        p = Processor(self._operator_processor.backend, self._nqubit*2, self._operator_processor.source)
         # A Processor with identical backend and source as the input
         qname = 'q'
         for i in range(self._nqubit):
@@ -151,28 +135,15 @@ class StateTomography(AAlgorithm):
         p.add(0, pc.build_preparation_circuit())  # Add state preparation circuit to the left of the operator
         p.add(0, self._operator_processor)  # including the operator (as a processor)
         p.add(0, mc.build_measurement_circuit())  # Add measurement basis circuit to the right of the operator
-
-        # Clear any inbuilt post-selection and heralding from perceval
-        # - important for tomography to get output without inbuilt normalization of perceval
-
-        p.clear_postselection()
-        inbuilt_herald_ports = self._operator_processor.heralds  # to remove inbuilt heralds from Perceval processor
-        for h_pos in inbuilt_herald_ports.keys():
-            p.remove_port(h_pos)
-
-        if self._post_process is True:
-            # perhaps in future a post_process setup will be needed
-            raise ValueError("Setting a postprocess is not implemented yet")
-
-        if self._renormalization is None:
-            # postselection on heralded modes if no renormalization
-            ps = PostSelect()
-            for m in self._heralded_modes:
-                ps.eq([m[0]], m[1])
-            p.set_postselection(ps)
-
+        #
         p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
-        p.with_input(self._input_state_dist_config())
+
+        input_state = BasicState()
+        for _ in range(self._nqubit):
+            # setting the input state for the gate qubit modes
+            input_state *= BasicState("|1,0>")
+
+        p.with_input(input_state)
 
         output_distribution = p.probs()["results"]
         return output_distribution
@@ -180,8 +151,8 @@ class StateTomography(AAlgorithm):
     def _stokes_parameter(self, prep_state_indices, meas_pauli_basis_indices):
         # Computes the Stokes parameter S_i for state prep_state_indices after operator_circuit
         # param prep_state_indices: list of length of number of qubits representing the preparation circuit
-        # param meas_pauli_basis_indices: list of length of number of qubits representing the measurement circuit and the
-        # eigenvector we are measuring
+        # param meas_pauli_basis_indices: list of length of number of qubits representing the measurement circuit
+        # and the eigenvector we are measuring
         # returns the value of Stokes parameter for a given combination of input and output state -> a complex float
 
         output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
@@ -204,13 +175,11 @@ class StateTomography(AAlgorithm):
                         measurement_state *= BasicState("|0,1>")
                         if meas_pauli_basis_indices[j] != 0:
                             eta *= -1
-                for m in self._heralded_modes:
-                    measurement_state *= BasicState([m[1]])
                 stokes_param += eta * output_distribution[measurement_state]
 
-        if self._renormalization is None:
-            return stokes_param
-        return stokes_param / self._renormalization
+        if self._renormalization:
+            return stokes_param / self._renormalization
+        return stokes_param
 
     def perform_state_tomography(self, prep_state_indices):
         """
@@ -239,17 +208,14 @@ class ProcessTomography(AAlgorithm):
         -- Fidelity of the operation, Error process map
 
     """
-    def __init__(self, nqubit: int, operator_processor: Processor, post_process=False,
-                 renormalization=None):
+    def __init__(self, operator_processor: Processor, renormalization=None):
         super().__init__(processor=operator_processor)
-        self._nqubit = nqubit
         self._operator_processor = operator_processor
-        self._backend = operator_processor.backend  # default - SLOSBackend()
-        self._post_process = post_process
+        self._nqubit = int(operator_processor.m / 2)  # nqubit
+        self._size_hilbert = 2 ** self._nqubit
+
         self._renormalization = renormalization
-        self._size_hilbert = 2 ** nqubit
-        self._qst = StateTomography(nqubit=self._nqubit, operator_processor=self._operator_processor,
-                                    post_process=self._post_process, renormalization=self._renormalization)
+        self._qst = StateTomography(operator_processor=self._operator_processor, renormalization=self._renormalization)
 
     def _beta_tensor_elem(self, j, k, m, n, nqubit):
         # computes the elements of beta^{mn}_{jk}, a rank 4 tensor, each index of which can
@@ -268,12 +234,6 @@ class ProcessTomography(AAlgorithm):
             j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
             for b in range(num_meas):
                 # j,k,m,n are indices for _beta_tensor_elem
-                # todo: fix tue morning - cool idea to remove divmod
-                #
-                # the task that all these are doing is creating pair of indices i,j xhich is a product of
-                # a set with itself {0,1,2,...,n}x{0,1,2,...,n} = {(0,0),(0,1),(0,2),...,(0,n),...(n,n)}
-                # only n changes but is mostly d**2
-                #
                 m, n = divmod(b, self._size_hilbert ** 2)
                 beta_matrix[a, b] = self._beta_tensor_elem(j, k, m, n, self._nqubit)
         return beta_matrix
@@ -329,7 +289,10 @@ class ProcessTomography(AAlgorithm):
         beta_inv = np.linalg.pinv(self._beta_as_matrix())
         L = self._lambda_vector()
         X = np.dot(beta_inv, L)  # X is a vector here
-        return _vector_to_sq_matrix(X)
+        chi = _vector_to_sq_matrix(X)
+        if self._renormalization:
+            chi = chi / np.trace(chi)
+        return chi
 
     def chi_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity

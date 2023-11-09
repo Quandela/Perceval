@@ -47,8 +47,9 @@ def _matrix_basis(nqubit, d):
     v[0] = 1
 
     for elem in pauli_indices:
-        M1 = get_pauli_circuit(elem[1]).compute_unitary()
-        M = np.kron(get_pauli_circuit(elem[0]).compute_unitary(), M1)
+        M = get_pauli_circuit(elem[0]).compute_unitary()
+        if len(elem) > 1:
+            M = np.kron(M, get_pauli_circuit(elem[1]).compute_unitary())
         B.append(_state_to_dens_matrix(np.dot(M, v)))
 
     return B
@@ -178,7 +179,7 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
     choi = 0
     for n in range(d2):
         # there were 2 transpose to compute P_n, removed. I do not know if one is important and there is another error
-        # todo: find out about the comment in previous line
+        # Todo : find out about the comment in previous line
         P_n = np.conjugate([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])
         for m in range(d2):
             choi += input_matrix[m, n] \
@@ -187,8 +188,8 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
     eigenvalues = np.linalg.eigvalsh(choi)
     if np.any(eigenvalues < -eigen_tolerance):
         val = np.round(eigenvalues[0], 5)
-        res['Completely Positive'] = False
+        res['Completely Positive'] = (False, eigenvalues[0])
     else:
-        res['Completely Positive'] = True
+        res['Completely Positive'] = (True, eigenvalues[0])
 
     return res
