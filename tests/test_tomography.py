@@ -42,7 +42,7 @@ from perceval.algorithm.tomography.tomography_utils import is_physical, get_paul
 @pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
 def test_density_matrix_state_tomography(pauli_gate):
     p = Processor("Naive", Circuit(2) // get_pauli_circuit(pauli_gate))  # 1 qubit Pauli X gate
-    qst = StateTomography(nqubit=1, operator_processor=p)
+    qst = StateTomography(operator_processor=p)
     density_matrix = qst.perform_state_tomography([PauliType.X])
 
     res = is_physical(density_matrix, nqubit=1)
@@ -53,9 +53,9 @@ def test_density_matrix_state_tomography(pauli_gate):
     assert res["Completely Positive"] is True
 
 
-def fidelity_op_process_tomography(op, op_proc, nqubit):
+def fidelity_op_process_tomography(op, op_proc):
     # create process tomography object
-    qpt = ProcessTomography(nqubit=nqubit, operator_processor=op_proc)
+    qpt = ProcessTomography(operator_processor=op_proc)
     # compute Chi matrix
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
@@ -69,7 +69,7 @@ def test_fidelity_cnot_operator():
     cnot_p = catalog["klm cnot"].build_processor()
     cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
-    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_p, nqubit=2)
+    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_p)
 
     assert cnot_fidelity == pytest.approx(1, 1e-3)  # computed fidelity is around 0.99967
 
@@ -91,20 +91,19 @@ def test_fidelity_random_op():
     random_op_proc = Processor(backend=SLOSBackend(), m_circuit=random_op_circ.m)
     random_op_proc.add(0, random_op_circ)
 
-    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc, 2)
+    random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc)
 
     assert random_op_fidelity == pytest.approx(1, 1e-6)
 
 
-@pytest.mark.parametrize(("renorm", "expected"), [(None, False), (0.0515, True)])
-def test_chi_cnot_is_physical(renorm, expected):
+def test_chi_cnot_is_physical():
     cnot_p = catalog["klm cnot"].build_processor()
 
-    qpt = ProcessTomography(nqubit=2, operator_processor=cnot_p, renormalization=renorm)
+    qpt = ProcessTomography(operator_processor=cnot_p)
 
     chi_op = qpt.chi_matrix()
     res = is_physical(chi_op, nqubit=2)
 
     assert res['Trace=1'] is True  # if Chi has Trace = 1
     assert res['Hermitian'] is True  # if Chi is Hermitian
-    assert res['Completely Positive'] == expected  # if input Chi is Completely Positive
+    assert res['Completely Positive'] is True  # if input Chi is Completely Positive

@@ -106,46 +106,58 @@ class StateTomography(AAlgorithm):
     - Computes parameters required to do state tomography
     - Performs Tomography experiment - Computes and Returns density matrices for each input state
     """
-    def __init__(self, operator_processor: Processor, renormalization=None):
+    def __init__(self, operator_processor: Processor):
         super().__init__(processor=operator_processor)
         self._operator_processor = operator_processor  # Gate operation under study
         self._nqubit = int(operator_processor.m / 2)  # nqubit
         self._size_hilbert = 2 ** self._nqubit
+        self._gate_logical_perf = None
 
-        self._renormalization = renormalization
-        # Todo: I need to put this number somewhere, i forgot. find [number of elements = between (0 -> 4**nqubits-1)]
-
-    def _compute_probs(self, prep_state_indices, meas_pauli_basis_indices):
+    def _configure_processor(self, prep_state_indices, meas_pauli_basis_indices):
         # Adds preparation and measurement circuit to input processor (with the gate operation under study)
         # and computes the output probability distribution.
         # param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
         # param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
         # circuit
-        # return: Output state probability distribution
+        # returns the processor configured to perform state tomography experiment
 
-        pc = StatePreparationCircuit(prep_state_indices, self._nqubit)  # state preparation circuit object
-        mc = MeasurementCircuit(meas_pauli_basis_indices, self._nqubit)  # measurement basis circuit object
-
-        p = Processor(self._operator_processor.backend, self._nqubit*2, self._operator_processor.source)
-        # A Processor with identical backend and source as the input
+        p = Processor(self._operator_processor.backend, self._nqubit * 2, self._operator_processor.source)
+        # A Processor with identical backend and source as the input processor
         qname = 'q'
         for i in range(self._nqubit):
-            p.add_port(i*2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))  # set ports correctly
+            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))  # set ports correctly
 
+        pc = StatePreparationCircuit(prep_state_indices, self._nqubit)
         p.add(0, pc.build_preparation_circuit())  # Add state preparation circuit to the left of the operator
+
         p.add(0, self._operator_processor)  # including the operator (as a processor)
+
+        mc = MeasurementCircuit(meas_pauli_basis_indices, self._nqubit)
         p.add(0, mc.build_measurement_circuit())  # Add measurement basis circuit to the right of the operator
-        #
+
         p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
 
         input_state = BasicState()
         for _ in range(self._nqubit):
-            # setting the input state for the gate qubit modes
             input_state *= BasicState("|1,0>")
-
         p.with_input(input_state)
 
+        return p
+
+    def _compute_probs(self, prep_state_indices, meas_pauli_basis_indices):
+        # computes the output probability distribution for the state tomography experiment
+        # return: Output state probability distribution
+
+        p = self._configure_processor(prep_state_indices, meas_pauli_basis_indices)
+
         output_distribution = p.probs()["results"]
+        logical_perf = p.probs()["logical_perf"]
+        self._gate_logical_perf = logical_perf
+
+        # Denormalize output state distribtion
+        for key in output_distribution:
+            output_distribution[key] *= logical_perf
+
         return output_distribution
 
     def _stokes_parameter(self, prep_state_indices, meas_pauli_basis_indices):
@@ -177,8 +189,6 @@ class StateTomography(AAlgorithm):
                             eta *= -1
                 stokes_param += eta * output_distribution[measurement_state]
 
-        if self._renormalization:
-            return stokes_param / self._renormalization
         return stokes_param
 
     def perform_state_tomography(self, prep_state_indices):
@@ -196,6 +206,7 @@ class StateTomography(AAlgorithm):
             density_matrix += self._stokes_parameter(prep_state_indices, elem_values) \
                               * _get_fixed_basis_ops(index, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
+
         return density_matrix
 
 
@@ -208,14 +219,16 @@ class ProcessTomography(AAlgorithm):
         -- Fidelity of the operation, Error process map
 
     """
-    def __init__(self, operator_processor: Processor, renormalization=None):
+    def __init__(self, operator_processor: Processor):
         super().__init__(processor=operator_processor)
         self._operator_processor = operator_processor
         self._nqubit = int(operator_processor.m / 2)  # nqubit
         self._size_hilbert = 2 ** self._nqubit
+        self._qst = StateTomography(operator_processor=self._operator_processor)
 
-        self._renormalization = renormalization
-        self._qst = StateTomography(operator_processor=self._operator_processor, renormalization=self._renormalization)
+        self.chi_normalized = None
+        self.chi_unnormalized = None
+        self.gate_efficiency = None
 
     def _beta_tensor_elem(self, j, k, m, n, nqubit):
         # computes the elements of beta^{mn}_{jk}, a rank 4 tensor, each index of which can
@@ -239,11 +252,9 @@ class ProcessTomography(AAlgorithm):
         return beta_matrix
 
     def _lambda_vector(self):
-        """
-        Computes the lambda vector of the operator
+        # Computes the lambda vector of the operator
+        # returns a size_hilbert**4 vector
 
-        :return: size_hilbert**4 vector
-        """
         density_matrices = []  # stores a list of density matrices for each measurement
         pauli_indices = _generate_pauli_index(self._nqubit)
 
@@ -289,17 +300,18 @@ class ProcessTomography(AAlgorithm):
         beta_inv = np.linalg.pinv(self._beta_as_matrix())
         L = self._lambda_vector()
         X = np.dot(beta_inv, L)  # X is a vector here
-        chi = _vector_to_sq_matrix(X)
-        if self._renormalization:
-            chi = chi / np.trace(chi)
-        return chi
+        self.chi_unnormalized = _vector_to_sq_matrix(X)
+        self.gate_efficiency = np.trace(self.chi_unnormalized)
+        self.chi_normalized = self.chi_unnormalized / self.gate_efficiency
+        return self.chi_normalized  # always returns normalized chi map
 
     def chi_target(self, operator):
         # Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
         beta_inv = np.linalg.pinv(self._beta_as_matrix())
         lambd = self._lambda_target(operator)
         X = np.dot(beta_inv, lambd)  # X is a matrix here
-        return _vector_to_sq_matrix(X[:, 0])
+        chi = _vector_to_sq_matrix(X[:, 0])
+        return chi
 
     @staticmethod
     def process_fidelity(chi_computed, chi_ideal):
@@ -329,6 +341,9 @@ class ProcessTomography(AAlgorithm):
         pauli_indices = _generate_pauli_index(self._nqubit)
         for prep_state_indices in pauli_indices:
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
+            # setting values
+
+        density_matrices = density_matrices / self._qst._gate_logical_perf
 
         for j in range(self._size_hilbert ** 2):
             Uj = _get_fixed_basis_ops(j, self._nqubit)
