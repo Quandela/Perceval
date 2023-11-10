@@ -37,6 +37,10 @@ from scipy.sparse.linalg import LinearOperator, eigsh
 import exqalibur as xq
 
 
+def create_index(m, n_max):
+    l = dict()
+    for i, x in enumerate(max_photon_state_iterator(m, n_max)):
+        l[x]=i
 
 
 class DiagonalBlockMatrix:
@@ -274,8 +278,6 @@ class DensityMatrix:
             new_mat[key] += value
 
         return DensityMatrix(new_mat, new_index)
-
-
 
     def normalize(self):
         """
