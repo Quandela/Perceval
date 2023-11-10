@@ -106,7 +106,7 @@ class DensityMatrix:
         :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
         :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
         """
-
+        # Here the constructor for a matrix
         if isinstance(mixed_state, (np.ndarray, sparray)):
             if index is None:
                 raise ValueError("you can't construct a DensityMatrix from a matrix without giving an index")
@@ -125,6 +125,7 @@ class DensityMatrix:
             self.is_block_diagonal = False
 
         else:
+            # Here the constructor for an SVD, SV or BS
             if isinstance(mixed_state, (StateVector, BasicState)):
                 mixed_state = SVDistribution(mixed_state)
 
@@ -257,6 +258,22 @@ class DensityMatrix:
 
         if not self._m == other._m:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
+
+        n = max(self._n_max, other.n_max)
+        m = self._m
+        if n == self.n_max:
+            new_mat = copy(self.mat)
+            other_mat = other.mat
+            new_index = self.index
+        else:
+            new_mat = copy(other.mat)
+            other_mat = self.mat
+            new_index = other.index
+
+        for key, value in other_mat.items():
+            new_mat[key] += value
+
+        return DensityMatrix(new_mat, new_index)
 
 
 
