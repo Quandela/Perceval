@@ -32,35 +32,11 @@ from perceval.utils.statevector import *
 from math import comb
 from numpy import conj
 import numpy as np
-from scipy.sparse import dok_array
+from scipy.sparse import dok_array, sparray
 from scipy.sparse.linalg import LinearOperator, eigsh
 import exqalibur as xq
 
 
-def _deflation(A, val, vec):
-    """
-    Defines the mat_vec function of the Linear operator after the deflation of all the vectors in eigen_vec_list
-    :param A: any kind of sparse matrix
-    :param val: the array of eigen_values
-    :param vec: the array of eigen_vector
-    """
-    if val.shape[0] != vec.shape[1]:
-        raise ValueError("inconsistent number of eigenvectors and eigenvalues")
-
-    if vec.shape[0] != A.shape[0]:
-        raise ValueError("the size of the matrix is inconsistent with this of the eigenvector")
-
-    def matrix_vector_multiplication(x):
-        """
-        The matrix vector multiplication function associated to the deflated operator
-        """
-        result = A @ x
-        for k in range(val.shape[0]):
-            result -= val[k]*(conj(vec[:, k].T)@x)*vec[:,k]
-
-        return result
-
-    return matrix_vector_multiplication
 
 
 class DiagonalBlockMatrix:
@@ -127,52 +103,70 @@ class DensityMatrix:
         """
         Constructor for the DensityMatrix Class
 
-        :param mixed_state: SVDistribution, StateVector or Basic State representing a mixed state
-        :param index: iterator on all Fock states accessible from this mixed states through a unitary evolution
+        :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
+        :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
         """
 
-        if isinstance(mixed_state, (StateVector, BasicState)):
-            mixed_state = SVDistribution(mixed_state)
+        if isinstance(mixed_state, (np.ndarray, sparray)):
+            if index is None:
+                raise ValueError("you can't construct a DensityMatrix from a matrix without giving an index")
+            if len(index) != mixed_state.shape[0]:
+                raise ValueError("The index length is incompatible with your matrix size")
+            if mixed_state.shape[0] != mixed_state.shape[1]:
+                raise ValueError("The density matrix must be square")
 
-        if not isinstance(mixed_state, SVDistribution):
-            raise TypeError("svd must be a BasicState, a StateVector or a SVDistribution")
+            self.mat = dok_array(mixed_state)
+            self._size = self.mat.shape[0]
+            self._m = next(iter(index.keys()))
+            self._n_max = max([x.n for x in index.keys()])
+            self.index = dict()
+            self.reverse_index = []
+            self.set_index(index)  # index construction
+            self.is_block_diagonal = False
 
-        self._m = mixed_state.m
-        self._n_max = mixed_state.n_max
-        self._size = comb(self.m + self._n_max, self.m)
-        self.is_block_diagonal = True
+        else:
+            if isinstance(mixed_state, (StateVector, BasicState)):
+                mixed_state = SVDistribution(mixed_state)
 
-        self.block_index = [0]
-        space_size = 1
-        for n_photon in range(self._n_max):
-            self.block_index.append(self.block_index[-1] + space_size)
-            space_size = (space_size*(self._m+n_photon))//(n_photon+1)
-            print(space_size)
+            if not isinstance(mixed_state, SVDistribution):
+                raise TypeError("svd must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
-        print("done1")
+            self._m = mixed_state.m
+            self._n_max = mixed_state.n_max
+            self._size = comb(self.m + self._n_max, self.m)
+            self.is_block_diagonal = True
 
-        self.index = dict()
-        self.reverse_index = []
-        self.set_index(index)  # index construction
+            self.block_index = [0]
+            space_size = 1
+            for n_photon in range(self._n_max):
+                self.block_index.append(self.block_index[-1] + space_size)
+                space_size = (space_size*(self._m+n_photon))//(n_photon+1)
+                print(space_size)
 
-        print("done2")
+            print("done1")
 
-        self.mat = dok_array((self._size, self._size), dtype=complex)
+            self.index = dict()
+            self.reverse_index = []
+            self.set_index(index)  # index construction
 
-        # matrix construction from svd
-        l=[]
-        for sv, p in mixed_state.items():
-            if len(sv.n) > 1:
-                self.is_block_diagonal = False
-            vect = dok_array((self._size, 1), dtype=complex)
-            for bst in sv.keys():
-                idx = self.index[bst]
-                vect[idx,0] = sv[bst]
-            l.append((vect, p))
+            print("done2")
 
-        for x in l:
-            vect, p = x
-            self.mat += p*(vect @ conj(vect.T))
+            self.mat = dok_array((self._size, self._size), dtype=complex)
+
+            # matrix construction from svd
+            l=[]
+            for sv, p in mixed_state.items():
+                if len(sv.n) > 1:
+                    self.is_block_diagonal = False
+                vect = dok_array((self._size, 1), dtype=complex)
+                for bst in sv.keys():
+                    idx = self.index[bst]
+                    vect[idx,0] = sv[bst]
+                l.append((vect, p))
+
+            for x in l:
+                vect, p = x
+                self.mat += p*(vect @ conj(vect.T))
 
     def set_index(self, index):
         if index is None:
@@ -198,6 +192,32 @@ class DensityMatrix:
         i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
+    @staticmethod
+    def _deflation(A, val, vec):
+        """
+        Defines the mat_vec function of the Linear operator after the deflation of all the vectors in eigen_vec_list
+        :param A: any kind of sparse matrix
+        :param val: the array of eigen_values
+        :param vec: the array of eigen_vector
+        """
+        if val.shape[0] != vec.shape[1]:
+            raise ValueError("inconsistent number of eigenvectors and eigenvalues")
+
+        if vec.shape[0] != A.shape[0]:
+            raise ValueError("the size of the matrix is inconsistent with this of the eigenvector")
+
+        def matrix_vector_multiplication(x):
+            """
+            The matrix vector multiplication function associated to the deflated operator
+            """
+            result = A @ x
+            for k in range(val.shape[0]):
+                result -= val[k] * (conj(vec[:, k].T) @ x) * vec[:, k]
+
+            return result
+
+        return matrix_vector_multiplication
+
     def to_svd(self, threshold=1e-8, batch_size=1):
         """
                 gives back an SVDistribution from the density_matrix
@@ -208,9 +228,9 @@ class DensityMatrix:
         while (val > threshold).all():
             if val.shape[0] > 0:
                 print(val[-1])
-            deflated_operator = LinearOperator((self._size, self._size), matvec=_deflation(self.mat, val, vec))
-            new_val, new_vec = scipy.sparse.linalg.eigsh(deflated_operator, batch_size)
-            val = np.concatenate((val,new_val))
+            deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
+            new_val, new_vec = eigsh(deflated_operator, batch_size)
+            val = np.concatenate((val, new_val))
             vec = np.concatenate((vec, new_vec), axis=1)
 
         dic = {}
@@ -235,11 +255,9 @@ class DensityMatrix:
         if not isinstance(other, DensityMatrix):
             raise TypeError("You can only add a Density Matrix to a Density Matrix")
 
-        if not self._size == other._size:
-            raise ValueError("You can't add Density Matrices with different dimensions")
-
         if not self._m == other._m:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
+
 
 
     def normalize(self):
@@ -249,7 +267,6 @@ class DensityMatrix:
 
         factor = self.mat.trace()
         self.mat = (1/factor)*self.mat
-
 
     @property
     def n_max(self):
