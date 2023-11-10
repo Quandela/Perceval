@@ -343,7 +343,7 @@ class ProcessTomography(AAlgorithm):
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
             # setting values
 
-        density_matrices = density_matrices / self._qst._gate_logical_perf
+        density_matrices = [x / self._qst._gate_logical_perf for x in density_matrices]
 
         for j in range(self._size_hilbert ** 2):
             Uj = _get_fixed_basis_ops(j, self._nqubit)
