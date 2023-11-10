@@ -41,6 +41,29 @@ def create_index(m, n_max):
     l = dict()
     for i, x in enumerate(max_photon_state_iterator(m, n_max)):
         l[x]=i
+    return l
+
+
+def density_matrix_tensor_product(A, B):
+    """
+    Make the tensor product of 2 Density Matrices
+    :param A, B: two density matrices
+    :return: the "kronecker" product of the density matrices
+    """
+    n_max = A.n_max + B.n_max
+    n_mode = A.m + B.n_max
+    size = comb(n_max+n_mode, n_max)
+    new_index = create_index(n_mode, n_max)
+    matrix = dok_array((size, size), dtype="complex")
+
+    new_dm = DensityMatrix(matrix, new_index)
+    for ia,ja in A.mat.keys():
+        ket_a, bra_a = A.reverse_index(ia), A.reverse_index(ja)
+        for ib,jb in B.mat.keys():
+            ket_b, bra_b = B.reverse_index[ib], B.reverse_index(jb)
+            new_dm[ket_a*ket_b, bra_a*bra_b] = A.mat[ia, ja]*A.mat[ib, jb]
+
+    return new_dm
 
 
 class DiagonalBlockMatrix:
@@ -278,6 +301,36 @@ class DensityMatrix:
             new_mat[key] += value
 
         return DensityMatrix(new_mat, new_index)
+
+    def __mul__(self, other):
+        """
+        Make a tensor product between a Density Matrix and a mixed state in any form
+        """
+        if isinstance(other, (SVDistribution, StateVector, BasicState)):
+            other = DensityMatrix(other)
+
+        if not isinstance(other, DensityMatrix):
+            raise TypeError(f"Can't do a Tensor product and a {type(other)}")
+
+        return density_matrix_tensor_product(self, other)
+
+    def __rmul__(self, other):
+        """
+            Make a tensor product between a mixed in any form and a Density Matrix
+            Or make a scalar multiplication
+        """
+        if isinstance(other, (int, float, complex)):
+            new_dm = copy(self)
+            new_dm.mat = other*new_dm.mat
+            return new_dm
+
+        if isinstance(other, (StateVector, SVDistribution, BasicState))
+            other = DensityMatrix(other)
+
+        if not isinstance(other, DensityMatrix):
+            raise TypeError(f"Cannot do a tensor product between a {type(other)} and a DensityMatrix")
+        else:
+            return density_matrix_tensor_product(other, self)
 
     def normalize(self):
         """
