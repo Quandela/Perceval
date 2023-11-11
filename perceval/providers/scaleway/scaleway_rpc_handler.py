@@ -35,7 +35,7 @@ import requests
 from requests import HTTPError
 from enum import Enum
 
-_ENDPOINT_URL = 'https://api.qaas.labs.scw.cloud'
+_ENDPOINT_URL = 'https://api.scaleway.com'
 
 _PROVIDER_NAME = 'quandela'
 
