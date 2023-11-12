@@ -29,3 +29,5 @@
 
 from .scaleway_session import Session
 from .scaleway_rpc_handler import RPCHandler
+
+__all__ = ['Session', 'RPCHandler']

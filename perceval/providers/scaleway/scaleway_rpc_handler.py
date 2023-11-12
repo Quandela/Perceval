@@ -31,9 +31,9 @@ import time
 from datetime import datetime, timedelta
 import json
 
+from enum import Enum
 import requests
 from requests import HTTPError
-from enum import Enum
 
 _ENDPOINT_URL = 'https://api.scaleway.com'
 
@@ -44,11 +44,13 @@ _ENDPOINT_JOB = '/jobs'
 
 
 class JobStatus(Enum):
-  COMPLETED = 'completed'
-  ERROR = 'error'
+    """JobStatus Enum"""
+    COMPLETED = 'completed'
+    ERROR = 'error'
 
 
 class RPCHandler:
+    """RPCHandler Scaleway"""
     name: str = None
     platform_id: str = None
     session_id: str = None
@@ -103,7 +105,7 @@ class RPCHandler:
             request_dict = request.json()
 
             self.instance_id = request_dict['id']
-        except:
+        except Exception:
             raise HTTPError(request.json())
 
         return request_dict['id']

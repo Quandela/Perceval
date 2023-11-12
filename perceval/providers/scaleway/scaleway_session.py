@@ -35,6 +35,7 @@ from requests import HTTPError
 
 _ENDPOINT_SESSION = '/sessions'
 
+
 class Session(ISession):
     session_id: str = None
 
@@ -78,14 +79,12 @@ class Session(ISession):
 
             self.session_id = request_dict['id']
             self._rpc_handler.session_id = self.session_id
-        except:
+        except Exception:
             raise HTTPError(request.json())
-
 
     def stop(self) -> None:
         endpoint = f"{self.url}{_ENDPOINT_SESSION}/{self.session_id}"
         request = requests.delete(endpoint,
-                                headers=self.headers)
+                                  headers=self.headers)
 
         request.raise_for_status()
-
