@@ -39,7 +39,7 @@ _ENDPOINT_SESSION = "/sessions"
 class Session(ISession):
     """Session Scaleway"""
 
-    _session_id: str = None
+    _session_id: str | None = None
 
     def __init__(
         self,
@@ -48,7 +48,7 @@ class Session(ISession):
         deduplication_id: str = "",
         max_idle_duration: str = "120s",
         max_duration: str = "360s",
-    ):
+    ) -> None:
         self._platform = platform
         self._deduplication_id = deduplication_id
         self._max_idle_duration = max_idle_duration

@@ -51,10 +51,10 @@ class JobStatus(Enum):
 class RPCHandler:
     """RPCHandler Scaleway """
 
-    name: str = None
-    session_id: str = None
+    name: str | None = None
+    session_id: str | None = None
 
-    def __init__(self, project_id, token, url: str = _ENDPOINT_URL):
+    def __init__(self, project_id, token, url: str = _ENDPOINT_URL) -> None:
         self._token = token
         self.project_id = project_id
         self.url = url
@@ -99,12 +99,12 @@ class RPCHandler:
 
         return request_dict["id"]
 
-    def cancel_job(self, job_id: str) -> dict:
+    def cancel_job(self, job_id: str) -> None:
         endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
         request = requests.post(endpoint, headers=self.headers)
         request.raise_for_status()
 
-    def get_job_status(self, job_id: str):
+    def get_job_status(self, job_id: str) -> dict:
         endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
@@ -156,7 +156,7 @@ class RPCHandler:
             "results_type": None,
         }
 
-    def _build_endpoint(self, endpoint):
+    def _build_endpoint(self, endpoint) -> str:
         return f"{self.url}{endpoint}"
 
     def __get_start_time(self, started_at: str | None) -> float | None:
@@ -172,7 +172,7 @@ class RPCHandler:
             return 1.0
         return 0.0
 
-    def __get_status_message(self, status, result_distribution):
+    def __get_status_message(self, status, result_distribution) -> str | None:
         if status == JobStatus.ERROR.value:
             return result_distribution
         return None
