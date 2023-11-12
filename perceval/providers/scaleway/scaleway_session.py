@@ -33,13 +33,22 @@ from .scaleway_rpc_handler import RPCHandler
 import requests
 from requests import HTTPError
 
-_ENDPOINT_SESSION = '/sessions'
+_ENDPOINT_SESSION = "/sessions"
 
 
 class Session(ISession):
-    session_id: str = None
+    """Session Scaleway"""
 
-    def __init__(self, platform: str, rpc_handler: RPCHandler, deduplication_id: str = "", max_idle_duration: str = "120s", max_duration: str = "360s"):
+    _session_id: str = None
+
+    def __init__(
+        self,
+        platform: str,
+        rpc_handler: RPCHandler,
+        deduplication_id: str = "",
+        max_idle_duration: str = "120s",
+        max_duration: str = "360s",
+    ):
         self._platform = platform
         self._deduplication_id = deduplication_id
         self._max_idle_duration = max_idle_duration
@@ -48,43 +57,40 @@ class Session(ISession):
         rpc_handler.name = platform
         self._rpc_handler = rpc_handler
 
-        self.url = rpc_handler.url
-        self.headers = rpc_handler.headers
+        self._url = rpc_handler.url
+        self._headers = rpc_handler.headers
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
-
-    def __fetch_platform_details(self) -> dict:
-        return self._rpc_handler.fetch_platform_details()
 
     def start(self) -> None:
         platform = self.__fetch_platform_details()
 
         payload = {
             "project_id": self._rpc_handler.project_id,
-            "platform_id": platform.get('id'),
+            "platform_id": platform.get("id"),
             "deduplication_id": self._deduplication_id,
             "max_duration": self._max_duration,
             "max_idle_duration": self._max_idle_duration,
         }
 
-        endpoint = f"{self.url}{_ENDPOINT_SESSION}"
-        request = requests.post(endpoint,
-                                headers=self.headers,
-                                json=payload)
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}"
+        request = requests.post(endpoint, headers=self._headers, json=payload)
 
         try:
             request.raise_for_status()
             request_dict = request.json()
 
-            self.session_id = request_dict['id']
-            self._rpc_handler.session_id = self.session_id
+            self._session_id = request_dict["id"]
+            self._rpc_handler.session_id = self._session_id
         except Exception:
             raise HTTPError(request.json())
 
     def stop(self) -> None:
-        endpoint = f"{self.url}{_ENDPOINT_SESSION}/{self.session_id}"
-        request = requests.delete(endpoint,
-                                  headers=self.headers)
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
+        request = requests.delete(endpoint, headers=self._headers)
 
         request.raise_for_status()
+
+    def __fetch_platform_details(self) -> dict:
+        return self._rpc_handler.fetch_platform_details()

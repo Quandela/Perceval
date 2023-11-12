@@ -35,89 +35,77 @@ from enum import Enum
 import requests
 from requests import HTTPError
 
-_ENDPOINT_URL = 'https://api.scaleway.com'
-
-_PROVIDER_NAME = 'quandela'
-
-_ENDPOINT_PLATFORM = '/platforms'
-_ENDPOINT_JOB = '/jobs'
+_ENDPOINT_URL = "https://api.scaleway.com"
+_PROVIDER_NAME = "quandela"
+_ENDPOINT_PLATFORM = "/platforms"
+_ENDPOINT_JOB = "/jobs"
 
 
 class JobStatus(Enum):
     """JobStatus Enum"""
-    COMPLETED = 'completed'
-    ERROR = 'error'
+
+    COMPLETED = "completed"
+    ERROR = "error"
 
 
 class RPCHandler:
-    """RPCHandler Scaleway"""
+    """RPCHandler Scaleway """
+
     name: str = None
-    platform_id: str = None
     session_id: str = None
 
     def __init__(self, project_id, token, url: str = _ENDPOINT_URL):
-        self.token = token
+        self._token = token
         self.project_id = project_id
         self.url = url
 
         self.headers = {
-            'X-Auth-Token': token,
+            "X-Auth-Token": token,
         }
 
-    def build_endpoint(self, endpoint):
-        return f"{self.url}{endpoint}"
-
     def fetch_platform_details(self) -> dict:
-        endpoint = f"{self.build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
-        resp = requests.get(endpoint,
-                            headers=self.headers)
+        endpoint = f"{self._build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
+        resp = requests.get(endpoint, headers=self.headers)
 
         resp.raise_for_status()
         resp_dict = resp.json()
 
-        if 'platforms' not in resp_dict:
+        if "platforms" not in resp_dict:
             raise HTTPError(f"platforms '{self.name}' not found")
 
-        platform_dict = resp_dict['platforms'][0]
-        platform_dict['specs'] = json.loads(platform_dict.get('metadata', {}))
-
-        self.platform_id = platform_dict['id']
+        platform_dict = resp_dict["platforms"][0]
+        platform_dict["specs"] = json.loads(platform_dict.get("metadata", {}))
 
         return platform_dict
 
     def create_job(self, payload) -> str:
         scw_payload = {
-            "name": payload.get('job_name'),
-            "circuit": {
-                "percevalCircuit": json.dumps(payload.get('payload', {}))
-            },
+            "name": payload.get("job_name"),
+            "circuit": {"percevalCircuit": json.dumps(payload.get("payload", {}))},
             "project_id": self.project_id,
-            "session_id": self.session_id
+            "session_id": self.session_id,
         }
 
         endpoint = f"{self.url}{_ENDPOINT_JOB}"
-        request = requests.post(endpoint,
-                                headers=self.headers,
-                                json=scw_payload)
+        request = requests.post(endpoint, headers=self.headers, json=scw_payload)
 
         try:
             request.raise_for_status()
             request_dict = request.json()
 
-            self.instance_id = request_dict['id']
+            self.instance_id = request_dict["id"]
         except Exception:
             raise HTTPError(request.json())
 
-        return request_dict['id']
+        return request_dict["id"]
 
     def cancel_job(self, job_id: str) -> dict:
-        endpoint = f"{self.build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
-        request = requests.post(endpoint,
-                                headers=self.headers)
+        endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
+        request = requests.post(endpoint, headers=self.headers)
         request.raise_for_status()
 
     def get_job_status(self, job_id: str):
-        endpoint = f"{self.build_endpoint(_ENDPOINT_JOB)}/{job_id}"
+        endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
         resp = requests.get(endpoint, headers=self.headers)
@@ -125,26 +113,30 @@ class RPCHandler:
 
         resp_dict = resp.json()
 
-        creation_datetime = datetime.fromisoformat(resp_dict.get('created_at')).timestamp()
-        start_time = self.__get_start_time(resp_dict.get('started_at'))
+        creation_datetime = datetime.fromisoformat(
+            resp_dict.get("created_at")
+        ).timestamp()
+        start_time = self.__get_start_time(resp_dict.get("started_at"))
         duration = self.__get_duration(start_time)
-        status = resp_dict.get('status')
+        status = resp_dict.get("status")
 
         return {
-            'creation_datetime': creation_datetime,
-            'duration': duration,
-            'failure_code': None,
-            'last_intermediate_results': None,
-            'msg': 'ok',
-            'progress': self.__get_progress_by_status(status),
-            'progress_message': resp_dict.get('progress_message'),
-            'start_time': start_time,
-            'status': status,
-            'status_message': self.__get_status_message(status, resp_dict.get('result_distribution'))
+            "creation_datetime": creation_datetime,
+            "duration": duration,
+            "failure_code": None,
+            "last_intermediate_results": None,
+            "msg": "ok",
+            "progress": self.__get_progress_by_status(status),
+            "progress_message": resp_dict.get("progress_message"),
+            "start_time": start_time,
+            "status": status,
+            "status_message": self.__get_status_message(
+                status, resp_dict.get("result_distribution")
+            ),
         }
 
     def get_job_results(self, job_id: str) -> dict:
-        endpoint = f"{self.build_endpoint(_ENDPOINT_JOB)}/{job_id}"
+        endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
         resp = requests.get(endpoint, headers=self.headers)
@@ -152,21 +144,28 @@ class RPCHandler:
 
         resp_dict = resp.json()
 
-        duration = self.__get_duration(self.__get_start_time(resp_dict.get('started_at')))
+        duration = self.__get_duration(
+            self.__get_start_time(resp_dict.get("started_at"))
+        )
 
         return {
-            'duration': duration,
-            'intermediate_results': [],
-            'job_id': resp_dict.get('id'),
-            'results': json.dumps(resp_dict.get('result_distribution', {})),
-            'results_type': None
+            "duration": duration,
+            "intermediate_results": [],
+            "job_id": resp_dict.get("id"),
+            "results": json.dumps(resp_dict.get("result_distribution", {})),
+            "results_type": None,
         }
+
+    def _build_endpoint(self, endpoint):
+        return f"{self.url}{endpoint}"
 
     def __get_start_time(self, started_at: str | None) -> float | None:
         return datetime.fromisoformat(started_at).timestamp() if started_at else None
 
     def __get_duration(self, start_time: float | None) -> int | None:
-        return timedelta(seconds=time.time() - start_time).seconds if start_time else None
+        return (
+            timedelta(seconds=time.time() - start_time).seconds if start_time else None
+        )
 
     def __get_progress_by_status(self, status: str) -> float:
         if status == JobStatus.COMPLETED.value:
