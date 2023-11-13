@@ -30,6 +30,8 @@ import urllib
 import time
 from datetime import datetime, timedelta
 import json
+from typing import Union
+
 
 from enum import Enum
 import requests
@@ -156,10 +158,10 @@ class RPCHandler:
     def _build_endpoint(self, endpoint) -> str:
         return f"{self._url}{endpoint}"
 
-    def __get_start_time(self, started_at: str | None) -> float | None:
+    def __get_start_time(self, started_at: Union[str, None]) -> Union[float, None]:
         return datetime.fromisoformat(started_at).timestamp() if started_at else None
 
-    def __get_duration(self, start_time: float | None) -> int | None:
+    def __get_duration(self, start_time: Union[float, None]) -> Union[int, None]:
         return (
             timedelta(seconds=time.time() - start_time).seconds if start_time else None
         )
@@ -169,7 +171,7 @@ class RPCHandler:
             return 1.0
         return 0.0
 
-    def __get_status_message(self, status, result_distribution) -> str | None:
+    def __get_status_message(self, status, result_distribution) -> Union[str, None]:
         if status == JobStatus.ERROR.value:
             return result_distribution
         return None
