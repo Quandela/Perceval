@@ -306,11 +306,17 @@ class DensityMatrix:
         """
         Make a tensor product between a Density Matrix and a mixed state in any form
         """
+
+        if isinstance(other, (int, float, complex)):
+            new_dm = copy(self)
+            new_dm.mat = other*new_dm.mat
+            return new_dm
+
         if isinstance(other, (SVDistribution, StateVector, BasicState)):
             other = DensityMatrix(other)
 
         if not isinstance(other, DensityMatrix):
-            raise TypeError(f"Can't do a Tensor product and a {type(other)}")
+            raise TypeError(f"Cannot do a Tensor product between a DensityMatrix and a {type(other)}")
 
         return density_matrix_tensor_product(self, other)
 
