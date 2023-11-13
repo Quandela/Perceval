@@ -28,20 +28,21 @@
 # SOFTWARE.
 import scipy.sparse.linalg
 
-from perceval.utils.statevector import *
+from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
+from typing import Union, Optional
 from math import comb
 from numpy import conj
 import numpy as np
-from scipy.sparse import dok_array, sparray
+from scipy.sparse import dok_array, sparray, csr_array, kron
 from scipy.sparse.linalg import LinearOperator, eigsh
-import exqalibur as xq
+from copy import copy
 
 
 def create_index(m, n_max):
-    l = dict()
+    index = dict()
     for i, x in enumerate(max_photon_state_iterator(m, n_max)):
-        l[x]=i
-    return l
+        index[x] = i
+    return index
 
 
 def density_matrix_tensor_product(A, B):
@@ -50,20 +51,33 @@ def density_matrix_tensor_product(A, B):
     :param A, B: two density matrices
     :return: the "kronecker" product of the density matrices
     """
+
+    if isinstance(A, (SVDistribution, StateVector, BasicState)):
+        A = DensityMatrix(A)
+
+    if isinstance(B, (StateVector, SVDistribution, BasicState)):
+        B = DensityMatrix(B)
+
+    if not isinstance(B, DensityMatrix):
+        raise TypeError(f"Cannot do a Tensor product between a DensityMatrix and a {type(B)}")
+
+    if not isinstance(A, DensityMatrix):
+        raise TypeError(f"Cannot do a tensor product between a {type(A)} and a DensityMatrix")
+
     n_max = A.n_max + B.n_max
-    n_mode = A.m + B.n_max
+    n_mode = A.m + B.m
     size = comb(n_max+n_mode, n_max)
     new_index = create_index(n_mode, n_max)
-    matrix = dok_array((size, size), dtype="complex")
+    matrix = kron(A.mat,B.mat)
+    perm = dok_array((A.size*B.size, size), dtype=complex)# matrix from tensor space to complete Fock space
+    for i, a_state in enumerate(A.reverse_index):
+        for j, b_state in enumerate(B.reverse_index):
+            index = new_index[a_state*b_state]
+            perm[i*B.size+j, index] = 1
 
-    new_dm = DensityMatrix(matrix, new_index)
-    for ia,ja in A.mat.keys():
-        ket_a, bra_a = A.reverse_index(ia), A.reverse_index(ja)
-        for ib,jb in B.mat.keys():
-            ket_b, bra_b = B.reverse_index[ib], B.reverse_index(jb)
-            new_dm[ket_a*ket_b, bra_a*bra_b] = A.mat[ia, ja]*A.mat[ib, jb]
+    matrix = perm.T @ matrix @ perm
 
-    return new_dm
+    return matrix
 
 
 class DensityMatrix:
@@ -72,7 +86,7 @@ class DensityMatrix:
     Does not support annotations
     """
     def __init__(self,
-                 mixed_state: Union[SVDistribution, StateVector, BasicState],
+                 mixed_state: Union[SVDistribution, StateVector, BasicState, sparray],
                  index: Optional[dict] = None):
         """
         Constructor for the DensityMatrix Class
@@ -89,14 +103,13 @@ class DensityMatrix:
             if mixed_state.shape[0] != mixed_state.shape[1]:
                 raise ValueError("The density matrix must be square")
 
-            self.mat = dok_array(mixed_state)
+            self.mat = csr_array(mixed_state)
             self._size = self.mat.shape[0]
             self._m = next(iter(index.keys()))
             self._n_max = max([x.n for x in index.keys()])
             self.index = dict()
             self.reverse_index = []
             self.set_index(index)  # index construction
-            self.is_block_diagonal = False
 
         else:
             # Here the constructor for an SVD, SV or BS
@@ -109,37 +122,21 @@ class DensityMatrix:
             self._m = mixed_state.m
             self._n_max = mixed_state.n_max
             self._size = comb(self.m + self._n_max, self.m)
-            self.is_block_diagonal = True
-
-            self.block_index = [0]
-            space_size = 1
-            for n_photon in range(self._n_max):
-                self.block_index.append(self.block_index[-1] + space_size)
-                space_size = (space_size*(self._m+n_photon))//(n_photon+1)
-                print(space_size)
-
 
             self.index = dict()
             self.reverse_index = []
             self.set_index(index)  # index construction
 
-
-            self.mat = dok_array((self._size, self._size), dtype=complex)
-
             # matrix construction from svd
-            l=[]
+            l = []
             for sv, p in mixed_state.items():
-                if len(sv.n) > 1:
-                    self.is_block_diagonal = False
-                vect = dok_array((self._size, 1), dtype=complex)
+                vector = dok_array((self._size, 1), dtype=complex)
                 for bst in sv.keys():
                     idx = self.index[bst]
-                    vect[idx,0] = sv[bst]
-                l.append((vect, p))
-
-            for x in l:
-                vect, p = x
-                self.mat += p*(vect @ conj(vect.T))
+                    vector[idx,0] = sv[bst]
+                vector = csr_array(vector)
+                l.append((vector, p))
+            self.mat = sum([p*(vector @ conj(vector.T)) for vector, p in l])
 
     def set_index(self, index):
         if index is None:
@@ -168,7 +165,7 @@ class DensityMatrix:
     @staticmethod
     def _deflation(A, val, vec):
         """
-        Defines the mat_vec function of the Linear operator after the deflation of all the vectors in eigen_vec_list
+        Defines the mat_vec function of the Linear operator after the deflation of all the vectors in the vec array
         :param A: any kind of sparse matrix
         :param val: the array of eigen_values
         :param vec: the array of eigen_vector
@@ -197,7 +194,6 @@ class DensityMatrix:
         """
         val = np.array([])
         vec = np.empty(shape=(self._size, 0), dtype=complex)
-        k=0
         while (val > threshold).all():
             if val.shape[0] > 0:
                 print(val[-1])
@@ -207,7 +203,6 @@ class DensityMatrix:
             vec = np.concatenate((vec, new_vec), axis=1)
 
         dic = {}
-        print(len(val))
         for i in range(val.shape[0]):
             if val[i] >= threshold:
                 sv = StateVector()
@@ -232,18 +227,17 @@ class DensityMatrix:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
 
         n = max(self._n_max, other.n_max)
-        m = self._m
+
         if n == self.n_max:
-            new_mat = copy(self.mat)
-            other_mat = other.mat
+            copy_mat = copy(other.mat)
+            copy_mat.resize(self._size, self._size)
+            new_mat = copy_mat + self.mat
             new_index = self.index
         else:
-            new_mat = copy(other.mat)
-            other_mat = self.mat
+            copy_mat = copy(self.mat)
+            copy_mat.resize(other._size, other._size)
+            new_mat = copy_mat + other.mat
             new_index = other.index
-
-        for key, value in other_mat.items():
-            new_mat[key] += value
 
         return DensityMatrix(new_mat, new_index)
 
@@ -257,12 +251,6 @@ class DensityMatrix:
             new_dm.mat = other*new_dm.mat
             return new_dm
 
-        if isinstance(other, (SVDistribution, StateVector, BasicState)):
-            other = DensityMatrix(other)
-
-        if not isinstance(other, DensityMatrix):
-            raise TypeError(f"Cannot do a Tensor product between a DensityMatrix and a {type(other)}")
-
         return density_matrix_tensor_product(self, other)
 
     def __rmul__(self, other):
@@ -275,11 +263,6 @@ class DensityMatrix:
             new_dm.mat = other*new_dm.mat
             return new_dm
 
-        if isinstance(other, (StateVector, SVDistribution, BasicState)):
-            other = DensityMatrix(other)
-
-        if not isinstance(other, DensityMatrix):
-            raise TypeError(f"Cannot do a tensor product between a {type(other)} and a DensityMatrix")
         else:
             return density_matrix_tensor_product(other, self)
 
@@ -302,3 +285,7 @@ class DensityMatrix:
     @property
     def shape(self):
         return self._size, self._size
+
+    @property
+    def size(self):
+        return self._size
