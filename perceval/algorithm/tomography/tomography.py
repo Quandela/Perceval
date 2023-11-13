@@ -29,74 +29,14 @@
 
 import numpy as np
 
-from perceval.components import Circuit, Processor, BS, Port, get_pauli_circuit
-from perceval.algorithm.abstract_algorithm import AAlgorithm
-from perceval.utils import BasicState, Encoding
-from typing import List
+from perceval.components import AProcessor, Processor, PauliType
+from perceval.utils import BasicState
+
 from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
     _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
-
-
-class StatePreparationCircuit(Circuit):
-    """
-    Builds a preparation circuit to prepare an input photon in each of the following
-    logical Qubit state states: |0>,|1>,|+>,|+i> using Pauli Gates.
-
-    :param nqubit: Number of Qubits
-    :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
-    """
-
-    def __init__(self, prep_state_indices: List, nqubit: int):
-        super().__init__(m=2*nqubit, name="State Preparation Circuit")
-        self._nqubit = nqubit
-        self._prep_state_indices = prep_state_indices
-
-    def build_preparation_circuit(self):
-        """
-        Builds the preparation circuit for tomography experiment
-        """
-        for m in range(len(self._prep_state_indices)):
-            self.add(2 * m, get_pauli_circuit(self._prep_state_indices[m]), merge=True)
-        return self
-
-
-class MeasurementCircuit(Circuit):
-    """
-    Builds a measurement circuit to measure photons created in the Pauli Basis (I,X,Y,Z) to perform
-    tomography experiments.
-
-    :param nqubit: Number of Qubits
-    :param meas_pauli_basis_indices: List of 'n'(=nqubit) indices to choose a circuit to measure
-    the prepared state at nth Qubit
-    """
-
-    def __init__(self, meas_pauli_basis_indices: List, nqubit: int):
-        super().__init__(m=2*nqubit, name="Measurement Basis Circuit")
-        self._nqubit = nqubit
-        self._meas_pauli_basis_indices = meas_pauli_basis_indices
-
-    @staticmethod
-    def _meas_circ(pauli_meas_circ_index: int) -> Circuit:
-        # Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
-        # param pauli_meas_circ_index: int between 0 and 3
-        # returns a 2 modes Measurement Circuit
-
-        assert 0 <= pauli_meas_circ_index <= 3, f'Invalid index for measurement circuit'
-
-        if pauli_meas_circ_index == 1:
-            return Circuit(2) // (0, BS.H())
-        elif pauli_meas_circ_index == 2:
-            return Circuit(2) // (0, BS.Rx(theta=np.pi / 2, phi_bl=np.pi, phi_br=-np.pi / 2))
-        else:
-            return Circuit(2)
-
-    def build_measurement_circuit(self):
-        """
-        Builds the circuit to perform measurement of photons prepared in the Pauli basis
-        """
-        for m in range(len(self._meas_pauli_basis_indices)):
-            self.add(2 * m, self._meas_circ(self._meas_pauli_basis_indices[m]), merge=True)
-        return self
+from ._prep_meas_circuits import StatePreparation, MeasurementCircuit
+from ..abstract_algorithm import AAlgorithm
+from ..sampler import Sampler
 
 
 class StateTomography(AAlgorithm):
@@ -105,13 +45,20 @@ class StateTomography(AAlgorithm):
     - Adds preparation and measurement circuits to input processor (with the gate operation under study)
     - Computes parameters required to do state tomography
     - Performs Tomography experiment - Computes and Returns density matrices for each input state
+
+    :param operator_processor: Gate under study
     """
-    def __init__(self, operator_processor: Processor):
-        super().__init__(processor=operator_processor)
-        self._operator_processor = operator_processor  # Gate operation under study
-        self._nqubit = int(operator_processor.m / 2)  # nqubit
+    def __init__(self, operator_processor: AProcessor, **kwargs):
+        super().__init__(processor=operator_processor, **kwargs)
+        self._nqubit, odd_modes = divmod(operator_processor.m, 2)
+        if odd_modes:
+            raise ValueError(
+                f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
+
+    _LOGICAL0 = BasicState([1, 0])
+    _LOGICAL1 = BasicState([0, 1])
 
     def _configure_processor(self, prep_state_indices, meas_pauli_basis_indices):
         # Adds preparation and measurement circuit to input processor (with the gate operation under study)
@@ -121,25 +68,22 @@ class StateTomography(AAlgorithm):
         # circuit
         # returns the processor configured to perform state tomography experiment
 
-        p = Processor(self._operator_processor.backend, self._nqubit * 2, self._operator_processor.source)
+        p = Processor(self._processor.backend, self._nqubit * 2, self._processor.source)
         # A Processor with identical backend and source as the input processor
-        qname = 'q'
-        for i in range(self._nqubit):
-            p.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))  # set ports correctly
 
-        pc = StatePreparationCircuit(prep_state_indices, self._nqubit)
-        p.add(0, pc.build_preparation_circuit())  # Add state preparation circuit to the left of the operator
+        pc = StatePreparation(prep_state_indices)
+        for c in pc:
+            p.add(*c)  # Add state preparation circuit to the left of the operator
 
-        p.add(0, self._operator_processor)  # including the operator (as a processor)
+        p.add(0, self._processor)  # including the operator (as a processor)
 
-        mc = MeasurementCircuit(meas_pauli_basis_indices, self._nqubit)
-        p.add(0, mc.build_measurement_circuit())  # Add measurement basis circuit to the right of the operator
+        mc = MeasurementCircuit(meas_pauli_basis_indices)
+        for c in mc:
+            p.add(*c)  # Add measurement basis circuit to the right of the operator
 
         p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
 
-        input_state = BasicState()
-        for _ in range(self._nqubit):
-            input_state *= BasicState("|1,0>")
+        input_state = BasicState([1, 0]*self._nqubit)
         p.with_input(input_state)
 
         return p
@@ -149,15 +93,13 @@ class StateTomography(AAlgorithm):
         # return: Output state probability distribution
 
         p = self._configure_processor(prep_state_indices, meas_pauli_basis_indices)
+        sampler = Sampler(p, max_shots_per_call=self._max_shots)
+        probs = sampler.probs()
+        output_distribution = probs["results"]
+        self._gate_logical_perf = probs["logical_perf"]
 
-        output_distribution = p.probs()["results"]
-        logical_perf = p.probs()["logical_perf"]
-        self._gate_logical_perf = logical_perf
-
-        # Denormalize output state distribtion
-        for key in output_distribution:
-            output_distribution[key] *= logical_perf
-
+        for key in output_distribution:  # Denormalize output state distribtion
+            output_distribution[key] *= self._gate_logical_perf
         return output_distribution
 
     def _stokes_parameter(self, prep_state_indices, meas_pauli_basis_indices):
@@ -174,18 +116,13 @@ class StateTomography(AAlgorithm):
         for k in range(self._nqubit + 1):
             for J in _list_subset_k_from_n(k, self._nqubit):
                 eta = 1
-                if 0 not in J:
-                    measurement_state = BasicState("|1,0>")
-                else:
-                    measurement_state = BasicState("|0,1>")
-                    if meas_pauli_basis_indices[0] != 0:
-                        eta *= -1
-                for j in range(1, self._nqubit):
+                measurement_state = BasicState()
+                for j in range(0, self._nqubit):
                     if j not in J:
-                        measurement_state *= BasicState("|1,0>")
+                        measurement_state *= self._LOGICAL0
                     else:
-                        measurement_state *= BasicState("|0,1>")
-                        if meas_pauli_basis_indices[j] != 0:
+                        measurement_state *= self._LOGICAL1
+                        if meas_pauli_basis_indices[j] != PauliType.I:
                             eta *= -1
                 stokes_param += eta * output_distribution[measurement_state]
 
@@ -202,8 +139,7 @@ class StateTomography(AAlgorithm):
 
         pauli_indices = _generate_pauli_index(self._nqubit)
         for index, elem in enumerate(pauli_indices):
-            elem_values = [p.value for p in elem]  # converting object to list of values
-            density_matrix += self._stokes_parameter(prep_state_indices, elem_values) \
+            density_matrix += self._stokes_parameter(prep_state_indices, elem) \
                               * _get_fixed_basis_ops(index, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
 
@@ -219,12 +155,15 @@ class ProcessTomography(AAlgorithm):
         -- Fidelity of the operation, Error process map
 
     """
-    def __init__(self, operator_processor: Processor):
-        super().__init__(processor=operator_processor)
-        self._operator_processor = operator_processor
-        self._nqubit = int(operator_processor.m / 2)  # nqubit
+    def __init__(self, operator_processor: AProcessor, **kwargs):
+        super().__init__(processor=operator_processor, **kwargs)
+        self._nqubit = operator_processor.m // 2
+        if self._nqubit > 3:
+            raise ValueError(
+                f"Input gate too large. Tomography supports up to 3-qubit gates ({self._nqubit}-qubit gate passed).")
+
         self._size_hilbert = 2 ** self._nqubit
-        self._qst = StateTomography(operator_processor=self._operator_processor)
+        self._qst = StateTomography(operator_processor=self._processor, **kwargs)
 
         self.chi_normalized = None
         self.chi_unnormalized = None

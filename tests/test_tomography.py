@@ -36,12 +36,15 @@ from perceval.components import catalog, Processor, Circuit, PauliType
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography.tomography_utils import is_physical, get_pauli_circuit
+from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit
+
+
+CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
 
 @pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
 def test_density_matrix_state_tomography(pauli_gate):
-    p = Processor("Naive", Circuit(2) // get_pauli_circuit(pauli_gate))  # 1 qubit Pauli X gate
+    p = Processor("Naive", Circuit(2) // get_preparation_circuit(pauli_gate))  # 1 qubit Pauli X gate
     qst = StateTomography(operator_processor=p)
     density_matrix = qst.perform_state_tomography([PauliType.X])
 
@@ -64,15 +67,18 @@ def fidelity_op_process_tomography(op, op_proc):
     return op_fidelity
 
 
-def test_fidelity_cnot_operator():
+def test_fidelity_klm_cnot():
     # set operator circuit, num qubits
     cnot_p = catalog["klm cnot"].build_processor()
-    cnot_op = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
-
-    cnot_fidelity = fidelity_op_process_tomography(cnot_op, cnot_p)
-
+    cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
     assert cnot_fidelity == pytest.approx(1, 1e-3)  # computed fidelity is around 0.99967
 
+
+def test_fidelity_postprocessed_cnot():
+    # set operator circuit, num qubits
+    cnot_p = catalog["postprocessed cnot"].build_processor()
+    cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
+    assert cnot_fidelity == pytest.approx(1)
 
 def test_fidelity_random_op():
     # process tomography to compute fidelity of a random 2 qubit gate operation

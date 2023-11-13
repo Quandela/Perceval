@@ -30,7 +30,7 @@
 import numpy as np
 import math
 from itertools import product, combinations
-from perceval.components import PauliType, get_pauli_gate, get_pauli_circuit
+from perceval.components import PauliType, get_pauli_gate, get_preparation_circuit
 
 
 def _state_to_dens_matrix(state):
@@ -47,9 +47,9 @@ def _matrix_basis(nqubit, d):
     v[0] = 1
 
     for elem in pauli_indices:
-        M = get_pauli_circuit(elem[0]).compute_unitary()
+        M = get_preparation_circuit(elem[0]).compute_unitary()
         if len(elem) > 1:
-            M = np.kron(M, get_pauli_circuit(elem[1]).compute_unitary())
+            M = np.kron(M, get_preparation_circuit(elem[1]).compute_unitary())
         B.append(_state_to_dens_matrix(np.dot(M, v)))
 
     return B
@@ -129,12 +129,9 @@ def _krauss_repr_ops(m, rhoj, n, nqubit):
 
 
 def _generate_pauli_index(n):
-    # generates all possible combinations of Pauli indices repeated n times
-
-    S = [PauliType(member.value) for member in PauliType]
-    # takes Cartesian product of elements of set S with itself repeating 'n' times
-    output_set = [list(p) for p in product(S, repeat=n)]
-    return output_set
+    """generates all possible combinations of Pauli indices repeated n times"""
+    s = [pt for pt in PauliType]
+    return [list(p) for p in product(s, repeat=n)] # takes Cartesian product of s with itself repeating 'n' times
 
 
 def _list_subset_k_from_n(k, n):
