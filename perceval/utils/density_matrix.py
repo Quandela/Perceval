@@ -66,59 +66,6 @@ def density_matrix_tensor_product(A, B):
     return new_dm
 
 
-class DiagonalBlockMatrix:
-    """
-    A DataType for large block diagonal matrices
-    Specially designed for Density matrices with no superposition between void and photons
-
-    """
-
-    def __init__(self, n_max, m):
-        """
-        initiate a zero square matrix for n_max photons and m modes
-        """
-
-        self.data = []
-        self.block_indices = [0]
-        for k in range(n_max + 1):
-            dim = comb(m+k-1, k)
-            self.data.append(np.zeros((dim, dim), dtype=complex))
-            self.block_indices.append(self.block_indices[-1] + dim)
-
-    def __getitem__(self, item):
-        i, j = item
-        bloc_idx1, bloc_idx2, k, l = self.get_indices(i,j)
-        if bloc_idx2 != bloc_idx1:
-            return 0j
-        else:
-            return self.data[bloc_idx1 - 1][k, l]
-
-    def __setitem__(self, key, value):
-        i, j = key
-        bloc_idx1, bloc_idx2, k, l = self.get_indices(i, j)
-        if bloc_idx2 != bloc_idx1:
-            raise IndexError(f"Can't affect non zero values at these indices: {(i,j)}")
-        else:
-            self.data[bloc_idx1 - 1][k, l] = value
-
-    def __rmul__(self, other):
-        for i, x in enumerate(self.data):
-            self.data[i] = other*x
-
-
-    def get_indices(self, i, j):
-        bloc_idx1, bloc_idx2 = 0, 0
-        while bloc_idx1 < i:
-            bloc_idx1 += 1
-        while bloc_idx2 < j:
-            bloc_idx2 += 1
-        return bloc_idx1, bloc_idx2, i-bloc_idx1, j-bloc_idx2
-
-    @property
-    def shape(self):
-        return
-
-
 class DensityMatrix:
     """
     Density operator representing a mixed state
@@ -171,13 +118,11 @@ class DensityMatrix:
                 space_size = (space_size*(self._m+n_photon))//(n_photon+1)
                 print(space_size)
 
-            print("done1")
 
             self.index = dict()
             self.reverse_index = []
             self.set_index(index)  # index construction
 
-            print("done2")
 
             self.mat = dok_array((self._size, self._size), dtype=complex)
 
