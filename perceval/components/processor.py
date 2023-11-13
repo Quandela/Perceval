@@ -171,8 +171,8 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
 
-    def clear_input_and_circuit(self):
-        super().clear_input_and_circuit()
+    def clear_input_and_circuit(self, new_m=None):
+        super().clear_input_and_circuit(new_m)
         self._inputs_map = None
 
     def _compose_processor(self, connector, processor, keep_port: bool):

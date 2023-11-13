@@ -68,8 +68,8 @@ class StateTomography(AAlgorithm):
         # circuit
         # returns the processor configured to perform state tomography experiment
 
-        p = Processor(self._processor.backend, self._nqubit * 2, self._processor.source)
-        # A Processor with identical backend and source as the input processor
+        p = self._processor.copy()
+        p.clear_input_and_circuit(self._nqubit*2)  # Clear processor content but keep its size
 
         pc = StatePreparation(prep_state_indices)
         for c in pc:

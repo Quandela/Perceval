@@ -80,6 +80,7 @@ def test_fidelity_postprocessed_cnot():
     cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
     assert cnot_fidelity == pytest.approx(1)
 
+
 def test_fidelity_random_op():
     # process tomography to compute fidelity of a random 2 qubit gate operation
     nqubit = 2
