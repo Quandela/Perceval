@@ -324,7 +324,7 @@ class DensityMatrix:
             new_dm.mat = other*new_dm.mat
             return new_dm
 
-        if isinstance(other, (StateVector, SVDistribution, BasicState))
+        if isinstance(other, (StateVector, SVDistribution, BasicState)):
             other = DensityMatrix(other)
 
         if not isinstance(other, DensityMatrix):
