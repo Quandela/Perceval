@@ -35,7 +35,6 @@ from enum import Enum
 import requests
 from requests import HTTPError
 
-_ENDPOINT_URL = "https://api.scaleway.com"
 _PROVIDER_NAME = "quandela"
 _ENDPOINT_PLATFORM = "/platforms"
 _ENDPOINT_JOB = "/jobs"
@@ -51,20 +50,19 @@ class JobStatus(Enum):
 class RPCHandler:
     """RPCHandler Scaleway """
 
-    def __init__(self, project_id, token, url: str = _ENDPOINT_URL) -> None:
-        self._token = token
-        self.project_id = project_id
-        self.url = url
-        self.name = None
-        self.session_id = None
+    def __init__(self, project_id, headers, url, name) -> None:
+        self._project_id = project_id
+        self._headers = headers
+        self._url = url
+        self.name = name # need to keep it public because of perceval/runtime/remote_processor.py:68 `self.name = rpc_handler.name`
+        self._session_id = None
 
-        self.headers = {
-            "X-Auth-Token": token,
-        }
+    def set_session_id(self, session_id) -> None:
+        self._session_id = session_id
 
     def fetch_platform_details(self) -> dict:
         endpoint = f"{self._build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
-        resp = requests.get(endpoint, headers=self.headers)
+        resp = requests.get(endpoint, headers=self._headers)
 
         resp.raise_for_status()
         resp_dict = resp.json()
@@ -81,12 +79,12 @@ class RPCHandler:
         scw_payload = {
             "name": payload.get("job_name"),
             "circuit": {"percevalCircuit": json.dumps(payload.get("payload", {}))},
-            "project_id": self.project_id,
-            "session_id": self.session_id,
+            "project_id": self._project_id,
+            "session_id": self._session_id,
         }
 
-        endpoint = f"{self.url}{_ENDPOINT_JOB}"
-        request = requests.post(endpoint, headers=self.headers, json=scw_payload)
+        endpoint = f"{self._url}{_ENDPOINT_JOB}"
+        request = requests.post(endpoint, headers=self._headers, json=scw_payload)
 
         try:
             request.raise_for_status()
@@ -100,14 +98,14 @@ class RPCHandler:
 
     def cancel_job(self, job_id: str) -> None:
         endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
-        request = requests.post(endpoint, headers=self.headers)
+        request = requests.post(endpoint, headers=self._headers)
         request.raise_for_status()
 
     def get_job_status(self, job_id: str) -> dict:
         endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
-        resp = requests.get(endpoint, headers=self.headers)
+        resp = requests.get(endpoint, headers=self._headers)
         resp.raise_for_status()
 
         resp_dict = resp.json()
@@ -138,7 +136,7 @@ class RPCHandler:
         endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
-        resp = requests.get(endpoint, headers=self.headers)
+        resp = requests.get(endpoint, headers=self._headers)
         resp.raise_for_status()
 
         resp_dict = resp.json()
@@ -156,7 +154,7 @@ class RPCHandler:
         }
 
     def _build_endpoint(self, endpoint) -> str:
-        return f"{self.url}{endpoint}"
+        return f"{self._url}{endpoint}"
 
     def __get_start_time(self, started_at: str | None) -> float | None:
         return datetime.fromisoformat(started_at).timestamp() if started_at else None

@@ -33,6 +33,7 @@ from .scaleway_rpc_handler import RPCHandler
 import requests
 from requests import HTTPError
 
+_ENDPOINT_URL = "https://api.scaleway.com/qaas/v1alpha1"
 _ENDPOINT_SESSION = "/sessions"
 
 
@@ -42,22 +43,36 @@ class Session(ISession):
     def __init__(
         self,
         platform: str,
-        rpc_handler: RPCHandler,
+        project_id: str,
+        token: str,
+        url: str = _ENDPOINT_URL,
         deduplication_id: str = "",
         max_idle_duration: str = "120s",
         max_duration: str = "360s",
     ) -> None:
+        self._token = token
+        self._project_id = project_id
+        self._url = url
         self._platform = platform
         self._deduplication_id = deduplication_id
         self._max_idle_duration = max_idle_duration
         self._max_duration = max_duration
+
         self._session_id = None
 
-        rpc_handler.name = platform
-        self._rpc_handler = rpc_handler
+        self._headers = {
+            "X-Auth-Token": token,
+        }
 
-        self._url = rpc_handler.url
-        self._headers = rpc_handler.headers
+        self._rpc_handler = self._build_rpc_handler()
+
+    def _build_rpc_handler(self) -> RPCHandler:
+        return RPCHandler(
+            project_id=self._project_id,
+            headers=self._headers,
+            name=self._platform,
+            url=self._url
+        )
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
@@ -66,7 +81,7 @@ class Session(ISession):
         platform = self.__fetch_platform_details()
 
         payload = {
-            "project_id": self._rpc_handler.project_id,
+            "project_id": self._project_id,
             "platform_id": platform.get("id"),
             "deduplication_id": self._deduplication_id,
             "max_duration": self._max_duration,
@@ -81,7 +96,7 @@ class Session(ISession):
             request_dict = request.json()
 
             self._session_id = request_dict["id"]
-            self._rpc_handler.session_id = self._session_id
+            self._rpc_handler.set_session_id(self._session_id)
         except Exception:
             raise HTTPError(request.json())
 
