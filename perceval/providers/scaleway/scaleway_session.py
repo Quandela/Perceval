@@ -39,8 +39,6 @@ _ENDPOINT_SESSION = "/sessions"
 class Session(ISession):
     """Session Scaleway"""
 
-    _session_id: str | None = None
-
     def __init__(
         self,
         platform: str,
@@ -53,6 +51,7 @@ class Session(ISession):
         self._deduplication_id = deduplication_id
         self._max_idle_duration = max_idle_duration
         self._max_duration = max_duration
+        self._session_id = None
 
         rpc_handler.name = platform
         self._rpc_handler = rpc_handler

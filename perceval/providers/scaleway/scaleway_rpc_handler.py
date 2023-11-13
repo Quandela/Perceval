@@ -51,13 +51,12 @@ class JobStatus(Enum):
 class RPCHandler:
     """RPCHandler Scaleway """
 
-    name: str | None = None
-    session_id: str | None = None
-
     def __init__(self, project_id, token, url: str = _ENDPOINT_URL) -> None:
         self._token = token
         self.project_id = project_id
         self.url = url
+        self.name = None
+        self.session_id = None
 
         self.headers = {
             "X-Auth-Token": token,
