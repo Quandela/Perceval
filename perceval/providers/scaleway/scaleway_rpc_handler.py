@@ -56,8 +56,12 @@ class RPCHandler:
         self._project_id = project_id
         self._headers = headers
         self._url = url
-        self.name = name # need to keep it public because of perceval/runtime/remote_processor.py:68 `self.name = rpc_handler.name`
+        self._name = name
         self._session_id = None
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def set_session_id(self, session_id) -> None:
         self._session_id = session_id
