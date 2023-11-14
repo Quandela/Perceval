@@ -41,30 +41,32 @@ class Session(ISession):
     """Session Scaleway
 
         Attributes:
-            platform (str): The `platform` parameter is a string that represents the platform on which the
-            circuit will be execute
+            platform (str): The `platform` parameter is a string that represents the platform on
+            which the circuit will be executed.
 
-            project_id (str): The `project_id` parameter is a string that represents the UUID of the Scaleway project
-            you want your sessions & jobs to be attached with
+            project_id (str): The `project_id` parameter is a string that represents the UUID of
+            the Scaleway project you want your sessions and jobs to be attached with.
 
             token (str): The `token` parameter is a string that represents the authentication token
-            required to access the Scaleway API
+            required to access the Scaleway API.
 
-            deduplication_id (str, optional):  Value that points on a unique running session.
-            If both Perceval programs (with same credentials) are targetting the same deduplication_id, it will returns the same session.
-            It is usefull to share session amongs same users. The deduplication_id works only on alive session.
+            deduplication_id (str, optional): Value that points on a unique running session. If
+            both Perceval programs (with same credentials) are targetting the same
+            `deduplication_id`, it will returns the same session. It is usefull to share session
+            amongs same users. The `deduplication_id` works only on alive session.
 
-            max_idle_duration (int, optional): The `max_idle_duration` parameter is an int that represents the
-            maximum duration of idle time allowed for a session. It specifies the amount of time that can
-            elapse without any activity before the session is considered idle. The default value is 1200,
-            which means 1200 seconds (or 20minutes)
+            max_idle_duration (int, optional): The `max_idle_duration` parameter is an int that
+            represents the maximum duration of idle time allowed for a session. It specifies the
+            amount of time that can elapse without any activity before the session is considered
+            idle. The default value is 1200 seconds (20 minutes).
 
-            max_duration (int, optional): The `max_duration` parameter is a int that represents the maximum
-            duration for a session. It specifies the maximum amount of time that a session can remain active
-            before it is automatically terminated. The default value is 3600, which means 3600 seconds (or 1hour)
+            max_duration (int, optional): The `max_duration` parameter is an int that represents
+            the maximum duration for a session. It specifies the maximum amount of time that a
+            session can remain active before it is automatically terminated. The default value is
+            3600 seconds (1 hour).
 
-            url (str, optional): The `url` parameter is a string that represents the endpoint URL for the API. It is
-            optional and has a default value of `_ENDPOINT_URL`
+            url (str, optional): The `url` parameter is a string that represents the endpoint URL
+            for the API. It is optional and has a default value of `_ENDPOINT_URL`.
     """
 
     def __init__(
