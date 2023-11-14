@@ -45,11 +45,11 @@ class Session(ISession):
 
     :param token: authentication token required to access the Scaleway API
 
-    :param deduplication_id: optional value, name mapping on a unique running session, allowing the sharing of an alive session amongs same users
+    :param deduplication_id: optional value, name mapping on a unique running session, allowing to share an alive session amongs multiple users
 
-    :param max_idle_duration: optional value, duration in seconds that can elapse without activity before the session terminates
+    :param max_idle_duration_s: optional value, duration in seconds that can elapsed without activity before the session terminates
 
-    :param max_duration: optional value, duration in seconds for a session before it automatically terminates
+    :param max_duration_s: optional value, duration in seconds for a session before it automatically terminates
 
     :param url: optional value, endpoint URL of the API
     """
@@ -60,8 +60,8 @@ class Session(ISession):
         project_id: str,
         token: str,
         deduplication_id: str = "",
-        max_idle_duration: int = 1200,
-        max_duration: int = 3600,
+        max_idle_duration_s: int = 1200,
+        max_duration_s: int = 3600,
         url: str = _ENDPOINT_URL,
     ) -> None:
 
@@ -70,8 +70,8 @@ class Session(ISession):
         self._url = url
         self._platform = platform
         self._deduplication_id = deduplication_id
-        self._max_idle_duration = self.__int_duration(max_idle_duration, 'max_idle_duration')
-        self._max_duration = self.__int_duration(max_duration, 'max_duration')
+        self._max_idle_duration_s = self.__int_duration(max_idle_duration_s, 'max_idle_duration_s')
+        self._max_duration_s = self.__int_duration(max_duration_s, 'max_duration_s')
 
         self._session_id = None
 
@@ -91,8 +91,8 @@ class Session(ISession):
             "project_id": self._project_id,
             "platform_id": platform.get("id"),
             "deduplication_id": self._deduplication_id,
-            "max_duration": self.__to_string_duration(self._max_duration),
-            "max_idle_duration": self.__to_string_duration(self._max_idle_duration),
+            "max_duration": self.__to_string_duration(self._max_duration_s),
+            "max_idle_duration": self.__to_string_duration(self._max_idle_duration_s),
         }
 
         endpoint = f"{self._url}{_ENDPOINT_SESSION}"
