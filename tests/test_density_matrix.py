@@ -58,7 +58,6 @@ def test_density_matrix():
     tensor_dm_2 = DensityMatrix(sv * sv)
     tensor_dm_3 = dm*sv
 
-
     assert tensor_dm_1.shape == (6, 6)
     assert tensor_dm_2.mat.trace() == pytest.approx(1)
 

@@ -44,6 +44,33 @@ def create_index(m, n_max):
         index[x] = i
     return index
 
+def statevector_to_array(sv, index):
+    """
+    translate a StateVector object into an array
+    :param sv: a StateVector
+    :param index: a dictionary with BasicStates as keys and indices as values
+    """
+    vector = np.zeros(len(index),  dtype=complex)
+    for key, value in sv:
+        vector[index[key]] += value
+    return vector
+
+def array_to_statevector(vector, reverse_index):
+    """
+    translate an array in a StateVector
+    :param vector: an array
+    :param reverse_index: a list of BasicStates
+    """
+
+    sv = StateVector()
+    for i, x in enumerate(reverse_index):
+        if vector[i] == 0:
+            continue
+        else:
+            sv += vector[i]*x
+
+    return sv
+
 
 def density_matrix_tensor_product(A, B):
     """
@@ -266,6 +293,22 @@ class DensityMatrix:
         else:
             return density_matrix_tensor_product(other, self)
 
+    def __matmul__(self, other):
+        """
+        matrix-vector multiplication
+        """
+
+        if isinstance(other, BasicState):
+            sv = StateVector()
+            for x in self.reverse_index:
+                sv += self[x, other]*x
+            return sv
+
+        if isinstance(other, StateVector):
+
+
+
+
     def normalize(self):
         """
         Normalize the density matrix so that Trace(\rho) = 1
@@ -273,6 +316,7 @@ class DensityMatrix:
 
         factor = self.mat.trace()
         self.mat = (1/factor)*self.mat
+
 
     @property
     def n_max(self):
