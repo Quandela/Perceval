@@ -41,7 +41,7 @@ class Session(ISession):
     """
     :param platform: platform on which the circuit will be executed
 
-    :param project_id: UUID of the Scaleway Project the session will be attached to
+    :param project_id: UUID of the Scaleway Project the session is attached to
 
     :param token: authentication token required to access the Scaleway API
 
