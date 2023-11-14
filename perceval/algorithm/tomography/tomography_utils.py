@@ -33,14 +33,23 @@ from itertools import product, combinations
 from perceval.components import PauliType, get_pauli_gate, get_preparation_circuit
 
 
-def _state_to_dens_matrix(state):
-    # computes the density matrix representation of a state r'$\rho = |\psi> <\psi|$' given a state r'$|\psi>$'
+def _state_to_dens_matrix(state: np.ndarray) -> np.ndarray:
+    r"""
+    computes the density matrix representation of a state
+    :math:'\rho = |\psi> <\psi|' given a state :math:'|\psi>'
+    :param state: state of the system
+    :return: density matrix
+    """
     return np.dot(state, np.conjugate(np.transpose(state)))
 
 
-def _matrix_basis(nqubit, d):
-    # generate a list of basis matrices by choosing all combinations of the tensor products of basis states
-
+def _matrix_basis(nqubit: int, d: int) -> list:
+    """
+    Generate a list of basis matrices by choosing all combinations of the tensor products of basis states
+    :param nqubit: number of qubits
+    :param d: Size of hilbert space
+    :return: list of basis matrices
+    """
     B = []
     pauli_indices = _generate_pauli_index(nqubit)
     v = np.zeros((d, 1), dtype='complex_')
@@ -55,13 +64,22 @@ def _matrix_basis(nqubit, d):
     return B
 
 
-def _matrix_to_vector(matrix):
-    # Returns a vector (size=>d**2) given a matrix (shape=>d*d) -> concatenates row wise
+def _matrix_to_vector(matrix: np.ndarray) -> np.ndarray:
+    """
+    Reforms a given matrix into a vector by concatenating row wise from the matrix
+    :param matrix: any matrix of shape d*d
+    :return: a vector of length d**2
+    """
     return np.ndarray.flatten(matrix)
 
 
-def _vector_to_sq_matrix(vector):
-    # expand a vector of size d**2 into a matrix of size d*d
+def _vector_to_sq_matrix(vector: np.ndarray) -> np.ndarray:
+    """
+    Reforms a vector of size d**2 into a matrix of size d*d
+    :param vector: vector of d**2 length
+    :return: Matrix of shape d$d
+    """
+
     size = math.sqrt(len(vector))
     if not size.is_integer():
         raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
@@ -69,10 +87,14 @@ def _vector_to_sq_matrix(vector):
     return np.reshape(vector, (int(size), int(size)))
 
 
-def _coef_linear_decomp(matrix, basis):
-    # Solves the linear system of equations : Matrix = Mu x Basis to find Mu.
-    # "Matrix" can be linearly decomposed in any given "Basis"
-    # param basis : List of basis matrices
+def _coef_linear_decomp(matrix: np.ndarray, basis: list) -> np.ndarray:
+    """
+    Solves the linear system of equations : Matrix (M) = Mu x Basis (B) to find Mu.
+    "Matrix" can be linearly decomposed in any given "Basis"
+    :param matrix: a matrix 'M' to decompose
+    :param basis: set of basis matrices 'B' in which the matrix 'M' is to be decomposed
+    :return: an array of coefficients 'Mu' which satisfies the equation M = Mu X B
+    """
 
     basis_vectors = np.column_stack([_matrix_to_vector(m) for m in basis])  # convert to list of basis vectors
     y = _matrix_to_vector(matrix)
@@ -82,12 +104,14 @@ def _coef_linear_decomp(matrix, basis):
     return mu
 
 
-def _get_fixed_basis_ops(j, nqubit):
-    # computes the set of operators (tensor products of pauli gates) in the fixed basis
-    # as an array of shape (size_hilbert x size_hilbert)
-    # :param j - Number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
-    # :param nqubit - number of qubits
-
+def _get_fixed_basis_ops(j: int, nqubit: int) -> np.ndarray:
+    """
+    computes the set of operators (tensor products of pauli gates) in the fixed basis
+    as an array of shape (size_hilbert x size_hilbert)
+    :param j: j - number of measurements for state tomography = int between [0,size_hilbert**2 - 1]
+    :param nqubit: number of qubits
+    :return: operators in a fixed basis (Pauli)
+    """
     if nqubit == 1:
         return get_pauli_gate(PauliType(j))
 
@@ -107,50 +131,63 @@ def _get_fixed_basis_ops(j, nqubit):
     return fix_basis_op
 
 
-def _get_canonical_basis_ops(j, d):
-    # computes the set of operators defined in canonical (standard) basis. Array of size (d x d)
-    # param d = Size of Hilbert space = 2**nqubits
-    # param j = Number of measurements for state tomography = int between [0, d**2 - 1]
-
+def _get_canonical_basis_ops(j: int, d: int) -> np.ndarray:
+    """
+    computes the set of operators defined in canonical (standard) basis. Array of size (d x d)
+    :param j: number of measurements for state tomography = int between [0, d**2 - 1]
+    :param d: size of Hilbert space = 2**nqubits
+    :return: operators in a canonical basis
+    """
     quotient, remainder = divmod(j, d)
     canonical_op = [[1 if i == quotient and j == remainder else 0 for j in range(d)] for i in range(d)]
     return np.array(canonical_op, dtype='complex_')
 
 
-def _krauss_repr_ops(m, rhoj, n, nqubit):
-    # computes the Krauss representation of an operator = (fixed_basis_op x (canonical_basis_op x fixed_basis_op))
-    # x: dot product in the previous line
-    # param rhoj = canonical basis operators
-    # param m,n = indices running between 0 -> d**2 - 1
-    # param nqubit = number of quibts
-
+def _krauss_repr_ops(m: int, rhoj: np.ndarray, n: int, nqubit: int) -> np.ndarray:
+    """
+    computes the Krauss representation of an operator = (fixed_basis_op x (canonical_basis_op x fixed_basis_op))
+    x: dot product in the previous line
+    :param m: indices running between 0 -> d**2 - 1
+    :param rhoj: operators in a canonical basis
+    :param n: indices running between 0 -> d**2 - 1
+    :param nqubit: number of qubits
+    :return: Operators in Krauss representation
+    """
     return np.dot(_get_fixed_basis_ops(m, nqubit), np.dot(rhoj,
                                                           np.conjugate(np.transpose(_get_fixed_basis_ops(n, nqubit)))))
 
 
-def _generate_pauli_index(n):
-    """generates all possible combinations of Pauli indices repeated n times"""
+def _generate_pauli_index(nqubit: int) -> list:
+    """
+    generates all possible combinations of Pauli indices repeated n times
+    :param nqubit: number of qubits
+    :return: List of Pauli indices
+    """
     s = [pt for pt in PauliType]
-    return [list(p) for p in product(s, repeat=n)] # takes Cartesian product of s with itself repeating 'n' times
+    return [list(p) for p in product(s, repeat=nqubit)]  # takes Cartesian product of s with itself repeating 'n' times
 
 
-def _list_subset_k_from_n(k, n):
-    # list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
-    # used only in the method _stokes_parameter
-    #  Should we put it in overall utils? or have a specific util for tomograph?
+def _list_subset_k_from_n(k: int, n: int) -> list:
+    """
+    list of distinct combination sets of length k from set 's' where 's' is the set {0,...,n-1}
+    used only in the method _stokes_parameter
+    :param k: index to iterate over the number of qubits
+    :param n: number of qubits
+    :return: combinations of sets of size k
+    """
 
     s = tuple(range(n))
     return list(combinations(s, k))
 
 
-def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
+def is_physical(input_matrix: np.ndarray, nqubit: int, eigen_tolerance: float = 1e-6) -> dict:
     """
     Verifies if a matrix is trace preserving, hermitian, and completely positive (using the Choi matrix)
 
     :param input_matrix: chi of a quantum map computed from Quantum Process Tomography
     :param nqubit: Number of qubits
     :param eigen_tolerance: brings a tolerance for the positivity of the eigenvalues of the Choi matrix
-    :return: information about the tests
+    :return: Results about the tests : if Trace Preserving (TP), Hermitian, Completely Positive (CP)
     """
     d2 = len(input_matrix)
     res = {}
@@ -184,7 +221,6 @@ def is_physical(input_matrix, nqubit, eigen_tolerance=1e-6):
     choi /= 2 ** nqubit
     eigenvalues = np.linalg.eigvalsh(choi)
     if np.any(eigenvalues < -eigen_tolerance):
-        val = np.round(eigenvalues[0], 5)
         res['Completely Positive'] = False
     else:
         res['Completely Positive'] = True
