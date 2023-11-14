@@ -98,7 +98,7 @@ class Session(ISession):
         return RemoteProcessor(rpc_handler=self._rpc_handler)
 
     def start(self) -> None:
-        platform = self.__fetch_platform_details()
+        platform = self._fetch_platform_details()
 
         payload = {
             "project_id": self._project_id,
@@ -126,7 +126,7 @@ class Session(ISession):
 
         request.raise_for_status()
 
-    def __fetch_platform_details(self) -> dict:
+    def _fetch_platform_details(self) -> dict:
         return self._rpc_handler.fetch_platform_details()
 
     def _to_string_duration(self, duration: int) -> str:
