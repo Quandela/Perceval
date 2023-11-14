@@ -38,35 +38,20 @@ _ENDPOINT_SESSION = "/sessions"
 
 
 class Session(ISession):
-    """Session Scaleway
+    """
+    :param platform: platform on which the circuit will be executed
 
-        Attributes:
-            platform (str): The `platform` parameter is a string that represents the platform on
-            which the circuit will be executed.
+    :param project_id: UUID of the Scaleway Project the session will be attached to
 
-            project_id (str): The `project_id` parameter is a string that represents the UUID of
-            the Scaleway project you want your sessions and jobs to be attached with.
+    :param token: authentication token required to access the Scaleway API
 
-            token (str): The `token` parameter is a string that represents the authentication token
-            required to access the Scaleway API.
+    :param deduplication_id: optional value, name mapping on a unique running session, allowing the sharing of an alive session amongs same users
 
-            deduplication_id (str, optional): Value that points on a unique running session. If
-            both Perceval programs (with same credentials) are targetting the same
-            `deduplication_id`, it will returns the same session. It is usefull to share session
-            amongs same users. The `deduplication_id` works only on alive session.
+    :param max_idle_duration: optional value, duration in seconds that can elapse without activity before the session terminates
 
-            max_idle_duration (int, optional): The `max_idle_duration` parameter is an int that
-            represents the maximum duration of idle time allowed for a session. It specifies the
-            amount of time that can elapse without any activity before the session is considered
-            idle. The default value is 1200 seconds (20 minutes).
+    :param max_duration: optional value, duration in seconds for a session before it automatically terminates
 
-            max_duration (int, optional): The `max_duration` parameter is an int that represents
-            the maximum duration for a session. It specifies the maximum amount of time that a
-            session can remain active before it is automatically terminated. The default value is
-            3600 seconds (1 hour).
-
-            url (str, optional): The `url` parameter is a string that represents the endpoint URL
-            for the API. It is optional and has a default value of `_ENDPOINT_URL`.
+    :param url: optional value, endpoint URL of the API
     """
 
     def __init__(

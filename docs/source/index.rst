@@ -111,6 +111,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/postselect
    reference/qiskit_converter
    reference/stategenerator
+   reference/scaleway_session
 
 .. toctree::
    :caption: Community

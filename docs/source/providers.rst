@@ -22,12 +22,14 @@ To use Scaleway QaaS as a provider you need a Scaleway account, a Scaleway Proje
 Using a Scaleway session
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+Let's see step by step how to instantiate and use a :ref:`Scaleway Session`.
+
 Import the library and Scaleway from the providers library:
 
 >>> import perceval as pcvl
 >>> import perceval.providers.scaleway as scw
 
-Provide your Scaleway project ID and API key:
+Provide your Scaleway Project ID and API key:
 
 >>> PROJECT_ID = "your-scaleway-project-id"
 >>> TOKEN = "your-scaleway-api-key"
