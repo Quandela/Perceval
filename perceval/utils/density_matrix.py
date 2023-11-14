@@ -49,7 +49,7 @@ def density_matrix_tensor_product(A, B):
     """
     Make the tensor product of 2 Density Matrices
     :param A, B: two density matrices
-    :return: the "kronecker" product of the density matrices
+    :return: the "kronecker" product of the density matrices, in the correct basis
     """
 
     if isinstance(A, (SVDistribution, StateVector, BasicState)):
@@ -105,7 +105,7 @@ class DensityMatrix:
 
             self.mat = csr_array(mixed_state)
             self._size = self.mat.shape[0]
-            self._m = next(iter(index.keys()))
+            self._m = next(iter(index.keys())).m
             self._n_max = max([x.n for x in index.keys()])
             self.index = dict()
             self.reverse_index = []

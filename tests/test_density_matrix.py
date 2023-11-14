@@ -26,26 +26,75 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, DensityMatrix
+from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution
+from perceval.utils.density_matrix import create_index
 import numpy as np
 import scipy
 from scipy.sparse import dok_array
 import pytest
+from _test_utils import assert_svd_close
+
+
+def test_create_index():
+    dic = create_index(10,5)
+    assert max([basic_state.n for basic_state in dic]) == 5
+    for basic_state in dic:
+        assert basic_state.m == 10
 
 
 def test_density_matrix():
     sv = BasicState([0]) + BasicState([1])
     dm = DensityMatrix(sv)
+    dm2 = DensityMatrix(BasicState([0]))
+
+    assert (dm + dm2).size == 2
+    assert (dm + dm).size == 2
+
     for i in range(2):
         for j in range(2):
             assert dm.mat[i, j] == pytest.approx(0.5)
 
     tensor_dm_1 = dm * dm
     tensor_dm_2 = DensityMatrix(sv * sv)
+    tensor_dm_3 = dm*sv
+
 
     assert tensor_dm_1.shape == (6, 6)
     assert tensor_dm_2.mat.trace() == pytest.approx(1)
 
     for i in range(tensor_dm_2.size):
         for j in range(tensor_dm_2.size):
-            assert tensor_dm_1.mat[i,j] == pytest.approx(tensor_dm_2.mat[i,j])
+            assert tensor_dm_1.mat[i, j] == pytest.approx(tensor_dm_2.mat[i, j])
+            assert tensor_dm_1.mat[i, j] == pytest.approx(tensor_dm_3.mat[i, j])
+
+    assert dm[BasicState([0]), BasicState([1])] == pytest.approx(.5)
+
+    assert (dm+dm2).size == 2
+    assert (dm+dm).size == 2
+
+
+def test_density_matrix_to_svd():
+
+    source = Source(.9)
+    svd1 = source.generate_distribution(BasicState[0, 1, 0, 1])
+    svd2 = source.generate_distribution(BasicState([0, 1]))
+    tensor_svd = svd1*svd2
+
+    dm1 = DensityMatrix(svd1)
+    dm2 = DensityMatrix(svd2)
+
+    svd1_back = dm1.to_svd()
+    svd2_back = dm2.to_svd()
+    tensor_svd_back = (dm1*dm2).to_svd()
+
+    assert len(svd1_back) == len(svd1)
+    assert_svd_close(svd1, svd1_back)
+    assert_svd_close(tensor_svd_back, tensor_svd)
+
+
+def test_density_matrix_array_constructor():
+    matrix = np.array([[.5,0],[.5,0]])
+    index = create_index(1,1)
+    dm = DensityMatrix(matrix, index)
+    svd = dm.to_svd()
+    assert_svd_close(svd,  SVDistribution({BasicState([0]): .5, BasicState([0]): .5}))
