@@ -45,18 +45,44 @@ class Session(ISession):
         platform: str,
         project_id: str,
         token: str,
-        url: str = _ENDPOINT_URL,
         deduplication_id: str = "",
         max_idle_duration: str = "120s",
         max_duration: str = "360s",
+        url: str = _ENDPOINT_URL,
     ) -> None:
+    '''
+        Parameters:
+                platform (str): The `platform` parameter is a string that represents the platform on which the
+                circuit will be execute
+
+                project_id (str): The `project_id` parameter is a string that represents the UUID of the Scaleway project
+                you are working on.
+
+                token (str): The `token` parameter is a string that represents the authentication token
+                required to access the Scaleway API
+
+                deduplication_id (str, optional):
+
+                max_idle_duration (str, optional): The `max_idle_duration` parameter is a string that represents the
+                maximum duration of idle time allowed for a session. It specifies the amount of time that can
+                elapse without any activity before the session is considered idle. The default value is "120s",
+                which means 120 seconds or 2 minutes
+
+                max_duration (str, optional): The `max_duration` parameter is a string that represents the maximum
+                duration for a session. It specifies the maximum amount of time that a session can remain active
+                before it is automatically terminated. The default value is "360s", which means 360 seconds or 6
+                minutes
+
+                url (str, optional): The `url` parameter is a string that represents the endpoint URL for the API. It is
+                optional and has a default value of `_ENDPOINT_URL`
+    '''
         self._token = token
         self._project_id = project_id
         self._url = url
         self._platform = platform
         self._deduplication_id = deduplication_id
-        self._max_idle_duration = max_idle_duration
-        self._max_duration = max_duration
+        self._max_idle_duration = self._is_string_duration(max_idle_duration, 'max_idle_duration')
+        self._max_duration = self._is_string_duration(max_duration, 'max_duration')
 
         self._session_id = None
 
@@ -65,6 +91,11 @@ class Session(ISession):
         }
 
         self._rpc_handler = self._build_rpc_handler()
+
+    def _is_string_duration(self, duration, name) -> str:
+        if isinstance(duration, str):
+            return duration
+        raise TypeError(f"{name} must be a valid duration string. Examples: '120s', '1h', '2m', etc.")
 
     def _build_rpc_handler(self) -> RPCHandler:
         return RPCHandler(
