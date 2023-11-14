@@ -42,13 +42,18 @@ from ..sampler import Sampler
 class StateTomography(AAlgorithm):
     """
     Experiment to reconstruct the state of the system by tomography experiment.
-    - Adds preparation and measurement circuits to input processor (with the gate operation under study)
-    - Computes parameters required to do state tomography
-    - Performs Tomography experiment - Computes and Returns density matrices for each input state
 
-    :param operator_processor: Gate under study
+    - Adds preparation and measurement circuits to input processor (with the gate operation under study)
+
+    - Computes parameters required to do state tomography
+
+    - Performs Tomography experiment - Computes and Returns density matrices for each input state
     """
     def __init__(self, operator_processor: AProcessor, **kwargs):
+        """
+        :param operator_processor: A perceval Processor with gate (or operation) on which state tomography
+        needs to be performed. By default, it will have a perfect source and use the SLOSBackend() for computations.
+        """
         super().__init__(processor=operator_processor, **kwargs)
         self._nqubit, odd_modes = divmod(operator_processor.m, 2)
         if odd_modes:
@@ -159,12 +164,20 @@ class ProcessTomography(AAlgorithm):
     """
     Experiment to reconstruct the process map of the gate operation by tomography experiment.
     - Computes the mathematical tensors/matrices defined by theory required to perform process tomography
-    - Computes r$\chi$ matrix form of the operation process map
+
+    - Computes :math:'$\chi$' matrix form of the operation process map
+
     - Provides analysis methods to investigate the results of process tomography
+
         -- Fidelity of the operation, Error process map
 
     """
     def __init__(self, operator_processor: AProcessor, **kwargs):
+        """
+
+        :param operator_processor: A perceval Processor with gate (or operation) on which process tomography
+        needs to be performed. By default, it will have a perfect source and use the SLOSBackend() for computations.
+        """
         super().__init__(processor=operator_processor, **kwargs)
         self._nqubit = operator_processor.m // 2
         if self._nqubit > 3:
