@@ -75,7 +75,7 @@ def test_density_matrix():
 def test_density_matrix_to_svd():
 
     source = Source(.9)
-    svd1 = source.generate_distribution(BasicState[0, 1, 0, 1])
+    svd1 = source.generate_distribution(BasicState([0, 1, 0, 1]))
     svd2 = source.generate_distribution(BasicState([0, 1]))
     tensor_svd = svd1*svd2
 
@@ -92,11 +92,12 @@ def test_density_matrix_to_svd():
 
 
 def test_density_matrix_array_constructor():
-    matrix = np.array([[.5, 0], [.5, 0]])
+    matrix = np.array([[.5, 0], [0, .5]])
     index = create_index(1, 1)
     dm = DensityMatrix(matrix, index)
     svd = dm.to_svd()
     assert_svd_close(svd,  SVDistribution({BasicState([0]): .5, BasicState([0]): .5}))
+
 
 def test_sample():
     dm = DensityMatrix(BasicState([1]))

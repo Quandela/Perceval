@@ -133,7 +133,7 @@ class DensityMatrix:
             if mixed_state.shape[0] != mixed_state.shape[1]:
                 raise ValueError("The density matrix must be square")
 
-            self.mat = csr_array(mixed_state)
+            self.mat = csr_array(mixed_state, dtype=complex)
             self._size = self.mat.shape[0]
             self._m = next(iter(index.keys())).m
             self._n_max = max([x.n for x in index.keys()])
@@ -218,19 +218,23 @@ class DensityMatrix:
 
         return matrix_vector_multiplication
 
+    @staticmethod
+    def _bra_str(bs):
+        return "<" + str(bs)[1:][:-1] + "|"
+
     def to_svd(self, threshold=1e-8, batch_size=1):
         """
                 gives back an SVDistribution from the density_matrix
         """
+
         val = np.array([])
         vec = np.empty(shape=(self._size, 0), dtype=complex)
         while (val > threshold).all():
             if val.shape[0] > 0:
-                print(val[-1])
-            deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
-            new_val, new_vec = eigsh(deflated_operator, batch_size)
-            val = np.concatenate((val, new_val))
-            vec = np.concatenate((vec, new_vec), axis=1)
+                deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
+                new_val, new_vec = eigsh(deflated_operator, batch_size)
+                val = np.concatenate((val, new_val))
+                vec = np.concatenate((vec, new_vec), axis=1)
 
         dic = {}
         for i in range(val.shape[0]):
@@ -311,6 +315,24 @@ class DensityMatrix:
         self.normalize()
         output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
         return output
+
+    def __str__(self):
+        """
+        string representation of a density matrix
+        """
+        string = ""
+        for i in range(self._size):
+            for j in range(self._size):
+                if self.mat[i,j] == 0:
+                    continue
+                else:
+                    new_term = f"{self.mat[i, j]:.2f}*" + str(self.reverse_index[j]) + self._bra_str(self.reverse_index[i]) + "+"
+                    string += new_term
+
+        return string[:-1]
+
+    def __repr__(self):
+        str(self.mat.toarray())
 
     @property
     def n_max(self):
