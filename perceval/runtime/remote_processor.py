@@ -29,6 +29,7 @@
 import uuid
 from typing import Dict, List
 from multipledispatch import dispatch
+import warnings
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source
@@ -42,6 +43,9 @@ from ._token_management import TokenProvider
 __process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
+PERFS_KEY = "perfs"
+TRANSMITTANCE_KEY = "Transmittance (%)"
+DEFAULT_TRANSMITTANCE = 0.06
 
 
 class RemoteProcessor(AProcessor):
@@ -56,6 +60,7 @@ class RemoteProcessor(AProcessor):
 
         self._rpc_handler = RPCHandler(self.name, url, token)
         self._specs = {}
+        self._perfs = {}
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
@@ -85,12 +90,18 @@ class RemoteProcessor(AProcessor):
         platform_details = self._rpc_handler.fetch_platform_details()
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
+        if PERFS_KEY in platform_details:
+            self._perfs.update(platform_details[PERFS_KEY])
         if platform_details['type'] != 'simulator':
             self._type = ProcessorType.PHYSICAL
 
     @property
     def specs(self):
         return self._specs
+
+    @property
+    def performance(self):
+        return self._perfs
 
     @property
     def constraints(self) -> Dict:
@@ -201,11 +212,12 @@ class RemoteProcessor(AProcessor):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
 
-    def _compute_sample_of_interest_probability(self,
-                                                transmittance: float = 0.06,
-                                                param_values: dict = None
-                                                ) -> float:
-        # TODO retrieve transmittance from the cloud worker
+    def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
+        if TRANSMITTANCE_KEY in self._perfs:
+            transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
+        else:
+            transmittance = DEFAULT_TRANSMITTANCE
+            warnings.warn(f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}")
         losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n

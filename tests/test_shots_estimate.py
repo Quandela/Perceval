@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import RemoteProcessor
+from perceval.runtime.remote_processor import RemoteProcessor, TRANSMITTANCE_KEY
 from perceval.components.abstract_processor import AProcessor
 from perceval.components import Unitary, BS, PS
 from perceval.utils import Matrix, BasicState, P
@@ -38,6 +38,9 @@ class _MockRemoteProcessor(RemoteProcessor):
     def __init__(self):
         AProcessor.__init__(self)  # Avoid RemoteProcessor __init__ to prevent the https request from firing
         self._specs = {}
+        self._perfs = {
+            TRANSMITTANCE_KEY: 6  # in percent
+        }
 
 
 def test_shots_estimate_trivial_filter_values():
