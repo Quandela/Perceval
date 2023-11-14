@@ -36,6 +36,7 @@ import numpy as np
 from scipy.sparse import dok_array, sparray, csr_array, kron
 from scipy.sparse.linalg import LinearOperator, eigsh
 from copy import copy
+import random
 
 
 def create_index(m, n_max):
@@ -43,6 +44,7 @@ def create_index(m, n_max):
     for i, x in enumerate(max_photon_state_iterator(m, n_max)):
         index[x] = i
     return index
+
 
 def statevector_to_array(sv, index):
     """
@@ -54,6 +56,7 @@ def statevector_to_array(sv, index):
     for key, value in sv:
         vector[index[key]] += value
     return vector
+
 
 def array_to_statevector(vector, reverse_index):
     """
@@ -95,7 +98,7 @@ def density_matrix_tensor_product(A, B):
     n_mode = A.m + B.m
     size = comb(n_max+n_mode, n_max)
     new_index = create_index(n_mode, n_max)
-    matrix = kron(A.mat,B.mat)
+    matrix = kron(A.mat, B.mat)
     perm = dok_array((A.size*B.size, size), dtype=complex)# matrix from tensor space to complete Fock space
     for i, a_state in enumerate(A.reverse_index):
         for j, b_state in enumerate(B.reverse_index):
@@ -160,7 +163,7 @@ class DensityMatrix:
                 vector = dok_array((self._size, 1), dtype=complex)
                 for bst in sv.keys():
                     idx = self.index[bst]
-                    vector[idx,0] = sv[bst]
+                    vector[idx, 0] = sv[bst]
                 vector = csr_array(vector)
                 l.append((vector, p))
             self.mat = sum([p*(vector @ conj(vector.T)) for vector, p in l])
@@ -171,7 +174,7 @@ class DensityMatrix:
             for key in max_photon_state_iterator(self._m, self._n_max):
                 self.index[key] = k
                 self.reverse_index.append(key)
-                k+=1
+                k += 1
         else:
             if len(index) == self._size:
                 self.index = index
@@ -293,22 +296,6 @@ class DensityMatrix:
         else:
             return density_matrix_tensor_product(other, self)
 
-    def __matmul__(self, other):
-        """
-        matrix-vector multiplication
-        """
-
-        if isinstance(other, BasicState):
-            sv = StateVector()
-            for x in self.reverse_index:
-                sv += self[x, other]*x
-            return sv
-
-        if isinstance(other, StateVector):
-
-
-
-
     def normalize(self):
         """
         Normalize the density matrix so that Trace(\rho) = 1
@@ -317,6 +304,13 @@ class DensityMatrix:
         factor = self.mat.trace()
         self.mat = (1/factor)*self.mat
 
+    def sample(self, count=1):
+        """
+        sample on the density matrix
+        """
+        self.normalize()
+        output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        return output
 
     @property
     def n_max(self):

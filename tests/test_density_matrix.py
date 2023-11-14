@@ -36,7 +36,7 @@ from _test_utils import assert_svd_close
 
 
 def test_create_index():
-    dic = create_index(10,5)
+    dic = create_index(10, 5)
     assert max([basic_state.n for basic_state in dic]) == 5
     for basic_state in dic:
         assert basic_state.m == 10
@@ -92,8 +92,13 @@ def test_density_matrix_to_svd():
 
 
 def test_density_matrix_array_constructor():
-    matrix = np.array([[.5,0],[.5,0]])
-    index = create_index(1,1)
+    matrix = np.array([[.5, 0], [.5, 0]])
+    index = create_index(1, 1)
     dm = DensityMatrix(matrix, index)
     svd = dm.to_svd()
     assert_svd_close(svd,  SVDistribution({BasicState([0]): .5, BasicState([0]): .5}))
+
+def test_sample():
+    dm = DensityMatrix(BasicState([1]))
+    for x in dm.sample(10):
+        assert x == BasicState([1])
