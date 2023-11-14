@@ -83,8 +83,8 @@ class Session(ISession):
         self._url = url
         self._platform = platform
         self._deduplication_id = deduplication_id
-        self._max_idle_duration = self._int_duration(max_idle_duration, 'max_idle_duration')
-        self._max_duration = self._int_duration(max_duration, 'max_duration')
+        self._max_idle_duration = self.__int_duration(max_idle_duration, 'max_idle_duration')
+        self._max_duration = self.__int_duration(max_duration, 'max_duration')
 
         self._session_id = None
 
@@ -92,20 +92,20 @@ class Session(ISession):
             "X-Auth-Token": token,
         }
 
-        self._rpc_handler = self._build_rpc_handler()
+        self._rpc_handler = self.__build_rpc_handler()
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
 
     def start(self) -> None:
-        platform = self._fetch_platform_details()
+        platform = self.__fetch_platform_details()
 
         payload = {
             "project_id": self._project_id,
             "platform_id": platform.get("id"),
             "deduplication_id": self._deduplication_id,
-            "max_duration": self._to_string_duration(self._max_duration),
-            "max_idle_duration": self._to_string_duration(self._max_idle_duration),
+            "max_duration": self.__to_string_duration(self._max_duration),
+            "max_idle_duration": self.__to_string_duration(self._max_idle_duration),
         }
 
         endpoint = f"{self._url}{_ENDPOINT_SESSION}"
@@ -126,18 +126,18 @@ class Session(ISession):
 
         request.raise_for_status()
 
-    def _fetch_platform_details(self) -> dict:
+    def __fetch_platform_details(self) -> dict:
         return self._rpc_handler.fetch_platform_details()
 
-    def _to_string_duration(self, duration: int) -> str:
+    def __to_string_duration(self, duration: int) -> str:
         return f"{duration}s"
 
-    def _int_duration(self, duration, name: str) -> int:
+    def __int_duration(self, duration, name: str) -> int:
         if isinstance(duration, int):
             return duration
         raise TypeError(f"{name} must be an int")
 
-    def _build_rpc_handler(self) -> RPCHandler:
+    def __build_rpc_handler(self) -> RPCHandler:
         return RPCHandler(
             project_id=self._project_id,
             headers=self._headers,

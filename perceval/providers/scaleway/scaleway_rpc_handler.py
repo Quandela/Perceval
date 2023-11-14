@@ -63,7 +63,7 @@ class RPCHandler:
         self._session_id = session_id
 
     def fetch_platform_details(self) -> dict:
-        endpoint = f"{self._build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
+        endpoint = f"{self.__build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
         resp = requests.get(endpoint, headers=self._headers)
 
         resp.raise_for_status()
@@ -99,12 +99,12 @@ class RPCHandler:
         return request_dict["id"]
 
     def cancel_job(self, job_id: str) -> None:
-        endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
+        endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
         request = requests.post(endpoint, headers=self._headers)
         request.raise_for_status()
 
     def get_job_status(self, job_id: str) -> dict:
-        endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
+        endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
         resp = requests.get(endpoint, headers=self._headers)
@@ -135,7 +135,7 @@ class RPCHandler:
         }
 
     def get_job_results(self, job_id: str) -> dict:
-        endpoint = f"{self._build_endpoint(_ENDPOINT_JOB)}/{job_id}"
+        endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
         resp = requests.get(endpoint, headers=self._headers)
@@ -155,7 +155,7 @@ class RPCHandler:
             "results_type": None,
         }
 
-    def _build_endpoint(self, endpoint) -> str:
+    def __build_endpoint(self, endpoint) -> str:
         return f"{self._url}{endpoint}"
 
     def __get_start_time(self, started_at: Union[str, None]) -> Union[float, None]:
