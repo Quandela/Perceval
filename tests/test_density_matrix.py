@@ -39,3 +39,13 @@ def test_density_matrix():
     for i in range(2):
         for j in range(2):
             assert dm.mat[i, j] == pytest.approx(0.5)
+
+    tensor_dm_1 = dm * dm
+    tensor_dm_2 = DensityMatrix(sv * sv)
+
+    assert tensor_dm_1.shape == (6, 6)
+    assert tensor_dm_2.mat.trace() == pytest.approx(1)
+
+    for i in range(tensor_dm_2.size):
+        for j in range(tensor_dm_2.size):
+            assert tensor_dm_1.mat[i,j] == pytest.approx(tensor_dm_2.mat[i,j])

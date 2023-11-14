@@ -77,7 +77,7 @@ def density_matrix_tensor_product(A, B):
 
     matrix = perm.T @ matrix @ perm
 
-    return matrix
+    return DensityMatrix(matrix, new_index)
 
 
 class DensityMatrix:
