@@ -70,6 +70,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    components
    tools
    algorithms
+   providers
    legacy
 
 .. toctree::
@@ -78,7 +79,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :hidden:
 
    notebooks/walkthrough-cnot
-   notebooks/Scaleway Tutorial
    notebooks/Tutorial
    notebooks/Differential equation solving
    notebooks/Shor Implementation
