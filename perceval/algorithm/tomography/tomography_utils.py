@@ -36,7 +36,7 @@ from perceval.components import PauliType, get_pauli_gate, get_preparation_circu
 def _state_to_dens_matrix(state: np.ndarray) -> np.ndarray:
     r"""
     computes the density matrix representation of a state
-    :math:'\rho = |\psi> <\psi|' given a state :math:'|\psi>'
+    :math:'$\rho = |\psi> <\psi|$' given a state :math:'$|\psi>$'
     :param state: state of the system
     :return: density matrix
     """
