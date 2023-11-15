@@ -54,7 +54,7 @@ You can also create a Scaleway session using a ``with`` block:
 ...      * Session scope
 ...      */
 
-Note: using a ``with`` block you do not need to stop your session, it stops automatically at the end of the block.
+Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
 Inside a session scope you can instantiate a ``Remote Processor`` linked to the session:
 
