@@ -27,4 +27,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .quandela_session import QuandelaSession
+from .quandela_session import Session

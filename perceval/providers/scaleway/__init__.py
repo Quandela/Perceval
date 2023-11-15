@@ -27,16 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import ISession
-from perceval.runtime.remote_processor import QUANDELA_CLOUD_URL, RemoteProcessor
-from perceval.runtime.rpc_handler import RPCHandler
+from .scaleway_session import Session
+from .scaleway_rpc_handler import RPCHandler
 
-
-class Session(ISession):
-    def __init__(self, platform_name: str, token: str, url: str = None):
-        self._platform_name = platform_name
-        self._token = token
-        self._url = url or QUANDELA_CLOUD_URL
-
-    def build_remote_processor(self) -> RemoteProcessor:
-        return RemoteProcessor(rpc_handler=RPCHandler(self._platform_name, self._url, self._token))
+__all__ = ['Session', 'RPCHandler']
