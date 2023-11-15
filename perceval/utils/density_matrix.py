@@ -330,10 +330,13 @@ class DensityMatrix:
         string = ""
         for i in range(self._size):
             for j in range(self._size):
-                if self.mat[i,j] == 0:
+                if self.mat[i, j] == 0:
                     continue
                 else:
-                    new_term = f"{self.mat[i, j]:.2f}*" + str(self.reverse_index[j]) + self._bra_str(self.reverse_index[i]) + "+"
+                    new_term = (f"{self.mat[i, j]:.2f}*" +
+                                str(self.reverse_index[j]) +
+                                self._bra_str(self.reverse_index[i]) +
+                                "+")
                     string += new_term
 
         return string[:-1]
