@@ -58,7 +58,7 @@ Note: using a ``with`` block you do not need to start and stop your session: it 
 
 Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommand using directly ``start`` and ``stop`` methods.
 
-From a session, you can instantiate a ``Remote Processor`` linked to the session:
+From a session, you can instantiate a ``RemoteProcessor`` linked to the session:
 
 >>> processor = session.build_remote_processor()
 
