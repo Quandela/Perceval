@@ -32,7 +32,7 @@ from perceval.runtime.remote_processor import QUANDELA_CLOUD_URL, RemoteProcesso
 from perceval.runtime.rpc_handler import RPCHandler
 
 
-class QuandelaSession(ISession):
+class Session(ISession):
     def __init__(self, platform_name: str, token: str, url: str = None):
         self._platform_name = platform_name
         self._token = token
