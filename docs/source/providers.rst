@@ -8,7 +8,7 @@ Scaleway
 
 This Scaleway Quantum as a Service (QaaS) leverages from GPUs like Nvidia P100 and H100 to increase mode limit and accelerate simulations.
 
-You can find prices and additional information on the `Scaleway QaaS Labs page <https://labs.scaleway.com/en/qaas/>`_.
+You can find prices and additional information on the `Scaleway Labs QaaS page <https://labs.scaleway.com/en/qaas/>`_.
 
 Scaleway authentication
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -56,8 +56,10 @@ You can also create a Scaleway session using a ``with`` block:
 
 Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
-Inside a session scope you can instantiate a ``Remote Processor`` linked to the session:
+Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommand using directly ``start`` and ``stop`` methods.
+
+From a session, you can instantiate a ``Remote Processor`` linked to the session:
 
 >>> processor = session.build_remote_processor()
 
-Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You now can continue with the documentation through :ref:`Work with algorithms`.
+Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation through :ref:`Work with algorithms`.
