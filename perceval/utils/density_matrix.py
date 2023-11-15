@@ -35,6 +35,7 @@ from numpy import conj
 import numpy as np
 from scipy.sparse import dok_array, sparray, csr_array, kron
 from scipy.sparse.linalg import LinearOperator, eigsh
+from scipy.linalg import eigh
 from copy import copy
 import random
 
@@ -65,13 +66,12 @@ def array_to_statevector(vector, reverse_index):
     :param reverse_index: a list of BasicStates
     """
 
-    sv = StateVector()
+    sv = 0*reverse_index[0]
     for i, x in enumerate(reverse_index):
         if vector[i] == 0:
             continue
         else:
-            sv += vector[i]*x
-
+            sv += complex(vector[i])*x
     return sv
 
 
@@ -99,7 +99,7 @@ def density_matrix_tensor_product(A, B):
     size = comb(n_max+n_mode, n_max)
     new_index = create_index(n_mode, n_max)
     matrix = kron(A.mat, B.mat)
-    perm = dok_array((A.size*B.size, size), dtype=complex)# matrix from tensor space to complete Fock space
+    perm = dok_array((A.size*B.size, size), dtype=complex) # matrix from tensor space to complete Fock space
     for i, a_state in enumerate(A.reverse_index):
         for j, b_state in enumerate(B.reverse_index):
             index = new_index[a_state*b_state]
@@ -226,27 +226,34 @@ class DensityMatrix:
         """
                 gives back an SVDistribution from the density_matrix
         """
-
-        val = np.array([])
-        vec = np.empty(shape=(self._size, 0), dtype=complex)
-        while (val > threshold).all():
-            if val.shape[0] > 0:
+        if self.size < 50:  # if the matrix is small: array eigh method
+            matrix = self.mat.toarray()
+            w, v = eigh(matrix)
+            dic = {}
+            for k in range(w.shape[0]):
+                sv = array_to_statevector(v[:, k], self.reverse_index)
+                if w[k] > threshold:
+                    dic[sv] = w[k]
+        else:  # if the matrix is large: sparse eigsh method
+            val = np.array([])
+            vec = np.empty(shape=(self._size, 0), dtype=complex)
+            while (val > threshold).all():
                 deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
                 new_val, new_vec = eigsh(deflated_operator, batch_size)
                 val = np.concatenate((val, new_val))
                 vec = np.concatenate((vec, new_vec), axis=1)
 
-        dic = {}
-        for i in range(val.shape[0]):
-            if val[i] >= threshold:
-                sv = StateVector()
-                for j in range(len(vec)):
-                    sv += complex(vec[j][i])*self.reverse_index[j]
-                sv.normalize()
-                if sv.m != 0:
-                    dic[sv] = val[i]
-            else:
-                continue
+            dic = {}
+            for i in range(val.shape[0]):
+                if val[i] >= threshold:
+                    sv = StateVector()
+                    for j in range(len(vec)):
+                        sv += complex(vec[j][i])*self.reverse_index[j]
+                    sv.normalize()
+                    if sv.m != 0:
+                        dic[sv] = val[i]
+                else:
+                    continue
         return SVDistribution(dic)
 
     def __add__(self, other):
