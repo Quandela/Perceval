@@ -26,16 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import warnings
-from math import sqrt
+
+import math
+import pytest
 
 from perceval.backends import Clifford2017Backend, NaiveBackend, AProbAmpliBackend, SLOSBackend, MPSBackend,\
     BackendFactory
 from perceval.components import BS, PS, Circuit, catalog
 from perceval.utils import BSCount, BasicState, Parameter, StateVector
 from _test_utils import assert_sv_close
-import pytest
-import numpy as np
 
 
 def _assert_cnot(backend: AProbAmpliBackend):
@@ -128,7 +127,7 @@ def test_backend_sym_bs(backend_name):
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
 def test_backend_asym_bs(backend_name):
     backend = BackendFactory.get_backend(backend_name)
-    backend.set_circuit(BS.H(theta=2*np.pi/3))
+    backend.set_circuit(BS.H(theta=2*math.pi/3))
     check_output_distribution(backend, BasicState("|2,0>"),
                               {BasicState("|2,0>"): 0.0625,
                                BasicState("|1,1>"): 0.3750,
@@ -193,7 +192,7 @@ def test_slos_cnot_with_mask():
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
 def test_probampli_backends(backend_name):
     backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
-    circuit = Circuit(3) // BS.H() // (1, PS(np.pi/4)) // (1, BS.H())
+    circuit = Circuit(3) // BS.H() // (1, PS(math.pi/4)) // (1, BS.H())
     backend.set_circuit(circuit)
     check_output_distribution(
         backend,
@@ -254,7 +253,7 @@ def test_evolve_indistinguishable(backend_name):
     backend.set_circuit(BS.H())
     backend.set_input_state(BasicState([1, 0]))
     sv_out = backend.evolve()
-    assert_sv_close(sv_out, sqrt(2)/2*StateVector([1, 0]) + sqrt(2)/2*StateVector([0, 1]))
+    assert_sv_close(sv_out, math.sqrt(2)/2*StateVector([1, 0]) + math.sqrt(2)/2*StateVector([0, 1]))
     backend.set_input_state(BasicState([1, 1]))
     sv_out = backend.evolve()
-    assert_sv_close(sv_out, sqrt(2)/2*StateVector([2, 0]) - sqrt(2)/2*StateVector([0, 2]))
+    assert_sv_close(sv_out, math.sqrt(2)/2*StateVector([2, 0]) - math.sqrt(2)/2*StateVector([0, 2]))

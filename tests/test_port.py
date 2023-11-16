@@ -27,8 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
 import pytest
-import numpy as np
 
 import perceval as pcvl
 from perceval import BasicState
@@ -39,9 +39,9 @@ from perceval.utils import Encoding
 
 def act_on_phi(value, obj):
     if value:
-        obj.assign({"phi": np.pi / 2})
+        obj.assign({"phi": math.pi / 2})
     else:
-        obj.assign({"phi": np.pi / 4})
+        obj.assign({"phi": math.pi / 4})
 
 
 def test_digital_converter():
@@ -59,11 +59,11 @@ def test_digital_converter():
 
     detector.trigger(True)
     assert not phi.is_symbolic()
-    assert float(phi) == np.pi / 2
+    assert float(phi) == math.pi / 2
 
     detector.trigger(False)
     assert not phi.is_symbolic()
-    assert float(phi) == np.pi / 4
+    assert float(phi) == math.pi / 4
 
 
 def test_basic_state_conversion():

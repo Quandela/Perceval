@@ -26,7 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import numpy as np
+
+import math
 
 import perceval as pcvl
 from perceval import Circuit
@@ -50,19 +51,19 @@ def test_PS_simp():
     phi = pcvl.P("phi")
 
     c = (Circuit(3)
-         .add(0, comp.PS(np.pi))
+         .add(0, comp.PS(math.pi))
          .add(0, comp.PERM([2, 1, 0]))
          .add(0, comp.BS())
          .add(2, comp.PS(phi))
-         .add(2, comp.PS(np.pi))
-         .add(0, comp.PS(np.pi / 2)))
+         .add(2, comp.PS(math.pi))
+         .add(0, comp.PS(math.pi / 2)))
 
-    expected = [(0, 2 * np.pi), (2, "phi"), (0, np.pi / 2)]
+    expected = [(0, 2 * math.pi), (2, "phi"), (0, math.pi / 2)]
     real = PS_testing(c, True)
 
     assert real == expected, "PS simplification with display = True not passed"
 
-    expected = [(2, "phi"), (0, np.pi / 2)]
+    expected = [(2, "phi"), (0, math.pi / 2)]
     real = PS_testing(c, False)
 
     assert real == expected, "PS simplification with display = False not passed"

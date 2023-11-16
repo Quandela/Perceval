@@ -27,9 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import random
+import math
 
-import numpy as np
 import pytest
 
 import perceval as pcvl
@@ -76,7 +75,7 @@ def test_match_perm():
     matched = bs.match(pattern)
     assert matched is not None
     theta = matched.v_map.get("theta", None)
-    assert pytest.approx(np.pi) == float(theta) or pytest.approx(3*np.pi) == float(theta)
+    assert pytest.approx(math.pi) == float(theta) or pytest.approx(3*math.pi) == float(theta)
 
 
 def test_match_double():
@@ -128,14 +127,14 @@ def test_subnodes_0():
 
 # def test_replace_R_by_theta_1():
 #     p0a = BS(theta=pcvl.P("theta"))
-#     p0b = BS(theta=pcvl.P("theta"), phi_tl=np.pi)
-#     random_theta = (random.random()-0.5) * np.pi
+#     p0b = BS(theta=pcvl.P("theta"), phi_tl=math.pi)
+#     random_theta = (random.random()-0.5) * math.pi
 #     a = BS(theta=random_theta)
 #     matched = a.match(p0a)
 #     if matched is None:
 #         matched = a.match(p0b)
 #         assert matched
-#     assert pytest.approx(np.cos(random_theta)**2) == matched.v_map.get("R", None)
+#     assert pytest.approx(math.cos(random_theta)**2) == matched.v_map.get("R", None)
 
 
 def test_match_rewrite_phase():

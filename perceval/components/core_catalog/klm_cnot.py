@@ -26,7 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+from math import sqrt
 from deprecated import deprecated
+
 from perceval.components import Circuit, Processor, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.utils import Encoding
@@ -44,8 +47,8 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                       ╰─────╯"""
     see_also = "postprocessed cnot and heralded cnot (using cz)"
 
-    R1 = 0.228
-    R2 = 0.758
+    R1 = (3 - sqrt(2)) / 7
+    R2 = 5 - 3 * sqrt(2)
     theta1 = BS.r_to_theta(R1)
     theta2 = BS.r_to_theta(R2)
 

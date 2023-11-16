@@ -27,12 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
+from warnings import warn
+from typing import Callable, List, Optional, Tuple
+
 from .linear_circuit import ACircuit, Circuit
 from perceval.utils import InterferometerShape
-
-import numpy as np
-from typing import Callable, List, Optional, Tuple
-from warnings import warn
 
 
 class GenericInterferometer(Circuit):
@@ -103,7 +103,7 @@ class GenericInterferometer(Circuit):
     def set_identity_mode(self):
         """Set the interferometer in identity mode (i.e. photons are output on the mode they're input)"""
         for p in self.get_parameters():
-            p.set_value(np.pi)
+            p.set_value(math.pi)
 
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth

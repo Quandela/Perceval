@@ -26,9 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import pytest
+
 import math
-import numpy as np
+import pytest
 
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
@@ -118,7 +118,7 @@ def test_simulator_probs_svd_superposed():
     superposed_state = StateVector("|0,{_:0},{_:1},0>") + StateVector("|0,{_:1},{_:0},0>")
     in_svd = SVDistribution({superposed_state: 1})
     circuit = Circuit(4)
-    circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1/3), phi_tl=-np.pi / 2, phi_bl=np.pi, phi_tr=np.pi / 2))
+    circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1/3), phi_tl=-math.pi / 2, phi_bl=math.pi, phi_tr=math.pi / 2))
     circuit.add(2, BS.H(BS.r_to_theta(1/3))).add(1, BS.H())
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)

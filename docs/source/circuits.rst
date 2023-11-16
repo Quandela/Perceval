@@ -229,21 +229,21 @@ Some additional parameters can simplifiy the decomposition:
 
 * `constraints`: you can provide a list of constraints on the different parameters of the unitary blocks to try to find
   circuits with constrained parameters. Each constraint is a t-uple of `None` or numerical value. When decomposing the
-  circuit, the parameters will be searched iteratively in the constrained spaces. For instance: `[(0, None), (np.pi/2, None), (None, None)]`
+  circuit, the parameters will be searched iteratively in the constrained spaces. For instance: `[(0, None), (math.pi/2, None), (None, None)]`
   will allow to look for parameters pairs where the first parameter is 0 or :math:`pi/2`, or any value if
   no solution is found with the first constraints.
 
->>> U=1/3*np.array([[np.sqrt(3),-np.sqrt(6)*1j,0,0,0,0],
->>>                 [-np.sqrt(6)*1j,np.sqrt(3),0,0,0,0],
->>>                 [0,0,np.sqrt(3),-np.sqrt(3)*1j,-np.sqrt(3)*1j,0],
->>>                 [0,0,-np.sqrt(3)*1j,np.sqrt(3),0,np.sqrt(3)],
->>>                 [0,0,-np.sqrt(3)*1j,0,np.sqrt(3),-np.sqrt(3)],
->>>                 [0,0,0,np.sqrt(3),-np.sqrt(3),-np.sqrt(3)]])
+>>> U=1/3*np.array([[math.sqrt(3),-math.sqrt(6)*1j,0,0,0,0],
+>>>                 [-math.sqrt(6)*1j,math.sqrt(3),0,0,0,0],
+>>>                 [0,0,math.sqrt(3),-math.sqrt(3)*1j,-math.sqrt(3)*1j,0],
+>>>                 [0,0,-math.sqrt(3)*1j,math.sqrt(3),0,math.sqrt(3)],
+>>>                 [0,0,-math.sqrt(3)*1j,0,math.sqrt(3),-math.sqrt(3)],
+>>>                 [0,0,0,math.sqrt(3),-math.sqrt(3),-math.sqrt(3)]])
 >>> ub = comp.BS(theta=pcvl.P("theta")) // comp.PS(phi=pcvl.P("phi"))
 >>> C1 = pcvl.Circuit.decomposition(U,
 >>>                                 ub,
->>>                                 shape="triangle", constraints=[(None,0),(None,np.pi/2),
->>>                                                                (None,3*np.pi/2),(None,None)])
+>>>                                 shape="triangle", constraints=[(None,0),(None,math.pi/2),
+>>>                                                                (None,3*math.pi/2),(None,None)])
 
 .. image:: _static/img/cnot-decomposed.png
    :width: 8cm

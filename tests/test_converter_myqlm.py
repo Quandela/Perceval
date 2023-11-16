@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
 import pytest
 import numpy as np
 
@@ -150,7 +151,7 @@ def test_compare_u_1qbit(Gate_Name):
     qbits = qprog.qalloc(1)
 
     if Gate_Name in ([PH, RX, RY, RZ]):
-        qprog.apply(Gate_Name(np.pi/2), qbits[0])
+        qprog.apply(Gate_Name(math.pi/2), qbits[0])
     else:
         qprog.apply(Gate_Name, qbits[0])
 
@@ -175,7 +176,7 @@ def test_abstract_1qbit_gate():
         _I = np.eye(2, dtype=np.complex128)
         _X = np.array([[0, 1], [1, 0]], dtype=np.complex128)
         _Y = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
-        return np.cos(theta / 2) * _I - 1j * np.sin(theta / 2) * (np.cos(phi) * _X + np.sin(phi) * _Y)
+        return math.cos(theta / 2) * _I - 1j * math.sin(theta / 2) * (math.cos(phi) * _X + math.sin(phi) * _Y)
 
     # Some abstract gate with 2 parameters
     Abs_gate = AbstractGate("Abs_Gate", [float, float], arity=1)
@@ -183,7 +184,7 @@ def test_abstract_1qbit_gate():
 
     prog = Program()
     qbits = prog.qalloc(1)
-    prog.apply(Abs_gate(np.pi, np.pi / 3), qbits[0])  # simply testing with 2 arbitrary values
+    prog.apply(Abs_gate(math.pi, math.pi / 3), qbits[0])  # simply testing with 2 arbitrary values
     circ = prog.to_circ()
 
     gate_id = circ.ops[0].gate

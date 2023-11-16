@@ -15,7 +15,7 @@ To define a parameter - just do:
 
 When defining the parameter, you can also set its value, and max/min values and periodicity:
 
->>> alpha = perceval.P("phi", min_v=0, max_v=2*np.pi, periodic=True)
+>>> alpha = perceval.P("phi", min_v=0, max_v=2*math.pi, periodic=True)
 
 defining boundaries and periodicity is used in particular when optimizing a parameterized circuit.
 
@@ -48,7 +48,7 @@ Setting Values
 
 To give a value to a parameter, use ``set_value``:
 
->>> alpha.set_value(np.pi/4)
+>>> alpha.set_value(math.pi/4)
 
 The parameter is then *defined* and its value will be used when calculating circuit unitary:
 

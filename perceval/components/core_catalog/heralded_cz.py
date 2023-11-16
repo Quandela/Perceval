@@ -45,8 +45,8 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
 
-    theta1 = 2*np.pi*54.74/180
-    theta2 = 2*np.pi*17.63/180
+    theta1 = 2*math.pi*54.74/180
+    theta2 = 2*math.pi*17.63/180
     #The additional 2 factor takes into account the difference between the beam-splitter conventions of Perceval and the paper
 
     def __init__(self):
@@ -63,8 +63,8 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def build_circuit(self, **kwargs) -> Circuit:
         # the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
         last_modes_cz = (Circuit(4)
-                         .add(0, PS(np.pi), x_grid=1)
-                         .add(3, PS(np.pi), x_grid=1)
+                         .add(0, PS(math.pi), x_grid=1)
+                         .add(3, PS(math.pi), x_grid=1)
                          .add((1, 2), PERM([1, 0]), x_grid=1)
                          .add((0, 1), BS.H(theta=self.theta1), x_grid=2)
                          .add((2, 3), BS.H(theta=self.theta1), x_grid=2)
