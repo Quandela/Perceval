@@ -102,10 +102,12 @@ class AProcessor(ABC):
     def clear_parameters(self):
         self._parameters = {}
 
-    def clear_input_and_circuit(self):
+    def clear_input_and_circuit(self, new_m=None):
         self._reset_circuit()
         self._input_state = None
         self._circuit_changed()
+        if new_m is not None:
+            self._n_moi = new_m
 
     def _circuit_changed(self):
         # Can be used by child class

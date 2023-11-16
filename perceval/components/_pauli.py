@@ -41,7 +41,7 @@ class PauliType(Enum):
     Z = 3
 
 
-def get_pauli_circuit(pauli_type: PauliType):
+def get_preparation_circuit(pauli_type: PauliType) -> Circuit:
     """
     Create a LO circuit corresponding to one of the Pauli operators (I,X,Y,Z)
 
@@ -53,11 +53,32 @@ def get_pauli_circuit(pauli_type: PauliType):
     if pauli_type == PauliType.I:
         return Circuit(2, name="I")
     elif pauli_type == PauliType.X:
-        return Circuit(2, name="X") // (0, PERM([1, 0]))
+        return Circuit(2, name="X") // PERM([1, 0])
     elif pauli_type == PauliType.Y:
-        return Circuit(2, name="Y") // (0, BS.H())
+        return Circuit(2, name="Y") // BS.H()
     elif pauli_type == PauliType.Z:
-        return Circuit(2, name="Z") // (0, BS.H()) // (1, PS(np.pi / 2))
+        return Circuit(2, name="Z") // BS.H() // (1, PS(np.pi / 2))
+    else:
+        raise NotImplementedError(f"{pauli_type}")
+
+
+def get_measurement_circuit(pauli_type: PauliType) -> Circuit:
+    """
+    Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
+
+    :param pauli_type: PauliType
+    :return: a 2-modes circuit
+    """
+    assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
+
+    if pauli_type == PauliType.I:
+        return Circuit(2, name="I")
+    elif pauli_type == PauliType.X:
+        return Circuit(2, name="X") // BS.H()
+    elif pauli_type == PauliType.Y:
+        return Circuit(2, name="Y") // BS.Rx(theta=np.pi/2, phi_bl=np.pi, phi_br=-np.pi/2)
+    elif pauli_type == PauliType.Z:
+        return Circuit(2, name="Z")
     else:
         raise NotImplementedError(f"{pauli_type}")
 
