@@ -36,7 +36,8 @@ from perceval.components import catalog, Processor, Circuit, PauliType
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit
+from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit, \
+    _generate_pauli_index, _vector_to_sq_matrix, _matrix_to_vector, _matrix_basis, _coef_linear_decomp
 
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
@@ -114,3 +115,48 @@ def test_chi_cnot_is_physical():
     assert res['Trace=1'] is True  # if Chi has Trace = 1
     assert res['Hermitian'] is True  # if Chi is Hermitian
     assert res['Completely Positive'] is True  # if input Chi is Completely Positive
+
+
+def test_processor_odd_modes():
+    # tests that a generic processor with odd number of modes does not work
+    with pytest.raises(ValueError):
+        ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
+
+
+def test_generate_pauli():
+    pauli_idx = _generate_pauli_index(2)
+    for elem in pauli_idx:
+        assert all(isinstance(val, PauliType) for val in elem)
+
+
+def test_utils_vector_to_sq_matrix():
+    # tests a valid vector that can be reshaped into a square matrix
+    m = _vector_to_sq_matrix(np.ones(16))
+    assert m.shape == (4, 4)
+    # tests an incorrect input to reshape to square matrix
+    with pytest.raises(ValueError):
+        _vector_to_sq_matrix(np.ones(10))
+
+
+def test_matrix_to_vector():
+    v = _matrix_to_vector(np.eye(5))
+    assert len(v) == 25
+
+
+def test_matrix_basis_n_decomp():
+    # generate matrix basis for the case with nqubit=1
+    basis = _matrix_basis(nqubit=1, d=2)
+
+    # any random matrix of the corresponding size
+    matrix = pcvl.MatrixN(np.random.randint(1, 10, (2, 2)))
+
+    # decomposing matrix into basis
+    mu = _coef_linear_decomp(matrix, basis)
+
+    # reconstruct
+    matrix_rebuilt = pcvl.MatrixN(np.zeros(matrix.shape, dtype=complex))
+
+    for idx, basis_matrices in enumerate(basis):
+        matrix_rebuilt += mu[idx]*basis_matrices
+
+    assert np.all(matrix == matrix_rebuilt)
