@@ -29,7 +29,7 @@
 import scipy.sparse.linalg
 
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 from math import comb
 from numpy import conj
 import numpy as np
@@ -186,7 +186,7 @@ class DensityMatrix:
             else:
                 raise ValueError("the index size does not match the matrix size")
 
-    def __getitem__(self, key: BasicState):
+    def __getitem__(self, key: Tuple[BasicState, BasicState]):
         """key must be a BasicState tuple"""
         key1, key2 = key
         if not isinstance(key1, BasicState) or not isinstance(key2, BasicState):
