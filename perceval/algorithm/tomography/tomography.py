@@ -277,12 +277,13 @@ class ProcessTomography(AAlgorithm):
         Computes the chi matrix of the operator_circuit. Size d^4 x d^4 [=2**(2*nqubit)x2**(2*nqubit) array]
         :return: Chi matrix normalized by gate efficiency (=its trace)
         """
-        beta_inv = np.linalg.pinv(self._beta_as_matrix())
-        L = self._lambda_vector()
-        X = np.dot(beta_inv, L)  # X is a vector here
-        self.chi_unnormalized = _vector_to_sq_matrix(X)
-        self.gate_efficiency = np.trace(self.chi_unnormalized)
-        self.chi_normalized = self.chi_unnormalized / self.gate_efficiency
+        if self.chi_normalized is None:
+            beta_inv = np.linalg.pinv(self._beta_as_matrix())
+            L = self._lambda_vector()
+            X = np.dot(beta_inv, L)  # X is a vector here
+            self.chi_unnormalized = _vector_to_sq_matrix(X)
+            self.gate_efficiency = np.trace(self.chi_unnormalized)
+            self.chi_normalized = self.chi_unnormalized / self.gate_efficiency
         return self.chi_normalized  # always returns normalized chi map
 
     def chi_target(self, operator: np.ndarray) -> np.ndarray:
