@@ -254,12 +254,18 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     dz = array.ravel()  # length along z-axis of each bar (height)
 
     # Colors
-    color_map = plt.cm.get_cmap('viridis_r')
     # get range of colorbars so we can normalize
     max_height = numpy.max(dz)
     min_height = numpy.min(dz)
-    # scale each z to [0,1], and get their rgb values
-    rgba = [color_map((k - min_height) / max_height) for k in dz]
+    color_map = plt.cm.get_cmap('viridis_r')
+    if max_height != min_height:
+        has_only_one_value = False
+        # scale each z to [0,1], and get their rgb values
+        rgba = [color_map((k - min_height) / max_height) for k in dz]
+    else:
+        has_only_one_value = True
+        rgba = [color_map(0)]
+
 
     # Caption
     font_size = 6
@@ -273,7 +279,8 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     ax.set_yticklabels(basis_name)
 
     # Z
-    ax.set_zlim(zmin=dz.min(), zmax=dz.max())
+    if not has_only_one_value:
+        ax.set_zlim(zmin=dz.min(), zmax=dz.max())
     ax.tick_params('z', which='both', labelsize=font_size)
     ax.grid(True, axis='z', which='major', linewidth=2)
     # interval = [v for v in ax.get_zticks() if v > 0][0]

@@ -59,6 +59,10 @@ class StateTomography(AAlgorithm):
         if odd_modes:
             raise ValueError(
                 f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
+
+        if self._processor.is_remote:
+            raise TypeError("Tomography does not support Remote Processor yet")
+
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
 
@@ -271,7 +275,7 @@ class ProcessTomography(AAlgorithm):
     def chi_matrix(self) -> np.ndarray:
         """
         Computes the chi matrix of the operator_circuit. Size d^4 x d^4 [=2**(2*nqubit)x2**(2*nqubit) array]
-        :return: Chi matrix
+        :return: Chi matrix normalized by gate efficiency (=its trace)
         """
         beta_inv = np.linalg.pinv(self._beta_as_matrix())
         L = self._lambda_vector()

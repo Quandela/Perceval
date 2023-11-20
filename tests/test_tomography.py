@@ -72,7 +72,7 @@ def test_fidelity_klm_cnot():
     # set operator circuit, num qubits
     cnot_p = catalog["klm cnot"].build_processor()
     cnot_fidelity = fidelity_op_process_tomography(CNOT_TARGET, cnot_p)
-    assert cnot_fidelity == pytest.approx(1, 1e-3)  # computed fidelity is around 0.99967
+    assert cnot_fidelity == pytest.approx(1)
 
 
 def test_fidelity_postprocessed_cnot():
@@ -101,7 +101,7 @@ def test_fidelity_random_op():
 
     random_op_fidelity = fidelity_op_process_tomography(random_op, random_op_proc)
 
-    assert random_op_fidelity == pytest.approx(1, 1e-6)
+    assert random_op_fidelity == pytest.approx(1)
 
 
 def test_chi_cnot_is_physical():
