@@ -159,4 +159,4 @@ def test_matrix_basis_n_decomp():
     for idx, basis_matrices in enumerate(basis):
         matrix_rebuilt += mu[idx]*basis_matrices
 
-    assert np.all(matrix == matrix_rebuilt)
+    assert np.allclose(matrix, matrix_rebuilt)
