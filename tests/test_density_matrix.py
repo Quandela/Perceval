@@ -86,10 +86,8 @@ def test_density_matrix_to_svd():
     svd2_back = dm2.to_svd()
 
     tensor_svd_back = (dm1*dm2).to_svd()
-    print(svd1)
-    print(svd1_back)
     assert len(svd1_back) == len(svd1)
-    assert len(tensor_svd_back) ==  len(tensor_svd)
+    assert len(tensor_svd_back) == len(tensor_svd)
 
 
 def test_density_matrix_array_constructor():

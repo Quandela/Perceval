@@ -39,15 +39,18 @@ from scipy.linalg import eigh
 from copy import copy
 import random
 
+# In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
+# The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
 
-def create_index(m, n_max):
+
+def create_index(m: int, n_max: int):
     index = dict()
     for i, x in enumerate(max_photon_state_iterator(m, n_max)):
         index[x] = i
     return index
 
 
-def statevector_to_array(sv, index):
+def statevector_to_array(sv: StateVector, index: dict):
     """
     translate a StateVector object into an array
     :param sv: a StateVector
@@ -59,14 +62,14 @@ def statevector_to_array(sv, index):
     return vector
 
 
-def array_to_statevector(vector, reverse_index):
+def array_to_statevector(vector: Union[np.ndarray, sparray], reverse_index: list):
     """
     translate an array in a StateVector
     :param vector: an array
-    :param reverse_index: a list of BasicStates
+    :param reverse_index: a list of BasicStates, describing a mapping from indeices to the corresponding basic states
     """
 
-    sv = 0*reverse_index[0]
+    sv = StateVector()
     for i, x in enumerate(reverse_index):
         if vector[i] == 0:
             continue
@@ -147,14 +150,11 @@ class DensityMatrix:
                 mixed_state = SVDistribution(mixed_state)
 
             if not isinstance(mixed_state, SVDistribution):
-                raise TypeError("svd must be a BasicState, a StateVector a SVDistribution or a 2d array")
+                raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
             self._m = mixed_state.m
             self._n_max = mixed_state.n_max
             self._size = comb(self.m + self._n_max, self.m)
-
-            self.index = dict()
-            self.reverse_index = []
             self.set_index(index)  # index construction
 
             # matrix construction from svd
@@ -168,7 +168,9 @@ class DensityMatrix:
                 l.append((vector, p))
             self.mat = sum([p*(vector @ conj(vector.T)) for vector, p in l])
 
-    def set_index(self, index):
+    def set_index(self, index: dict):
+        self.index = dict()
+        self.reverse_index = []
         if index is None:
             k = 0
             for key in max_photon_state_iterator(self._m, self._n_max):
@@ -184,16 +186,16 @@ class DensityMatrix:
             else:
                 raise ValueError("the index size does not match the matrix size")
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: BasicState):
         """key must be a BasicState tuple"""
         key1, key2 = key
-        if not isinstance(key1, BasicState) and isinstance(key2, BasicState):
+        if not isinstance(key1, BasicState) or not isinstance(key2, BasicState):
             raise TypeError("Expected BasicState tuple")
         i, j = self.index[key1], self.index[key2]
         return self.mat[i, j]
 
     @staticmethod
-    def _deflation(A, val, vec):
+    def _deflation(A: sparray, val: np.ndarray, vec: np.ndarray):
         """
         Defines the mat_vec function of the Linear operator after the deflation of all the vectors in the vec array
         :param A: any kind of sparse matrix
@@ -206,7 +208,7 @@ class DensityMatrix:
         if vec.shape[0] != A.shape[0]:
             raise ValueError("the size of the matrix is inconsistent with this of the eigenvector")
 
-        def matrix_vector_multiplication(x):
+        def matrix_vector_multiplication(x: np.ndarray):
             """
             The matrix vector multiplication function associated to the deflated operator
             """
@@ -219,10 +221,10 @@ class DensityMatrix:
         return matrix_vector_multiplication
 
     @staticmethod
-    def _bra_str(bs):
+    def _bra_str(bs: BasicState):
         return "<" + str(bs)[1:][:-1] + "|"
 
-    def to_svd(self, threshold=1e-8, batch_size=1):
+    def to_svd(self, threshold: float = 1e-8, batch_size: int = 1):
         """
                 gives back an SVDistribution from the density_matrix
         """
@@ -315,7 +317,7 @@ class DensityMatrix:
         factor = self.mat.trace()
         self.mat = (1/factor)*self.mat
 
-    def sample(self, count=1):
+    def sample(self, count: int = 1):
         """
         sample on the density matrix
         """
