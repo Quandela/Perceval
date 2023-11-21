@@ -286,6 +286,7 @@ def test_evolve_phase():
     input_state2 = StateVector([0, 0])
     assert simu.evolve(input_state2) == StateVector([0,0])
 
+
 def test_simulator_evolve_svd():
     input_svd = SVDistribution({StateVector([1, 1]): 0.2,
                                 StateVector([2, 0]): 0.8})
