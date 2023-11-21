@@ -27,12 +27,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution
-from perceval.utils.density_matrix import create_index
+from perceval.utils.density_matrix import create_index, statevector_to_array
 import numpy as np
 import scipy
 from scipy.sparse import dok_array
 import pytest
 from _test_utils import assert_svd_close
+
+
+def test_statevector_to_array():
+    index = create_index(2, 2)
+    sv = StateVector(BasicState([1, 1]))
+    vector = np.zeros(6, dtype=complex)
+    vector[4] = 1
+    assert statevector_to_array(sv, index) == pytest.approx(vector)
 
 
 def test_create_index():
@@ -46,6 +54,8 @@ def test_density_matrix():
     sv = BasicState([0]) + BasicState([1])
     dm = DensityMatrix(sv)
     dm2 = DensityMatrix(BasicState([0]))
+    dm3 = dm * 2
+    dm4 = 2 * dm
 
     assert (dm + dm2).size == 2
     assert (dm + dm).size == 2
@@ -53,6 +63,8 @@ def test_density_matrix():
     for i in range(2):
         for j in range(2):
             assert dm.mat[i, j] == pytest.approx(0.5)
+            assert dm3.mat[i, j] == pytest.approx(1)
+            assert dm4.mat[i, j] == pytest.approx(1)
 
     tensor_dm_1 = dm * dm
     tensor_dm_2 = DensityMatrix(sv * sv)
@@ -83,7 +95,6 @@ def test_density_matrix_to_svd():
     dm2 = DensityMatrix(svd2)
 
     svd1_back = dm1.to_svd()
-    svd2_back = dm2.to_svd()
 
     tensor_svd_back = (dm1*dm2).to_svd()
     assert len(svd1_back) == len(svd1)
