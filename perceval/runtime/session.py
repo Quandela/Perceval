@@ -27,18 +27,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
-from ._pauli import PauliType, get_preparation_circuit, get_measurement_circuit, get_pauli_gate
+from abc import ABC, abstractmethod
+from .remote_processor import RemoteProcessor
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
 
-catalog = Catalog('perceval.components.core_catalog')
+class ISession(ABC):
+    """
+    A session binds an authenticated user to a single remote platform on a given Cloud provider
+    """
+
+    @abstractmethod
+    def build_remote_processor(self) -> RemoteProcessor:
+        """
+        Build a RemoteProcessor object given the session data
+        """
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        self.stop()
+        return False  # Do not suppress an exception that would be raised in the scope

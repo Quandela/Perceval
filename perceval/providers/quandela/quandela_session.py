@@ -27,18 +27,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
-from ._pauli import PauliType, get_preparation_circuit, get_measurement_circuit, get_pauli_gate
+from perceval.runtime import ISession
+from perceval.runtime.remote_processor import QUANDELA_CLOUD_URL, RemoteProcessor
+from perceval.runtime.rpc_handler import RPCHandler
 
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
 
-catalog = Catalog('perceval.components.core_catalog')
+class Session(ISession):
+    def __init__(self, platform_name: str, token: str, url: str = None):
+        self._platform_name = platform_name
+        self._token = token
+        self._url = url or QUANDELA_CLOUD_URL
+
+    def build_remote_processor(self) -> RemoteProcessor:
+        return RemoteProcessor(rpc_handler=RPCHandler(self._platform_name, self._url, self._token))
