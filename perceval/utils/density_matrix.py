@@ -270,17 +270,16 @@ class DensityMatrix:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
 
         n = max(self._n_max, other.n_max)
-
         if n == self.n_max:
-            copy_mat = copy(other.mat)
-            copy_mat.resize(self._size, self._size)
-            new_mat = copy_mat + self.mat
-            new_index = self.index
+            small_matrix = other
+            big_matrix = self
         else:
-            copy_mat = copy(self.mat)
-            copy_mat.resize(other._size, other._size)
-            new_mat = copy_mat + other.mat
-            new_index = other.index
+            small_matrix = self
+            big_matrix = other
+        copy_mat = copy(small_matrix.mat)
+        copy_mat.resize(big_matrix.size, big_matrix.size)
+        new_mat = copy_mat + big_matrix.mat
+        new_index = big_matrix.index
 
         return DensityMatrix(new_mat, new_index)
 

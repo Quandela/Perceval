@@ -65,7 +65,6 @@ def test_density_matrix():
     assert np.allclose(dm3.mat.toarray(), test_mat, 1e-6, 1e-6)
     assert np.allclose(dm4.mat.toarray(), test_mat, 1e-6, 1e-6)
 
-
     tensor_dm_1 = dm * dm
     tensor_dm_2 = DensityMatrix(sv * sv)
     tensor_dm_3 = dm*sv
