@@ -37,7 +37,7 @@ class AAlgorithm:
         # max_shots_per_call must be found in **kwargs when the processor is remote.
         # This condition is forced because the user will consume credits on the cloud and needs to set an upper bound
         if (processor.is_remote and self._MAX_SHOTS_NAMED_PARAM not in kwargs) or \
-            (self._MAX_SHOTS_NAMED_PARAM in kwargs and kwargs[self._MAX_SHOTS_NAMED_PARAM] < 1):
+            (kwargs.get(self._MAX_SHOTS_NAMED_PARAM) and kwargs[self._MAX_SHOTS_NAMED_PARAM] < 1):
             raise RuntimeError(
                 f'Please input a `{self._MAX_SHOTS_NAMED_PARAM}` positive value when using a RemoteProcessor')
         self._processor = processor

@@ -62,15 +62,13 @@ class RPCHandler:
         request = requests.post(endpoint,
                                 headers=self.headers,
                                 json=payload)
-
-        json = {}
         try:
             jsonres = request.json()
-        except:
-            pass
+        except Exception as e:
+            jsonres = {'error': f'{e}'}
 
         if request.status_code != 200:
-            raise HTTPError(jsonres['error'])
+            raise HTTPError(jsonres.get('error', 'Unspecified error'))
 
         return jsonres['job_id']
 
