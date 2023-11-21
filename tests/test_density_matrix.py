@@ -60,11 +60,11 @@ def test_density_matrix():
     assert (dm + dm2).size == 2
     assert (dm + dm).size == 2
 
-    for i in range(2):
-        for j in range(2):
-            assert dm.mat[i, j] == pytest.approx(0.5)
-            assert dm3.mat[i, j] == pytest.approx(1)
-            assert dm4.mat[i, j] == pytest.approx(1)
+    test_mat = np.ones((2,2))
+    assert np.allclose(dm.mat.toarray(), 0.5*test_mat, 1e-6, 1e-6)
+    assert np.allclose(dm3.mat.toarray(), test_mat, 1e-6, 1e-6)
+    assert np.allclose(dm4.mat.toarray(), test_mat, 1e-6, 1e-6)
+
 
     tensor_dm_1 = dm * dm
     tensor_dm_2 = DensityMatrix(sv * sv)

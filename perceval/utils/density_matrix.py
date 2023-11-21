@@ -66,7 +66,7 @@ def array_to_statevector(vector: Union[np.ndarray, sparray], reverse_index: list
     """
     translate an array in a StateVector
     :param vector: an array
-    :param reverse_index: a list of BasicStates, describing a mapping from indeices to the corresponding basic states
+    :param reverse_index: a list of BasicStates, describing a mapping from indices to the corresponding basic states
     """
 
     sv = StateVector()
@@ -344,7 +344,7 @@ class DensityMatrix:
         return string[:-1]
 
     def __repr__(self):
-        str(self.mat.toarray())
+        return str(self.mat.toarray())
 
     @property
     def n_max(self):
