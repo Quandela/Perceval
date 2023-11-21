@@ -152,6 +152,10 @@ class DensityMatrix:
             if not isinstance(mixed_state, SVDistribution):
                 raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
+            for key in mixed_state.keys():
+                if key.has_annotations():
+                    raise ValueError("annotations are not supported yet in DensityMatrix")
+
             self._m = mixed_state.m
             self._n_max = mixed_state.n_max
             self._size = comb(self.m + self._n_max, self.m)
@@ -266,7 +270,7 @@ class DensityMatrix:
         if not isinstance(other, DensityMatrix):
             raise TypeError("You can only add a Density Matrix to a Density Matrix")
 
-        if not self._m == other._m:
+        if self._m != other._m:
             raise ValueError("You can't add Density Matrices acting on different numbers of mode")
 
         n = max(self._n_max, other.n_max)
@@ -285,7 +289,8 @@ class DensityMatrix:
 
     def __mul__(self, other):
         """
-        Make a tensor product between a Density Matrix and a mixed state in any form
+            Make a tensor product between a Density Matrix and a mixed state in any form
+            Or make a scalar multiplication
         """
 
         if isinstance(other, (int, float, complex)):
