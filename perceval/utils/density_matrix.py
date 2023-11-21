@@ -153,7 +153,7 @@ class DensityMatrix:
                 raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
             for key in mixed_state.keys():
-                if key.has_annotations():
+                if any([bs[0].has_annotations for bs in key]):
                     raise ValueError("annotations are not supported yet in DensityMatrix")
 
             self._m = mixed_state.m
