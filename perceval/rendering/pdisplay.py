@@ -324,7 +324,7 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     if not mplot_noshow:
         plt.show()
     if mplot_savefig:
-        fig.savefig(mplot_savefig, bbox_inches="tight", format="PNG")
+        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
         return ""
 
     return None

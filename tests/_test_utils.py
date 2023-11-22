@@ -27,9 +27,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils import StateVector, SVDistribution
+from typing import Type
 
 import pytest
+from pathlib import Path
+import re
+
+import perceval as pcvl
+from perceval.utils import StateVector, SVDistribution
+from perceval.rendering import pdisplay_to_file, Format
+from perceval.rendering.pdisplay import pdisplay_circuit
+from perceval.rendering.circuit import ASkin, PhysSkin
+
+
+TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
 
 def strip_line_12(s: str) -> str:
@@ -78,6 +89,58 @@ def assert_svd_close(lhsvd, rhsvd):
 
 def  dict2svd(d: dict):
     return SVDistribution({StateVector(k): v for k, v in d.items()})
+
+
+@pytest.fixture(scope="session")
+def save_figs(pytestconfig):
+    return pytestconfig.getoption("save_figs")
+
+
+def _norm(svg):
+    svg = svg.replace(" \n", "\n")
+    svg = re.sub(r'url\(#.*?\)', 'url(#staticClipPath)', svg)
+    svg = re.sub(r'<clipPath id=".*?">', '<clipPath id="staticClipPath">', svg)
+    svg = re.sub(r'<dc:date>(.*)</dc:date>', '<dc:date></dc:date>', svg)
+    svg = re.sub(r'<dc:title>(.*)</dc:title>', '<dc:title></dc:title>', svg)
+    return svg
+
+
+def _check_image(test_path, ref_path):
+    with open(test_path) as f_test:
+        test = _norm("".join(f_test.readlines()))
+    with open(ref_path) as f_ref:
+        ref = _norm("".join(f_ref.readlines()))
+    m_test = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', test)
+    m_ref = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', ref)
+    if not m_test:
+        return False, "cannot find patch in test"
+    if not m_ref:
+        return False, "cannot find patch in ref"
+    m_test_patch = re.sub(r'url\(#.*?\)', "url()", m_test.group(1))
+    m_ref_patch = re.sub(r'url\(#.*?\)', "url()", m_ref.group(1))
+    if m_test_patch != m_ref_patch:
+        return False, "test and ref are different"
+    return True, "ok"
+
+
+def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False,
+                   skin_type: Type[ASkin] = PhysSkin) -> None:
+    img_path = (TEST_IMG_DIR if save_figs else tmp_path) / \
+        Path(circuit_name + ".svg")
+    skin = skin_type(compact)
+    pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
+                          recursive=recursive, skin=skin)
+
+    if save_figs:
+        with open(img_path) as f_saved:
+            saved = "".join(f_saved.readlines())
+        saved = _norm(saved)
+        with open(img_path, "w") as fw_saved:
+            fw_saved.write(saved)
+    else:
+        ok, msg = _check_image(img_path, TEST_IMG_DIR /
+                               Path(circuit_name + ".svg"))
+        assert ok, msg
 
 
 if __name__ == "__main__":

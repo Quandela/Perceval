@@ -42,6 +42,7 @@ from perceval.algorithm import ProcessTomography, StateTomography
 from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit, \
     _generate_pauli_index, _vector_to_sq_matrix, _matrix_to_vector, _matrix_basis, _coef_linear_decomp
 
+from _test_utils import _check_image
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
@@ -121,14 +122,10 @@ def test_chi_cnot_is_physical_and_display():
     assert res['Completely Positive'] is True  # if input Chi is Completely Positive
 
     # display
-    curr_path = "tomography_cnot.png"
-    other_path = TEST_IMG_DIR / Path("tomography_cnot.png")
+    curr_path = "tomography_cnot.svg"
+    other_path = TEST_IMG_DIR / Path("tomography_cnot.svg")
     pcvl.pdisplay_to_file(qpt, path=curr_path)
-    is_same = False
-    with open(curr_path, 'rb') as f1, open(other_path, 'rb') as f2:
-        contents1 = f1.read()
-        contents2 = f2.read()
-    is_same = contents1 == contents2
+    is_same = _check_image(curr_path, other_path)
     os.remove(curr_path)
     assert is_same
 
