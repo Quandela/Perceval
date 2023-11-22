@@ -27,6 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+from pathlib import Path
+
 import pytest
 import numpy as np
 from scipy.stats import unitary_group
@@ -41,6 +44,7 @@ from perceval.algorithm.tomography.tomography_utils import is_physical, get_prep
 
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
+TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
 
 @pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
@@ -104,7 +108,7 @@ def test_fidelity_random_op():
     assert random_op_fidelity == pytest.approx(1)
 
 
-def test_chi_cnot_is_physical():
+def test_chi_cnot_is_physical_and_display():
     cnot_p = catalog["klm cnot"].build_processor()
 
     qpt = ProcessTomography(operator_processor=cnot_p)
@@ -116,6 +120,17 @@ def test_chi_cnot_is_physical():
     assert res['Hermitian'] is True  # if Chi is Hermitian
     assert res['Completely Positive'] is True  # if input Chi is Completely Positive
 
+    # display
+    curr_path = "tomography_cnot.png"
+    other_path = TEST_IMG_DIR / Path("tomography_cnot.png")
+    pcvl.pdisplay_to_file(qpt, path=curr_path)
+    is_same = False
+    with open(curr_path, 'rb') as f1, open(other_path, 'rb') as f2:
+        contents1 = f1.read()
+        contents2 = f2.read()
+    is_same = contents1 == contents2
+    os.remove(curr_path)
+    assert is_same
 
 def test_processor_odd_modes():
     # tests that a generic processor with odd number of modes does not work
