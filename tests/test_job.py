@@ -59,9 +59,6 @@ def test_run_sync_1():
     assert job.status.running_time < 1
     assert job.status.status == RunningStatus.SUCCESS
 
-    job.status.status = RunningStatus.PARTIAL_COMPLETION
-    assert job.get_results() == [0, 1, 4, 9, 16]
-
     job.status.status = RunningStatus.UNKNOWN
     with pytest.warns(UserWarning):
         assert job.get_results() == [0, 1, 4, 9, 16]
@@ -218,9 +215,6 @@ def test_remote_job():
         rj.name = 28
     job_status = rj.status
     assert rj.is_complete == job_status.completed
-    assert rj.get_results() == _REMOTE_JOB_RESULTS
-
-    rj.status.status = RunningStatus.PARTIAL_COMPLETION
     assert rj.get_results() == _REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN

@@ -117,7 +117,7 @@ class LocalJob(Job):
     def cancel(self):
         self._cancel_requested = True
 
-    def _assign_and_get_results(self):
+    def _get_results(self):
         if self._result_mapping_function:
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],

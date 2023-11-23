@@ -125,7 +125,7 @@ class Job(ABC):
         pass
 
     @abstractmethod
-    def _assign_and_get_results(self):
+    def _get_results(self):
         pass
 
     def get_results(self) -> Dict:
@@ -138,11 +138,11 @@ class Job(ABC):
             raise RuntimeError(f'The job failed: {job_status.stop_message}')
 
         if job_status.success:
-            return self._assign_and_get_results()
+            return self._get_results()
 
         if self.maybe_complete:
             warnings.warn("Unknown job status, trying to get result anyway.")
             try:
-                return self._assign_and_get_results()
+                return self._get_results()
             except KeyError:
                 raise RuntimeError('Results are not available')

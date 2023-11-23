@@ -181,7 +181,7 @@ class RemoteJob(Job):
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
-    def _assign_and_get_results(self) -> None:
+    def _get_results(self) -> None:
         response = self._rpc_handler.get_job_results(self._id)
         results = deserialize(json.loads(response)['results'])
         if "job_context" in results and 'result_mapping' in results["job_context"]:

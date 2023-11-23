@@ -41,8 +41,7 @@ class RunningStatus(Enum):
     CANCELED = 4
     SUSPENDED = 5
     CANCEL_REQUESTED = 6
-    PARTIAL_COMPLETION = 7
-    UNKNOWN = 8
+    UNKNOWN = 7
 
     @staticmethod
     def from_server_response(res: str):
@@ -133,11 +132,11 @@ class JobStatus:
 
     @property
     def completed(self):
-        return self._status in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.PARTIAL_COMPLETION]
+        return self._status in [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.CANCELED]
 
     @property
     def success(self):
-        return self._status in [RunningStatus.SUCCESS, RunningStatus.PARTIAL_COMPLETION]
+        return self._status in [RunningStatus.SUCCESS]
 
     @property
     def failed(self):
