@@ -105,9 +105,8 @@ jobs:
         python -m pip install -r docs/requirements.txt
         python -m pip install .
     - name: Install Pandoc
-      # Silence errors that could come from apt update - TODO remove this "|| true" work-around
       run: |
-        sudo apt update || true
+        sudo apt update
         sudo apt install pandoc
 
     - name: Build docs
