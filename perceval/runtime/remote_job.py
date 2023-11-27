@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import json
 import time
 from typing import Any
@@ -88,6 +89,7 @@ class RemoteJob(Job):
         self._id = None
         self.name = job_name
         self._request_data = request_data
+        self._results = None
 
     @property
     def id(self):
@@ -176,27 +178,26 @@ class RemoteJob(Job):
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
             self._rpc_handler.cancel_job(self._id)
-            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancelation requested by user')
+            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
-    def get_results(self) -> Any:
-        job_status = self.status
-        if not job_status.completed:
-            raise RuntimeError('The job is still running, results are not available yet.')
-        if job_status.status == RunningStatus.ERROR:
-            raise RuntimeError(f'The job failed: {job_status.stop_message}')
+    def _get_results(self) -> None:
+        if self._results and self.status.completed:
+            return self._results
         response = self._rpc_handler.get_job_results(self._id)
-        results = deserialize(json.loads(response['results']))
-        if "job_context" in results and 'result_mapping' in results["job_context"]:
-            path_parts = results["job_context"]["result_mapping"]
+        self._results = deserialize(json.loads(response['results']))
+        if "job_context" in self._results and 'result_mapping' in self._results["job_context"]:
+            path_parts = self._results["job_context"]["result_mapping"]
             module = __import__(path_parts[0], fromlist=path_parts[1])
             result_mapping_function = getattr(module, path_parts[1])
             # retrieve delta parameters from the response
-            self._delta_parameters = results["job_context"].get("mapping_delta_parameters", {})
-            if "results_list" in results:
-                for res in results["results_list"]:
+            self._delta_parameters = self._results["job_context"].get(
+                "mapping_delta_parameters", {})
+            if "results_list" in self._results:
+                for res in self._results["results_list"]:
                     res["results"] = result_mapping_function(res["results"], **self._delta_parameters)
             else:
-                results["results"] = result_mapping_function(results["results"], **self._delta_parameters)
-        return results
+                self._results["results"] = result_mapping_function(
+                    self._results["results"], **self._delta_parameters)
+        return self._results
