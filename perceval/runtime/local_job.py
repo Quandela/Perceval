@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import warnings
-from typing import Any, Callable, Optional, Dict
+from typing import Callable, Optional
 import threading
 
 from .job import Job

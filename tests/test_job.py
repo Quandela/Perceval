@@ -192,14 +192,10 @@ class MockRPCHandler:
 
     def get_job_results(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
-        return json.dumps(serialize({
-            'results': _REMOTE_JOB_RESULTS,
-            'physical_perf': 0.7988443869134395,
-            'job_context': {
-                'mapping_delta_parameters': {'count': 10000},
-                'result_mapping': ['perceval.utils', 'probs_to_sample_count']
-            }
-        }))
+        return {'results': json.dumps({
+            'results': serialize(_REMOTE_JOB_RESULTS),
+            'physical_perf': 1
+        })}
 
 
 def test_remote_job():
@@ -215,15 +211,15 @@ def test_remote_job():
         rj.name = 28
     job_status = rj.status
     assert rj.is_complete == job_status.completed
-    assert rj.get_results() == _REMOTE_JOB_RESULTS
+    assert rj.get_results()['results'] == _REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN
     with pytest.warns(UserWarning):
-        assert rj.get_results() == _REMOTE_JOB_RESULTS
+        assert rj.get_results()['results'] == _REMOTE_JOB_RESULTS
 
     _TEST_JOB_ID = "any"
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
-    assert resumed_rj.get_results() == _REMOTE_JOB_RESULTS
+    assert resumed_rj.get_results()['results'] == _REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
     assert rj.is_complete == job_status.completed
     assert rj.name == _REMOTE_JOB_NAME
