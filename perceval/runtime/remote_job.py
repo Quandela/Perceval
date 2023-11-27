@@ -186,7 +186,7 @@ class RemoteJob(Job):
         if self._results and self.status.completed:
             return self._results
         response = self._rpc_handler.get_job_results(self._id)
-        self._results = deserialize(json.loads(response)['results'])
+        self._results = deserialize(json.loads(response['results']))
         if "job_context" in self._results and 'result_mapping' in self._results["job_context"]:
             path_parts = self._results["job_context"]["result_mapping"]
             module = __import__(path_parts[0], fromlist=path_parts[1])
