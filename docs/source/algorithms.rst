@@ -121,13 +121,13 @@ On a QPU, the acquisition is measured in **shots**. A shot is any coincidence wi
 Shots act as credits on the Cloud services. Users have to set a maximum shots value they are willing to use for any
 given task.
 
->>> remote_p = pcvl.RemoteProcessor("sim:clifford")
+>>> remote_p = pcvl.RemoteProcessor("sim:sampling")
 >>> remote_p.set_circuit(pcvl.BS())
 >>> remote_p.with_input(pcvl.BasicState('|1,1>'))
 >>> sampler = pcvl.algorithm.Sampler(remote_p, max_shots_per_call=500_000)
 >>> remote_sample_job = sampler.sample_count
 
-Here, the computation was set-up to run on `sim:clifford` platform when :code:`remote_sample_job` is executed.
+Here, the computation was set-up to run on `sim:sampling` platform when :code:`remote_sample_job` is executed.
 
 For more information about the shots and shots/samples ratio estimate, please read
 :ref:`Remote computing on Quandela Cloud`.
