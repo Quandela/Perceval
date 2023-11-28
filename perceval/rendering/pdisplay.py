@@ -317,18 +317,12 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     imag_chi = numpy.round(chi_op.imag, significant_digit)
     _get_sub_figure(ax, imag_chi, pauli_captions)
 
-
     plt.show()
 
 
 @dispatch(object)
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
-
-
-@dispatch(ProcessTomography)
-def _pdisplay(qpt, **kwargs):
-    return pdisplay_tomography_chi(qpt, **kwargs)
 
 
 @dispatch(ProcessTomography)
