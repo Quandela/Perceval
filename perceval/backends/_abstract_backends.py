@@ -58,20 +58,15 @@ class ABackend(ABC):
     def name(self) -> str:
         """Each backend has to expose its name as a string"""
 
-    @staticmethod
-    @abstractmethod
-    def preferred_command() -> str:
-        pass
-
 
 class ASamplingBackend(ABackend):
     @abstractmethod
     def sample(self):
-        """Request samples from the circuit given an input state"""
+        """Request one sample from the circuit given an input state"""
 
-    @staticmethod
-    def preferred_command() -> str:
-        return "sample"
+    @abstractmethod
+    def samples(self, count: int):
+        """Request samples from the circuit given an input state"""
 
 
 class AProbAmpliBackend(ABackend):
@@ -91,10 +86,6 @@ class AProbAmpliBackend(ABackend):
     def evolve(self) -> StateVector:
         res = StateVector()
         for output_state in allstate_iterator(self._input_state):
-            res[output_state] = self.prob_amplitude(output_state)
+            res += output_state * self.prob_amplitude(output_state)
         res.normalize()
         return res
-
-    @staticmethod
-    def preferred_command() -> str:
-        return "prob_amplitude"

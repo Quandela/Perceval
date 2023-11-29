@@ -31,17 +31,18 @@ from abc import ABC, abstractmethod
 import copy
 from deprecated import deprecated
 from enum import Enum
-from typing import Any, Dict, List, Union, Callable
+from typing import Any, Dict, List, Union, Callable, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
-from .port import LogicalState, Herald, PortLocation, APort
+from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
+from perceval.utils import LogicalState
 
 
 class ProcessorType(Enum):
@@ -70,7 +71,7 @@ class AProcessor(ABC):
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: List[AComponent] = []  # Any type of components, not only unitary ones
+        self._components: List[Tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
 
         self._n_moi = None  # Number of modes of interest (moi)
 
@@ -101,10 +102,12 @@ class AProcessor(ABC):
     def clear_parameters(self):
         self._parameters = {}
 
-    def clear_input_and_circuit(self):
+    def clear_input_and_circuit(self, new_m=None):
         self._reset_circuit()
         self._input_state = None
         self._circuit_changed()
+        if new_m is not None:
+            self._n_moi = new_m
 
     def _circuit_changed(self):
         # Can be used by child class
@@ -227,10 +230,6 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._postselect is not None:
-            raise RuntimeError("Cannot add any component to a processor with a post-process function. You may remove the post-process function by calling clear_postprocess()")
-
-        self._simulator = None  # Invalidate simulator which will have to be recreated later on
         if self._n_moi is None:
             if isinstance(mode_mapping, int):
                 self._n_moi = (component.m if isinstance(component, ACircuit) else component.circuit_size) + mode_mapping
@@ -246,10 +245,20 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
-    def _compose_processor(self, connector, processor, keep_port: bool):
+    def _validate_postselect_composition(self, mode_mapping: Dict):
+        if self._postselect is not None and isinstance(self._postselect, PostSelect):
+            impacted_modes = list(mode_mapping.keys())
+            # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
+            assert self._postselect.can_compose_with(impacted_modes),\
+                f"Post-selection conditions cannot compose with modes {impacted_modes}"
+
+    def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
+        if not (self._postselect is None or processor._postselect is None):
+            raise RuntimeError("Cannot automatically compose two processors with post-selection conditions")
+        self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new processor
             for i in mode_mapping:
@@ -302,6 +311,7 @@ class AProcessor(ABC):
                 self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
 
     def _add_component(self, mode_mapping, component):
+        self._validate_postselect_composition(mode_mapping)
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
@@ -363,8 +373,8 @@ class AProcessor(ABC):
         if not self._is_unitary:
             raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
-        for component in self._components:
-            circuit.add(component[0], component[1], merge=flatten)
+        for pos_m, component in self._components:
+            circuit.add(pos_m, component, merge=flatten)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> List:
@@ -440,6 +450,24 @@ class AProcessor(ABC):
             self._out_ports[port] = port_range
         return self
 
+    @staticmethod
+    def _find_and_remove_port_from_list(m, port_list):
+        for current_port, current_port_range in port_list.items():
+            if m in current_port_range:
+                del port_list[current_port]
+                return True
+        return False
+
+    def remove_port(self, m, location: PortLocation = PortLocation.IN_OUT):
+        if location in (PortLocation.IN_OUT, PortLocation.INPUT):
+            if not AProcessor._find_and_remove_port_from_list(m, self._in_ports):
+                raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
+
+        if location in (PortLocation.IN_OUT, PortLocation.OUTPUT):
+            if not AProcessor._find_and_remove_port_from_list(m, self._out_ports):
+                raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
+        return self
+
     @property
     def _closed_photonic_modes(self):
         output = [False] * self.circuit_size
@@ -504,7 +532,7 @@ class AProcessor(ABC):
         return pos
 
     def _with_logical_input(self, input_state: LogicalState):
-        input_state = input_state.to_basic_state(list(self._in_ports.keys()))
+        input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         self.with_input(input_state)
 
     @abstractmethod

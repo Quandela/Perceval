@@ -29,18 +29,16 @@
 
 import pytest
 from pathlib import Path
+from collections import Counter
 
-from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
-from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix, pdisplay_analyzer
+from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor, GenericInterferometer
+from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
+from _test_utils import strip_line_12
 import sympy as sp
 import numpy as np
-
-
-def strip_line_12(s: str) -> str:
-    return s.strip().replace("            ", "")
 
 
 def test_helloword():
@@ -78,18 +76,51 @@ def test_helloword():
         p = Processor(backend_name, c)
         ca = algo.Analyzer(p,
                            [BasicState([0, 1]), BasicState([1, 0]), BasicState([1, 1])],  # the input states
-                           [BasicState([0, 1]), BasicState([1, 0]), BasicState([2, 0]), BasicState([1, 1]),
-                            BasicState([0, 2])]  # all possible output states that can be generated with 1 or 2 photons
+                           "*"  # all possible output states that can be generated with 1 or 2 photons
                            )
-        assert strip_line_12(pdisplay_analyzer(ca)) == strip_line_12("""
-            +-------+-------+-------+-------+-------+-------+
-            |       | |0,1> | |1,0> | |2,0> | |1,1> | |0,2> |
-            +-------+-------+-------+-------+-------+-------+
-            | |0,1> |  1/2  |  1/2  |   0   |   0   |   0   |
-            | |1,0> |  1/2  |  1/2  |   0   |   0   |   0   |
-            | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
-            +-------+-------+-------+-------+-------+-------+
-        """)
+
+        b01 = BasicState("|0,1>")
+        b10 = BasicState("|1,0>")
+        b20 = BasicState("|2,0>")
+        b11 = BasicState("|1,1>")
+        b02 = BasicState("|0,2>")
+
+        # test if the input & output states are the same
+        input_states = [b01, b11, b10]
+        output_states = [b01, b10, b20, b11, b02]
+
+        assert Counter(ca.input_states_list) == Counter(input_states)
+        assert Counter(ca.output_states_list) == Counter(output_states)
+
+        # test if it's this distribution:
+        # +-------+-------+-------+-------+-------+-------+
+        # |       | |0,1> | |1,0> | |2,0> | |1,1> | |0,2> |
+        # +-------+-------+-------+-------+-------+-------+
+        # | |0,1> |  1/2  |  1/2  |   0   |   0   |   0   |
+        # | |1,0> |  1/2  |  1/2  |   0   |   0   |   0   |
+        # | |1,1> |   0   |   0   |  1/2  |   0   |  1/2  |
+        # +-------+-------+-------+-------+-------+-------+
+
+        input_states_dict = {elem: i for i, elem in enumerate(ca.input_states_list)}
+        output_states_dict = {elem: i for i, elem in enumerate(ca.output_states_list)}
+
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b01]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b10]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b20]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b11]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b01]][output_states_dict[b02]] == pytest.approx(0)
+
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b01]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b10]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b20]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b11]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b10]][output_states_dict[b02]] == pytest.approx(0)
+
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b01]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b10]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b20]] == pytest.approx(1 / 2)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b11]] == pytest.approx(0)
+        assert ca.distribution[input_states_dict[b11]][output_states_dict[b02]] == pytest.approx(1 / 2)
 
 
 def test_empty_circuit():
@@ -235,11 +266,11 @@ def _gen_bs(i: int):
 
 # noinspection PyTypeChecker
 def test_generator():
-    c = Circuit.generic_interferometer(5, _gen_bs)
+    c = GenericInterferometer(5, _gen_bs)
     assert len(c.get_parameters()) == 5*4/2
-    c = Circuit.generic_interferometer(5, _gen_bs, depth=1)
+    c = GenericInterferometer(5, _gen_bs, depth=1)
     assert len(c.get_parameters()) == 2
-    c = Circuit.generic_interferometer(5, _gen_bs, depth=2)
+    c = GenericInterferometer(5, _gen_bs, depth=2)
     assert len(c.get_parameters()) == 4
 
 
@@ -259,14 +290,6 @@ def test_iterator():
     assert len(l_comp) == 4
     for i in range(4):
         assert float(l_comp[i][1].param("theta")) == 1/(i+1) and l_comp[i][0] == comps[i]
-
-
-def test_evolve():
-    for backend_name in ["SLOS", "Naive", "MPS"]:
-        backend = BackendFactory.get_backend(backend_name)
-        backend.set_circuit(comp.BS.H())
-        backend.set_input_state(BasicState("|1,0>"))
-        assert str(backend.evolve()) == "sqrt(2)/2*|1,0>+sqrt(2)/2*|0,1>"
 
 
 def _generate_simple_circuit():
@@ -337,3 +360,27 @@ def test_getitem2_value():
 def test_getitem3_parameter():
     c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
     assert c.getitem((0, 0), True).describe() == "PS(phi=phi1)"
+
+
+def test_x_grid_1_setting_values():
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    with pytest.raises(ValueError):
+        c.add(1, comp.BS(), x_grid=1)
+    # reinitialize the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    with pytest.raises(ValueError):
+        c.add(2, comp.BS(), x_grid=1)
+    # reinitialize again the circuit...
+    c = Circuit(4)
+    c.add(0, comp.BS(), x_grid=1)
+    c.add(2, comp.BS(), x_grid=1)
+    c.add(1, comp.BS(), x_grid=2)
+    c.add(0, comp.BS())
+    c.add(0, comp.BS(), x_grid=3)
+    c.add(2, comp.BS(), x_grid=3)

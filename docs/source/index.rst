@@ -74,26 +74,65 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    legacy
 
 .. toctree::
-   :caption: Examples
+   :caption: Beginner tutorials
    :maxdepth: 2
    :hidden:
 
-   notebooks/walkthrough-cnot
+   notebooks/Walkthrough-cnot
    notebooks/Tutorial
-   notebooks/Differential equation solving
-   notebooks/Shor Implementation
-   notebooks/Boson Sampling
-   notebooks/Boson Sampling with MPS
-   notebooks/Variational Quantum Eigensolver
-   notebooks/2-mode Grover algorithm
-   notebooks/BS-based implementation notebook
-   notebooks/Rewriting rules in Perceval
-   notebooks/Non-unitary components
-   notebooks/Qiskit conversion
-   notebooks/Remote computing
-   notebooks/Reinforcement learning
+
+.. toctree::
+   :caption: Advanced tutorials
+   :maxdepth: 2
+   :hidden:
+
+   notebooks/BS-based_implementation
+   notebooks/LOv_rewriting_rules
+   notebooks/Simulation_non-unitary_components
+   notebooks/Circuit_conversion_qiskit_myQLM
+   notebooks/Remote_computing
+   notebooks/Graph_States_generation_and_display
+   notebooks/Tomography_walkthrough
+
+.. toctree::
+   :caption: Boson sampling
+   :maxdepth: 2
+   :hidden:
+
+   notebooks/Boson_sampling
+   notebooks/MPS_techniques_for_boson_sampling
+
+.. toctree::
+   :caption: Standard quantum algorithms
+   :maxdepth: 2
+   :hidden:
+
+   notebooks/Shor_Implementation
+   notebooks/2-mode_Grover_algorithm
+
+.. toctree::
+   :caption: Variational quantum algorithms
+   :maxdepth: 2
+   :hidden:
+
+   notebooks/Differential_equation_resolution
+   notebooks/Variational_Quantum_Eigensolver
+   notebooks/Reinforcement_learning
    notebooks/QUBO
-   notebooks/Graph States and representation
+
+.. toctree::
+   :caption: Quantum walk
+   :maxdepth: 2
+   :hidden:
+
+   notebooks/Two-particle_bosonic-fermionic_quantum_walk
+
+.. toctree::
+   :caption: Others
+   :maxdepth: 2
+   :hidden:
+
+   notebooks/Gedik_qudit
 
 .. toctree::
    :caption: Code Reference

@@ -27,62 +27,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
 import exqalibur as xq
 from perceval.utils import BasicState
-
+from perceval.components import ACircuit
 from ._abstract_backends import ASamplingBackend
 
 
-def _square(x):
-    return abs(x**2).real
-
-
-def _get_scale(w):
-    return max([max(abs(x.real), abs(x.imag)) for x in w])
-
-
 class Clifford2017Backend(ASamplingBackend):
+    def __init__(self):
+        self._clifford = xq.Clifford2017()
+
+    def set_circuit(self, circuit: ACircuit):
+        super().set_circuit(circuit)  # Computes circuit unitary as _umat
+        self._clifford.set_unitary(self._umat)
+
+    def set_input_state(self, input_state: BasicState):
+        super().set_input_state(input_state)
+        self._clifford.set_input_state(input_state)
+
+    def sample(self):
+        return self._clifford.sample()
+
+    def samples(self, count: int):
+        return self._clifford.samples(count)
 
     @property
     def name(self) -> str:
         return "CliffordClifford2017"
-
-    def _prepare_us(self):
-        # prepare Us that is a m*n matrix
-        m = self._input_state.m
-        us = np.zeros((self._input_state.n, m), dtype=np.complex128)
-        # build Us while transposing it
-        rowidx = 0
-        for ik in range(m):
-            extract = self._umat[:, ik]
-            for _ in range(self._input_state[ik]):
-                us[rowidx, :] = extract
-                rowidx += 1
-        return us
-
-    def sample(self) -> BasicState:
-        n = self._input_state.n
-        if n == 0:
-            return self._input_state
-
-        A = self._prepare_us()
-        if n > 1:
-            A = A[np.random.permutation(n), :]
-        w = _square(A[0, :])
-        m = self._input_state.m
-        mode_seq = [np.random.choice(np.arange(0, m), p=w / sum(w), size=1)[0]]
-        output_state = [0] * m
-        output_state[mode_seq[0]] = 1
-        for mode_limit in range(2, n + 1):
-            # permanents of sub-matrices using Laplace-type expansion (arXiv:1505.05486)
-            sub_perm = np.array(
-                xq.sub_permanents_cx(np.copy(np.reshape(A[0:mode_limit, mode_seq], (-1, mode_limit - 1)))))
-            sub_perm /= _get_scale(sub_perm)
-            # generate next mode from there
-            perm_vector = np.dot(sub_perm.transpose(), A[0:mode_limit])
-            w = _square(perm_vector)
-            next_mode = np.random.choice(np.arange(0, m), p=w/sum(w), size=1)[0]
-            mode_seq.append(next_mode)
-            output_state[next_mode] += 1
-        return BasicState(output_state)

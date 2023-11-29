@@ -15,7 +15,7 @@ To define a parameter - just do:
 
 When defining the parameter, you can also set its value, and max/min values and periodicity:
 
->>> alpha = perceval.P("phi", min_v=0, max_v=2*np.pi, periodic=True)
+>>> alpha = perceval.P("phi", min_v=0, max_v=2*math.pi, periodic=True)
 
 defining boundaries and periodicity is used in particular when optimizing a parameterized circuit.
 
@@ -31,7 +31,7 @@ You can use it several times and define other parameters dynamically:
 >>> c = BS(theta=alpha) // PS(pcvl.P("phi")) // BS(theta=alpha)
 
 .. note::
-  If you declare two parameters with the same name, they are not refering to the same variable, and to avoid confusion
+  If you declare two parameters with the same name, they are not referring to the same variable, and to avoid confusion
   you can not use them simultaneously in a same circuit - the following is incorrect:
 
   >>> c = BS(theta=pcvl.P("alpha")) // PS(pcvl.P("phi")) // BS(theta=pcvl.P("alpha"))
@@ -48,7 +48,7 @@ Setting Values
 
 To give a value to a parameter, use ``set_value``:
 
->>> alpha.set_value(np.pi/4)
+>>> alpha.set_value(math.pi/4)
 
 The parameter is then *defined* and its value will be used when calculating circuit unitary:
 
@@ -91,6 +91,21 @@ Then, add ``pcvl.pdisplay()`` of your circuit.
 .. figure:: _static/img/mzi.png
   :align: center
   :width: 75%
+
+.. tip::
+
+    The outcome of this last command will depend on your environment.
+
+    .. list-table::
+       :header-rows: 1
+       :width: 100%
+
+       * - Text Console
+         - Jupyter Notebook
+         - IDE (Pycharm, Spyder, etc)
+       * - .. image:: _static/img/terminal-screenshot.jpg
+         - .. image:: _static/img/jupyter-screenshot.jpg
+         - .. image:: _static/img/ide-screenshot.jpg
 
 Also, you can change the display of the circuit using a different skin which can itself be configured.
 Indeed, a boolean can be set to obtain a more compact display (if the circuit is too wide for example).
@@ -143,7 +158,7 @@ from the Perceval library.
 
 let's simulate the distribution obtained when we input two photons in a beam-splitter. We will use the Naive backend already stored in simulator_backend.
 
-We will simulate the behaviour of the circuit using the `Circuit Analyser` which has three arguments:
+We will simulate the behavior of the circuit using the `Circuit Analyzer` which has three arguments:
 
 - The first one is an instance of a processor containing the circuit to analyse.
 - The second one is the input state (we will use `input_state`).
@@ -157,7 +172,7 @@ Then, we display the result of `Circuit Analyzer` via ``pdisplay``.
 
 >>> pcvl.pdisplay(ca)
 
-.. figure:: _static/img/CircuitAnalyserHOM.png
+.. figure:: _static/img/CircuitAnalyzerHOM.png
   :align: center
   :width: 40%
 

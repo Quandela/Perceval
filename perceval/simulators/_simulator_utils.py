@@ -36,9 +36,7 @@ from typing import List
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
     res = BSDistribution()
-    sv_copy = copy(sv)
-    sv_copy.normalize()
-    for state, pa in sv_copy.items():
+    for state, pa in copy(sv):
         state.clear_annotations()
         res[state] += abs(pa) ** 2
     return res
@@ -46,8 +44,8 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     res_sv = copy(sv)
-    if str(annotation):  # len(annotation) not working on unix
-        for s in res_sv:
+    if len(annotation):
+        for s, _ in res_sv:
             s.inject_annotation(annotation)
     return res_sv
 
@@ -57,11 +55,11 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
         return sv2
     pa_threshold = sqrt(prob_threshold)
     res = StateVector()
-    for s1, pa1 in sv1.items():
-        for s2, pa2 in sv2.items():
+    for s1, pa1 in sv1:
+        for s2, pa2 in sv2:
             pa = pa1*pa2
             if abs(pa) > pa_threshold:
-                res[s1.merge(s2)] += pa
+                res += s1.merge(s2)*pa
     return res
 
 

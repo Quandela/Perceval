@@ -27,9 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .heralded_cnot import HeraldedCnotItem
+from .klm_cnot import KLMCnotItem
 from .postprocessed_cnot import PostProcessedCnotItem
+from .heralded_cnot import HeraldedCnotItem
 from .heralded_cz import HeraldedCzItem
 from .generic_2mode import Generic2ModeItem
+from .mzi import MZIPhaseFirst, MZIPhaseLast
+from .postprocessed_ccz import PostProcessedCCZItem
+from .toffoli import ToffoliItem
 
-catalog = [HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem]
+catalog_items = [KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
+                 MZIPhaseLast, PostProcessedCCZItem, ToffoliItem]

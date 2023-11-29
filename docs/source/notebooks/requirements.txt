@@ -4,3 +4,4 @@ qiskit
 qutip
 seaborn
 nbconvert
+myqlm>=1.9.3

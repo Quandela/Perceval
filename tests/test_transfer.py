@@ -27,12 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
 import pytest
 from pathlib import Path
 
-import numpy as np
-
-from perceval import Circuit, P, Matrix
+from perceval import Circuit, P, Matrix, GenericInterferometer, InterferometerShape
 import perceval.components.unitary_components as comp
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
@@ -43,7 +42,7 @@ def test_basic_transfer():
     theta = P("theta")
     b = comp.BS(theta=theta)
     b.transfer_from(a)
-    assert theta.defined and pytest.approx(np.pi/2) == float(theta)
+    assert theta.defined and pytest.approx(math.pi/2) == float(theta)
 
 
 def test_basic_transfer_fix():
@@ -57,46 +56,46 @@ def test_basic_transfer_fix():
 
 
 def test_transfer_complex_1():
-    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(np.pi/2)) // (0, comp.BS())
+    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(math.pi/2)) // (0, comp.BS())
     phi_a = P("phi_a")
     phi_b = P("phi_b")
     theta = P("theta")
     b = Circuit(3) // (0, comp.PS(phi_a)) // (2, comp.PS(phi_b)) // (0, comp.BS(theta=theta))
     b.transfer_from(a)
     assert pytest.approx(0) == float(phi_a)
-    assert pytest.approx(np.pi/2) == float(phi_b)
-    assert pytest.approx(np.pi/2) == float(theta)
+    assert pytest.approx(math.pi/2) == float(phi_b)
+    assert pytest.approx(math.pi/2) == float(theta)
 
 
 def test_transfer_complex_2():
     # order is not important
-    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(np.pi/2)) // (0, comp.BS())
+    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(math.pi/2)) // (0, comp.BS())
     phi_a = P("phi_a")
     phi_b = P("phi_b")
     theta = P("theta")
     b = Circuit(3) // (2, comp.PS(phi_b)) // (0, comp.PS(phi_a)) // (0, comp.BS(theta=theta))
     b.transfer_from(a)
     assert pytest.approx(0) == float(phi_a)
-    assert pytest.approx(np.pi/2) == float(phi_b)
-    assert pytest.approx(np.pi/2) == float(theta)
+    assert pytest.approx(math.pi/2) == float(phi_b)
+    assert pytest.approx(math.pi/2) == float(theta)
 
 
 def test_transfer_complex_3():
     # the circuit can be bigger
-    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(np.pi/2)) // (0, comp.BS()) // (1, comp.PS(0))
+    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(math.pi/2)) // (0, comp.BS()) // (1, comp.PS(0))
     phi_a = P("phi_a")
     phi_b = P("phi_b")
     theta = P("theta")
     b = Circuit(3) // (2, comp.PS(phi_b)) // (0, comp.PS(phi_a)) // (0, comp.BS(theta=theta))
     b.transfer_from(a)
     assert pytest.approx(0) == float(phi_a)
-    assert pytest.approx(np.pi/2) == float(phi_b)
-    assert pytest.approx(np.pi/2) == float(theta)
+    assert pytest.approx(math.pi/2) == float(phi_b)
+    assert pytest.approx(math.pi/2) == float(theta)
 
 
 def test_transfer_complex_4():
     # but the circuit cannot match a component that is not here
-    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(np.pi/2)) // (0, comp.BS()) // (1, comp.PS(0))
+    a = Circuit(3) // (0, comp.PS(0)) // (2, comp.PS(math.pi/2)) // (0, comp.BS()) // (1, comp.PS(0))
     phi_a = P("phi_a")
     phi_b = P("phi_b")
     phi_c = P("phi_c")
@@ -104,7 +103,7 @@ def test_transfer_complex_4():
     b = Circuit(3) // (2, comp.PS(phi_b)) // (1, comp.PS(phi_c)) // (0, comp.PS(phi_a)) // (0, comp.BS(theta=theta))
     with pytest.raises(AssertionError):
         b.transfer_from(a)
-    a = Circuit(3) // (0, comp.PS(0)) // (1, comp.PS(0)) // (2, comp.PS(np.pi/2)) // (0, comp.BS())
+    a = Circuit(3) // (0, comp.PS(0)) // (1, comp.PS(0)) // (2, comp.PS(math.pi/2)) // (0, comp.BS())
     phi_a = P("phi_a")
     phi_b = P("phi_b")
     phi_c = P("phi_c")
@@ -124,8 +123,8 @@ def test_transfer_complex_5():
                     // (0, comp.PS(phi=P("φ_a%d" % idx)))
                     // comp.BS()
                     // (0, comp.PS(phi=P("φ_b%d" % idx))))
-        C1 = Circuit.decomposition(M, ub(0), shape="triangle")
-    C2 = Circuit.generic_interferometer(8, ub, shape="triangle")
+        C1 = Circuit.decomposition(M, ub(0), shape=InterferometerShape.TRIANGLE)
+    C2 = GenericInterferometer(8, ub, shape=InterferometerShape.TRIANGLE)
     C2.transfer_from(C1)
     def ub_varbs(idx):
         return (Circuit(2)
@@ -133,5 +132,5 @@ def test_transfer_complex_5():
                 // (0, comp.PS(phi=0))
                 // comp.BS(theta=P("theta%d" % (2*idx+1)))
                 // (0, comp.PS(phi=0)))
-    C3 = Circuit.generic_interferometer(8, ub_varbs, shape="triangle")
+    C3 = GenericInterferometer(8, ub_varbs, shape=InterferometerShape.TRIANGLE)
     C3.transfer_from(C1, force=True)

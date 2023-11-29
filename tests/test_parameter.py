@@ -27,14 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
+
 import pytest
+import sympy as sp
 
 from perceval import Parameter
 import perceval.components.unitary_components as comp
 from perceval.rendering.pdisplay import pdisplay_matrix
 
-import sympy as sp
-import numpy as np
 
 
 def test_definition():
@@ -60,13 +61,10 @@ def test_set_variable():
 
 def test_fixed_0():
     p = Parameter("alpha", 2)
+    assert p.fixed
     assert p.defined
-    try:
-        p.set_value(1)
-    except RuntimeError:
-        pass
-    else:
-        raise Exception("Cannot set a fixed parameter")
+    with pytest.raises(RuntimeError):
+        p.set_value(1)  # Cannot set value to a fixed parameter
 
 
 def test_fixed_1():
@@ -98,8 +96,8 @@ def test_invalid_values():
 def test_periodic_values():
     p = Parameter("theta", 0, 0, 2*sp.pi)
     assert float(p)==0
-    p = Parameter("theta", 5*np.pi/2, 0, 2 * sp.pi)
-    assert float(p) == float(np.pi/2)
+    p = Parameter("theta", 5*math.pi/2, 0, 2 * sp.pi)
+    assert float(p) == float(math.pi/2)
 
 
 def test_multiple_parameter_use():

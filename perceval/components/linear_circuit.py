@@ -30,6 +30,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
+from deprecated import deprecated
 import random
 from typing import Callable, Optional, Union, Tuple, Type, List
 
@@ -38,7 +39,7 @@ import sympy as sp
 import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
-from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params
+from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
 import perceval.utils.algorithms.decomposition as decomposition
 from perceval.utils.algorithms.match import Match
 from perceval.utils.algorithms.solve import solve
@@ -50,6 +51,7 @@ class ACircuit(AParametrizedComponent, ABC):
     Parameters can be fixed (value) or variables.
     """
     _supports_polarization = False
+    _x_grid = None
 
     def __init__(self, m: int, name: str = None):
         super().__init__(m, name)
@@ -109,7 +111,7 @@ class ACircuit(AParametrizedComponent, ABC):
             component: ACircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
-    def param(self, param_name):
+    def param(self, param_name) -> Parameter:
         return self._params[param_name]
 
     def __setitem__(self, key, value):
@@ -367,8 +369,69 @@ class Circuit(ACircuit):
         """
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
+    def _check_x_grid_consistency(self):
+        r"""Check that components with x_grid value have consistent x_grid values - ie it is not possible to have
+            right components with lower x_grid than left components
+
+        :raise: ``ValueError``: if x_grid values are not consistent
+        """
+        x_grids = [None for _ in range(self._m)]
+        for port_range, component in self._components:
+            if component._x_grid is not None:
+                for port in port_range:
+                    if x_grids[port] is not None and x_grids[port] >= component._x_grid:
+                        raise ValueError("x_grid values are not consistent")
+                    x_grids[port] = component._x_grid
+
+    def group_components_by_xgrid(self) -> List[List[Tuple[int], ACircuit]]:
+        r"""Group the components according to their x_grid to facilitate rendering
+
+        Grouping rule is simple: components without x_grid are singleton, components with similar x_grid are grouped
+        together at the position of the first one, moving of the components force recursively parents components to move
+        This reordering works if x_grid values are consistent which is guaranteed by construction"""
+
+        # list all the x_grid values
+        x_grid_groups = set()
+        for idx, (range, component) in enumerate(self._components):
+            if component._x_grid is not None:
+                x_grid_groups.add(component._x_grid)
+
+        # we will need to display all the x_grid values in order, so we sort them
+        sorted_x_grid = sorted(x_grid_groups)
+
+        displayed_components = [False] * len(self._components)
+        grouped_components = []
+
+        for x_grid in sorted_x_grid:
+            x_grid_group = []
+            block = [False] * self.m
+            for idx, (range, component) in enumerate(self._components):
+                # do not display twice same component and do not pass through a blocked port
+                if displayed_components[idx] or any([block[port] for port in range]):
+                    continue
+                if component._x_grid is not None:
+                    for port in range:
+                        block[port] = True
+                    if component._x_grid == x_grid:
+                        x_grid_group.append((range, component))
+                    else:
+                        # do not mark displayed a component with another x_grid
+                        continue
+                else:
+                    grouped_components.append([(range, component),])
+                displayed_components[idx] = True
+            grouped_components.append(x_grid_group)
+
+        # now add all non displayed components
+        for idx, (range, component) in enumerate(self._components):
+            if displayed_components[idx]:
+                continue
+            grouped_components.append([(range, component),])
+
+        return grouped_components
+
     def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
-            component: ACircuit, merge: bool = False) -> Circuit:
+            component: ACircuit, merge: bool = False, x_grid: int = None) -> Circuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
@@ -376,6 +439,9 @@ class Circuit(ACircuit):
         :param component: the component to add, must be a linear component or circuit
         :param merge: when the component is a complex circuit, if True, flatten the added circuit.
                       Otherwise keep the nested structure (default False)
+        :x_grid: if not None, the component is aligned based on this x_grid value according to the following rule:
+                 - any other component with the same x_grid will be vertically aligned
+                 - components with lower x_grids will be on the left
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
@@ -401,11 +467,26 @@ class Circuit(ACircuit):
                 self._params[p.name] = p
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
-            for sprange, sc in component._components:
+            first = True
+            for idx, (sprange, sc) in enumerate(component._components):
+                if x_grid is not None:
+                    if first:
+                        x_grid_first = sc._x_grid
+                        sc._x_grid = x_grid
+                        first = False
+                    elif sc._x_grid is not None:
+                        if x_grid_first is None:
+                            x_grid_first = sc._x_grid-1
+                        sc._x_grid = x_grid + (sc._x_grid - x_grid_first)/100
+                    else:
+                        sc._x_grid = x_grid + idx/10000
                 nprange = tuple(r + port_range[0] for r in sprange)
                 self._components.append((nprange, sc))
         else:
+            component._x_grid = x_grid
             self._components.append((port_range, component))
+        if x_grid is not None:
+            self._check_x_grid_consistency()
         return self
 
     def _compute_unitary(self,
@@ -472,58 +553,20 @@ class Circuit(ACircuit):
         return u
 
     @staticmethod
+    @deprecated(version="0.10.0", reason="Construct a GenericInterferometer object instead")
     def generic_interferometer(m: int,
                                fun_gen: Callable[[int], ACircuit],
-                               shape: str = "rectangle",  # Literal["triangle", "rectangle"]
+                               shape: Union[str, InterferometerShape] = InterferometerShape.RECTANGLE,
                                depth: int = None,
                                phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
                                phase_at_output: bool = False) -> Circuit:
-        r"""Generate a generic interferometer with generic elements and optional phase_shifter layer
-
-        :param m: number of modes
-        :param fun_gen: generator function for the building components, index is an integer allowing to generate
-                        named parameters - for instance:
-                        :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P("phi_%d"%idx)))`
-        :param shape: `rectangle` or `triangle`
-        :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
-                      Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
-        :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
-        :param phase_at_output: if True creates a layer of phase shifters at the output of the generated interferometer
-                                else creates it in the input (default: False)
-        :return: a circuit
-
-        See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
-        """
-        generated = Circuit(m)
-        if phase_shifter_fun_gen and not phase_at_output:
-            for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i), merge=True)
-        idx = 0
-        depths = [0] * m
-        max_depth = depth is None and m or depth
-        if shape == "rectangle":
-            for i in range(0, max_depth):
-                for j in range(0+i % 2, m-1, 2):
-                    if depth is not None and (depths[j] == depth or depths[j+1] == depth):
-                        continue
-                    generated.add((j, j+1), fun_gen(idx), merge=True)
-                    depths[j] += 1
-                    depths[j+1] += 1
-                    idx += 1
-        else:
-            for i in range(1, m):
-                for j in range(i, 0, -1):
-                    if depth is not None and (depths[j-1] == depth or depths[j] == depth):
-                        continue
-                    generated.add((j-1, j), fun_gen(idx), merge=True)
-                    depths[j-1] += 1
-                    depths[j] += 1
-                    idx += 1
-
-        if phase_shifter_fun_gen and phase_at_output:
-            for i in range(0, m):
-                generated.add(i, phase_shifter_fun_gen(i))
-        return generated
+        from .generic_interferometer import GenericInterferometer  # Import in method to avoir circular dependency
+        if isinstance(shape, str):
+            try:
+                shape = InterferometerShape[shape.upper()]
+            except:
+                raise ValueError(f"Unknown interferometer shape: {shape}")
+        return GenericInterferometer(m, fun_gen, shape, depth, phase_shifter_fun_gen, phase_at_output)
 
     def copy(self, subs: Union[dict,list] = None):
         nc = copy.deepcopy(self)
@@ -537,7 +580,7 @@ class Circuit(ACircuit):
     def decomposition(U: MatrixN,
                       component: ACircuit,
                       phase_shifter_fn: Callable[[int], ACircuit] = None,
-                      shape: str = "triangle",  # Literal["triangle"]
+                      shape: Union[str, InterferometerShape] = InterferometerShape.TRIANGLE,
                       permutation: Type[ACircuit] = None,
                       inverse_v: bool = False,
                       inverse_h: bool = False,
@@ -567,6 +610,11 @@ class Circuit(ACircuit):
                                       Otherwise, insert a component everytime (default True).
         :return: a circuit
         """
+        if isinstance(shape, str):
+            try:
+                shape = InterferometerShape[shape.upper()]
+            except:
+                raise ValueError(f"Unknown interferometer shape: {shape}")
         if not Matrix(U).is_unitary() or Matrix(U).is_symbolic():
             raise(ValueError("decomposed matrix should be non symbolic unitary"))
         if inverse_h:
@@ -581,14 +629,16 @@ class Circuit(ACircuit):
                 assert isinstance(constraint, (list, tuple)) and len(constraint) == len(component.get_parameters()),\
                     "there should as many component in each constraint than free parameters in the component"
         while count < max_try:
-            if shape == "triangle":
+            if shape == InterferometerShape.TRIANGLE:
                 lc = decomposition.decompose_triangle(U, component, phase_shifter_fn, permutation, precision,
                                                       constraints, allow_error=allow_error,
                                                       ignore_identity_block=ignore_identity_block)
-            else:
+            elif shape == InterferometerShape.RECTANGLE:
                 lc = decomposition.decompose_rectangle(U, component, phase_shifter_fn, permutation, precision,
                                                        constraints, allow_error=allow_error,
                                                        ignore_identity_block=ignore_identity_block)
+            else:
+                raise NotImplementedError(f"Shape {shape} not supported")
             if lc is not None:
                 C = Circuit(N)
                 for range, component in lc:

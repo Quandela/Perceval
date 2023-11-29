@@ -2,10 +2,96 @@ Legacy
 ======
 
 Perceval has evolved quickly from the initial release, some evolution are introducing breaking changes for existing code.
-While we are trying hard to avoid unncessary API changes, some of necessary to bring new features and keep a consistent
+While we are trying hard to avoid unnecessary API changes, some of necessary to bring new features and keep a consistent
 code base.
 
 This section lists the major breaking changes introduced.
+
+Breaking changes in Perceval 0.10
+---------------------------------
+The main changes between versions 0.9 and 0.10 comes from the migration of the :code:`StateVector` code into our C++ library, Exqalibur.
+
+StateVector
+^^^^^^^^^^^
+
+Iterate through a State Vector
+++++++++++++++++++++++++++++++
+
+State Vector is still a hash map (state, amplitude) but works a bit differently than a python dictionary.
+
+State Vector keys, :code:`states`, are obtained with method :code:`keys`:
+
+From version 0.9
+
+>>> for state in state_vector:
+>>>   assert state in state_vector
+
+To version 0.10
+
+>>> for state in state_vector.keys():
+>>>   assert state in state_vector
+
+State Vector items, :code:`(states, amplitude)`, are obtained by iterate directly through the state vector object:
+
+From version 0.9
+
+>>> for state, amplitude in state_vector.items():
+>>>   assert state_vector[state] == amplitude
+
+To version 0.10
+
+>>> for state, amplitude in state_vector:
+>>>   assert state_vector[state] == amplitude
+
+Using :code:`numpy` scalars in StateVector arithmetic
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Exqalibur C++ package may interact badly with :code:`numpy` types depending on the operand order in some arithmetic operations.
+Multiplying a :code:`numpy` scalar (left operand) with a StateVector (right operand) fails as :code:`numpy` has the priority on an operation it's unable to perform correctly.
+
+From version 0.9
+
+>>> import numpy
+>>> sv1 = numpy.int16(4) * state_vector
+>>> sv2 = state_vector * numpy.int16(4)
+>>> assert sv1 == sv2
+
+To version 0.10
+
+>>> import numpy
+>>> # sv1 = numpy.int16(4) * state_vector # will raise a ValueError
+>>> sv2 = state_vector * numpy.int16(4)
+
+.. note:: StateVector will interact badly with any :code:`numpy` scalar type
+
+Shots in algorithms
+^^^^^^^^^^^^^^^^^^^
+
+When instantiating an algorithm class (:code:`Sampler`, :code:`Analyzer`) with a :code:`RemoteProcessor`, the user now has to
+pass a positive integer value for the named parameter :code:`max_shots_per_call`. Please note that this parameter
+name **has to** be typed in order to avoid potential signature errors.
+
+>>> p = RemoteProcessor("sim:platform")
+>>> sampler = Sampler(p, max_shots_per_call=10_000_000)
+
+This parameter is also handled by local simulations.
+
+.. note:: Probability amplitude back-ends used for sampling (e.g. using **SLOS** for a :code:`sample_count` call) cannot
+    estimate accurately the sample to shots ratio when converting probabilities to samples.
+
+Parameter :code:`count` was renamed to :code:`max_samples` in methods :code:`samples` and :code:`sample_count`.
+
+>>> sampler.samples(500)  # still works
+>>> # sampler.samples(count=500)  # will not work anymore
+>>> sampler.samples(max_samples=500)  # works
+
+For additional information, see: :ref:`Remote computing on Quandela Cloud`
+
+AnnotatedBasicState
+^^^^^^^^^^^^^^^^^^^
+:code:`AnnotatedBasicState` has been deprecated since Perceval 0.7.0, it's time to say goodbye.
+
+See :ref:`AnnotatedBasicState was deprecated`
 
 Breaking changes in Perceval 0.9
 --------------------------------
@@ -32,7 +118,7 @@ From version 0.8
 
 >>> backend_name = "SLOS"
 >>> backend_type = pcvl.BackendFactory.get_backend(backend_name) # In 0.8, the BackendFactory would only be a mapping between a name and a type
->>> backend_obj = backend_type(circuit) # You'd have to instanciate the backend on the next line using the type
+>>> backend_obj = backend_type(circuit) # You'd have to instantiate the backend on the next line using the type
 >>> pa = backend_obj.probampli(input_state, output_state) # You can then start simulating
 
 To version 0.9
@@ -42,7 +128,7 @@ To version 0.9
 >>>
 >>> from perceval.backends import SLOSBackend
 >>> slos = SLOSBackend() # This is equivalent to using the BackendFactory
->>> slos_with_mask = SLOSBackend(mask="0    0", n=2) # You can also use the specifics of each backend when creating one
+>>> slos_with_mask = SLOSBackend(mask=["0    0"], n=2) # You can also use the specifics of each backend when creating one
 >>>
 >>> slos.set_circuit(circuit) # Set a circuit first
 >>> slos.set_input_state(input_state) # Input state has to be a Fock state (all indistinguishable photons)
@@ -141,7 +227,7 @@ Even though this filtering works well with QPU simulators and actual QPU acquisi
 simulations was impacted by a threshold detection rule when they use perfect detectors. In this case, you could retrieve
 unexpected results.
 
-Perceval introcudes :code:`min_detected_photons_filter` to improve its behavior. Updating to Perceval 0.8 and using
+Perceval introduces :code:`min_detected_photons_filter` to improve its behavior. Updating to Perceval 0.8 and using
 :code:`min_detected_photons_filter` as you would have used :code:`mode_post_selection`, will not change results
 for threshold detections, and will improve them for perfect simulations (less states will be rejected, improving
 *physical performance*).
@@ -160,9 +246,9 @@ One direct benefit of this change is that the beam splitter definition is now th
 
 >>> import perceval as pcvl
 >>> from perceval.components.unitary_components import PS, BS, PERM
->>> import numpy as np
+>>> import math
 >>>
->>> c = pcvl.Circuit(2) // PS(np.pi) // BS() // PERM([1, 0]) // (1, PS(np.pi))
+>>> c = pcvl.Circuit(2) // PS(math.pi) // BS() // PERM([1, 0]) // (1, PS(math.pi))
 
 Display components
 ^^^^^^^^^^^^^^^^^^
@@ -248,7 +334,7 @@ and imperfect simulated sources will return results closer to the actual photoni
 Backward compatibility with pre-0.7.3 sources is broken.
 
 * :code:`brightness` was replaced by :code:`emission_probability`. Balanced losses from the source output to the circuit
-  output can be modelled with :code:`losses` paramater.
+  output can be modelled with :code:`losses` parameter.
 
 * :code:`purity` and :code:`purity_model` were respectively replaced by :code:`multiphoton_component` and
   :code:`multiphoton_model`.

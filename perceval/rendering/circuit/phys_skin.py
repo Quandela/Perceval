@@ -27,17 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
 from multipledispatch import dispatch
-import copy
 
 from perceval.components import AComponent, Circuit, Port, Herald, PortLocation,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeStyle
 from .skin_common import bs_convention_color
-
-import sympy as sp
-import numpy as np
 
 
 class PhysSkin(ASkin):
@@ -163,9 +160,9 @@ class PhysSkin(ASkin):
             return 0
         theta = float(theta)
         if convention == cp.BSConvention.Ry:
-            return 1 if theta < 2*np.pi else -1
+            return 1 if theta < 2*math.pi else -1
         elif convention == cp.BSConvention.H:
-            return -1 if round(theta/2/np.pi) % 2 else 1
+            return -1 if round(theta/2/math.pi) % 2 else 1
 
     def bs_shape(self, bs, canvas, content, mode_style, **opts):
         split_content = content.split("\n")

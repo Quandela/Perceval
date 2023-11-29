@@ -27,9 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import time
+import pytest
+
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
-import time
 
 
 def quadratic_count_down(n, speed=0.1, progress_callback=None):
@@ -44,11 +46,11 @@ def quadratic_count_down(n, speed=0.1, progress_callback=None):
 
 
 def test_run_sync_0():
-    assert (pcvl.LocalJob(quadratic_count_down)(5) == [0, 1, 4, 9, 16])
+    assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])(5) == [0, 1, 4, 9, 16])
 
 
 def test_run_sync_1():
-    job = pcvl.LocalJob(quadratic_count_down)
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
     assert job.execute_sync(5) == [0, 1, 4, 9, 16]
     assert job.is_complete
     assert job.status.success
@@ -57,10 +59,14 @@ def test_run_sync_1():
     assert job.status.running_time < 1
     assert job.status.status == RunningStatus.SUCCESS
 
+    job.status.status = RunningStatus.UNKNOWN
+    with pytest.warns(UserWarning):
+        assert job.get_results() == [0, 1, 4, 9, 16]
+
 
 def test_run_async():
-    job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.3) is job
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    assert job.execute_async(5, 0.3) is job
     assert not job.is_complete
     counter = 0
     while not job.is_complete:
@@ -77,11 +83,9 @@ def test_run_async():
 
 
 def test_run_async_fail():
-    job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.01) is job
-    counter = 0
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    assert job.execute_async(5, 0.01) is job
     while not job.is_complete:
-        counter += 1
         time.sleep(1)
     assert not job.status.success
     assert job.status.progress == 0.8
@@ -90,10 +94,14 @@ def test_run_async_fail():
     # should be ~0.05 s
     assert job.status.running_time < 0.5
 
+    job.status.status = RunningStatus.UNKNOWN
+    with pytest.warns(UserWarning):
+        assert job.get_results() == None
+
 
 def test_run_async_cancel():
-    job = pcvl.LocalJob(quadratic_count_down)
-    assert job.execute_async(5, speed=0.3) is job
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    assert job.execute_async(5, 0.3) is job
     job.cancel()
     while job.is_running:
         time.sleep(0.1)
@@ -111,6 +119,13 @@ _REMOTE_JOB_NAME = "a remote job"
 _REMOTE_JOB_DURATION = 5
 _REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
 _REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
+_REMOTE_JOB_RESULTS = pcvl.BSDistribution({
+                pcvl.BasicState([1, 0, 0, 0]): 0.200266,
+                pcvl.BasicState([0, 1, 0, 0]): 0.09734,
+                pcvl.BasicState([0, 0, 1, 0]): 0.089365,
+                pcvl.BasicState([0, 0, 0, 1]): 0.223731,
+                pcvl.BasicState([1, 0, 1, 0]): 0.308951
+            })
 
 
 class MockRPCHandler:
@@ -177,20 +192,10 @@ class MockRPCHandler:
 
     def get_job_results(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
-        return json.dumps(serialize({
-            'results': pcvl.BSDistribution({
-                pcvl.BasicState([1, 0, 0, 0]): 0.200266,
-                pcvl.BasicState([0, 1, 0, 0]): 0.09734,
-                pcvl.BasicState([0, 0, 1, 0]): 0.089365,
-                pcvl.BasicState([0, 0, 0, 1]): 0.223731,
-                pcvl.BasicState([1, 0, 1, 0]): 0.308951
-            }),
-            'physical_perf': 0.7988443869134395,
-            'job_context': {
-                'mapping_delta_parameters': {'count': 10000},
-                'result_mapping': ['perceval.utils', 'probs_to_sample_count']
-            }
-        }))
+        return {'results': json.dumps({
+            'results': serialize(_REMOTE_JOB_RESULTS),
+            'physical_perf': 1
+        })}
 
 
 def test_remote_job():
@@ -206,9 +211,15 @@ def test_remote_job():
         rj.name = 28
     job_status = rj.status
     assert rj.is_complete == job_status.completed
+    assert rj.get_results()['results'] == _REMOTE_JOB_RESULTS
+
+    rj.status.status = RunningStatus.UNKNOWN
+    with pytest.warns(UserWarning):
+        assert rj.get_results()['results'] == _REMOTE_JOB_RESULTS
 
     _TEST_JOB_ID = "any"
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
+    assert resumed_rj.get_results()['results'] == _REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
     assert rj.is_complete == job_status.completed
     assert rj.name == _REMOTE_JOB_NAME

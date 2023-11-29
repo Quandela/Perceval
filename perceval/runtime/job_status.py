@@ -54,7 +54,6 @@ class RunningStatus(Enum):
                 warnings.warn(f"Unknown job running status: {res}")
                 return RunningStatus.UNKNOWN
 
-
 class JobStatus:
     def __init__(self):
         self._status: RunningStatus = RunningStatus.WAITING
@@ -137,11 +136,15 @@ class JobStatus:
 
     @property
     def success(self):
-        return self._status == RunningStatus.SUCCESS
+        return self._status in [RunningStatus.SUCCESS]
 
     @property
     def failed(self):
         return self._status in [RunningStatus.CANCELED, RunningStatus.ERROR]
+
+    @property
+    def maybe_completed(self):
+        return self._status in [RunningStatus.UNKNOWN]
 
     @property
     def stop_message(self):

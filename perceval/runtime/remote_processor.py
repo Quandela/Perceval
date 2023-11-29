@@ -33,17 +33,20 @@ from pkg_resources import get_distribution
 from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components.linear_circuit import Circuit, ACircuit
-from perceval.components.source import Source
-from perceval.components.port import PortLocation, APort, LogicalState
-from perceval.utils import BasicState
+from perceval.components import ACircuit, Processor, Source
+from perceval.components.port import PortLocation, APort
+from perceval.utils import BasicState, LogicalState, PMetadata
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
+from ._token_management import TokenProvider
 
 __process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
+PERFS_KEY = "perfs"
+TRANSMITTANCE_KEY = "Transmittance (%)"
+DEFAULT_TRANSMITTANCE = 0.06
 
 
 class RemoteProcessor(AProcessor):
@@ -69,12 +72,18 @@ class RemoteProcessor(AProcessor):
             if name is not None and name != self.name:
                 warn(f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})")
         else:
-            if name is None or token is None:
-                raise ValueError("Parameters 'name' and 'token' must have a value")
+            if name is None:
+                raise ValueError("Parameter 'name' must have a value")
+            if token is None:
+                provider = TokenProvider()
+                token = provider.get_token()
+            if token is None:
+                raise ConnectionError("No token found")
             self.name = name
             self._rpc_handler = RPCHandler(self.name, url, token)
 
         self._specs = {}
+        self._perfs = {}
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
@@ -104,12 +113,18 @@ class RemoteProcessor(AProcessor):
         platform_details = self._rpc_handler.fetch_platform_details()
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
+        if PERFS_KEY in platform_details:
+            self._perfs.update(platform_details[PERFS_KEY])
         if platform_details['type'] != 'simulator':
             self._type = ProcessorType.PHYSICAL
 
     @property
     def specs(self):
         return self._specs
+
+    @property
+    def performance(self):
+        return self._perfs
 
     @property
     def constraints(self) -> Dict:
@@ -174,7 +189,7 @@ class RemoteProcessor(AProcessor):
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
         j = {
             'platform_name': self.name,
-            'pcvl_version': get_distribution("perceval-quandela").version,
+            'pcvl_version': PMetadata.short_version(),
             'process_id': str(__process_id__)
         }
         payload = {
@@ -217,3 +232,63 @@ class RemoteProcessor(AProcessor):
     def source(self, source: Source):
         # TODO: Implement source setter, setting parameters to be sent remotely
         raise NotImplementedError("Source setting not implemented for remote processors")
+
+    def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
+        if TRANSMITTANCE_KEY in self._perfs:
+            transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
+        else:
+            transmittance = DEFAULT_TRANSMITTANCE
+            warn(f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}")
+        losses = 1 - transmittance
+        n = self._input_state.n
+        photon_filter = n
+        if self._min_detected_photons is not None:
+            photon_filter = self._min_detected_photons
+            if photon_filter > n:
+                return 0
+        if photon_filter < 2:
+            return 1
+
+        # Simulation with a noisy source (only losses)
+        c = self.linear_circuit(flatten=True).copy()
+        if param_values:
+            for n, v in param_values.items():
+                c.param(n).set_value(v)
+        lp = Processor("SLOS", c, Source(losses=losses))
+        lp.min_detected_photons_filter(1)
+        lp.thresholded_output(self._thresholded_output)
+        lp.with_input(self._input_state)
+        probs = lp.probs()
+        p_above_filter_ns = 0
+        for state, prob in probs['results'].items():
+            if state.n >= photon_filter:
+                p_above_filter_ns += prob
+        return p_above_filter_ns
+
+    def estimate_required_shots(self, nsamples: int, param_values: dict = None) -> int:
+        """
+        Compute an estimate number of required shots given the platform and the user request.
+        The circuit, input state, minimum photon filter are taken into account.
+
+        :param nsamples: Number of expected samples of interest
+        :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
+            for this computation to run.
+        :return: Estimate of the number of shots the user needs to acquire enough samples of interest
+        """
+        p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
+        if p_interest == 0:
+            return None
+        return round(nsamples / p_interest)
+
+    def estimate_expected_samples(self, nshots: int, param_values: dict = None) -> int:
+        """
+        Compute an estimate number of samples the user can expect given the platform and the user request.
+        The circuit, input state, minimum photon filter are taken into account.
+
+        :param nshots: Number of shots the user is willing to consume
+        :param param_values: Key/value pairs for variable parameters inside the circuit. All parameters need to be fixed
+            for this computation to run.
+        :return: Estimate of the number of samples of interest the user can expect back
+        """
+        p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
+        return round(nshots * p_interest)

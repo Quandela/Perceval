@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import json
 import time
 from typing import Any
@@ -78,7 +79,7 @@ class RemoteJob(Job):
             are available in the async_execute() call
         :param refresh_progress_delay: wait time when running in sync mode between each refresh
         """
-        super().__init__(delta_parameters=delta_parameters)
+        super().__init__(delta_parameters=delta_parameters, command_param_names=command_param_names)
         self._rpc_handler = rpc_handler
         self._job_status = JobStatus()
         self._job_context = job_context
@@ -88,7 +89,7 @@ class RemoteJob(Job):
         self._id = None
         self.name = job_name
         self._request_data = request_data
-        self._param_names = command_param_names or []
+        self._results = None
 
     @property
     def id(self):
@@ -147,16 +148,6 @@ class RemoteJob(Job):
 
         return self._job_status
 
-    def _handle_unnamed_params(self, args, kwargs):
-        if len(args) > len(self._param_names):
-            raise RuntimeError(f'Too many unnamed parameter: {len(args)}, expected {len(self._param_names)}')
-        for idx, unnamed_arg in enumerate(args):
-            param_name = self._param_names[idx]
-            if param_name in kwargs:  # Parameter exists twice (in args and in kwargs)
-                raise RuntimeError(f'Parameter named {param_name} was passed twice (in *args and **kwargs)')
-            kwargs[param_name] = unnamed_arg
-        return kwargs
-
     def execute_sync(self, *args, **kwargs) -> Any:
         job = self.execute_async(*args, **kwargs)
         while not job.is_complete:
@@ -166,12 +157,13 @@ class RemoteJob(Job):
     def execute_async(self, *args, **kwargs):
         assert self._job_status.waiting, "job has already been executed"
         try:
-            args, kwargs = self._adapt_parameters(args, kwargs)
-            if self._delta_parameters:
+            self._handle_params(args, kwargs)
+            if self._delta_parameters['mapping']:
                 if self._job_context is None:
                     self._job_context = {}
-                self._job_context["mapping_delta_parameters"] = self._delta_parameters
-            kwargs = self._handle_unnamed_params(args, kwargs)
+                self._job_context["mapping_delta_parameters"] = self._delta_parameters["mapping"]
+
+            kwargs = self._delta_parameters['command']
             kwargs['job_context'] = self._job_context
             self._request_data['job_name'] = self._name
             self._request_data['payload'].update(kwargs)
@@ -186,27 +178,26 @@ class RemoteJob(Job):
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
             self._rpc_handler.cancel_job(self._id)
-            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancelation requested by user')
+            self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
-    def get_results(self) -> Any:
-        job_status = self.status
-        if not job_status.completed:
-            raise RuntimeError('The job is still running, results are not available yet.')
-        if job_status.status == RunningStatus.ERROR:
-            raise RuntimeError(f'The job failed: {job_status.stop_message}')
+    def _get_results(self) -> None:
+        if self._results and self.status.completed:
+            return self._results
         response = self._rpc_handler.get_job_results(self._id)
-        results = deserialize(json.loads(response['results']))
-        if "job_context" in results and 'result_mapping' in results["job_context"]:
-            path_parts = results["job_context"]["result_mapping"]
+        self._results = deserialize(json.loads(response['results']))
+        if "job_context" in self._results and 'result_mapping' in self._results["job_context"]:
+            path_parts = self._results["job_context"]["result_mapping"]
             module = __import__(path_parts[0], fromlist=path_parts[1])
             result_mapping_function = getattr(module, path_parts[1])
             # retrieve delta parameters from the response
-            self._delta_parameters = results["job_context"].get("mapping_delta_parameters", {})
-            if "results_list" in results:
-                for res in results["results_list"]:
+            self._delta_parameters = self._results["job_context"].get(
+                "mapping_delta_parameters", {})
+            if "results_list" in self._results:
+                for res in self._results["results_list"]:
                     res["results"] = result_mapping_function(res["results"], **self._delta_parameters)
             else:
-                results["results"] = result_mapping_function(results["results"], **self._delta_parameters)
-        return results
+                self._results["results"] = result_mapping_function(
+                    self._results["results"], **self._delta_parameters)
+        return self._results

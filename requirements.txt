@@ -1,5 +1,5 @@
 numpy
-exqalibur~=0.2.0
+exqalibur~=0.3.0
 tabulate
 pytest
 setuptools

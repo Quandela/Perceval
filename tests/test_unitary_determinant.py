@@ -27,10 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
+
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-
-import numpy as np
 
 
 def test_determinant_base():
@@ -44,10 +44,10 @@ def test_determinant_generic():
 
 
 def test_determinant_1():
-    c = comp.BS(theta=pcvl.P("θ"), phi_tl=np.pi/2, phi_bl=np.pi/2, phi_tr=0)
+    c = comp.BS(theta=pcvl.P("θ"), phi_tl=math.pi/2, phi_bl=math.pi/2, phi_tr=0)
     assert abs(c.U.det().simplify()) == 1
 
 
 def test_determinant_2():
-    c = comp.BS(theta=pcvl.P("θ"), phi_tl=np.pi/2, phi_bl=np.pi/2, phi_tr=np.pi/2)
+    c = comp.BS(theta=pcvl.P("θ"), phi_tl=math.pi/2, phi_bl=math.pi/2, phi_tr=math.pi/2)
     assert abs(c.U.det().simplify()) == 1

@@ -29,10 +29,9 @@
 from numpy import Inf
 
 from .abstract_processor import AProcessor, ProcessorType
-from .port import LogicalState
 from .source import Source
 from .linear_circuit import ACircuit
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 from multipledispatch import dispatch
@@ -150,7 +149,7 @@ class Processor(AProcessor):
         self._input_state = svd
         expected_photons = Inf
         for sv in svd:
-            for state in sv:
+            for state in sv.keys():
                 expected_photons = min(expected_photons, state.n)
                 if state.m != self.circuit_size:
                     raise ValueError(
@@ -172,8 +171,8 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
 
-    def clear_input_and_circuit(self):
-        super().clear_input_and_circuit()
+    def clear_input_and_circuit(self, new_m=None):
+        super().clear_input_and_circuit(new_m)
         self._inputs_map = None
 
     def _compose_processor(self, connector, processor, keep_port: bool):
@@ -189,18 +188,23 @@ class Processor(AProcessor):
             return modes_with_photons >= self._min_detected_photons
         return output_state.n >= self._min_detected_photons
 
-    def samples(self, count: int, progress_callback=None) -> Dict:
+    def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> Dict:
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         pre_physical_perf = 1
         # Rework input map so that it contains only states with enough photons
         input_svd = SVDistribution()
+        zpp = 0  # Zero photon probability
         for sv, p in self._inputs_map.items():
+            if max(sv.n) == 0:
+                zpp += p
             if self._state_preselected_physical(sv):
                 if len(sv) > 1:
                     raise RuntimeError("Cannot sample on a superposed state")
                 input_svd[sv] = p
             else:
                 pre_physical_perf -= p
+        if max_shots is not None:
+            max_shots = round(max_shots*(1 - zpp))
 
         self.backend.set_circuit(self.linear_circuit())
         output = BSSamples()
@@ -208,10 +212,11 @@ class Processor(AProcessor):
         idx = 0
         not_selected_physical = 0
         not_selected = 0
-        while len(output) < count:
+        shots = 0
+        while len(output) < max_samples and (max_shots is None or shots < max_shots):
             if idx == len(selected_inputs):
                 idx = 0
-                selected_inputs = input_svd.sample(count)
+                selected_inputs = input_svd.sample(max_samples)
             selected_bs = selected_inputs[idx][0]
             idx += 1
 
@@ -230,6 +235,7 @@ class Processor(AProcessor):
                 sampled_state = self.backend.sample()
 
             # Post-processing
+            shots += 1
             if not self._state_selected_physical(sampled_state):
                 not_selected_physical += 1
                 continue
@@ -240,15 +246,19 @@ class Processor(AProcessor):
 
             # Progress handling
             if progress_callback:
-                exec_request = progress_callback(len(output)/count, "sampling")
+                exec_request = progress_callback(len(output)/max_samples, "sampling")
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     break
 
-        physical_perf = pre_physical_perf * (count + not_selected) / (count + not_selected + not_selected_physical)
-        logical_perf = count / (count + not_selected)
+        selected = len(output)
+        physical_perf = 0
+        logical_perf = 0
+        if selected > 0:
+            physical_perf = pre_physical_perf * (selected + not_selected) / (selected + not_selected + not_selected_physical)
+            logical_perf = selected / (selected + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def probs(self, progress_callback: Callable = None) -> Dict:
+    def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
@@ -256,6 +266,8 @@ class Processor(AProcessor):
         else:
             self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components)
 
+        if precision is not None:
+            self._simulator.set_precision(precision)
         res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
         lperf = 1
         pperf = 1
@@ -276,4 +288,4 @@ class Processor(AProcessor):
 
     @property
     def available_commands(self) -> List[str]:
-        return ["samples" if self.backend.preferred_command() == "sample" else "probs"]
+        return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]

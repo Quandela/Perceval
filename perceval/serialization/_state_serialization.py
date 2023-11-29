@@ -49,7 +49,7 @@ def deserialize_state_list(states):
 def serialize_statevector(sv: StateVector) -> str:
     sv.normalize()
     ls = []
-    for key, value in sv.items():
+    for key, value in sv:
         real = simple_float(value.real, nsimplify=False)[1]
         imag = simple_float(value.imag, nsimplify=False)[1]
         ls.append("(%s,%s)*%s" % (real, imag, str(key)))
@@ -61,9 +61,7 @@ def deserialize_statevector(s) -> StateVector:
     for c in s.split("+"):
         m = re.match(r"\((.*),(.*)\)\*(.*)$", c)
         assert m, "invalid state vector serialization: %s" % s
-        sv[BasicState(m.group(3))] = float(m.group(1)) + 1j * float(m.group(2))
-    sv._normalized = True
-    sv._has_symbolic = False
+        sv += BasicState(m.group(3)) * (float(m.group(1)) + 1j * float(m.group(2)))
     return sv
 
 

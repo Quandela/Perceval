@@ -55,6 +55,9 @@ class ISimulator(ABC):
     def set_min_detected_photon_filter(self, value: int):
         pass
 
+    def set_precision(self, precision: float):
+        pass
+
 
 class ASimulatorDecorator(ISimulator, ABC):
     def __init__(self, simulator: ISimulator):
@@ -90,3 +93,6 @@ class ASimulatorDecorator(ISimulator, ABC):
 
     def set_min_detected_photon_filter(self, value: int):
         self._simulator.set_min_detected_photon_filter(value)
+
+    def set_precision(self, precision: float):
+        self._simulator.set_precision(precision)

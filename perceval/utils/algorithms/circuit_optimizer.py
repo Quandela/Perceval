@@ -12,6 +12,13 @@
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 #
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,7 +30,7 @@
 from typing import Callable, Tuple, Union
 
 import exqalibur as xq
-from perceval.components import ACircuit, Circuit, BS, PS
+from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
 from perceval.utils import Matrix, P
 from perceval.serialization import serialize_binary, deserialize_circuit
 
@@ -91,17 +98,20 @@ class CircuitOptimizer:
         >>>    return Circuit(2) // PS(P(f"phi_1_{i}")) // BS() // PS(P(f"phi_2_{i}")) // BS()
         >>> def ps(i):
         >>>    return PS(P(f"phi_3_{i}"))
-        >>> template = Circuit.generic_interferometer(12, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
+        >>> template = GenericInterferometer(12, mzi, phase_shifter_fun_gen=ps, phase_at_output=True)
         >>> random_unitary = Matrix.random_unitary(12)
         >>> result_circuit, fidelity = CircuitOptimizer().optimize(random_unitary, template)
         """
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
-        assert template.m == target.shape[0], \
-            f"Template circuit and target size should be the same ({template.m} != {target.m})"
-        assert not target.is_symbolic(), "Target must not contain variables"
 
-        optimizer = xq.CircuitOptimizer(serialize_binary(target), serialize_binary(template))
+        if template.m != target.shape[0]:
+            raise ValueError(f"Template circuit and target size should be the same ({template.m} != {target.shape[0]})")
+
+        if target.is_symbolic():
+            raise TypeError("Target must be numeric")
+
+        optimizer = xq.CircuitOptimizer(target, serialize_binary(template))
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))
@@ -128,16 +138,9 @@ class CircuitOptimizer:
         def _gen_ps(i: int):
             return PS(P(f"phL_{i}"))
 
-        def _mzi_default(i: int):
-            return (Circuit(2)
-                    // (0, PS(phi=P(f"phi_a{i}")))
-                    // BS()
-                    // (0, PS(phi=P(f"phi_b{i}")))
-                    // BS())
-
         if template_component_generator_func is None:
-            template_component_generator_func = _mzi_default
-        template = Circuit.generic_interferometer(
+            template_component_generator_func = catalog["mzi phase first"].generate
+        template = GenericInterferometer(
             target.shape[0],
             template_component_generator_func,
             phase_shifter_fun_gen=_gen_ps,

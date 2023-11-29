@@ -36,7 +36,6 @@ import pytest
 import sympy as sp
 
 
-
 def test_polar_parse_error():
     invalid_str = {"a": "angle value should not contain variable",
                    "(1,2,3)": "more than two parameters",

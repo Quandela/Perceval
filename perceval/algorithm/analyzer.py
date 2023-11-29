@@ -31,12 +31,12 @@ import numpy as np
 
 from .abstract_algorithm import AAlgorithm
 from .sampler import Sampler
-from perceval.utils import BasicState, allstate_iterator
+from perceval.utils import BasicState, allstate_iterator, Matrix
 from perceval.components import AProcessor
 
 
 class Analyzer(AAlgorithm):
-    def __init__(self, processor: AProcessor, input_states, output_states=None, mapping=None):
+    def __init__(self, processor: AProcessor, input_states, output_states=None, mapping=None, **kwargs):
         """
             Initialization of a processor analyzer
             `simulator` is a simulator instance initialized for the circuit
@@ -48,8 +48,8 @@ class Analyzer(AAlgorithm):
         """
         if mapping is None:
             mapping = {}
-        super().__init__(processor)
-        self._sampler = Sampler(processor)
+        super().__init__(processor, **kwargs)
+        self._sampler = Sampler(processor, **kwargs)
         self._mapping = mapping
         self.performance = None
         self.error_rate = None
@@ -104,6 +104,7 @@ class Analyzer(AAlgorithm):
         """
         probs_res = {}
         logical_perf = []
+        has_an_empty_PD = False
         if expected is not None:
             normalize = True
             self.error_rate = 0
@@ -118,6 +119,8 @@ class Analyzer(AAlgorithm):
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()
             probs = probs_output['results']
+            if len(probs) == 0:
+                has_an_empty_PD = True
             probs_res[i_state] = probs
             if 'logical_perf' in probs_output:
                 logical_perf.append(probs_output['logical_perf'])
@@ -127,7 +130,7 @@ class Analyzer(AAlgorithm):
                 progress_callback((idx+1)/len(self.input_states_list))
 
         # Create a distribution matrix and compute performance / error rate if needed
-        self._distribution = np.zeros((len(self.input_states_list), len(self.output_states_list)))
+        self._distribution = Matrix(np.zeros((len(self.input_states_list), len(self.output_states_list))))
         for iidx, i_state in enumerate(self.input_states_list):
             sum_p = 0
             for oidx, o_state in enumerate(self.output_states_list):
@@ -151,11 +154,18 @@ class Analyzer(AAlgorithm):
         self.performance = min(logical_perf)
         output = {'results': self._distribution, 'input_states': self.input_states_list,
                   'output_states': self.output_states_list, 'performance': self.performance}
+
+        if has_an_empty_PD:
+            output['performance'] = 0
         if expected is not None:
-            self.error_rate /= len(self.input_states_list)
-            output['error_rate'] = self.error_rate
-            self.fidelity = 1 - self.error_rate
-            output['fidelity'] = self.fidelity
+            if has_an_empty_PD:
+                output['error_rate'] = None
+                output['fidelity'] = None
+            else:
+                self.error_rate /= len(self.input_states_list)
+                output['error_rate'] = self.error_rate
+                self.fidelity = 1 - self.error_rate
+                output['fidelity'] = self.fidelity
         return output
 
     @property

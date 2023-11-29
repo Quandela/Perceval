@@ -26,9 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import pytest
 
 import perceval as pcvl
 import networkx as nx
+import math
 
 
 def test_logical_state_raw():
@@ -125,23 +127,43 @@ def test_ghz_state_polarization():
         pcvl.BasicState("|{P:V},{P:V},{P:V},{P:V}>"))
 
 
+sqrt2_4 = math.sqrt(2) / 4
+
+
 def test_graph_state_raw():
     sg = pcvl.StateGenerator(pcvl.Encoding.RAW)
     sv = sg.graph_state(nx.path_graph(3))
-    assert str(sv) == "sqrt(2)/4*|1,0,0>+sqrt(2)/4*|0,0,0>-sqrt(2)/4*|1,1,0>+sqrt(2)/4*|0,1,0>+" \
-                      "sqrt(2)/4*|1,0,1>+sqrt(2)/4*|0,0,1>+sqrt(2)/4*|1,1,1>-sqrt(2)/4*|0,1,1>"
+    assert pytest.approx(sv[pcvl.BasicState('|0,0,0>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,0,0>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,1,0>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,0,1>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,1,0>')]) == -sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,0,1>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,1,1>')]) == -sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,1,1>')]) == sqrt2_4
 
 
 def test_graph_state_dual_rail():
     sg = pcvl.StateGenerator(pcvl.Encoding.DUAL_RAIL)
     sv = sg.graph_state(nx.path_graph(3))
-    assert str(sv) == "sqrt(2)/4*|0,1,1,0,1,0>+sqrt(2)/4*|1,0,1,0,1,0>-sqrt(2)/4*|0,1,0,1,1,0>+sqrt(2)/4*|1,0,0,1,1,0>+" \
-                      "sqrt(2)/4*|0,1,1,0,0,1>+sqrt(2)/4*|1,0,1,0,0,1>+sqrt(2)/4*|0,1,0,1,0,1>-sqrt(2)/4*|1,0,0,1,0,1>"
+    assert pytest.approx(sv[pcvl.BasicState('|1,0,1,0,1,0>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,1,1,0,1,0>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,0,0,1,1,0>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,0,1,0,0,1>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,1,0,1,1,0>')]) == -sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,1,1,0,0,1>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|1,0,0,1,0,1>')]) == -sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|0,1,0,1,0,1>')]) == sqrt2_4
 
 
 def test_graph_state_polarization():
     sg = pcvl.StateGenerator(pcvl.Encoding.POLARIZATION)
     sv = sg.graph_state(nx.path_graph(3))
-    assert str(sv) == "sqrt(2)/4*|{P:V},{P:H},{P:H}>+sqrt(2)/4*|{P:H},{P:H},{P:H}>-sqrt(2)/4*|{P:V},{P:V},{P:H}>+" \
-                      "sqrt(2)/4*|{P:H},{P:V},{P:H}>+sqrt(2)/4*|{P:V},{P:H},{P:V}>+sqrt(2)/4*|{P:H},{P:H},{P:V}>+" \
-                      "sqrt(2)/4*|{P:V},{P:V},{P:V}>-sqrt(2)/4*|{P:H},{P:V},{P:V}>"
+    assert pytest.approx(sv[pcvl.BasicState('|{P:H},{P:H},{P:H}>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:V},{P:H},{P:H}>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:H},{P:V},{P:H}>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:H},{P:H},{P:V}>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:V},{P:V},{P:H}>')]) == -sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:V},{P:H},{P:V}>')]) == sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:H},{P:V},{P:V}>')]) == -sqrt2_4
+    assert pytest.approx(sv[pcvl.BasicState('|{P:V},{P:V},{P:V}>')]) == sqrt2_4

@@ -26,11 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from perceval.components import Circuit, Processor
-from perceval.components.unitary_components import *
+from deprecated import deprecated
+from perceval.components import Circuit, Processor, PERM, BS, Port
 from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.components.port import Port
 from perceval.utils import Encoding, PostSelect
 
 
@@ -44,32 +42,36 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
 data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
+    see_also = "klm cnot and heralded cnot (using cz)"
 
     def __init__(self):
         super().__init__("postprocessed cnot")
         self._default_opts['type'] = AsType.PROCESSOR
 
+    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
     def build(self):
-        theta_13 = BS.r_to_theta(1/3)
-        c_cnot = (Circuit(6, name="PostProcessed CNOT")
-                  .add(0, PERM([0, 2, 3, 4, 1]))  # So that both heralded modes are on the bottom of the gate
-                  .add((0, 1), BS.H(theta_13))
-                  .add((0, 1), PERM([1, 0]))
-                  .add((3, 4), BS.H())
-                  .add((2, 3), PERM([1, 0]))
-                  .add((2, 3), BS.H(theta_13))
-                  .add((2, 3), PERM([1, 0]))
-                  .add((4, 5), BS.H(theta_13))
-                  .add((3, 4), BS.H())
-                  .add(0, PERM([4, 0, 1, 2, 3])))  # So that both heralded modes are on the bottom of the gate
-
         if self._opt('type') == AsType.CIRCUIT:
-            return c_cnot
+            return self.build_circuit()
         elif self._opt('type') == AsType.PROCESSOR:
-            p = Processor(self._opt('backend'), c_cnot)
-            p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
-             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
-             .add_herald(4, 0) \
-             .add_herald(5, 0)
-            p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
-            return p
+            return self.build_processor(backend=self._opt('backend'))
+
+    def build_circuit(self, **kwargs):
+        theta_13 = BS.r_to_theta(1 / 3)
+        return (Circuit(6, name="PostProcessed CNOT")
+                .add(0, PERM([0, 2, 3, 4, 1]))  # So that both heralded modes are on the bottom of the gate
+                .add((0, 1), BS.H(theta_13), x_grid=1)
+                .add((3, 4), BS.H())
+                .add((2, 3), PERM([1, 0]))
+                .add((2, 3), BS.H(theta_13), x_grid=1)
+                .add((2, 3), PERM([1, 0]))
+                .add((4, 5), BS.H(theta_13), x_grid=1)
+                .add((3, 4), BS.H())
+                .add(1, PERM([3, 0, 1, 2])))  # So that both heralded modes are on the bottom of the gate
+
+    def build_processor(self, **kwargs):
+        p = self._init_processor(**kwargs)
+        p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
+        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+            .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
+            .add_herald(4, 0) \
+            .add_herald(5, 0)
