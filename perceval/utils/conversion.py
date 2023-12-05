@@ -73,7 +73,7 @@ def probs_to_sample_count(probs: BSDistribution, count: int = None, **kwargs) ->
     for state in perturbed_dist:
         results.add(state, round(perturbed_dist[state] * count))
     # Artificially deal with the rounding errors
-    diff = count - sum(list(results.values()))
+    diff = round(count - sum(list(results.values())))
     if diff > 0:
         results[random.choice(list(results.keys()))] += diff
     elif diff < 0:
