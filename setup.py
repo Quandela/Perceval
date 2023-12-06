@@ -31,11 +31,12 @@ setuptools.setup(
     ],
     packages=package_list,
     install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.3.0', 'multipledispatch',
-                      'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec', 'platformdirs'],
+                      'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec',
+                      'platformdirs'],
     extras_require={
-        "qiskit_bridge": ["qiskit", "seaborn"],
-        "qutip_bridge": ["qutip"],
-        "myqlm_bridge": ["myqlm>=1.9.3"]
+        "qiskit_bridge": ["qiskit~=0.45.1", "seaborn~=0.13"],
+        "qutip_bridge": ["qutip~=4.7.3"],
+        "myqlm_bridge": ["myqlm~=1.9.5"]
     },
     setup_requires=["scmver"],
     python_requires=">=3.8,<3.12",

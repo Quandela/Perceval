@@ -313,8 +313,8 @@ class BSCount(defaultdict):
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSCount key must be a BasicState"
-        assert isinstance(value, int) and value >= 0, "Count must be a positive integer"
-        super().__setitem__(key, value)
+        assert value >= 0, "Count must be a positive value"
+        super().__setitem__(key, int(value))
 
     def __getitem__(self, key):
         assert isinstance(key, BasicState), "BSCount key must be a BasicState"
