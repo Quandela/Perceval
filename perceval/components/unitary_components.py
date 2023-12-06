@@ -34,7 +34,7 @@ from enum import Enum
 import numpy as np
 import sympy as sp
 
-from .linear_circuit import ACircuit
+from .linear_circuit import ACircuit, Circuit
 from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
 
 
@@ -414,6 +414,23 @@ class PERM(Unitary):
             for state, prob_ampli in sv.items()
         })
         return nsv
+
+    def break_in_2_mode_perms(self):
+
+        perm_vec_req = self.perm_vector
+        perm_len = len(perm_vec_req)
+
+        circ = Circuit(perm_len, name="PERM broken into 2 mode PERM")
+        new_perm_vec = [i for i in range(perm_len)]
+
+        for in_m_pos in range(perm_len):
+            out_m_pos = perm_vec_req.index(in_m_pos)
+            while new_perm_vec[in_m_pos] != out_m_pos:
+                swap_idx = new_perm_vec.index(out_m_pos)
+                new_perm_vec[swap_idx], new_perm_vec[swap_idx - 1] = new_perm_vec[swap_idx - 1], new_perm_vec[swap_idx]
+                circ.add(swap_idx - 1, PERM([1, 0]))
+
+        return circ
 
 
 class PBS(Unitary):

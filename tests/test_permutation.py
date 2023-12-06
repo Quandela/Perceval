@@ -31,6 +31,7 @@ import perceval as pcvl
 import perceval.components.unitary_components as comp
 import perceval.algorithm as algo
 import numpy as np
+import pytest
 
 
 def test_permutation_3():
@@ -69,3 +70,15 @@ def test_permutation_inverse():
     expected = [max(perm_vector)-i for i in perm_vector]
     expected.reverse()
     assert perm.perm_vector == expected
+
+
+@pytest.mark.parametrize("perm_list", [[2, 0, 1], [2, 3, 1, 0]])
+def test_n_mode_permutation_in_2_mode_perms(perm_list):
+    n_mode_perm = comp.PERM(perm_list)
+
+    new_circ = n_mode_perm.break_in_2_mode_perms()
+    u_des = n_mode_perm.compute_unitary()
+
+    u_new = new_circ.compute_unitary()
+
+    assert np.all(u_des == u_new)
