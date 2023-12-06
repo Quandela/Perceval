@@ -1,7 +1,7 @@
 jupyter
 tqdm
-qiskit
-qutip
-seaborn
+qiskit~=0.45.1
+qutip~=4.7.3
+seaborn~=0.13
 nbconvert
-myqlm>=1.9.3
+myqlm~=1.9.5
