@@ -35,6 +35,17 @@ import pytest
 from _test_utils import assert_svd_close
 
 
+def test_fock_basis():
+
+    basis = FockBasis(12,3)
+    assert basis.m == 12
+    assert len(basis) == 455
+    basis.add_photon()
+    assert len(basis) == 1820
+    basis.add_photons(2)
+    assert len(basis) == 18564
+    assert basis.n_max == 6
+
 def test_statevector_to_array():
     index = FockBasis(2,2)
     sv = StateVector(BasicState([1, 1]))
