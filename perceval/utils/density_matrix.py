@@ -149,19 +149,22 @@ class DensityMatrix:
 
         :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
         :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
+        :param m: optional number of modes if index is not giver
+        :param n_max: optional maximum number of photon if index is not given
         """
         # Here the constructor for a matrix
         if not isinstance(mixed_state, (np.ndarray, sparray)):
-            raise TypeError(f"Can't consruct a density matrix from {type(mixed_state)}")
+            raise TypeError(f"Can't construct a density matrix from {type(mixed_state)}")
         if index is None:
             if not (m is None or n_max is None):
                 index = FockBasis(m, n_max)
             else:
                 raise ValueError("you must provide an index or a number of modes and photons")
-        if not (isinstance(index, FockBasis) and len(index) == mixed_state.shape[0]):
-            raise ValueError("The given index is not incorrect")
+        if not isinstance(index, FockBasis):
+            raise ValueError(f"index must be a FockBasis object. {type(index)} was given")
         if len(index) != mixed_state.shape[0]:
-            raise ValueError("The index length is incompatible with your matrix size")
+            raise ValueError(f"The index length is incompatible with your matrix size. \n "
+                             f"For at most {index.n_max} photons in {index.m} modes, your matrix size must be {len(index)}")
         if mixed_state.shape[0] != mixed_state.shape[1]:
             raise ValueError("The density matrix must be square")
 
@@ -175,9 +178,11 @@ class DensityMatrix:
         self.set_index(index)  # index construction
 
     @staticmethod
-    def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
+    def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
         """
         Construct a Density matrix from a SVDistribution
+        :param svd: an SVDistribution object representing the mixed state
+        :param index: the basis in which the density matrix is expressed. Self generated if incorrect"
         """
         if isinstance(svd, (StateVector, BasicState)):
             svd = SVDistribution(svd)
@@ -263,7 +268,9 @@ class DensityMatrix:
 
     def to_svd(self, threshold: float = 1e-8, batch_size: int = 1):
         """
-                gives back an SVDistribution from the density_matrix
+            gives back an SVDistribution from the density_matrix
+            :param threshold: the threshold when the search for eigen values is stopped
+            :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration. Only used if matrix is large enough.
         """
         if self.size < 50:  # if the matrix is small: array eigh method
             matrix = self.mat.toarray()
