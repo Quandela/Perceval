@@ -44,13 +44,6 @@ import exqalibur as xq
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
 
 
-def create_index(m: int, n_max: int):
-    index = dict()
-    for i, x in enumerate(max_photon_state_iterator(m, n_max)):
-        index[x] = i
-    return index
-
-
 def statevector_to_array(sv: StateVector, index: dict):
     """
     translate a StateVector object into an array
@@ -101,7 +94,7 @@ def density_matrix_tensor_product(A, B):
     n_max = A.n_max + B.n_max
     n_mode = A.m + B.m
     size = comb(n_max+n_mode, n_max)
-    new_index = create_index(n_mode, n_max)
+    new_index = FockBasis(n_mode, n_max)
     matrix = kron(A.mat, B.mat)
     perm = dok_array((A.size*B.size, size), dtype=complex) # matrix from tensor space to complete Fock space
     for i, a_state in enumerate(A.reverse_index):
@@ -144,11 +137,11 @@ class FockBasis(dict):
 class DensityMatrix:
     """
     Density operator representing a mixed state
-    Does not support annotations
+    Does not support annotations yet
     """
     def __init__(self,
                  mixed_state: Union[SVDistribution, StateVector, BasicState, sparray],
-                 index: Optional[dict] = None,
+                 index: Optional[FockBasis] = None,
                  m: Optional[int] = None,
                  n_max: Optional[int] = None):
         """
@@ -165,7 +158,7 @@ class DensityMatrix:
                 index = FockBasis(m, n_max)
             else:
                 raise ValueError("you must provide an index or a number of modes and photons")
-        if not (isinstance(index, dict) and len(index) == mixed_state.shape[0]):
+        if not (isinstance(index, FockBasis) and len(index) == mixed_state.shape[0]):
             raise ValueError("The given index is not incorrect")
         if len(index) != mixed_state.shape[0]:
             raise ValueError("The index length is incompatible with your matrix size")
@@ -174,8 +167,11 @@ class DensityMatrix:
 
         self.mat = csr_array(mixed_state, dtype=complex)
         self._size = self.mat.shape[0]
-        self._m = next(iter(index.keys())).m
-        self._n_max = max([x.n for x in index.keys()])
+        self._m = index.m
+        self._n_max = index.n_max
+
+        self.index = dict()
+        self.reverse_index = []
         self.set_index(index)  # index construction
 
     @staticmethod
@@ -212,8 +208,6 @@ class DensityMatrix:
         return DensityMatrix(matrix, index)
 
     def set_index(self, index: dict):
-        self.index = dict()
-        self.reverse_index = []
         if index is None:
             k = 0
             for key in max_photon_state_iterator(self._m, self._n_max):

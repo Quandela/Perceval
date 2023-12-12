@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution
-from perceval.utils.density_matrix import create_index, statevector_to_array
+from perceval.utils.density_matrix import FockBasis, statevector_to_array
 import numpy as np
 import scipy
 from scipy.sparse import dok_array
@@ -36,7 +36,7 @@ from _test_utils import assert_svd_close
 
 
 def test_statevector_to_array():
-    index = create_index(2, 2)
+    index = FockBasis(2,2)
     sv = StateVector(BasicState([1, 1]))
     vector = np.zeros(6, dtype=complex)
     vector[4] = 1
@@ -44,7 +44,7 @@ def test_statevector_to_array():
 
 
 def test_create_index():
-    dic = create_index(10, 5)
+    dic = FockBasis(10, 5)
     assert max([basic_state.n for basic_state in dic]) == 5
     for basic_state in dic:
         assert basic_state.m == 10
@@ -102,7 +102,7 @@ def test_density_matrix_to_svd():
 
 def test_density_matrix_array_constructor():
     matrix = np.array([[0.8, 0], [0, 0.2]])
-    index = create_index(1, 1)
+    index = FockBasis(1, 1)
     dm1 = DensityMatrix(matrix, index)
     dm2 = DensityMatrix.from_svd(SVDistribution({BasicState([0]): .8, BasicState([1]): .2}))
     assert np.allclose(dm1.mat.toarray(), dm2.mat.toarray())
