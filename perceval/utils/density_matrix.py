@@ -38,6 +38,7 @@ from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.linalg import eigh
 from copy import copy
 import random
+import exqalibur as xq
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
@@ -86,10 +87,10 @@ def density_matrix_tensor_product(A, B):
     """
 
     if isinstance(A, (SVDistribution, StateVector, BasicState)):
-        A = DensityMatrix(A)
+        A = DensityMatrix.from_svd(A)
 
     if isinstance(B, (StateVector, SVDistribution, BasicState)):
-        B = DensityMatrix(B)
+        B = DensityMatrix.from_svd(B)
 
     if not isinstance(B, DensityMatrix):
         raise TypeError(f"Cannot do a Tensor product between a DensityMatrix and a {type(B)}")
@@ -111,6 +112,33 @@ def density_matrix_tensor_product(A, B):
     matrix = perm.T @ matrix @ perm
 
     return DensityMatrix(matrix, new_index)
+
+
+class FockBasis(dict):
+    def __init__(self, m, n_max):
+        for i, st in enumerate(max_photon_state_iterator(m, n_max)):
+            self[st] = i
+        self._m = m
+        self._n_max = n_max
+
+    def add_photon(self):
+        self._n_max += 1
+        N = len(self)
+        new_states = xq.FSArray(self._m, self._n_max)
+        for i, st in enumerate(new_states):
+            self[st] = N+i
+
+    def add_photons(self, n):
+        for k in range(n):
+            self.add_photon()
+
+    @property
+    def m(self):
+        return self._m
+
+    @property
+    def n_max(self):
+        return self._n_max
 
 
 class DensityMatrix:
@@ -144,33 +172,38 @@ class DensityMatrix:
             self.reverse_index = []
             self.set_index(index)  # index construction
 
-        else:
-            # Here the constructor for an SVD, SV or BS
-            if isinstance(mixed_state, (StateVector, BasicState)):
-                mixed_state = SVDistribution(mixed_state)
+    @staticmethod
+    def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
+        """
+        Construct a Density matrix from a SVDistribution
+        """
+        if isinstance(svd, (StateVector, BasicState)):
+            svd = SVDistribution(svd)
 
-            if not isinstance(mixed_state, SVDistribution):
-                raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
+        if not isinstance(svd, SVDistribution):
+            raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
 
-            for key in mixed_state.keys():
-                if any([bs[0].has_annotations for bs in key]):
-                    raise ValueError("annotations are not supported yet in DensityMatrix")
+        for key in svd.keys():
+            if any([bs[0].has_annotations for bs in key]):
+                raise ValueError("annotations are not supported yet in DensityMatrix")
 
-            self._m = mixed_state.m
-            self._n_max = mixed_state.n_max
-            self._size = comb(self.m + self._n_max, self.m)
-            self.set_index(index)  # index construction
+        m = svd.m
+        n_max = svd.n_max
+        size = comb(m+n_max, m)
 
-            # matrix construction from svd
-            l = []
-            for sv, p in mixed_state.items():
-                vector = dok_array((self._size, 1), dtype=complex)
-                for bst in sv.keys():
-                    idx = self.index[bst]
-                    vector[idx, 0] = sv[bst]
-                vector = csr_array(vector)
-                l.append((vector, p))
-            self.mat = sum([p*(vector @ conj(vector.T)) for vector, p in l])
+        if not(isinstance(index, FockBasis) and index.m == m and index.n_max >= n_max):
+            index = FockBasis(m, n_max)
+        l = []
+        for sv, p in svd.items():
+            vector = csr_array((size, 1), dtype=complex)
+            for bst in sv.keys():
+                idx = index[bst]
+                vector[idx, 0] = sv[bst]
+            vector = csr_array(vector)
+            l.append((vector, p))
+        matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])
+
+        return DensityMatrix(matrix, index)
 
     def set_index(self, index: dict):
         self.index = dict()
@@ -271,7 +304,7 @@ class DensityMatrix:
             raise TypeError("You can only add a Density Matrix to a Density Matrix")
 
         if self._m != other._m:
-            raise ValueError("You can't add Density Matrices acting on different numbers of mode")
+            raise ValueError("You can't add Density Matrices with different numbers of mode")
 
         n = max(self._n_max, other.n_max)
         if n == self.n_max:

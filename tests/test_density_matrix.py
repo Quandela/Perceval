@@ -52,8 +52,8 @@ def test_create_index():
 
 def test_density_matrix():
     sv = BasicState([0]) + BasicState([1])
-    dm = DensityMatrix(sv)
-    dm2 = DensityMatrix(BasicState([0]))
+    dm = DensityMatrix.from_svd(sv)
+    dm2 = DensityMatrix.from_svd(BasicState([0]))
     dm3 = dm * 2
     dm4 = 2 * dm
 
@@ -66,7 +66,7 @@ def test_density_matrix():
     assert np.allclose(dm4.mat.toarray(), test_mat, 1e-6, 1e-6)
 
     tensor_dm_1 = dm * dm
-    tensor_dm_2 = DensityMatrix(sv * sv)
+    tensor_dm_2 = DensityMatrix.from_svd(sv * sv)
     tensor_dm_3 = dm*sv
 
     assert tensor_dm_1.shape == (6, 6)
@@ -90,8 +90,8 @@ def test_density_matrix_to_svd():
     svd2 = source.generate_distribution(BasicState([0, 1]))
     tensor_svd = svd1*svd2
 
-    dm1 = DensityMatrix(svd1)
-    dm2 = DensityMatrix(svd2)
+    dm1 = DensityMatrix.from_svd(svd1)
+    dm2 = DensityMatrix.from_svd(svd2)
 
     svd1_back = dm1.to_svd()
 
@@ -104,11 +104,11 @@ def test_density_matrix_array_constructor():
     matrix = np.array([[0.8, 0], [0, 0.2]])
     index = create_index(1, 1)
     dm1 = DensityMatrix(matrix, index)
-    dm2 = DensityMatrix(SVDistribution({BasicState([0]): .8, BasicState([1]): .2}))
+    dm2 = DensityMatrix.from_svd(SVDistribution({BasicState([0]): .8, BasicState([1]): .2}))
     assert np.allclose(dm1.mat.toarray(), dm2.mat.toarray())
 
 
 def test_sample():
-    dm = DensityMatrix(BasicState([1]))
+    dm = DensityMatrix.from_svd(BasicState([1]))
     for x in dm.sample(10):
         assert x == BasicState([1])
