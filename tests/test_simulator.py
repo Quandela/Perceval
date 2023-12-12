@@ -152,7 +152,10 @@ def test_simulator_probs_postselection():
     simulator = Simulator(MockBackend())
     simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
-    output_dist = simulator.probs(input_state)
+
+    with pytest.warns(UserWarning):
+        output_dist = simulator.probs(input_state)
+
     assert len(output_dist) == 0
     assert simulator.logical_perf == pytest.approx(0)
 

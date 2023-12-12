@@ -85,8 +85,10 @@ def test_run_async():
 def test_run_async_fail():
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
     assert job.execute_async(5, 0.01) is job
-    while not job.is_complete:
-        time.sleep(1)
+
+    with pytest.warns(UserWarning):
+        while not job.is_complete:
+            time.sleep(1)
     assert not job.status.success
     assert job.status.progress == 0.8
     assert job.status.status == RunningStatus.ERROR
