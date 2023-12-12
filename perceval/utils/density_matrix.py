@@ -148,7 +148,9 @@ class DensityMatrix:
     """
     def __init__(self,
                  mixed_state: Union[SVDistribution, StateVector, BasicState, sparray],
-                 index: Optional[dict] = None):
+                 index: Optional[dict] = None,
+                 m: Optional[int] = None,
+                 n_max: Optional[int] = None):
         """
         Constructor for the DensityMatrix Class
 
@@ -156,21 +158,25 @@ class DensityMatrix:
         :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
         """
         # Here the constructor for a matrix
-        if isinstance(mixed_state, (np.ndarray, sparray)):
-            if index is None:
-                raise ValueError("you can't construct a DensityMatrix from a matrix without giving an index")
-            if len(index) != mixed_state.shape[0]:
-                raise ValueError("The index length is incompatible with your matrix size")
-            if mixed_state.shape[0] != mixed_state.shape[1]:
-                raise ValueError("The density matrix must be square")
+        if not isinstance(mixed_state, (np.ndarray, sparray)):
+            raise TypeError(f"Can't consruct a density matrix from {type(mixed_state)}")
+        if index is None:
+            if not (m is None or n_max is None):
+                index = FockBasis(m, n_max)
+            else:
+                raise ValueError("you must provide an index or a number of modes and photons")
+        if not (isinstance(index, dict) and len(index) == mixed_state.shape[0]):
+            raise ValueError("The given index is not incorrect")
+        if len(index) != mixed_state.shape[0]:
+            raise ValueError("The index length is incompatible with your matrix size")
+        if mixed_state.shape[0] != mixed_state.shape[1]:
+            raise ValueError("The density matrix must be square")
 
-            self.mat = csr_array(mixed_state, dtype=complex)
-            self._size = self.mat.shape[0]
-            self._m = next(iter(index.keys())).m
-            self._n_max = max([x.n for x in index.keys()])
-            self.index = dict()
-            self.reverse_index = []
-            self.set_index(index)  # index construction
+        self.mat = csr_array(mixed_state, dtype=complex)
+        self._size = self.mat.shape[0]
+        self._m = next(iter(index.keys())).m
+        self._n_max = max([x.n for x in index.keys()])
+        self.set_index(index)  # index construction
 
     @staticmethod
     def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[dict] = None):
