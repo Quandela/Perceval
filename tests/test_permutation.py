@@ -29,10 +29,13 @@
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
+from perceval.components import Circuit
+from perceval.components.comp_utils import decompose_perms
 import perceval.algorithm as algo
 import numpy as np
 import pytest
 import random
+
 
 def test_permutation_3():
     circuit = comp.PERM([2, 0, 1])
@@ -96,3 +99,17 @@ def test_random_perm_breakup_run_multiple(ith_run):
         assert perm.m == 2
 
     assert np.all(n_mode_perm.compute_unitary() == new_circ.compute_unitary())
+
+
+def test_circuit_decompose_perms():
+    # tests if any given circuit with n-mode perm returns a circuit with only 2-mode perms
+
+    c = Circuit(3) // (0, comp.PERM([2, 0, 1])) // (0, comp.BS.H()) // (1, comp.PERM([1, 0]))
+
+    decomp_c = decompose_perms(c)
+
+    assert c.m == decomp_c.m
+
+    for r, c in decomp_c:
+        if isinstance(c, comp.PERM):
+            assert c.m == 2

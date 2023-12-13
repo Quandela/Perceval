@@ -29,7 +29,6 @@
 
 from .unitary_components import PERM
 from .linear_circuit import Circuit
-import perceval as pcvl
 
 
 def decompose_perms(circuit: Circuit) -> Circuit:
