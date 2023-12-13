@@ -416,12 +416,21 @@ class PERM(Unitary):
         return nsv
 
     def break_in_2_mode_perms(self):
+        """
+        Breaks any n-mode PERM into an equivalent circuit with only 2 mode PERMs
+
+        :return: An equivalent Circuit with only 2 mode PERM components
+        """
 
         perm_vec_req = self.perm_vector
         perm_len = len(perm_vec_req)
 
-        circ = Circuit(perm_len, name="PERM broken into 2 mode PERM")
-        new_perm_vec = [i for i in range(perm_len)]
+        if perm_len == 2:
+            print("length 2, returning myself")
+            return self
+
+        circ = Circuit(perm_len, name="Decomposed PERM")
+        new_perm_vec = list(range(perm_len))
 
         for in_m_pos in range(perm_len):
             out_m_pos = perm_vec_req.index(in_m_pos)

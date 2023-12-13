@@ -32,7 +32,7 @@ import perceval.components.unitary_components as comp
 import perceval.algorithm as algo
 import numpy as np
 import pytest
-
+import random
 
 def test_permutation_3():
     circuit = comp.PERM([2, 0, 1])
@@ -75,10 +75,24 @@ def test_permutation_inverse():
 @pytest.mark.parametrize("perm_list", [[2, 0, 1], [2, 3, 1, 0]])
 def test_n_mode_permutation_in_2_mode_perms(perm_list):
     n_mode_perm = comp.PERM(perm_list)
+    new_circ = n_mode_perm.break_in_2_mode_perms()
+
+    for _, perm in new_circ:
+        assert isinstance(perm, comp.PERM)
+        assert perm.m == 2
+
+    assert np.all(n_mode_perm.compute_unitary() == new_circ.compute_unitary())
+
+
+@pytest.mark.parametrize('ith_run', range(10))
+def test_random_perm_breakup_run_multiple(ith_run):
+    my_perm_list = list(range(15))
+    random.shuffle(my_perm_list)
+    n_mode_perm = comp.PERM(my_perm_list)
 
     new_circ = n_mode_perm.break_in_2_mode_perms()
-    u_des = n_mode_perm.compute_unitary()
+    for _, perm in new_circ:
+        assert isinstance(perm, comp.PERM)
+        assert perm.m == 2
 
-    u_new = new_circ.compute_unitary()
-
-    assert np.all(u_des == u_new)
+    assert np.all(n_mode_perm.compute_unitary() == new_circ.compute_unitary())
