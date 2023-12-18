@@ -295,6 +295,7 @@ class Simulator(ISimulator):
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
+        res.normalize()
         return res
 
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
@@ -351,6 +352,7 @@ class Simulator(ISimulator):
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
+        res.normalize()
         return res
 
     def probs_svd(self, input_dist: SVDistribution, progress_callback: Optional[Callable] = None):
