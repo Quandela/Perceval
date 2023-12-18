@@ -426,7 +426,6 @@ class PERM(Unitary):
         perm_len = len(perm_vec_req)
 
         if perm_len == 2:
-            print("length 2, returning myself")
             return self
 
         circ = Circuit(perm_len, name="Decomposed PERM")

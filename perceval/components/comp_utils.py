@@ -31,7 +31,7 @@ from .unitary_components import PERM
 from .linear_circuit import Circuit
 
 
-def decompose_perms(circuit: Circuit) -> Circuit:
+def decompose_perms(circuit: Circuit, merge: bool=True) -> Circuit:
     """
     Sweeps through a Circuit to find any complex n-mode PERM componets to output an equivalent circuit containing
     only 2-mode PERMS
@@ -40,7 +40,7 @@ def decompose_perms(circuit: Circuit) -> Circuit:
     for r, c in circuit:
         if isinstance(c, PERM):
             new_c = c.break_in_2_mode_perms()
-            decomp_c.add(r, new_c)
+            decomp_c.add(r, new_c, merge=merge)
         else:
             decomp_c.add(r, c)
 
