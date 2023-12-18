@@ -53,6 +53,7 @@ from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_compo
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
+from perceval.utils import DensityMatrix
 from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
@@ -319,11 +320,17 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 
     plt.show()
 
+def _pdisplay_density_matrices(dm):
+    pass
+
 
 @dispatch(object)
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
 
+@dispatch(DensityMatrix)
+def _pdisplay(dm, **qwargs)
+        return pdisplay_density_matrix(dm, **kwargs)
 
 @dispatch(ProcessTomography)
 def _pdisplay(qpt, **kwargs):
