@@ -320,8 +320,15 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 
     plt.show()
 
-def _pdisplay_density_matrices(dm):
-    pass
+def _pdisplay_density_matrix(dm,
+                             output_format: Format = Format.MPLOT,
+                             format="flat",
+                             basis_type="fock_state",
+                             render_size = None):
+
+    if output_format == Format.TEXT or output_format == Format.LATEX:
+        raise TypeError(f"Density Matrix plot does not support {output_format}")
+
 
 
 @dispatch(object)
@@ -329,8 +336,8 @@ def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
 
 @dispatch(DensityMatrix)
-def _pdisplay(dm, **qwargs)
-        return pdisplay_density_matrix(dm, **kwargs)
+def _pdisplay(dm, **kwargs)
+    return _pdisplay_density_matrix(dm, **kwargs)
 
 @dispatch(ProcessTomography)
 def _pdisplay(qpt, **kwargs):
