@@ -27,18 +27,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
-from ._pauli import PauliType, get_preparation_circuit, get_measurement_circuit, get_pauli_gate
-from .comp_utils import decompose_perms
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
+from .unitary_components import PERM
+from .linear_circuit import Circuit
 
-catalog = Catalog('perceval.components.core_catalog')
+
+def decompose_perms(circuit: Circuit, merge: bool=True) -> Circuit:
+    """
+    Sweeps through a Circuit to find any complex n-mode PERM componets to output an equivalent circuit containing
+    only 2-mode PERMS
+    """
+    decomp_c = Circuit(circuit.m, name="Decomposed Circuit")
+    for r, c in circuit:
+        if isinstance(c, PERM):
+            new_c = c.break_in_2_mode_perms()
+            decomp_c.add(r, new_c, merge=merge)
+        else:
+            decomp_c.add(r, c)
+
+    return decomp_c
