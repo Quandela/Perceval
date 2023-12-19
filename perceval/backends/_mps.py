@@ -84,7 +84,7 @@ class MPSBackend(AProbAmpliBackend):
             assert isinstance(c, PERM) or c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
                 "MPS backend can not be used with components of using more than 2 modes other than a PERM"
             if isinstance(c, PERM) and len(c.perm_vector) > 2:
-                # sets the flag to True if n-mode PERM (n>2) is
+                # sets the flag to True if n-mode PERM (n>2) is found in the circuit
                 decomp_perm = True
 
         if decomp_perm:
