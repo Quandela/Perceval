@@ -45,6 +45,8 @@ with warnings.catch_warnings():
 
 import matplotlib.pyplot as plt
 from matplotlib import ticker
+from matplotlib import colormaps
+from cmath import phase, pi
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
@@ -58,6 +60,8 @@ from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
 from ._processor_utils import precompute_herald_pos
+import numpy as np
+from numpy.linalg import norm
 
 
 in_notebook = False
@@ -320,14 +324,41 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 
     plt.show()
 
-def _pdisplay_density_matrix(dm,
-                             output_format: Format = Format.MPLOT,
-                             format="flat",
-                             basis_type="fock_state",
-                             render_size = None):
 
-    if output_format == Format.TEXT or output_format == Format.LATEX:
-        raise TypeError(f"Density Matrix plot does not support {output_format}")
+def _complex_to_rgb(z: complex,
+                    factor: float = 1.,
+                    cmap='hsv'):
+    """for better rendering, cmap should be a cyclic color map"""
+    r, g, b, a = colormaps[cmap]((phase(z) + pi) / (2 * pi))
+    a = abs(z)
+    vect = np.array([r, g, b])
+    vect = (a / norm(vect)) * vect
+    return vect
+
+
+def _csr_to_rgb_array(matrix):
+    if matrix.ndim != 2:
+        raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
+
+    img = np.zeros(matrix.shape + (3,))
+    coef_max = 0
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[0]):
+            z = matrix[i,j]
+            if z != 0:
+                img[i,j,:] = _complex_to_rgb(z)
+                if abs(z) > coef_max:
+                    coef_max = abs(z)
+    img = (1/coef_max) * img
+    return img
+
+
+def _pdisplay_density_matrix(dm, output_format: Format = Format.MPLOT):
+
+    img = _csr_to_rgb_array(dm.mat)
+    plt.imshow(img)
+    plt.show()
+
 
 
 
@@ -336,7 +367,7 @@ def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
 
 @dispatch(DensityMatrix)
-def _pdisplay(dm, **kwargs)
+def _pdisplay(dm, **kwargs):
     return _pdisplay_density_matrix(dm, **kwargs)
 
 @dispatch(ProcessTomography)
