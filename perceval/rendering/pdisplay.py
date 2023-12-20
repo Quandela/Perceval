@@ -328,7 +328,7 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 def _complex_to_rgb(z: complex,
                     factor: float = 1.,
                     cmap='hsv'):
-    """for better rendering, cmap should be a cyclic color map"""
+    """for better rendering, cmap should be a cyclic matplotlib ColorMap"""
     r, g, b, a = colormaps[cmap]((phase(z) + pi) / (2 * pi))
     a = abs(z)
     vect = np.array([r, g, b])
@@ -354,6 +354,9 @@ def _csr_to_rgb_array(matrix):
 
 
 def _pdisplay_density_matrix(dm, output_format: Format = Format.MPLOT):
+
+    if output_format != Format.MPLOT:
+        raise NotImplementedError(f"Tomography plot does not support {output_format}")
 
     img = _csr_to_rgb_array(dm.mat)
     plt.imshow(img)
