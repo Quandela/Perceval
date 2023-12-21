@@ -116,10 +116,10 @@ class FockBasis(dict):
 
     def add_photon(self):
         self._n_max += 1
-        N = len(self)
+        length = len(self)
         new_states = xq.FSArray(self._m, self._n_max)
         for i, st in enumerate(new_states):
-            self[st] = N+i
+            self[st] = length+i
 
     def add_photons(self, n):
         for k in range(n):
