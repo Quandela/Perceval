@@ -181,7 +181,8 @@ class DensityMatrix:
         """
         Construct a Density matrix from a SVDistribution
         :param svd: an SVDistribution object representing the mixed state
-        :param index: the basis in which the density matrix is expressed. Self generated if incorrect"
+        :param index: the basis in which the density matrix is expressed. Self generated if incorrect
+        :return: the DensityMatrix object corresponding to the SVDistribution given
         """
         if isinstance(svd, (StateVector, BasicState)):
             svd = SVDistribution(svd)
