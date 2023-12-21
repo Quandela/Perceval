@@ -325,9 +325,7 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     plt.show()
 
 
-def _complex_to_rgb(z: complex,
-                    factor: float = 1.,
-                    cmap='hsv'):
+def _complex_to_rgb(z: complex, cmap='hsv'):
     """for better rendering, cmap should be a cyclic matplotlib ColorMap"""
     r, g, b, a = colormaps[cmap]((phase(z) + pi) / (2 * pi))
     a = abs(z)
@@ -344,9 +342,9 @@ def _csr_to_rgb_array(matrix):
     coef_max = 0
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[0]):
-            z = matrix[i,j]
+            z = matrix[i, j]
             if z != 0:
-                img[i,j,:] = _complex_to_rgb(z)
+                img[i, j, :] = _complex_to_rgb(z)
                 if abs(z) > coef_max:
                     coef_max = abs(z)
     img = (1/coef_max) * img
