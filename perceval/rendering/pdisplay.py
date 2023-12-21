@@ -354,10 +354,10 @@ def _csr_to_rgb_array(matrix):
 def _pdisplay_density_matrix(dm, output_format: Format = Format.MPLOT):
 
     if output_format != Format.MPLOT:
-        raise NotImplementedError(f"Tomography plot does not support {output_format}")
+        raise NotImplementedError(f"DensityMatrix plot does not support {output_format}")
 
     img = _csr_to_rgb_array(dm.mat)
-    plt.imshow(img)
+    plt.plot(img)
     plt.show()
 
 
