@@ -62,6 +62,7 @@ from .format import Format
 from ._processor_utils import precompute_herald_pos
 import numpy as np
 from numpy.linalg import norm
+import math
 
 
 in_notebook = False
@@ -350,14 +351,26 @@ def _csr_to_rgb_array(matrix):
     img = (1/coef_max) * img
     return img
 
+def generate_ticks(dm):
+    m, n = dm.m, dm.n_max
+    tick_list = [0]
+    tick_labels = ["0 photon"]
+    for k in range(n):
+        tick_list.append(math.comb(m+k, k))
+        tick_labels.append(str(k+1)+" photons")
+    return tick_list, tick_labels
 
-def _pdisplay_density_matrix(dm, output_format: Format = Format.MPLOT):
+def pdisplay_density_matrix(dm, output_format: Format = Format.MPLOT):
 
-    if output_format != Format.MPLOT:
-        raise NotImplementedError(f"DensityMatrix plot does not support {output_format}")
+    #if output_format != Format.MPLOT:
+        #raise NotImplementedError(f"DensityMatrix plot does not support {output_format}")
 
     img = _csr_to_rgb_array(dm.mat)
-    plt.plot(img)
+    plt.imshow(img)
+    l1,l2 = generate_ticks(dm)
+
+    plt.yticks(l1,l2)
+    plt.xticks([])
     plt.show()
 
 
@@ -369,7 +382,7 @@ def _pdisplay(o, **kwargs):
 
 @dispatch(DensityMatrix)
 def _pdisplay(dm, **kwargs):
-    return _pdisplay_density_matrix(dm, **kwargs)
+    return pdisplay_density_matrix(dm, **kwargs)
 
 @dispatch(ProcessTomography)
 def _pdisplay(qpt, **kwargs):
