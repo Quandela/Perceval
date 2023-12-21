@@ -78,10 +78,10 @@ def density_matrix_tensor_product(A, B):
     :return: the "kronecker" product of the density matrices, in the correct basis
     """
 
-    if isinstance(A, (SVDistribution, StateVector, BasicState)):
+    if not isinstance(A, DensityMatrix):
         A = DensityMatrix.from_svd(A)
 
-    if isinstance(B, (StateVector, SVDistribution, BasicState)):
+    if not isinstance(B, DensityMatrix):
         B = DensityMatrix.from_svd(B)
 
     if not isinstance(B, DensityMatrix):
