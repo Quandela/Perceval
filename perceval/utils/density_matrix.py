@@ -269,7 +269,10 @@ class DensityMatrix:
         """
             gives back an SVDistribution from the density_matrix
             :param threshold: the threshold when the search for eigen values is stopped
-            :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration. Only used if matrix is large enough.
+            :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
+                Only used if matrix is large enough.
+            :return: The SVD object corresponding to the DensityMatrix.
+                The StateVector with probability < threshold are removed.
         """
         if self.size < 50:  # if the matrix is small: array eigh method
             matrix = self.mat.toarray()
