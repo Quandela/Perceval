@@ -46,8 +46,9 @@ def test_fock_basis():
     assert len(basis) == 18564
     assert basis.n_max == 6
 
+
 def test_statevector_to_array():
-    index = FockBasis(2,2)
+    index = FockBasis(2, 2)
     sv = StateVector(BasicState([1, 1]))
     vector = np.zeros(6, dtype=complex)
     vector[4] = 1
