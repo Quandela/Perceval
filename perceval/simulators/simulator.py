@@ -260,7 +260,7 @@ class Simulator(ISimulator):
         ]
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
         for sv, prob in input_dist.items():
-            if min(sv.n) >= self._min_detected_photons:
+            if max(sv.n) >= self._min_detected_photons:
                 decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]))
             else:
                 self._physical_perf -= prob
@@ -286,12 +286,16 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                res[bs] += p*prob0
+                if bs.n >= self._min_detected_photons:
+                    res[bs] += p * prob0
+                else:
+                    self._physical_perf -= p * prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
+        res.normalize()
         return res
 
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
@@ -311,7 +315,7 @@ class Simulator(ISimulator):
        ]
        where [bs_x,] is the list of the un-annotated separated basic state (bs_x.separate_state())"""
         for sv, prob in input_dist.items():
-            if min(sv.n) >= self._min_detected_photons:
+            if max(sv.n) >= self._min_detected_photons:
                 decomposed_input.append(
                     (prob, sv[0].separate_state(keep_annotations=False))
                 )
@@ -339,12 +343,16 @@ class Simulator(ISimulator):
             """Then, add the resulting distribution to the global distribution"""
             if probs_in_s:
                 for bs, p in probs_in_s.items():
-                    res[bs] += p * prob0
+                    if bs.n >= self._min_detected_photons:
+                        res[bs] += p * prob0
+                    else:
+                        self._physical_perf -= p * prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
+        res.normalize()
         return res
 
     def probs_svd(self, input_dist: SVDistribution, progress_callback: Optional[Callable] = None):
