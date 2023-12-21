@@ -149,7 +149,7 @@ class DensityMatrix:
 
         :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
         :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
-        :param m: optional number of modes if index is not giver
+        :param m: optional number of modes if index is not given
         :param n_max: optional maximum number of photon if index is not given
         """
         # Here the constructor for a matrix
