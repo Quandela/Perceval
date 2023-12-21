@@ -84,12 +84,6 @@ def density_matrix_tensor_product(A, B):
     if not isinstance(B, DensityMatrix):
         B = DensityMatrix.from_svd(B)
 
-    if not isinstance(B, DensityMatrix):
-        raise TypeError(f"Cannot do a Tensor product between a DensityMatrix and a {type(B)}")
-
-    if not isinstance(A, DensityMatrix):
-        raise TypeError(f"Cannot do a tensor product between a {type(A)} and a DensityMatrix")
-
     n_max = A.n_max + B.n_max
     n_mode = A.m + B.m
     size = comb(n_max+n_mode, n_max)
