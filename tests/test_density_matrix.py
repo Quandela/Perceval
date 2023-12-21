@@ -125,3 +125,8 @@ def test_sample():
     dm = DensityMatrix.from_svd(BasicState([1]))
     for x in dm.sample(10):
         assert x == BasicState([1])
+
+
+def test_avoid_annotations():
+    with pytest.raises(ValueError):
+        DensityMatrix.from_svd(BasicState('|{_:1}>')+BasicState('|{_:2}>'))
