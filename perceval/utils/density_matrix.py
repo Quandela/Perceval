@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import scipy.sparse.linalg
 
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
 from typing import Union, Optional, Tuple
@@ -122,7 +121,7 @@ class FockBasis(dict):
             self[st] = length+i
 
     def add_photons(self, n):
-        for k in range(n):
+        for _ in range(n):
             self.add_photon()
 
     @property

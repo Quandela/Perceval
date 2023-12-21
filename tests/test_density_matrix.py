@@ -116,6 +116,8 @@ def test_density_matrix_array_constructor():
     index = FockBasis(1, 1)
     dm1 = DensityMatrix(matrix, index)
     dm2 = DensityMatrix.from_svd(SVDistribution({BasicState([0]): .8, BasicState([1]): .2}))
+    dm3 = DensityMatrix(matrix, m=1, n_max=1)
+    assert np.allclose(dm1.mat.toarray(), dm3.mat.toarray())
     assert np.allclose(dm1.mat.toarray(), dm2.mat.toarray())
 
 
