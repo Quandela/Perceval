@@ -266,6 +266,39 @@ class DensityMatrix:
     def _bra_str(bs: BasicState):
         return "<" + str(bs)[1:][:-1] + "|"
 
+    def _to_svd_small(self, threshold):
+        """Extracting the svd using the scipy method on arrays"""
+        matrix = self.mat.toarray()
+        w, v = eigh(matrix)
+        dic = {}
+        for k in range(w.shape[0]):
+            sv = array_to_statevector(v[:, k], self.reverse_index)
+            if w[k] > threshold:
+                dic[sv] = w[k]
+        return SVDistribution(dic)
+
+    def _to_svd_large(self, threshold, batch_size):
+        """Extracting the svd using the scipy method on sparse matrices"""
+        val = np.array([])
+        vec = np.empty(shape=(self._size, 0), dtype=complex)
+        while (val > threshold).all():
+            deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
+            new_val, new_vec = eigsh(deflated_operator, batch_size)
+            val = np.concatenate((val, new_val))
+            vec = np.concatenate((vec, new_vec), axis=1)
+        dic = {}
+        for i in range(val.shape[0]):
+            if val[i] >= threshold:
+                sv = StateVector()
+                for j in range(len(vec)):
+                    sv += complex(vec[j][i]) * self.reverse_index[j]
+                sv.normalize()
+                if sv.m != 0:
+                    dic[sv] = val[i]
+            else:
+                continue
+        return SVDistribution(dic)
+
     def to_svd(self, threshold: float = 1e-8, batch_size: int = 1):
         """
             gives back an SVDistribution from the density_matrix
@@ -276,34 +309,10 @@ class DensityMatrix:
                 The StateVector with probability < threshold are removed.
         """
         if self.size < 50:  # if the matrix is small: array eigh method
-            matrix = self.mat.toarray()
-            w, v = eigh(matrix)
-            dic = {}
-            for k in range(w.shape[0]):
-                sv = array_to_statevector(v[:, k], self.reverse_index)
-                if w[k] > threshold:
-                    dic[sv] = w[k]
-        else:  # if the matrix is large: sparse eigsh method
-            val = np.array([])
-            vec = np.empty(shape=(self._size, 0), dtype=complex)
-            while (val > threshold).all():
-                deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
-                new_val, new_vec = eigsh(deflated_operator, batch_size)
-                val = np.concatenate((val, new_val))
-                vec = np.concatenate((vec, new_vec), axis=1)
+            return self._to_svd_small(threshold)
 
-            dic = {}
-            for i in range(val.shape[0]):
-                if val[i] >= threshold:
-                    sv = StateVector()
-                    for j in range(len(vec)):
-                        sv += complex(vec[j][i])*self.reverse_index[j]
-                    sv.normalize()
-                    if sv.m != 0:
-                        dic[sv] = val[i]
-                else:
-                    continue
-        return SVDistribution(dic)
+        else:  # if the matrix is large: sparse eigsh method
+            return self._to_svd_large(threshold, batch_size)
 
     def __add__(self, other):
         """
