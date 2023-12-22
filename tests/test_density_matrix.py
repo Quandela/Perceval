@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution
-from perceval.utils.density_matrix import create_index, statevector_to_array
+from perceval.utils.density_matrix import FockBasis, statevector_to_array
 import numpy as np
 import scipy
 from scipy.sparse import dok_array
@@ -35,8 +35,20 @@ import pytest
 from _test_utils import assert_svd_close
 
 
+def test_fock_basis():
+
+    basis = FockBasis(12,3)
+    assert basis.m == 12
+    assert len(basis) == 455
+    basis.add_photon()
+    assert len(basis) == 1820
+    basis.add_photons(2)
+    assert len(basis) == 18564
+    assert basis.n_max == 6
+
+
 def test_statevector_to_array():
-    index = create_index(2, 2)
+    index = FockBasis(2, 2)
     sv = StateVector(BasicState([1, 1]))
     vector = np.zeros(6, dtype=complex)
     vector[4] = 1
@@ -44,7 +56,7 @@ def test_statevector_to_array():
 
 
 def test_create_index():
-    dic = create_index(10, 5)
+    dic = FockBasis(10, 5)
     assert max([basic_state.n for basic_state in dic]) == 5
     for basic_state in dic:
         assert basic_state.m == 10
@@ -52,8 +64,8 @@ def test_create_index():
 
 def test_density_matrix():
     sv = BasicState([0]) + BasicState([1])
-    dm = DensityMatrix(sv)
-    dm2 = DensityMatrix(BasicState([0]))
+    dm = DensityMatrix.from_svd(sv)
+    dm2 = DensityMatrix.from_svd(BasicState([0]))
     dm3 = dm * 2
     dm4 = 2 * dm
 
@@ -66,7 +78,7 @@ def test_density_matrix():
     assert np.allclose(dm4.mat.toarray(), test_mat, 1e-6, 1e-6)
 
     tensor_dm_1 = dm * dm
-    tensor_dm_2 = DensityMatrix(sv * sv)
+    tensor_dm_2 = DensityMatrix.from_svd(sv * sv)
     tensor_dm_3 = dm*sv
 
     assert tensor_dm_1.shape == (6, 6)
@@ -90,8 +102,8 @@ def test_density_matrix_to_svd():
     svd2 = source.generate_distribution(BasicState([0, 1]))
     tensor_svd = svd1*svd2
 
-    dm1 = DensityMatrix(svd1)
-    dm2 = DensityMatrix(svd2)
+    dm1 = DensityMatrix.from_svd(svd1)
+    dm2 = DensityMatrix.from_svd(svd2)
 
     svd1_back = dm1.to_svd()
 
@@ -102,13 +114,20 @@ def test_density_matrix_to_svd():
 
 def test_density_matrix_array_constructor():
     matrix = np.array([[0.8, 0], [0, 0.2]])
-    index = create_index(1, 1)
+    index = FockBasis(1, 1)
     dm1 = DensityMatrix(matrix, index)
-    dm2 = DensityMatrix(SVDistribution({BasicState([0]): .8, BasicState([1]): .2}))
+    dm2 = DensityMatrix.from_svd(SVDistribution({BasicState([0]): .8, BasicState([1]): .2}))
+    dm3 = DensityMatrix(matrix, m=1, n_max=1)
+    assert np.allclose(dm1.mat.toarray(), dm3.mat.toarray())
     assert np.allclose(dm1.mat.toarray(), dm2.mat.toarray())
 
 
 def test_sample():
-    dm = DensityMatrix(BasicState([1]))
+    dm = DensityMatrix.from_svd(BasicState([1]))
     for x in dm.sample(10):
         assert x == BasicState([1])
+
+
+def test_avoid_annotations():
+    with pytest.raises(ValueError):
+        DensityMatrix.from_svd(BasicState('|{_:1}>')+BasicState('|{_:2}>'))

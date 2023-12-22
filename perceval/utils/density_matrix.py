@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import scipy.sparse.linalg
 
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
 from typing import Union, Optional, Tuple
@@ -38,16 +37,10 @@ from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.linalg import eigh
 from copy import copy
 import random
+import exqalibur as xq
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
-
-
-def create_index(m: int, n_max: int):
-    index = dict()
-    for i, x in enumerate(max_photon_state_iterator(m, n_max)):
-        index[x] = i
-    return index
 
 
 def statevector_to_array(sv: StateVector, index: dict):
@@ -85,22 +78,16 @@ def density_matrix_tensor_product(A, B):
     :return: the "kronecker" product of the density matrices, in the correct basis
     """
 
-    if isinstance(A, (SVDistribution, StateVector, BasicState)):
-        A = DensityMatrix(A)
-
-    if isinstance(B, (StateVector, SVDistribution, BasicState)):
-        B = DensityMatrix(B)
+    if not isinstance(A, DensityMatrix):
+        A = DensityMatrix.from_svd(A)
 
     if not isinstance(B, DensityMatrix):
-        raise TypeError(f"Cannot do a Tensor product between a DensityMatrix and a {type(B)}")
-
-    if not isinstance(A, DensityMatrix):
-        raise TypeError(f"Cannot do a tensor product between a {type(A)} and a DensityMatrix")
+        B = DensityMatrix.from_svd(B)
 
     n_max = A.n_max + B.n_max
     n_mode = A.m + B.m
     size = comb(n_max+n_mode, n_max)
-    new_index = create_index(n_mode, n_max)
+    new_index = FockBasis(n_mode, n_max)
     matrix = kron(A.mat, B.mat)
     perm = dok_array((A.size*B.size, size), dtype=complex) # matrix from tensor space to complete Fock space
     for i, a_state in enumerate(A.reverse_index):
@@ -113,68 +100,113 @@ def density_matrix_tensor_product(A, B):
     return DensityMatrix(matrix, new_index)
 
 
+class FockBasis(dict):
+    def __init__(self, m, n_max):
+        for i, st in enumerate(max_photon_state_iterator(m, n_max)):
+            self[st] = i
+        self._m = m
+        self._n_max = n_max
+
+    def add_photon(self):
+        self._n_max += 1
+        length = len(self)
+        new_states = xq.FSArray(self._m, self._n_max)
+        for i, st in enumerate(new_states):
+            self[st] = length+i
+
+    def add_photons(self, n):
+        for _ in range(n):
+            self.add_photon()
+
+    @property
+    def m(self):
+        return self._m
+
+    @property
+    def n_max(self):
+        return self._n_max
+
+
 class DensityMatrix:
     """
     Density operator representing a mixed state
-    Does not support annotations
+    Does not support annotations yet
     """
     def __init__(self,
                  mixed_state: Union[SVDistribution, StateVector, BasicState, sparray],
-                 index: Optional[dict] = None):
+                 index: Optional[FockBasis] = None,
+                 m: Optional[int] = None,
+                 n_max: Optional[int] = None):
         """
         Constructor for the DensityMatrix Class
 
         :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
         :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
+        :param m: optional number of modes if index is not given
+        :param n_max: optional maximum number of photon if index is not given
         """
         # Here the constructor for a matrix
-        if isinstance(mixed_state, (np.ndarray, sparray)):
-            if index is None:
-                raise ValueError("you can't construct a DensityMatrix from a matrix without giving an index")
-            if len(index) != mixed_state.shape[0]:
-                raise ValueError("The index length is incompatible with your matrix size")
-            if mixed_state.shape[0] != mixed_state.shape[1]:
-                raise ValueError("The density matrix must be square")
+        if not isinstance(mixed_state, (np.ndarray, sparray)):
+            raise TypeError(f"Can't construct a density matrix from {type(mixed_state)}")
+        if index is None:
+            if not (m is None or n_max is None):
+                index = FockBasis(m, n_max)
+            else:
+                raise ValueError("you must provide an index or a number of modes and photons")
+        if not isinstance(index, FockBasis):
+            raise ValueError(f"index must be a FockBasis object. {type(index)} was given")
+        if len(index) != mixed_state.shape[0]:
+            raise ValueError(f"The index length is incompatible with your matrix size. \n "
+                             f"For at most {index.n_max} photons in {index.m} modes, your matrix size must be {len(index)}")
+        if mixed_state.shape[0] != mixed_state.shape[1]:
+            raise ValueError("The density matrix must be square")
 
-            self.mat = csr_array(mixed_state, dtype=complex)
-            self._size = self.mat.shape[0]
-            self._m = next(iter(index.keys())).m
-            self._n_max = max([x.n for x in index.keys()])
-            self.index = dict()
-            self.reverse_index = []
-            self.set_index(index)  # index construction
+        self.mat = csr_array(mixed_state, dtype=complex)
+        self._size = self.mat.shape[0]
+        self._m = index.m
+        self._n_max = index.n_max
 
-        else:
-            # Here the constructor for an SVD, SV or BS
-            if isinstance(mixed_state, (StateVector, BasicState)):
-                mixed_state = SVDistribution(mixed_state)
-
-            if not isinstance(mixed_state, SVDistribution):
-                raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
-
-            for key in mixed_state.keys():
-                if any([bs[0].has_annotations for bs in key]):
-                    raise ValueError("annotations are not supported yet in DensityMatrix")
-
-            self._m = mixed_state.m
-            self._n_max = mixed_state.n_max
-            self._size = comb(self.m + self._n_max, self.m)
-            self.set_index(index)  # index construction
-
-            # matrix construction from svd
-            l = []
-            for sv, p in mixed_state.items():
-                vector = dok_array((self._size, 1), dtype=complex)
-                for bst in sv.keys():
-                    idx = self.index[bst]
-                    vector[idx, 0] = sv[bst]
-                vector = csr_array(vector)
-                l.append((vector, p))
-            self.mat = sum([p*(vector @ conj(vector.T)) for vector, p in l])
-
-    def set_index(self, index: dict):
         self.index = dict()
         self.reverse_index = []
+        self.set_index(index)  # index construction
+
+    @staticmethod
+    def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
+        """
+        Construct a Density matrix from a SVDistribution
+        :param svd: an SVDistribution object representing the mixed state
+        :param index: the basis in which the density matrix is expressed. Self generated if incorrect
+        :return: the DensityMatrix object corresponding to the SVDistribution given
+        """
+        if isinstance(svd, (StateVector, BasicState)):
+            svd = SVDistribution(svd)
+
+        if not isinstance(svd, SVDistribution):
+            raise TypeError("mixed_state must be a BasicState, a StateVector a SVDistribution or a 2d array")
+
+        for key in svd.keys():
+            if any([bs[0].has_annotations for bs in key]):
+                raise ValueError("annotations are not supported yet in DensityMatrix")
+
+        m = svd.m
+        n_max = svd.n_max
+        size = comb(m+n_max, m)
+
+        if not(isinstance(index, FockBasis) and index.m == m and index.n_max >= n_max):
+            index = FockBasis(m, n_max)
+        l = []
+        for sv, p in svd.items():
+            vector = csr_array((size, 1), dtype=complex)
+            for bst in sv.keys():
+                idx = index[bst]
+                vector[idx, 0] = sv[bst]
+            vector = csr_array(vector)
+            l.append((vector, p))
+        matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])
+
+        return DensityMatrix(matrix, index)
+
+    def set_index(self, index: dict):
         if index is None:
             k = 0
             for key in max_photon_state_iterator(self._m, self._n_max):
@@ -228,39 +260,53 @@ class DensityMatrix:
     def _bra_str(bs: BasicState):
         return "<" + str(bs)[1:][:-1] + "|"
 
+    def _to_svd_small(self, threshold):
+        """Extracting the svd using the scipy method on arrays"""
+        matrix = self.mat.toarray()
+        w, v = eigh(matrix)
+        dic = {}
+        for k in range(w.shape[0]):
+            sv = array_to_statevector(v[:, k], self.reverse_index)
+            if w[k] > threshold:
+                dic[sv] = w[k]
+        return SVDistribution(dic)
+
+    def _to_svd_large(self, threshold, batch_size):
+        """Extracting the svd using the scipy method on sparse matrices"""
+        val = np.array([])
+        vec = np.empty(shape=(self._size, 0), dtype=complex)
+        while (val > threshold).all():
+            deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
+            new_val, new_vec = eigsh(deflated_operator, batch_size)
+            val = np.concatenate((val, new_val))
+            vec = np.concatenate((vec, new_vec), axis=1)
+        dic = {}
+        for i in range(val.shape[0]):
+            if val[i] >= threshold:
+                sv = StateVector()
+                for j in range(len(vec)):
+                    sv += complex(vec[j][i]) * self.reverse_index[j]
+                sv.normalize()
+                if sv.m != 0:
+                    dic[sv] = val[i]
+            else:
+                continue
+        return SVDistribution(dic)
+
     def to_svd(self, threshold: float = 1e-8, batch_size: int = 1):
         """
-                gives back an SVDistribution from the density_matrix
+            gives back an SVDistribution from the density_matrix
+            :param threshold: the threshold when the search for eigen values is stopped
+            :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
+                Only used if matrix is large enough.
+            :return: The SVD object corresponding to the DensityMatrix.
+                The StateVector with probability < threshold are removed.
         """
         if self.size < 50:  # if the matrix is small: array eigh method
-            matrix = self.mat.toarray()
-            w, v = eigh(matrix)
-            dic = {}
-            for k in range(w.shape[0]):
-                sv = array_to_statevector(v[:, k], self.reverse_index)
-                if w[k] > threshold:
-                    dic[sv] = w[k]
-        else:  # if the matrix is large: sparse eigsh method
-            val = np.array([])
-            vec = np.empty(shape=(self._size, 0), dtype=complex)
-            while (val > threshold).all():
-                deflated_operator = LinearOperator((self._size, self._size), matvec=self._deflation(self.mat, val, vec))
-                new_val, new_vec = eigsh(deflated_operator, batch_size)
-                val = np.concatenate((val, new_val))
-                vec = np.concatenate((vec, new_vec), axis=1)
+            return self._to_svd_small(threshold)
 
-            dic = {}
-            for i in range(val.shape[0]):
-                if val[i] >= threshold:
-                    sv = StateVector()
-                    for j in range(len(vec)):
-                        sv += complex(vec[j][i])*self.reverse_index[j]
-                    sv.normalize()
-                    if sv.m != 0:
-                        dic[sv] = val[i]
-                else:
-                    continue
-        return SVDistribution(dic)
+        else:  # if the matrix is large: sparse eigsh method
+            return self._to_svd_large(threshold, batch_size)
 
     def __add__(self, other):
         """
@@ -271,7 +317,7 @@ class DensityMatrix:
             raise TypeError("You can only add a Density Matrix to a Density Matrix")
 
         if self._m != other._m:
-            raise ValueError("You can't add Density Matrices acting on different numbers of mode")
+            raise ValueError("You can't add Density Matrices with different numbers of mode")
 
         n = max(self._n_max, other.n_max)
         if n == self.n_max:
