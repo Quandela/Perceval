@@ -471,7 +471,7 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_ide and (isinstance(o, (ACircuit, AProcessor, DensityMatrix))):
+    elif in_ide and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, ProcessTomography))):
         return Format.MPLOT
     return Format.TEXT
 
