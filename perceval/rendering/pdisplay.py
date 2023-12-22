@@ -382,19 +382,18 @@ def generate_ticks(dm):
 
 def pdisplay_density_matrix(dm,
                             output_format: Format = Format.MPLOT,
-                            color: str = "color",
+                            color: bool = True,
                             cmap='hsv'):
 
     if output_format == Format.TEXT or output_format == Format.LATEX:
-        raise TypeError(f"Tomography plot does not support {output_format}")
-    if color == "color":
+        raise TypeError(f"DensityMatrix plot does not support {output_format}")
+    if color:
         img = _csr_to_rgb(dm.mat, cmap)
-    elif color == "grey":
-        img = _csr_to_greyscale(dm.mat)
+        plt.imshow(img)
     else:
-        raise ValueError(f"invalid parameter color = \"{color}\"")
+        img = _csr_to_greyscale(dm.mat)
+        plt.imshow(img, cmap='gray')
 
-    plt.imshow(img)
     l1, l2 = generate_ticks(dm)
 
     plt.yticks(l1, l2)
@@ -472,7 +471,7 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_ide and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
+    elif in_ide and (isinstance(o, ACircuit, AProcessor, DensityMatrix)):
         return Format.MPLOT
     return Format.TEXT
 
