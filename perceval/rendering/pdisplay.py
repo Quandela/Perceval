@@ -335,7 +335,7 @@ def _complex_to_rgb(z: complex, cmap='hsv'):
     return vect
 
 
-def _csr_to_rgb_array(matrix):
+def _csr_to_rgb(matrix, cmap='hsv'):
     if matrix.ndim != 2:
         raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
 
@@ -351,6 +351,25 @@ def _csr_to_rgb_array(matrix):
     img = (1/coef_max) * img
     return img
 
+
+def _csr_to_greyscale(matrix):
+
+    if matrix.ndim != 2:
+        raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
+
+    img = np.zeros(matrix.shape)
+    coef_max = 0
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[0]):
+            z = matrix[i, j]
+            if z != 0:
+                img[i, j] = 255*abs(z)
+                if abs(z) > coef_max:
+                    coef_max = abs(z)
+    img = (1 / coef_max) * img
+    return img
+
+
 def generate_ticks(dm):
     m, n = dm.m, dm.n_max
     tick_list = [0]
@@ -360,20 +379,27 @@ def generate_ticks(dm):
         tick_labels.append(str(k+1)+" photons")
     return tick_list, tick_labels
 
-def pdisplay_density_matrix(dm, output_format: Format = Format.MPLOT):
 
-    #if output_format != Format.MPLOT:
-        #raise NotImplementedError(f"DensityMatrix plot does not support {output_format}")
+def pdisplay_density_matrix(dm,
+                            output_format: Format = Format.MPLOT,
+                            color: str = "color",
+                            cmap='hsv'):
 
-    img = _csr_to_rgb_array(dm.mat)
+    if output_format == Format.TEXT or output_format == Format.LATEX:
+        raise TypeError(f"Tomography plot does not support {output_format}")
+    if color == "color":
+        img = _csr_to_rgb(dm.mat, cmap)
+    elif color == "grey":
+        img = _csr_to_greyscale(dm.mat)
+    else:
+        raise ValueError(f"invalid parameter color = \"{color}\"")
+
     plt.imshow(img)
-    l1,l2 = generate_ticks(dm)
+    l1, l2 = generate_ticks(dm)
 
-    plt.yticks(l1,l2)
+    plt.yticks(l1, l2)
     plt.xticks([])
     plt.show()
-
-
 
 
 @dispatch(object)
