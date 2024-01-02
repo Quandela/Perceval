@@ -265,7 +265,7 @@ def test_backend_mps_n_mode_perm_decomp():
 
     for r, c in backend._circuit:
         if isinstance(c, PERM):
-            assert len(c.perm_vector) == 2
+            assert c.m == 2
 
     check_output_distribution(backend, BasicState("|2,0,0>"),
                               {BasicState("|0,2,0>"): 0.25,
@@ -276,4 +276,4 @@ def test_backend_mps_n_mode_perm_decomp():
                                BasicState("|0,0,1>"): 0.5})
     check_output_distribution(backend, BasicState("|1,0,1>"),
                               {BasicState("|0,2,0>"): 0.5,
-                               BasicState("|00,,2>"): 0.5})
+                               BasicState("|0,0,2>"): 0.5})
