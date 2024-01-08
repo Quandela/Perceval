@@ -359,6 +359,20 @@ class DensityMatrix:
         else:
             return density_matrix_tensor_product(other, self)
 
+    def remove_low_amplitude(self, threshold = 1e-6):
+        """
+        Remove the lines and column wher the amplitude is below a certain threshold
+        """
+        projector = dok_array(self.shape)
+        for k in range(self.size):
+            if self.mat[k, k] > threshold:
+                projector[k, k] = 1
+
+        projector = csr_array(projector)
+
+        self.mat = projector.dot(self.mat).dot(projector)
+        self.normalize()
+
     def normalize(self):
         """
         Normalize the density matrix so that Trace(\rho) = 1
