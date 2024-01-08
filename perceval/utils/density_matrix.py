@@ -196,7 +196,7 @@ class DensityMatrix:
             index = FockBasis(m, n_max)
         l = []
         for sv, p in svd.items():
-            vector = csr_array((size, 1), dtype=complex)
+            vector = np.zeros((size, 1), dtype=complex)
             for bst in sv.keys():
                 idx = index[bst]
                 vector[idx, 0] = sv[bst]
