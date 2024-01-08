@@ -26,16 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
 from .simulator_interface import ISimulator
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
 from perceval.backends import AProbAmpliBackend
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
+import numpy as np
+from scipy.sparse import csr_array
 
 
 class Simulator(ISimulator):
@@ -459,3 +462,25 @@ class Simulator(ISimulator):
         return {'results': new_svd,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
+
+    def evolve_density_matrix(self, dm: DensityMatrix) -> DensityMatrix:
+        """
+        Compute the DensityMatrix evolved from "dm" through a Linear optical circuit
+
+        :param dm: The density Matrix to evolve
+        :return: The evolved DensityMatrix
+        """
+        if not isinstance(dm, DensityMatrix):
+            raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
+
+        input_list = []
+        for k in range(dm.size):
+            vec = dm.mat[[k]]
+            if (vec @ vec.transpose())[0, 0]:
+                input_list.append(dm.reverse_index[k])
+
+        print(input_list)
+
+        #self._evolve_cache(set(input_list))
+
+        #evolution_operator = csr_array(dm.shape, dtype=complex)
