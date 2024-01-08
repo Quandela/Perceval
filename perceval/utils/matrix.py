@@ -32,6 +32,7 @@ from abc import ABC, abstractmethod
 import io
 import re
 from typing import Iterator, Optional, Union, Tuple
+import warnings
 import numpy as np
 import sympy as sp
 
@@ -145,19 +146,44 @@ class Matrix(ABC):
         :return: a numeric Matrix
         """
         if parameters is not None:
-            assert len(parameters) == 2*n**2, "parameters has not the right size: should be %d, and is %d" % (
-                2*n**2, len(parameters)
-            )
-            a = np.reshape(parameters[:n**2], (n, n))
-            b = np.reshape(parameters[n**2:], (n, n))
+            warnings.warn("use parametrized_unitary(parameters) instead to create a parametrized unitary "
+                          "matrix, version=0.11", DeprecationWarning)
+            assert len(parameters) == 2 * n ** 2, "parameters do not have the right size: should be %d, and is %d" % (
+                2 * n ** 2, len(parameters))
+            a = np.reshape(parameters[:n ** 2], (n, n))
+            b = np.reshape(parameters[n ** 2:], (n, n))
             u = a + 1j * b
+            (q, r) = np.linalg.qr(u)
+            r_diag = np.sign(np.diagonal(np.real(r)))
+            n_u = np.zeros((n, n))
+            np.fill_diagonal(n_u, val=r_diag)
+            return MatrixN(np.matmul(q, n_u))
         else:
             u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
+            (q, r) = np.linalg.qr(u)
+            r_diag = np.sign(np.diagonal(np.real(r)))
+            n_u = np.zeros((n, n))
+            np.fill_diagonal(n_u, val=r_diag)
+            return Matrix(np.matmul(q, n_u))
+
+    @staticmethod
+    def parametrized_unitary(n: int, parameters: Union[np.ndarray,list] = None) -> MatrixN:
+        r"""static method generating a random unitary matrix
+
+        :param n: size of the Matrix
+        :param parameters: :math:`2n^2` random parameters to use a generator
+        :return: a numeric Matrix
+        """
+        assert len(parameters) == 2*n**2, "parameters do not have the right size: should be %d, and is %d" % (
+            2*n**2, len(parameters))
+        a = np.reshape(parameters[:n**2], (n, n))
+        b = np.reshape(parameters[n**2:], (n, n))
+        u = a + 1j * b
         (q, r) = np.linalg.qr(u)
         r_diag = np.sign(np.diagonal(np.real(r)))
         n_u = np.zeros((n, n))
         np.fill_diagonal(n_u, val=r_diag)
-        return Matrix(np.matmul(q, n_u))
+        return MatrixN(np.matmul(q, n_u))
 
     def simp(self):
         """Simplify the matrix - only implemented for symbolic matrix"""
