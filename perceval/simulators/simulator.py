@@ -32,6 +32,7 @@ from .simulator_interface import ISimulator
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
 from perceval.backends import AProbAmpliBackend
+from perceval.utils.density_matrix import statevector_to_array
 
 from copy import copy
 from multipledispatch import dispatch
@@ -479,8 +480,19 @@ class Simulator(ISimulator):
             if (vec @ vec.transpose())[0, 0]:
                 input_list.append(dm.reverse_index[k])
 
-        print(input_list)
+        self._evolve_cache(set(input_list))
 
-        #self._evolve_cache(set(input_list))
+        intermediary_matrix = csr_array(dm.shape, dtype=complex)
 
-        #evolution_operator = csr_array(dm.shape, dtype=complex)
+        for state in input_list:
+            ket = statevector_to_array(self._evolve[state], dm.index).reshape(dm.size, 1)
+            intermediary_matrix += csr_array(ket) @ dm.mat[[dm.index[state]]]
+
+        intermediary_matrix = intermediary_matrix.transpose()
+        out_matrix = csr_array(dm.shape, dtype=complex)
+
+        for state in input_list:
+            ket = statevector_to_array(self._evolve[state], dm.index).reshape(dm.size, 1)
+            out_matrix += csr_array(ket) @ intermediary_matrix[[dm.index[state]]]
+
+        return DensityMatrix(out_matrix, index=dm.index)
