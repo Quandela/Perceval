@@ -1,10 +1,11 @@
+"""build the index.html for multiversion docs"""
 import os
 from perceval import PMetadata
 
-DIRECTORY_OF_SRIPT = os.path.dirname(__file__)
-INDEX_OF_HTML = os.path.join(DIRECTORY_OF_SRIPT, "../../build/html/index.html")
+DIR_SCRIPT = os.path.dirname(__file__)
+INDEX_OF_HTML = os.path.join(DIR_SCRIPT, "../../build/html/index.html")
 
-latest_tag = f"v{PMetadata.version()}"
+LATEST_TAG = f"v{PMetadata.version()}"
 
 TEMPLATE = f"""
 <!DOCTYPE html>
@@ -12,11 +13,11 @@ TEMPLATE = f"""
     <head>
         <title>Redirecting to latest branch</title>
         <meta charset="utf-8">
-        <meta http-equiv="refresh" content="0; url=./{latest_tag}">
-        <link rel="canonical" href="{latest_tag}">
+        <meta http-equiv="refresh" content="0; url=./{LATEST_TAG}">
+        <link rel="canonical" href="{LATEST_TAG}">
     </head>
     <body>
-        <p>Redirecting you to <a href="./{latest_tag}">{latest_tag}</a></p>
+        <p>Redirecting you to <a href="./{LATEST_TAG}">{LATEST_TAG}</a></p>
     </body>
 </html>
 """
