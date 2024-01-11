@@ -42,7 +42,7 @@ jobs:
     - name: Build docs
       run: |
         cd docs
-        make html
+        make multiversion
 
     - name: Install SSH Key
       uses: shimataro/ssh-key-action@v2

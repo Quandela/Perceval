@@ -18,3 +18,12 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+multiversion:
+	python -m sphinx_multiversion source build/html
+	python source/_templates/build_index.py
+
+clean:
+	rm -rf build
+
+.PHONY: clean

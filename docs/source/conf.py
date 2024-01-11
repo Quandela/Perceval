@@ -67,7 +67,22 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinxcontrib.bibtex',
     'nbsphinx',
+    'sphinx_multiversion',
 ]
+
+# Whitelist pattern for tags (set to None to ignore all tags)
+smv_tag_whitelist = r'^v\d+\.\d+\.\d+$'
+
+# Whitelist pattern for branches (set to None to ignore all branches)
+smv_branch_whitelist = None
+
+# Whitelist pattern for remotes (set to None to use local branches only)
+smv_remote_whitelist = None
+
+# Pattern for released versions
+smv_released_pattern = r'v.*'
+
+smv_latest_version = f"v{PMetadata.version()}"
 
 bibtex_bibfiles = ['references.bib']
 bibtex_reference_style = 'author_year'
