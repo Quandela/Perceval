@@ -327,6 +327,12 @@ def pdisplay_density_matrix(dm,
                             output_format: Format = Format.MPLOT,
                             color: bool = True,
                             cmap='hsv'):
+    """
+    :param dm:
+    :param output_format:
+    :param color: whether to display the phase according to some circular cmap
+    :param cmap: the cmap to use fpr the phase indication
+    """
 
     if output_format == Format.TEXT or output_format == Format.LATEX:
         raise TypeError(f"DensityMatrix plot does not support {output_format}")
