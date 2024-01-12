@@ -44,19 +44,22 @@ with warnings.catch_warnings():
     import drawsvg
 
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
 from perceval.algorithm import ProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
+from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks, _complex_to_rgb
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
+from perceval.utils import DensityMatrix
 from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
 from ._processor_utils import precompute_herald_pos
+
+import math
 
 
 in_notebook = False
@@ -320,10 +323,40 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     plt.show()
 
 
+def pdisplay_density_matrix(dm,
+                            output_format: Format = Format.MPLOT,
+                            color: bool = True,
+                            cmap='hsv'):
+    """
+    :param dm:
+    :param output_format:
+    :param color: whether to display the phase according to some circular cmap
+    :param cmap: the cmap to use fpr the phase indication
+    """
+
+    if output_format == Format.TEXT or output_format == Format.LATEX:
+        raise TypeError(f"DensityMatrix plot does not support {output_format}")
+    if color:
+        img = _csr_to_rgb(dm.mat, cmap)
+        plt.imshow(img)
+    else:
+        img = _csr_to_greyscale(dm.mat)
+        plt.imshow(img, cmap='gray')
+
+    l1, l2 = generate_ticks(dm)
+
+    plt.yticks(l1, l2)
+    plt.xticks([])
+    plt.show()
+
+
 @dispatch(object)
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
 
+@dispatch(DensityMatrix)
+def _pdisplay(dm, **kwargs):
+    return pdisplay_density_matrix(dm, **kwargs)
 
 @dispatch(ProcessTomography)
 def _pdisplay(qpt, **kwargs):
@@ -387,7 +420,7 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_ide and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
+    elif in_ide and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, ProcessTomography))):
         return Format.MPLOT
     return Format.TEXT
 
