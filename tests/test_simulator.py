@@ -185,6 +185,15 @@ def test_simulator_probampli():
     # prob_amplitude call is strict on annotations name
     assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
 
+    input_state = StateVector("|{_:0},{_:1}>")
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|0,{_:0}{_:1}>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0},{_:1}>")) == pytest.approx(0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:1},{_:0}>")) == pytest.approx(-0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
+    assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
+    # prob_amplitude call is strict on annotations name
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
 
 def test_simulator_probability():
     input_state = BasicState("|{_:0},{_:1}>")
@@ -201,6 +210,12 @@ def test_simulator_probability():
     assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.0)
+
+    input_state = StateVector("|{_:0},{_:1}>")
+    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5)
 
 
 def test_simulator_probs_sv():
