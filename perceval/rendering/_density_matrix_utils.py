@@ -45,6 +45,7 @@ def _complex_to_rgb(z: complex, cmap='hsv'):
 
 
 def _csr_to_rgb(matrix, cmap='hsv'):
+    """convert a complex csr_matrix to an rgb image"""
     if matrix.ndim != 2:
         raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
 
@@ -54,7 +55,7 @@ def _csr_to_rgb(matrix, cmap='hsv'):
         for j in range(matrix.shape[0]):
             z = matrix[i, j]
             if z != 0:
-                img[i, j, :] = _complex_to_rgb(z)
+                img[i, j, :] = _complex_to_rgb(z, cmap)
                 if abs(z) > coef_max:
                     coef_max = abs(z)
     img = (1/coef_max) * img
@@ -62,7 +63,7 @@ def _csr_to_rgb(matrix, cmap='hsv'):
 
 
 def _csr_to_greyscale(matrix):
-
+    """convert a complex matrix to a greyscale image"""
     if matrix.ndim != 2:
         raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
 
