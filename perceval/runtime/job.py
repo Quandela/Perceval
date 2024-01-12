@@ -79,10 +79,6 @@ class Job(ABC):
     def __call__(self, *args, **kwargs) -> Dict:
         return self.execute_sync(*args, **kwargs)
 
-    @abstractmethod
-    def get_results(self) -> Dict:
-        pass
-
     @property
     @abstractmethod
     def status(self) -> JobStatus:

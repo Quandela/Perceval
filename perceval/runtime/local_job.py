@@ -57,6 +57,7 @@ class LocalJob(Job):
         self._worker = None
         self._user_cb = None
         self._cancel_requested = False
+        self._is_res_mapped = False
 
     def set_progress_callback(self, callback: Callable):  # Signature must be (float, Optional[str])
         self._user_cb = callback
@@ -118,13 +119,16 @@ class LocalJob(Job):
         self._cancel_requested = True
 
     def _get_results(self):
-        if self._result_mapping_function:
-            if 'results' in self._results:
-                self._results['results'] = self._result_mapping_function(self._results['results'],
-                                                                         **self._delta_parameters['mapping'])
-            elif 'results_list' in self._results:
-                for res in self._results["results_list"]:
-                    res["results"] = self._result_mapping_function(res['results'], **self._delta_parameters['mapping'])
-            else:
-                raise KeyError("Cannot find either 'result' or 'results_list' in self._results")
+        if not self._is_res_mapped:
+            if self._result_mapping_function:
+                if 'results' in self._results:
+                    self._results['results'] = self._result_mapping_function(self._results['results'],
+                                                                             **self._delta_parameters['mapping'])
+                elif 'results_list' in self._results:
+                    for res in self._results["results_list"]:
+                        res["results"] = self._result_mapping_function(res['results'],
+                                                                       **self._delta_parameters['mapping'])
+                else:
+                    raise KeyError("Cannot find either 'result' or 'results_list' in self._results")
+            self._is_res_mapped = True
         return self._results
