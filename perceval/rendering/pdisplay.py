@@ -44,15 +44,13 @@ with warnings.catch_warnings():
     import drawsvg
 
 import matplotlib.pyplot as plt
-from matplotlib import ticker
-from matplotlib import colormaps
-from cmath import phase, pi
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
 from perceval.algorithm import ProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
+from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks, _complex_to_rgb
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
 from perceval.utils import DensityMatrix
@@ -60,8 +58,7 @@ from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
 from ._processor_utils import precompute_herald_pos
-import numpy as np
-from numpy.linalg import norm
+
 import math
 
 
@@ -324,60 +321,6 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     _get_sub_figure(ax, imag_chi, pauli_captions)
 
     plt.show()
-
-
-def _complex_to_rgb(z: complex, cmap='hsv'):
-    """for better rendering, cmap should be a cyclic matplotlib ColorMap"""
-    r, g, b, a = colormaps[cmap]((phase(z) + pi) / (2 * pi))
-    a = abs(z)
-    vect = np.array([r, g, b])
-    vect = (a / norm(vect)) * vect
-    return vect
-
-
-def _csr_to_rgb(matrix, cmap='hsv'):
-    if matrix.ndim != 2:
-        raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
-
-    img = np.zeros(matrix.shape + (3,))
-    coef_max = 0
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[0]):
-            z = matrix[i, j]
-            if z != 0:
-                img[i, j, :] = _complex_to_rgb(z)
-                if abs(z) > coef_max:
-                    coef_max = abs(z)
-    img = (1/coef_max) * img
-    return img
-
-
-def _csr_to_greyscale(matrix):
-
-    if matrix.ndim != 2:
-        raise ValueError(f"matrix should be a 2d array, not {matrix.ndim}d")
-
-    img = np.zeros(matrix.shape)
-    coef_max = 0
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[0]):
-            z = matrix[i, j]
-            if z != 0:
-                img[i, j] = 255*abs(z)
-                if abs(z) > coef_max:
-                    coef_max = abs(z)
-    img = (1 / coef_max) * img
-    return img
-
-
-def generate_ticks(dm):
-    m, n = dm.m, dm.n_max
-    tick_list = [0]
-    tick_labels = ["0 photon"]
-    for k in range(n):
-        tick_list.append(math.comb(m+k, k))
-        tick_labels.append(str(k+1)+" photons")
-    return tick_list, tick_labels
 
 
 def pdisplay_density_matrix(dm,
