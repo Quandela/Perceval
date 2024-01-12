@@ -5,7 +5,7 @@ from perceval import PMetadata
 DIR_SCRIPT = os.path.dirname(__file__)
 INDEX_OF_HTML = os.path.join(DIR_SCRIPT, "../../build/html/index.html")
 
-LATEST_TAG = f"v{PMetadata.version()}"
+LATEST_TAG = f"v{PMetadata.short_version()}"
 
 TEMPLATE = f"""
 <!DOCTYPE html>
