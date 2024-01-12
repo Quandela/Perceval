@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution
+from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution, Matrix, Simulator
 from perceval.utils.density_matrix import FockBasis, statevector_to_array
 import numpy as np
 import scipy
@@ -131,3 +131,14 @@ def test_sample():
 def test_avoid_annotations():
     with pytest.raises(ValueError):
         DensityMatrix.from_svd(BasicState('|{_:1}>')+BasicState('|{_:2}>'))
+
+
+def test_remove_low_amplitude():
+
+    matrix = np.diag([.5, 0.5 - 1e-7, 1e-7])
+    assert matrix.trace() == pytest.approx(1)
+    dm = DensityMatrix(matrix, m=2, n_max=1)
+    dm.remove_low_amplitude()
+
+    assert dm.mat.nnz == 2
+    assert dm.mat.trace() == pytest.approx(1)

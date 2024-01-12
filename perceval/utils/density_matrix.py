@@ -133,7 +133,7 @@ class DensityMatrix:
     Does not support annotations yet
     """
     def __init__(self,
-                 mixed_state: Union[SVDistribution, StateVector, BasicState, sparray],
+                 mixed_state: Union[np.array, sparray],
                  index: Optional[FockBasis] = None,
                  m: Optional[int] = None,
                  n_max: Optional[int] = None):
@@ -359,9 +359,9 @@ class DensityMatrix:
         else:
             return density_matrix_tensor_product(other, self)
 
-    def remove_low_amplitude(self, threshold = 1e-6):
+    def remove_low_amplitude(self, threshold=1e-6):
         """
-        Remove the lines and column wher the amplitude is below a certain threshold
+        Remove the lines and column where the amplitude is below a certain threshold
         """
         projector = dok_array(self.shape)
         for k in range(self.size):
