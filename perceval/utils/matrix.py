@@ -148,16 +148,7 @@ class Matrix(ABC):
         if parameters is not None:
             warnings.warn("use parametrized_unitary(parameters) instead to create a parametrized unitary "
                           "matrix, version=0.11", DeprecationWarning)
-            assert len(parameters) == 2 * n ** 2, "parameters do not have the right size: should be %d, and is %d" % (
-                2 * n ** 2, len(parameters))
-            a = np.reshape(parameters[:n ** 2], (n, n))
-            b = np.reshape(parameters[n ** 2:], (n, n))
-            u = a + 1j * b
-            (q, r) = np.linalg.qr(u)
-            r_diag = np.sign(np.diagonal(np.real(r)))
-            n_u = np.zeros((n, n))
-            np.fill_diagonal(n_u, val=r_diag)
-            return MatrixN(np.matmul(q, n_u))
+            return Matrix.parametrized_unitary(n, parameters)
         else:
             u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
             (q, r) = np.linalg.qr(u)
@@ -167,11 +158,11 @@ class Matrix(ABC):
             return Matrix(np.matmul(q, n_u))
 
     @staticmethod
-    def parametrized_unitary(n: int, parameters: Union[np.ndarray,list] = None) -> MatrixN:
+    def parametrized_unitary(n: int, parameters: Union[np.ndarray,list]) -> MatrixN:
         r"""static method generating a random unitary matrix
 
         :param n: size of the Matrix
-        :param parameters: :math:`2n^2` random parameters to use a generator
+        :param parameters: :math:`2n^2` parameters to use as generator
         :return: a numeric Matrix
         """
         assert len(parameters) == 2*n**2, "parameters do not have the right size: should be %d, and is %d" % (

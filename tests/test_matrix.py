@@ -200,10 +200,10 @@ def test_param_unitary():
         assert M.shape == (2, 2)
         assert M.is_unitary()
 
-        # Testing the use of new method - parametrized_unitary()
+    # Testing the use of new method - parametrized_unitary()
 
-        PM = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
+    PM = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
 
-        assert isinstance(PM, pcvl.Matrix)
-        assert PM.shape == (2, 2)
-        assert PM.is_unitary()
+    assert isinstance(PM, pcvl.Matrix)
+    assert PM.shape == (2, 2)
+    assert PM.is_unitary()
