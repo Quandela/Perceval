@@ -135,10 +135,23 @@ def test_avoid_annotations():
 
 def test_remove_low_amplitude():
 
-    matrix = np.diag([.5, 0.5 - 1e-7, 1e-7])
-    assert matrix.trace() == pytest.approx(1)
-    dm = DensityMatrix(matrix, m=2, n_max=1)
+    s = Source(.991)
+    dm = DensityMatrix.from_svd(s.generate_distribution(BasicState([1, 0, 1, 0, 1, 0])))
+
+    assert dm.mat.nnz == 8
+    assert dm.mat.trace() == pytest.approx(1)
+
     dm.remove_low_amplitude()
 
-    assert dm.mat.nnz == 2
+    assert dm.mat.nnz == 7
+    assert dm.mat.trace() == pytest.approx(1)
+    assert dm[BasicState([0, 0, 0, 0, 0, 0]), BasicState([0, 0, 0, 0, 0, 0])] == 0
+
+    dm.remove_low_amplitude(1e-3)
+
+    assert dm.mat.nnz == 4
+    assert dm.mat.trace() == pytest.approx(1)
+
+    dm.remove_low_amplitude(1e-1)
+    assert dm.mat.nnz == 1
     assert dm.mat.trace() == pytest.approx(1)
