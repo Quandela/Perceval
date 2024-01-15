@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution
+from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution, Matrix, Simulator
 from perceval.utils.density_matrix import FockBasis, statevector_to_array
 import numpy as np
 import scipy
@@ -131,3 +131,27 @@ def test_sample():
 def test_avoid_annotations():
     with pytest.raises(ValueError):
         DensityMatrix.from_svd(BasicState('|{_:1}>')+BasicState('|{_:2}>'))
+
+
+def test_remove_low_amplitude():
+
+    s = Source(.991)
+    dm = DensityMatrix.from_svd(s.generate_distribution(BasicState([1, 0, 1, 0, 1, 0])))
+
+    assert dm.mat.nnz == 8
+    assert dm.mat.trace() == pytest.approx(1)
+
+    dm.remove_low_amplitude()
+
+    assert dm.mat.nnz == 7
+    assert dm.mat.trace() == pytest.approx(1)
+    assert dm[BasicState([0, 0, 0, 0, 0, 0]), BasicState([0, 0, 0, 0, 0, 0])] == 0
+
+    dm.remove_low_amplitude(1e-3)
+
+    assert dm.mat.nnz == 4
+    assert dm.mat.trace() == pytest.approx(1)
+
+    dm.remove_low_amplitude(1e-1)
+    assert dm.mat.nnz == 1
+    assert dm.mat.trace() == pytest.approx(1)

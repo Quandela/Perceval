@@ -133,7 +133,7 @@ class DensityMatrix:
     Does not support annotations yet
     """
     def __init__(self,
-                 mixed_state: Union[SVDistribution, StateVector, BasicState, sparray],
+                 mixed_state: Union[np.array, sparray],
                  index: Optional[FockBasis] = None,
                  m: Optional[int] = None,
                  n_max: Optional[int] = None):
@@ -196,7 +196,7 @@ class DensityMatrix:
             index = FockBasis(m, n_max)
         l = []
         for sv, p in svd.items():
-            vector = csr_array((size, 1), dtype=complex)
+            vector = np.zeros((size, 1), dtype=complex)
             for bst in sv.keys():
                 idx = index[bst]
                 vector[idx, 0] = sv[bst]
@@ -358,6 +358,20 @@ class DensityMatrix:
 
         else:
             return density_matrix_tensor_product(other, self)
+
+    def remove_low_amplitude(self, threshold=1e-6):
+        """
+        Remove the lines and column where the amplitude is below a certain threshold
+        """
+        projector = dok_array(self.shape)
+        for k in range(self.size):
+            if self.mat[k, k] > threshold:
+                projector[k, k] = 1
+
+        projector = csr_array(projector)
+
+        self.mat = projector.dot(self.mat).dot(projector)
+        self.normalize()
 
     def normalize(self):
         """
