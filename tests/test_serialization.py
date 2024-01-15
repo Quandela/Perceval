@@ -252,6 +252,9 @@ def test_compress():
     assert not d_not_compressed["circuit"].startswith(zip_prefix)
     assert d_not_compressed["integer"] == 43  # JSon-compatible integral types are neither serialized nor compressed
 
+    # Compressing a circuit serialization gives a smaller representation
+    assert len(d_compressed["circuit"]) < len(d_not_compressed['circuit'])
+
     d_only_circuit = serialize(d, compress=["ACircuit"])  # Compress only ACircuit objects
     assert not d_only_circuit["input_state"].startswith(zip_prefix)
     assert d_only_circuit["circuit"].startswith(zip_prefix)
