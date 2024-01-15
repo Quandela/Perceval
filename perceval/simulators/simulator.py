@@ -33,13 +33,15 @@ from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
 from perceval.backends import AProbAmpliBackend
 from perceval.utils.density_matrix import statevector_to_array
+from perceval.utils import allstate_iterator
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
 import numpy as np
-from scipy.sparse import csr_array
+from scipy.sparse import csr_array, dok_array, lil_array
+import time
 
 
 class Simulator(ISimulator):
@@ -474,25 +476,29 @@ class Simulator(ISimulator):
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
 
+        print(time.time())
         input_list = []
         for k in range(dm.size):
-            vec = dm.mat[[k]]
-            if (vec @ vec.transpose())[0, 0]:
+            if dm.mat[k,k] != 0:
                 input_list.append(dm.reverse_index[k])
-
-        self._evolve_cache(set(input_list))
-
-        intermediary_matrix = csr_array(dm.shape, dtype=complex)
+        u_evolve = lil_array(dm.shape, dtype=complex)
 
         for state in input_list:
-            ket = statevector_to_array(self._evolve[state], dm.index).reshape(dm.size, 1)
-            intermediary_matrix += csr_array(ket) @ dm.mat[[dm.index[state]]]
+            self._backend.set_input_state(state)
+            input_index = dm.index[state]
+            for fs in allstate_iterator(state):
+                amplitude = self._backend.prob_amplitude(fs)
+                if amplitude != 0:
+                    output_index = dm.index[fs]
+                    u_evolve[output_index, input_index] = amplitude
+        print(time.time())
 
-        intermediary_matrix = intermediary_matrix.transpose()
-        out_matrix = csr_array(dm.shape, dtype=complex)
+        print(u_evolve.nnz)
+        print(u_evolve.shape)
 
-        for state in input_list:
-            ket = statevector_to_array(self._evolve[state], dm.index).reshape(dm.size, 1)
-            out_matrix += csr_array(ket) @ intermediary_matrix[[dm.index[state]]]
-
+        u_evolve = csr_array(u_evolve)
+        print(time.time())
+        out_matrix = u_evolve @ (u_evolve @ dm.mat).transpose()
+        print(time.time())
+        del u_evolve
         return DensityMatrix(out_matrix, index=dm.index)
