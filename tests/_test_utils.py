@@ -35,8 +35,7 @@ import pytest
 
 import perceval as pcvl
 from perceval.utils import StateVector, SVDistribution
-from perceval.rendering import pdisplay_to_file, Format
-from perceval.rendering.pdisplay import pdisplay_circuit
+from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import ProcessTomography
 
@@ -105,15 +104,13 @@ def _norm(svg):
     return svg
 
 
-def _check_image(test_path, ref_path):
+def _check_svg(test_path, ref_path, collection: str):
     with open(test_path) as f_test:
         test = _norm("".join(f_test.readlines()))
     with open(ref_path) as f_ref:
         ref = _norm("".join(f_ref.readlines()))
-    if test == ref:
-        return True, "ok"
-    m_test = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', test)
-    m_ref = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', ref)
+    m_test = re.search(rf'<g id="{collection}Collection.*?>((.|\n)*?)</g>', test)
+    m_ref = re.search(rf'<g id="{collection}Collection.*?>((.|\n)*?)</g>', ref)
     if not m_test:
         return False, "cannot find patch in test"
     if not m_ref:
@@ -125,6 +122,14 @@ def _check_image(test_path, ref_path):
     return True, "ok"
 
 
+def _check_circuit(test_path, ref_path):
+    return _check_svg(test_path, ref_path, 'Patch')
+
+
+def _check_qpt(test_path, ref_path):
+    return _check_svg(test_path, ref_path, 'Line3D')
+
+
 def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False,
                    skin_type: Type[ASkin] = PhysSkin) -> None:
     img_path = (TEST_IMG_DIR if save_figs else tmp_path) / \
@@ -133,9 +138,11 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
 
     if isinstance(c, ProcessTomography):
         pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT)
-    else:
+    elif isinstance(c, pcvl.AComponent) or isinstance(c, pcvl.components.ACircuit) or isinstance(c, pcvl.AProcessor):
         pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
                               recursive=recursive, skin=skin)
+    else:
+        raise NotImplementedError(f"_save_or_check not implemented for {type(c)}")
 
     if save_figs:
         with open(img_path) as f_saved:
@@ -144,8 +151,14 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         with open(img_path, "w") as fw_saved:
             fw_saved.write(saved)
     else:
-        ok, msg = _check_image(img_path, TEST_IMG_DIR /
-                               Path(circuit_name + ".svg"))
+        if isinstance(c, ProcessTomography):
+            ok, msg = _check_qpt(img_path, TEST_IMG_DIR /
+                                 Path(circuit_name + ".svg"))
+        elif isinstance(c, pcvl.AComponent) or isinstance(c, pcvl.components.ACircuit) or isinstance(c, pcvl.AProcessor):
+            ok, msg = _check_circuit(img_path, TEST_IMG_DIR /
+                                     Path(circuit_name + ".svg"))
+        else:
+            raise NotImplementedError(f"_save_or_check not implemented for {type(c)}")
         assert ok, msg
 
 
