@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -42,7 +42,7 @@ from perceval.algorithm import ProcessTomography, StateTomography
 from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit, \
     _generate_pauli_index, _vector_to_sq_matrix, _matrix_to_vector, _matrix_basis, _coef_linear_decomp
 
-from _test_utils import _check_image
+from _test_utils import save_figs, _save_or_check
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
@@ -109,7 +109,7 @@ def test_fidelity_random_op():
     assert random_op_fidelity == pytest.approx(1)
 
 
-def test_chi_cnot_is_physical_and_display():
+def test_chi_cnot_is_physical_and_display(tmp_path, save_figs):
     cnot_p = catalog["klm cnot"].build_processor()
 
     qpt = ProcessTomography(operator_processor=cnot_p)
@@ -122,12 +122,7 @@ def test_chi_cnot_is_physical_and_display():
     assert res['Completely Positive'] is True  # if input Chi is Completely Positive
 
     # display
-    curr_path = "tomography_cnot.svg"
-    other_path = TEST_IMG_DIR / Path("tomography_cnot.svg")
-    pcvl.pdisplay_to_file(qpt, path=curr_path)
-    is_same = _check_image(curr_path, other_path)
-    os.remove(curr_path)
-    assert is_same
+    _save_or_check(qpt, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 def test_processor_odd_modes():
     # tests that a generic processor with odd number of modes does not work

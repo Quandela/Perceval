@@ -27,18 +27,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import re
 from typing import Type
+from pathlib import Path
 
 import pytest
-from pathlib import Path
-import re
 
 import perceval as pcvl
 from perceval.utils import StateVector, SVDistribution
 from perceval.rendering import pdisplay_to_file, Format
 from perceval.rendering.pdisplay import pdisplay_circuit
 from perceval.rendering.circuit import ASkin, PhysSkin
-
+from perceval.algorithm import ProcessTomography
 
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
@@ -110,6 +110,8 @@ def _check_image(test_path, ref_path):
         test = _norm("".join(f_test.readlines()))
     with open(ref_path) as f_ref:
         ref = _norm("".join(f_ref.readlines()))
+    if test == ref:
+        return True, "ok"
     m_test = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', test)
     m_ref = re.search(r'<g id="PatchCollection.*?>((.|\n)*?)</g>', ref)
     if not m_test:
@@ -128,8 +130,12 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
     img_path = (TEST_IMG_DIR if save_figs else tmp_path) / \
         Path(circuit_name + ".svg")
     skin = skin_type(compact)
-    pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
-                          recursive=recursive, skin=skin)
+
+    if isinstance(c, ProcessTomography):
+        pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT)
+    else:
+        pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
+                              recursive=recursive, skin=skin)
 
     if save_figs:
         with open(img_path) as f_saved:
