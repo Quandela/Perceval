@@ -476,13 +476,14 @@ class Simulator(ISimulator):
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
 
-        print(time.time())
+        # Establishing te set of FockState to evolve
         input_list = []
         for k in range(dm.size):
-            if dm.mat[k,k] != 0:
+            if dm.mat[k, k] != 0:
                 input_list.append(dm.reverse_index[k])
         u_evolve = lil_array(dm.shape, dtype=complex)
 
+        # Constructing the evolution operator
         for state in input_list:
             self._backend.set_input_state(state)
             input_index = dm.index[state]
@@ -491,14 +492,42 @@ class Simulator(ISimulator):
                 if amplitude != 0:
                     output_index = dm.index[fs]
                     u_evolve[output_index, input_index] = amplitude
-        print(time.time())
-
-        print(u_evolve.nnz)
-        print(u_evolve.shape)
-
         u_evolve = csr_array(u_evolve)
-        print(time.time())
-        out_matrix = u_evolve @ (u_evolve @ dm.mat).transpose()
-        print(time.time())
+
+        # Evolving the input state
+        half_matrix = extract_upper_triangle(dm.mat)
+        half_result = u_evolve @ (u_evolve @ half_matrix).transpose()
+        out_matrix = half_result + half_result.transpose().conj()
+        del half_result
         del u_evolve
+
         return DensityMatrix(out_matrix, index=dm.index)
+
+
+def extract_upper_triangle(csr_matrix):
+    result_data = []
+    result_indices = []
+    result_indptr = [0]
+    size = csr_matrix.shape[0]
+
+    for row in range(size):
+        start_idx = csr_matrix.indptr[row]
+        end_idx = csr_matrix.indptr[row + 1]
+
+        for i in range(start_idx, end_idx):
+            col = csr_matrix.indices[i]
+
+            # Only include elements in the upper triangle
+            if col > row:
+                result_data.append(csr_matrix.data[i])
+                result_indices.append(col)
+            elif col == row:
+                result_data.append(csr_matrix.data[i]/2)
+                result_indices.append(col)
+
+        result_indptr.append(len(result_data))
+
+    # Create a new CSR matrix using the extracted upper triangular part
+    upper_triangle_matrix = csr_array((result_data, result_indices, result_indptr), shape = (size, size))
+
+    return upper_triangle_matrix
