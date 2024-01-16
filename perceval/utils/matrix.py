@@ -138,7 +138,7 @@ class Matrix(ABC):
         pass
 
     @staticmethod
-    def random_unitary(n: int, parameters: Optional[Union[np.ndarray,list]] = None) -> MatrixN:
+    def random_unitary(n: int, parameters: Optional[Union[np.ndarray, list]] = None) -> MatrixN:
         r"""static method generating a random unitary matrix
 
         :param n: size of the Matrix
@@ -146,20 +146,16 @@ class Matrix(ABC):
         :return: a numeric Matrix
         """
         if parameters is not None:
-            warnings.warn("use parametrized_unitary(parameters) instead to create a parametrized unitary "
+            warnings.warn("use parametrized_unitary(n, parameters) instead to create a parametrized unitary "
                           "matrix, version=0.11", DeprecationWarning)
             return Matrix.parametrized_unitary(n, parameters)
         else:
             u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
-            (q, r) = np.linalg.qr(u)
-            r_diag = np.sign(np.diagonal(np.real(r)))
-            n_u = np.zeros((n, n))
-            np.fill_diagonal(n_u, val=r_diag)
-            return Matrix(np.matmul(q, n_u))
+            return Matrix._unitarize_matrix(n, u)
 
     @staticmethod
     def parametrized_unitary(n: int, parameters: Union[np.ndarray,list]) -> MatrixN:
-        r"""static method generating a random unitary matrix
+        r"""static method generating a parametrized unitary matrix
 
         :param n: size of the Matrix
         :param parameters: :math:`2n^2` parameters to use as generator
@@ -170,6 +166,11 @@ class Matrix(ABC):
         a = np.reshape(parameters[:n**2], (n, n))
         b = np.reshape(parameters[n**2:], (n, n))
         u = a + 1j * b
+        return Matrix._unitarize_matrix(n, u)
+
+    @staticmethod
+    def _unitarize_matrix(n: int, u: np.ndarray) -> MatrixN:
+        # makes an 'n x n' matrix 'u' unitary
         (q, r) = np.linalg.qr(u)
         r_diag = np.sign(np.diagonal(np.real(r)))
         n_u = np.zeros((n, n))
