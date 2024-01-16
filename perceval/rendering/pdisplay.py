@@ -66,7 +66,7 @@ try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
         in_notebook = True
-        from IPython.display import HTML, display
+        from IPython.display import display, Math
 except (ImportError, AttributeError):
     pass
 
@@ -429,7 +429,7 @@ def pdisplay(o, output_format: Format = None, **opts):
     if isinstance(res, drawsvg.Drawing):
         return res
     elif in_notebook and output_format != Format.TEXT and output_format != Format.LATEX:
-        display(HTML(res))
+        display(Math(res))
     else:
         print(res)
 
