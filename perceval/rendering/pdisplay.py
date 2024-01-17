@@ -61,8 +61,7 @@ from ._processor_utils import precompute_herald_pos
 
 in_notebook = False
 environ = str(os.environ)
-in_ide_vscode = 'VSCODE' in environ
-in_ide = "PYCHARM_HOSTED" in environ or 'SPY_PYTHONPATH' in environ or in_ide_vscode
+in_ide = "PYCHARM_HOSTED" in environ or 'SPY_PYTHONPATH' in environ or 'VSCODE' in environ
 
 try:
     from IPython import get_ipython
@@ -108,6 +107,7 @@ def pdisplay_processor(processor: AProcessor,
     n_modes = processor.circuit_size
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
+    w, h = skin.get_size(processor, recursive)
     w, h = skin.get_size(processor, recursive)
     renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, compact=compact, **opts)
@@ -431,10 +431,7 @@ def pdisplay(o, output_format: Format = None, **opts):
     if isinstance(res, drawsvg.Drawing):
         return res
     elif in_notebook and (output_format == Format.LATEX or output_format == Format.HTML):
-        if in_ide_vscode:
-            display(Math(res))
-        else:
-            display(HTML(res))
+        display(Math(res))
     else:
         print(res)
 
