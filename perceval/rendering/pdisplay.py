@@ -428,7 +428,7 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     if isinstance(res, drawsvg.Drawing):
         return res
-    elif in_notebook and output_format != Format.TEXT and output_format != Format.LATEX:
+    elif in_notebook and output_format != Format.TEXT and output_format != Format.MPLOT:
         display(Math(res))
     else:
         print(res)
