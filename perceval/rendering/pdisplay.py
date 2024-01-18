@@ -60,14 +60,20 @@ from ._processor_utils import precompute_herald_pos
 
 
 in_notebook = False
-environ = str(os.environ)
-in_ide = "PYCHARM_HOSTED" in environ or 'SPY_PYTHONPATH' in environ or 'VSCODE' in environ
+
+
+def in_ide():
+    for key in os.environ:
+        if 'PYCHARM' in key or 'SPY_PYTHONPATH' in key or 'VSCODE' in key:
+            return True
+    return False
+
 
 try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
         in_notebook = True
-        from IPython.display import display, Math, HTML
+        from IPython.display import display, Math
 except (ImportError, AttributeError):
     pass
 
@@ -107,7 +113,6 @@ def pdisplay_processor(processor: AProcessor,
     n_modes = processor.circuit_size
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
-    w, h = skin.get_size(processor, recursive)
     w, h = skin.get_size(processor, recursive)
     renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
                                total_width=w, total_height=h, compact=compact, **opts)
@@ -389,7 +394,7 @@ def _default_output_format(o):
     """
     if in_notebook:
         return Format.HTML
-    elif in_ide and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
+    elif in_ide() and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
         return Format.MPLOT
     return Format.TEXT
 
