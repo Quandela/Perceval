@@ -73,7 +73,7 @@ try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
         in_notebook = True
-        from IPython.display import display, Math
+        from IPython.display import display, Math, HTML
 except (ImportError, AttributeError):
     pass
 
@@ -393,6 +393,8 @@ def _default_output_format(o):
     Deduces the best output format given the nature of the data to be displayed and the execution context
     """
     if in_notebook:
+        if isinstance(o, Matrix):
+            return Format.LATEX
         return Format.HTML
     elif in_ide() and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
         return Format.MPLOT
@@ -435,8 +437,10 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     if isinstance(res, drawsvg.Drawing):
         return res
-    elif in_notebook and (output_format == Format.LATEX or output_format == Format.HTML):
+    elif in_notebook and output_format == Format.LATEX:
         display(Math(res))
+    elif in_notebook and output_format == Format.HTML:
+        display(HTML(res))
     else:
         print(res)
 
