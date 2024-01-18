@@ -60,13 +60,20 @@ from ._processor_utils import precompute_herald_pos
 
 
 in_notebook = False
-in_ide = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ or 'VSCODE' in os.environ
+
+
+def in_ide():
+    for key in os.environ:
+        if 'PYCHARM' in key or 'SPY_PYTHONPATH' in key or 'VSCODE' in key:
+            return True
+    return False
+
 
 try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
         in_notebook = True
-        from IPython.display import HTML, display
+        from IPython.display import display, Math, HTML
 except (ImportError, AttributeError):
     pass
 
@@ -386,8 +393,10 @@ def _default_output_format(o):
     Deduces the best output format given the nature of the data to be displayed and the execution context
     """
     if in_notebook:
+        if isinstance(o, Matrix):
+            return Format.LATEX
         return Format.HTML
-    elif in_ide and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
+    elif in_ide() and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
         return Format.MPLOT
     return Format.TEXT
 
@@ -428,7 +437,9 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     if isinstance(res, drawsvg.Drawing):
         return res
-    elif in_notebook and output_format != Format.TEXT and output_format != Format.LATEX:
+    elif in_notebook and output_format == Format.LATEX:
+        display(Math(res))
+    elif in_notebook and output_format == Format.HTML:
         display(HTML(res))
     else:
         print(res)
