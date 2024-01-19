@@ -34,14 +34,13 @@ from perceval.utils import BasicState, BSDistribution, StateVector, SVDistributi
 from perceval.backends import AProbAmpliBackend
 from perceval.utils.density_matrix import statevector_to_array
 from perceval.utils import allstate_iterator, max_photon_state_iterator
+from perceval.utils.density_matrix_utils import extract_upper_triangle
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
-import numpy as np
-from scipy.sparse import csr_array, dok_array, lil_array, csc_array, hstack, vstack
-import time
+from scipy.sparse import csr_array, csc_array
 
 
 class Simulator(ISimulator):
@@ -431,7 +430,7 @@ class Simulator(ISimulator):
         result_sv.normalize()
         return self._post_select_on_statevector(result_sv)
 
-    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState], progress_callback: Optional[Callable] = None) -> SVDistribution:
+    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState], progress_callback: Optional[Callable] = None):
         """
         Compute the SVDistribution evolved through a Linear Optical circuit
 
@@ -507,32 +506,3 @@ class Simulator(ISimulator):
         out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
 
         return DensityMatrix(out_matrix, index=dm.index)
-
-
-def extract_upper_triangle(csr_matrix):
-    result_data = []
-    result_indices = []
-    result_indptr = [0]
-    size = csr_matrix.shape[0]
-
-    for row in range(size):
-        start_idx = csr_matrix.indptr[row]
-        end_idx = csr_matrix.indptr[row + 1]
-
-        for i in range(start_idx, end_idx):
-            col = csr_matrix.indices[i]
-
-            # Only include elements in the upper triangle
-            if col > row:
-                result_data.append(csr_matrix.data[i])
-                result_indices.append(col)
-            elif col == row:
-                result_data.append(csr_matrix.data[i]/2)
-                result_indices.append(col)
-
-        result_indptr.append(len(result_data))
-
-    # Create a new CSR matrix using the extracted upper triangular part
-    upper_triangle_matrix = csr_array((result_data, result_indices, result_indptr), shape=csr_matrix.shape)
-
-    return upper_triangle_matrix
