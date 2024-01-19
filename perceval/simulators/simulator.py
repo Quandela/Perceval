@@ -536,11 +536,3 @@ def extract_upper_triangle(csr_matrix):
     upper_triangle_matrix = csr_array((result_data, result_indices, result_indptr), shape=csr_matrix.shape)
 
     return upper_triangle_matrix
-
-
-def csr_transp_to_csc(csc_matrix):
-    """convert a csr_matrix to its transpose csc"""
-    return csr_array((csc_matrix.data,
-                      csc_matrix.indices,
-                      csc_matrix.indptr),
-                     shape=csc_matrix.shape)
