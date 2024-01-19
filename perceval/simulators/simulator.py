@@ -33,14 +33,14 @@ from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
 from perceval.backends import AProbAmpliBackend
 from perceval.utils.density_matrix import statevector_to_array
-from perceval.utils import allstate_iterator
+from perceval.utils import allstate_iterator, max_photon_state_iterator
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
 import numpy as np
-from scipy.sparse import csr_array, dok_array, lil_array
+from scipy.sparse import csr_array, dok_array, lil_array, csc_array, hstack, vstack
 import time
 
 
@@ -475,31 +475,36 @@ class Simulator(ISimulator):
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
+        size = dm.mat.shape[0]
 
         # Establishing te set of FockState to evolve
         input_list = []
         for k in range(dm.size):
             if dm.mat[k, k] != 0:
                 input_list.append(dm.reverse_index[k])
-        u_evolve = lil_array(dm.shape, dtype=complex)
+
+        u_evolve_data = []
+        u_evolve_indices = []
+        u_evolve_indptr = [0]
 
         # Constructing the evolution operator
-        for state in input_list:
-            self._backend.set_input_state(state)
-            input_index = dm.index[state]
-            for fs in allstate_iterator(state):
-                amplitude = self._backend.prob_amplitude(fs)
-                if amplitude != 0:
-                    output_index = dm.index[fs]
-                    u_evolve[output_index, input_index] = amplitude
-        u_evolve = csr_array(u_evolve)
+        nnz_count = 0
+        for i, fs in enumerate(dm.reverse_index):
+            if fs in input_list:
+                self._backend.set_input_state(fs)
+                output_sv = self._backend.evolve()
+                for state, amplitude in output_sv:
+                    u_evolve_data.append(amplitude)
+                    u_evolve_indices.append(dm.index[state])
+                    nnz_count += 1
+            u_evolve_indptr.append(nnz_count)
+        u_evolve = csc_array((u_evolve_data,
+                              u_evolve_indices,
+                              u_evolve_indptr),
+                             shape=dm.shape)
 
-        # Evolving the input state
-        half_matrix = extract_upper_triangle(dm.mat)
-        half_result = u_evolve @ (u_evolve @ half_matrix).transpose()
-        out_matrix = half_result + half_result.transpose().conj()
-        del half_result
-        del u_evolve
+        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
+        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
 
         return DensityMatrix(out_matrix, index=dm.index)
 
@@ -528,6 +533,14 @@ def extract_upper_triangle(csr_matrix):
         result_indptr.append(len(result_data))
 
     # Create a new CSR matrix using the extracted upper triangular part
-    upper_triangle_matrix = csr_array((result_data, result_indices, result_indptr), shape = (size, size))
+    upper_triangle_matrix = csr_array((result_data, result_indices, result_indptr), shape=csr_matrix.shape)
 
     return upper_triangle_matrix
+
+
+def csr_transp_to_csc(csc_matrix):
+    """convert a csr_matrix to its transpose csc"""
+    return csr_array((csc_matrix.data,
+                      csc_matrix.indices,
+                      csc_matrix.indptr),
+                     shape=csc_matrix.shape)
