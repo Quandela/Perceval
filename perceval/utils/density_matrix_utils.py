@@ -27,13 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import DensityMatrix, StateVector
-from perceval.utils.density_matrix import FockBasis
+from perceval.utils.statevector import StateVector
 from typing import Union
 import numpy as np
-from scipy.sparse import sparray, kron
-from scipy import csr_array, dok_array
-from math import comb
+from scipy.sparse import sparray, csr_array
 
 
 def extract_upper_triangle(csr_matrix: csr_array) -> csr_array:
@@ -96,32 +93,3 @@ def array_to_statevector(vector: Union[np.ndarray, sparray], reverse_index: list
         else:
             sv += complex(vector[i])*x
     return sv
-
-
-def density_matrix_tensor_product(A, B):
-    """
-    Make the tensor product of 2 Density Matrices
-    :param A, B: two density matrices
-    :return: the "kronecker" product of the density matrices, in the correct basis
-    """
-
-    if not isinstance(A, DensityMatrix):
-        A = DensityMatrix.from_svd(A)
-
-    if not isinstance(B, DensityMatrix):
-        B = DensityMatrix.from_svd(B)
-
-    n_max = A.n_max + B.n_max
-    n_mode = A.m + B.m
-    size = comb(n_max+n_mode, n_max)
-    new_index = FockBasis(n_mode, n_max)
-    matrix = kron(A.mat, B.mat)
-    perm = dok_array((A.size*B.size, size), dtype=complex)  # matrix from tensor space to complete Fock space
-    for i, a_state in enumerate(A.reverse_index):
-        for j, b_state in enumerate(B.reverse_index):
-            index = new_index[a_state*b_state]
-            perm[i*B.size+j, index] = 1
-
-    matrix = perm.T @ matrix @ perm
-
-    return DensityMatrix(matrix, new_index)
