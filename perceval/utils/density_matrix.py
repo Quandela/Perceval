@@ -442,7 +442,7 @@ class DensityMatrix:
             Construct the list of projection operators over a mode
             faster than doing n time construct_projector
         """
-        projectors = [dok_array(self.shape, dtype=complex) for k in range(self.n_max)]
+        projectors = [dok_array(self.shape, dtype=complex) for _ in range(self.n_max + 1)]
         for i, fs in enumerate(self.reverse_index):
             projectors[fs[mode]][i, i] += 1
 
