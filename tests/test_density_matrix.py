@@ -155,3 +155,13 @@ def test_remove_low_amplitude():
     dm.remove_low_amplitude(1e-1)
     assert dm.mat.nnz == 1
     assert dm.mat.trace() == pytest.approx(1)
+
+def test_measure():
+
+    sv = StateVector({BasicState([1, 0, 0]): 1,
+                      BasicState([0, 1, 0]): 1,
+                      BasicState([0, 0, 1]): 1})
+    sv.normalize()
+    dm = DensityMatrix.from_svd(sv)
+
+    dm.measure([1,2 , 3], )

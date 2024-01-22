@@ -392,7 +392,7 @@ class DensityMatrix:
             output.append(state)
         return output
 
-    def measure(self, modes: Union[list[int], int], mixed_state=False):
+    def measure(self, modes: Union[list[int], int], mixed_state: bool = True) -> None:
         """
         makes a measure on a list of modes
         :param modes: a list of integer for the modes you want to measure
@@ -401,12 +401,12 @@ class DensityMatrix:
         """
         self.normalize()
         if isinstance(modes, int):
-            self._measure(modes, mixed_state, mixed_state)
+            self._measure(modes, mixed_state)
         else:
             for mode in modes:
                 self._measure(mode, mixed_state)
 
-    def _measure(self, mode: int, mixed_state: bool=False):
+    def _measure(self, mode: int, mixed_state: bool = True) -> None:
         """
         The same as above but for only one mode
         """
@@ -426,7 +426,7 @@ class DensityMatrix:
             self.mat = projector @ self.mat @ projector
             self.normalize()
 
-    def _construct_projector(self, mode, num_photon):
+    def _construct_projector(self, mode, num_photon) -> dok_array:
         """
         Construct the projection operator onto the subspace of some number photons on some mode
         """
@@ -437,7 +437,7 @@ class DensityMatrix:
 
         return projector
 
-    def _construct_projectors(self, mode):
+    def _construct_projectors(self, mode) -> list[dok_array]:
         """
             Construct the list of projection operators over a mode
             faster than doing n time construct_projector
