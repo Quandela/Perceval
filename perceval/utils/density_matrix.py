@@ -392,15 +392,21 @@ class DensityMatrix:
             output.append(state)
         return output
 
-    def measure(self, modes: list[int], mixed_state=False, keep_modes=True):
+    def measure(self, modes: Union[list[int], int], mixed_state=False):
         """
         makes a measure on a list of modes
         :param modes: a list of integer for the modes you want to measure
         :param mixed_state: whether you want a resulting mixed state or a sample
         :param keep_modes: whether you want to keep the modes where you made the measure
         """
+        self.normalize()
+        if isinstance(modes, int):
+            self._measure(modes, mixed_state, mixed_state)
+        else:
+            for mode in modes:
+                self._measure(mode, mixed_state)
 
-    def _measure(self, mode: int, mixed_state: bool=False, keep_modes: bool=True):
+    def _measure(self, mode: int, mixed_state: bool=False):
         """
         The same as above but for only one mode
         """
@@ -411,8 +417,14 @@ class DensityMatrix:
         for i, fs in enumerate(self.reverse_index):
             probs_list[fs[mode]] += probs[i]
 
-        projectors = self._construct_projectors(mode)
-        self.mat = sum(probs_list[k]*projectors[k] @ self.mat @ projectors[k] for k in range(self.n_max))
+        if mixed_state:
+            projectors = self._construct_projectors(mode)
+            self.mat = sum(probs_list[k]*projectors[k] @ self.mat @ projectors[k] for k in range(self.n_max))
+        else:
+            n = np.random.choice(self.n_max, p=probs_list)
+            projector = self._construct_projector(mode, n)
+            self.mat = projector @ self.mat @ projector
+            self.normalize()
 
     def _construct_projector(self, mode, num_photon):
         """
