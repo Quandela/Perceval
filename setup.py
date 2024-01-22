@@ -35,7 +35,9 @@ setuptools.setup(
                       'platformdirs'],
     extras_require={
         "qiskit_bridge": ["qiskit~=0.45.1", "seaborn~=0.13"],
-        "qutip_bridge": ["qutip~=4.7.3"],
+        "qutip_bridge": ["qutip~=4.7.3",
+                         "scipy~=1.11.4"  # Because of an incompatibility between qutip 4.7 and scipy 1.12
+                         ],
         "myqlm_bridge": ["myqlm~=1.9.5"]
     },
     setup_requires=["scmver"],
