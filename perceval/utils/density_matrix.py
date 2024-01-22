@@ -392,6 +392,47 @@ class DensityMatrix:
             output.append(state)
         return output
 
+    def measure(self, modes: list[int], mixed_state=False, keep_modes=True):
+        """
+        makes a measure on a list of modes
+        :param modes: a list of integer for the modes you want to measure
+        :param mixed_state: whether you want a resulting mixed state or a sample
+        :param keep_modes: whether you want to keep the modes where you made the measure
+        """
+
+    def _measure(self, mode:int, mixed_state:bool=False, keep_modes:bool=True):
+        """
+        The same as above but for only one mode
+        """
+        if mode >= self.m:
+            raise ValueError(f"There is only {self.m} modes in this DensityMatrix, so you can't mesure the {mode}th")
+        probs_list = [0]*(self.n_max+1)
+        probs = self.mat.diagonal()
+        for i, fs in enumerate(self.reverse_index):
+            probs_list[fs[mode]] += probs[i]
+
+    def _construct_projector(self, mode, num_photon):
+        """
+        Construct the projection operator onto the subspace of some number photons on some mode
+        """
+        projector = dok_array(self.shape, dtype=complex)
+        for i, fs in enumerate(self.reverse_index):
+            if fs[mode] == num_photon:
+                projector[i,i] += 1
+
+        return projector
+
+    def _construct_projectors(self, mode):
+        """
+            Construct the list of projection operators over a mode
+            faster than doing n time construct_projector
+        """
+        projectors = [dok_array(self.shape, dtype=complex) for k in range(self.n_max)]
+        for i, fs in enumerate(self.reverse_index):
+            projectors[fs[mode]][i, i] += 1
+
+        return projectors
+
     def __str__(self):
         """
         string representation of a density matrix
