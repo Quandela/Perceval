@@ -400,7 +400,7 @@ class DensityMatrix:
         :param keep_modes: whether you want to keep the modes where you made the measure
         """
 
-    def _measure(self, mode:int, mixed_state:bool=False, keep_modes:bool=True):
+    def _measure(self, mode: int, mixed_state: bool=False, keep_modes: bool=True):
         """
         The same as above but for only one mode
         """
@@ -410,6 +410,9 @@ class DensityMatrix:
         probs = self.mat.diagonal()
         for i, fs in enumerate(self.reverse_index):
             probs_list[fs[mode]] += probs[i]
+
+        projectors = self._construct_projectors(mode)
+        self.mat = sum(probs_list[k]*projectors[k] @ self.mat @ projectors[k] for k in range(self.n_max))
 
     def _construct_projector(self, mode, num_photon):
         """
