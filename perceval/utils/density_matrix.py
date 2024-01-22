@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
+from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from typing import Union, Optional, Tuple
 from math import comb
 from numpy import conj
@@ -381,12 +381,15 @@ class DensityMatrix:
         factor = self.mat.trace()
         self.mat = (1/factor)*self.mat
 
-    def sample(self, count: int = 1):
+    def sample(self, count: int = 1) -> BSSamples:
         """
         sample on the density matrix
         """
         self.normalize()
-        output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        samples = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        output = BSSamples()
+        for state in samples:
+            output.append(state)
         return output
 
     def __str__(self):
