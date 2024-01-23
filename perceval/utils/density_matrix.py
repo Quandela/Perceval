@@ -392,60 +392,49 @@ class DensityMatrix:
             output.append(state)
         return output
 
-    def measure(self, modes: Union[list[int], int], mixed_state: bool = True) -> None:
+    def measure(self, modes: Union[list[int], int], all_results: bool = True):
         """
         makes a measure on a list of modes
         :param modes: a list of integer for the modes you want to measure
-        :param mixed_state: whether you want a resulting mixed state or a sample
+        :param all_results: whether you want a resulting mixed state or a simple sample
         """
         self.normalize()
         if isinstance(modes, int):
-            self._measure(modes, mixed_state)
+            modes = [modes]
+
+        if all_results:
+            projectors = self._construct_all_projectors(modes)
+            res = dict()
+            for key_fs, item_list in projectors:
+                basis = item_list[0]
+                projector = item_list[1]
+                prob = item_list[2]
+                collapsed_dm = projector @ self.mat @ projector.T
+
+                res[key_fs] = (DensityMatrix(collapsed_dm, basis), prob)
+            return res
         else:
-            for mode in modes:
-                self._measure(mode, mixed_state)
+            sample = self.sample()[0]
+            measure, remaining = self._divide_fock_state(sample, modes)
+            proj, basis = self._construct_projector(modes, measure)
+            return DensityMatrix(proj @ self.mat @ proj.T, basis)
 
-    def _measure(self, mode: int, mixed_state: bool = True) -> None:
-        """
-        The same as above but for only one mode
-        """
-        if mode >= self.m:
-            raise ValueError(f"There is only {self.m} modes in this DensityMatrix, so you can't mesure the {mode}th")
-        probs_list = [0]*(self.n_max+1)
-        probs = self.mat.diagonal()
-        for i, fs in enumerate(self.reverse_index):
-            probs_list[fs[mode]] += probs[i]
-
-        if mixed_state:
-            projectors = self._construct_projectors(mode)
-            self.mat = sum(probs_list[k]*projectors[k] @ self.mat @ projectors[k] for k in range(self.n_max))
-        else:
-            n = np.random.choice(self.n_max, p=probs_list)
-            projector = self._construct_projector(mode, n)
-            self.mat = projector @ self.mat @ projector
-            self.normalize()
-
-    def _construct_projector(self, mode, num_photon) -> dok_array:
+    def _construct_projector(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
         """
         Construct the projection operator onto the subspace of some number photons on some mode
         """
-        projector = dok_array(self.shape, dtype=complex)
+        if len(modes) != fock_state.m:
+            raise ValueError(f"you can't have {fock_state} in  {len(modes)} number of modes")
+
+        basis = FockBasis(self.m-fock_state.m, self.n_max-fock_state.n)
+        projector = dok_array((len(basis), self.size), dtype=float)
+
         for i, fs in enumerate(self.reverse_index):
-            if fs[mode] == num_photon:
-                projector[i,i] += 1
+            meas_fs, remain_fs = self._divide_fock_state(fs, modes)
+            if meas_fs == fock_state:
+                projector[basis[remain_fs], i] = 1
 
-        return projector
-
-    def _construct_projectors(self, mode) -> list[dok_array]:
-        """
-            Construct the list of projection operators over a mode
-            faster than doing n time construct_projector
-        """
-        projectors = [dok_array(self.shape, dtype=complex) for _ in range(self.n_max + 1)]
-        for i, fs in enumerate(self.reverse_index):
-            projectors[fs[mode]][i, i] += 1
-
-        return projectors
+        return basis, projector
 
     def _construct_all_projectors(self, modes: list[int]) -> dict:
         """
