@@ -26,8 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import itertools
 
 import numpy as np
+from collections import defaultdict
 
 from perceval.components import AProcessor, Processor, PauliType
 from perceval.utils import BasicState
@@ -65,6 +67,9 @@ class StateTomography(AAlgorithm):
 
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
+        #
+        self.cache = defaultdict(lambda: defaultdict(lambda: dict))
+        self._qst_optimized = False
 
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
@@ -127,7 +132,18 @@ class StateTomography(AAlgorithm):
         :return: Value of Stokes parameter for a given combination of input and output state -> a complex float
         """
 
-        output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+        if self._qst_optimized:
+            if tuple(prep_state_indices) not in self.cache.keys():
+                output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+                self.cache[tuple(prep_state_indices)][tuple(meas_pauli_basis_indices)] = output_distribution
+            else:
+                if all(elem == PauliType.I or elem == PauliType.Z for elem in meas_pauli_basis_indices):
+                    output_distribution = self.cache[tuple(prep_state_indices)][tuple(itertools.repeat(PauliType.I,
+                                                                                                       self._nqubit))]
+                else:
+                    output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+        else:
+            output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0

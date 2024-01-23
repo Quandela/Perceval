@@ -35,12 +35,12 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Processor, Circuit, PauliType
+from perceval.components import catalog, Processor, Circuit, PauliType, get_preparation_circuit
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit, \
-    _generate_pauli_index, _vector_to_sq_matrix, _matrix_to_vector, _matrix_basis, _coef_linear_decomp
+from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
+                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp)
 
 from _test_utils import save_figs, _save_or_check
 
