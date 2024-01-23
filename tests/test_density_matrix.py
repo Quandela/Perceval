@@ -163,8 +163,16 @@ def test_measure():
     sv.normalize()
     dm = DensityMatrix.from_svd(sv)
 
-    dm.measure([0,1,2])
+    dm.measure([0, 1, 2])
     for i in range(dm.size):
         for j in range(dm.size):
             if i != j:
                 assert dm.mat[i, j] == 0
+
+
+def test_divide_fockstate():
+
+    fs = BasicState([2, 0, 0, 1, 4])
+    meas, remain = DensityMatrix._divide_fock_state(fs, [0, 2, 4])
+    assert meas == BasicState([2, 0, 4])
+    assert remain == BasicState([0, 1])
