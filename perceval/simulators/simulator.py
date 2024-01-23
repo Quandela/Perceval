@@ -32,15 +32,13 @@ from .simulator_interface import ISimulator
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
 from perceval.backends import AProbAmpliBackend
-from perceval.utils.density_matrix import statevector_to_array
-from perceval.utils import allstate_iterator, max_photon_state_iterator
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
-from scipy.sparse import csr_array, csc_array
+from scipy.sparse import csc_array
 
 
 class Simulator(ISimulator):

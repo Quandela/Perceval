@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from perceval.utils.statevector import SVDistribution, BasicState, max_photon_state_iterator
-from perceval.utils.density_matrix_utils import *
+from perceval.utils.density_matrix_utils import array_to_statevector
 from typing import Union, Optional, Tuple
 from math import comb
 from numpy import conj
