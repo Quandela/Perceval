@@ -390,6 +390,14 @@ class Simulator(ISimulator):
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
 
+    def probs_density_matrix(self, dm: DensityMatrix):
+        """
+        gives the output probability distribution, after evolving some density matrix through the simulator
+        :param dm: the input DensityMatrix
+        """
+        if not isinstance(dm, DensityMatrix):
+            raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
+
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
         Evolve a state through the circuit
