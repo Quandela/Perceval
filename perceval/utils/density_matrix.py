@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
+from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples, allstate_iterator
 from typing import Union, Optional, Tuple
 from math import comb
 from numpy import conj
@@ -446,6 +446,45 @@ class DensityMatrix:
             projectors[fs[mode]][i, i] += 1
 
         return projectors
+
+    def _construct_all_projectors(self, modes: list[int]) -> dict:
+        """
+        construct all the projectors associated with some modes
+        :return: a dictionary with for each measured state a list [fock_basis, projector, probability]
+        """
+        modes = list(set(modes))
+        res = dict()
+        for nb_measured_photons in range(self.n_max):
+            for measured_fs in xq.FSArray(len(modes), nb_measured_photons):
+                remaining_basis = FockBasis(self.m-len(modes), self.n_max-nb_measured_photons)
+                res[measured_fs] = [remaining_basis, dok_array((len(remaining_basis), self.size)), 0]
+
+        diag_coefs = self.mat.diagonal()
+
+        for i, fs in enumerate(self.reverse_index):
+            prob = abs(diag_coefs[i])
+            measured_fs, remaining_fs = self._divide_fock_state(fs, modes)
+            remaining_basis = res[measured_fs]
+            new_basis_idx = remaining_basis[remaining_fs]
+            res[measured_fs][1][new_basis_idx, i] = 1
+            res[measured_fs][2] += prob
+
+        return res
+
+    @staticmethod
+    def _divide_fock_state(fs, modes):
+        """
+        divide a BasicState into two BasicStates
+        """
+        measured_fs = []
+        remaining_fs = []
+        for mode in range(fs.m):
+            if mode in modes:
+                measured_fs.append(fs[mode])
+            else:
+                remaining_fs.append(fs[mode])
+
+        return BasicState(measured_fs), BasicState(remaining_fs)
 
     def __str__(self):
         """
