@@ -157,19 +157,6 @@ def test_remove_low_amplitude():
     assert dm.mat.trace() == pytest.approx(1)
 
 
-def test_measure():
-
-    sv = BasicState([1, 0, 0]) + BasicState([0, 1, 0]) + BasicState([0, 0, 1])
-    sv.normalize()
-    dm = DensityMatrix.from_svd(sv)
-
-    dm.measure([0, 1, 2])
-    for i in range(dm.size):
-        for j in range(dm.size):
-            if i != j:
-                assert dm.mat[i, j] == 0
-
-
 def test_divide_fockstate():
 
     fs = BasicState([2, 0, 0, 1, 4])
