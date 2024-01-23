@@ -397,7 +397,6 @@ class DensityMatrix:
         makes a measure on a list of modes
         :param modes: a list of integer for the modes you want to measure
         :param mixed_state: whether you want a resulting mixed state or a sample
-        :param keep_modes: whether you want to keep the modes where you made the measure
         """
         self.normalize()
         if isinstance(modes, int):
