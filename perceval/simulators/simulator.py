@@ -428,7 +428,9 @@ class Simulator(ISimulator):
         result_sv.normalize()
         return self._post_select_on_statevector(result_sv)
 
-    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState], progress_callback: Optional[Callable] = None):
+    def evolve_svd(self,
+                   svd: Union[SVDistribution, StateVector, BasicState],
+                   progress_callback: Optional[Callable] = None) -> dict:
         """
         Compute the SVDistribution evolved through a Linear Optical circuit
 

@@ -35,8 +35,8 @@ from scipy.sparse import sparray, csr_array
 
 def extract_upper_triangle(csr_matrix: csr_array) -> csr_array:
     """
-    extract the upper half matrix S of a hermitian matrix rho such that S + S_dagger = rho
-
+    extract sort of the upper triangle of the matrix
+    if the input matrix M is hermitian, we have S + S_dagger = M with M the output matrix
     """
 
     result_data = []
