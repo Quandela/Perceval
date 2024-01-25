@@ -32,8 +32,8 @@ import pytest
 
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
-from perceval.components import Circuit, BS, PS
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
+from perceval.components import Circuit, BS, PS, Source, unitary_components
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
 from _test_utils import assert_sv_close, assert_svd_close
 
 
@@ -307,3 +307,20 @@ def test_simulator_evolve_svd():
     output_svd_2 = sim.evolve_svd(input_svd_2)["results"]
     assert len(output_svd_2) == 1
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
+
+
+def test_evolve_density_matrix():
+    s = Source(.9)
+    svd = s.generate_distribution(BasicState([1,1,1,1]))
+    U = Matrix.random_unitary(4)
+    circuit = Circuit(4).add(0,unitary_components.Unitary(U))
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    svd = sim.evolve_svd(svd)["results"]
+    dm = DensityMatrix.from_svd(svd)
+
+    final_svd = sim.evolve_svd(svd)["results"]
+    final_dm = sim.evolve_density_matrix(dm)
+    comparing_dm = DensityMatrix.from_svd(final_svd)
+
+    assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10

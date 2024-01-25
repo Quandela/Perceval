@@ -26,16 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
 from .simulator_interface import ISimulator
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
 from perceval.backends import AProbAmpliBackend
+from perceval.utils.density_matrix_utils import extract_upper_triangle
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
+from scipy.sparse import csc_array
 
 
 class Simulator(ISimulator):
@@ -425,7 +428,9 @@ class Simulator(ISimulator):
         result_sv.normalize()
         return self._post_select_on_statevector(result_sv)
 
-    def evolve_svd(self, svd: Union[SVDistribution, StateVector, BasicState], progress_callback: Optional[Callable] = None) -> SVDistribution:
+    def evolve_svd(self,
+                   svd: Union[SVDistribution, StateVector, BasicState],
+                   progress_callback: Optional[Callable] = None) -> dict:
         """
         Compute the SVDistribution evolved through a Linear Optical circuit
 
@@ -459,3 +464,45 @@ class Simulator(ISimulator):
         return {'results': new_svd,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
+
+    def evolve_density_matrix(self, dm: DensityMatrix) -> DensityMatrix:
+        """
+        Compute the DensityMatrix evolved from "dm" through a Linear optical circuit
+
+        :param dm: The density Matrix to evolve
+        :return: The evolved DensityMatrix
+        """
+        if not isinstance(dm, DensityMatrix):
+            raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
+        size = dm.mat.shape[0]
+
+        # Establishing te set of FockState to evolve
+        input_list = []
+        for k in range(dm.size):
+            if dm.mat[k, k] != 0:
+                input_list.append(dm.reverse_index[k])
+
+        u_evolve_data = []
+        u_evolve_indices = []
+        u_evolve_indptr = [0]
+
+        # Constructing the evolution operator
+        nnz_count = 0
+        for i, fs in enumerate(dm.reverse_index):
+            if fs in input_list:
+                self._backend.set_input_state(fs)
+                output_sv = self._backend.evolve()
+                for state, amplitude in output_sv:
+                    u_evolve_data.append(amplitude)
+                    u_evolve_indices.append(dm.index[state])
+                    nnz_count += 1
+            u_evolve_indptr.append(nnz_count)
+        u_evolve = csc_array((u_evolve_data,
+                              u_evolve_indices,
+                              u_evolve_indptr),
+                             shape=dm.shape)
+
+        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
+        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
+
+        return DensityMatrix(out_matrix, index=dm.index)
