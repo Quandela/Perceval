@@ -130,6 +130,9 @@ def test_processor_odd_modes():
         ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
 
 
+def test_pauli_order():
+    assert PauliType.I.value == 0 and PauliType.X.value == 1 and PauliType.Y.value == 2 and PauliType.Z.value == 3
+
 def test_generate_pauli():
     pauli_idx = _generate_pauli_index(2)
     for elem in pauli_idx:
