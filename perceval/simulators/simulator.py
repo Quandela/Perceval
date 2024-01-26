@@ -38,7 +38,7 @@ from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
-from scipy.sparse import csc_array
+from scipy.sparse import csc_array, csr_array
 
 
 class Simulator(ISimulator):
@@ -390,13 +390,31 @@ class Simulator(ISimulator):
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
 
-    def probs_density_matrix(self, dm: DensityMatrix):
+    def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
         gives the output probability distribution, after evolving some density matrix through the simulator
         :param dm: the input DensityMatrix
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
+
+        input_list = self._get_density_matrix_input_list(dm)
+        u_evolve = self._construct_evolve_operator(input_list, dm)
+        u_evolve_in_row = csr_array(u_evolve)
+        res_bsd = BSDistribution()
+
+        for row_idx, fs in enumerate(dm.reverse_index):
+
+            vec = u_evolve_in_row[[row_idx]]
+            prob = abs(vec @ dm.mat @ vec.conj().T)
+            if fs.n >= self._min_detected_photons:
+                res_bsd[fs] += prob
+            else:
+                self._physical_perf -= prob
+
+        return {'results': self._post_select_on_distribution(res_bsd),
+                'physical_perf': self._physical_perf,
+                'logical_perf': self._logical_perf}
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
@@ -493,10 +511,10 @@ class Simulator(ISimulator):
 
         return DensityMatrix(out_matrix, index=dm.index)
 
-    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix):
+    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix) -> csc_array:
         """
             construct the evolution operator needed to perform evolve_density_matrix.
-            Stores it in a csr sparse_matrix
+            Stores it in a csc sparse_matrix
         """
 
         u_evolve_data = []
@@ -519,7 +537,7 @@ class Simulator(ISimulator):
         return u_evolve
 
     @staticmethod
-    def _get_density_matrix_input_list(dm: DensityMatrix):
+    def _get_density_matrix_input_list(dm: DensityMatrix) -> list:
         """
         get the input_list necessary to density_matrix evolution
         """
