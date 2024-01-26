@@ -398,9 +398,6 @@ class Simulator(ISimulator):
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
 
-
-
-
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
         Evolve a state through the circuit
@@ -485,13 +482,9 @@ class Simulator(ISimulator):
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
-        size = dm.mat.shape[0]
 
         # Establishing te set of FockState to evolve
-        input_list = []
-        for k in range(dm.size):
-            if dm.mat[k, k] != 0:
-                input_list.append(dm.reverse_index[k])
+        input_list = self._get_density_matrix_input_list(dm)
 
         u_evolve = self._construct_evolve_operator(input_list, dm)
 
@@ -524,3 +517,14 @@ class Simulator(ISimulator):
                               u_evolve_indptr),
                              shape=dm.shape)
         return u_evolve
+
+    @staticmethod
+    def _get_density_matrix_input_list(dm: DensityMatrix):
+        """
+        get the input_list necessary to density_matrix evolution
+        """
+        input_list = []
+        for k in range(dm.size):
+            if dm.mat[k, k] != 0:
+                input_list.append(dm.reverse_index[k])
+        return input_list
