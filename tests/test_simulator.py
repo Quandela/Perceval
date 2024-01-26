@@ -324,3 +324,22 @@ def test_evolve_density_matrix():
     comparing_dm = DensityMatrix.from_svd(final_svd)
 
     assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10
+
+
+def test_probs_density_matrix():
+
+    s = Source(.9)
+    svd = s.generate_distribution(BasicState([1, 1, 1, 1]))
+    U = Matrix.random_unitary(4)
+    circuit = Circuit(4).add(0, unitary_components.Unitary(U))
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    probs_1 = sim.probs_svd(svd)["results"]
+    dm = DensityMatrix.from_svd(svd)
+    probs_2 = sim.probs_density_matrix(dm)["results"]
+
+    for key, value in probs_1.items():
+        assert probs_2[key] == pytest.approx(value)
+
+    for key, value in probs_2.items():
+        assert probs_1[key] == pytest.approx(value)
