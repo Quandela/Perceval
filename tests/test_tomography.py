@@ -31,6 +31,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import time
 import numpy as np
 from scipy.stats import unitary_group
 
@@ -133,6 +134,7 @@ def test_processor_odd_modes():
 def test_pauli_order():
     assert PauliType.I.value == 0 and PauliType.X.value == 1 and PauliType.Y.value == 2 and PauliType.Z.value == 3
 
+
 def test_generate_pauli():
     pauli_idx = _generate_pauli_index(2)
     for elem in pauli_idx:
@@ -170,3 +172,26 @@ def test_matrix_basis_n_decomp():
         matrix_rebuilt += mu[idx]*basis_matrices
 
     assert np.allclose(matrix, matrix_rebuilt)
+
+
+def test_qst_perf():
+    # timing when QST is optimized
+    s = time.perf_counter()
+    test_fidelity_klm_cnot()
+    e = time.perf_counter()
+    time_qst_optimized = e - s
+
+    # timing when QST is done with all measurements
+    strt = time.perf_counter()
+    qpt = ProcessTomography(operator_processor=catalog["klm cnot"].build_processor())
+    qpt._qst._not_optimize_state_tomography()
+    # compute Chi matrix
+    chi_op_ideal = qpt.chi_target(CNOT_TARGET)
+    chi_op = qpt.chi_matrix()
+    # Compute fidelity
+    cnot_fidelity = qpt.process_fidelity(chi_op, chi_op_ideal)
+    assert cnot_fidelity == pytest.approx(1)
+    endt = time.perf_counter()
+    time_qst_all_meas = endt - strt
+
+    assert time_qst_all_meas > time_qst_optimized
