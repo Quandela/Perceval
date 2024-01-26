@@ -398,6 +398,9 @@ class Simulator(ISimulator):
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
 
+
+
+
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
         Evolve a state through the circuit
@@ -490,11 +493,22 @@ class Simulator(ISimulator):
             if dm.mat[k, k] != 0:
                 input_list.append(dm.reverse_index[k])
 
+        u_evolve = self._construct_evolve_operator(input_list, dm)
+
+        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
+        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
+
+        return DensityMatrix(out_matrix, index=dm.index)
+
+    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix):
+        """
+            construct the evolution operator needed to perform evolve_density_matrix.
+            Stores it in a csr sparse_matrix
+        """
+
         u_evolve_data = []
         u_evolve_indices = []
         u_evolve_indptr = [0]
-
-        # Constructing the evolution operator
         nnz_count = 0
         for i, fs in enumerate(dm.reverse_index):
             if fs in input_list:
@@ -509,8 +523,4 @@ class Simulator(ISimulator):
                               u_evolve_indices,
                               u_evolve_indptr),
                              shape=dm.shape)
-
-        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
-        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
-
-        return DensityMatrix(out_matrix, index=dm.index)
+        return u_evolve
