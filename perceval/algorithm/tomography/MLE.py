@@ -1,0 +1,440 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from abc import ABC
+import numpy as np
+from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector
+from ._prep_n_meas_circuits import get_measurement_circuit, get_preparation_circuit
+from MLEfastprocess import povm_operator,proj_simplex,inner_frob,c_data,f_data
+
+
+class MLE(ABC):
+    # Maximum Likelihood Estimation
+    def __init__(self):
+        pass
+
+
+class MLEState(MLE):
+    def __init__(self):
+        pass
+
+    def F(f, rho, nqubit):
+        """
+        Log-likelihood function to minimize
+        :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome
+        of the POVM given a certain input (must be called with f_data)
+        :param rho: density matrix
+        :param nqubit: number of qubits
+        :returns: log-likelihood
+        """
+        P = povm_operator(nqubit)
+        K = len(f)
+        x = 0
+        for k in range(K):
+            if np.trace(np.dot(rho, P[k])) != 0:
+                x -= f[k] * np.log(np.trace(np.dot(rho, P[k])))
+        return x
+
+    def gradF(f, rho, nqubit):
+        """
+        Gradient of the log-likelihood function
+        :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome
+        of the POVM given a certain input (must be called with f_data)
+        :param rho: density matrix
+        :param nqubit: number of qubits
+        :returns: gradient of log-likelihood
+        """
+        P = povm_operator(nqubit)
+        K = len(f)
+        grad = 0
+        for k in range(K):
+            if np.trace(np.dot(rho, P[k])) != 0:
+                grad -= (f[k] / (np.trace(np.dot(rho, P[k])))) * P[k]
+        return grad
+
+    def proj(rho):
+        """
+        Projects a hermitian matrix on the cone of positive semi-definite trace 1 matrices
+        :param rho: hermitian matrix
+        :return: positive semi-definite trace 1 matrix
+        """
+        eigenvalues, eigenvectors = np.linalg.eigh(rho)
+        eigenvalues2 = list(eigenvalues)
+        eigenvalues2.reverse()
+        L = proj_simplex(eigenvalues2)
+        L.reverse()
+        x = L[0] * _state_to_dens_matrix(eigenvectors[:, 0])
+        for i in range(1, len(eigenvalues2)):
+            x += L[i] * _state_to_dens_matrix(np.transpose(np.array([eigenvectors[:, i]], dtype='complex_')))
+        return x
+
+    def APG_state(self, rho_0, f, beta, t, max_it, nqubit):
+        """
+        Accelerated Projected Gradient algorithm for state tomography from https://doi.org/10.48550/arXiv.1609.07881
+
+        :param rho_0: initial density matrix, usually the identity
+        :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome
+        of the POVM given a certain input (must be called with f_data)
+        :param beta: parameter to update the learning rate t, to decrease it to make the descent slower when needed
+        :param t: initial learning rate
+        :param max_it: maximum number of iterations
+
+        :return: Density matrix maximising likelihood function
+        """
+        rho, rho_proj_i1, theta, t_i = rho_0, rho_0, 1, t
+        for i in range(max_it):
+            rho_proj_i = proj(rho - t_i * gradF(f, rho, nqubit))
+            delta_i = rho_proj_i - rho
+            while F(f, rho_proj_i, nqubit) > F(f, rho, nqubit) + inner_frob(gradF(f, rho, nqubit), delta_i) + (
+                    1 / (2 * t_i)) * np.linalg.norm(delta_i, ord='fro') ** 2:
+                t_i *= beta
+                rho_proj_i = proj(rho - t_i * gradF(f, rho, nqubit))
+                delta_i = rho_proj_i - rho
+            delta_i_hat = rho_proj_i - rho_proj_i1
+            if inner_frob(delta_i, delta_i_hat) < 0:
+                rho_proj_i, rho, theta = rho_proj_i1, rho_proj_i1, 1
+            else:
+                theta, rho = (1 + np.sqrt(1 + 4 * theta ** 2)) / 2, rho_proj_i + delta_i_hat * (theta - 1) / (
+                            (1 + np.sqrt(1 + 4 * theta ** 2)) / 2)
+            if np.abs(F(f, rho_proj_i, nqubit) - F(f, rho_proj_i1, nqubit)) < 10 ** (-10):
+                break
+            rho_proj_i1 = rho_proj_i
+        return rho_proj_i
+
+
+class MLEProcess(MLE):
+    def __init__(self):
+        pass
+
+    def prep_circ_single_qubit(j):
+        prep_circuit = pcvl.Circuit(2)
+        if j % 2 == 1:
+            prep_circuit.add(0, comp.PERM([1, 0]))
+        if j // 2 >= 1:
+            prep_circuit.add(0, comp.BS.H())
+        if j // 2 == 2:
+            prep_circuit.add(1, comp.PS(np.pi / 2))
+        return prep_circuit
+
+    def preparation_circuit(j, nqubit):
+        prep_circuit = Circuit(2 * nqubit)
+        for m in range(len(j)):
+            prep_circuit.add(2 * m, prep_circ_single_qubit(j[m]), merge=True)
+        return prep_circuit
+
+    def c_data(nqubit, num_state, operator_circuit, i, heralded_modes=[], post_process=False, renormalization=None,
+               brightness=1, g2=0, indistinguishability=1, loss=0):
+        """
+        Measures the operator indexed by i after the gate where the input state is indexed by num_states.
+
+        :param nqubit: number of qubits
+        :param num_state: list of length of number of qubits representing the preparation circuit
+        :param operator_circuit: perceval circuit for the operator
+        :param i: list of length of number of qubits representing the measurement circuit and the eigenvector we measuring
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just doing postselection which leads to non CP maps
+        :return: list where each element is the probability that we measure one eigenvector of the measurement operator
+        """
+        d = 2 ** nqubit
+        l = []
+        for j in range(nqubit - 1, -1, -1):
+            l.append(num_state // (6 ** j))
+            num_state = num_state % (6 ** j)
+        L = []
+        for j in range(nqubit - 1, -1, -1):
+            L.append(i // (3 ** j))
+            i = i % (3 ** j)
+        qpt_circuit = pcvl.Circuit(2 * nqubit + len(heralded_modes))
+        # state preparation
+        qpt_circuit.add(0, preparation_circuit(l, nqubit))
+        # unknown operator
+        qpt_circuit.add(0, operator_circuit)
+        # measurement operator
+        qpt_circuit.add(0, measurement_circuit(L, nqubit))
+
+        source = pcvl.Source(emission_probability=brightness, multiphoton_component=g2,
+                             indistinguishability=indistinguishability, losses=loss)
+        simulator = Simulator(SLOSBackend())
+        simulator.set_circuit(qpt_circuit)
+
+        # postselection if no renormalization
+        if renormalization == None:
+            ps = pcvl.PostSelect()
+            if post_process:
+                for m in range(nqubit):
+                    ps.eq([2 * m, 2 * m + 1], 1)
+            for m in heralded_modes:
+                ps.eq([m[0]], m[1])
+            simulator.set_postselection(ps)
+
+        # input state accounting the heralded modes
+        input_state = pcvl.BasicState("|1,0>")
+        for _ in range(1, nqubit):
+            input_state *= pcvl.BasicState("|1,0>")
+        for m in heralded_modes:
+            input_state *= pcvl.BasicState([m[1]])
+        input_distribution = source.generate_distribution(expected_input=input_state)
+
+        simulator.set_min_detected_photon_filter(0)
+        output_distribution = simulator.probs_svd(input_distribution)["results"]
+        B = []
+        for j in range(d):
+            measurement_state = pcvl.BasicState([])
+            for m in range(nqubit - 1, -1, -1):
+                if (j // (2 ** m)) % 2 == 0:
+                    measurement_state *= pcvl.BasicState([1, 0])
+                else:
+                    measurement_state *= pcvl.BasicState([0, 1])
+            for m in heralded_modes:
+                measurement_state *= pcvl.BasicState([m[1]])
+            if renormalization == None:
+                B.append(output_distribution[measurement_state] / (3 ** nqubit))
+            else:
+                B.append(output_distribution[measurement_state] / renormalization / (3 ** nqubit))
+        return B
+
+    def f_data(nqubit, operator_circuit, heralded_modes=[], post_process=False, renormalization=None, brightness=1,
+               g2=0, indistinguishability=1, loss=0):
+        """
+        Doing a POVM after the gate on the sets of input states and stores it in a dictionary
+
+        :param nqubit: number of qubits
+        :param operator_circuit: perceval circuit for the operator
+        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
+        :param post_process: bool for postselection on the outcome or not
+        :param renormalization: float (success probability of the gate) by which we renormalize the map instead of just doing postselection which leads to non CP maps
+        :return: dictionary where keys are the indexes of the input state and the values are probabilities of each outcome of the POVM
+        """
+        f = {}
+        for a in range(6 ** nqubit):
+            f[a] = []
+            for b in range(3 ** nqubit):
+                f[a] += c_data(nqubit, a, operator_circuit, b, heralded_modes, post_process, renormalization,
+                               brightness, g2, indistinguishability, loss)
+        return f
+
+    def povm_state(nqubit):
+        """
+        Gives a set of measurement states so they form a set of informationally complete measurements. For 1 qubit, they are : |0>,|1>,|+>,|->,|i+>,|i->,
+        which are the eigenvectors of the Pauli operators I,X,Y. For more qubits, the code returns eigenvectors of the tensor products of Pauli operators
+        """
+        d = 2 ** nqubit
+        P = []
+        B = [np.array([[1], [0]], dtype='complex_'), np.array([[0], [1]], dtype='complex_'),
+             (1 / np.sqrt(2)) * np.array([[1], [1]], dtype='complex_'),
+             (1 / np.sqrt(2)) * np.array([[1], [-1]], dtype='complex_'),
+             (1 / np.sqrt(2)) * np.array([[1], [1j]], dtype='complex_'),
+             (1 / np.sqrt(2)) * np.array([[1], [-1j]], dtype='complex_')]  #
+        for pauli_index in range(3 ** nqubit):  # iterates over pauli operators I,X,Y or their tensor products
+            pauli_list = []  # saves on each element the pauli index for this qubit
+            for j in range(nqubit - 1, -1, -1):
+                pauli_list.append(pauli_index // (3 ** j))
+                pauli_index = pauli_index % (3 ** j)
+            X = [np.array([1], dtype='complex_')] * d  # neutral elements for tensor products
+            for qubit_index in range(nqubit):
+                for eigenvector_index in range(d):  # iterates over the eigenvectors of the pauli operator
+                    eigenvector_list = []  # saves on each element the eigenvector index for this qubit
+                    k1 = eigenvector_index
+                    for j1 in range(nqubit - 1, -1, -1):
+                        eigenvector_list.append(k1 // (2 ** j1))
+                        k1 = k1 % (2 ** j1)
+                    X[eigenvector_index] = np.kron(X[eigenvector_index],
+                                                   B[2 * pauli_list[qubit_index] + eigenvector_list[qubit_index]])
+            P += X
+        return P
+
+    def povm_operator(nqubit):
+        """
+        Gives a POVM set suited for tomography
+        """
+        B = povm_state(nqubit)
+        L = []
+        for state in B:
+            L.append(_state_to_dens_matrix(state) / (3 ** nqubit))
+        return L
+
+    def compute_matrix(j):
+        if j == 0:
+            return np.eye((2), dtype='complex_')
+        if j == 1:
+            return (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype='complex_')
+        if j == 2:
+            return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
+
+    def input_basis(nqubit):  # create a matrix basis from all the tensor products states
+        """
+        Computes input density matrix basis (same as POVM but not same order)
+        """
+
+        B = []
+        for j in range(6 ** nqubit):
+            k = []
+            for m in range(nqubit - 1, -1, -1):
+                k.append(j // (6 ** m))
+                j = j % (6 ** m)
+            k.reverse()
+            M = 1
+            v = 1
+            for i in k:
+                M = np.kron(compute_matrix(i // 2), M)
+                if i % 2 == 0:
+                    v = np.kron(np.array([[1], [0]], dtype='complex_'), v)
+                else:
+                    v = np.kron(np.array([[0], [1]], dtype='complex_'), v)
+            B.append(_state_to_dens_matrix(np.dot(M, v)))
+        return B
+
+    def F(f, S, nqubit):
+        """
+        Log-likelihood function to minimize
+        :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome of the POVM given a certain input (must be called with f_data)
+        :param S: Choi matrix
+        :param nqubit: number of qubits
+        :returns: log-likelihood
+        """
+        P = povm_operator(nqubit)
+        B = input_basis(nqubit)
+        LB, LP = len(B), len(P)
+        x = 0
+        for m in range(LB):
+            for l in range(LP):
+                pml = 2 ** nqubit * np.real(np.trace(np.dot(S, np.kron(np.transpose(B[m]), P[l]))))
+                if 0 < pml <= 1:
+                    x -= f[m][l] * np.log(pml)
+        return x
+
+    def gradF(f, S, nqubit):
+        """
+        Gradient of the log-likelihood function
+        :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome of the POVM given a certain input (must be called with f_data)
+        :param S: Choi matrix
+        :param nqubit: number of qubits
+        :returns: gradient of log-likelihood
+        """
+        P = povm_operator(nqubit)
+        B = input_basis(nqubit)
+        LB, LP = len(B), len(P)
+        grad = 0
+        for l in range(LP):
+            for m in range(LB):
+                pml = 2 ** nqubit * np.real(np.trace(np.dot(S, np.kron(np.transpose(B[m]), P[l]))))
+                if 0 < pml <= 1:
+                    grad -= (f[m][l] / pml) * np.kron(np.transpose(B[m]), P[l])
+        return grad
+
+    def proj_simplex(eigenvalues):
+        """
+        projects a real eigenspectra sorted in descent order on positive elements with their sum equal to 1
+        :param eigenvalues: list of real numbers sorted in descent order
+        :return: list of positive numbers with sum equal to 1
+        """
+        u = 0
+        for j in range(1, len(eigenvalues) + 1):
+            x = eigenvalues[j - 1] - (1 / j) * (sum(eigenvalues[:j]) - 1)
+            if x > 0:
+                u = j
+        if u == 0:
+            w = 0
+        else:
+            w = (1 / u) * (sum(eigenvalues[:u]) - 1)
+        L = []
+        for lambda_i in eigenvalues:
+            L.append(max(lambda_i - w, 0))
+        return L
+
+    def proj(S):
+        """
+        Projects a hermitian matrix on the cone of positive semi-definite trace 1 matrices
+        :param S: hermitian matrix
+        :return: positive semi-definite trace 1 matrix
+        """
+        eigenvalues, eigenvectors = np.linalg.eigh(S)
+        eigenvalues2 = list(eigenvalues)
+        eigenvalues2.reverse()
+        L = proj_simplex(eigenvalues2)
+        L.reverse()
+        x_0 = _state_to_dens_matrix(np.transpose(np.array([eigenvectors[:, 0]], dtype='complex_')))
+        x = (L[0] / np.trace(x_0)) * x_0
+        for i in range(1, len(eigenvalues2)):
+            x_i = _state_to_dens_matrix(np.transpose(np.array([eigenvectors[:, i]], dtype='complex_')))
+            x += (L[i] / np.trace(x_i)) * x_i
+        return x
+
+    def inner_frob(A, B):  # calculate inner product associated to Froebenius norm
+        return np.trace(np.dot(np.transpose(np.conjugate(A)), B))
+
+    def APG_process(S_0, f, beta=0.5, t=1, max_it=100):
+        """
+        Accelerated Projected Gradient algorithm for process tomography adapted from https://doi.org/10.48550/arXiv.1609.07881
+
+        :param S_0: initial Choi matrix, usually the identity
+        :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome of the POVM given a certain input (must be called with f_data)
+        :param beta: parameter to update the learning rate t, to decrease it to make the descent slower when needed
+        :param t: initial learning rate
+        :param max_it: maximum number of iterations
+
+        :return: Choi matrix maximising likelihood function
+        """
+        nqubit = int(np.log2(len(S_0)) / 2)
+        S, S_proj_i1, theta, t_i = copy.deepcopy(S_0), copy.deepcopy(S_0), 1, t
+        for i in range(max_it):
+            S_proj_i = proj(S - t_i * gradF(f, S, nqubit))
+            delta_i = S_proj_i - S
+            while F(f, S_proj_i, nqubit) > F(f, S, nqubit) + inner_frob(gradF(f, S, nqubit), delta_i) + (
+                    1 / (2 * t_i)) * np.linalg.norm(delta_i, ord='fro') ** 2:
+                t_i *= beta
+                S_proj_i = proj(S - t_i * gradF(f, S, nqubit))
+                delta_i = S_proj_i - S
+            delta_i_hat = S_proj_i - S_proj_i1
+            if inner_frob(delta_i, delta_i_hat) < 0:
+                S_proj_i, S, theta = copy.deepcopy(S_proj_i1), copy.deepcopy(S_proj_i1), 1
+            else:
+                theta, S = (1 + np.sqrt(1 + 4 * theta ** 2)) / 2, S_proj_i + delta_i_hat * (theta - 1) / (
+                            (1 + np.sqrt(1 + 4 * theta ** 2)) / 2)
+            if np.abs(F(f, S_proj_i, nqubit) - F(f, S_proj_i1, nqubit)) < 10 ** (-10):
+                break
+            S_proj_i1 = copy.deepcopy(S_proj_i)
+        return S_proj_i
+
+    def chi_from_choi(choi):
+        """
+        Converts a Choi matrix into a chi matrix
+        :param choi: Choi matrix
+        :return: chi matrix
+        """
+        l = len(choi)
+        nqubit = int(np.log2(l) / 2)
+        X = np.zeros((l, l), dtype='complex_')
+        for m in range(l):
+            P_m = np.conjugate(np.transpose(matrix_to_vector(np.transpose(E(m, nqubit)))))
+            for n in range(l):
+                X[m, n] = (1 / 2 ** nqubit) * np.linalg.multi_dot(
+                    [P_m, choi, matrix_to_vector(np.transpose(E(n, nqubit)))])
+        return X
