@@ -43,6 +43,7 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawsvg
 
+import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
@@ -63,13 +64,20 @@ import math
 
 
 in_notebook = False
-in_ide = "PYCHARM_HOSTED" in os.environ or 'SPY_PYTHONPATH' in os.environ or 'VSCODE' in os.environ
+
+
+def in_ide():
+    for key in os.environ:
+        if 'PYCHARM' in key or 'SPY_PYTHONPATH' in key or 'VSCODE' in key:
+            return True
+    return False
+
 
 try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
         in_notebook = True
-        from IPython.display import HTML, display
+        from IPython.display import display, Math, HTML
 except (ImportError, AttributeError):
     pass
 
@@ -260,7 +268,7 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     # get range of colorbars so we can normalize
     max_height = numpy.max(dz)
     min_height = numpy.min(dz)
-    color_map = plt.cm.get_cmap('viridis_r')
+    color_map = plt.colormaps['viridis_r']
     if max_height != min_height:
         has_only_one_value = False
         # scale each z to [0,1], and get their rgb values
@@ -294,8 +302,8 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     ax.view_init(elev=30, azim=45)
 
 
-def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision=1E-6,
-                            render_size=None):
+def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
+                            render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
     if output_format == Format.TEXT or output_format == Format.LATEX:
         raise TypeError(f"Tomography plot does not support {output_format}")
 
@@ -320,7 +328,13 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     imag_chi = numpy.round(chi_op.imag, significant_digit)
     _get_sub_figure(ax, imag_chi, pauli_captions)
 
-    plt.show()
+    if not mplot_noshow:
+        plt.show()
+    if mplot_savefig:
+        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
+        return ""
+
+    return None
 
 
 def pdisplay_density_matrix(dm,
@@ -419,8 +433,10 @@ def _default_output_format(o):
     Deduces the best output format given the nature of the data to be displayed and the execution context
     """
     if in_notebook:
+        if isinstance(o, Matrix):
+            return Format.LATEX
         return Format.HTML
-    elif in_ide and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, ProcessTomography))):
+    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, ProcessTomography))):
         return Format.MPLOT
     return Format.TEXT
 
@@ -461,7 +477,9 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     if isinstance(res, drawsvg.Drawing):
         return res
-    elif in_notebook and output_format != Format.TEXT and output_format != Format.LATEX:
+    elif in_notebook and output_format == Format.LATEX:
+        display(Math(res))
+    elif in_notebook and output_format == Format.HTML:
         display(HTML(res))
     else:
         print(res)

@@ -26,8 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, DensityMatrix, Source, SVDistribution, Matrix, Simulator
-from perceval.utils.density_matrix import FockBasis, statevector_to_array
+from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator
+from perceval.utils.density_matrix import FockBasis, DensityMatrix
+from perceval.utils.density_matrix_utils import *
 import numpy as np
 import scipy
 from scipy.sparse import dok_array
