@@ -85,8 +85,10 @@ def test_run_async():
 def test_run_async_fail():
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
     assert job.execute_async(5, 0.01) is job
-    while not job.is_complete:
-        time.sleep(1)
+
+    with pytest.warns(UserWarning):
+        while not job.is_complete:
+            time.sleep(1)
     assert not job.status.success
     assert job.status.progress == 0.8
     assert job.status.status == RunningStatus.ERROR
@@ -106,6 +108,28 @@ def test_run_async_cancel():
     while job.is_running:
         time.sleep(0.1)
     assert job.status.status == RunningStatus.CANCELED
+
+
+def test_get_res_run_async():
+    u = pcvl.Unitary(pcvl.Matrix.random_unitary(6))  # a random unitary matrix
+    bs = pcvl.BasicState("|1,0,1,0,1,0>")  # basic state
+    proc = pcvl.Processor("SLOS", u)  # a processor with a circuit formed of random unitary matrix
+    proc.with_input(bs)  # setting up the input to the processor
+    job = pcvl.algorithm.Sampler(proc).sample_count  # create a sampler job
+    job.execute_async(10000)
+    while not job.is_complete:
+        time.sleep(0.01)
+
+    res_1st_call = job.get_results()
+    res_2nd_call = job.get_results()
+
+    assert isinstance(res_1st_call["results"], pcvl.BSCount)
+    assert isinstance(res_2nd_call["results"], pcvl.BSCount)
+
+    assert res_1st_call["results"] == res_2nd_call["results"]
+    assert res_1st_call["physical_perf"] == res_2nd_call["physical_perf"]
+    assert res_1st_call["logical_perf"] == res_2nd_call["logical_perf"]
+
 
 
 # ============ Remote jobs ============ #

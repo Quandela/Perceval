@@ -32,8 +32,8 @@ import pytest
 
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
-from perceval.components import Circuit, BS, PS
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
+from perceval.components import Circuit, BS, PS, Source, unitary_components
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
 from _test_utils import assert_sv_close, assert_svd_close
 
 
@@ -152,7 +152,10 @@ def test_simulator_probs_postselection():
     simulator = Simulator(MockBackend())
     simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
-    output_dist = simulator.probs(input_state)
+
+    with pytest.warns(UserWarning):
+        output_dist = simulator.probs(input_state)
+
     assert len(output_dist) == 0
     assert simulator.logical_perf == pytest.approx(0)
 
@@ -182,6 +185,15 @@ def test_simulator_probampli():
     # prob_amplitude call is strict on annotations name
     assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
 
+    input_state = StateVector("|{_:0},{_:1}>")
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|0,{_:0}{_:1}>")) == pytest.approx(0.5j)
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0},{_:1}>")) == pytest.approx(0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:1},{_:0}>")) == pytest.approx(-0.5)
+    assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
+    assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
+    # prob_amplitude call is strict on annotations name
+    assert simulator.prob_amplitude(input_state, BasicState("|{_:0}{_:2},0>")) == pytest.approx(0)
 
 def test_simulator_probability():
     input_state = BasicState("|{_:0},{_:1}>")
@@ -198,6 +210,12 @@ def test_simulator_probability():
     assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.5)
     assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.0)
+
+    input_state = StateVector("|{_:0},{_:1}>")
+    assert simulator.probability(input_state, BasicState("|{_:0}{_:1},0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5)
 
 
 def test_simulator_probs_sv():
@@ -307,3 +325,20 @@ def test_simulator_evolve_svd():
     output_svd_2 = sim.evolve_svd(input_svd_2)["results"]
     assert len(output_svd_2) == 1
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
+
+
+def test_evolve_density_matrix():
+    s = Source(.9)
+    svd = s.generate_distribution(BasicState([1,1,1,1]))
+    U = Matrix.random_unitary(4)
+    circuit = Circuit(4).add(0,unitary_components.Unitary(U))
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    svd = sim.evolve_svd(svd)["results"]
+    dm = DensityMatrix.from_svd(svd)
+
+    final_svd = sim.evolve_svd(svd)["results"]
+    final_dm = sim.evolve_density_matrix(dm)
+    comparing_dm = DensityMatrix.from_svd(final_svd)
+
+    assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10

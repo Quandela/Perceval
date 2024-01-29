@@ -103,7 +103,7 @@ def serialize(dist: SVDistribution, compress=False) -> str:
 
 
 @dispatch(BSDistribution, compress=(list, bool))
-def serialize(dist: BSDistribution, compress=False) -> str:
+def serialize(dist: BSDistribution, compress=True) -> str:
     tag = "BSDistribution"
     compress = _handle_compress_parameter(compress, tag)
     serial_bsd = f":PCVL:{tag}:{{" \
@@ -113,7 +113,7 @@ def serialize(dist: BSDistribution, compress=False) -> str:
 
 
 @dispatch(BSCount, compress=(list, bool))
-def serialize(obj, compress=False) -> str:
+def serialize(obj, compress=True) -> str:
     tag = "BSCount"
     compress = _handle_compress_parameter(compress, tag)
     serial_bsc = f":PCVL:{tag}:{{" \
