@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import pytest
+
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding
 from perceval.backends import Clifford2017Backend
@@ -96,7 +97,10 @@ def test_processor_probs():
     qpu = Processor("Naive", BS(), source)
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
     qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
-    probs = qpu.probs()
+
+    with pytest.warns(UserWarning):
+        probs = qpu.probs()
+
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
 

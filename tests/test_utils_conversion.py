@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import pytest
 
 from perceval.utils.conversion import *
@@ -72,7 +73,9 @@ def test_sample_count_to_probs():
     assert output[b2] == 0.4
     assert output[b3] == 0.2
 
-    empty = sample_count_to_probs({})
+    with pytest.warns(UserWarning):
+        empty = sample_count_to_probs({})
+
     assert len(empty) == 0
 
 
