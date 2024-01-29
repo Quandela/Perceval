@@ -135,7 +135,7 @@ class Simulator(ISimulator):
     @dispatch(StateVector, BasicState)
     def prob_amplitude(self, input_state: StateVector, output_state: BasicState) -> complex:
         result = complex(0)
-        for state, pa in input_state.items():
+        for state, pa in input_state:
             result += self.prob_amplitude(state, output_state) * pa
         return result
 
@@ -165,7 +165,7 @@ class Simulator(ISimulator):
         output_state.clear_annotations()
         sv_out = self.evolve(input_state)  # This is not as optimized as it could be
         result = 0
-        for state, pa in sv_out.items():
+        for state, pa in sv_out:
             state.clear_annotations()
             if state == output_state:
                 result += abs(pa) ** 2

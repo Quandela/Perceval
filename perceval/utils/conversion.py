@@ -27,11 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BSDistribution, BSCount, BSSamples
+from collections import Counter
 
-import math
-import numpy as np
 import random
+import numpy as np
+
+from .statevector import BSDistribution, BSCount, BSSamples
 
 
 def _deduce_count(count: int, **kwargs) -> int:
@@ -49,11 +50,7 @@ def _deduce_count(count: int, **kwargs) -> int:
 
 # Conversion functions (samples <=> probs <=> sample_count)
 def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
-    results = BSCount()
-    for s in sample_list:
-        if s not in results:
-            results[s] = sample_list.count(s)
-    return results
+    return BSCount(Counter(sample_list))
 
 
 def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
@@ -73,7 +70,7 @@ def probs_to_sample_count(probs: BSDistribution, count: int = None, **kwargs) ->
     for state in perturbed_dist:
         results.add(state, round(perturbed_dist[state] * count))
     # Artificially deal with the rounding errors
-    diff = count - sum(list(results.values()))
+    diff = round(count - sum(list(results.values())))
     if diff > 0:
         results[random.choice(list(results.keys()))] += diff
     elif diff < 0:

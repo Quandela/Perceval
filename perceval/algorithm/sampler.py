@@ -170,6 +170,14 @@ class Sampler(AAlgorithm):
         for iter_params in iterations:
             self.add_iteration(**iter_params)
 
+    def clear_iterations(self):
+        # In case, the user wants to use the same sampler instance, but with a new iterator
+        self._iterator = []
+
+    @property
+    def n_iterations(self):
+        return len(self._iterator)
+
     def _probs_wrapper(self, progress_callback: Callable = None):
         # max_shots is used as the invert of the precision set in the probs computation
         # Rationale: mimic the fact that the more shots, the more accurate probability distributions are.
