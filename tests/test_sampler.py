@@ -105,6 +105,30 @@ def test_sampler_iteration_bad_params():
         sampler.add_iteration(input_state=pcvl.BasicState([1, 0, 0]))  # input state too large
 
 
+def test_sampler_clear_iterations():
+    c = BS() // PS(phi=pcvl.P("phi1")) // BS()
+    p = pcvl.Processor("SLOS", c)
+    sampler = Sampler(p)
+    iteration_list = [
+        {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+        {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
+        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1}
+    ]
+    assert sampler.n_iterations == 0
+
+    sampler.add_iteration_list(iteration_list)
+    assert sampler.n_iterations == len(iteration_list)
+
+    sampler.add_iteration_list(iteration_list)
+    assert sampler.n_iterations == len(iteration_list)*2
+
+    sampler.clear_iterations()
+    assert sampler.n_iterations == 0
+
+    sampler.add_iteration(circuit_params={"phi1": 0.1}, input_state=pcvl.BasicState([0, 1]))
+    assert sampler.n_iterations == 1
+
+
 @pytest.mark.parametrize("backend_name", ["SLOS", "CliffordClifford2017"])
 def test_sampler_iterator(backend_name):
     c = BS() // PS(phi=pcvl.P("phi1")) // BS()

@@ -66,13 +66,17 @@ def deserialize_statevector(s) -> StateVector:
 
 
 def serialize_bssamples(bss: BSSamples) -> str:
-    bs_set = []
-    order = []
-    for s in bss:
-        if s not in bs_set:
-            bs_set.append(s)
-        order.append(bs_set.index(s))
-    return ';'.join([serialize_state(bs) for bs in bs_set]) + '/' + ';'.join([str(i) for i in order])
+    order = [0]*len(bss)
+    mapping = {}
+    index = 0
+    for idx, bs in enumerate(bss):
+        if bs not in mapping:
+            mapping[bs] = index
+            order[idx] = index
+            index += 1
+        else:
+            order[idx] = mapping[bs]
+    return ';'.join([serialize_state(bs) for bs in mapping.keys()]) + '/' + ';'.join([str(i) for i in order])
 
 
 def deserialize_bssamples(serialized_bss: str) -> BSSamples:
