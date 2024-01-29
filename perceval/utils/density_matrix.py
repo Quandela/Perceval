@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples, allstate_iterator
+from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from typing import Union, Optional, Tuple
 from math import comb
 from numpy import conj
