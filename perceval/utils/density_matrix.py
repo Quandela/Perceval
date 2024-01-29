@@ -428,7 +428,7 @@ class DensityMatrix:
         for i, fs in enumerate(self.reverse_index):
             prob = abs(diag_coefs[i])
             measured_fs, remaining_fs = self._divide_fock_state(fs, modes)
-            remaining_basis = res[measured_fs]
+            remaining_basis = res[measured_fs][0]
             new_basis_idx = remaining_basis[remaining_fs]
             res[measured_fs][1][new_basis_idx, i] = 1
             res[measured_fs][2] += prob

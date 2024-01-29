@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator
+from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
 from perceval.utils.density_matrix_utils import *
 import numpy as np
@@ -164,3 +164,24 @@ def test_divide_fockstate():
     meas, remain = DensityMatrix._divide_fock_state(fs, [0, 2, 4])
     assert meas == BasicState([2, 0, 4])
     assert remain == BasicState([0, 1])
+
+
+def test_measure_density_matrix():
+
+    plus_state = BasicState([0]) + BasicState([1])
+    minus_state = BasicState([0]) - BasicState([1])
+    svd = SVDistribution({StateVector(BasicState([0]))*plus_state: 1/3,
+                          StateVector(BasicState([1]))*minus_state: 2/3})
+    dm = DensityMatrix.from_svd(svd)
+
+    dic = dm.measure([0])
+    sub_dm_0, p0 = dic[BasicState([0])]
+    sub_dm_1, p1 = dic[BasicState([1])]
+
+    assert p0 == pytest.approx(1/3)
+    assert p1 == pytest.approx(2/3)
+
+    assert sub_dm_0.mat == pytest.approx(1/2*np.array([[1, 1],
+                                                       [1, 1]]))
+    assert sub_dm_1.mat == pytest.approx(1/2*np.array([[1, -1],
+                                                       [-1, 1]]))
