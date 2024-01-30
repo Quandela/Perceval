@@ -173,7 +173,6 @@ def test_measure_density_matrix():
     svd = SVDistribution({StateVector(BasicState([0]))*plus_state: 1/3,
                           StateVector(BasicState([1]))*minus_state: 2/3})
     dm = DensityMatrix.from_svd(svd)
-
     dic = dm.measure([0])
     sub_dm_0, p0 = dic[BasicState([0])]
     sub_dm_1, p1 = dic[BasicState([1])]
@@ -181,7 +180,9 @@ def test_measure_density_matrix():
     assert p0 == pytest.approx(1/3)
     assert p1 == pytest.approx(2/3)
 
-    assert sub_dm_0.mat == pytest.approx(1/2*np.array([[1, 1],
-                                                       [1, 1]]))
-    assert sub_dm_1.mat == pytest.approx(1/2*np.array([[1, -1],
-                                                       [-1, 1]]))
+    assert sub_dm_0.mat.toarray() == pytest.approx(1/2*np.array([[1, 1, 0],
+                                                                 [1, 1, 0],
+                                                                 [0, 0, 0]]))
+
+    assert sub_dm_1.mat.toarray() == pytest.approx(1/2*np.array([[1, -1],
+                                                                 [-1, 1]]))

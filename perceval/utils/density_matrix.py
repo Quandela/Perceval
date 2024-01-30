@@ -380,13 +380,14 @@ class DensityMatrix:
         if all_results:
             projectors = self._construct_all_projectors(modes)
             res = dict()
-            for key_fs, item_list in projectors:
+            for key_fs, item_list in projectors.items():
                 basis = item_list[0]
                 projector = item_list[1]
                 prob = item_list[2]
                 collapsed_dm = projector @ self.mat @ projector.T
-
-                res[key_fs] = (DensityMatrix(collapsed_dm, basis), prob)
+                resulting_dm = DensityMatrix(collapsed_dm, basis)
+                resulting_dm.normalize()
+                res[key_fs] = (resulting_dm, prob)
             return res
         else:
             sample = self.sample()[0]
@@ -418,9 +419,9 @@ class DensityMatrix:
         """
         modes = list(set(modes))
         res = dict()
-        for nb_measured_photons in range(self.n_max):
+        for nb_measured_photons in range(self.n_max+1):
+            remaining_basis = FockBasis(self.m - len(modes), self.n_max - nb_measured_photons)
             for measured_fs in xq.FSArray(len(modes), nb_measured_photons):
-                remaining_basis = FockBasis(self.m-len(modes), self.n_max-nb_measured_photons)
                 res[measured_fs] = [remaining_basis, dok_array((len(remaining_basis), self.size)), 0]
 
         diag_coefs = self.mat.diagonal()
