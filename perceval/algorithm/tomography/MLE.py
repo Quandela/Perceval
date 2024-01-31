@@ -146,7 +146,7 @@ class MLEStateTomography(TomographyMLE):
         eigenvalues, eigenvectors = np.linalg.eigh(rho)
         eigenvalues2 = list(eigenvalues)
         eigenvalues2.reverse()
-        L = MLEProcessTomography.proj_simplex(eigenvalues2)
+        L = proj_simplex(eigenvalues2)
         L.reverse()
         x = L[0] * _state_to_dens_matrix(eigenvectors[:, 0])
         for i in range(1, len(eigenvalues2)):
@@ -168,7 +168,7 @@ class MLEStateTomography(TomographyMLE):
         """
         rho, rho_proj_i1, theta, t_i = rho_0, rho_0, 1, t
         for i in range(max_it):
-            rho_proj_i = MLEProcessTomography.proj(rho - t_i * self.gradF(f, rho))
+            rho_proj_i = proj(rho - t_i * self.gradF(f, rho))
             delta_i = rho_proj_i - rho
             while F(f, rho_proj_i, nqubit) > F(f, rho, nqubit) + inner_frob(self.gradF(f, rho), delta_i) + (
                     1 / (2 * t_i)) * np.linalg.norm(delta_i, ord='fro') ** 2:
@@ -339,7 +339,7 @@ class MLEProcessTomography(TomographyMLE):
         eigenvalues, eigenvectors = np.linalg.eigh(S)
         eigenvalues2 = list(eigenvalues)
         eigenvalues2.reverse()
-        L = MLEProcessTomography.proj_simplex(eigenvalues2)
+        L = proj_simplex(eigenvalues2)
         L.reverse()
         x_0 = _state_to_dens_matrix(np.transpose(np.array([eigenvectors[:, 0]], dtype='complex_')))
         x = (L[0] / np.trace(x_0)) * x_0
