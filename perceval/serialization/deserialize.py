@@ -32,7 +32,7 @@ from typing import Union
 import json
 
 from perceval.components import Circuit
-from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount
+from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel
 from perceval.serialization import _matrix_serialization, deserialize_state
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 import perceval.serialization._component_deserialization as _cd
@@ -129,6 +129,13 @@ def deserialize_bscount(serial_bsc):
     return bsc
 
 
+def deserialize_noise_model(serial_nm: str) -> NoiseModel:
+    nm = NoiseModel(**json.loads(serial_nm))
+    # for k, v in json.loads(serial_nm).items():
+    #     nm.set_value(k, v)
+    return nm
+
+
 def deserialize(obj):
     if isinstance(obj, bytes):
         raise TypeError("Generic deserialize function does not handle binary representation. "
@@ -169,6 +176,8 @@ def deserialize(obj):
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
             r = deserialize_circuit(obj)
+        elif cl == "NoiseModel":
+            r = deserialize_noise_model(sobj)
         else:
             raise NotImplementedError(f"No deserializer found for {cl}")
     else:
