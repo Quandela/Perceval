@@ -400,6 +400,8 @@ class Simulator(ISimulator):
 
         input_list = self._get_density_matrix_input_list(dm)
         u_evolve = self._construct_evolve_operator(input_list, dm)
+
+        # Here I change to csr format to be able to iterate on the rows
         u_evolve_in_row = csr_array(u_evolve)
         res_bsd = BSDistribution()
 
@@ -501,7 +503,7 @@ class Simulator(ISimulator):
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
 
-        # Establishing te set of FockState to evolve
+        # Establishing the set of FockState to evolve
         input_list = self._get_density_matrix_input_list(dm)
 
         u_evolve = self._construct_evolve_operator(input_list, dm)
@@ -530,6 +532,8 @@ class Simulator(ISimulator):
                     u_evolve_indices.append(dm.index[state])
                     nnz_count += 1
             u_evolve_indptr.append(nnz_count)
+
+        # Here we use csc array, because it is constructed row by row
         u_evolve = csc_array((u_evolve_data,
                               u_evolve_indices,
                               u_evolve_indptr),
@@ -539,7 +543,7 @@ class Simulator(ISimulator):
     @staticmethod
     def _get_density_matrix_input_list(dm: DensityMatrix) -> list:
         """
-        get the input_list necessary to density_matrix evolution
+        get the list of Fockstates on which a DensityMatrix is embedded
         """
         input_list = []
         for k in range(dm.size):
