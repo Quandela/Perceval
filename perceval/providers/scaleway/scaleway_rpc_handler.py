@@ -28,14 +28,13 @@
 # SOFTWARE.
 import urllib
 import time
-from datetime import datetime, timedelta
-import json
-from typing import Union
-
-
-from enum import Enum
 import requests
+import json
+
+from datetime import datetime, timedelta
 from requests import HTTPError
+from typing import Union
+from enum import Enum
 
 _PROVIDER_NAME = "quandela"
 _ENDPOINT_PLATFORM = "/platforms"
@@ -152,10 +151,10 @@ class RPCHandler:
         )
 
         return {
-            "duration": duration,
+            "duration": resp_dict.get("job_duration", duration),
             "intermediate_results": [],
             "job_id": resp_dict.get("id"),
-            "results": json.dumps(resp_dict.get("result_distribution", {})),
+            "results": resp_dict.get("result_distribution", {}),
             "results_type": None,
         }
 
