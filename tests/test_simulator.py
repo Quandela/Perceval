@@ -326,6 +326,7 @@ def test_simulator_evolve_svd():
     assert len(output_svd_2) == 1
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
 
+
 def get_comparison_setup():
     s = Source(.9)
     svd = s.generate_distribution(BasicState([1, 1, 1, 1]))
