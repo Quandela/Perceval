@@ -46,24 +46,33 @@ class TomographyMLE(ABC):
         self._qst = StateTomography(operator_processor=self._processor)
 
     @abstractmethod
-    def _log_likelihood_func(self):
+    def _log_likelihood_func(self, *args, **kwargs) -> float:
         pass
 
     @abstractmethod
-    def _grad_log_likelihood_func(self):
+    def _grad_log_likelihood_func(self, *args, **kwargs) -> float:
         pass
 
-    def c_data(self, prep_state_indices, meas_pauli_basis_indices, heralded_modes=[], renormalization=None):
+    def c_data(self, num_state, i):
         """
         Measures the operator indexed by i after the gate where the input state is indexed by num_states.
 
-        :param heralded_modes: list of tuples giving for each heralded mode the number of heralded photons
-        :param renormalization: float (success probability of the gate) by which we renormalize the map instead
-        of just doing postselection which leads to non CP maps
+        :param num_state:
+        :param i:
         :return: list where each element is the probability that we measure one eigenvector of the measurement operator
         """
 
-        output_distribution = self._qst._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+        l = []
+        for j in range(self._nqubit - 1, -1, -1):
+            l.append(num_state // (6 ** j))
+            num_state = num_state % (6 ** j)
+
+        L = []
+        for j in range(self._nqubit - 1, -1, -1):
+            L.append(i // (3 ** j))
+            i = i % (3 ** j)
+
+        output_distribution = self._qst._compute_probs(prep_state_indices=l, meas_pauli_basis_indices=L)
 
         # TODO: verify what the following does and how is it different from previous code
         B = []
@@ -218,7 +227,7 @@ class MLEStateTomography(TomographyMLE):
             # todo : fix this on the basis of Arman's example
         return f
 
-    def _log_likelihood_func(self, f, rho):
+    def _log_likelihood_func(self, f: dict, rho: np.ndarray) -> float:
         """
         Log-likelihood function to minimize
         :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome
@@ -234,7 +243,7 @@ class MLEStateTomography(TomographyMLE):
                 x -= f[k] * np.log(np.trace(np.dot(rho, P[k])))
         return x
 
-    def _grad_log_likelihood_func(self, f, rho):
+    def _grad_log_likelihood_func(self, f: dict, rho: np.ndarray) -> float:
         """
         Gradient of the log-likelihood function
         :param f: dictionary for the data, keys are the input states and the values are probabilities for each outcome
@@ -319,7 +328,7 @@ class MLEProcessTomography(TomographyMLE):
                 f[a] += self.c_data(prep_state_indices=a, meas_pauli_basis_indices=b)
         return f
 
-    def _log_likelihood_func(self, f, S):
+    def _log_likelihood_func(self, f: dict, S: np.ndarray) -> float:
         """
         Log-likelihood function to minimize
         :param f: dictionary for the data, keys are the input states and the values are probabilities for each
@@ -338,7 +347,7 @@ class MLEProcessTomography(TomographyMLE):
                     x -= f[m][l] * np.log(pml)
         return x
 
-    def _grad_log_likelihood_func(self, f, S):
+    def _grad_log_likelihood_func(self, f: dict, S) -> float:
         """
         Gradient of the log-likelihood function
         :param f: dictionary for the data, keys are the input states and the values are
