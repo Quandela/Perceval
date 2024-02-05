@@ -67,7 +67,7 @@ For this, you only have to go to your session's settings on the console, copy th
 >>> DEDUPLICATION_ID = "my-quantum-workshop-identifier"
 >>> session = scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN, deduplication_id=DEDUPLICATION_ID)
 
-A session can be fetched until termination or timeout. If there is no alive session matching the deduplication_id, a new one will be created and returned. 
+A session can be fetched until termination or timeout. If there is no alive session matching the deduplication_id, a new one will be created and returned.
 It is highly convenient if you wish to keep a specific amount of session alive at a time.
 
 Send a circuit to a Scaleway session
@@ -77,7 +77,7 @@ Now you are handling a session, you can instantiate a ``RemoteProcessor`` linked
 
 >>> processor = session.build_remote_processor()
 
-Then, we can attached a toy circuit to send on our session
+Then, we can attach a toy circuit and send it on our session
 
 >>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
 >>> processor.with_input(pcvl.BasicState("|0,1>"))
