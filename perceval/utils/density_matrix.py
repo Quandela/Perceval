@@ -363,6 +363,23 @@ class DensityMatrix:
         output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
         return output
 
+    def _construct_kraus_loss(self, modes: list):
+        """
+        Construct the kraus operators for a loss channel on specified modes
+        """
+
+        annihilation_operators = [dok_array(self.shape, dtype=complex) for m in modes]
+
+        for state, idx in self.index.items():
+            for i, mode in enumerate(modes):
+                if state[mode] == 0:
+                    annihilation_operators[i][idx, idx] = 1
+                else:
+                    listed_state = list(state)
+                    listed_state[mode] -= 1
+                    result_idx = self.index[BasicState(listed_state)]
+                    annihilation_operators[i][result_idx, idx] = 1
+
     def __str__(self):
         """
         string representation of a density matrix
