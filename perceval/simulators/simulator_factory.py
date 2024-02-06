@@ -64,6 +64,8 @@ class SimulatorFactory:
         sim_losses = False
         convert_to_circuit = False
         min_detected_photons = None
+        post_select = None
+        heralds = None
         m = 0
         if isinstance(circuit, ACircuit):
             sim_polarization = circuit.requires_polarization
@@ -75,6 +77,8 @@ class SimulatorFactory:
                 if backend is None:
                     backend = circuit.backend
                 min_detected_photons = circuit.parameters.get('min_detected_photons')
+                post_select = circuit.post_select_fn
+                heralds = circuit.heralds
                 circuit = circuit.components
 
             for _, cp in circuit:
@@ -95,10 +99,16 @@ class SimulatorFactory:
             else:
                 raise ValueError(f"Backend '{backend}' not supported")
 
-        # Building the simulator layers
+        ## Building the simulator layers
+        # First - the core simulator with its state selection setup
         simulator = Simulator(backend)
         if min_detected_photons is not None:
             simulator.set_min_detected_photon_filter(min_detected_photons)
+        if heralds is not None:
+            simulator.set_heralds(heralds)
+        if post_select is not None:
+            simulator.set_postselection(post_select)
+
         if sim_polarization:
             simulator = PolarizationSimulator(simulator)
         if sim_delay:

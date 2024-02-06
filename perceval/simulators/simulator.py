@@ -30,7 +30,8 @@
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
 from .simulator_interface import ISimulator
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
+    DensityMatrix, post_select_distribution
 from perceval.backends import AProbAmpliBackend
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 
@@ -54,6 +55,7 @@ class Simulator(ISimulator):
         self._backend = backend
         self._invalidate_cache()
         self._postselect: PostSelect = PostSelect()
+        self._heralds: dict = {}
         self._logical_perf: float = 1
         self._physical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
@@ -83,7 +85,7 @@ class Simulator(ISimulator):
     def logical_perf(self):
         return self._logical_perf
 
-    def set_postselection(self, postselect: PostSelect):
+    def set_postselection(self, postselect: PostSelect = None, ):
         """Set a post-selection function
 
         :param postselect: a PostSelect object
@@ -93,6 +95,17 @@ class Simulator(ISimulator):
     def clear_postselection(self):
         """Clear the post-selection function"""
         self._postselect = PostSelect()
+
+    def set_heralds(self, heralds: dict):
+        """Set expected detections (heralds). Only corresponding states will be selected, others are filtered out.
+
+        :param heralds: Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1 on
+                        mode 6.
+        """
+        self._heralds = heralds
+
+    def clear_heralds(self):
+        self._heralds = {}
 
     def set_circuit(self, circuit: ACircuit):
         """Set a circuit for simulation.
@@ -190,20 +203,6 @@ class Simulator(ISimulator):
             self.DEBUG_merge_count += 1
         return results
 
-    def _post_select_on_distribution(self, bsd: BSDistribution) -> BSDistribution:
-        self._logical_perf = 1
-        if not self._postselect.has_condition:
-            bsd.normalize()
-            return bsd
-        result = BSDistribution()
-        for state, prob in bsd.items():
-            if self._postselect(state):
-                result[state] = prob
-            else:
-                self._logical_perf -= prob
-        result.normalize()
-        return result
-
     def _post_select_on_statevector(self, sv: StateVector) -> BSDistribution:
         self._logical_perf = 1
         if not self._postselect.has_condition:
@@ -228,13 +227,14 @@ class Simulator(ISimulator):
         input_list = input_state.separate_state(keep_annotations=False)
         self._evolve_cache(set(input_list))
         result = self._merge_probability_dist(input_list)
-        return self._post_select_on_distribution(result)
+        result, self._logical_perf = post_select_distribution(result, self._postselect, self._heralds)
+        return result
 
     @dispatch(StateVector)
     def probs(self, input_state: StateVector) -> BSDistribution:
         if len(input_state) == 1:
             return self.probs(input_state[0])
-        return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
+        return _to_bsd(self.evolve(input_state))
 
     def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
         decomposed_input = []
@@ -386,7 +386,8 @@ class Simulator(ISimulator):
         else:
             res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
-        return {'results': self._post_select_on_distribution(res),
+        res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds)
+        return {'results': res,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
 
