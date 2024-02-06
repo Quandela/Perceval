@@ -27,13 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._validated_fields import AValidatedParam, ValidatedBool, ValidatedFloat
+from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
 from typing import Dict
 
 
 class NoiseModel:
     """
-    The NoiseModel class contains all noise parameters which can be supported by Perceval. Default value of each
+    The NoiseModel class contains all noise parameters which are supported by Perceval. Default value of each
     parameter means "no noise", so a NoiseModel constructed with all default parameters leads to a perfect simulation.
 
     :param brightness: first lens brightness of a quantum dot
@@ -69,9 +69,10 @@ class NoiseModel:
         self._params[param.name] = param
         cls = type(self)
         if not hasattr(cls, param.name):
+            # Create a property named after the param name
             setattr(cls, param.name, property(lambda slf: slf._params[param.name].get()))
 
-    def __getitem__(self, param_name: str):
+    def __getitem__(self, param_name: str) -> AValidatedParam:
         if param_name in self._params:
             return self._params[param_name]
         raise KeyError(f"No parameter named '{param_name}'")
@@ -79,31 +80,16 @@ class NoiseModel:
     def set_value(self, param_name: str, value):
         self[param_name].set(value)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__dict__())
 
-    def __dict__(self):
+    def __dict__(self) -> dict:
         return {k: v.get() for k, v in self._params.items() if not v.is_default}
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
+        if len(self._params) != len(other._params):
+            return False
         for field in self._params:
             if self._params[field] != other._params[field]:
                 return False
         return True
-
-
-if __name__ == "__main__":
-
-    import json
-
-    nm = NoiseModel(brightness=0.23, g2=0.012, g2_distinguishable=False)
-    print(nm)
-    print(nm["brightness"])
-    print(nm.brightness)
-    print(nm.__dict__())
-    print(json.dumps(nm.__dict__()))
-    nm.set_value("brightness", 0.4)
-    nm2 = NoiseModel(brightness=0.35, g2=0.012)
-    print(nm2)
-    print(nm2["brightness"])
-    print(nm2.brightness)
