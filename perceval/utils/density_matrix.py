@@ -387,7 +387,7 @@ class DensityMatrix:
                 collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
                 resulting_dm = DensityMatrix(collapsed_dm, basis)
                 resulting_dm.normalize()
-                res[key_fs] = (resulting_dm, prob)
+                res[key_fs] = (prob, resulting_dm)
             return res
         else:
             sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities

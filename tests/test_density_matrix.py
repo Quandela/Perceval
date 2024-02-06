@@ -174,8 +174,8 @@ def test_measure_density_matrix():
                           StateVector(BasicState([1]))*minus_state: 2/3})
     dm = DensityMatrix.from_svd(svd)
     dic = dm.measure([0])
-    sub_dm_0, p0 = dic[BasicState([0])]
-    sub_dm_1, p1 = dic[BasicState([1])]
+    p0, sub_dm_0 = dic[BasicState([0])]
+    p1, sub_dm_1 = dic[BasicState([1])]
 
     assert p0 == pytest.approx(1/3)
     assert p1 == pytest.approx(2/3)
@@ -186,3 +186,9 @@ def test_measure_density_matrix():
 
     assert sub_dm_1.mat.toarray() == pytest.approx(1/2*np.array([[1, -1],
                                                                  [-1, 1]]))
+
+    sv = BasicState([1, 1, 1, 1]) + BasicState([2, 0, 2, 0]) + BasicState([2, 0, 1, 1])
+    equivalent_dm = DensityMatrix.from_svd(sv)
+
+    measurements = sv.measure([0, 1])
+    measurements_dm = equivalent_dm.measure([0, 1])
