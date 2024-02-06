@@ -192,3 +192,15 @@ def test_measure_density_matrix():
 
     measurements = sv.measure([0, 1])
     measurements_dm = equivalent_dm.measure([0, 1])
+
+    assert len(measurements) == len(measurements_dm)
+
+    for state in measurements.keys():
+        p_sv, rstate = measurements[state]
+        p_dm, rdm = measurements_dm[state]
+
+        assert p_sv == pytest.approx(p_dm)
+
+        dm_comparison = DensityMatrix.from_svd(rstate, index=rdm.index)
+
+        assert dm_comparison.mat.toarray() == pytest.approx(rdm.mat.toarray())
