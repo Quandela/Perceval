@@ -379,20 +379,20 @@ class DensityMatrix:
 
         if all_results:
             projectors = self._construct_all_projectors(modes)
-            res = dict()
+            res = dict() # result fo the form {measured FockState: (remaining density matrix, probability)
             for key_fs, item_list in projectors.items():
-                basis = item_list[0]
+                basis = item_list[0] # FockBasis of possible measurement
                 projector = item_list[1]
                 prob = item_list[2]
-                collapsed_dm = projector @ self.mat @ projector.T
+                collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
                 resulting_dm = DensityMatrix(collapsed_dm, basis)
                 resulting_dm.normalize()
                 res[key_fs] = (resulting_dm, prob)
             return res
         else:
-            sample = self.sample()[0]
+            sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities
             measure, remaining = self._divide_fock_state(sample, modes)
-            proj, basis = self._construct_projector(modes, measure)
+            basis, proj = self._construct_projector(modes, measure)
             return DensityMatrix(proj @ self.mat @ proj.T, basis)
 
     def _construct_projector(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
@@ -420,13 +420,15 @@ class DensityMatrix:
         modes = list(set(modes))
         res = dict()
         for nb_measured_photons in range(self.n_max+1):
+            # FockBasis for the remaining density matrices
             remaining_basis = FockBasis(self.m - len(modes), self.n_max - nb_measured_photons)
             for measured_fs in xq.FSArray(len(modes), nb_measured_photons):
+                # initialisation of the empty projectors
                 res[measured_fs] = [remaining_basis, dok_array((len(remaining_basis), self.size)), 0]
 
         diag_coefs = self.mat.diagonal()
 
-        for i, fs in enumerate(self.reverse_index):
+        for i, fs in enumerate(self.reverse_index):  # construction of the projectors
             prob = abs(diag_coefs[i])
             measured_fs, remaining_fs = self._divide_fock_state(fs, modes)
             remaining_basis = res[measured_fs][0]
