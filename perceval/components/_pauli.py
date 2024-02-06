@@ -35,6 +35,7 @@ from perceval.utils import Matrix
 
 
 class PauliType(Enum):
+    # Order of members important
     I = 0
     X = 1
     Y = 2

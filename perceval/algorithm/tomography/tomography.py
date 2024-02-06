@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import numpy as np
+from collections import defaultdict
 
 from perceval.components import AProcessor, Processor, PauliType
 from perceval.utils import BasicState
@@ -65,6 +66,7 @@ class StateTomography(AAlgorithm):
 
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
+        self._qst_cache = defaultdict(lambda: defaultdict(lambda: dict))
 
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
@@ -127,7 +129,12 @@ class StateTomography(AAlgorithm):
         :return: Value of Stokes parameter for a given combination of input and output state -> a complex float
         """
 
-        output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+        if PauliType.Z not in meas_pauli_basis_indices:
+            output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+            self._qst_cache[tuple(prep_state_indices)][tuple(meas_pauli_basis_indices)] = output_distribution
+        else:
+            meas_indices_Z_to_I = [elem if elem != PauliType.Z else PauliType.I for elem in meas_pauli_basis_indices]
+            output_distribution = self._qst_cache[tuple(prep_state_indices)][tuple(meas_indices_Z_to_I)]
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0

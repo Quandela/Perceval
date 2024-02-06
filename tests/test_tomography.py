@@ -35,12 +35,12 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Processor, Circuit, PauliType
+from perceval.components import catalog, Processor, Circuit, PauliType, get_preparation_circuit
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit, \
-    _generate_pauli_index, _vector_to_sq_matrix, _matrix_to_vector, _matrix_basis, _coef_linear_decomp
+from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
+                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp)
 
 from _test_utils import save_figs, _save_or_check
 
@@ -124,10 +124,15 @@ def test_chi_cnot_is_physical_and_display(tmp_path, save_figs):
     # display
     _save_or_check(qpt, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
+
 def test_processor_odd_modes():
     # tests that a generic processor with odd number of modes does not work
     with pytest.raises(ValueError):
         ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
+
+
+def test_pauli_order():
+    assert PauliType.I.value == 0 and PauliType.X.value == 1 and PauliType.Y.value == 2 and PauliType.Z.value == 3
 
 
 def test_generate_pauli():
