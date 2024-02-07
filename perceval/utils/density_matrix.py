@@ -363,22 +363,30 @@ class DensityMatrix:
         output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
         return output
 
-    def _construct_kraus_loss(self, modes: list):
+    def _construct_iterated_loss_operators(self, mode: int):
         """
         Construct the kraus operators for a loss channel on specified modes
         """
 
-        annihilation_operators = [dok_array(self.shape, dtype=complex) for m in modes]
+        annihilation_operators = [dok_array(self.shape, dtype=complex) for _ in range(self.n_max)]
 
         for state, idx in self.index.items():
-            for i, mode in enumerate(modes):
-                if state[mode] == 0:
-                    annihilation_operators[i][idx, idx] = 1
-                else:
-                    listed_state = list(state)
-                    listed_state[mode] -= 1
-                    result_idx = self.index[BasicState(listed_state)]
-                    annihilation_operators[i][result_idx, idx] = 1
+            state_n_photon = state[mode]
+            if state_n_photon == 0:
+                for operator in annihilation_operators:
+                    operator[idx, idx] +=1
+            else:
+                listed_state = list(state)
+                listed_state[mode] -= 1
+                result_idx = self.index[BasicState(listed_state)]
+                for n_iter in range(1, self.n_max +1):
+                    if n_iter >= state_n_photon:
+                        annihilation_operators[n_iter-1][result_idx, idx] += 1
+                    else:
+                        annihilation_operators[n_iter-1][idx, idx] += 1
+
+        return annihilation_operators
+
 
     def __str__(self):
         """
