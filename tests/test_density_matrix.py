@@ -204,3 +204,7 @@ def test_measure_density_matrix():
         dm_comparison = DensityMatrix.from_svd(rstate, index=rdm.index)
 
         assert dm_comparison.mat.toarray() == pytest.approx(rdm.mat.toarray())
+
+    dm = DensityMatrix.from_svd(BasicState([1,0]) + BasicState([0,1]))
+    measure_fs, remaining_dm = dm.measure(0, all_results=False)
+    assert measure_fs.n + remaining_dm.n_max == 1

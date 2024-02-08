@@ -396,7 +396,7 @@ class DensityMatrix:
             sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities
             measure, remaining = self._divide_fock_state(sample, modes)
             basis, proj = self._construct_projector(modes, measure)
-            return DensityMatrix(proj @ self.mat @ proj.T, basis)
+            return measure, DensityMatrix(proj @ self.mat @ proj.T, basis)
 
     def _construct_projector(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
         """
