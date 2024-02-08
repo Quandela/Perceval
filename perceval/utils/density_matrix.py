@@ -381,7 +381,7 @@ class DensityMatrix:
         """
         Construct the kraus operators for a loss channel on specified modes
         """
-        operators = [dok_array(self.shape, dtype=int) for _ in range(self.size+1)]
+        operators = [dok_array(self.shape, dtype=float) for _ in range(self.size+1)]
 
         for n_photon_loss in range(len(operators)):
             for state, idx in self.index.items():
