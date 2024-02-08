@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit
+from perceval import Matrix, P, ACircuit, Circuit, NoiseModel
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -188,6 +188,19 @@ def test_sv_serialization():
         or sv_serialized == ":PCVL:StateVector:(0.5,-0.5)*|1,0>+(0.5,0.5)*|0,1>"  # Order does not matter
     sv_deserialized = deserialize(sv_serialized)
     assert sv == sv_deserialized
+
+
+def test_noise_model_serialization():
+    empty_nm = NoiseModel()
+    empty_nm_ser = serialize(empty_nm)
+    empty_nm_deser = deserialize(empty_nm_ser)
+    assert empty_nm == empty_nm_deser
+
+    nm = NoiseModel(brightness=0.1, indistinguishability=0.2, g2=0.3, g2_distinguishable=True, transmittance=0.4,
+                    phase_imprecision=0.5)
+    nm_ser = serialize(nm)
+    nm_deser = deserialize(nm_ser)
+    assert nm == nm_deser
 
 
 def test_json():

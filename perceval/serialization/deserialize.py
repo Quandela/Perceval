@@ -32,7 +32,7 @@ from typing import Union
 import json
 
 from perceval.components import Circuit
-from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount
+from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel
 from perceval.serialization import _matrix_serialization, deserialize_state
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 import perceval.serialization._component_deserialization as _cd
@@ -96,7 +96,7 @@ def circuit_from_file(filepath: str) -> Circuit:
         return deserialize_circuit(f.read())
 
 
-def deserialize_svdistribution(serial_svd):
+def deserialize_svdistribution(serial_svd) -> SVDistribution:
     assert serial_svd[0] == '{' and serial_svd[-1] == '}', "Invalid serialized SVDistribution"
     if len(serial_svd) == 2:
         return SVDistribution()
@@ -107,7 +107,7 @@ def deserialize_svdistribution(serial_svd):
     return svd
 
 
-def deserialize_bsdistribution(serial_bsd):
+def deserialize_bsdistribution(serial_bsd) -> BSDistribution:
     assert serial_bsd[0] == '{' and serial_bsd[-1] == '}', "Invalid serialized BSDistribution"
     if len(serial_bsd) == 2:
         return BSDistribution()
@@ -118,7 +118,7 @@ def deserialize_bsdistribution(serial_bsd):
     return bsd
 
 
-def deserialize_bscount(serial_bsc):
+def deserialize_bscount(serial_bsc) -> BSCount:
     assert serial_bsc[0] == '{' and serial_bsc[-1] == '}', "Invalid serialized BSCount"
     if len(serial_bsc) == 2:
         return BSCount()
@@ -127,6 +127,10 @@ def deserialize_bscount(serial_bsc):
         k, v = s.split("=")
         bsc[deserialize_state(k)] = int(v)
     return bsc
+
+
+def deserialize_noise_model(serial_nm: str) -> NoiseModel:
+    return NoiseModel(**json.loads(serial_nm))
 
 
 def deserialize(obj):
@@ -169,6 +173,8 @@ def deserialize(obj):
             r = deserialize_matrix(obj)
         elif cl == "ACircuit":
             r = deserialize_circuit(obj)
+        elif cl == "NoiseModel":
+            r = deserialize_noise_model(sobj)
         else:
             raise NotImplementedError(f"No deserializer found for {cl}")
     else:
