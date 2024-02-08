@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import math
+
 from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
 from perceval.utils.density_matrix_utils import *
@@ -156,3 +158,14 @@ def test_remove_low_amplitude():
     dm.remove_low_amplitude(1e-1)
     assert dm.mat.nnz == 1
     assert dm.mat.trace() == pytest.approx(1)
+
+
+def test_photon_loss():
+
+    dm = DensityMatrix.from_svd(BasicState([5]))
+    dm.apply_loss(0, .5)
+
+    assert dm.mat.trace() == pytest.approx(1)
+
+    for k in range(6):
+        assert dm[BasicState([k]), BasicState([k])] == pytest.approx(math.comb(5, k) * (1/2)**5)
