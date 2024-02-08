@@ -31,7 +31,7 @@
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
 from perceval.utils.density_matrix_utils import array_to_statevector
 from typing import Union, Optional, Tuple
-from math import comb
+from math import comb, sqrt
 from numpy import conj
 import numpy as np
 from scipy.sparse import dok_array, sparray, csr_array, kron
@@ -40,6 +40,7 @@ from scipy.linalg import eigh
 from copy import copy
 import random
 import exqalibur as xq
+from multipledispatch import dispatch
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
@@ -363,30 +364,47 @@ class DensityMatrix:
         output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
         return output
 
-    def _construct_iterated_loss_operators(self, mode: int):
+    @staticmethod
+    def _get_annihilated_fockstate(fockstate, m, n_photon):
+        """
+        give the fockstate after loss of n_photon in the mode m
+        """
+
+        listed_fs = list(fockstate)
+        if listed_fs[m] <= n_photon:
+            listed_fs[m] = 0
+        else:
+            listed_fs[m] -= n_photon
+        return BasicState(listed_fs)
+
+    def _construct_loss_operators(self, mode: int, p:float):
         """
         Construct the kraus operators for a loss channel on specified modes
         """
+        operators = [dok_array(self.shape, dtype=int) for _ in range(self.size+1)]
 
-        annihilation_operators = [dok_array(self.shape, dtype=complex) for _ in range(self.n_max)]
+        for n_photon_loss in range(len(operators)):
+            for state, idx in self.index.items():
+                n_photon = state[mode]
+                if n_photon >= n_photon_loss:
+                    result_idx = self.index[self._get_annihilated_fockstate(state, mode, n_photon_loss)]
+                    operators[n_photon_loss][result_idx, idx] += sqrt(comb(n_photon, n_photon_loss) *
+                                                                      (1-p)**(n_photon-n_photon_loss) *
+                                                                      p**n_photon_loss)
+        return operators
 
-        for state, idx in self.index.items():
-            state_n_photon = state[mode]
-            if state_n_photon == 0:
-                for operator in annihilation_operators:
-                    operator[idx, idx] +=1
-            else:
-                listed_state = list(state)
-                listed_state[mode] -= 1
-                result_idx = self.index[BasicState(listed_state)]
-                for n_iter in range(1, self.n_max +1):
-                    if n_iter >= state_n_photon:
-                        annihilation_operators[n_iter-1][result_idx, idx] += 1
-                    else:
-                        annihilation_operators[n_iter-1][idx, idx] += 1
+    @dispatch(int, float)
+    def apply_loss(self, mode: int, prob: float):
 
-        return annihilation_operators
+        matrix_after_loss = csr_array(self.shape, dtype=complex)
+        for operator in self._construct_loss_operators(mode, prob):
+            matrix_after_loss += operator @ self.mat @ operator.T
+        self.mat = matrix_after_loss
 
+    @dispatch(list, float)
+    def apply_loss(self, modes: list, prob: float):
+        for mode in modes:
+            self.apply_loss(mode, prob)
 
     def __str__(self):
         """
