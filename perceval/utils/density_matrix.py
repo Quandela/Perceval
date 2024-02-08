@@ -354,7 +354,9 @@ class DensityMatrix:
         """
 
         factor = self.mat.trace()
-        self.mat = (1/factor)*self.mat
+
+        if abs(factor-1) >= 1e-10:
+            self.mat = (1/factor)*self.mat
 
     def sample(self, count: int = 1) -> BSSamples:
         """
