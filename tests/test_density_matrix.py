@@ -169,3 +169,9 @@ def test_photon_loss():
 
     for k in range(6):
         assert dm[BasicState([k]), BasicState([k])] == pytest.approx(math.comb(5, k) * (1/2)**5)
+
+    sv = BasicState([2, 1, 0]) + BasicState([1, 3, 2]) + BasicState([0, 0, 1])
+    dm = DensityMatrix.from_svd(sv)
+    dm.apply_loss([0, 1], .2)
+
+    assert dm.mat.trace() == pytest.approx(1)
