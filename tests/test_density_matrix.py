@@ -205,6 +205,11 @@ def test_measure_density_matrix():
 
         assert dm_comparison.mat.toarray() == pytest.approx(rdm.mat.toarray())
 
-    dm = DensityMatrix.from_svd(BasicState([1,0]) + BasicState([0,1]))
-    measure_fs, remaining_dm = dm.measure(0, all_results=False)
-    assert measure_fs.n + remaining_dm.n_max == 1
+
+def test_measure_random():
+    dm = DensityMatrix.from_svd(SVDistribution({BasicState([1, 2, 2, 0]) + BasicState([0, 1, 1, 3]) + BasicState([4, 0, 0, 1]): 1/2,
+                                BasicState([1, 1, 0, 0]): 1/2 }))
+
+    for k in range(10):
+        measured_fs, remaining_dm = dm.measure(0, all_results=False)
+        assert measured_fs.n + remaining_dm.n_max == 5
