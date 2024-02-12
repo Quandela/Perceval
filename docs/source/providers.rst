@@ -58,8 +58,31 @@ Note: using a ``with`` block you do not need to start and stop your session: it 
 
 Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommand using directly ``start`` and ``stop`` methods.
 
-From a session, you can instantiate a ``RemoteProcessor`` linked to the session:
+Using an existing Scaleway session
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you created your session from the `Scaleway console <https://console.scaleway.com/qaas>`_, you can retrieve it from Perceval.
+
+For this, you only have to go to your session's settings on the console, copy the deduplication identifier and put it to the session creation on your Perceval code.
+
+>>> DEDUPLICATION_ID = "my-quantum-workshop-identifier"
+>>> session = scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN, deduplication_id=DEDUPLICATION_ID)
+
+A session can be fetched until termination or timeout. If there is no alive session matching the deduplication_id, a new one will be created and returned.
+It is highly convenient if you wish to keep a specific amount of session alive at a time.
+
+Send a circuit to a Scaleway session
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Now you are handling a session, you can instantiate a ``RemoteProcessor`` linked to the session:
 
 >>> processor = session.build_remote_processor()
+
+Then, we can attach a toy circuit and send it on our session
+
+>>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
+>>> processor.with_input(pcvl.BasicState("|0,1>"))
+>>> sampler = pcvl.algorithm.Sampler(processor, max_shots_per_call=10_000)
+>>> job = sampler.samples(100)
+>>> print(job)
 
 Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation through :ref:`Work with algorithms`.
