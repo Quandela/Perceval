@@ -54,12 +54,12 @@ class Simulator(ISimulator):
     def __init__(self, backend: AProbAmpliBackend):
         self._backend = backend
         self._invalidate_cache()
+        self._min_detected_photons: int = 0
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._logical_perf: float = 1
         self._physical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
-        self._min_detected_photons: int = 0
 
     @property
     def precision(self):
@@ -75,11 +75,29 @@ class Simulator(ISimulator):
 
     def set_min_detected_photon_filter(self, value: int):
         """
-        Set a minimum number of detected photons in the output distributions
+        Set a minimum number of detected photons in the output distribution
 
         :param value: The minimum photon count
         """
         self._min_detected_photons = value
+
+    def set_selection(self, min_detected_photon_filter: int = None,
+                      postselect: PostSelect = None,
+                      heralds: dict = None):
+        """Set multiple selection filters at once to remove unwanted states from computed output distribution
+
+        :param min_detected_photon_filter: minimum number of detected photons in the output distribution
+        :param postselect: a post-selection function
+        :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
+                        out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
+                        on mode 6.
+        """
+        if min_detected_photon_filter is not None:
+            self._min_detected_photons = min_detected_photon_filter
+        if postselect is not None:
+            self._postselect = postselect
+        if heralds is not None:
+            self._heralds = heralds
 
     @property
     def logical_perf(self):
@@ -95,14 +113,6 @@ class Simulator(ISimulator):
     def clear_postselection(self):
         """Clear the post-selection function"""
         self._postselect = PostSelect()
-
-    def set_heralds(self, heralds: dict):
-        """Set expected detections (heralds). Only corresponding states will be selected, others are filtered out.
-
-        :param heralds: Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1 on
-                        mode 6.
-        """
-        self._heralds = heralds
 
     def clear_heralds(self):
         self._heralds = {}

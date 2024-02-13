@@ -99,22 +99,15 @@ class SimulatorFactory:
             else:
                 raise ValueError(f"Backend '{backend}' not supported")
 
-        ## Building the simulator layers
-        # First - the core simulator with its state selection setup
+        # Building the simulator layers
         simulator = Simulator(backend)
-        if min_detected_photons is not None:
-            simulator.set_min_detected_photon_filter(min_detected_photons)
-        if heralds is not None:
-            simulator.set_heralds(heralds)
-        if post_select is not None:
-            simulator.set_postselection(post_select)
-
         if sim_polarization:
             simulator = PolarizationSimulator(simulator)
         if sim_delay:
             simulator = DelaySimulator(simulator)
         if sim_losses:
             simulator = LossSimulator(simulator)
+        simulator.set_selection(min_detected_photons, post_select, heralds)
 
         if convert_to_circuit:
             circuit = _unitary_components_to_circuit(circuit, m)
