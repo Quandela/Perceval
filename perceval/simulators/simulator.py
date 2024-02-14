@@ -31,7 +31,7 @@ from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_sta
 from .simulator_interface import ISimulator
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
-    DensityMatrix, post_select_distribution
+    DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.backends import AProbAmpliBackend
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 
@@ -212,20 +212,6 @@ class Simulator(ISimulator):
             results = BSDistribution.tensor_product(results, _to_bsd(self._evolve[input_state]), merge_modes=True)
             self.DEBUG_merge_count += 1
         return results
-
-    def _post_select_on_statevector(self, sv: StateVector) -> BSDistribution:
-        self._logical_perf = 1
-        if not self._postselect.has_condition:
-            sv.normalize()
-            return sv
-        result = StateVector()
-        for state, ampli in sv:
-            if self._postselect(state):
-                result += ampli*state
-            else:
-                self._logical_perf -= abs(ampli)**2
-        result.normalize()
-        return result
 
     @dispatch(BasicState)
     def probs(self, input_state: BasicState) -> BSDistribution:
@@ -435,9 +421,8 @@ class Simulator(ISimulator):
                 evolved_in_s = _merge_sv(evolved_in_s, sv)
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
-
-        result_sv.normalize()
-        return self._post_select_on_statevector(result_sv)
+        result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds)
+        return result_sv
 
     def evolve_svd(self,
                    svd: Union[SVDistribution, StateVector, BasicState],

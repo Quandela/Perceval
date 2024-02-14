@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BasicState, BSDistribution
+from .statevector import BasicState, BSDistribution, StateVector
 
 import json
 import re
-from typing import Callable, List
+from typing import Callable, List, Tuple
 
 
 class PostSelect:
@@ -161,7 +161,8 @@ class PostSelect:
         return True
 
 
-def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, heralds: dict = None):
+def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, heralds: dict = None
+                             ) -> Tuple[BSDistribution, float]:
     if not (postselect.has_condition or heralds):
         bsd.normalize()
         return bsd, 1
@@ -179,5 +180,27 @@ def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, herald
             result[state] = prob
         else:
             logical_perf -= prob
+    result.normalize()
+    return result, logical_perf
+
+
+def post_select_statevector(sv: StateVector, postselect: PostSelect, heralds: dict = None) -> Tuple[StateVector, float]:
+    if not (postselect.has_condition or heralds):
+        sv.normalize()
+        return sv, 1
+
+    if heralds is None:
+        heralds = {}
+    logical_perf = 1
+    result = StateVector()
+    for state, ampli in sv:
+        heralds_ok = True
+        for m, v in heralds.items():
+            if state[m] != v:
+                heralds_ok = False
+        if heralds_ok and postselect(state):
+            result += ampli*state
+        else:
+            logical_perf -= abs(ampli)**2
     result.normalize()
     return result, logical_perf
