@@ -160,3 +160,19 @@ def test_matrix_basis_n_decomp():
         matrix_rebuilt += mu[idx]*basis_matrices
 
     assert np.allclose(matrix, matrix_rebuilt)
+
+
+def test_avg_fidelity_postprocessed_ccz_gate():
+    ccz_p = catalog["postprocessed ccz"].build_processor()
+    op_CCZ = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
+                       [0, 1, 0, 0, 0, 0, 0, 0],
+                       [0, 0, 1, 0, 0, 0, 0, 0],
+                       [0, 0, 0, 1, 0, 0, 0, 0],
+                       [0, 0, 0, 0, 1, 0, 0, 0],
+                       [0, 0, 0, 0, 0, 1, 0, 0],
+                       [0, 0, 0, 0, 0, 0, 1, 0],
+                       [0, 0, 0, 0, 0, 0, 0, -1]], dtype='complex_')
+
+    qpt = ProcessTomography(operator_processor=ccz_p)
+    ccz_avg_f = qpt.average_fidelity(op_CCZ)
+    assert ccz_avg_f == pytest.approx(1)
