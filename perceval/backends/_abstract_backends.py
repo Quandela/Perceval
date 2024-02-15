@@ -92,13 +92,13 @@ class AProbAmpliBackend(ABackend):
 
     def prob_distribution(self) -> BSDistribution:
         bsd = BSDistribution()
-        for output_state in allstate_iterator(self._input_state):
+        for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
     def evolve(self) -> StateVector:
         res = StateVector()
-        for output_state in allstate_iterator(self._input_state):
+        for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
         res.normalize()
         return res
