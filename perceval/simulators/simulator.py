@@ -411,9 +411,10 @@ class Simulator(ISimulator):
             else:
                 self._physical_perf -= prob
 
-        return {'results': self._post_select_on_distribution(res_bsd),
+        res_bsd, logical_perf_coeff = post_select_distribution(res_bsd, self._postselect, self._heralds)
+        return {'results': res_bsd,
                 'physical_perf': self._physical_perf,
-                'logical_perf': self._logical_perf}
+                'logical_perf': self._logical_perf * logical_perf_coeff}
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
