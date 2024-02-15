@@ -80,8 +80,8 @@ class AProbAmpliBackend(ABackend):
 
         if n_photon not in self._cache_iterator.keys():
             self._cache_iterator[n_photon] = allstate_iterator(input_state, mask)
-        else:
-            return self._cache_iterator[n_photon]
+
+        return self._cache_iterator[n_photon]
 
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:

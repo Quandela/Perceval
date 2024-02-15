@@ -118,12 +118,12 @@ class SLOSBackend(AProbAmpliBackend):
         return "SLOS"
 
     def _reset(self):
-        self._fsms = [[]]
-        self._fsas = {}
+        self._fsms = [[]]  # xq.FSMask
+        self._fsas = {}  # xq.FSArray
         self._mk_l: List[int] = [1]
         self._path_roots: List[_Path] = []
         self._state_mapping: Dict[BasicState, _Path] = {}
-        self._mask = None
+        self._mask = None  # xq.FSMAsk
 
     def _compute_path(self, umat):
         for path in self._path_roots:
@@ -197,7 +197,7 @@ class SLOSBackend(AProbAmpliBackend):
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        for output_state, probability in zip(allstate_iterator(self._input_state, self._mask), c):
+        for output_state, probability in zip(self._get_iterator(self._input_state, self._mask), c):
             bsd.add(output_state, probability)
         return bsd
 
@@ -214,7 +214,7 @@ class SLOSBackend(AProbAmpliBackend):
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
-        for output_state, pa in zip(allstate_iterator(self._input_state, self._mask), c):
+        for output_state, pa in zip(self._get_iterator(self._input_state, self._mask), c):
             res += output_state * (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
         res.normalize()
         return res
