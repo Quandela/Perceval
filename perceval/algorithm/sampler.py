@@ -199,6 +199,7 @@ class Sampler(AAlgorithm):
         for idx, it in enumerate(self._iterator):
             self._apply_iteration(it)
             results['results_list'].append(self._processor.probs(precision))
+            results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self._iterator))
         return results
@@ -212,6 +213,7 @@ class Sampler(AAlgorithm):
         for idx, it in enumerate(self._iterator):
             self._apply_iteration(it)
             results['results_list'].append(self._processor.samples(max_samples, max_shots))
+            results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self._iterator))
         return results
