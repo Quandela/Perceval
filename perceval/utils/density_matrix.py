@@ -381,9 +381,9 @@ class DensityMatrix:
 
         if all_results:
             projectors = self._construct_all_projectors(modes)
-            res = dict() # result fo the form {measured FockState: (remaining density matrix, probability)
+            res = dict()  # result fo the form {measured FockState: (remaining density matrix, probability)
             for key_fs, item_list in projectors.items():
-                basis = item_list[0] # FockBasis of possible measurement
+                basis = item_list[0]  # FockBasis of possible measurement
                 projector = item_list[1]
                 prob = item_list[2]
                 if prob != 0:
