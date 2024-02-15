@@ -327,18 +327,36 @@ def test_simulator_evolve_svd():
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
 
 
-def test_evolve_density_matrix():
+def get_comparison_setup():
     s = Source(.9)
-    svd = s.generate_distribution(BasicState([1,1,1,1]))
+    svd = s.generate_distribution(BasicState([1, 1, 1, 1]))
     U = Matrix.random_unitary(4)
-    circuit = Circuit(4).add(0,unitary_components.Unitary(U))
+    circuit = Circuit(4).add(0, unitary_components.Unitary(U))
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)
-    svd = sim.evolve_svd(svd)["results"]
     dm = DensityMatrix.from_svd(svd)
+    return sim, dm, svd
 
+
+def test_evolve_density_matrix():
+
+    sim, dm, svd = get_comparison_setup()
     final_svd = sim.evolve_svd(svd)["results"]
     final_dm = sim.evolve_density_matrix(dm)
     comparing_dm = DensityMatrix.from_svd(final_svd)
 
     assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10
+
+
+def test_probs_density_matrix():
+
+    sim, dm, svd = get_comparison_setup()
+
+    probs_1 = sim.probs_svd(svd)["results"]
+    probs_2 = sim.probs_density_matrix(dm)["results"]
+
+    for key, value in probs_1.items():
+        assert probs_2[key] == pytest.approx(value)
+
+    for key, value in probs_2.items():
+        assert probs_1[key] == pytest.approx(value)

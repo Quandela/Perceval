@@ -39,7 +39,7 @@ from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
-from scipy.sparse import csc_array
+from scipy.sparse import csc_array, csr_array
 
 
 class Simulator(ISimulator):
@@ -387,6 +387,34 @@ class Simulator(ISimulator):
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
 
+    def probs_density_matrix(self, dm: DensityMatrix) -> dict:
+        """
+        gives the output probability distribution, after evolving some density matrix through the simulator
+        :param dm: the input DensityMatrix
+        """
+        if not isinstance(dm, DensityMatrix):
+            raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
+
+        input_list = self._get_density_matrix_input_list(dm)
+        u_evolve = self._construct_evolve_operator(input_list, dm)
+
+        # Here I change to csr format to be able to iterate on the rows
+        u_evolve_in_row = csr_array(u_evolve)
+        res_bsd = BSDistribution()
+
+        for row_idx, fs in enumerate(dm.reverse_index):
+
+            vec = u_evolve_in_row[[row_idx]]
+            prob = abs(vec @ dm.mat @ vec.conj().T)
+            if fs.n >= self._min_detected_photons:
+                res_bsd[fs] += prob
+            else:
+                self._physical_perf -= prob
+
+        return {'results': self._post_select_on_distribution(res_bsd),
+                'physical_perf': self._physical_perf,
+                'logical_perf': self._logical_perf}
+
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
         Evolve a state through the circuit
@@ -470,19 +498,26 @@ class Simulator(ISimulator):
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
-        size = dm.mat.shape[0]
 
-        # Establishing te set of FockState to evolve
-        input_list = []
-        for k in range(dm.size):
-            if dm.mat[k, k] != 0:
-                input_list.append(dm.reverse_index[k])
+        # Establishing the set of FockState to evolve
+        input_list = self._get_density_matrix_input_list(dm)
+
+        u_evolve = self._construct_evolve_operator(input_list, dm)
+
+        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
+        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
+
+        return DensityMatrix(out_matrix, index=dm.index)
+
+    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix) -> csc_array:
+        """
+            construct the evolution operator needed to perform evolve_density_matrix.
+            Stores it in a csc sparse_matrix
+        """
 
         u_evolve_data = []
         u_evolve_indices = []
         u_evolve_indptr = [0]
-
-        # Constructing the evolution operator
         nnz_count = 0
         for i, fs in enumerate(dm.reverse_index):
             if fs in input_list:
@@ -493,12 +528,21 @@ class Simulator(ISimulator):
                     u_evolve_indices.append(dm.index[state])
                     nnz_count += 1
             u_evolve_indptr.append(nnz_count)
+
+        # Here we use csc array, because it is constructed row by row
         u_evolve = csc_array((u_evolve_data,
                               u_evolve_indices,
                               u_evolve_indptr),
                              shape=dm.shape)
+        return u_evolve
 
-        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
-        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
-
-        return DensityMatrix(out_matrix, index=dm.index)
+    @staticmethod
+    def _get_density_matrix_input_list(dm: DensityMatrix) -> list:
+        """
+        get the list of Fockstates on which a DensityMatrix is embedded
+        """
+        input_list = []
+        for k in range(dm.size):
+            if dm.mat[k, k] != 0:
+                input_list.append(dm.reverse_index[k])
+        return input_list
