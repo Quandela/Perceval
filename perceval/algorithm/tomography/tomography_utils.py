@@ -84,7 +84,8 @@ def _matrix_basis(nqubit: int, d: int) -> list:
     for elem in pauli_indices:
         M = get_preparation_circuit(elem[0]).compute_unitary()
         if len(elem) > 1:
-            M = np.kron(M, get_preparation_circuit(elem[1]).compute_unitary())
+            for i in elem[1:]:
+                M = np.kron(M, get_preparation_circuit(i).compute_unitary())
         B.append(_state_to_dens_matrix(np.dot(M, v)))
 
     return B
