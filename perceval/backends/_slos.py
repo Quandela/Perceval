@@ -124,6 +124,7 @@ class SLOSBackend(AProbAmpliBackend):
         self._path_roots: List[_Path] = []
         self._state_mapping: Dict[BasicState, _Path] = {}
         self._mask = None  # xq.FSMAsk
+        self._cache_iterator = dict()
 
     def _compute_path(self, umat):
         for path in self._path_roots:
