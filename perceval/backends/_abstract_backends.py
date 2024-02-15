@@ -70,6 +70,19 @@ class ASamplingBackend(ABackend):
 
 
 class AProbAmpliBackend(ABackend):
+
+    def __init__(self):
+        super().__init__()
+        self._cache_iterator = {}
+
+    def _get_iterator(self, input_state: BasicState, mask=None):
+        n_photon = input_state.n
+
+        if n_photon not in self._cache_iterator.keys():
+            self._cache_iterator[n_photon] = allstate_iterator(input_state, mask)
+        else:
+            return self._cache_iterator[n_photon]
+
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:
         pass
