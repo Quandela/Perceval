@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator
+from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
 from perceval.utils.density_matrix_utils import *
 import numpy as np
@@ -156,3 +156,60 @@ def test_remove_low_amplitude():
     dm.remove_low_amplitude(1e-1)
     assert dm.mat.nnz == 1
     assert dm.mat.trace() == pytest.approx(1)
+
+
+def test_divide_fockstate():
+
+    fs = BasicState([2, 0, 0, 1, 4])
+    meas, remain = DensityMatrix._divide_fock_state(fs, [0, 2, 4])
+    assert meas == BasicState([2, 0, 4])
+    assert remain == BasicState([0, 1])
+
+
+def test_measure_density_matrix():
+
+    plus_state = BasicState([0]) + BasicState([1])
+    minus_state = BasicState([0]) - BasicState([1])
+    svd = SVDistribution({StateVector(BasicState([0]))*plus_state: 1/3,
+                          StateVector(BasicState([1]))*minus_state: 2/3})
+    dm = DensityMatrix.from_svd(svd)
+    dic = dm.measure([0])
+    p0, sub_dm_0 = dic[BasicState([0])]
+    p1, sub_dm_1 = dic[BasicState([1])]
+
+    assert p0 == pytest.approx(1/3)
+    assert p1 == pytest.approx(2/3)
+
+    assert sub_dm_0.mat.toarray() == pytest.approx(1/2*np.array([[1, 1, 0],
+                                                                 [1, 1, 0],
+                                                                 [0, 0, 0]]))
+
+    assert sub_dm_1.mat.toarray() == pytest.approx(1/2*np.array([[1, -1],
+                                                                 [-1, 1]]))
+
+    sv = BasicState([1, 1, 1, 1]) + BasicState([2, 0, 2, 0]) + BasicState([2, 0, 1, 1])
+    equivalent_dm = DensityMatrix.from_svd(sv)
+
+    measurements = sv.measure([0, 1])
+    measurements_dm = equivalent_dm.measure([0, 1])
+
+    assert len(measurements) == len(measurements_dm)
+
+    for state in measurements.keys():
+        p_sv, rstate = measurements[state]
+        p_dm, rdm = measurements_dm[state]
+
+        assert p_sv == pytest.approx(p_dm)
+
+        dm_comparison = DensityMatrix.from_svd(rstate, index=rdm.index)
+
+        assert dm_comparison.mat.toarray() == pytest.approx(rdm.mat.toarray())
+
+
+def test_measure_random():
+    dm = DensityMatrix.from_svd(SVDistribution({BasicState([1, 2, 2, 0]) + BasicState([0, 1, 1, 3]) + BasicState([4, 0, 0, 1]): 1/2,
+                                BasicState([1, 1, 0, 0]): 1/2 }))
+
+    for k in range(10):
+        measured_fs, remaining_dm = dm.measure(0, all_results=False)
+        assert measured_fs.n + remaining_dm.n_max == 5
