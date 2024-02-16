@@ -35,7 +35,8 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Processor, Circuit, PauliType, get_preparation_circuit
+from perceval.components import (catalog, Processor, Circuit, PauliType, get_preparation_circuit,
+                                 processor_circuit_configurator)
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
@@ -172,3 +173,19 @@ def test_matrix_basis_n_decomp():
         matrix_rebuilt += mu[idx]*basis_matrices
 
     assert np.allclose(matrix, matrix_rebuilt)
+
+
+def test_processor_circuit_configurator():
+
+    with pytest.raises(TypeError):
+        processor_circuit_configurator(Circuit(2), [PauliType.I, PauliType.I],
+                                       [PauliType.I, PauliType.I])
+
+    cnot = catalog["klm cnot"].build_processor()
+    with pytest.raises(TypeError):
+        processor_circuit_configurator(cnot, [1, 0],[1, 0])
+
+    configured_cnot = processor_circuit_configurator(cnot, [PauliType.I, PauliType.I],
+                                   [PauliType.I, PauliType.I])
+
+    assert isinstance(configured_cnot, Processor)

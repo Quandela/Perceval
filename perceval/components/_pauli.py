@@ -31,7 +31,9 @@ import numpy as np
 from enum import Enum
 from .linear_circuit import Circuit
 from .unitary_components import BS, PS, PERM
+from .processor import Processor
 from perceval.utils import Matrix
+from typing import List
 
 
 class PauliType(Enum):
@@ -102,3 +104,47 @@ def get_pauli_gate(pauli_type: PauliType):
         return Matrix([[1, 0], [0, -1]])
     else:
         raise NotImplementedError(f"{pauli_type}")
+
+
+def prep_state_circuit_preparer(prep_state_indices: List):
+    for i, pauli_type in enumerate(prep_state_indices):
+        yield i * 2, get_preparation_circuit(pauli_type)
+
+
+def meas_state_circuit_preparer(pauli_indices: List):
+    for i, pauli_type in enumerate(pauli_indices):
+        yield i*2, get_measurement_circuit(pauli_type)
+
+
+def processor_circuit_configurator(processor, prep_state_indices: list, meas_pauli_basis_indices: list):
+    """
+    Adds preparation and measurement circuit to input processor (with the gate operation under study) to configure
+    it for the tomography experiment
+    :param processor: Processor with input circuit on which Tomography is to be performed
+    :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
+    :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
+     circuit
+    :return: the configured processor to perform state tomography experiment
+    """
+    if not isinstance(processor, Processor):
+        raise TypeError(f"{processor} is not a Processor and hence cannot be configured")
+
+    if not (all(isinstance(p_index, PauliType) for p_index in prep_state_indices)
+            or all(isinstance(m_index, PauliType) for m_index in meas_pauli_basis_indices)):
+        raise TypeError(
+            f"Indices for the preparation and measurement circuits should be a PauliType")
+
+    p = processor.copy()
+    p.clear_input_and_circuit(processor.m)  # Clear processor content but keep its size
+
+    for c in prep_state_circuit_preparer(prep_state_indices):
+        p.add(*c)  # Add state preparation circuit to the left of the operator
+
+    p.add(0, processor)  # including the operator (as a processor)
+
+    for c in meas_state_circuit_preparer(meas_pauli_basis_indices):
+        p.add(*c)  # Add measurement basis circuit to the right of the operator
+
+    p.min_detected_photons_filter(0)  # QPU would have a problem with this
+
+    return p
