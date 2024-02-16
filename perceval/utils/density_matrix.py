@@ -377,17 +377,21 @@ class DensityMatrix:
             listed_fs[m] -= n_photon
         return BasicState(listed_fs)
 
-    def _construct_loss_operators(self, mode: int, p:float):
+    def _construct_loss_operators(self, mode: int, p: float):
         """
         Construct the kraus operators for a loss channel on specified modes
         """
-        operators = [dok_array(self.shape, dtype=float) for _ in range(self.size+1)]
+        operators = [dok_array(self.shape, dtype=float) for _ in range(self._n_max+1)]
 
+        # We separate the states depending on the number of lost photons
+        # Because there is no more coherence between those states
         for n_photon_loss in range(len(operators)):
             for state, idx in self.index.items():
                 n_photon = state[mode]
                 if n_photon >= n_photon_loss:
                     result_idx = self.index[self._get_annihilated_fockstate(state, mode, n_photon_loss)]
+
+                    #  Binomial probability, (comes from the simplification of the beam splitter action)
                     operators[n_photon_loss][result_idx, idx] += sqrt(comb(n_photon, n_photon_loss) *
                                                                       (1-p)**(n_photon-n_photon_loss) *
                                                                       p**n_photon_loss)
