@@ -3,6 +3,5 @@ pytest-cov
 pytest-benchmark
 flake8
 qiskit~=0.45.1
-qutip~=4.7.3
-scipy~=1.11.4
+qutip~=4.7.5
 myqlm~=1.9.5
