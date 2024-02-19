@@ -408,7 +408,7 @@ class Simulator(ISimulator):
         for row_idx, fs in enumerate(dm.reverse_index):
 
             vec = u_evolve_in_row[[row_idx]]
-            prob = abs(vec @ dm.mat @ vec.conj().T)
+            prob = abs((vec @ dm.mat @ vec.conj().T)[0, 0])
             if fs.n >= self._min_detected_photons:
                 res_bsd[fs] += prob
             else:

@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 from multipledispatch import dispatch
-from functools import wraps
 from zlib import compress as zlib_compress
 
 from ._matrix_serialization import serialize_matrix
@@ -36,7 +35,7 @@ from ._circuit_serialization import serialize_circuit
 from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
 from perceval.components import ACircuit
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
-    simple_float
+    simple_float, NoiseModel
 from base64 import b64encode
 import json
 
@@ -127,6 +126,13 @@ def serialize(obj, compress=True) -> str:
     tag = "BSSamples"
     compress = _handle_compress_parameter(compress, tag)
     return _handle_compression(f":PCVL:{tag}:" + serialize_bssamples(obj), do_compress=compress)
+
+
+@dispatch(NoiseModel, compress=(list, bool))
+def serialize(obj, compress=False):
+    tag = "NoiseModel"
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(f":PCVL:{tag}:" + json.dumps(obj.__dict__()), do_compress=compress)
 
 
 @dispatch(dict, compress=(list, bool))

@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 
-from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
+
+from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from perceval.utils.density_matrix_utils import array_to_statevector
 from typing import Union, Optional, Tuple
 from math import comb, sqrt
@@ -354,16 +355,22 @@ class DensityMatrix:
         """
 
         factor = self.mat.trace()
-        self.mat = (1/factor)*self.mat
 
-    def sample(self, count: int = 1):
+        if abs(factor-1) >= 1e-10:
+            self.mat = (1/factor)*self.mat
+
+    def sample(self, count: int = 1) -> BSSamples:
         """
         sample on the density matrix
         """
         self.normalize()
-        output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        samples = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        output = BSSamples()
+        for state in samples:
+            output.append(state)
         return output
 
+<<<<<<< HEAD
     @staticmethod
     def _get_annihilated_fockstate(fockstate, m, n_photon):
         """
@@ -420,6 +427,94 @@ class DensityMatrix:
         """
         for mode in modes:
             self.apply_loss(mode, prob)
+=======
+    def measure(self, modes: Union[list[int], int], all_results: bool = True):
+        """
+        makes a measure on a list of modes
+        :param modes: a list of integer for the modes you want to measure
+        :param all_results: whether you want a resulting mixed state or a simple sample
+        """
+        self.normalize()
+        if isinstance(modes, int):
+            modes = [modes]
+
+        if all_results:
+            projectors = self._construct_all_projectors(modes)
+            res = dict()  # result fo the form {measured FockState: (remaining density matrix, probability)
+            for key_fs, item_list in projectors.items():
+                basis = item_list[0]  # FockBasis of possible measurement
+                projector = item_list[1]
+                prob = item_list[2]
+                if prob != 0:
+                    collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
+                    resulting_dm = DensityMatrix(collapsed_dm, basis)
+                    resulting_dm.normalize()
+                    res[key_fs] = (prob, resulting_dm)
+            return res
+        else:
+            sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities
+            measure, remaining = self._divide_fock_state(sample, modes)
+            basis, proj = self._construct_projector_one_sample(modes, measure)
+            return measure, DensityMatrix(proj @ self.mat @ proj.T, basis)
+
+    def _construct_projector_one_sample(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
+        """
+        Construct the projection operator onto the subspace of some number photons on some mode
+        """
+        if len(modes) != fock_state.m:
+            raise ValueError(f"you can't have {fock_state} in  {len(modes)} number of modes")
+
+        basis = FockBasis(self.m-fock_state.m, self.n_max-fock_state.n)
+        projector = dok_array((len(basis), self.size), dtype=float)
+
+        for i, fs in enumerate(self.reverse_index):
+            meas_fs, remain_fs = self._divide_fock_state(fs, modes)
+            if meas_fs == fock_state:
+                projector[basis[remain_fs], i] = 1
+
+        return basis, projector
+
+    def _construct_all_projectors(self, modes: list[int]) -> dict:
+        """
+        construct all the projectors associated with some modes
+        :return: a dictionary with for each measured state a list [fock_basis, projector, probability]
+        """
+        modes = list(set(modes))
+        res = dict()
+        for nb_measured_photons in range(self.n_max+1):
+            # FockBasis for the remaining density matrices
+            remaining_basis = FockBasis(self.m - len(modes), self.n_max - nb_measured_photons)
+            for measured_fs in xq.FSArray(len(modes), nb_measured_photons):
+                # initialisation of the empty projectors
+                res[measured_fs] = [remaining_basis, dok_array((len(remaining_basis), self.size)), 0]
+
+        diag_coefs = self.mat.diagonal()
+
+        for i, fs in enumerate(self.reverse_index):  # construction of the projectors
+            prob = abs(diag_coefs[i])
+            measured_fs, remaining_fs = self._divide_fock_state(fs, modes)
+            remaining_basis = res[measured_fs][0]
+            new_basis_idx = remaining_basis[remaining_fs]
+            res[measured_fs][1][new_basis_idx, i] = 1
+            res[measured_fs][2] += prob
+
+        return res
+
+    @staticmethod
+    def _divide_fock_state(fs, modes):
+        """
+        divide a BasicState into two BasicStates
+        """
+        measured_fs = []
+        remaining_fs = []
+        for mode in range(fs.m):
+            if mode in modes:
+                measured_fs.append(fs[mode])
+            else:
+                remaining_fs.append(fs[mode])
+
+        return BasicState(measured_fs), BasicState(remaining_fs)
+>>>>>>> release/0.11.0
 
     def __str__(self):
         """

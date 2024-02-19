@@ -340,7 +340,9 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
 def pdisplay_density_matrix(dm,
                             output_format: Format = Format.MPLOT,
                             color: bool = True,
-                            cmap='hsv'):
+                            cmap='hsv',
+                            mplot_noshow: bool = False,
+                            mplot_savefig: str = None):
     """
     :param dm:
     :param output_format:
@@ -350,6 +352,8 @@ def pdisplay_density_matrix(dm,
 
     if output_format == Format.TEXT or output_format == Format.LATEX:
         raise TypeError(f"DensityMatrix plot does not support {output_format}")
+    fig = plt.figure()
+
     if color:
         img = _csr_to_rgb(dm.mat, cmap)
         plt.imshow(img)
@@ -361,7 +365,12 @@ def pdisplay_density_matrix(dm,
 
     plt.yticks(l1, l2)
     plt.xticks([])
-    plt.show()
+
+    if not mplot_noshow:
+        plt.show()
+    if mplot_savefig:
+        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
+        return ""
 
 
 @dispatch(object)
