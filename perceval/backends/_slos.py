@@ -118,13 +118,13 @@ class SLOSBackend(AProbAmpliBackend):
         return "SLOS"
 
     def _reset(self):
+        super()._reset()
         self._fsms = [[]]  # xq.FSMask
         self._fsas = {}  # xq.FSArray
         self._mk_l: List[int] = [1]
         self._path_roots: List[_Path] = []
         self._state_mapping: Dict[BasicState, _Path] = {}
         self._mask = None  # xq.FSMAsk
-        self._cache_iterator = dict()
 
     def _compute_path(self, umat):
         for path in self._path_roots:

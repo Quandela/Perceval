@@ -83,6 +83,15 @@ class AProbAmpliBackend(ABackend):
 
         return self._cache_iterator[n_photons]
 
+    def _reset(self):
+        self._cache_iterator = dict()
+
+    def set_circuit(self, circuit: ACircuit):
+        if self._circuit and circuit.m != self._circuit:
+            self._reset()
+        super().set_circuit(circuit)
+
+
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:
         pass
