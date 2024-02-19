@@ -239,6 +239,7 @@ def test_photon_loss():
     dm_test = DensityMatrix.from_svd(Source(.5).generate_distribution(BasicState([0, 1, 1])))
     dm_to_test = DensityMatrix.from_svd(Source(.5).generate_distribution(BasicState([1, 1])))
 
+    #  Beam splitter that has a chance 0.75 to make the photon switch its mode (model of a .75 loss probability)
     virtual_circuit = Circuit(3) // (0, Unitary(Matrix([[.5, .866025404],
                                                    [-.866025404, .5]])))
 
