@@ -83,12 +83,12 @@ class AProbAmpliBackend(ABackend):
 
         return self._cache_iterator[n_photons]
 
-    def _reset(self):
+    def clear_iterator_cache(self):
         self._cache_iterator = dict()
 
     def set_circuit(self, circuit: ACircuit):
         if self._circuit and circuit.m != self._circuit:
-            self._reset()
+            self.clear_iterator_cache()
         super().set_circuit(circuit)
 
 
