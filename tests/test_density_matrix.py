@@ -28,6 +28,8 @@
 # SOFTWARE.
 
 import math
+
+import perceval
 from perceval import (StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding,
                       Unitary, Circuit, SLOSBackend)
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
@@ -239,6 +241,7 @@ def test_photon_loss():
 
     virtual_circuit = Circuit(3) // (0, Unitary(Matrix([[.5, .866025404],
                                                    [-.866025404, .5]])))
+
     sim = Simulator(SLOSBackend())
     sim.set_circuit(virtual_circuit)
     out_svd = sim.evolve_density_matrix(dm_test)
@@ -246,5 +249,13 @@ def test_photon_loss():
 
     remaining_dm = sum([prob*dm for (prob, dm) in remaining_dms.values()])
 
-    assert remaining_dms.n_max == 2
-    assert remaining_dms.m == 2
+    assert remaining_dm.n_max == 2
+    assert remaining_dm.m == 2
+
+    dm_to_test.apply_loss(0, .75)
+
+    assert dm_to_test.n_max == 2
+    assert dm_to_test.m == 2
+
+    assert remaining_dm.size == dm_to_test.size
+    assert remaining_dm.mat.toarray() == pytest.approx(dm_to_test.mat.toarray())
