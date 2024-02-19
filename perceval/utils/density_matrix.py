@@ -284,6 +284,16 @@ class DensityMatrix:
         else:  # if the matrix is large: sparse eigsh method
             return self._to_svd_large(threshold, batch_size)
 
+    def __radd__(self, other):
+        """
+        Method used to be compatible with the sum build-in function of python
+        """
+
+        if other == 0:
+            return self
+        else:
+            raise TypeError("You can only add a Density Matrix to a Density Matrix")
+
     def __add__(self, other):
         """
         add two density Matrices together
