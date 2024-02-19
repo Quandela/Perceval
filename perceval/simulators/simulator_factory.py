@@ -41,7 +41,7 @@ from typing import List, Union
 
 class SimulatorFactory:
     """
-    Using the SimulatorFactory is an easy and integrated way of instanciating the correct layers of simulation for a
+    Using the SimulatorFactory is an easy and integrated way of instantiating the correct layers of simulation for a
     given circuit. The factory will adapt to the component needs, in terms of simulation, and chain the correct
     simulator calls.
     """

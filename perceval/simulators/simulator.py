@@ -103,7 +103,7 @@ class Simulator(ISimulator):
     def logical_perf(self):
         return self._logical_perf
 
-    def set_postselection(self, postselect: PostSelect = None, ):
+    def set_postselection(self, postselect: PostSelect):
         """Set a post-selection function
 
         :param postselect: a PostSelect object
