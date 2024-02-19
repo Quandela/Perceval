@@ -204,3 +204,16 @@ results in the mixed state ``1/2|0,1><0,1|+1/4(1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1>)(
 
 .. WARNING::
     The ``BSDistribution``, ``SVDistribution`` and ``BSCount`` classes inherits from dictionnaries. Thus they are not ordered data structures and must NOT be indexed with integers.
+
+Density Matrices
+----------------
+
+An other way of dealing with mixed states is to use the Density Matrices formalism. You can create a density matrix from
+any 2-D array-like object and a mapping between the ``BasicStates`` and the indices of your array. Otherwise you can give a number of modes and photons
+and a mapping will be generated according to the ``FockBasis`` object. The easiest way to generate Density matrices remains to give any other quantum state
+class instance to the method ``from_svd()``.
+
+Many of the above methods extends to Density Matrices, such as sample and measure. This class is also suited for non unitary evolution of the state.
+For example, the ``apply_loss`` method is already build-in to simulate photon loss in several modes.
+
+The ``pdisplay()`` function also allows to easily see the cohérence of your state by highlighting the non diagonal coefficients.
