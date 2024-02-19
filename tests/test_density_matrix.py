@@ -216,6 +216,7 @@ def test_measure_random():
         measured_fs, remaining_dm = dm.measure(0, all_results=False)
         assert measured_fs.n + remaining_dm.n_max == 5
 
+
 def test_photon_loss():
 
     dm = DensityMatrix.from_svd(BasicState([5]))
