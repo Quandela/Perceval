@@ -277,3 +277,14 @@ def test_backend_mps_n_mode_perm_decomp():
     check_output_distribution(backend, BasicState("|1,0,1>"),
                               {BasicState("|0,2,0>"): 0.5,
                                BasicState("|0,0,2>"): 0.5})
+
+
+def test_probampli_iterator_cache():
+    backends = [SLOSBackend(), MPSBackend(), NaiveBackend()]
+    for b in backends:
+        b.set_circuit(Circuit(5).add(0, BS.H()))
+        b.set_input_state(BasicState([1, 1, 0, 0, 0]))
+        b.evolve()
+        assert len(b._cache_iterator) != 0
+        b.set_circuit(Circuit(7).add(3, BS.H()))
+        assert len(b._cache_iterator) == 0
