@@ -213,7 +213,8 @@ any 2-D array-like object and a mapping between the ``BasicStates`` and the indi
 and a mapping will be generated according to the ``FockBasis`` object. The easiest way to generate Density matrices remains to give any other quantum state
 class instance to the method ``from_svd()``.
 
-Many of the above methods extends to Density Matrices, such as sample and measure. This class is also suited for non unitary evolution of the state.
-For example, the ``apply_loss`` method is already build-in to simulate photon loss in several modes.
+Many of the above methods extends to Density Matrices, such as ``sample`` and ``measure``. This class is also suited for non unitary evolution of the state.
+For example, the ``apply_loss`` method is already build-in to simulate the probabilistic loss of photons. It is also handled by the simulator for unitary evolutions
+with the method ``evolve_density_matrix``.
 
-The ``pdisplay()`` function also allows to easily see the cohérence of your state by highlighting the non diagonal coefficients.
+The ``pdisplay()`` function also allows to easily see the coherence of your state by highlighting the non diagonal coefficients.
