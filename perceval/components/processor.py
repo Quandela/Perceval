@@ -30,8 +30,8 @@ from numpy import Inf
 
 from .abstract_processor import AProcessor, ProcessorType
 from .source import Source
-from .linear_circuit import ACircuit
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState
+from .linear_circuit import ACircuit, Circuit
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState, NoiseModel
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 from multipledispatch import dispatch
@@ -53,27 +53,50 @@ class Processor(AProcessor):
         >>> p = Processor("SLOS", BS() // PS() // BS())
 
     :param source: the Source used by the processor (defaults to perfect source)
+    :param noise: a NoiseModel containing noise parameters (defaults to no noise)
+                  Note: source and noise are mutually exclusive
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = Source(),
-                 name: str = None):
+    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = None,
+                 noise: NoiseModel = None, name: str = "Local processor"):
         super().__init__()
-        self._source = source
-        self.name = "Local processor" if name is None else name
+        self._init_backend(backend)
+        self._init_circuit(m_circuit)
+        self._init_noise(source, noise)
+        self.name = name
+        self._inputs_map: Union[SVDistribution, None] = None
+        self._simulator = None
 
+    def _init_noise(self, source: Source, noise: NoiseModel):
+        # Default = perfect simulation
+        self._phase_quantization = 0
+        self._source = Source()
+
+        # Backward compatibility case: the user passes a Source
+        if source is not None:
+            # If he also passed noise parameters: conflict between noise parameters => raise an exception
+            if noise is not None:
+                raise ValueError("Both 'source' and 'noise' parameters were set. You should only input a NoiseModel")
+            self._source = source
+
+        # The user passes a NoiseModel
+        elif noise is not None:
+            self._source = Source.from_noise_model(noise)
+            self._phase_quantization = noise.phase_imprecision
+
+    def _init_circuit(self, m_circuit):
         if isinstance(m_circuit, ACircuit):
             self._n_moi = m_circuit.m
             self.add(0, m_circuit)
         else:
             self._n_moi = m_circuit  # number of modes of interest (MOI)
 
-        self._inputs_map: Union[SVDistribution, None] = None
+    def _init_backend(self, backend):
         if isinstance(backend, str):
             assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
             self.backend = BACKEND_LIST[backend]()
         else:
             self.backend = backend
-        self._simulator = None
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -187,6 +210,18 @@ class Processor(AProcessor):
             modes_with_photons = len([n for n in output_state if n > 0])
             return modes_with_photons >= self._min_detected_photons
         return output_state.n >= self._min_detected_photons
+
+    def linear_circuit(self, flatten: bool = False) -> Circuit:
+        circuit = super().linear_circuit(flatten)
+        if not self._phase_quantization:
+            return circuit
+        # Apply phase quantization noise on all phase parameters in the circuit
+        for _, component in circuit:
+            if "phi" in component.params:
+                phi_param = component.param("phi")
+                phi_param.set_value(self._phase_quantization * round(float(phi_param) / self._phase_quantization),
+                                    force=True)
+        return circuit
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> Dict:
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"

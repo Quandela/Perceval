@@ -29,7 +29,7 @@
 
 import math
 
-from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations
+from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel
 from typing import Dict, List, Union
 
 
@@ -73,6 +73,14 @@ class Source:
         self._context = context or {}
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 0
+
+    @staticmethod
+    def from_noise_model(noise: NoiseModel):
+        return Source(emission_probability=noise.brightness,
+                      multiphoton_component=noise.g2,
+                      indistinguishability=noise.indistinguishability,
+                      losses=1 - noise.transmittance,
+                      multiphoton_model="distinguishable" if noise.g2_distinguishable else "indistinguishable")
 
     def get_tag(self, tag, add=False):
         if add:
