@@ -30,7 +30,7 @@
 import pytest
 
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
-from perceval.utils import BasicState, StateVector, SVDistribution, Encoding
+from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
 
@@ -222,3 +222,19 @@ def test_add_remove_ports():
     for i in range(6):
         assert processor.get_input_port(i) is None
         assert processor.get_output_port(i) is None
+
+
+def test_phase_quantization():
+    nm = NoiseModel(phase_imprecision=0.1)
+    p0 = Processor("SLOS", catalog["mzi phase first"].build_circuit(phi_a=0.596898191919898198,
+                                                                    phi_b=0.16561561651616))
+    p1 = Processor("SLOS", catalog["mzi phase first"].build_circuit(phi_a=0.596898191919898198,
+                                                                    phi_b=0.16561561651616), noise=nm)
+    p2 = Processor("SLOS", catalog["mzi phase first"].build_circuit(phi_a=0.6,
+                                                                    phi_b=0.2))
+
+    p0.with_input(BasicState([1, 1]))
+    p1.with_input(BasicState([1, 1]))
+    p2.with_input(BasicState([1, 1]))
+    assert p0.probs()["results"] != p1.probs()["results"]
+    assert p1.probs()["results"] == p2.probs()["results"]

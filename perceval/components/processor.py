@@ -59,7 +59,7 @@ class Processor(AProcessor):
     """
     def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
-        super().__init__()
+        super().__init__(noise)
         self._init_backend(backend)
         self._init_circuit(m_circuit)
         self._init_noise(source, noise)

@@ -42,7 +42,7 @@ from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
-from perceval.utils import LogicalState
+from perceval.utils import LogicalState, NoiseModel
 
 
 class ProcessorType(Enum):
@@ -51,13 +51,15 @@ class ProcessorType(Enum):
 
 
 class AProcessor(ABC):
-    def __init__(self):
+    def __init__(self, noise_model: NoiseModel = NoiseModel()):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict = {}
+        self._parameters: Dict[str, Any] = {}
+
+        self._noise: NoiseModel = noise_model
 
         self._thresholded_output: bool = False
-        self._min_detected_photons = None
+        self._min_detected_photons: Union[int, None] = None
 
         self._reset_circuit()
 
