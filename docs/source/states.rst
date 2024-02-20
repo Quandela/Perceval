@@ -217,4 +217,9 @@ Many of the above methods extends to Density Matrices, such as ``sample`` and ``
 For example, the ``apply_loss`` method is already build-in to simulate the probabilistic loss of photons. It is also handled by the simulator for unitary evolutions
 with the method ``evolve_density_matrix``.
 
-The ``pdisplay()`` function also allows to easily see the coherence of your state by highlighting the non diagonal coefficients.
+The ``pdisplay()`` function also allows to easily see the coherence of your state by highlighting the non diagonal coefficients. For exemple, here is the density resulting matrix
+when we try to create a bell state with a Post-Selected CNOT, with a noisy source:
+
+.. figure:: _static/img/bell.svg
+   :scale: 10 %
+   :align: center
