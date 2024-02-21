@@ -46,7 +46,8 @@ class PauliType(Enum):
 
 def get_preparation_circuit(pauli_type: PauliType) -> Circuit:
     """
-    Create a LO circuit corresponding to one of the Pauli operators (I,X,Y,Z)
+    Create a LO circuit corresponding to one of the Pauli operators (I,X,Y,Z).
+    Equivalent to a 1-qubit Pauli Gate with Dual rail encoding.
 
     :param pauli_type: PauliType
     :return: 2 mode perceval circuit
@@ -67,7 +68,8 @@ def get_preparation_circuit(pauli_type: PauliType) -> Circuit:
 
 def get_measurement_circuit(pauli_type: PauliType) -> Circuit:
     """
-    Prepares 1 qubit circuits to measure a photon in the pauli basis I,X,Y,Z
+    Creates LO circuits to measure logical state in the pauli basis I,X,Y,Z.
+    Equivalent to measuring eigenstates of the 1-qubit Pauli gates
 
     :param pauli_type: PauliType
     :return: a 2-modes circuit
@@ -88,8 +90,7 @@ def get_measurement_circuit(pauli_type: PauliType) -> Circuit:
 
 def get_pauli_gate(pauli_type: PauliType):
     """
-    Computes one of the Pauli operators (I,X,Y,Z).
-    They are also the gate matrix
+    Computes the gate matrices of the Pauli operators (I,X,Y,Z).
 
     :param pauli_type: PauliType
     :return: 2x2 unitary and hermitian array
@@ -106,20 +107,20 @@ def get_pauli_gate(pauli_type: PauliType):
         raise NotImplementedError(f"{pauli_type}")
 
 
-def prep_state_circuit_preparer(prep_state_indices: List):
+def _prep_state_circuit_preparer(prep_state_indices: List):
     """
-    Builds preparation circuits to prepare an input photon in each of the following
-    logical qubit state states: |0>,|1>,|+>,|+i> using Pauli Gates.
+    Generates a layer of state preparation circuits (essentially 1-qubit pauli gates) for each qubit.
+    The logical qubit state prepared will be one of the list: |0>,|1>,|+>,|+i> using Pauli Gates.
     :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
     """
     for i, pauli_type in enumerate(prep_state_indices):
         yield i * 2, get_preparation_circuit(pauli_type)
 
 
-def meas_state_circuit_preparer(pauli_indices: List):
+def _meas_state_circuit_preparer(pauli_indices: List):
     """
-    Builds a measurement circuit to measure photons created in the Pauli Basis (I,X,Y,Z) to perform
-    tomography experiments.
+    Generates a layer of state measurement circuits (essentially measuring eigenstates of one of the pauli gates)
+     for each qubit.
     :param pauli_indices: List of 'n'(=nqubit) indices to choose a circuit to measure the prepared state at nth qubit
     """
     for i, pauli_type in enumerate(pauli_indices):
@@ -147,12 +148,12 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
     p = processor.copy()
     p.clear_input_and_circuit(processor.m)  # Clear processor content but keep its size
 
-    for c in prep_state_circuit_preparer(prep_state_indices):
+    for c in _prep_state_circuit_preparer(prep_state_indices):
         p.add(*c)  # Add state preparation circuit to the left of the operator
 
     p.add(0, processor)  # including the operator (as a processor)
 
-    for c in meas_state_circuit_preparer(meas_pauli_basis_indices):
+    for c in _meas_state_circuit_preparer(meas_pauli_basis_indices):
         p.add(*c)  # Add measurement basis circuit to the right of the operator
 
     p.min_detected_photons_filter(0)  # QPU would have a problem with this
