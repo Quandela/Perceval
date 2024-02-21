@@ -503,29 +503,27 @@ class DensityMatrix:
                                                                       p**n_photon_loss)
         return operators
 
-    @dispatch(int, float)
-    def apply_loss(self, mode: int, prob: float):
+    def apply_loss(self, modes: Union[int, list], prob: float):
         """
         Apply a loss on some mode according to some probability of losing a photon
         Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
 
-        :param mode: the mode were you want to simulate a loss
+        :param modes: the mode were you want to simulate a loss
         :param prob: the probability to lose a photon
         """
+        self._apply_loss(modes, prob)
+
+    @dispatch(int, float)
+    def _apply_loss(self, mode: int, prob: float):
+
         matrix_after_loss = csr_array(self.shape, dtype=complex)
         for operator in self._construct_loss_operators(mode, prob):
             matrix_after_loss += operator @ self.mat @ operator.T
         self.mat = matrix_after_loss
 
     @dispatch(list, float)
-    def apply_loss(self, modes: list, prob: float):
-        """
-        Apply a loss on some modes according to some probability of losing a photon
-        Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
+    def _apply_loss(self, modes: list, prob: float):
 
-        :param modes: the mode were you want to simulate a loss
-        :param prob: the probability to lose a photon
-        """
         for mode in modes:
             self.apply_loss(mode, prob)
 
