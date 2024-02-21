@@ -26,7 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval import StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding
+
+import math
+
+import perceval
+from perceval import (StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding,
+                      Unitary, Circuit, SLOSBackend)
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
 from perceval.utils.density_matrix_utils import *
 import numpy as np
@@ -213,3 +218,45 @@ def test_measure_random():
     for k in range(10):
         measured_fs, remaining_dm = dm.measure(0, all_results=False)
         assert measured_fs.n + remaining_dm.n_max == 5
+
+
+def test_photon_loss():
+
+    dm = DensityMatrix.from_svd(BasicState([5]))
+    dm.apply_loss(0, .5)
+
+    assert dm.mat.trace() == pytest.approx(1)
+
+    for k in range(6):
+        assert dm[BasicState([k]), BasicState([k])] == pytest.approx(math.comb(5, k) * (1/2)**5)
+
+    sv = BasicState([2, 1, 0]) + BasicState([1, 3, 2]) + BasicState([0, 0, 1])
+    dm = DensityMatrix.from_svd(sv)
+    dm.apply_loss([0, 1], .2)
+
+    assert dm.mat.trace() == pytest.approx(1)
+
+    dm_test = DensityMatrix.from_svd(Source(.5).generate_distribution(BasicState([0, 1, 1])))
+    dm_to_test = DensityMatrix.from_svd(Source(.5).generate_distribution(BasicState([1, 1])))
+
+    #  Beam splitter that has a chance 0.75 to make the photon switch its mode (model of a .75 loss probability)
+    virtual_circuit = Circuit(3) // (0, Unitary(Matrix([[.5, .866025404],
+                                                   [-.866025404, .5]])))
+
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(virtual_circuit)
+    out_svd = sim.evolve_density_matrix(dm_test)
+    remaining_dms = out_svd.measure(0)
+
+    remaining_dm = sum([prob*dm for (prob, dm) in remaining_dms.values()])
+
+    assert remaining_dm.n_max == 2
+    assert remaining_dm.m == 2
+
+    dm_to_test.apply_loss(0, .75)
+
+    assert dm_to_test.n_max == 2
+    assert dm_to_test.m == 2
+
+    assert remaining_dm.size == dm_to_test.size
+    assert remaining_dm.mat.toarray() == pytest.approx(dm_to_test.mat.toarray())

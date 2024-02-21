@@ -269,19 +269,15 @@ class Processor(AProcessor):
         if precision is not None:
             self._simulator.set_precision(precision)
         res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
-        lperf = 1
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
-            if not self._state_selected_physical(state):
-                pperf -= prob
-                continue
-            if self._state_selected(state):
+            if self._state_selected_physical(state):
                 postprocessed_res[self.postprocess_output(state)] += prob
             else:
-                lperf -= prob
+                pperf -= prob
+
         postprocessed_res.normalize()
-        res['logical_perf'] = res['logical_perf']*lperf if 'logical_perf' in res else lperf
         res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
         res['results'] = postprocessed_res
         return res
