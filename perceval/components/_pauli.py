@@ -107,11 +107,21 @@ def get_pauli_gate(pauli_type: PauliType):
 
 
 def prep_state_circuit_preparer(prep_state_indices: List):
+    """
+    Builds preparation circuits to prepare an input photon in each of the following
+    logical qubit state states: |0>,|1>,|+>,|+i> using Pauli Gates.
+    :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
+    """
     for i, pauli_type in enumerate(prep_state_indices):
         yield i * 2, get_preparation_circuit(pauli_type)
 
 
 def meas_state_circuit_preparer(pauli_indices: List):
+    """
+    Builds a measurement circuit to measure photons created in the Pauli Basis (I,X,Y,Z) to perform
+    tomography experiments.
+    :param pauli_indices: List of 'n'(=nqubit) indices to choose a circuit to measure the prepared state at nth qubit
+    """
     for i, pauli_type in enumerate(pauli_indices):
         yield i*2, get_measurement_circuit(pauli_type)
 
