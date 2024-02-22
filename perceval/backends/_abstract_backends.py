@@ -70,6 +70,28 @@ class ASamplingBackend(ABackend):
 
 
 class AProbAmpliBackend(ABackend):
+
+    def __init__(self):
+        super().__init__()
+        self._cache_iterator = dict()
+
+    def _get_iterator(self, input_state: BasicState, mask=None):
+        n_photons = input_state.n
+
+        if n_photons not in self._cache_iterator.keys():
+            self._cache_iterator[n_photons] = list(allstate_iterator(input_state, mask))
+
+        return self._cache_iterator[n_photons]
+
+    def clear_iterator_cache(self):
+        self._cache_iterator = dict()
+
+    def set_circuit(self, circuit: ACircuit):
+        if self._circuit and circuit.m != self._circuit:
+            self.clear_iterator_cache()
+        super().set_circuit(circuit)
+
+
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:
         pass
@@ -79,13 +101,13 @@ class AProbAmpliBackend(ABackend):
 
     def prob_distribution(self) -> BSDistribution:
         bsd = BSDistribution()
-        for output_state in allstate_iterator(self._input_state):
+        for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
     def evolve(self) -> StateVector:
         res = StateVector()
-        for output_state in allstate_iterator(self._input_state):
+        for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
         res.normalize()
         return res

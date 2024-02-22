@@ -28,10 +28,11 @@
 # SOFTWARE.
 
 
-from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator
+
+from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from perceval.utils.density_matrix_utils import array_to_statevector
 from typing import Union, Optional, Tuple
-from math import comb
+from math import comb, sqrt
 from numpy import conj
 import numpy as np
 from scipy.sparse import dok_array, sparray, csr_array, kron
@@ -40,6 +41,7 @@ from scipy.linalg import eigh
 from copy import copy
 import random
 import exqalibur as xq
+from multipledispatch import dispatch
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
@@ -282,6 +284,16 @@ class DensityMatrix:
         else:  # if the matrix is large: sparse eigsh method
             return self._to_svd_large(threshold, batch_size)
 
+    def __radd__(self, other):
+        """
+        Method used to be compatible with the sum build-in function of python
+        """
+
+        if other == 0:
+            return self
+        else:
+            raise TypeError("You can only add a Density Matrix to a Density Matrix")
+
     def __add__(self, other):
         """
         add two density Matrices together
@@ -353,15 +365,164 @@ class DensityMatrix:
         """
 
         factor = self.mat.trace()
-        self.mat = (1/factor)*self.mat
 
-    def sample(self, count: int = 1):
+        if abs(factor-1) >= 1e-10:
+            self.mat = (1/factor)*self.mat
+
+    def sample(self, count: int = 1) -> BSSamples:
         """
         sample on the density matrix
         """
         self.normalize()
-        output = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        samples = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        output = BSSamples()
+        for state in samples:
+            output.append(state)
         return output
+
+    def measure(self, modes: Union[list[int], int], all_results: bool = True):
+        """
+        makes a measure on a list of modes
+        :param modes: a list of integer for the modes you want to measure
+        :param all_results: whether you want a resulting mixed state or a simple sample
+        """
+        self.normalize()
+        if isinstance(modes, int):
+            modes = [modes]
+
+        if all_results:
+            projectors = self._construct_all_projectors(modes)
+            res = dict()  # result fo the form {measured FockState: (remaining density matrix, probability)
+            for key_fs, item_list in projectors.items():
+                basis = item_list[0]  # FockBasis of possible measurement
+                projector = item_list[1]
+                prob = item_list[2]
+                if prob != 0:
+                    collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
+                    resulting_dm = DensityMatrix(collapsed_dm, basis)
+                    resulting_dm.normalize()
+                    res[key_fs] = (prob, resulting_dm)
+            return res
+        else:
+            sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities
+            measure, remaining = self._divide_fock_state(sample, modes)
+            basis, proj = self._construct_projector_one_sample(modes, measure)
+            return measure, DensityMatrix(proj @ self.mat @ proj.T, basis)
+
+    def _construct_projector_one_sample(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
+        """
+        Construct the projection operator onto the subspace of some number photons on some mode
+        """
+        if len(modes) != fock_state.m:
+            raise ValueError(f"you can't have {fock_state} in  {len(modes)} number of modes")
+
+        basis = FockBasis(self.m-fock_state.m, self.n_max-fock_state.n)
+        projector = dok_array((len(basis), self.size), dtype=float)
+
+        for i, fs in enumerate(self.reverse_index):
+            meas_fs, remain_fs = self._divide_fock_state(fs, modes)
+            if meas_fs == fock_state:
+                projector[basis[remain_fs], i] = 1
+
+        return basis, projector
+
+    def _construct_all_projectors(self, modes: list[int]) -> dict:
+        """
+        construct all the projectors associated with some modes
+        :return: a dictionary with for each measured state a list [fock_basis, projector, probability]
+        """
+        modes = list(set(modes))
+        res = dict()
+        for nb_measured_photons in range(self.n_max+1):
+            # FockBasis for the remaining density matrices
+            remaining_basis = FockBasis(self.m - len(modes), self.n_max - nb_measured_photons)
+            for measured_fs in xq.FSArray(len(modes), nb_measured_photons):
+                # initialisation of the empty projectors
+                res[measured_fs] = [remaining_basis, dok_array((len(remaining_basis), self.size)), 0]
+
+        diag_coefs = self.mat.diagonal()
+
+        for i, fs in enumerate(self.reverse_index):  # construction of the projectors
+            prob = abs(diag_coefs[i])
+            measured_fs, remaining_fs = self._divide_fock_state(fs, modes)
+            remaining_basis = res[measured_fs][0]
+            new_basis_idx = remaining_basis[remaining_fs]
+            res[measured_fs][1][new_basis_idx, i] = 1
+            res[measured_fs][2] += prob
+
+        return res
+
+    @staticmethod
+    def _divide_fock_state(fs, modes):
+        """
+        divide a BasicState into two BasicStates
+        """
+        measured_fs = []
+        remaining_fs = []
+        for mode in range(fs.m):
+            if mode in modes:
+                measured_fs.append(fs[mode])
+            else:
+                remaining_fs.append(fs[mode])
+
+        return BasicState(measured_fs), BasicState(remaining_fs)
+
+    @staticmethod
+    def _get_annihilated_fockstate(fockstate, m, n_photon):
+        """
+        give the fockstate after loss of n_photon in the mode m
+        """
+
+        listed_fs = list(fockstate)
+        if listed_fs[m] <= n_photon:
+            listed_fs[m] = 0
+        else:
+            listed_fs[m] -= n_photon
+        return BasicState(listed_fs)
+
+    def _construct_loss_operators(self, mode: int, p: float):
+        """
+        Construct the kraus operators for a loss channel on specified modes
+        """
+        operators = [dok_array(self.shape, dtype=float) for _ in range(self._n_max+1)]
+
+        # We separate the states depending on the number of lost photons
+        # Because there is no more coherence between those states
+        for n_photon_loss in range(len(operators)):
+            for state, idx in self.index.items():
+                n_photon = state[mode]
+                if n_photon >= n_photon_loss:
+                    result_idx = self.index[self._get_annihilated_fockstate(state, mode, n_photon_loss)]
+
+                    #  Binomial probability, (comes from the simplification of the beam splitter action)
+                    operators[n_photon_loss][result_idx, idx] += sqrt(comb(n_photon, n_photon_loss) *
+                                                                      (1-p)**(n_photon-n_photon_loss) *
+                                                                      p**n_photon_loss)
+        return operators
+
+    @dispatch(int, float)
+    def apply_loss(self, mode: int, prob: float):
+        """
+        Apply a loss on some mode according to some probability of losing a photon
+        Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
+        :param mode: the mode were you want to simulate a loss
+        :param prob: the probability to lose a photon
+        """
+        matrix_after_loss = csr_array(self.shape, dtype=complex)
+        for operator in self._construct_loss_operators(mode, prob):
+            matrix_after_loss += operator @ self.mat @ operator.T
+        self.mat = matrix_after_loss
+
+    @dispatch(list, float)
+    def apply_loss(self, modes: list, prob: float):
+        """
+        Apply a loss on some modes according to some probability of losing a photon
+        Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
+        :param modes: the mode were you want to simulate a loss
+        :param prob: the probability to lose a photon
+        """
+        for mode in modes:
+            self.apply_loss(mode, prob)
 
     def __str__(self):
         """

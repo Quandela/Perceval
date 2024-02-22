@@ -142,6 +142,10 @@ def test_sampler_iterator(backend_name):
     sampler.add_iteration_list(iteration_list)
     rl = sampler.probs()['results_list']
     assert len(rl) == len(iteration_list)
+    for i in range(len(iteration_list)):
+        assert "results" in rl[i]
+        assert "iteration" in rl[i]
+        assert rl[i]["iteration"] == iteration_list[i]
     # Test that the results changes given the iteration parameters (avoid Clifford as sampling adds randomness)
     if backend_name == "SLOS":
         assert rl[0]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.7701511529340699)
