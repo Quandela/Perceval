@@ -93,8 +93,8 @@ def density_matrix_tensor_product(A, B):
     new_index = FockBasis(n_mode, n_max)
     matrix = kron(A.mat, B.mat)
     perm = dok_array((A.size*B.size, size), dtype=complex)  # matrix from tensor space to complete Fock space
-    for i, a_state in enumerate(A.reverse_index):
-        for j, b_state in enumerate(B.reverse_index):
+    for i, a_state in enumerate(A.inverse_index):
+        for j, b_state in enumerate(B.inverse_index):
             index = new_index[a_state*b_state]
             perm[i*B.size+j, index] = 1
 
@@ -147,7 +147,7 @@ class DensityMatrix:
         self._n_max = index.n_max
 
         self.index = dict()
-        self.reverse_index = []  # TODO : rename
+        self.inverse_index = []
         self.set_index(index)  # index construction
 
 
@@ -192,14 +192,14 @@ class DensityMatrix:
             k = 0
             for key in max_photon_state_iterator(self._m, self._n_max):
                 self.index[key] = k
-                self.reverse_index.append(key)
+                self.inverse_index.append(key)
                 k += 1
         else:
             if len(index) == self._size:
                 self.index = index
-                self.reverse_index = [None]*self._size
+                self.inverse_index = [None]*self._size
                 for key in index.keys():
-                    self.reverse_index[index[key]] = key
+                    self.inverse_index[index[key]] = key
             else:
                 raise ValueError("the index size does not match the matrix size")
 
@@ -247,7 +247,7 @@ class DensityMatrix:
         w, v = eigh(matrix)
         dic = {}
         for k in range(w.shape[0]):
-            sv = array_to_statevector(v[:, k], self.reverse_index)
+            sv = array_to_statevector(v[:, k], self.inverse_index)
             if w[k] > threshold:
                 dic[sv] = w[k]
         return SVDistribution(dic)
@@ -266,7 +266,7 @@ class DensityMatrix:
             if val[i] >= threshold:
                 sv = StateVector()
                 for j in range(len(vec)):
-                    sv += complex(vec[j][i]) * self.reverse_index[j]
+                    sv += complex(vec[j][i]) * self.inverse_index[j]
                 sv.normalize()
                 if sv.m != 0:
                     dic[sv] = val[i]
@@ -380,7 +380,7 @@ class DensityMatrix:
         sample on the density matrix
         """
         self.normalize()
-        samples = random.choices(self.reverse_index, list(self.mat.diagonal()), k=count)
+        samples = random.choices(self.inverse_index, list(self.mat.diagonal()), k=count)
         output = BSSamples()
         for state in samples:
             output.append(state)
@@ -425,7 +425,7 @@ class DensityMatrix:
         basis = FockBasis(self.m-fock_state.m, self.n_max-fock_state.n)
         projector = dok_array((len(basis), self.size), dtype=float)
 
-        for i, fs in enumerate(self.reverse_index):
+        for i, fs in enumerate(self.inverse_index):
             meas_fs, remain_fs = self._divide_fock_state(fs, modes)
             if meas_fs == fock_state:
                 projector[basis[remain_fs], i] = 1
@@ -448,7 +448,7 @@ class DensityMatrix:
 
         diag_coefs = self.mat.diagonal()
 
-        for i, fs in enumerate(self.reverse_index):  # construction of the projectors
+        for i, fs in enumerate(self.inverse_index):  # construction of the projectors
             prob = abs(diag_coefs[i])
             measured_fs, remaining_fs = self._divide_fock_state(fs, modes)
             remaining_basis = res[measured_fs][0]
@@ -541,8 +541,8 @@ class DensityMatrix:
                     continue
                 else:
                     new_term = (f"{self.mat[i, j]:.2f}*" +
-                                str(self.reverse_index[j]) +
-                                self._bra_str(self.reverse_index[i]) +
+                                str(self.inverse_index[j]) +
+                                self._bra_str(self.inverse_index[i]) +
                                 "+")
                     string += new_term
 

@@ -402,7 +402,7 @@ class Simulator(ISimulator):
         u_evolve_in_row = csr_array(u_evolve)
         res_bsd = BSDistribution()
 
-        for row_idx, fs in enumerate(dm.reverse_index):
+        for row_idx, fs in enumerate(dm.inverse_index):
 
             vec = u_evolve_in_row[[row_idx]]
             prob = abs((vec @ dm.mat @ vec.conj().T)[0, 0])
@@ -520,7 +520,7 @@ class Simulator(ISimulator):
         u_evolve_indices = []
         u_evolve_indptr = [0]
         nnz_count = 0
-        for i, fs in enumerate(dm.reverse_index):
+        for i, fs in enumerate(dm.inverse_index):
             if fs in input_list:
                 self._backend.set_input_state(fs)
                 output_sv = self._backend.evolve()
@@ -545,5 +545,5 @@ class Simulator(ISimulator):
         input_list = []
         for k in range(dm.size):
             if dm.mat[k, k] != 0:
-                input_list.append(dm.reverse_index[k])
+                input_list.append(dm.inverse_index[k])
         return input_list
