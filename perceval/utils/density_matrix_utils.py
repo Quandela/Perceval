@@ -31,6 +31,8 @@ from perceval.utils.statevector import StateVector
 from typing import Union
 import numpy as np
 from scipy.sparse import sparray, csr_array
+from pytest import approx
+
 
 
 
