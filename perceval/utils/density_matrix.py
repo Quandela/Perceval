@@ -113,7 +113,8 @@ class DensityMatrix:
                  index: Optional[FockBasis] = None,
                  m: Optional[int] = None,
                  n_max: Optional[int] = None,
-                 check_hermitian: bool = True):
+                 check_hermitian: bool = True,
+                 precision: bool = 1e-6):
         """
         Constructor for the DensityMatrix Class
 
@@ -145,11 +146,11 @@ class DensityMatrix:
         self._size = self.mat.shape[0]
         self._m = index.m
         self._n_max = index.n_max
+        self.precision = precision
 
         self.index = dict()
         self.inverse_index = []
         self.set_index(index)  # index construction
-
 
     @staticmethod
     def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
@@ -274,7 +275,7 @@ class DensityMatrix:
                 continue
         return SVDistribution(dic)
 
-    def to_svd(self, threshold: float = 1e-8, batch_size: int = 1):
+    def to_svd(self, threshold: Optional[float] = None, batch_size: int = 1):
         """
             gives back an SVDistribution from the density_matrix
             :param threshold: the threshold when the search for eigen values is stopped
@@ -283,6 +284,9 @@ class DensityMatrix:
             :return: The SVD object corresponding to the DensityMatrix.
                 The StateVector with probability < threshold are removed.
         """
+        if threshold is None:
+            threshold = self.precision
+
         if self.size < 50:  # if the matrix is small: array eigh method
             # TODO : better handle this size threshold
             return self._to_svd_small(threshold)
@@ -290,9 +294,10 @@ class DensityMatrix:
         else:  # if the matrix is large: sparse eigsh method
             return self._to_svd_large(threshold, batch_size)
 
-    def __radd__(self, other):  # TODO : rather use a zero density_matrix for this kind of sum
+    def __radd__(self, other):
         """
         Method used to be compatible with the sum build-in function of python
+        Exists ONLY for this case ONLY!!!
         """
 
         if other == 0:
@@ -351,10 +356,14 @@ class DensityMatrix:
         else:
             return density_matrix_tensor_product(other, self)
 
-    def remove_low_amplitude(self, threshold=1e-6):
+    def remove_low_amplitude(self, threshold: Optional[float] = None):
         """
         Remove the lines and column where the amplitude is below a certain threshold
         """
+
+        if threshold is None:
+            threshold = self.precision
+
         projector = dok_array(self.shape)
         for k in range(self.size):
             if self.mat[k, k] > threshold:
@@ -372,7 +381,7 @@ class DensityMatrix:
 
         factor = self.mat.trace()
 
-        if abs(factor-1) >= 1e-10:
+        if abs(factor-1) >= self.precision:
             self.mat = (1/factor)*self.mat
 
     def sample(self, count: int = 1) -> BSSamples:
