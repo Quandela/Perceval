@@ -152,7 +152,6 @@ class DensityMatrix:
         self.inverse_index = []
         self.set_index(index)  # index construction
 
-
     @staticmethod
     def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
         """
@@ -291,13 +290,18 @@ class DensityMatrix:
         if threshold is None:
             threshold = self.precision
 
+<<<<<<< HEAD
         if self.size < SPARSE_THRESHOLD:  # if the matrix is small: array eigh method
+=======
+        if self.size < 50:  # if the matrix is small: array eigh method
+            # TODO : better handle this size threshold
+>>>>>>> 7866bc4 (improved threshold handling)
             return self._to_svd_small(threshold)
 
         else:  # if the matrix is large: sparse eigsh method
             return self._to_svd_large(threshold, batch_size)
 
-    def __radd__(self, other):  # TODO : rather use a zero density_matrix for this kind of sum
+    def __radd__(self, other):
         """
         Method used to be compatible with the sum build-in function of python
         Exists ONLY for this case ONLY!!!
