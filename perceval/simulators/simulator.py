@@ -508,7 +508,7 @@ class Simulator(ISimulator):
         inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
         out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
 
-        return DensityMatrix(out_matrix, index=dm.index)
+        return DensityMatrix(out_matrix, index=dm.index, check_hermitian=False)
 
     def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix) -> csc_array:
         """

@@ -30,7 +30,7 @@
 
 
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
-from perceval.utils.density_matrix_utils import array_to_statevector
+from perceval.utils.density_matrix_utils import array_to_statevector, is_hermitian
 from typing import Union, Optional, Tuple
 from math import comb, sqrt
 from numpy import conj
@@ -100,7 +100,7 @@ def density_matrix_tensor_product(A, B):
 
     matrix = perm.T @ matrix @ perm
 
-    return DensityMatrix(matrix, new_index)
+    return DensityMatrix(matrix, new_index, check_hermitian=False)
 
 
 class DensityMatrix:
@@ -112,7 +112,8 @@ class DensityMatrix:
                  mixed_state: Union[np.array, sparray],
                  index: Optional[FockBasis] = None,
                  m: Optional[int] = None,
-                 n_max: Optional[int] = None):
+                 n_max: Optional[int] = None,
+                 check_hermitian: bool = True):
         """
         Constructor for the DensityMatrix Class
 
@@ -124,6 +125,11 @@ class DensityMatrix:
         # Here the constructor for a matrix
         if not isinstance(mixed_state, (np.ndarray, sparray)):
             raise TypeError(f"Can't construct a density matrix from {type(mixed_state)}")
+
+        if check_hermitian:
+            if not is_hermitian(mixed_state):
+                raise AssertionError("A density Matrix must be Hermitian")
+
         if index is None:
             if not (m is None or n_max is None):
                 index = FockBasis(m, n_max)
@@ -134,8 +140,6 @@ class DensityMatrix:
         if len(index) != mixed_state.shape[0]:
             raise ValueError(f"The index length is incompatible with your matrix size. \n "
                              f"For at most {index.n_max} photons in {index.m} modes, your matrix size must be {len(index)}")
-        if mixed_state.shape[0] != mixed_state.shape[1]:
-            raise ValueError("The density matrix must be square")
 
         self.mat = csr_array(mixed_state, dtype=complex)
         self._size = self.mat.shape[0]
@@ -143,8 +147,9 @@ class DensityMatrix:
         self._n_max = index.n_max
 
         self.index = dict()
-        self.reverse_index = []
+        self.reverse_index = []  # TODO : rename
         self.set_index(index)  # index construction
+
 
     @staticmethod
     def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
@@ -178,9 +183,9 @@ class DensityMatrix:
                 vector[idx, 0] = sv[bst]
             vector = csr_array(vector)
             l.append((vector, p))
-        matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])
+        matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])  # This avoids the SparseEfficiencyWarning
 
-        return DensityMatrix(matrix, index)
+        return DensityMatrix(matrix, index, check_hermitian=False)
 
     def set_index(self, index: dict):
         if index is None:
@@ -279,12 +284,13 @@ class DensityMatrix:
                 The StateVector with probability < threshold are removed.
         """
         if self.size < 50:  # if the matrix is small: array eigh method
+            # TODO : better handle this size threshold
             return self._to_svd_small(threshold)
 
         else:  # if the matrix is large: sparse eigsh method
             return self._to_svd_large(threshold, batch_size)
 
-    def __radd__(self, other):
+    def __radd__(self, other):  # TODO : rather use a zero density_matrix for this kind of sum
         """
         Method used to be compatible with the sum build-in function of python
         """
@@ -317,7 +323,7 @@ class DensityMatrix:
         new_mat = copy_mat + big_matrix.mat
         new_index = big_matrix.index
 
-        return DensityMatrix(new_mat, new_index)
+        return DensityMatrix(new_mat, new_index, check_hermitian=False)
 
     def __mul__(self, other):
         """
@@ -399,15 +405,15 @@ class DensityMatrix:
                 prob = item_list[2]
                 if prob != 0:
                     collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
-                    resulting_dm = DensityMatrix(collapsed_dm, basis)
+                    resulting_dm = DensityMatrix(collapsed_dm, basis, check_hermitian=False)
                     resulting_dm.normalize()
                     res[key_fs] = (prob, resulting_dm)
             return res
-        else:
+        else:  # TODO : separate method
             sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities
             measure, remaining = self._divide_fock_state(sample, modes)
             basis, proj = self._construct_projector_one_sample(modes, measure)
-            return measure, DensityMatrix(proj @ self.mat @ proj.T, basis)
+            return measure, DensityMatrix(proj @ self.mat @ proj.T, basis, check_hermitian=False)
 
     def _construct_projector_one_sample(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
         """
