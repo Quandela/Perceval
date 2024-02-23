@@ -31,7 +31,6 @@ from perceval.utils.statevector import StateVector
 from typing import Union
 import numpy as np
 from scipy.sparse import sparray, csr_array
-from pytest import approx
 
 
 
@@ -103,8 +102,8 @@ def is_hermitian(matrix: Union[sparray, np.ndarray]) -> bool:
 
     if n == m:
         for i in range(n):
-            for j in range(i,n):
-                if matrix[i,j] != approx(matrix[j,i]):
+            for j in range(i, n):
+                if matrix[i, j] != np.isclose(matrix[j, i]):
                     return False
         return True
     return False
