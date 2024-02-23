@@ -208,7 +208,7 @@ results in the mixed state ``1/2|0,1><0,1|+1/4(1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1>)(
 Density Matrices
 ----------------
 
-An other way of dealing with mixed states is to use the Density Matrices formalism. You can create a density matrix from
+An other way of representing mixed states is through the Density Matrices formalism. You can create a density matrix from
 any 2-D array-like object and a mapping between the ``BasicStates`` and the indices of your array. Otherwise you can give a number of modes and photons
 and a mapping will be generated according to the ``FockBasis`` object. The easiest way to generate Density matrices remains to give any other quantum state
 class instance to the method ``from_svd()``.
