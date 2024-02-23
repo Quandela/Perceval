@@ -51,12 +51,12 @@ class ProcessorType(Enum):
 
 
 class AProcessor(ABC):
-    def __init__(self, noise_model: NoiseModel = NoiseModel()):
+    def __init__(self):
         self._input_state = None
         self.name: str = ""
         self._parameters: Dict[str, Any] = {}
 
-        self._noise: NoiseModel = noise_model
+        self._noise: NoiseModel = NoiseModel()
 
         self._thresholded_output: bool = False
         self._min_detected_photons: Union[int, None] = None
@@ -132,6 +132,15 @@ class AProcessor(ABC):
         return self._input_state
 
     @property
+    def noise(self):
+        return self._noise
+
+    @noise.setter
+    def noise(self, nm: NoiseModel):
+        assert isinstance(nm, NoiseModel), "noise type has to be 'NoiseModel'"
+        self._noise = nm
+
+    @property
     @abstractmethod
     def available_commands(self) -> List[str]:
         pass
@@ -186,7 +195,7 @@ class AProcessor(ABC):
         return True
 
     def copy(self, subs: Union[dict, list] = None):
-        new_proc = copy.deepcopy(self)
+        new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))

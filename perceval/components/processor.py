@@ -59,7 +59,7 @@ class Processor(AProcessor):
     """
     def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
-        super().__init__(noise)
+        super().__init__()
         self._init_backend(backend)
         self._init_circuit(m_circuit)
         self._init_noise(source, noise)
@@ -81,8 +81,15 @@ class Processor(AProcessor):
 
         # The user passes a NoiseModel
         elif noise is not None:
-            self._source = Source.from_noise_model(noise)
-            self._phase_quantization = noise.phase_imprecision
+            self.noise = noise
+
+    @AProcessor.noise.setter
+    def noise(self, nm):
+        super(Processor, type(self)).noise.fset(self, nm)
+        self._source = Source.from_noise_model(nm)
+        self._phase_quantization = nm.phase_imprecision
+        if isinstance(self._input_state, BasicState):
+            self._generate_noisy_input()
 
     def _init_circuit(self, m_circuit):
         if isinstance(m_circuit, ACircuit):
@@ -121,6 +128,9 @@ class Processor(AProcessor):
         """
         self._with_logical_input(input_state)
 
+    def _generate_noisy_input(self):
+        self._inputs_map = self._source.generate_distribution(self._input_state)
+
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         """
@@ -146,7 +156,7 @@ class Processor(AProcessor):
                 input_idx += 1
 
         self._input_state = BasicState(input_list)
-        self._inputs_map = self._source.generate_distribution(self._input_state)
+        self._generate_noisy_input()
         self._min_detected_photons = expected_photons
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
