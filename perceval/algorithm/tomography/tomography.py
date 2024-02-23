@@ -30,14 +30,13 @@
 import numpy as np
 from collections import defaultdict
 
-from perceval.components import AProcessor, Processor, PauliType
+from perceval.components import AProcessor, PauliType
 from perceval.utils import BasicState
 
-from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
-    _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n,
-                               _compute_probs)
+from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
+                               _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index,
+                               _list_subset_k_from_n, _compute_probs)
 from ..abstract_algorithm import AAlgorithm
-from ..sampler import Sampler
 
 
 class StateTomography(AAlgorithm):
@@ -81,7 +80,8 @@ class StateTomography(AAlgorithm):
         """
 
         if PauliType.Z not in meas_pauli_basis_indices:
-            output_distribution = _compute_probs(self, prep_state_indices, meas_pauli_basis_indices)
+            output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices,
+                                                                          meas_pauli_basis_indices)
             self._qst_cache[tuple(prep_state_indices)][tuple(meas_pauli_basis_indices)] = output_distribution
         else:
             meas_indices_Z_to_I = [elem if elem != PauliType.Z else PauliType.I for elem in meas_pauli_basis_indices]

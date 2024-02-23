@@ -35,7 +35,7 @@ from perceval.algorithm import Sampler
 from perceval.utils import BasicState
 
 
-def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list) -> dict:
+def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list) -> tuple:
     """
     computes the output probability distribution for the tomography experiment
     :param tomography_experiment: Tomography experiment object with a Processor on which Tomography is to be done
@@ -56,7 +56,7 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
 
     for key in output_distribution:  # Denormalize output state distribution
         output_distribution[key] *= gate_logical_perf
-    return output_distribution
+    return output_distribution, gate_logical_perf
 
 
 def _state_to_dens_matrix(state: np.ndarray) -> np.ndarray:
