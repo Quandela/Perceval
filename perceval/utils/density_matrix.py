@@ -511,21 +511,19 @@ class DensityMatrix:
         :param modes: the mode were you want to simulate a loss
         :param prob: the probability to lose a photon
         """
-        self._apply_loss(modes, prob)
 
-    @dispatch(int, float)
+        if isinstance(modes, int):
+            modes = [modes]
+
+        for mode in modes:
+            self._apply_loss(mode, prob)
+
     def _apply_loss(self, mode: int, prob: float):
 
         matrix_after_loss = csr_array(self.shape, dtype=complex)
         for operator in self._construct_loss_operators(mode, prob):
             matrix_after_loss += operator @ self.mat @ operator.T
         self.mat = matrix_after_loss
-
-    @dispatch(list, float)
-    def _apply_loss(self, modes: list, prob: float):
-
-        for mode in modes:
-            self.apply_loss(mode, prob)
 
     def __str__(self):
         """
