@@ -103,7 +103,7 @@ def is_hermitian(matrix: Union[sparray, np.ndarray]) -> bool:
     if n == m:
         for i in range(n):
             for j in range(i, n):
-                if matrix[i, j] != np.isclose(matrix[j, i]):
+                if not np.isclose(matrix[i, j], matrix[j, i]):
                     return False
         return True
     return False
