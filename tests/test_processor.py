@@ -260,5 +260,5 @@ def test_phase_quantization():
     p0.with_input(BasicState([1, 1]))
     p1.with_input(BasicState([1, 1]))
     p2.with_input(BasicState([1, 1]))
-    assert p0.probs()["results"] != p1.probs()["results"]
-    assert p1.probs()["results"] == p2.probs()["results"]
+    assert p0.probs()["results"] != pytest.approx(p1.probs()["results"])
+    assert p1.probs()["results"] == pytest.approx(p2.probs()["results"])
