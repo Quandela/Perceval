@@ -343,6 +343,7 @@ class AProcessor(ABC):
             self._anon_herald_num += 1
         self._in_ports[Herald(expected, name)] = [mode]
         self._out_ports[Herald(expected, name)] = [mode]
+        self._circuit_changed()
 
     def add_herald(self, mode: int, expected: int, name: str = None):
         r"""

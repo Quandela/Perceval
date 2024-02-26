@@ -32,7 +32,7 @@
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from perceval.utils.density_matrix_utils import array_to_statevector
 from typing import Union, Optional, Tuple
-from math import comb
+from math import comb, sqrt
 from numpy import conj
 import numpy as np
 from scipy.sparse import dok_array, sparray, csr_array, kron
@@ -41,6 +41,7 @@ from scipy.linalg import eigh
 from copy import copy
 import random
 import exqalibur as xq
+from multipledispatch import dispatch
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
@@ -283,6 +284,16 @@ class DensityMatrix:
         else:  # if the matrix is large: sparse eigsh method
             return self._to_svd_large(threshold, batch_size)
 
+    def __radd__(self, other):
+        """
+        Method used to be compatible with the sum build-in function of python
+        """
+
+        if other == 0:
+            return self
+        else:
+            raise TypeError("You can only add a Density Matrix to a Density Matrix")
+
     def __add__(self, other):
         """
         add two density Matrices together
@@ -455,6 +466,63 @@ class DensityMatrix:
                 remaining_fs.append(fs[mode])
 
         return BasicState(measured_fs), BasicState(remaining_fs)
+
+    @staticmethod
+    def _get_annihilated_fockstate(fockstate, m, n_photon):
+        """
+        give the fockstate after loss of n_photon in the mode m
+        """
+
+        listed_fs = list(fockstate)
+        if listed_fs[m] <= n_photon:
+            listed_fs[m] = 0
+        else:
+            listed_fs[m] -= n_photon
+        return BasicState(listed_fs)
+
+    def _construct_loss_operators(self, mode: int, p: float):
+        """
+        Construct the kraus operators for a loss channel on specified modes
+        """
+        operators = [dok_array(self.shape, dtype=float) for _ in range(self._n_max+1)]
+
+        # We separate the states depending on the number of lost photons
+        # Because there is no more coherence between those states
+        for n_photon_loss in range(len(operators)):
+            for state, idx in self.index.items():
+                n_photon = state[mode]
+                if n_photon >= n_photon_loss:
+                    result_idx = self.index[self._get_annihilated_fockstate(state, mode, n_photon_loss)]
+
+                    #  Binomial probability, (comes from the simplification of the beam splitter action)
+                    operators[n_photon_loss][result_idx, idx] += sqrt(comb(n_photon, n_photon_loss) *
+                                                                      (1-p)**(n_photon-n_photon_loss) *
+                                                                      p**n_photon_loss)
+        return operators
+
+    @dispatch(int, float)
+    def apply_loss(self, mode: int, prob: float):
+        """
+        Apply a loss on some mode according to some probability of losing a photon
+        Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
+        :param mode: the mode were you want to simulate a loss
+        :param prob: the probability to lose a photon
+        """
+        matrix_after_loss = csr_array(self.shape, dtype=complex)
+        for operator in self._construct_loss_operators(mode, prob):
+            matrix_after_loss += operator @ self.mat @ operator.T
+        self.mat = matrix_after_loss
+
+    @dispatch(list, float)
+    def apply_loss(self, modes: list, prob: float):
+        """
+        Apply a loss on some modes according to some probability of losing a photon
+        Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
+        :param modes: the mode were you want to simulate a loss
+        :param prob: the probability to lose a photon
+        """
+        for mode in modes:
+            self.apply_loss(mode, prob)
 
     def __str__(self):
         """
