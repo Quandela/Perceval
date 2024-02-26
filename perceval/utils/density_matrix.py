@@ -46,6 +46,7 @@ from multipledispatch import dispatch
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
 
+SPARSE_THRESHOLD = 50
 
 class FockBasis(dict):
     def __init__(self, m, n_max):
@@ -287,8 +288,7 @@ class DensityMatrix:
         if threshold is None:
             threshold = self.precision
 
-        if self.size < 50:  # if the matrix is small: array eigh method
-            # TODO : better handle this size threshold
+        if self.size < SPARSE_THRESHOLD:  # if the matrix is small: array eigh method
             return self._to_svd_small(threshold)
 
         else:  # if the matrix is large: sparse eigsh method
