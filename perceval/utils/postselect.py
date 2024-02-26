@@ -57,7 +57,7 @@ class PostSelect:
     def __init__(self, str_repr: str = None):
         self._conditions = {}
         condition_count = 0
-        if str_repr is not None:
+        if str_repr:
             try:
                 for match in self._PATTERN.finditer(str_repr):
                     indexes = tuple(json.loads(match.group(1)))

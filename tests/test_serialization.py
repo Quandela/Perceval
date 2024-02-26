@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel
+from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -201,6 +201,15 @@ def test_noise_model_serialization():
     nm_ser = serialize(nm)
     nm_deser = deserialize(nm_ser)
     assert nm == nm_deser
+
+
+@pytest.mark.parametrize("ps", (PostSelect(),
+                                PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0"),
+                                PostSelect("[0]>0&[1]<2&[2]==1")))
+def test_postselect_serialization(ps):
+    ps_ser = serialize(ps)
+    ps_deser = deserialize(ps_ser)
+    assert ps == ps_deser
 
 
 def test_json():

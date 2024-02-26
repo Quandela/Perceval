@@ -26,23 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import json
+from base64 import b64decode
 from os import path
 from typing import Union
 import json
-
-from perceval.components import Circuit
-from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel
-from perceval.serialization import _matrix_serialization, deserialize_state
-from ._state_serialization import deserialize_statevector, deserialize_bssamples
-import perceval.serialization._component_deserialization as _cd
-from perceval.serialization import _schema_circuit_pb2 as pb
-from base64 import b64decode
 from zlib import decompress
 
-
-_MATRIX_PREFIX = ":PCVL:Matrix:"
-_CIRCUIT_PREFIX = ":PCVL:ACircuit:"
+from perceval.components import Circuit
+from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
+from perceval.serialization import _matrix_serialization, deserialize_state
+from ._constants import *
+from ._state_serialization import deserialize_statevector, deserialize_bssamples
+from . import _component_deserialization as _cd
+from . import _schema_circuit_pb2 as pb
 
 
 def deserialize_float(floatstring):
@@ -56,8 +52,7 @@ def deserialize_matrix(pb_mat: Union[str, pb.Matrix]) -> Matrix:
         if isinstance(pb_binary_repr, bytes):
             pb_mat.ParseFromString(pb_binary_repr)
         else:
-            assert pb_binary_repr.startswith(_MATRIX_PREFIX)
-            pb_mat.ParseFromString(b64decode(pb_binary_repr[len(_MATRIX_PREFIX):]))
+            pb_mat.ParseFromString(b64decode(pb_binary_repr))
     return _matrix_serialization.deserialize_pb_matrix(pb_mat)
 
 
@@ -78,8 +73,7 @@ def deserialize_circuit(pb_circ: Union[str, bytes, pb.Circuit]) -> Circuit:
         if isinstance(pb_binary_repr, bytes):
             pb_circ.ParseFromString(pb_binary_repr)
         else:
-            assert pb_binary_repr.startswith(_CIRCUIT_PREFIX)
-            pb_circ.ParseFromString(b64decode(pb_binary_repr[len(_CIRCUIT_PREFIX):]))
+            pb_circ.ParseFromString(b64decode(pb_binary_repr))
     builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name)
     for pb_c in pb_circ.components:
         builder.add(pb_c)
@@ -133,6 +127,25 @@ def deserialize_noise_model(serial_nm: str) -> NoiseModel:
     return NoiseModel(**json.loads(serial_nm))
 
 
+def deserialize_postselect(serial_ps: str) -> PostSelect:
+    return PostSelect(serial_ps)
+
+
+# Known deserializer functions
+DESERIALIZER = {
+    BS_TAG: BasicState,
+    SV_TAG: deserialize_statevector,
+    SVD_TAG: deserialize_svdistribution,
+    BSD_TAG: deserialize_bsdistribution,
+    BSC_TAG: deserialize_bscount,
+    BSS_TAG: deserialize_bssamples,
+    MATRIX_TAG: deserialize_matrix,
+    CIRCUIT_TAG: deserialize_circuit,
+    NOISE_TAG: deserialize_noise_model,
+    POSTSELECT_TAG: deserialize_postselect
+}
+
+
 def deserialize(obj):
     if isinstance(obj, bytes):
         raise TypeError("Generic deserialize function does not handle binary representation. "
@@ -145,38 +158,22 @@ def deserialize(obj):
         r = []
         for k in obj:
             r.append(deserialize(k))
-    elif isinstance(obj, str) and obj.startswith(":PCVL:"):
-        if obj.startswith(":PCVL:zip:"):
+    elif isinstance(obj, str) and obj.startswith(PCVL_PREFIX):
+        if obj.startswith(ZIP_PREFIX):
             # if zip found -> update obj
             # STEPS: remove prefix -> decode b64 encoding -> decompress -> decode utf-8 (byte-> str)
-            zip_prefix = ":PCVL:zip:"
-            obj = obj[len(zip_prefix):]
-            obj = b64decode(obj)
-            obj = (decompress(obj)).decode('utf-8')
+            obj = b64decode(obj[len(ZIP_PREFIX):])
+            obj = decompress(obj).decode('utf-8')
 
-        p = obj[6:].find(":")
-        cl = obj[6:p+6]
-        sobj = obj[p+7:]
-        if cl == "BasicState":
-            r = BasicState(sobj)
-        elif cl == "StateVector":
-            r = deserialize_statevector(sobj)
-        elif cl == "SVDistribution":
-            r = deserialize_svdistribution(sobj)
-        elif cl == "BSDistribution":
-            r = deserialize_bsdistribution(sobj)
-        elif cl == "BSCount":
-            r = deserialize_bscount(sobj)
-        elif cl == "BSSamples":
-            r = deserialize_bssamples(sobj)
-        elif cl == "Matrix":
-            r = deserialize_matrix(obj)
-        elif cl == "ACircuit":
-            r = deserialize_circuit(obj)
-        elif cl == "NoiseModel":
-            r = deserialize_noise_model(sobj)
-        else:
-            raise NotImplementedError(f"No deserializer found for {cl}")
+        p = obj[len(PCVL_PREFIX):].find(SEP)
+        class_obj = obj[6:p+6]
+        serial_obj = obj[p+7:]
+
+        def serializer_not_implemented(_: str):
+            raise NotImplementedError(f"Not serializer found for {class_obj}")
+
+        deserialize_func = DESERIALIZER.get(class_obj, serializer_not_implemented)
+        r = deserialize_func(serial_obj)
     else:
         r = obj
     return r
