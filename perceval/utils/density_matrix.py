@@ -538,7 +538,7 @@ class DensityMatrix:
                          [sg._one_state * state for state in state_list])
 
         logical_index = {}
-        for i, state in enumerate(state_list)
+        for i, state in enumerate(state_list):
             logical_index[state] = i
 
         projector = dok_array((self.size, 2**n_qbit), dtype = int)
@@ -549,8 +549,8 @@ class DensityMatrix:
             else:
                 logical_perf -= self.mat[index, index]
 
-        return {"results" : projector @ self.mat @ projector.T,
-                "logical_perf" : logical_perf}
+        return {"results": (projector @ self.mat @ projector.T).toarray(),
+                "logical_perf": logical_perf}
 
     def __str__(self):
         """
