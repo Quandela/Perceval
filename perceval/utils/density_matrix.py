@@ -26,11 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-
-
+import perceval
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from perceval.utils.density_matrix_utils import array_to_statevector
+from perceval.utils import Encoding
 from typing import Union, Optional, Tuple
 from math import comb, sqrt
 from numpy import conj
@@ -524,6 +523,34 @@ class DensityMatrix:
         for operator in self._construct_loss_operators(mode, prob):
             matrix_after_loss += operator @ self.mat @ operator.T
         self.mat = matrix_after_loss
+
+    def get_computational(self):
+
+        if self._m % 2 == 1:
+            raise AssertionError("You need an even number of modes")
+
+        n_qbit = self._m // 2
+
+        sg = perceval.StateGenerator(Encoding.DUAL_RAIL)
+        state_list = [BasicState()]
+        for k in range(n_qbit):
+            state_list= ([sg._zero_state * state for state in state_list] +
+                         [sg._one_state * state for state in state_list])
+
+        logical_index = {}
+        for i, state in enumerate(state_list)
+            logical_index[state] = i
+
+        projector = dok_array((self.size, 2**n_qbit), dtype = int)
+        logical_perf = 1
+        for state, index in self.index.items():
+            if state in logical_index.keys():
+                projector[index, logical_index[state]] = 1
+            else:
+                logical_perf -= self.mat[index, index]
+
+        return {"results" : projector @ self.mat @ projector.T,
+                "logical_perf" : logical_perf}
 
     def __str__(self):
         """
