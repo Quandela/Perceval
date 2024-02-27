@@ -68,9 +68,7 @@ class Processor(AProcessor):
         self._simulator = None
 
     def _init_noise(self, source: Source, noise: NoiseModel):
-        # Default = perfect simulation
-        self._phase_quantization = 0
-        self._source = Source()
+        self._phase_quantization = 0  # Default = infinite precision
 
         # Backward compatibility case: the user passes a Source
         if source is not None:
@@ -82,6 +80,10 @@ class Processor(AProcessor):
         # The user passes a NoiseModel
         elif noise is not None:
             self.noise = noise
+
+        # Default = perfect simulation
+        else:
+            self._source = Source()
 
     @AProcessor.noise.setter
     def noise(self, nm):
@@ -222,6 +224,14 @@ class Processor(AProcessor):
         return output_state.n >= self._min_detected_photons
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
+        """
+        Creates a linear circuit from internal components, if all internal components are unitary. Takes phase
+        imprecision noise into account.
+
+        :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
+        :raises RuntimeError: If any component is non-unitary
+        :return: The resulting Circuit object
+        """
         circuit = super().linear_circuit(flatten)
         if not self._phase_quantization:
             return circuit

@@ -56,7 +56,7 @@ class AProcessor(ABC):
         self.name: str = ""
         self._parameters: Dict[str, Any] = {}
 
-        self._noise: NoiseModel = NoiseModel()
+        self._noise: Union[NoiseModel, None] = None
 
         self._thresholded_output: bool = False
         self._min_detected_photons: Union[int, None] = None
@@ -66,7 +66,7 @@ class AProcessor(ABC):
     def _reset_circuit(self):
         self._in_ports: Dict = {}
         self._out_ports: Dict = {}
-        self._postselect: PostSelect = None
+        self._postselect: Union[PostSelect, None] = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
@@ -386,7 +386,7 @@ class AProcessor(ABC):
             raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
         for pos_m, component in self._components:
-            circuit.add(pos_m, component, merge=flatten)
+            circuit.add(pos_m, component.copy(), merge=flatten)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> List:

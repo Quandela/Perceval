@@ -262,3 +262,10 @@ def test_phase_quantization():
     p2.with_input(BasicState([1, 1]))
     assert p0.probs()["results"] != pytest.approx(p1.probs()["results"])
     assert p1.probs()["results"] == pytest.approx(p2.probs()["results"])
+
+    p1.noise = NoiseModel()
+    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+
+    p0.noise = nm
+    p1.noise = nm
+    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
