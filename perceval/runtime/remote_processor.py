@@ -45,6 +45,7 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
+DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
@@ -129,6 +130,12 @@ class RemoteProcessor(AProcessor):
         if 'constraints' in self._specs:
             return self._specs['constraints']
         return {}
+
+    def set_parameter(self, key: str, value: Any):
+        super().set_parameter(key, value)
+        if key in DEPRECATED_NOISE_PARAMS:
+            warn(f"'{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead.",
+                 DeprecationWarning)
 
     def set_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
@@ -224,15 +231,6 @@ class RemoteProcessor(AProcessor):
         assert isinstance(processor, RemoteProcessor), "can not mix types of processors"
         assert self.name == processor.name, "can not compose processors with different targets"
         super()._compose_processor(connector, processor, keep_port)
-
-    @property
-    def source(self):
-        return None
-
-    @source.setter
-    def source(self, source: Source):
-        # TODO: Implement source setter, setting parameters to be sent remotely
-        raise NotImplementedError("Source setting not implemented for remote processors")
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
         if TRANSMITTANCE_KEY in self._perfs:

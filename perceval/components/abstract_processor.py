@@ -91,10 +91,13 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict):
-        self._parameters.update(params)
+    def set_parameters(self, params: Dict[str, Any]):
+        for key, value in params:
+            self.set_parameter(key, value)
 
     def set_parameter(self, key: str, value: Any):
+        if not isinstance(key, str):
+            raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
 
     @property
@@ -550,30 +553,6 @@ class AProcessor(ABC):
     @abstractmethod
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
-
-    @property
-    def source_distribution(self) -> Union[SVDistribution, None]:
-        r"""
-        Retrieve the computed input distribution.
-        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
-        """
-        return self._inputs_map
-
-    @property
-    def source(self):
-        r"""
-        :return: The photonic source
-        """
-        return self._source
-
-    @source.setter
-    def source(self, source: Source):
-        r"""
-        :param source: A Source instance to use as the new source for this processor.
-        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
-        """
-        self._source = source
-        self._inputs_map = None
 
     def flatten(self) -> List:
         """

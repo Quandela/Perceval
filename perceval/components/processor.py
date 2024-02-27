@@ -93,6 +93,30 @@ class Processor(AProcessor):
         if isinstance(self._input_state, BasicState):
             self._generate_noisy_input()
 
+    @property
+    def source_distribution(self) -> Union[SVDistribution, None]:
+        r"""
+        Retrieve the computed input distribution.
+        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
+        """
+        return self._inputs_map
+
+    @property
+    def source(self):
+        """
+        :return: The photonic source
+        """
+        return self._source
+
+    @source.setter
+    def source(self, source: Source):
+        r"""
+        :param source: A Source instance to use as the new source for this processor.
+        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
+        """
+        self._source = source
+        self._inputs_map = None
+
     def _init_circuit(self, m_circuit):
         if isinstance(m_circuit, ACircuit):
             self._n_moi = m_circuit.m
