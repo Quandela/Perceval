@@ -27,15 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Any
 from multipledispatch import dispatch
-from pkg_resources import get_distribution
 from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source
-from perceval.components.port import PortLocation, APort
-from perceval.utils import BasicState, LogicalState, PMetadata
+from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -142,14 +140,6 @@ class RemoteProcessor(AProcessor):
         super().set_circuit(circuit)
         return self
 
-    def add_port(self, m, port: APort, location: PortLocation = PortLocation.IN_OUT):
-        # TODO: Remove this
-        raise NotImplementedError("Ports not implemented for now with RemoteProcessors")
-
-    def add_herald(self, mode: int, expected: int, name: str = None):
-        # TODO: Remove this
-        raise NotImplementedError("Heralds not implemented for now with RemoteProcessors")
-
     def get_rpc_handler(self):
         return self._rpc_handler
 
@@ -186,7 +176,8 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> List[str]:
         return self._specs.get("available_commands", [])
 
-    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
+    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
+                            ) -> Dict[str, Any]:
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),
@@ -202,6 +193,16 @@ class RemoteProcessor(AProcessor):
             payload['input_state'] = serialize(self._input_state)
         if self._parameters:
             payload['parameters'] = self._parameters
+        if self._postselect is not None:
+            if isinstance(self._postselect, PostSelect):
+                payload['postselect'] = serialize(self._postselect)
+            else:
+                warn(f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect",
+                     RuntimeWarning)
+        if self.heralds:
+            payload['heralds'] = self.heralds
+        if self._noise is not None:
+            payload['noise'] = serialize(self._noise)
         j['payload'] = payload
         return j
 
