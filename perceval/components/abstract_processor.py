@@ -375,6 +375,8 @@ class AProcessor(ABC):
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
+        if self._n_moi is None:
+            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -386,7 +388,7 @@ class AProcessor(ABC):
             raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
         for pos_m, component in self._components:
-            circuit.add(pos_m, component.copy(), merge=flatten)
+            circuit.add(pos_m, component, merge=flatten)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> List:
