@@ -395,34 +395,27 @@ class DensityMatrix:
             output.append(state)
         return output
 
-    def measure(self, modes: Union[list[int], int], all_results: bool = True):
+    def measure(self, modes: Union[list[int], int]):
         """
         makes a measure on a list of modes
         :param modes: a list of integer for the modes you want to measure
-        :param all_results: whether you want a resulting mixed state or a simple sample
         """
         self.normalize()
         if isinstance(modes, int):
             modes = [modes]
 
-        if all_results:
-            projectors = self._construct_all_projectors(modes)
-            res = dict()  # result fo the form {measured FockState: (remaining density matrix, probability)
-            for key_fs, item_list in projectors.items():
-                basis = item_list[0]  # FockBasis of possible measurement
-                projector = item_list[1]
-                prob = item_list[2]
-                if prob != 0:
-                    collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
-                    resulting_dm = DensityMatrix(collapsed_dm, basis, check_hermitian=False)
-                    resulting_dm.normalize()
-                    res[key_fs] = (prob, resulting_dm)
-            return res
-        else:  # TODO : separate method
-            sample = self.sample()[0]  # if you want to sample instead of keeping all the possibilities
-            measure, remaining = self._divide_fock_state(sample, modes)
-            basis, proj = self._construct_projector_one_sample(modes, measure)
-            return measure, DensityMatrix(proj @ self.mat @ proj.T, basis, check_hermitian=False)
+        projectors = self._construct_all_projectors(modes)
+        res = dict()  # result fo the form {measured FockState: (remaining density matrix, probability)
+        for key_fs, item_list in projectors.items():
+            basis = item_list[0]  # FockBasis of possible measurement
+            projector = item_list[1]
+            prob = item_list[2]
+            if prob != 0:
+                collapsed_dm = projector @ self.mat @ projector.T  # wave function collapse
+                resulting_dm = DensityMatrix(collapsed_dm, basis, check_hermitian=False)
+                resulting_dm.normalize()
+                res[key_fs] = (prob, resulting_dm)
+        return res
 
     def _construct_projector_one_sample(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
         """
