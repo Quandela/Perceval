@@ -27,21 +27,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import random
+from copy import copy
+from math import comb, sqrt
+from typing import Union, Optional, Tuple
 
+import numpy as np
+from numpy import conj
+from scipy.linalg import eigh
+from scipy.sparse.linalg import LinearOperator, eigsh
+from scipy.sparse import dok_array, sparray, csr_array, kron
 
+import exqalibur as xq
 from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from perceval.utils.density_matrix_utils import array_to_statevector, is_hermitian
-from typing import Union, Optional, Tuple
-from math import comb, sqrt
-from numpy import conj
-import numpy as np
-from scipy.sparse import dok_array, sparray, csr_array, kron
-from scipy.sparse.linalg import LinearOperator, eigsh
-from scipy.linalg import eigh
-from copy import copy
-import random
-import exqalibur as xq
-from multipledispatch import dispatch
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch

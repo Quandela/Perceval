@@ -28,17 +28,15 @@
 # SOFTWARE.
 
 import math
+import pytest
 
-import perceval
-from perceval import (StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding,
-                      Unitary, Circuit, SLOSBackend)
+import numpy as np
+
+from perceval import BasicState, Source, SVDistribution, Matrix, Simulator, \
+                      Unitary, Circuit, SLOSBackend
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
 from perceval.utils.density_matrix_utils import *
-import numpy as np
-import scipy
-from scipy.sparse import dok_array
-import pytest
-from _test_utils import assert_svd_close
+
 
 
 def test_fock_basis():

@@ -27,13 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import StateVector
 from typing import Union
+
 import numpy as np
 from scipy.sparse import sparray, csr_array
 from pytest import approx
 
 
+from perceval.utils.statevector import StateVector
 
 
 def extract_upper_triangle(csr_matrix: csr_array) -> csr_array:
