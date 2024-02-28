@@ -404,8 +404,12 @@ class DensityMatrix:
 
     def measure(self, modes: Union[list[int], int]):
         """
+<<<<<<< HEAD
         Makes a measure on a list of modes.
 
+=======
+        Makes a measure on a list of modes
+>>>>>>> 047cd6d (removed random measurement)
         :param modes: a list of integer for the modes you want to measure
         """
         self.normalize()
