@@ -30,14 +30,13 @@
 import numpy as np
 from collections import defaultdict
 
-from perceval.components import AProcessor, Processor, PauliType
+from perceval.components import AProcessor, PauliType
 from perceval.utils import BasicState
 
-from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
-    _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
-from ._prep_n_meas_circuits import StatePreparation, MeasurementCircuit
+from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
+                               _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index,
+                               _list_subset_k_from_n, _compute_probs)
 from ..abstract_algorithm import AAlgorithm
-from ..sampler import Sampler
 
 
 class StateTomography(AAlgorithm):
@@ -71,55 +70,6 @@ class StateTomography(AAlgorithm):
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
 
-    def _configure_processor(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> Processor:
-        """
-        Adds preparation and measurement circuit to input processor (with the gate operation under study) and
-        computes the output probability distribution
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-         circuit
-        :return: the configured processor to perform state tomography experiment
-        """
-
-        p = self._processor.copy()
-        p.clear_input_and_circuit(self._nqubit*2)  # Clear processor content but keep its size
-
-        pc = StatePreparation(prep_state_indices)
-        for c in pc:
-            p.add(*c)  # Add state preparation circuit to the left of the operator
-
-        p.add(0, self._processor)  # including the operator (as a processor)
-
-        mc = MeasurementCircuit(meas_pauli_basis_indices)
-        for c in mc:
-            p.add(*c)  # Add measurement basis circuit to the right of the operator
-
-        p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
-
-        input_state = BasicState([1, 0]*self._nqubit)
-        p.with_input(input_state)
-
-        return p
-
-    def _compute_probs(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> dict:
-        """
-        computes the output probability distribution for the state tomography experiment
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-         circuit
-        :return: Output state probability distribution
-        """
-
-        p = self._configure_processor(prep_state_indices, meas_pauli_basis_indices)
-        sampler = Sampler(p, max_shots_per_call=self._max_shots)
-        probs = sampler.probs()
-        output_distribution = probs["results"]
-        self._gate_logical_perf = probs["logical_perf"]
-
-        for key in output_distribution:  # Denormalize output state distribution
-            output_distribution[key] *= self._gate_logical_perf
-        return output_distribution
-
     def _stokes_parameter(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> float:
         """
         Computes the Stokes parameter S_i for state prep_state_indices after operator_circuit
@@ -130,7 +80,8 @@ class StateTomography(AAlgorithm):
         """
 
         if PauliType.Z not in meas_pauli_basis_indices:
-            output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+            output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices,
+                                                                          meas_pauli_basis_indices)
             self._qst_cache[tuple(prep_state_indices)][tuple(meas_pauli_basis_indices)] = output_distribution
         else:
             meas_indices_Z_to_I = [elem if elem != PauliType.Z else PauliType.I for elem in meas_pauli_basis_indices]

@@ -35,7 +35,8 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Processor, Circuit, PauliType, get_preparation_circuit
+from perceval.components import (catalog, Processor, Circuit, PauliType, get_preparation_circuit,
+                                 processor_circuit_configurator)
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography

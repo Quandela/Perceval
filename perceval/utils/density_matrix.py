@@ -77,8 +77,8 @@ class FockBasis(dict):
 
 def density_matrix_tensor_product(A, B):
     """
-    Make the tensor product of 2 Density Matrices
-    :param A, B: two density matrices
+    Make the tensor product of 2 Density Matrices \
+    :param A, B: two density matrices \
     :return: the "kronecker" product of the density matrices, in the correct basis
     """
 
@@ -106,8 +106,12 @@ def density_matrix_tensor_product(A, B):
 
 class DensityMatrix:
     """
-    Density operator representing a mixed state
-    Does not support annotations yet
+    Density operator representing a mixed state. Does not support annotations yet.
+
+    :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
+    :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
+    :param m: optional number of modes if index is not given
+    :param n_max: optional maximum number of photon if index is not given
     """
     def __init__(self,
                  mixed_state: Union[np.array, sparray],
@@ -118,11 +122,6 @@ class DensityMatrix:
                  precision: bool = 1e-6):
         """
         Constructor for the DensityMatrix Class
-
-        :param mixed_state: 2d-array, SVDistribution, StateVector or Basic State representing a mixed state
-        :param index: index of all BasicStates accessible from this mixed states through a unitary evolution
-        :param m: optional number of modes if index is not given
-        :param n_max: optional maximum number of photon if index is not given
         """
         # Here the constructor for a matrix
         if not isinstance(mixed_state, (np.ndarray, sparray)):
@@ -156,10 +155,11 @@ class DensityMatrix:
     @staticmethod
     def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
         """
-        Construct a Density matrix from a SVDistribution
-        :param svd: an SVDistribution object representing the mixed state
-        :param index: the basis in which the density matrix is expressed. Self generated if incorrect
-        :return: the DensityMatrix object corresponding to the SVDistribution given
+        Construct a Density matrix from a SVDistribution.
+
+        :param svd: an SVDistribution object representing the mixed state \
+        :param index: the basis in which the density matrix is expressed. Self generated if incorrect \
+        :return: the DensityMatrix object corresponding to the SVDistribution given \
         """
         if isinstance(svd, (StateVector, BasicState)):
             svd = SVDistribution(svd)
@@ -216,7 +216,8 @@ class DensityMatrix:
     @staticmethod
     def _deflation(A: sparray, val: np.ndarray, vec: np.ndarray):
         """
-        Defines the mat_vec function of the Linear operator after the deflation of all the vectors in the vec array
+        Defines the mat_vec function of the Linear operator after the deflation of all the vectors in the vec array.
+
         :param A: any kind of sparse matrix
         :param val: the array of eigen_values
         :param vec: the array of eigen_vector
@@ -278,8 +279,9 @@ class DensityMatrix:
 
     def to_svd(self, threshold: Optional[float] = None, batch_size: int = 1):
         """
-            gives back an SVDistribution from the density_matrix
-            :param threshold: the threshold when the search for eigen values is stopped
+            Gives back an SVDistribution from the density_matrix
+
+            :param threshold: the threshold when the search for eigen values is stopped.
             :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
                 Only used if matrix is large enough.
             :return: The SVD object corresponding to the DensityMatrix.
@@ -376,7 +378,7 @@ class DensityMatrix:
 
     def normalize(self):
         """
-        Normalize the density matrix so that Trace(\rho) = 1
+        Normalize the density matrix so that Trace(rho) = 1
         """
 
         factor = self.mat.trace()
@@ -386,7 +388,7 @@ class DensityMatrix:
 
     def sample(self, count: int = 1) -> BSSamples:
         """
-        sample on the density matrix
+        Sample a basic state on the density matrix
         """
         self.normalize()
         samples = random.choices(self.inverse_index, list(self.mat.diagonal()), k=count)
@@ -397,7 +399,8 @@ class DensityMatrix:
 
     def measure(self, modes: Union[list[int], int]):
         """
-        makes a measure on a list of modes
+        Makes a measure on a list of modes.
+
         :param modes: a list of integer for the modes you want to measure
         """
         self.normalize()
@@ -508,29 +511,27 @@ class DensityMatrix:
                                                                       p**n_photon_loss)
         return operators
 
-    @dispatch(int, float)
-    def apply_loss(self, mode: int, prob: float):
+    def apply_loss(self, modes: Union[int, list], prob: float):
         """
         Apply a loss on some mode according to some probability of losing a photon
         Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
-        :param mode: the mode were you want to simulate a loss
+
+        :param modes: the mode were you want to simulate a loss
         :param prob: the probability to lose a photon
         """
+
+        if isinstance(modes, int):
+            modes = [modes]
+
+        for mode in modes:
+            self._apply_loss(mode, prob)
+
+    def _apply_loss(self, mode: int, prob: float):
+
         matrix_after_loss = csr_array(self.shape, dtype=complex)
         for operator in self._construct_loss_operators(mode, prob):
             matrix_after_loss += operator @ self.mat @ operator.T
         self.mat = matrix_after_loss
-
-    @dispatch(list, float)
-    def apply_loss(self, modes: list, prob: float):
-        """
-        Apply a loss on some modes according to some probability of losing a photon
-        Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob
-        :param modes: the mode were you want to simulate a loss
-        :param prob: the probability to lose a photon
-        """
-        for mode in modes:
-            self.apply_loss(mode, prob)
 
     def __str__(self):
         """
