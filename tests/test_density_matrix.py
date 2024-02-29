@@ -28,17 +28,15 @@
 # SOFTWARE.
 
 import math
+import pytest
 
-import perceval
-from perceval import (StateVector, BasicState, Source, SVDistribution, Matrix, Simulator, StateGenerator, Encoding,
-                      Unitary, Circuit, SLOSBackend)
+import numpy as np
+
+from perceval import BasicState, Source, SVDistribution, Matrix, Simulator, \
+                      Unitary, Circuit, SLOSBackend
 from perceval.utils.density_matrix import FockBasis, DensityMatrix
 from perceval.utils.density_matrix_utils import *
-import numpy as np
-import scipy
-from scipy.sparse import dok_array
-import pytest
-from _test_utils import assert_svd_close
+
 
 
 def test_fock_basis():
@@ -209,15 +207,6 @@ def test_measure_density_matrix():
         dm_comparison = DensityMatrix.from_svd(rstate, index=rdm.index)
 
         assert dm_comparison.mat.toarray() == pytest.approx(rdm.mat.toarray())
-
-
-def test_measure_random():
-    dm = DensityMatrix.from_svd(SVDistribution({BasicState([1, 2, 2, 0]) + BasicState([0, 1, 1, 3]) + BasicState([4, 0, 0, 1]): 1/2,
-                                BasicState([1, 1, 0, 0]): 1/2 }))
-
-    for k in range(10):
-        measured_fs, remaining_dm = dm.measure(0, all_results=False)
-        assert measured_fs.n + remaining_dm.n_max == 5
 
 
 def test_photon_loss():
