@@ -47,6 +47,7 @@ from perceval.utils.density_matrix_utils import array_to_statevector, is_hermiti
 
 SPARSE_THRESHOLD = 50
 
+
 class FockBasis(dict):
     def __init__(self, m, n_max):
         for i, st in enumerate(max_photon_state_iterator(m, n_max)):
