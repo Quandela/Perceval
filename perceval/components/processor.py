@@ -260,6 +260,7 @@ class Processor(AProcessor):
         if not self._phase_quantization:
             return circuit
         # Apply phase quantization noise on all phase parameters in the circuit
+        circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
         for _, component in circuit:
             if "phi" in component.params:
                 phi_param = component.param("phi")

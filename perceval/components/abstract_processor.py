@@ -378,6 +378,8 @@ class AProcessor(ABC):
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
+        if self._n_moi is None:
+            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
