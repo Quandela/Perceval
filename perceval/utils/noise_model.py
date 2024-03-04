@@ -38,7 +38,8 @@ class NoiseModel:
 
     :param brightness: first lens brightness of a quantum dot
     :param indistinguishability: chance two photons are indistinguishable
-    :param g2: g²(0) - second order intensity autocorrelation at zero time delay
+    :param g2: g²(0) - second order intensity autocorrelation at zero time delay. This parameter is correlated with how
+               often two photons are emitted by the source instead of a single one.
     :param g2_distinguishable: g2-generated photons indistinguishability
     :param transmittance: system-wide transmittance (warning, can interfere with the brightness parameter)
     :param phase_imprecision: maximum precision of the phase shifters (0 means infinite precision)
