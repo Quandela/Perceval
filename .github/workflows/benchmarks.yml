@@ -149,7 +149,7 @@ jobs:
           alert-threshold: '120%'
           comment-on-alert: true
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: Quandela/Perceval-PrivateBenchmark
           ref: ${{ needs.setup.outputs.gh_branch }}
