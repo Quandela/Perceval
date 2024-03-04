@@ -42,7 +42,7 @@ from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
-from perceval.utils import LogicalState
+from perceval.utils import LogicalState, NoiseModel
 
 
 class ProcessorType(Enum):
@@ -54,17 +54,19 @@ class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict = {}
+        self._parameters: Dict[str, Any] = {}
+
+        self._noise: Union[NoiseModel, None] = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons = None
+        self._min_detected_photons: Union[int, None] = None
 
         self._reset_circuit()
 
     def _reset_circuit(self):
         self._in_ports: Dict = {}
         self._out_ports: Dict = {}
-        self._postselect: PostSelect = None
+        self._postselect: Union[PostSelect, None] = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
@@ -130,6 +132,15 @@ class AProcessor(ABC):
         return self._input_state
 
     @property
+    def noise(self):
+        return self._noise
+
+    @noise.setter
+    def noise(self, nm: NoiseModel):
+        assert isinstance(nm, NoiseModel), "noise type has to be 'NoiseModel'"
+        self._noise = nm
+
+    @property
     @abstractmethod
     def available_commands(self) -> List[str]:
         pass
@@ -184,7 +195,7 @@ class AProcessor(ABC):
         return True
 
     def copy(self, subs: Union[dict, list] = None):
-        new_proc = copy.deepcopy(self)
+        new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))
@@ -364,6 +375,8 @@ class AProcessor(ABC):
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
+        if self._n_moi is None:
+            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:

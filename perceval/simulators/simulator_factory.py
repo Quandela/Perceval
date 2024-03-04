@@ -79,17 +79,21 @@ class SimulatorFactory:
                 min_detected_photons = circuit.parameters.get('min_detected_photons')
                 post_select = circuit.post_select_fn
                 heralds = circuit.heralds
-                circuit = circuit.components
+                if circuit._is_unitary:
+                    circuit = circuit.linear_circuit()
+                else:
+                    circuit = circuit.components
 
-            for _, cp in circuit:
-                if not sim_losses and isinstance(cp, LC):
-                    sim_losses = True
-                    convert_to_circuit = False
-                if not sim_delay and isinstance(cp, TD):
-                    sim_delay = True
-                    convert_to_circuit = False
-                if not sim_polarization and isinstance(cp, ACircuit):
-                    sim_polarization = cp.requires_polarization
+            if not isinstance(circuit, ACircuit):
+                for _, cp in circuit:
+                    if not sim_losses and isinstance(cp, LC):
+                        sim_losses = True
+                        convert_to_circuit = False
+                    if not sim_delay and isinstance(cp, TD):
+                        sim_delay = True
+                        convert_to_circuit = False
+                    if not sim_polarization and isinstance(cp, ACircuit):
+                        sim_polarization = cp.requires_polarization
 
         if backend is None:
             backend = SLOSBackend()  # The default is SLOS
