@@ -49,9 +49,9 @@ jobs:
         echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
       shell: Bash
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ env.PYTHON_V }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_V }}
 
