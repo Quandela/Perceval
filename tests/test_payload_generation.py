@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import pytest
 from _mock_rpc_handler import MockRPCHandler
 from perceval import RemoteProcessor, Circuit, BasicState, PostSelect
 from perceval.serialization._constants import ZIP_PREFIX, BS_TAG, SEP, PCVL_PREFIX, POSTSELECT_TAG
@@ -65,6 +65,8 @@ def test_payload_parameters():
     rp = _get_remote_processor()
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
+    with pytest.warns(DeprecationWarning):
+        rp.set_parameter('g2', 0.05)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' in payload
     for i in range(n_params):

@@ -28,7 +28,6 @@
 # SOFTWARE.
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
-from _mock_rpc_handler import MockRPCHandler
 
 
 def quadratic_count_down(n, speed=0.1, progress_callback=None):
@@ -133,18 +132,8 @@ def test_get_res_run_async():
 from perceval.runtime import RemoteJob
 import pytest
 import time
-
-_REMOTE_JOB_NAME = "a remote job"
-_REMOTE_JOB_DURATION = 5
-_REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
-_REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
-_REMOTE_JOB_RESULTS = pcvl.BSDistribution({
-                pcvl.BasicState([1, 0, 0, 0]): 0.200266,
-                pcvl.BasicState([0, 1, 0, 0]): 0.09734,
-                pcvl.BasicState([0, 0, 1, 0]): 0.089365,
-                pcvl.BasicState([0, 0, 0, 1]): 0.223731,
-                pcvl.BasicState([1, 0, 1, 0]): 0.308951
-            })
+from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
+    REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
 
 
 def test_remote_job():
@@ -160,18 +149,18 @@ def test_remote_job():
         rj.name = 28
     job_status = rj.status
     assert rj.is_complete == job_status.completed
-    assert rj.get_results()['results'] == _REMOTE_JOB_RESULTS
+    assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN
     with pytest.warns(UserWarning):
-        assert rj.get_results()['results'] == _REMOTE_JOB_RESULTS
+        assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     _TEST_JOB_ID = "any"
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
-    assert resumed_rj.get_results()['results'] == _REMOTE_JOB_RESULTS
+    assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
     assert rj.is_complete == job_status.completed
-    assert rj.name == _REMOTE_JOB_NAME
-    assert rj.status.creation_timestamp == _REMOTE_JOB_CREATION_TIMESTAMP
-    assert rj.status.start_timestamp == _REMOTE_JOB_START_TIMESTAMP
-    assert rj.status.duration == _REMOTE_JOB_DURATION
+    assert rj.name == REMOTE_JOB_NAME
+    assert rj.status.creation_timestamp == REMOTE_JOB_CREATION_TIMESTAMP
+    assert rj.status.start_timestamp == REMOTE_JOB_START_TIMESTAMP
+    assert rj.status.duration == REMOTE_JOB_DURATION

@@ -92,7 +92,7 @@ class AProcessor(ABC):
         return dict()
 
     def set_parameters(self, params: Dict[str, Any]):
-        for key, value in params:
+        for key, value in params.items():
             self.set_parameter(key, value)
 
     def set_parameter(self, key: str, value: Any):
@@ -140,8 +140,10 @@ class AProcessor(ABC):
 
     @noise.setter
     def noise(self, nm: NoiseModel):
-        assert isinstance(nm, NoiseModel), "noise type has to be 'NoiseModel'"
-        self._noise = nm
+        if nm is None or isinstance(nm, NoiseModel):
+            self._noise = nm
+        else:
+            raise TypeError("noise type has to be 'NoiseModel'")
 
     @property
     @abstractmethod

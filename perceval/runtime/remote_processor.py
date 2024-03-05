@@ -33,7 +33,7 @@ from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source
-from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect
+from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -54,7 +54,8 @@ class RemoteProcessor(AProcessor):
                  token: str = None,
                  url: str = QUANDELA_CLOUD_URL,
                  rpc_handler: RPCHandler = None,
-                 m: int = None):
+                 m: int = None,
+                 noise: NoiseModel = None):
         """
         :param name: Platform name
         :param token: Token value to authenticate the user
@@ -63,6 +64,8 @@ class RemoteProcessor(AProcessor):
             when doing so, name, token and url are expected to be blank
         :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
             circuit added decides of the processor size
+        :param noise: a NoiseModel containing noise parameters (defaults to no noise)
+                      simulated noise is ignored when working on a physical Quantum Processing Unit
         """
         super().__init__()
         if rpc_handler is not None:  # When a rpc_handler object is passed, name, token and url are expected to be None
@@ -90,6 +93,14 @@ class RemoteProcessor(AProcessor):
             self._n_moi = m
 
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
+        self.noise = noise
+
+    @AProcessor.noise.setter
+    def noise(self, nm):
+        super(RemoteProcessor, type(self)).noise.fset(self, nm)
+        if self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
+            warn(f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
+                 UserWarning)
 
     @property
     def is_remote(self) -> bool:
@@ -156,7 +167,7 @@ class RemoteProcessor(AProcessor):
 
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState) -> None:
-        r"""
+        """
         Set up the processor input with a LogicalState. Computes the input probability distribution.
 
         :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports

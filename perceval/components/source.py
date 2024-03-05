@@ -76,6 +76,8 @@ class Source:
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
+        if noise is None:
+            return Source()
         return Source(emission_probability=noise.brightness,
                       multiphoton_component=noise.g2,
                       indistinguishability=noise.indistinguishability,

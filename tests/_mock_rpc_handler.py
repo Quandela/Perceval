@@ -29,6 +29,21 @@
 
 import time
 import json
+from perceval.utils import BSDistribution, BasicState
+from perceval.serialization import serialize
+
+
+REMOTE_JOB_NAME = "a remote job"
+REMOTE_JOB_DURATION = 5
+REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
+REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
+REMOTE_JOB_RESULTS = BSDistribution({
+    BasicState([1, 0, 0, 0]): 0.200266,
+    BasicState([0, 1, 0, 0]): 0.09734,
+    BasicState([0, 0, 1, 0]): 0.089365,
+    BasicState([0, 0, 0, 1]): 0.223731,
+    BasicState([1, 0, 1, 0]): 0.308951
+})
 
 
 class MockRPCHandler:
@@ -81,15 +96,15 @@ class MockRPCHandler:
     def get_job_status(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
         return {
-            "creation_datetime": _REMOTE_JOB_CREATION_TIMESTAMP,
-            "duration": _REMOTE_JOB_DURATION,
+            "creation_datetime": REMOTE_JOB_CREATION_TIMESTAMP,
+            "duration": REMOTE_JOB_DURATION,
             "failure_code": None,
             "last_intermediate_results": None,
             "msg": "ok",
-            "name": _REMOTE_JOB_NAME,
+            "name": REMOTE_JOB_NAME,
             "progress": 1.0,
             "progress_message": "Computing phases to apply (step 2)",
-            "start_time": _REMOTE_JOB_START_TIMESTAMP,
+            "start_time": REMOTE_JOB_START_TIMESTAMP,
             "status": "completed",
             "status_message": None
         }
@@ -97,6 +112,6 @@ class MockRPCHandler:
     def get_job_results(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
         return {'results': json.dumps({
-            'results': serialize(_REMOTE_JOB_RESULTS),
+            'results': serialize(REMOTE_JOB_RESULTS),
             'physical_perf': 1
         })}
