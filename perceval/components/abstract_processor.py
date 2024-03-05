@@ -393,7 +393,7 @@ class AProcessor(ABC):
             raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
         for pos_m, component in self._components:
-            circuit.add(pos_m, component.copy(), merge=flatten)
+            circuit.add(pos_m, component, merge=flatten)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> List:
