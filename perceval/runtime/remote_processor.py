@@ -98,7 +98,7 @@ class RemoteProcessor(AProcessor):
     @AProcessor.noise.setter
     def noise(self, nm):
         super(RemoteProcessor, type(self)).noise.fset(self, nm)
-        if self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
+        if nm and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
             warn(f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
                  UserWarning)
 
