@@ -7,4 +7,5 @@ nbsphinx
 jinja2==3.0.0
 ipython
 ipykernel
+gitpython
 git+https://github.com/Quandevla/sphinx-multiversion-contrib.git@fix-html-index
