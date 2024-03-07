@@ -26,11 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import requests
+
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import RemoteProcessor
 from .scaleway_rpc_handler import RPCHandler
-
-import requests
 from requests import HTTPError
 
 _ENDPOINT_URL = "https://api.scaleway.com/qaas/v1alpha1"
@@ -108,6 +108,12 @@ class Session(ISession):
             raise HTTPError(request.json())
 
     def stop(self) -> None:
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}/terminate"
+        request = requests.post(endpoint, headers=self._headers)
+
+        request.raise_for_status()
+
+    def delete(self) -> None:
         endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
         request = requests.delete(endpoint, headers=self._headers)
 

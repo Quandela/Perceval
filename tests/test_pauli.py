@@ -27,39 +27,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import get_preparation_circuit, get_measurement_circuit
-from typing import List
+import pytest
+import numpy as np
+from perceval.components import (PauliType, processor_circuit_configurator, catalog, Circuit, Processor,
+                                 get_preparation_circuit, get_pauli_gate)
 
 
-class StatePreparation:
-    """
-    Builds preparation circuits to prepare an input photon in each of the following
-    logical qubit state states: |0>,|1>,|+>,|+i> using Pauli Gates.
-
-    :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
-    """
-    def __init__(self, prep_state_indices: List):
-        self._prep_state_indices = prep_state_indices
-
-    def __iter__(self):
-        """
-        Returns preparation circuits qubit by qubit
-        """
-        for i, pauli_type in enumerate(self._prep_state_indices):
-            yield i*2, get_preparation_circuit(pauli_type)
+def test_pauli_type():
+    pauli_s = list(PauliType)
+    pauli_val = [member.value for member in PauliType]
+    is_ascending = np.all(np.diff(pauli_val) >= 0)
+    assert len(pauli_s) == 4
+    assert is_ascending == True
 
 
-class MeasurementCircuit:
-    """
-    Builds a measurement circuit to measure photons created in the Pauli Basis (I,X,Y,Z) to perform
-    tomography experiments.
+@pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
+def test_pauli_state_prep_circuits(pauli_gate):
+    c = Circuit(2) // get_preparation_circuit(pauli_gate)
+    assert c.m == 2
 
-    :param pauli_indices: List of 'n'(=nqubit) indices to choose a circuit to measure the prepared state at nth qubit
-    """
 
-    def __init__(self, pauli_indices: List):
-        self._pauli_indices = pauli_indices
+@pytest.mark.parametrize("pauli_gate", [PauliType.X, PauliType.Y, PauliType.Z])
+def test_pauli_gates(pauli_gate):
+    gate_matrix = get_pauli_gate(pauli_gate)
+    assert np.trace(gate_matrix) == 0  # verify pauli matrices are traceless
 
-    def __iter__(self):
-        for i, pauli_type in enumerate(self._pauli_indices):
-            yield i*2, get_measurement_circuit(pauli_type)
+
+def test_processor_circuit_configurator():
+
+    with pytest.raises(TypeError):
+        processor_circuit_configurator(Circuit(2), [PauliType.I, PauliType.I],
+                                       [PauliType.I, PauliType.I])
+
+    cnot = catalog["klm cnot"].build_processor()
+    with pytest.raises(TypeError):
+        processor_circuit_configurator(cnot, [1, 0],[1, 0])
+
+    configured_cnot = processor_circuit_configurator(cnot, [PauliType.I, PauliType.I],
+                                   [PauliType.I, PauliType.I])
+
+    assert isinstance(configured_cnot, Processor)

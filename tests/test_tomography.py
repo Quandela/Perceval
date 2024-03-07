@@ -27,20 +27,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+from pathlib import Path
+
 import pytest
 import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import catalog, Processor, Circuit, PauliType
+from perceval.components import (catalog, Processor, Circuit, PauliType, get_preparation_circuit,
+                                 processor_circuit_configurator)
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
-from perceval.algorithm.tomography.tomography_utils import is_physical, get_preparation_circuit, \
-    _generate_pauli_index, _vector_to_sq_matrix, _matrix_to_vector, _matrix_basis, _coef_linear_decomp
+from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
+                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp)
 
+from _test_utils import save_figs, _save_or_check
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
+TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
 
 @pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
@@ -104,7 +110,7 @@ def test_fidelity_random_op():
     assert random_op_fidelity == pytest.approx(1)
 
 
-def test_chi_cnot_is_physical():
+def test_chi_cnot_is_physical_and_display(tmp_path, save_figs):
     cnot_p = catalog["klm cnot"].build_processor()
 
     qpt = ProcessTomography(operator_processor=cnot_p)
@@ -116,11 +122,18 @@ def test_chi_cnot_is_physical():
     assert res['Hermitian'] is True  # if Chi is Hermitian
     assert res['Completely Positive'] is True  # if input Chi is Completely Positive
 
+    # display
+    _save_or_check(qpt, tmp_path, sys._getframe().f_code.co_name, save_figs)
+
 
 def test_processor_odd_modes():
     # tests that a generic processor with odd number of modes does not work
     with pytest.raises(ValueError):
         ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
+
+
+def test_pauli_order():
+    assert PauliType.I.value == 0 and PauliType.X.value == 1 and PauliType.Y.value == 2 and PauliType.Z.value == 3
 
 
 def test_generate_pauli():
@@ -160,3 +173,19 @@ def test_matrix_basis_n_decomp():
         matrix_rebuilt += mu[idx]*basis_matrices
 
     assert np.allclose(matrix, matrix_rebuilt)
+
+
+def test_avg_fidelity_postprocessed_ccz_gate():
+    ccz_p = catalog["postprocessed ccz"].build_processor()
+    op_CCZ = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
+                       [0, 1, 0, 0, 0, 0, 0, 0],
+                       [0, 0, 1, 0, 0, 0, 0, 0],
+                       [0, 0, 0, 1, 0, 0, 0, 0],
+                       [0, 0, 0, 0, 1, 0, 0, 0],
+                       [0, 0, 0, 0, 0, 1, 0, 0],
+                       [0, 0, 0, 0, 0, 0, 1, 0],
+                       [0, 0, 0, 0, 0, 0, 0, -1]], dtype='complex_')
+
+    qpt = ProcessTomography(operator_processor=ccz_p)
+    ccz_avg_f = qpt.average_fidelity(op_CCZ)
+    assert ccz_avg_f == pytest.approx(1)

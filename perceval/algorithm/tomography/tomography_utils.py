@@ -30,7 +30,33 @@
 import numpy as np
 import math
 from itertools import product, combinations
-from perceval.components import PauliType, get_pauli_gate, get_preparation_circuit
+from perceval.components import PauliType, get_pauli_gate, get_preparation_circuit, processor_circuit_configurator
+from perceval.algorithm import Sampler
+from perceval.utils import BasicState
+
+
+def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list) -> tuple:
+    """
+    computes the output probability distribution for the tomography experiment
+    :param tomography_experiment: Tomography experiment object with a Processor on which Tomography is to be done
+    :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
+    :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
+     circuit
+    :return: Output state probability distribution
+    """
+    p = processor_circuit_configurator(tomography_experiment._processor, prep_state_indices, meas_pauli_basis_indices)
+
+    input_state = BasicState([1, 0] * tomography_experiment._nqubit)
+    p.with_input(input_state)
+
+    sampler = Sampler(p, max_shots_per_call=tomography_experiment._max_shots)
+    probs = sampler.probs()
+    output_distribution = probs["results"]
+    gate_logical_perf = probs["logical_perf"]
+
+    for key in output_distribution:  # Denormalize output state distribution
+        output_distribution[key] *= gate_logical_perf
+    return output_distribution, gate_logical_perf
 
 
 def _state_to_dens_matrix(state: np.ndarray) -> np.ndarray:
@@ -58,7 +84,8 @@ def _matrix_basis(nqubit: int, d: int) -> list:
     for elem in pauli_indices:
         M = get_preparation_circuit(elem[0]).compute_unitary()
         if len(elem) > 1:
-            M = np.kron(M, get_preparation_circuit(elem[1]).compute_unitary())
+            for i in elem[1:]:
+                M = np.kron(M, get_preparation_circuit(i).compute_unitary())
         B.append(_state_to_dens_matrix(np.dot(M, v)))
 
     return B

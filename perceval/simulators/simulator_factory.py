@@ -41,7 +41,7 @@ from typing import List, Union
 
 class SimulatorFactory:
     """
-    Using the SimulatorFactory is an easy and integrated way of instanciating the correct layers of simulation for a
+    Using the SimulatorFactory is an easy and integrated way of instantiating the correct layers of simulation for a
     given circuit. The factory will adapt to the component needs, in terms of simulation, and chain the correct
     simulator calls.
     """
@@ -64,6 +64,8 @@ class SimulatorFactory:
         sim_losses = False
         convert_to_circuit = False
         min_detected_photons = None
+        post_select = None
+        heralds = None
         m = 0
         if isinstance(circuit, ACircuit):
             sim_polarization = circuit.requires_polarization
@@ -75,17 +77,23 @@ class SimulatorFactory:
                 if backend is None:
                     backend = circuit.backend
                 min_detected_photons = circuit.parameters.get('min_detected_photons')
-                circuit = circuit.components
+                post_select = circuit.post_select_fn
+                heralds = circuit.heralds
+                if circuit._is_unitary:
+                    circuit = circuit.linear_circuit()
+                else:
+                    circuit = circuit.components
 
-            for _, cp in circuit:
-                if not sim_losses and isinstance(cp, LC):
-                    sim_losses = True
-                    convert_to_circuit = False
-                if not sim_delay and isinstance(cp, TD):
-                    sim_delay = True
-                    convert_to_circuit = False
-                if not sim_polarization and isinstance(cp, ACircuit):
-                    sim_polarization = cp.requires_polarization
+            if not isinstance(circuit, ACircuit):
+                for _, cp in circuit:
+                    if not sim_losses and isinstance(cp, LC):
+                        sim_losses = True
+                        convert_to_circuit = False
+                    if not sim_delay and isinstance(cp, TD):
+                        sim_delay = True
+                        convert_to_circuit = False
+                    if not sim_polarization and isinstance(cp, ACircuit):
+                        sim_polarization = cp.requires_polarization
 
         if backend is None:
             backend = SLOSBackend()  # The default is SLOS
@@ -97,14 +105,13 @@ class SimulatorFactory:
 
         # Building the simulator layers
         simulator = Simulator(backend)
-        if min_detected_photons is not None:
-            simulator.set_min_detected_photon_filter(min_detected_photons)
         if sim_polarization:
             simulator = PolarizationSimulator(simulator)
         if sim_delay:
             simulator = DelaySimulator(simulator)
         if sim_losses:
             simulator = LossSimulator(simulator)
+        simulator.set_selection(min_detected_photons, post_select, heralds)
 
         if convert_to_circuit:
             circuit = _unitary_components_to_circuit(circuit, m)

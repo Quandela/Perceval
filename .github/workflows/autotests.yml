@@ -38,6 +38,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
+    permissions:
+      contents: write
     steps:
     - if: runner.os == 'Linux'
       name: Initialize PYTHON_V_CP linux
@@ -49,9 +51,9 @@ jobs:
         echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
       shell: Bash
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ env.PYTHON_V }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_V }}
 
@@ -97,7 +99,7 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version:  ${{ env.PYTHON_V }}
 
@@ -117,7 +119,7 @@ jobs:
         make multiversion
 
     - name: 'Create docs Artefact'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docs
         path: docs/build/html

@@ -6,4 +6,5 @@ sphinx_autodoc_typehints
 nbsphinx
 jinja2==3.0.0
 ipython
+ipykernel
 git+https://github.com/Quandevla/sphinx-multiversion-contrib.git@fix-html-index

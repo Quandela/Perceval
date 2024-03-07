@@ -1,5 +1,5 @@
 [![GitHub release](https://img.shields.io/github/v/release/Quandela/Perceval.svg?style=plastic)](https://github.com/Quandela/Perceval/releases/latest)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/Perceval?style=plastic)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/perceval-quandela?style=plastic)
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/python-publish.yml)
 
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml)
@@ -39,7 +39,7 @@ practitioners.
 
 Perceval requires:
 
-* Python 3.8 or above
+* Above Python 3.8 and below Python 3.12
 
 ## PIP
 We recommend installing it with `pip`:
