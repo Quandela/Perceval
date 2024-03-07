@@ -21,7 +21,6 @@ help:
 
 multiversion:
 	python -m sphinx_multiversion source build/html
-	python source/_templates/build_index.py
 
 clean:
 	rm -rf build
