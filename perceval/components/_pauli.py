@@ -44,29 +44,80 @@ class PauliType(Enum):
     Z = 3
 
 
-def get_preparation_circuit(pauli_type: PauliType) -> Circuit:
+class PauliEigenStateType(Enum):
+    # Order of members important
+    Zp = 0  # Pauli eigen-state Z+ : |0>
+    Zm = 1  # Pauli eigen-state Z- : |1>
+
+    Xp = 2  # Pauli eigen-state X+ : |+>
+    Yp = 3  # Pauli eigen-state Y+ : |i+>
+
+    Xm = 4  # Pauli eigen-state X- : |->
+    Ym = 5  # Pauli eigen-state Y- : |i->
+
+
+def get_pauli_eigen_state_prep_circ(pauli_type: PauliEigenStateType) -> Circuit:
     """
-    Create a LO circuit corresponding to one of the Pauli operators (I,X,Y,Z).
-    Equivalent to a 1-qubit Pauli Gate with Dual rail encoding.
+    Generates a 2-mode LO circuit to prepare the logical states in one of the eigen states of Pauli
+    Z_p : |0>, Z_m : |1>, X_p : |+>, X_m : |->, Y_p : |i+>, and Y_m : |i->
 
     :param pauli_type: PauliType
     :return: 2 mode perceval circuit
     """
-    assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
+    assert isinstance(pauli_type, PauliEigenStateType) and not isinstance(pauli_type, PauliType), \
+        f"Wrong type, expected a Pauli eigen-state, got {type(pauli_type)}"
 
-    if pauli_type == PauliType.I:
-        return Circuit(2, name="I")
-    elif pauli_type == PauliType.X:
-        return Circuit(2, name="X") // PERM([1, 0])
-    elif pauli_type == PauliType.Y:
-        return Circuit(2, name="Y") // BS.H()
-    elif pauli_type == PauliType.Z:
-        return Circuit(2, name="Z") // BS.H() // (1, PS(np.pi / 2))
+    if isinstance(pauli_type, PauliType):
+        pauli_type = map_pauli_to_paulieigenstate(pauli_type)
+
+    if pauli_type == PauliEigenStateType.Zm:
+        return Circuit(2, name="Zm State Preparer")
+
+    elif pauli_type == PauliEigenStateType.Zp:
+        return Circuit(2, name="Zp State Preparer") // PERM([1, 0])
+
+    elif pauli_type == PauliEigenStateType.Xp:
+        return Circuit(2, name="Xp State Preparer") // BS.H()
+
+
+    elif pauli_type == PauliEigenStateType.Xm:
+        return Circuit(2, name="Xm State Preparer") // PERM([1, 0]) // BS.H()
+
+    elif pauli_type == PauliEigenStateType.Yp:
+        return Circuit(2, name="Yp State Preparer") // BS.H() // (1, PS(np.pi / 2))
+
+    elif pauli_type == PauliEigenStateType.Ym:
+        return Circuit(2, name="Ym State Preparer") // PERM([1, 0]) // BS.H() // (1, PS(np.pi / 2))
+
     else:
         raise NotImplementedError(f"{pauli_type}")
 
 
-def get_measurement_circuit(pauli_type: PauliType) -> Circuit:
+def get_pauli_gate(pauli_type: PauliType):
+    """
+    Computes one of the Pauli operators (I,X,Y,Z).
+    They are also the gate matrix
+
+    :param pauli_type: PauliType
+    :return: 2x2 unitary and hermitian array
+    """
+    if pauli_type == PauliType.I:
+        return Matrix.eye(2)
+
+    elif pauli_type == PauliType.X:
+        return Matrix([[0, 1], [1, 0]])
+
+    elif pauli_type == PauliType.Y:
+        return Matrix([[0, -1j], [1j, 0]])
+
+    elif pauli_type == PauliType.Z:
+        return Matrix([[1, 0], [0, -1]])
+
+    else:
+        raise NotImplementedError(f"{pauli_type}")
+
+
+def get_pauli_basis_measurement_circuit(pauli_type: PauliType) -> Circuit:
     """
     Creates LO circuits to measure logical state in the pauli basis I,X,Y,Z.
     Equivalent to measuring eigenstates of the 1-qubit Pauli gates
@@ -77,85 +128,25 @@ def get_measurement_circuit(pauli_type: PauliType) -> Circuit:
     assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
 
     if pauli_type == PauliType.I:
-        return Circuit(2, name="I")
+        return Circuit(2, name="Measurer I")
     elif pauli_type == PauliType.X:
-        return Circuit(2, name="X") // BS.H()
+        return Circuit(2, name="Measurer X") // BS.H()
     elif pauli_type == PauliType.Y:
-        return Circuit(2, name="Y") // BS.Rx(theta=np.pi/2, phi_bl=np.pi, phi_br=-np.pi/2)
+        return Circuit(2, name="Measurer Y") // BS.Rx(theta=np.pi/2, phi_bl=np.pi, phi_br=-np.pi/2)
     elif pauli_type == PauliType.Z:
-        return Circuit(2, name="Z")
+        return Circuit(2, name="Measurer Z")
     else:
         raise NotImplementedError(f"{pauli_type}")
 
 
-def get_pauli_gate(pauli_type: PauliType):
-    """
-    Computes the gate matrices of the Pauli operators (I,X,Y,Z).
-
-    :param pauli_type: PauliType
-    :return: 2x2 unitary and hermitian array
-    """
+def map_pauli_to_paulieigenstate(self, pauli_type: PauliType) -> PauliEigenStateType:
     if pauli_type == PauliType.I:
-        return Matrix.eye(2)
+        return PauliEigenStateType.Zm
     elif pauli_type == PauliType.X:
-        return Matrix([[0, 1], [1, 0]])
-    elif pauli_type == PauliType.Y:
-        return Matrix([[0, -1j], [1j, 0]])
+        return PauliEigenStateType.Zp
+    elif pauli_type == PauliEigenStateType.Y:
+        return PauliEigenStateType.Xp
     elif pauli_type == PauliType.Z:
-        return Matrix([[1, 0], [0, -1]])
+        return PauliEigenStateType.Yp
     else:
-        raise NotImplementedError(f"{pauli_type}")
-
-
-def _prep_state_circuit_preparer(prep_state_indices: List):
-    """
-    Generates a layer of state preparation circuits (essentially 1-qubit pauli gates) for each qubit.
-    The logical qubit state prepared will be one of the list: |0>,|1>,|+>,|+i> using Pauli Gates.
-    :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
-    """
-    for i, pauli_type in enumerate(prep_state_indices):
-        yield i * 2, get_preparation_circuit(pauli_type)
-
-
-def _meas_state_circuit_preparer(pauli_indices: List):
-    """
-    Generates a layer of state measurement circuits (essentially measuring eigenstates of one of the pauli gates)
-     for each qubit.
-    :param pauli_indices: List of 'n'(=nqubit) indices to choose a circuit to measure the prepared state at nth qubit
-    """
-    for i, pauli_type in enumerate(pauli_indices):
-        yield i*2, get_measurement_circuit(pauli_type)
-
-
-def processor_circuit_configurator(processor, prep_state_indices: list, meas_pauli_basis_indices: list):
-    """
-    Adds preparation and measurement circuit to input processor (with the gate operation under study) to configure
-    it for the tomography experiment
-    :param processor: Processor with input circuit on which Tomography is to be performed
-    :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-    :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-     circuit
-    :return: the configured processor to perform state tomography experiment
-    """
-    if not isinstance(processor, Processor):
-        raise TypeError(f"{processor} is not a Processor and hence cannot be configured")
-
-    if not (all(isinstance(p_index, PauliType) for p_index in prep_state_indices)
-            or all(isinstance(m_index, PauliType) for m_index in meas_pauli_basis_indices)):
-        raise TypeError(
-            f"Indices for the preparation and measurement circuits should be a PauliType")
-
-    p = processor.copy()
-    p.clear_input_and_circuit(processor.m)  # Clear processor content but keep its size
-
-    for c in _prep_state_circuit_preparer(prep_state_indices):
-        p.add(*c)  # Add state preparation circuit to the left of the operator
-
-    p.add(0, processor)  # including the operator (as a processor)
-
-    for c in _meas_state_circuit_preparer(meas_pauli_basis_indices):
-        p.add(*c)  # Add measurement basis circuit to the right of the operator
-
-    p.min_detected_photons_filter(0)  # QPU would have a problem with this
-
-    return p
+        raise NotImplementedError("Unknown pauli")

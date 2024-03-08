@@ -176,6 +176,7 @@ class ProcessTomography(AAlgorithm):
         :return: Beta Matrix for Chi computation
         """
         num_meas = self._size_hilbert ** 4  # Total number of measurements needed for process tomography
+        # todo: better update to 4**n to count num_prep and num_meas
         beta_matrix = np.zeros((num_meas, num_meas), dtype='complex_')
         for a in range(num_meas):
             j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
