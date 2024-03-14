@@ -133,6 +133,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :hidden:
 
    notebooks/Gedik_qudit
+   notebooks/Boson_Bunching
 
 .. toctree::
    :caption: Code Reference
