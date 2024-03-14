@@ -29,8 +29,8 @@
 
 import pytest
 import numpy as np
-from perceval.components import (PauliType, processor_circuit_configurator, catalog, Circuit, Processor,
-                                 get_preparation_circuit, get_pauli_gate)
+from perceval.components import (PauliType, PauliEigenStateType, processor_circuit_configurator, catalog, Circuit,
+                                 Processor, get_pauli_eigen_state_prep_circ, get_pauli_gate)
 
 
 def test_pauli_type():
@@ -41,9 +41,10 @@ def test_pauli_type():
     assert is_ascending == True
 
 
-@pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
-def test_pauli_state_prep_circuits(pauli_gate):
-    c = Circuit(2) // get_preparation_circuit(pauli_gate)
+#@pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
+@pytest.mark.parametrize("pauli_eigen_states", [item for item in PauliEigenStateType])
+def test_pauli_state_prep_circuits(pauli_eigen_states):
+    c = Circuit(2) // get_pauli_eigen_state_prep_circ(pauli_eigen_states)
     assert c.m == 2
 
 
@@ -56,14 +57,16 @@ def test_pauli_gates(pauli_gate):
 def test_processor_circuit_configurator():
 
     with pytest.raises(TypeError):
-        processor_circuit_configurator(Circuit(2), [PauliType.I, PauliType.I],
-                                       [PauliType.I, PauliType.I])
+        processor_circuit_configurator(Circuit(2),
+                                       [PauliEigenStateType.Zm, PauliEigenStateType.Zm],
+                                       [PauliType.I, PauliType.I],)
 
     cnot = catalog["klm cnot"].build_processor()
     with pytest.raises(TypeError):
         processor_circuit_configurator(cnot, [1, 0],[1, 0])
 
-    configured_cnot = processor_circuit_configurator(cnot, [PauliType.I, PauliType.I],
-                                   [PauliType.I, PauliType.I])
+    configured_cnot = processor_circuit_configurator(cnot,
+                                                     [PauliEigenStateType.Zm, PauliEigenStateType.Zm],
+                                                     [PauliType.I, PauliType.I],)
 
     assert isinstance(configured_cnot, Processor)
