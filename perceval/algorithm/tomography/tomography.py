@@ -35,7 +35,7 @@ from perceval.utils import BasicState
 
 from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
                                _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index,
-                               _list_subset_k_from_n, _compute_probs)
+                               _generate_pauli_prep_index, _list_subset_k_from_n, _compute_probs)
 from ..abstract_algorithm import AAlgorithm
 
 
@@ -113,8 +113,9 @@ class StateTomography(AAlgorithm):
         """
         density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype='complex_')
 
-        pauli_indices = _generate_pauli_index(self._nqubit)
-        for index, elem in enumerate(pauli_indices):
+        pauli_meas_indices = _generate_pauli_index(self._nqubit)  # generates indices for measurement
+
+        for index, elem in enumerate(pauli_meas_indices):
             density_matrix += self._stokes_parameter(prep_state_indices, elem) \
                               * _get_fixed_basis_ops(index, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
@@ -152,6 +153,8 @@ class ProcessTomography(AAlgorithm):
         self.chi_normalized = None
         self.chi_unnormalized = None
         self.gate_efficiency = None
+        self._prep_basis_size = 4
+        # Standard Process tomography works with a subset of pauli eigenstates prepared at input : |0>, |1>, |+>, |i+>
 
     def _beta_tensor_elem(self, j: int, k: int, m: int, n: int, nqubit: int) -> np.ndarray:
         """
@@ -176,7 +179,6 @@ class ProcessTomography(AAlgorithm):
         :return: Beta Matrix for Chi computation
         """
         num_meas = self._size_hilbert ** 4  # Total number of measurements needed for process tomography
-        # todo: better update to 4**n to count num_prep and num_meas
         beta_matrix = np.zeros((num_meas, num_meas), dtype='complex_')
         for a in range(num_meas):
             j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
@@ -192,9 +194,9 @@ class ProcessTomography(AAlgorithm):
         :return: Lambda vector for Chi computation
         """
         density_matrices = []  # stores a list of density matrices for each measurement
-        pauli_indices = _generate_pauli_index(self._nqubit)
 
-        for prep_state_indices in pauli_indices:
+        pauli_prep_indices = _generate_pauli_prep_index(self._nqubit, self._prep_basis_size)
+        for prep_state_indices in pauli_prep_indices:
             # compute state of system for each preparation state - perform state tomography
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
 
@@ -283,8 +285,9 @@ class ProcessTomography(AAlgorithm):
 
         # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
         density_matrices = []   # stores a list of density matrices for each measurement
-        pauli_indices = _generate_pauli_index(self._nqubit)
-        for prep_state_indices in pauli_indices:
+
+        pauli_prep_indices = _generate_pauli_prep_index(self._nqubit, self._prep_basis_size)
+        for prep_state_indices in pauli_prep_indices:
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
             # setting values
 

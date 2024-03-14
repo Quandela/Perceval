@@ -27,7 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from typing import List
+from .processor import Processor
 from ._pauli import PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ, get_pauli_basis_measurement_circuit
+
+
 def _prep_state_circuit_preparer(prep_state_indices: List):
     """
     Generates a layer of state preparation circuits (essentially 1-qubit pauli gates) for each qubit.
@@ -61,10 +65,13 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
     if not isinstance(processor, Processor):
         raise TypeError(f"{processor} is not a Processor and hence cannot be configured")
 
-    if not (all(isinstance(p_index, PauliType) for p_index in prep_state_indices)
-            or all(isinstance(m_index, PauliType) for m_index in meas_pauli_basis_indices)):
+    if not all(isinstance(p_index, PauliEigenStateType) for p_index in prep_state_indices):
         raise TypeError(
-            f"Indices for the preparation and measurement circuits should be a PauliType")
+            f"Indices for the preparation circuits should be a PauliEigenStateType")
+
+    if not all(isinstance(m_index, PauliType) for m_index in meas_pauli_basis_indices):
+        raise TypeError(
+            f"Indices for the measurement circuits should be a PauliType")
 
     p = processor.copy()
     p.clear_input_and_circuit(processor.m)  # Clear processor content but keep its size

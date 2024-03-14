@@ -31,12 +31,15 @@ import numpy as np
 from enum import Enum
 from .linear_circuit import Circuit
 from .unitary_components import BS, PS, PERM
-from .processor import Processor
 from perceval.utils import Matrix
-from typing import List
 
 
 class PauliType(Enum):
+    """
+    Enumeration of different Pauli Types. Usage -
+    1. Choose a Pauli gate (/operator)
+    2. Choose to measure a logical state in the basis of a Pauli operator
+    """
     # Order of members important
     I = 0
     X = 1
@@ -45,9 +48,12 @@ class PauliType(Enum):
 
 
 class PauliEigenStateType(Enum):
+    """
+    Enumeration of different eigenstates of Pauli operators.
+    """
     # Order of members important
-    Zp = 0  # Pauli eigen-state Z+ : |0>
-    Zm = 1  # Pauli eigen-state Z- : |1>
+    Zm = 0  # Pauli eigen-state Z- : |1>
+    Zp = 1  # Pauli eigen-state Z+ : |0>
 
     Xp = 2  # Pauli eigen-state X+ : |+>
     Yp = 3  # Pauli eigen-state Y+ : |i+>
@@ -64,11 +70,6 @@ def get_pauli_eigen_state_prep_circ(pauli_type: PauliEigenStateType) -> Circuit:
     :param pauli_type: PauliType
     :return: 2 mode perceval circuit
     """
-    assert isinstance(pauli_type, PauliEigenStateType) and not isinstance(pauli_type, PauliType), \
-        f"Wrong type, expected a Pauli eigen-state, got {type(pauli_type)}"
-
-    if isinstance(pauli_type, PauliType):
-        pauli_type = map_pauli_to_paulieigenstate(pauli_type)
 
     if pauli_type == PauliEigenStateType.Zm:
         return Circuit(2, name="Zm State Preparer")
@@ -78,7 +79,6 @@ def get_pauli_eigen_state_prep_circ(pauli_type: PauliEigenStateType) -> Circuit:
 
     elif pauli_type == PauliEigenStateType.Xp:
         return Circuit(2, name="Xp State Preparer") // BS.H()
-
 
     elif pauli_type == PauliEigenStateType.Xm:
         return Circuit(2, name="Xm State Preparer") // PERM([1, 0]) // BS.H()
@@ -95,8 +95,7 @@ def get_pauli_eigen_state_prep_circ(pauli_type: PauliEigenStateType) -> Circuit:
 
 def get_pauli_gate(pauli_type: PauliType):
     """
-    Computes one of the Pauli operators (I,X,Y,Z).
-    They are also the gate matrix
+    Computes the (gate) matrix for the Pauli operators (I,X,Y,Z).
 
     :param pauli_type: PauliType
     :return: 2x2 unitary and hermitian array
@@ -119,7 +118,7 @@ def get_pauli_gate(pauli_type: PauliType):
 
 def get_pauli_basis_measurement_circuit(pauli_type: PauliType) -> Circuit:
     """
-    Creates LO circuits to measure logical state in the pauli basis I,X,Y,Z.
+    Creates LO circuits to measure a logical state in the pauli basis I,X,Y,Z.
     Equivalent to measuring eigenstates of the 1-qubit Pauli gates
 
     :param pauli_type: PauliType
@@ -128,25 +127,12 @@ def get_pauli_basis_measurement_circuit(pauli_type: PauliType) -> Circuit:
     assert isinstance(pauli_type, PauliType), f"Wrong type, expected Pauli, got {type(pauli_type)}"
 
     if pauli_type == PauliType.I:
-        return Circuit(2, name="Measurer I")
+        return Circuit(2, name="I Measurer")
     elif pauli_type == PauliType.X:
-        return Circuit(2, name="Measurer X") // BS.H()
+        return Circuit(2, name="Pauli X Measurer") // BS.H()
     elif pauli_type == PauliType.Y:
-        return Circuit(2, name="Measurer Y") // BS.Rx(theta=np.pi/2, phi_bl=np.pi, phi_br=-np.pi/2)
+        return Circuit(2, name="Pauli Y Measurer") // BS.Rx(theta=np.pi/2, phi_bl=np.pi, phi_br=-np.pi/2)
     elif pauli_type == PauliType.Z:
-        return Circuit(2, name="Measurer Z")
+        return Circuit(2, name="Pauli Z Measurer ")
     else:
         raise NotImplementedError(f"{pauli_type}")
-
-
-def map_pauli_to_paulieigenstate(self, pauli_type: PauliType) -> PauliEigenStateType:
-    if pauli_type == PauliType.I:
-        return PauliEigenStateType.Zm
-    elif pauli_type == PauliType.X:
-        return PauliEigenStateType.Zp
-    elif pauli_type == PauliEigenStateType.Y:
-        return PauliEigenStateType.Xp
-    elif pauli_type == PauliType.Z:
-        return PauliEigenStateType.Yp
-    else:
-        raise NotImplementedError("Unknown pauli")
