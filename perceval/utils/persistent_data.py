@@ -67,7 +67,7 @@ class PersistentData:
         try:
             self._create_directory()
         except (PermissionError, OSError) as exc:
-            warnings.warn(exc)
+            warnings.warn(UserWarning(f"{exc}"))
             return
         if not self.is_writable() or not self.is_readable():
             warnings.warn(UserWarning(f"Cannot read or write in {self._directory}"))
