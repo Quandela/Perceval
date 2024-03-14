@@ -66,7 +66,7 @@ class PersistentData:
         self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
         try:
             self._create_directory()
-        except OSError as exc:
+        except (PermissionError, OSError) as exc:
             warnings.warn(exc)
             return
         if not self.is_writable() or not self.is_readable():
