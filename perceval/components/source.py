@@ -76,6 +76,8 @@ class Source:
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
+        if noise is None:
+            return Source()
         return Source(emission_probability=noise.brightness,
                       multiphoton_component=noise.g2,
                       indistinguishability=noise.indistinguishability,
@@ -142,7 +144,7 @@ class Source:
 
         dist = []  # Distribution represented as a list of annotations on 1 mode + probability
         self._add(dist, 0, p0)
-        if self.partially_distinguishible:
+        if self.partially_distinguishable:
             self._add(dist, ["_:0", "_:%s" % second_photon],  (1 - distinguishability) * p2to2)
             self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
             self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
@@ -155,7 +157,7 @@ class Source:
         return dist
 
     @property
-    def partially_distinguishible(self):
+    def partially_distinguishable(self):
         return self._indistinguishability != 1 \
             or (self._multiphoton_model == "distinguishable" and self._multiphoton_component)
 
@@ -191,6 +193,6 @@ class Source:
         dist = SVDistribution()
         for photon_count in expected_input:
             dist *= self.probability_distribution(photon_count)
-        if self.partially_distinguishible:
+        if self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist

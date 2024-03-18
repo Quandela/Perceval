@@ -35,12 +35,11 @@ from typing import Any, Dict, List, Union, Callable, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
+from perceval.utils import BasicState, Parameter, PostSelect
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
-from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from perceval.utils import LogicalState, NoiseModel
 
@@ -91,10 +90,13 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict):
-        self._parameters.update(params)
+    def set_parameters(self, params: Dict[str, Any]):
+        for key, value in params.items():
+            self.set_parameter(key, value)
 
     def set_parameter(self, key: str, value: Any):
+        if not isinstance(key, str):
+            raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
 
     @property
@@ -137,8 +139,10 @@ class AProcessor(ABC):
 
     @noise.setter
     def noise(self, nm: NoiseModel):
-        assert isinstance(nm, NoiseModel), "noise type has to be 'NoiseModel'"
-        self._noise = nm
+        if nm is None or isinstance(nm, NoiseModel):
+            self._noise = nm
+        else:
+            raise TypeError("noise type has to be 'NoiseModel'")
 
     @property
     @abstractmethod
@@ -552,30 +556,6 @@ class AProcessor(ABC):
     @abstractmethod
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
-
-    @property
-    def source_distribution(self) -> Union[SVDistribution, None]:
-        r"""
-        Retrieve the computed input distribution.
-        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
-        """
-        return self._inputs_map
-
-    @property
-    def source(self):
-        r"""
-        :return: The photonic source
-        """
-        return self._source
-
-    @source.setter
-    def source(self, source: Source):
-        r"""
-        :param source: A Source instance to use as the new source for this processor.
-        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
-        """
-        self._source = source
-        self._inputs_map = None
 
     def flatten(self) -> List:
         """

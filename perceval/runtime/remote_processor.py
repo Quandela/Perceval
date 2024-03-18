@@ -27,15 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Any
 from multipledispatch import dispatch
-from pkg_resources import get_distribution
 from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source
-from perceval.components.port import PortLocation, APort
-from perceval.utils import BasicState, LogicalState, PMetadata
+from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -47,6 +45,7 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
+DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
@@ -55,7 +54,8 @@ class RemoteProcessor(AProcessor):
                  token: str = None,
                  url: str = QUANDELA_CLOUD_URL,
                  rpc_handler: RPCHandler = None,
-                 m: int = None):
+                 m: int = None,
+                 noise: NoiseModel = None):
         """
         :param name: Platform name
         :param token: Token value to authenticate the user
@@ -64,6 +64,8 @@ class RemoteProcessor(AProcessor):
             when doing so, name, token and url are expected to be blank
         :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
             circuit added decides of the processor size
+        :param noise: a NoiseModel containing noise parameters (defaults to no noise)
+                      simulated noise is ignored when working on a physical Quantum Processing Unit
         """
         super().__init__()
         if rpc_handler is not None:  # When a rpc_handler object is passed, name, token and url are expected to be None
@@ -91,6 +93,14 @@ class RemoteProcessor(AProcessor):
             self._n_moi = m
 
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
+        self.noise = noise
+
+    @AProcessor.noise.setter
+    def noise(self, nm):
+        super(RemoteProcessor, type(self)).noise.fset(self, nm)
+        if nm and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
+            warn(f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
+                 UserWarning)
 
     @property
     def is_remote(self) -> bool:
@@ -132,6 +142,12 @@ class RemoteProcessor(AProcessor):
             return self._specs['constraints']
         return {}
 
+    def set_parameter(self, key: str, value: Any):
+        super().set_parameter(key, value)
+        if key in DEPRECATED_NOISE_PARAMS:
+            warn(f"'{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead.",
+                 DeprecationWarning)
+
     def set_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
@@ -142,14 +158,6 @@ class RemoteProcessor(AProcessor):
         super().set_circuit(circuit)
         return self
 
-    def add_port(self, m, port: APort, location: PortLocation = PortLocation.IN_OUT):
-        # TODO: Remove this
-        raise NotImplementedError("Ports not implemented for now with RemoteProcessors")
-
-    def add_herald(self, mode: int, expected: int, name: str = None):
-        # TODO: Remove this
-        raise NotImplementedError("Heralds not implemented for now with RemoteProcessors")
-
     def get_rpc_handler(self):
         return self._rpc_handler
 
@@ -159,7 +167,7 @@ class RemoteProcessor(AProcessor):
 
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState) -> None:
-        r"""
+        """
         Set up the processor input with a LogicalState. Computes the input probability distribution.
 
         :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
@@ -186,7 +194,8 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> List[str]:
         return self._specs.get("available_commands", [])
 
-    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs):
+    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
+                            ) -> Dict[str, Any]:
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),
@@ -202,6 +211,16 @@ class RemoteProcessor(AProcessor):
             payload['input_state'] = serialize(self._input_state)
         if self._parameters:
             payload['parameters'] = self._parameters
+        if self._postselect is not None:
+            if isinstance(self._postselect, PostSelect):
+                payload['postselect'] = serialize(self._postselect)
+            else:
+                warn(f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect",
+                     RuntimeWarning)
+        if self.heralds:
+            payload['heralds'] = self.heralds
+        if self._noise is not None:
+            payload['noise'] = serialize(self._noise)
         j['payload'] = payload
         return j
 
@@ -223,15 +242,6 @@ class RemoteProcessor(AProcessor):
         assert isinstance(processor, RemoteProcessor), "can not mix types of processors"
         assert self.name == processor.name, "can not compose processors with different targets"
         super()._compose_processor(connector, processor, keep_port)
-
-    @property
-    def source(self):
-        return None
-
-    @source.setter
-    def source(self, source: Source):
-        # TODO: Implement source setter, setting parameters to be sent remotely
-        raise NotImplementedError("Source setting not implemented for remote processors")
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
         if TRANSMITTANCE_KEY in self._perfs:

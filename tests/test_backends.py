@@ -30,8 +30,7 @@
 import math
 import pytest
 
-from perceval.backends import Clifford2017Backend, NaiveBackend, AProbAmpliBackend, SLOSBackend, MPSBackend,\
-    BackendFactory
+from perceval.backends import Clifford2017Backend, AProbAmpliBackend, SLOSBackend, BackendFactory
 from perceval.components import BS, PS, PERM, Circuit, catalog
 from perceval.utils import BSCount, BasicState, Parameter, StateVector
 from _test_utils import assert_sv_close
