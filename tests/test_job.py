@@ -29,6 +29,9 @@
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
 
+import pytest
+import time
+
 
 def quadratic_count_down(n, speed=0.1, progress_callback=None):
     l = []
@@ -125,42 +128,3 @@ def test_get_res_run_async():
     assert res_1st_call["results"] == res_2nd_call["results"]
     assert res_1st_call["physical_perf"] == res_2nd_call["physical_perf"]
     assert res_1st_call["logical_perf"] == res_2nd_call["logical_perf"]
-
-
-
-# ============ Remote jobs ============ #
-from perceval.runtime import RemoteJob
-import pytest
-import time
-from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
-    REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
-
-
-def test_remote_job():
-    _FIRST_JOB_NAME = "job name"
-    _SECOND_JOB_NAME = "another name"
-    rj = RemoteJob({}, MockRPCHandler(), _FIRST_JOB_NAME)
-    assert rj.name == _FIRST_JOB_NAME
-    rj.name = _SECOND_JOB_NAME
-    assert rj.name == _SECOND_JOB_NAME
-    with pytest.raises(TypeError):
-        rj.name = None
-    with pytest.raises(TypeError):
-        rj.name = 28
-    job_status = rj.status
-    assert rj.is_complete == job_status.completed
-    assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
-
-    rj.status.status = RunningStatus.UNKNOWN
-    with pytest.warns(UserWarning):
-        assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
-
-    _TEST_JOB_ID = "any"
-    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
-    assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
-    assert resumed_rj.id == _TEST_JOB_ID
-    assert rj.is_complete == job_status.completed
-    assert rj.name == REMOTE_JOB_NAME
-    assert rj.status.creation_timestamp == REMOTE_JOB_CREATION_TIMESTAMP
-    assert rj.status.start_timestamp == REMOTE_JOB_START_TIMESTAMP
-    assert rj.status.duration == REMOTE_JOB_DURATION

@@ -165,9 +165,10 @@ def deserialize(obj):
             obj = b64decode(obj[len(ZIP_PREFIX):])
             obj = decompress(obj).decode('utf-8')
 
-        p = obj[len(PCVL_PREFIX):].find(SEP)
-        class_obj = obj[6:p+6]
-        serial_obj = obj[p+7:]
+        lp = len(PCVL_PREFIX)
+        p = obj[lp:].find(SEP)
+        class_obj = obj[lp:p+lp]
+        serial_obj = obj[p+lp+1:]
 
         def serializer_not_implemented(_: str):
             raise NotImplementedError(f"Not serializer found for {class_obj}")
