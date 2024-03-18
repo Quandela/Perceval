@@ -51,4 +51,4 @@ jobs:
         known_hosts: ${{ secrets.PERCEVAL_WEB_KNOWN_HOST }}
 
     - name: Deploy
-      run: rsync -avz docs/build/html/ ${{secrets.PERCEVAL_WEB_USER}}@${{secrets.PERCEVAL_WEB_HOST}}:/var/www/html-perceval
+      run: rsync -avz --delete docs/build/html/ ${{secrets.PERCEVAL_WEB_USER}}@${{secrets.PERCEVAL_WEB_HOST}}:/var/www/html-perceval
