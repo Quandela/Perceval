@@ -36,9 +36,7 @@ from perceval.utils import Matrix
 
 class PauliType(Enum):
     """
-    Enumeration of different Pauli Types. Usage -
-    1. Choose a Pauli gate (/operator)
-    2. Choose to measure a logical state in the basis of a Pauli operator
+    Enumeration of different Pauli  (gates/operators) Types + Identity.
     """
     # Order of members important
     I = 0
@@ -95,7 +93,8 @@ def get_pauli_eigen_state_prep_circ(pauli_type: PauliEigenStateType) -> Circuit:
 
 def get_pauli_gate(pauli_type: PauliType):
     """
-    Computes the (gate) matrix for the Pauli operators (I,X,Y,Z).
+    Uses the PauliType to choose and compute the matrix corresponding Pauli (gates) operators
+    (I,X,Y,Z).
 
     :param pauli_type: PauliType
     :return: 2x2 unitary and hermitian array
@@ -118,7 +117,8 @@ def get_pauli_gate(pauli_type: PauliType):
 
 def get_pauli_basis_measurement_circuit(pauli_type: PauliType) -> Circuit:
     """
-    Creates LO circuits to measure a logical state in the pauli basis I,X,Y,Z.
+    Uses the PauliType to choose and create LO measurement circuits in Pauli Basis (I,X,Y,Z).
+
     Equivalent to measuring eigenstates of the 1-qubit Pauli gates
 
     :param pauli_type: PauliType
@@ -133,6 +133,6 @@ def get_pauli_basis_measurement_circuit(pauli_type: PauliType) -> Circuit:
     elif pauli_type == PauliType.Y:
         return Circuit(2, name="Pauli Y Measurer") // BS.Rx(theta=np.pi/2, phi_bl=np.pi, phi_br=-np.pi/2)
     elif pauli_type == PauliType.Z:
-        return Circuit(2, name="Pauli Z Measurer ")
+        return Circuit(2, name="Pauli Z Measurer")
     else:
         raise NotImplementedError(f"{pauli_type}")

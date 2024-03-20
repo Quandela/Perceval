@@ -41,7 +41,6 @@ def test_pauli_type():
     assert is_ascending == True
 
 
-#@pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
 @pytest.mark.parametrize("pauli_eigen_states", [item for item in PauliEigenStateType])
 def test_pauli_state_prep_circuits(pauli_eigen_states):
     c = Circuit(2) // get_pauli_eigen_state_prep_circ(pauli_eigen_states)
