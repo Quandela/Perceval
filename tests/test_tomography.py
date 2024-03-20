@@ -35,8 +35,8 @@ import numpy as np
 from scipy.stats import unitary_group
 
 import perceval as pcvl
-from perceval.components import (catalog, Processor, Circuit, PauliType, get_preparation_circuit,
-                                 processor_circuit_configurator)
+from perceval.components import (catalog, Processor, Circuit, PauliType, PauliEigenStateType,
+                                 get_pauli_eigen_state_prep_circ)
 from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
@@ -49,11 +49,12 @@ CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]],
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
 
-@pytest.mark.parametrize("pauli_gate", [PauliType.I, PauliType.X, PauliType.Y, PauliType.Z])
+@pytest.mark.parametrize("pauli_gate", [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp,
+                                        PauliEigenStateType.Yp])
 def test_density_matrix_state_tomography(pauli_gate):
-    p = Processor("Naive", Circuit(2) // get_preparation_circuit(pauli_gate))  # 1 qubit Pauli X gate
+    p = Processor("Naive", Circuit(2) // get_pauli_eigen_state_prep_circ(pauli_gate))  # 1 qubit Pauli X gate
     qst = StateTomography(operator_processor=p)
-    density_matrix = qst.perform_state_tomography([PauliType.X])
+    density_matrix = qst.perform_state_tomography([PauliEigenStateType.Xp])
 
     res = is_physical(density_matrix, nqubit=1)
 

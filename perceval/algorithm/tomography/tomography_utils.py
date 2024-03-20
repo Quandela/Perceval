@@ -30,7 +30,8 @@
 import numpy as np
 import math
 from itertools import product, combinations
-from perceval.components import PauliType, get_pauli_gate, get_preparation_circuit, processor_circuit_configurator
+from perceval.components import (PauliType, PauliEigenStateType, get_pauli_gate, get_pauli_eigen_state_prep_circ,
+                                 processor_circuit_configurator)
 from perceval.algorithm import Sampler
 from perceval.utils import BasicState
 
@@ -77,15 +78,15 @@ def _matrix_basis(nqubit: int, d: int) -> list:
     :return: list of basis matrices
     """
     B = []
-    pauli_indices = _generate_pauli_index(nqubit)
+    pauli_indices = _generate_pauli_prep_index(nqubit, prep_basis_size=4)
     v = np.zeros((d, 1), dtype='complex_')
     v[0] = 1
 
     for elem in pauli_indices:
-        M = get_preparation_circuit(elem[0]).compute_unitary()
+        M = get_pauli_eigen_state_prep_circ(elem[0]).compute_unitary()
         if len(elem) > 1:
             for i in elem[1:]:
-                M = np.kron(M, get_preparation_circuit(i).compute_unitary())
+                M = np.kron(M, get_pauli_eigen_state_prep_circ(i).compute_unitary())
         B.append(_state_to_dens_matrix(np.dot(M, v)))
 
     return B
@@ -186,12 +187,29 @@ def _krauss_repr_ops(m: int, rhoj: np.ndarray, n: int, nqubit: int) -> np.ndarra
 
 def _generate_pauli_index(nqubit: int) -> list:
     """
-    generates all possible combinations of Pauli indices repeated n times
+    generates all possible combinations of Pauli operator indices repeated n times
     :param nqubit: number of qubits
-    :return: List of Pauli indices
+    :return: List of Pauli operator indices
     """
     s = [pt for pt in PauliType]
     return [list(p) for p in product(s, repeat=nqubit)]  # takes Cartesian product of s with itself repeating 'n' times
+
+
+def _generate_pauli_prep_index(nqubit: int, prep_basis_size: int = None) -> list:
+    """
+    generates all possible combinations of indices for pauli eigenstates repeated n times
+    :param nqubit: number of qubits
+    :param prep_basis_size: allows choosing a subset of states from Pauli eigenstates
+    :return: List of Pauli eigenstate indices
+    """
+    if prep_basis_size is None:
+        # uses the full set Zm, Zp, Xp, Xm, Yp, Ym
+        s = [pt for pt in PauliEigenStateType]
+    else:
+        # standard tomography needs only the first four Zm, Zp, Xp, Yp eigenstates
+        s = [pt for pt in PauliEigenStateType][:4]
+
+    return [list(p) for p in product(s, repeat=nqubit)]
 
 
 def _list_subset_k_from_n(k: int, n: int) -> list:
@@ -239,8 +257,6 @@ def is_physical(input_matrix: np.ndarray, nqubit: int, eigen_tolerance: float = 
     # check if completely positive with Choi–Jamiołkowski isomorphism
     choi = 0
     for n in range(d2):
-        # there were 2 transpose to compute P_n, removed. I do not know if one is important and there is another error
-        # Todo : find out about the comment in previous line
         P_n = np.conjugate([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])
         for m in range(d2):
             choi += input_matrix[m, n] \
