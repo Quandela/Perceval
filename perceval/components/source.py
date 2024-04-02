@@ -29,7 +29,7 @@
 
 import math
 
-from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel
+from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params
 from typing import Dict, List, Union
 
 
@@ -145,7 +145,7 @@ class Source:
         dist = []  # Distribution represented as a list of annotations on 1 mode + probability
         self._add(dist, 0, p0)
         if self.partially_distinguishable:
-            self._add(dist, ["_:0", "_:%s" % second_photon],  (1 - distinguishability) * p2to2)
+            self._add(dist, ["_:0", "_:%s" % second_photon], (1 - distinguishability) * p2to2)
             self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
             self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
             self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
@@ -181,18 +181,21 @@ class Source:
                 svd.add(StateVector(BasicState([len(photons)], {0: photons})), prob)
         return svd
 
-    def generate_distribution(self, expected_input: BasicState):
+    def generate_distribution(self, expected_input: BasicState, simplify: bool = False):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
 
         :param expected_input: Expected input BasicState
-        The properties of the source will alter the input state. A perfect source always delivers the expected state as
-        an input. Imperfect ones won't.
+            The properties of the source will alter the input state. A perfect source always delivers the expected state
+            as an input. Imperfect ones won't.
+        :param simplify: Simplify the distribution by anonymizing photon annotations (can be time-consuming for larger
+            distributions). Default is False.
         """
         dist = SVDistribution()
+        prob_threshold = global_params['min_p']
         for photon_count in expected_input:
-            dist *= self.probability_distribution(photon_count)
-        if self.partially_distinguishable:
+            dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
+        if simplify and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
