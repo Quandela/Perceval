@@ -205,7 +205,7 @@ Let us define for instance:
 
 Then you can build a circuit using the method :meth:`perceval.components.circuit.Circuit.decomposition`:
 
->>> c2 = pcvl.Circuit.decomposition(M, mzi, shape="triangle")
+>>> c2 = pcvl.Circuit.decomposition(M, mzi, shape=pcvl.InterferometerShape.TRIANGLE)
 >>> c2.describe()
 Circuit(3).add((0, 1), phys.BS()).add(0, phys.PS(phi=pi)).add((0, 1), phys.BS()).add(1, phys.PS(phi=0.681255)).add((1, 2), phys.BS()).add(1, phys.PS(phi=-pi)).add((1, 2), phys.BS()).add(2, phys.PS(phi=0.124498)).add((0, 1), phys.BS()).add(0, phys.PS(phi=pi)).add((0, 1), phys.BS()).add(1, phys.PS(phi=3.974189))
 >>> pcvl.pdisplay(c2)
@@ -221,7 +221,7 @@ Some additional parameters can simplifiy the decomposition:
 >>> C1 = pcvl.Circuit.decomposition(comp.PERM([3, 2, 1, 0]).compute_unitary(False),
 >>>                                 comp.BS(theta=pcvl.Parameter("theta")),
 >>>                                 permutation=comp.PERM,
->>>                                 shape="triangle")
+>>>                                 shape=pcvl.InterferometerShape.TRIANGLE)
 >>>pcvl.pdisplay(C1)
 
 .. image:: _static/img/permutations-perm.png
@@ -242,7 +242,7 @@ Some additional parameters can simplifiy the decomposition:
 >>> ub = comp.BS(theta=pcvl.P("theta")) // comp.PS(phi=pcvl.P("phi"))
 >>> C1 = pcvl.Circuit.decomposition(U,
 >>>                                 ub,
->>>                                 shape="triangle", constraints=[(None,0),(None,math.pi/2),
+>>>                                 shape=pcvl.InterferometerShape.TRIANGLE, constraints=[(None,0),(None,math.pi/2),
 >>>                                                                (None,3*math.pi/2),(None,None)])
 
 .. image:: _static/img/cnot-decomposed.png
@@ -330,7 +330,7 @@ and a phase shifter as base components:
 
 >>> c = pcvl.GenericInterferometer(8,
 ...                                lambda i: comp.BS() // comp.PS(pcvl.P("φ%d" % i)),
-...                                shape="triangle")
+...                                shape=pcvl.InterferometerShape.TRIANGLE)
 >>> pcvl.pdisplay(c)
 
 .. figure:: _static/img/generic-interferometer.png
