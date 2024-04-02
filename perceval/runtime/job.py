@@ -137,5 +137,5 @@ class Job(ABC):
         except KeyError:
             if job_status.failed:
                 raise RuntimeError(f'The job failed: {job_status.stop_message}')
-            else
+            else:
                 raise RuntimeError('Results are not available')
