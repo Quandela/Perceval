@@ -300,19 +300,20 @@ class Simulator(ISimulator):
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
         decomposed_input = []
         """decomposed input:
-       From a SVD = {
-           bs_1: p1,
-           bs_2: p2,
-           ...
-           bs_k: pk
-       }
-       the following data structure is built:
-       [
-           (p1, [bs_1,]),
-           ...
-           (pk, [bs_k,])
-       ]
-       where [bs_x,] is the list of the un-annotated separated basic state (bs_x.separate_state())"""
+           From a SVD = {
+               bs_1: p1,
+               bs_2: p2,
+               ...
+               bs_k: pk
+           }
+           the following data structure is built:
+           [
+               (p1, [bs_1,]),
+               ...
+               (pk, [bs_k,])
+           ]
+           where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
+        """
         for sv, prob in input_dist.items():
             if max(sv.n) >= self._min_detected_photons:
                 decomposed_input.append(
@@ -320,11 +321,19 @@ class Simulator(ISimulator):
                 )
             else:
                 self._physical_perf -= prob
-        input_set = set([state for s in decomposed_input for state in s[1]])
+
+        """Create a cache with strong simulation of all unique input"""
         cache = {}
-        for state in input_set:
+        input_set = set([state for s in decomposed_input for state in s[1]])
+        len_input_set = len(input_set)
+        for idx, state in enumerate(input_set):
             self._backend.set_input_state(state)
             cache[state] = self._backend.prob_distribution()
+            if progress_callback and idx % 10 == 0:
+                progress = (idx + 1) / len_input_set * 0.5  # From 0. to 0.5
+                exec_request = progress_callback(progress, 'compute probability distributions')
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    raise RuntimeError("Cancel requested")
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
@@ -347,8 +356,9 @@ class Simulator(ISimulator):
                     else:
                         self._physical_perf -= p * prob0
 
-            if progress_callback:
-                exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
+            if progress_callback and idx % 20 == 0:
+                progress = (idx + 1) / len(decomposed_input) * 0.5 + 0.5  # From 0.5 to 1
+                exec_request = progress_callback(progress, 'recombine distributions')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         res.normalize()

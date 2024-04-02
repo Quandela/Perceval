@@ -239,6 +239,22 @@ class SVDistribution(ProbabilityDistribution):
     def n_max(self):
         return self._n_max
 
+    @staticmethod
+    def tensor_product(svd1, svd2, prob_threshold: float = 0):
+        """
+        Compute the tensor product of two SVDistribution with an optional probability threshold
+        """
+        if len(svd1) == 0:
+            return svd2
+        new_dist = SVDistribution()
+        for sv1, proba1 in svd1.items():
+            for sv2, proba2 in svd2.items():
+                if proba1 * proba2 < prob_threshold:
+                    continue
+                sv = sv1 * sv2
+                new_dist[sv] += proba1 * proba2
+        return new_dist
+
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):

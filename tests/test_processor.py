@@ -57,6 +57,7 @@ def test_processor_input_fock_state_with_all_noise_sources():
     source = Source(emission_probability=0.2,
                     multiphoton_component=0.1, multiphoton_model="indistinguishable",
                     indistinguishability=0.9)
+    source.simplify_distribution = True
     p = Processor("Naive", Circuit(4), source)
     p.with_input(BasicState([0, 1, 1, 0]))
 
