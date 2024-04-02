@@ -74,6 +74,9 @@ class Source:
         if "discernability_tag" not in self._context:
             self._context["discernability_tag"] = 0
 
+        self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
+                                             # time-consuming for larger distributions)
+
     @staticmethod
     def from_noise_model(noise: NoiseModel):
         if noise is None:
@@ -181,7 +184,7 @@ class Source:
                 svd.add(StateVector(BasicState([len(photons)], {0: photons})), prob)
         return svd
 
-    def generate_distribution(self, expected_input: BasicState, simplify: bool = False):
+    def generate_distribution(self, expected_input: BasicState):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
@@ -189,13 +192,12 @@ class Source:
         :param expected_input: Expected input BasicState
             The properties of the source will alter the input state. A perfect source always delivers the expected state
             as an input. Imperfect ones won't.
-        :param simplify: Simplify the distribution by anonymizing photon annotations (can be time-consuming for larger
-            distributions). Default is False.
         """
         dist = SVDistribution()
         prob_threshold = global_params['min_p']
         for photon_count in expected_input:
             dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
-        if simplify and self.partially_distinguishable:
+        dist.normalize()
+        if self.simplify_distribution and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
