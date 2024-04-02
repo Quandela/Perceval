@@ -44,7 +44,10 @@ class AAlgorithm:
         if not self._check_compatibility():
             raise RuntimeError("Processor and algorithm are not compatible")
         self.default_job_name = None
-        self._max_shots = int(kwargs.get(self._MAX_SHOTS_NAMED_PARAM))
+        try:
+            self._max_shots = int(kwargs.get(self._MAX_SHOTS_NAMED_PARAM))
+        except:
+            self._max_shots = None
 
     def _check_compatibility(self) -> bool:
         # if self._processor.is_remote:
