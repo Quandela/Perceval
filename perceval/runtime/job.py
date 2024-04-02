@@ -89,10 +89,6 @@ class Job(ABC):
         return self.status.completed
 
     @property
-    def maybe_complete(self) -> bool:
-        return self.status.maybe_completed
-
-    @property
     def is_failed(self) -> bool:
         return self.status.failed
 
@@ -127,18 +123,19 @@ class Job(ABC):
     def get_results(self) -> Dict:
         job_status = self.status
 
-        if not job_status.completed and not job_status.maybe_completed:
+        if not job_status.maybe_completed:
             raise RuntimeError('The job is still running, results are not available yet.')
 
-        if not job_status.success and not job_status.maybe_completed:
-            raise RuntimeError(f'The job failed: {job_status.stop_message}')
+        if job_status.canceled:
+            warnings.warn("Job has been canceled, trying to get partial result.")
 
-        if job_status.success:
-            return self._get_results()
-
-        if self.maybe_complete:
+        if job_status.unknown:
             warnings.warn("Unknown job status, trying to get result anyway.")
-            try:
-                return self._get_results()
-            except KeyError:
+
+        try:
+            return self._get_results()
+        except KeyError:
+            if job_status.failed:
+                raise RuntimeError(f'The job failed: {job_status.stop_message}')
+            else
                 raise RuntimeError('Results are not available')
