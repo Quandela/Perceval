@@ -31,7 +31,7 @@ from abc import abstractmethod
 import copy
 import numpy as np
 from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
-    _generate_pauli_prep_index
+    _generate_pauli_prep_index, _generate_pauli_index
 from perceval.utils import BasicState
 from perceval.components import AProcessor, get_pauli_eigen_state_prep_circ, PauliType, PauliEigenStateType
 from ..abstract_algorithm import AAlgorithm
@@ -63,34 +63,22 @@ class TomographyMLE(AAlgorithm):
     def _grad_log_likelihood_func(self, *args, **kwargs) -> float:
         pass
 
-    def _c_data(self, num_state, i):
+    def _c_data(self, prep_state_indices, state_meas_indices):
         """
         Measures the operator indexed by i after the gate where the input state is indexed by num_states.
 
-        :param num_state:
-        :param i:
+        :param prep_state_indices: list of indices for state preparation at each qubit
+        :param state_meas_indices: list of indices for state measurement at each qubit
         :return: list where each element is the probability that we measure one eigenvector of the measurement operator
         """
-
-        l1 = []
-        for j in range(self._nqubit - 1, -1, -1):
-            l1.append(num_state // (6 ** j))
-            num_state = num_state % (6 ** j)
-        l = [PauliEigenStateType(val) for val in l1]
-
-        L1 = []
-        for j in range(self._nqubit - 1, -1, -1):
-            L1.append(i // (3 ** j))
-            i = i % (3 ** j)
-        L = [PauliType(val) for val in L1]
-        print('computing probs for prep', l)
-        print('computing probs for meas', L)
-        output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices=l, meas_pauli_basis_indices=L)
+        #print('collecting data, computing output dist for')
+        #print('preparation indices', prep_state_indices)
+        #print('measruement', state_meas_indices)
+        output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices, state_meas_indices)
 
         # TODO: verify what the following does and how is it different from previous code
         B = []
         for j in range(2**self._nqubit):
-
             measurement_state = BasicState()
             for m in range(self._nqubit - 1, -1, -1):
                 if (j // (2 ** m)) % 2 == 0:
@@ -99,10 +87,8 @@ class TomographyMLE(AAlgorithm):
                     measurement_state *= self._LOGICAL1
 
             B.append(output_distribution[measurement_state] / (3 ** self._nqubit))
-            # if renormalization == None:
-            #     B.append(output_distribution[measurement_state] / (3 ** self._nqubit))
-            # else:
-            #     B.append(output_distribution[measurement_state] / renormalization / (3 ** self._nqubit))
+        print('B')
+        print(B)
         return B
 
     @abstractmethod
@@ -170,7 +156,7 @@ class TomographyMLE(AAlgorithm):
             v = 1
             for i in k:
                 # M = np.kron(compute_matrix(i // 2), M)
-                M = np.kron(get_pauli_eigen_state_prep_circ(i // 2).compute_unitary(), M)
+                M = np.kron(get_pauli_eigen_state_prep_circ(PauliEigenStateType(i // 2)).compute_unitary(), M)
                 # this compute_matrix seems to have changed to prep_circuit unitary todo: verify and modify
                 if i % 2 == 0:
                     v = np.kron(np.array([[1], [0]], dtype='complex_'), v)
@@ -236,13 +222,15 @@ class StateTomographyMLE(TomographyMLE):
         values are probabilities of each outcome of the POVM
         """
         f = []
-        for i in range(3 ** self._nqubit):
-            # todo: fix the following
-            prep_state_indices = 0 # [PauliType.I]  # 0
-            meas_pauli_basis_indices = i
-            # _c_data(num_state, i)
-            f += self._c_data(prep_state_indices, meas_pauli_basis_indices)
-            # todo : fix this on the basis of Arman's example
+        measurement_indices = _generate_pauli_index(self._nqubit)
+        preparation_indices = [PauliEigenStateType.Zm]  * self._nqubit
+        # Input Preparation fixed to |0> for state tomography
+
+        for val in measurement_indices:
+            if PauliType.Z in val:
+                continue
+            f += self._c_data(preparation_indices, state_meas_indices=val)
+
         return f
 
     def _log_likelihood_func(self, rho: np.ndarray) -> float:
@@ -335,6 +323,7 @@ class StateTomographyMLE(TomographyMLE):
 class ProcessTomographyMLE(TomographyMLE):
     def __init__(self, operator_processor):
         super().__init__(operator_processor)
+        self.ff = None
 
     def _f_data(self):
         """
@@ -348,14 +337,24 @@ class ProcessTomographyMLE(TomographyMLE):
         # prep has 6 options -> 4 pauli and 2 other are some combo
         # of that itself -> find which and decide how to implement
         f = {}
-        for a in range(6 ** self._nqubit):
-            f[a] = []
-            for b in range(3 ** self._nqubit):
-                # _c_data(num_state, i)
-                # todo: fix indices
-                prep_state_indices = a
-                meas_pauli_basis_indices = b
-                f[a] += self._c_data(num_state=prep_state_indices, i=meas_pauli_basis_indices)
+        preparation_states = _generate_pauli_prep_index(self._nqubit)
+        measurement_states = _generate_pauli_index(self._nqubit)
+
+        for index, value in enumerate(preparation_states):
+            f[index] = []
+            for meas_indices in measurement_states:
+                if PauliType.Z in meas_indices:
+                    continue
+                f[index] += self._c_data(prep_state_indices=value, state_meas_indices=meas_indices)
+
+        # for a in range(6 ** self._nqubit):
+        #     f[a] = []
+        #     for b in range(3 ** self._nqubit):
+        #         # _c_data(num_state, i)
+        #         # todo: fix indices
+        #         prep_state_indices = a
+        #         meas_pauli_basis_indices = b
+        #         f[a] += self._c_data(prep_state_indices=prep_state_indices, state_meas_indices=meas_pauli_basis_indices)
         return f
 
     def _log_likelihood_func(self, S: np.ndarray) -> float:
@@ -365,7 +364,12 @@ class ProcessTomographyMLE(TomographyMLE):
         :param S: Choi matrix
         :returns: log-likelihood
         """
-        f = self._f_data()  # todo: fix :param f: dictionary for the data, keys are the input states and the values are probabilities for each
+        if self.ff is None:
+            f = self._f_data()
+            # todo: fix :param f: dictionary for the data, keys are the input states and the values are probabilities for each
+            self.ff = f
+        else:
+            f = self.ff
 
         P = self._povm_operator()
         B = self._input_basis()
@@ -385,7 +389,10 @@ class ProcessTomographyMLE(TomographyMLE):
         :param S: Choi matrix
         :returns: gradient of log-likelihood
         """
-        f = self._f_data()  # todo: fix :param f: dictionary for the data, keys are the input states and the values are
+        if self.ff is None:
+            f = self._f_data()  # todo: fix :param f: dictionary for the data, keys are the input states and the values are
+        else:
+            f = self.ff
 
         P = self._povm_operator()
         B = self._input_basis()
@@ -431,10 +438,12 @@ class ProcessTomographyMLE(TomographyMLE):
         """
         S, S_proj_i1, theta, t_i = copy.deepcopy(S_0), copy.deepcopy(S_0), 1, t
         for i in range(max_it):
+            print('iteration', i)
             S_proj_i = TomographyMLE._proj(S - t_i * self._grad_log_likelihood_func(S))
             delta_i = S_proj_i - S
             while self._log_likelihood_func(S_proj_i) > self._log_likelihood_func(S) + TomographyMLE._frobenius_inner_product(self._grad_log_likelihood_func(S), delta_i) + (
                     1 / (2 * t_i)) * np.linalg.norm(delta_i, ord='fro') ** 2:
+                #print('i enter while loop')
                 t_i *= beta
                 S_proj_i = TomographyMLE._proj(S - t_i * self._grad_log_likelihood_func(S))
                 delta_i = S_proj_i - S
@@ -444,6 +453,9 @@ class ProcessTomographyMLE(TomographyMLE):
             else:
                 theta, S = (1 + np.sqrt(1 + 4 * theta ** 2)) / 2, S_proj_i + delta_i_hat * (theta - 1) / (
                             (1 + np.sqrt(1 + 4 * theta ** 2)) / 2)
+            #print('What is this F',
+            #      np.abs(self._log_likelihood_func(S_proj_i) - self._log_likelihood_func(S_proj_i1))                  )
+
             if np.abs(self._log_likelihood_func(S_proj_i) - self._log_likelihood_func(S_proj_i1)) < 10 ** (-10):
                 break
             S_proj_i1 = copy.deepcopy(S_proj_i)
@@ -460,7 +472,7 @@ class ProcessTomographyMLE(TomographyMLE):
 
         :return: chi matrix
         """
-        choi = self._choi_matrix(S_0, self._f_data(), beta, t, max_it)
+        choi = self._choi_matrix(S_0, beta, t, max_it)
         X = np.zeros((len(choi), len(choi)), dtype='complex_')
 
         for m in range(len(choi)):
