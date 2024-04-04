@@ -123,8 +123,6 @@ smv_remote_whitelist = None
 # Pattern for released versions
 smv_released_pattern = r".*"
 
-smv_latest_version = f"v{PMetadata.short_version()}"
-
 smv_regex_name = r"(.*)\..*"
 
 bibtex_bibfiles = ["references.bib"]
