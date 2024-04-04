@@ -125,6 +125,8 @@ smv_released_pattern = r".*"
 
 smv_latest_version = f"v{PMetadata.short_version()}"
 
+smv_regex_name = r"(.*).*+"
+
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 

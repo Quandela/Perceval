@@ -8,4 +8,4 @@ jinja2==3.0.0
 ipython
 ipykernel
 gitpython
-git+https://github.com/Quandela/sphinx-multiversion-contrib.git@1.0.0
+git+https://github.com/Quandela/sphinx-multiversion-contrib.git@1.0.1
