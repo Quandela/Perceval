@@ -32,6 +32,7 @@ import pytest
 import perceval as pcvl
 import perceval.components as comp
 from perceval.utils.algorithms.circuit_optimizer import CircuitOptimizer
+from perceval.utils.algorithms.rectangular_decomposer import RectangularDecomposer
 from perceval.utils.algorithms import norm
 
 import numpy as np
@@ -224,3 +225,10 @@ def test_decomposition_inverse_h():
                                    inverse_h=True,
                                    phase_shifter_fn=comp.PS)
     np.testing.assert_array_almost_equal(u, c.compute_unitary(False), decimal=6)
+
+
+def test_rectangular_decomposer():
+    u = pcvl.Matrix.random_unitary(24)
+    rd = RectangularDecomposer(u)
+    rd.decompose()
+    np.testing.assert_array_almost_equal(rd.get_interferometer(True).compute_unitary(), u, decimal=6)
