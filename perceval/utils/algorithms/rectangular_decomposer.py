@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Callable, Tuple, Union
+from typing import Union
 
 import exqalibur as xq
-from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
-from perceval.utils import Matrix, P
+from perceval.components import ACircuit
+from perceval.utils import Matrix
 from perceval.serialization import deserialize_circuit
 
 
