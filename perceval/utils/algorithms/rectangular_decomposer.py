@@ -36,24 +36,23 @@ from perceval.serialization import deserialize_circuit
 
 
 class RectangularDecomposer:
-    """_summary_
+    """Instantiate a rectangular Decomposition
 
-        :param precision: _description_, defaults to 1e-6
-        :type precision: float, optional
+        :param precision: precision of the decomposition, defaults to 1e-6
         """
 
     def __init__(self, precision: float = 1e-6):
         self.rectangular_decomposer = xq.RectangularDecomposer(precision)
 
     def decompose(self, target: Union[ACircuit, Matrix], add_phase_correction: bool = False) -> None:
-        """_summary_
+        """compute the rectangular interferometer from the target matrix
 
-        :param target: _description_
-        :param add_phase_correction: _description_, defaults to False
+        :param target: the unitary matrix to decompose
+        :param add_phase_correction: whether to add the final vertical line of phase shifters to the final interferometer, defaults to False
 
-        :raises TypeError: _description_
+        :raises TypeError: target must be a numeric matrix or a fully determine circuit (no unset parameter or symbolic values)
 
-        :return: _description_
+        :return: the rectangular interferometer
         """
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
@@ -61,27 +60,17 @@ class RectangularDecomposer:
             raise TypeError("Target must be numeric")
         return deserialize_circuit(self.rectangular_decomposer.decompose(target, add_phase_correction))
 
-    def get_interferometer(self, add_phase_correction: bool = False) -> ACircuit:
-        """_summary_
+    def get_interferometer(self, add_phase_correction: bool) -> ACircuit:
+        """get the rectangular interferometer
 
-        :param add_phase_correction: _description_, defaults to False
+        :param add_phase_correction: whether to add the final vertical line of phase shifters to the final interferometer.
 
-        :return: _description_
+        :return: the rectangular interferometer
         """
         return deserialize_circuit(self.rectangular_decomposer.get_interferometer(add_phase_correction))
 
     def set_precision(self, precision: float) -> None:
-        """_summary_
-
-        :param precision: _description_
-        :type precision: float
-        """
         self.rectangular_decomposer.set_precision(precision)
 
     def get_precision(self) -> float:
-        """_summary_
-
-        :return: _description_
-        :rtype: float
-        """
         return self.rectangular_decomposer.get_precision()
