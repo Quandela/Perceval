@@ -36,20 +36,52 @@ from perceval.serialization import deserialize_circuit
 
 
 class RectangularDecomposer:
+    """_summary_
 
-    def __init__(self, target: Union[ACircuit, Matrix], precision: float = 1e-6):
+        :param precision: _description_, defaults to 1e-6
+        :type precision: float, optional
+        """
+
+    def __init__(self, precision: float = 1e-6):
+        self.rectangular_decomposer = xq.RectangularDecomposer(precision)
+
+    def decompose(self, target: Union[ACircuit, Matrix], add_phase_correction: bool = False) -> None:
+        """_summary_
+
+        :param target: _description_
+        :param add_phase_correction: _description_, defaults to False
+
+        :raises TypeError: _description_
+
+        :return: _description_
+        """
         if isinstance(target, ACircuit):
             target = target.compute_unitary()
         if target.is_symbolic():
             raise TypeError("Target must be numeric")
+        return deserialize_circuit(self.rectangular_decomposer.decompose(target, add_phase_correction))
 
-        self.rectangular_decomposer = xq.RectangularDecomposer(target, precision)
+    def get_interferometer(self, add_phase_correction: bool = False) -> ACircuit:
+        """_summary_
 
-    def decompose(self) -> None:
-        self.rectangular_decomposer.decompose()
+        :param add_phase_correction: _description_, defaults to False
 
-    def get_interferometer(self, add_phase_correction: bool = False) -> Tuple[ACircuit, float]:
+        :return: _description_
+        """
         return deserialize_circuit(self.rectangular_decomposer.get_interferometer(add_phase_correction))
 
-    def get_fidelity(self) -> float:
-        return self.rectangular_decomposer.get_fidelity()
+    def set_precision(self, precision: float) -> None:
+        """_summary_
+
+        :param precision: _description_
+        :type precision: float
+        """
+        self.rectangular_decomposer.set_precision(precision)
+
+    def get_precision(self) -> float:
+        """_summary_
+
+        :return: _description_
+        :rtype: float
+        """
+        return self.rectangular_decomposer.get_precision()

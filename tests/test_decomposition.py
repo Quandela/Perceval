@@ -28,14 +28,15 @@
 # SOFTWARE.
 
 from pathlib import Path
+
 import pytest
+import numpy as np
+
 import perceval as pcvl
 import perceval.components as comp
 from perceval.utils.algorithms.circuit_optimizer import CircuitOptimizer
 from perceval.utils.algorithms.rectangular_decomposer import RectangularDecomposer
 from perceval.utils.algorithms import norm
-
-import numpy as np
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
@@ -229,6 +230,9 @@ def test_decomposition_inverse_h():
 
 def test_rectangular_decomposer():
     u = pcvl.Matrix.random_unitary(24)
-    rd = RectangularDecomposer(u)
-    rd.decompose()
-    np.testing.assert_array_almost_equal(rd.get_interferometer(True).compute_unitary(), u, decimal=6)
+
+    decimal_precision = 6
+    rd = RectangularDecomposer(10**-decimal_precision)
+
+    interferometer = rd.decompose(u, True)
+    np.testing.assert_array_almost_equal(interferometer.compute_unitary(), u, decimal=decimal_precision)
