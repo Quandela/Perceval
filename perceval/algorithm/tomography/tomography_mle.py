@@ -54,6 +54,7 @@ class TomographyMLE(AAlgorithm):
 
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
+    _FLAG = 0
 
     @abstractmethod
     def _log_likelihood_func(self, *args, **kwargs) -> float:
@@ -71,12 +72,11 @@ class TomographyMLE(AAlgorithm):
         :param state_meas_indices: list of indices for state measurement at each qubit
         :return: list where each element is the probability that we measure one eigenvector of the measurement operator
         """
-        #print('collecting data, computing output dist for')
-        #print('preparation indices', prep_state_indices)
-        #print('measruement', state_meas_indices)
-        output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices, state_meas_indices)
 
-        # TODO: verify what the following does and how is it different from previous code
+        output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices, state_meas_indices)
+        for key in output_distribution:  # Renormalize output state distribution for MLE
+            output_distribution[key] /= self._gate_logical_perf
+
         B = []
         for j in range(2**self._nqubit):
             measurement_state = BasicState()
@@ -87,8 +87,6 @@ class TomographyMLE(AAlgorithm):
                     measurement_state *= self._LOGICAL1
 
             B.append(output_distribution[measurement_state] / (3 ** self._nqubit))
-        print('B')
-        print(B)
         return B
 
     @abstractmethod
@@ -323,7 +321,7 @@ class StateTomographyMLE(TomographyMLE):
 class ProcessTomographyMLE(TomographyMLE):
     def __init__(self, operator_processor):
         super().__init__(operator_processor)
-        self.ff = None
+        self._f = self._f_data()
 
     def _f_data(self):
         """
@@ -332,8 +330,7 @@ class ProcessTomographyMLE(TomographyMLE):
         :return: dictionary where keys are the indexes of the input state and the
         values are probabilities of each outcome of the POVM
         """
-        # todo: fix indices based on the following note
-        # measurement is always on 3 Paulitype I, x, Y : Z is moved away
+        # measurement is always on 3 Paulitype I, X, Y : Z is moved away
         # prep has 6 options -> 4 pauli and 2 other are some combo
         # of that itself -> find which and decide how to implement
         f = {}
@@ -347,14 +344,6 @@ class ProcessTomographyMLE(TomographyMLE):
                     continue
                 f[index] += self._c_data(prep_state_indices=value, state_meas_indices=meas_indices)
 
-        # for a in range(6 ** self._nqubit):
-        #     f[a] = []
-        #     for b in range(3 ** self._nqubit):
-        #         # _c_data(num_state, i)
-        #         # todo: fix indices
-        #         prep_state_indices = a
-        #         meas_pauli_basis_indices = b
-        #         f[a] += self._c_data(prep_state_indices=prep_state_indices, state_meas_indices=meas_pauli_basis_indices)
         return f
 
     def _log_likelihood_func(self, S: np.ndarray) -> float:
@@ -364,13 +353,7 @@ class ProcessTomographyMLE(TomographyMLE):
         :param S: Choi matrix
         :returns: log-likelihood
         """
-        if self.ff is None:
-            f = self._f_data()
-            # todo: fix :param f: dictionary for the data, keys are the input states and the values are probabilities for each
-            self.ff = f
-        else:
-            f = self.ff
-
+        f = self._f
         P = self._povm_operator()
         B = self._input_basis()
 
@@ -389,11 +372,7 @@ class ProcessTomographyMLE(TomographyMLE):
         :param S: Choi matrix
         :returns: gradient of log-likelihood
         """
-        if self.ff is None:
-            f = self._f_data()  # todo: fix :param f: dictionary for the data, keys are the input states and the values are
-        else:
-            f = self.ff
-
+        f = self._f
         P = self._povm_operator()
         B = self._input_basis()
 
@@ -403,6 +382,8 @@ class ProcessTomographyMLE(TomographyMLE):
                 pml = 2 ** self._nqubit * np.real(np.trace(np.dot(S, np.kron(np.transpose(B[m]), P[l]))))
                 if 0 < pml <= 1:
                     grad -= (f[m][l] / pml) * np.kron(np.transpose(B[m]), P[l])
+        print(grad)
+        # todo ; problem seems to be in input_basis - check and fix
         return grad
 
     # @staticmethod
@@ -437,24 +418,29 @@ class ProcessTomographyMLE(TomographyMLE):
         :return: Choi matrix maximising likelihood function
         """
         S, S_proj_i1, theta, t_i = copy.deepcopy(S_0), copy.deepcopy(S_0), 1, t
+
         for i in range(max_it):
             print('iteration', i)
             S_proj_i = TomographyMLE._proj(S - t_i * self._grad_log_likelihood_func(S))
             delta_i = S_proj_i - S
+
             while self._log_likelihood_func(S_proj_i) > self._log_likelihood_func(S) + TomographyMLE._frobenius_inner_product(self._grad_log_likelihood_func(S), delta_i) + (
                     1 / (2 * t_i)) * np.linalg.norm(delta_i, ord='fro') ** 2:
                 #print('i enter while loop')
                 t_i *= beta
                 S_proj_i = TomographyMLE._proj(S - t_i * self._grad_log_likelihood_func(S))
                 delta_i = S_proj_i - S
+
             delta_i_hat = S_proj_i - S_proj_i1
+
             if TomographyMLE._frobenius_inner_product(delta_i, delta_i_hat) < 0:
                 S_proj_i, S, theta = copy.deepcopy(S_proj_i1), copy.deepcopy(S_proj_i1), 1
             else:
                 theta, S = (1 + np.sqrt(1 + 4 * theta ** 2)) / 2, S_proj_i + delta_i_hat * (theta - 1) / (
                             (1 + np.sqrt(1 + 4 * theta ** 2)) / 2)
-            #print('What is this F',
-            #      np.abs(self._log_likelihood_func(S_proj_i) - self._log_likelihood_func(S_proj_i1))                  )
+
+            print('What is this F',
+                  np.abs(self._log_likelihood_func(S_proj_i) - self._log_likelihood_func(S_proj_i1))                  )
 
             if np.abs(self._log_likelihood_func(S_proj_i) - self._log_likelihood_func(S_proj_i1)) < 10 ** (-10):
                 break
