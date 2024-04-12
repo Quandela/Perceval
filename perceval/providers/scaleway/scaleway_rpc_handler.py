@@ -49,7 +49,7 @@ class JobStatus(Enum):
 
 
 class RPCHandler:
-    """RPCHandler Scaleway """
+    """RPCHandler Scaleway"""
 
     def __init__(self, project_id, headers, url, name) -> None:
         self._project_id = project_id
@@ -75,7 +75,12 @@ class RPCHandler:
         if "platforms" not in resp_dict:
             raise HTTPError(f"platforms '{self.name}' not found")
 
-        platform_dict = resp_dict["platforms"][0]
+        platforms = resp_dict["platforms"]
+
+        if len(platforms) == 0:
+            raise Exception("Empty platform list from service")
+
+        platform_dict = platforms[0]
         platform_dict["specs"] = json.loads(platform_dict.get("metadata", {}))
 
         return platform_dict
@@ -115,30 +120,26 @@ class RPCHandler:
 
         resp_dict = resp.json()
 
-        creation_datetime = datetime.fromisoformat(
-            resp_dict.get("created_at")
-        ).timestamp()
-        start_time = self.__get_start_time(resp_dict.get("started_at"))
-        duration = self.__get_duration(start_time)
+        created_at = self.__to_date(resp_dict.get("created_at"))
+        started_at = self.__to_date(resp_dict.get("started_at"))
+        duration = self.__get_duration(started_at)
         status = resp_dict.get("status")
 
         return {
-            "creation_datetime": creation_datetime,
+            "creation_datetime": created_at,
             "duration": duration,
             "failure_code": None,
             "last_intermediate_results": None,
             "msg": "ok",
             "progress": self.__get_progress_by_status(status),
             "progress_message": resp_dict.get("progress_message"),
-            "start_time": start_time,
+            "start_time": started_at,
             "status": status,
-            "status_message": self.__get_status_message(
-                status, resp_dict.get("result_distribution")
-            ),
+            "status_message": resp_dict.get("progress_message"),
         }
 
     def get_job_results(self, job_id: str) -> dict:
-        endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
+        endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/results"
 
         # requests may throw an IO Exception, let the user deal with it
         resp = requests.get(endpoint, headers=self._headers)
@@ -146,23 +147,52 @@ class RPCHandler:
 
         resp_dict = resp.json()
 
-        duration = self.__get_duration(
-            self.__get_start_time(resp_dict.get("started_at"))
-        )
+        result_payload = None
+        duration = None
+        results = resp_dict.get("job_results", [])
+
+        if len(results) > 0:
+            first_result = results[0]
+
+            duration = self.__get_duration(
+                self.__to_date(first_result.get("created_at"))
+            )
+
+            result = first_result.get("result", None)
+
+            if result is None or result == "":
+                url = first_result.get("url", None)
+
+                if url is not None:
+                    resp = requests.get(url)
+                    resp.raise_for_status()
+
+                    result_payload = resp.text
+                else:
+                    raise Exception("Got result with empty data and url fields")
+            else:
+                result_payload = result
 
         return {
-            "duration": resp_dict.get("job_duration", duration),
+            "duration": duration,
             "intermediate_results": [],
-            "job_id": resp_dict.get("id"),
-            "results": resp_dict.get("result_distribution", {}),
+            "job_id": resp_dict.get("job_id"),
+            "results": result_payload,
             "results_type": None,
         }
 
     def __build_endpoint(self, endpoint) -> str:
         return f"{self._url}{endpoint}"
 
-    def __get_start_time(self, started_at: Union[str, None]) -> Union[float, None]:
-        return datetime.fromisoformat(started_at).timestamp() if started_at else None
+    def __to_date(self, date: Union[str, None]) -> Union[float, None]:
+        if not date or date == "":
+            return None
+
+        # Compat for python 3.10
+        if date.endswith("Z"):
+            date = date[:-1]
+
+        return datetime.fromisoformat(date).timestamp()
 
     def __get_duration(self, start_time: Union[float, None]) -> Union[int, None]:
         return (
@@ -173,8 +203,3 @@ class RPCHandler:
         if status == JobStatus.COMPLETED.value:
             return 1.0
         return 0.0
-
-    def __get_status_message(self, status, result_distribution) -> Union[str, None]:
-        if status == JobStatus.ERROR.value:
-            return result_distribution
-        return None

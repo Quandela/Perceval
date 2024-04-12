@@ -70,8 +70,10 @@ class Session(ISession):
         self._url = url
         self._platform = platform
         self._deduplication_id = deduplication_id
-        self._max_idle_duration_s = self.__int_duration(max_idle_duration_s, 'max_idle_duration_s')
-        self._max_duration_s = self.__int_duration(max_duration_s, 'max_duration_s')
+        self._max_idle_duration_s = self.__int_duration(
+            max_idle_duration_s, "max_idle_duration_s"
+        )
+        self._max_duration_s = self.__int_duration(max_duration_s, "max_duration_s")
 
         self._session_id = None
 
@@ -135,5 +137,5 @@ class Session(ISession):
             project_id=self._project_id,
             headers=self._headers,
             name=self._platform,
-            url=self._url
+            url=self._url,
         )
