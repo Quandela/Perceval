@@ -238,11 +238,6 @@ class RemoteProcessor(AProcessor):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
         super()._add_component(mode_mapping, component)
 
-    def _compose_processor(self, connector, processor, keep_port: bool):
-        assert isinstance(processor, RemoteProcessor), "can not mix types of processors"
-        assert self.name == processor.name, "can not compose processors with different targets"
-        super()._compose_processor(connector, processor, keep_port)
-
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
         if TRANSMITTANCE_KEY in self._perfs:
             transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
