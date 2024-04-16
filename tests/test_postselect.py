@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from copy import copy
-from perceval.utils import BasicState, PostSelect
+from perceval.utils import BasicState, PostSelect, postselect_independent
 
 import pytest
 
@@ -132,3 +132,23 @@ def test_postselect_can_compose_with():
     assert ps.can_compose_with([2, 3])
     assert not ps.can_compose_with([2, 3, 4])
     assert not ps.can_compose_with([3, 4])
+
+
+def test_postselect_merge():
+    ps1 = PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0")
+    ps2 = PostSelect("[5,6,7] == 1")
+    ps1.merge(ps2)
+    assert ps1 == PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0 & [5,6,7] == 1")
+
+    ps_empty = PostSelect()
+    ps_empty.merge(ps1)
+    assert ps_empty == ps1
+
+
+def test_postselect_independent():
+    ps1 = PostSelect("[0]==0 & [1,2]==1")
+    assert not postselect_independent(ps1, ps1)
+    ps2 = PostSelect("[2,3] == 1")
+    assert not postselect_independent(ps1, ps2)
+    ps3 = PostSelect("[3]<1 & [4]<1 & [5]>0")
+    assert postselect_independent(ps1, ps3)

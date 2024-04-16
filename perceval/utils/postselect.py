@@ -146,6 +146,11 @@ class PostSelect:
         return output
 
     def shift_modes(self, shift: int):
+        """
+        Shift all mode indexes inside this instance
+
+        :param shift: Value to shift all mode indexes with
+        """
         for operator, cond in self._conditions.items():
             for c, (indexes, value) in enumerate(cond):
                 assert min(indexes) + shift >= 0, f"A shift of {shift} would lead to negative mode# on {self}"
@@ -166,6 +171,29 @@ class PostSelect:
                 if i_set.intersection(m_set) and not i_set.issuperset(m_set):
                     return False
         return True
+
+    def merge(self, other):
+        """
+        Merge with other PostSelect. Updates the current instance.
+
+        :param other: Another PostSelect instance
+        """
+        for operator, cond in other._conditions.items():
+            for indexes, value in cond:
+                self._add_condition(indexes, operator, value)
+
+def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
+    ps1_mode_set = set()
+    for _, cond in ps1._conditions.items():
+        for (indexes, _) in cond:
+            for i in indexes:
+                ps1_mode_set.add(i)
+    for _, cond in ps2._conditions.items():
+        for (indexes, _) in cond:
+            for i in indexes:
+                if i in ps1_mode_set:
+                    return False
+    return True
 
 
 def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, heralds: dict = None

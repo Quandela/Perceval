@@ -35,7 +35,7 @@ from .statevector import BasicState, StateVector, SVDistribution, BSDistribution
     tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator
 from .logical_state import LogicalState, generate_all_logical_states
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, post_select_distribution, post_select_statevector
+from .postselect import PostSelect, postselect_independent, post_select_distribution, post_select_statevector
 from ._random import random_seed
 from .globals import global_params
 from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
