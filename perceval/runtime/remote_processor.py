@@ -181,12 +181,14 @@ class RemoteProcessor(AProcessor):
         self._input_state = input_state
 
     def check_input(self, input_state: BasicState) -> None:
-        if 'max_photon_count' in self.constraints and input_state.n > self.constraints['max_photon_count']:
+        n_heralds = sum(self.heralds.values())
+        n_photons = input_state.n + n_heralds
+        if 'max_photon_count' in self.constraints and n_photons > self.constraints['max_photon_count']:
             raise RuntimeError(
-                f"Too many photons in input state ({input_state.n} > {self.constraints['max_photon_count']})")
-        if 'min_photon_count' in self.constraints and input_state.n < self.constraints['min_photon_count']:
+                f"Too many photons in input state ({input_state.n} + {n_heralds} heralds > {self.constraints['max_photon_count']})")
+        if 'min_photon_count' in self.constraints and n_photons < self.constraints['min_photon_count']:
             raise RuntimeError(
-                f"Not enough photons in input state ({input_state.n} < {self.constraints['min_photon_count']})")
+                f"Not enough photons in input state ({n_photons} < {self.constraints['min_photon_count']})")
         if self._n_moi is not None and input_state.m != self._n_moi:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
 

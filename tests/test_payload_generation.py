@@ -109,7 +109,13 @@ def test_payload_cnot():
     assert rp.m == 8
     assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
 
+    input_state = BasicState([1, 0]*4)
+    rp.with_input(input_state)
+
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
+    assert 'input_state' in payload
+    assert payload['input_state'] == f"{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}"
+
     # Heralds come from the 3 CNOT gates
     assert 'heralds' in payload and len(payload['heralds']) == 6
     # Heralds from the heralded CNOT are put after the modes of interest (0 to 7) and 1 photon is injected in each
