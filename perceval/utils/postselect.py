@@ -145,6 +145,13 @@ class PostSelect:
                 output._conditions[operator].append((tuple(new_indexes), value))
         return output
 
+    def shift_modes(self, shift: int):
+        for operator, cond in self._conditions.items():
+            for c, (indexes, value) in enumerate(cond):
+                assert min(indexes) + shift >= 0, f"A shift of {shift} would lead to negative mode# on {self}"
+                new_indexes = tuple(i + shift for i in indexes)
+                cond[c] = (new_indexes, value)
+
     def can_compose_with(self, modes: List[int]) -> bool:
         """
         Check if all conditions are compatible with a compisition on given modes

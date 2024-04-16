@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from copy import copy
 from perceval.utils import BasicState, PostSelect
 
 import pytest
@@ -95,6 +95,22 @@ def test_postselect_apply_permutation():
     assert ((0, 2), 1) in ps_out._conditions[int.__eq__]
     assert ((3, 1), 2) in ps_out._conditions[int.__gt__]
     assert ((4, 5), 3) in ps_out._conditions[int.__lt__]
+
+
+def test_postselect_shift_modes():
+    initial_ps = PostSelect("[0,1]==1 & [2,3]>2 & [4,5]<3")
+    ps = copy(initial_ps)
+    ps.shift_modes(0)
+    assert ps == initial_ps
+
+    ps.shift_modes(2)
+    assert ps == PostSelect("[2,3]==1 & [4,5]>2 & [6,7]<3")
+
+    ps.shift_modes(-2)
+    assert ps == initial_ps
+
+    with pytest.raises(AssertionError):
+        ps.shift_modes(-1)
 
 
 def test_postselect_can_compose_with():
