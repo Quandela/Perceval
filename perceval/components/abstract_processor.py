@@ -35,13 +35,12 @@ from typing import Any, Dict, List, Union, Callable, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, Parameter, PostSelect
+from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from perceval.utils.algorithms.simplification import perm_compose, simplify
-from perceval.utils import LogicalState, NoiseModel
 
 
 class ProcessorType(Enum):
@@ -271,8 +270,7 @@ class AProcessor(ABC):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
-        if not (self._postselect is None or processor._postselect is None):
-            raise RuntimeError("Cannot automatically compose two processors with post-selection conditions")
+
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new processor
@@ -319,11 +317,17 @@ class AProcessor(ABC):
 
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
+            c_first = perm_modes[0]
             if perm_component is None:
-                self._postselect = processor._postselect
+                other_postselect = copy.copy(processor._postselect)
             else:
-                c_first = perm_modes[0]
-                self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+                other_postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+            other_postselect.shift_modes(c_first)
+            if not (self._postselect is None or other_postselect is None
+                    or postselect_independent(self._postselect, other_postselect)):
+                raise RuntimeError("Cannot automatically compose processor's post-selection conditions")
+            self._postselect = self._postselect or PostSelect()
+            self._postselect.merge(other_postselect)
 
     def _add_component(self, mode_mapping, component):
         self._validate_postselect_composition(mode_mapping)
