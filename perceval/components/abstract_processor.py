@@ -176,7 +176,8 @@ class AProcessor(ABC):
         :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
         """
-        assert isinstance(postselect, PostSelect), "Parameter must be a PostSelect object"
+        if not isinstance(postselect, PostSelect):
+            raise TypeError("Parameter must be a PostSelect object")
         self._postselect = postselect
 
     @deprecated(version="0.9", reason="use clear_postselection() instead")

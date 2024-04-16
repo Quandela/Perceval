@@ -32,7 +32,7 @@ from multipledispatch import dispatch
 from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source
+from perceval.components import ACircuit, Processor, Source, AComponent
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
@@ -148,13 +148,18 @@ class RemoteProcessor(AProcessor):
             warn(f"'{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead.",
                  DeprecationWarning)
 
-    def set_circuit(self, circuit: ACircuit):
+    def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
         if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
             raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
-        if self._input_state is not None and self._input_state.m != circuit.m:
-            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
+        if self._input_state is not None:
+            input_size = self._input_state.m + len(self.heralds)
+            if input_size != circuit.m:
+                raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m} + {len(self.heralds)} heralds)")
+
+    def set_circuit(self, circuit: ACircuit):
+        self.check_circuit(circuit)
         super().set_circuit(circuit)
         return self
 
@@ -208,7 +213,9 @@ class RemoteProcessor(AProcessor):
             **kwargs
         }
         if not circuitless:
-            payload['circuit'] = serialize(self.linear_circuit())
+            circuit = self.linear_circuit()
+            self.check_circuit(circuit)
+            payload['circuit'] = serialize(circuit)
         if self._input_state and not inputless:
             payload['input_state'] = serialize(self._input_state)
         if self._parameters:
@@ -235,10 +242,15 @@ class RemoteProcessor(AProcessor):
             return 0
         return self._n_moi
 
-    def _add_component(self, mode_mapping, component):
+    def _add_component(self, mode_mapping, component: AComponent):
         if not isinstance(component, ACircuit):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
         super()._add_component(mode_mapping, component)
+
+    def _compose_processor(self, connector, processor: AProcessor, keep_port: bool):
+        if not processor._is_unitary:
+            raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        super()._compose_processor(connector, processor, keep_port)
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
         if TRANSMITTANCE_KEY in self._perfs:
