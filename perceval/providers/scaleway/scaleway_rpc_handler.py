@@ -78,7 +78,7 @@ class RPCHandler:
         platforms = resp_dict["platforms"]
 
         if len(platforms) == 0:
-            raise Exception("Empty platform list from service")
+            raise HTTPError("Empty platform list from Scaleway service")
 
         platform_dict = platforms[0]
         platform_dict["specs"] = json.loads(platform_dict.get("metadata", {}))
