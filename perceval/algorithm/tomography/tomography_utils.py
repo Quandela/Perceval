@@ -208,8 +208,8 @@ def _generate_pauli_prep_index(nqubit: int, prep_basis_size: int = None) -> list
         # uses the full set Zm, Zp, Xp, Xm, Yp, Ym
         s = [pt for pt in PauliEigenStateType]
     else:
-        # standard tomography needs only the first four Zm, Zp, Xp, Yp eigenstates
-        s = [pt for pt in PauliEigenStateType][:4]
+        # standard tomography requires only 4 eigenstates - Zm, Zp, Xp, Yp
+        s = [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp, PauliEigenStateType.Yp]
 
     return [list(p) for p in product(s, repeat=nqubit)]
 

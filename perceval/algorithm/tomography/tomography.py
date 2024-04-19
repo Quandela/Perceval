@@ -128,7 +128,7 @@ class ProcessTomography(AAlgorithm):
     Experiment to reconstruct the process map of the gate operation by tomography experiment.
     - Computes the mathematical tensors/matrices defined by theory required to perform process tomography
 
-    - Computes :math:'$\chi$' matrix form of the operation process map
+    - Computes Chi matrix form of the operation process map
 
     - Provides analysis methods to investigate the results of process tomography
 

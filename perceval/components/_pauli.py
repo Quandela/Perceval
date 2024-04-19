@@ -54,9 +54,9 @@ class PauliEigenStateType(Enum):
     Zp = 1  # Pauli eigen-state Z+ : |0>
 
     Xp = 2  # Pauli eigen-state X+ : |+>
-    Yp = 4  # Pauli eigen-state Y+ : |i+>
-
     Xm = 3  # Pauli eigen-state X- : |->
+
+    Yp = 4  # Pauli eigen-state Y+ : |i+>
     Ym = 5  # Pauli eigen-state Y- : |i->
 
 
