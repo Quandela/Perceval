@@ -182,6 +182,7 @@ class PostSelect:
             for indexes, value in cond:
                 self._add_condition(indexes, operator, value)
 
+
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
     ps1_mode_set = set()
     for _, cond in ps1._conditions.items():
