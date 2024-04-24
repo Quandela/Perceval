@@ -125,6 +125,11 @@ class RPCHandler:
         duration = self.__get_duration(started_at)
         status = resp_dict.get("status")
 
+        if status == "cancelled":
+            status = "canceled"
+        elif status == "cancelling":
+            status = "cancel_requested"
+
         return {
             "creation_datetime": created_at,
             "duration": duration,
