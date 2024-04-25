@@ -71,7 +71,7 @@ def test_ghz_state_tomography_mle():
 
     s_mle = StateTomographyMLE(ghz_state_proc)
 
-    ghz_state = s_mle.APG_state(np.eye(2 ** s_mle._nqubit) / (2 ** s_mle._nqubit), 0.5, 1, 2000)
+    ghz_state = s_mle.state_tomography_density_matrix()
 
     fidelity = s_mle.state_fidelity(GHZ_TARGET, ghz_state)
 
