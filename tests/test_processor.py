@@ -183,6 +183,21 @@ def test_processor_composition():
         p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
 
 
+def test_composition_error_post_selection():
+    processor = catalog['postprocessed cnot'].build_processor()
+    # Composing 2 CNOTs on the exact same modes should work in theory, but not in the current implementation,
+    # it's still possible to apply a PostSelect manually to the resulting Processor.
+    with pytest.raises(AssertionError):
+        processor.add(0, processor)
+
+    processor2 = Processor("SLOS", 5)
+    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    processor2.add(0, pp_cnot)
+    # It's 100% valid that this 2nd case is blocked
+    with pytest.raises(AssertionError):
+        processor2.add(1, pp_cnot)
+
+
 def test_add_remove_ports():
     processor = Processor("SLOS", 6)
     p0 = Port(Encoding.DUAL_RAIL, "q0")

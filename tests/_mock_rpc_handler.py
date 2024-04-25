@@ -61,10 +61,10 @@ class MockRPCHandler:
             'name': self.name,
             'perfs': {},
             'specs': {
-                'available_commands': ['probs'], 'connected_input_modes': [0, 2, 4, 6, 8],
+                'available_commands': ['probs'], 'connected_input_modes': [0, 2, 4, 6, 8, 10],
                 'constraints': {
-                    'max_mode_count': 12,
-                    'max_photon_count': 5,
+                    'max_mode_count': 20,
+                    'max_photon_count': 6,
                     'min_mode_count': 1,
                     'min_photon_count': 1
                 },
