@@ -34,7 +34,7 @@ from scipy.linalg import sqrtm
 from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
     _generate_pauli_prep_index, _generate_pauli_index
 from perceval.utils import BasicState
-from perceval.components import AProcessor, get_pauli_gate, PauliType, PauliEigenStateType
+from perceval.components import AProcessor, PauliType, PauliEigenStateType
 from ..abstract_algorithm import AAlgorithm
 
 
@@ -53,6 +53,16 @@ class TomographyMLE(AAlgorithm):
 
         self._gate_logical_perf = None
 
+        # following parameters are for the reconstruction algorithm
+        self.decelerate_factor = kwargs.get('decelerate_factor', 0.5)
+        # param decelerate_factor: Decreases the learning rate for a slower descent with a value in range (0,1)
+        self.init_learn_rate = kwargs.get('init_learn_rate', 1)
+        # param init_learn_rate: initial learning rate
+        self.max_iterations = kwargs.get('max_iterations', 100)
+        # :param max_iterations: maximum number of iterations
+        self.convergence_precision = kwargs.get('convergence_precision', 1e-10)
+        # precision for convergence of the algorithm
+
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
 
@@ -61,14 +71,14 @@ class TomographyMLE(AAlgorithm):
         pass
 
     @abstractmethod
-    def _grad_log_likelihood_func(self, *args, **kwargs) -> float:
+    def _grad_log_likelihood_func(self, *args, **kwargs) -> np.ndarray:
         pass
 
     @abstractmethod
     def _povm_data(self):
         pass
 
-    def _collect_data(self, prep_state_indices, state_meas_indices):
+    def _collect_data(self, prep_state_indices, state_meas_indices) -> list:
         # performs measurements on the output_state for given preparation and measurement state indices at each qubit
 
         output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices, state_meas_indices,
@@ -86,7 +96,7 @@ class TomographyMLE(AAlgorithm):
             B.append(output_distribution[measurement_state] / (3 ** self._nqubit))
         return B
 
-    def _povm_state(self):
+    def _povm_state(self) -> list:
         # Gives a set of measurement states, so they form a set of informationally complete measurements.
         # For 1 qubit, they are (order important) : |0>,|1>,|+>,|->,|i+>,|i->,
         # These measurement states are eigenvectors of the tensor products of Pauli operators
@@ -120,7 +130,7 @@ class TomographyMLE(AAlgorithm):
             P += X
         return P
 
-    def _povm_operator(self):
+    def _povm_operator(self) -> list:
         # Gives a POVM (positive operator value measure) set suited for tomography
         B = self._povm_state()
         L = []
@@ -128,7 +138,7 @@ class TomographyMLE(AAlgorithm):
             L.append(_state_to_dens_matrix(state) / (3 ** self._nqubit))
         return L
 
-    def _compute_matrix(self, j):
+    def _compute_matrix(self, j: int) -> np.ndarray:
         if j == 0:
             return np.eye((2), dtype='complex_')
         if j == 1:
@@ -136,7 +146,7 @@ class TomographyMLE(AAlgorithm):
         if j == 2:
             return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
 
-    def _input_basis(self):
+    def _input_basis(self) -> list:
         # Computes input density matrix basis (similar to POVM but not same order)
 
         B = []
@@ -159,12 +169,12 @@ class TomographyMLE(AAlgorithm):
         return B
 
     @staticmethod
-    def _frobenius_inner_product(A, B):
+    def _frobenius_inner_product(A: np.ndarray, B: np.ndarray) -> float:
         # calculates the inner product associated to Frobenius norm
         return np.trace(np.dot(np.transpose(np.conjugate(A)), B))
 
     @staticmethod
-    def _proj_simplex(eigenvalues):
+    def _proj_simplex(eigenvalues: list) -> list:
         # Projects a given real eigen-spectra (sorted in descending order) on positive elements with their sum equal to 1
         u = 0
         for j in range(1, len(eigenvalues) + 1):
@@ -181,7 +191,7 @@ class TomographyMLE(AAlgorithm):
         return L
 
     @staticmethod
-    def _proj(h_matrix):
+    def _proj(h_matrix: np.ndarray) -> np.ndarray:
         # Projects a given hermitian matrix on the cone of positive semi-definite trace=1 matrices
         eigenvalues, eigenvectors = np.linalg.eigh(h_matrix)
         eigenvalues2 = list(eigenvalues)
@@ -195,27 +205,24 @@ class TomographyMLE(AAlgorithm):
             x += (L[i] / np.trace(x_i)) * x_i
         return x
 
-    def _perform_mle_tomography(self, init_guess_quantum_map, decelerate_factor: float=0.5, init_learn_rate:float=1,
-                                max_iterations :int=1000, convergence_precision:float=1e-10):
+    def _perform_mle_tomography(self, init_guess_quantum_map: np.ndarray) -> np.ndarray:
+
         # Accelerated Projected Gradient descent algorithm which takes an input guess and
         # uses measurements to reconstruct quantum maps (state or process) using MLE for Quantum Tomography
         # ref: https://doi.org/10.48550/arXiv.1609.07881
         #
         # param init_guess_quantum_map: an initial guess ofr the quantum map
-        # param decelerate_factor: Decreases the learning rate for a slower descent with a value in range (0,1)
-        # param init_learn_rate: initial learning rate
-        # :param max_iterations: maximum number of iterations
 
         guess_quantum_map = copy.deepcopy(init_guess_quantum_map)
         init_quantum_map = copy.deepcopy(init_guess_quantum_map)
 
         theta = 1
-        ith_learn_rate = init_learn_rate  # initializing the learning rate of the algorithm
+        ith_learn_rate = self.init_learn_rate  # initializing the learning rate of the algorithm
 
         log_f_guess_quantum_map = self._log_likelihood_func(guess_quantum_map)
         grad_log_f_guess_quantum_map = self._grad_log_likelihood_func(guess_quantum_map)
 
-        for i in range(max_iterations):
+        for i in range(self.max_iterations):
             ith_quantum_map = self._proj(guess_quantum_map - ith_learn_rate * grad_log_f_guess_quantum_map)
 
             delta_i = ith_quantum_map - guess_quantum_map  # difference between current and target
@@ -228,7 +235,7 @@ class TomographyMLE(AAlgorithm):
 
 
             while log_f_ith_quantum_map > (log_f_guess_quantum_map + frob_prod_grad_log_f_delta + norm_delta_i):
-                ith_learn_rate *= decelerate_factor
+                ith_learn_rate *= self.decelerate_factor
                 ith_quantum_map = TomographyMLE._proj(guess_quantum_map - ith_learn_rate * grad_log_f_guess_quantum_map)
                 delta_i = ith_quantum_map - guess_quantum_map
 
@@ -242,7 +249,7 @@ class TomographyMLE(AAlgorithm):
                 theta, guess_quantum_map = (1 + np.sqrt(1 + 4 * theta ** 2)) / 2, ith_quantum_map + delta_i_hat * (theta - 1) / (
                             (1 + np.sqrt(1 + 4 * theta ** 2)) / 2)
 
-            if np.abs(log_f_ith_quantum_map - self._log_likelihood_func(init_quantum_map)) < convergence_precision:
+            if np.abs(log_f_ith_quantum_map - self._log_likelihood_func(init_quantum_map)) < self.convergence_precision:
                 break
 
             init_quantum_map = ith_quantum_map
@@ -252,12 +259,12 @@ class TomographyMLE(AAlgorithm):
 
 
 class StateTomographyMLE(TomographyMLE):
-    def __init__(self, operator_processor):
-        super().__init__(operator_processor)
+    def __init__(self, operator_processor, **kwargs):
+        super().__init__(operator_processor, **kwargs)
         self._f = self._povm_data()
         self._guess_density_matrix = np.eye(2 ** self._nqubit) / (2 ** self._nqubit)
 
-    def _povm_data(self):
+    def _povm_data(self) -> list:
         # Performing a POVM (positive operator value measure) on the quantum processor
         # in the informationally complete Pauli basis, i.e. choosing all the eigenvectors of the PAuli operators.
         # They are |0>,|1>,|+>,|->,|i+>,|i->
@@ -299,31 +306,31 @@ class StateTomographyMLE(TomographyMLE):
                 grad -= (f[k] / (np.trace(np.dot(rho, P[k])))) * P[k]
         return grad
 
-    def state_tomography_density_matrix(self, decelerate_factor: float = 0.5, init_learn_rate: float = 1,
-                                        max_iterations: int = 1000):
-
-        return self._perform_mle_tomography(self._guess_density_matrix, 0.5, 1, 1000)
-
+    def state_tomography_density_matrix(self) -> np.ndarray:
+        return self._perform_mle_tomography(self._guess_density_matrix)
 
     @staticmethod
-    def state_fidelity(x, y):
+    def state_fidelity(target_state_dm: np.ndarray, computed_state_dm: np.ndarray) -> float:
         """
         Computes the fidelity of the density matrix reconstructed after State Tomography using MLE algorithm
+        :param target_state_dm: target Density Matrix of the State
+        :param computed_state_dm: reconstructed Density Matrix of the State
+        :return: fidelity of the reconstructed state
         """
-        rx = sqrtm(x)
-        z = np.linalg.multi_dot([rx, y, rx])
+        rx = sqrtm(target_state_dm)
+        z = np.linalg.multi_dot([rx, computed_state_dm, rx])
         return np.real(np.trace(sqrtm(z)) ** 2)
 
 
-
 class ProcessTomographyMLE(TomographyMLE):
-    def __init__(self, operator_processor):
-        super().__init__(operator_processor)
+    def __init__(self, operator_processor, **kwargs):
+        super().__init__(operator_processor, **kwargs)
         self._f = self._povm_data()
         self._guess_choi_seed = np.eye((2 ** self._nqubit), dtype='complex_')
         self._guess_choi_matrix = np.kron(self._guess_choi_seed, self._guess_choi_seed) / 16
+    # Todo : Discuss and fix achritecture for fidelity and chi_matrix (Abstract class?)
 
-    def _povm_data(self):
+    def _povm_data(self) -> list:
         # Performing a POVM (positive operator value measure) on the quantum processor
         # in the informationally complete Pauli basis, i.e. choosing all the eigenvectors of the Pauli operators.
         # They are |0>,|1>,|+>,|->,|i+>,|i->
@@ -361,7 +368,7 @@ class ProcessTomographyMLE(TomographyMLE):
                     x -= f[m][l] * np.log(pml)
         return x
 
-    def _grad_log_likelihood_func(self, S) -> float:
+    def _grad_log_likelihood_func(self, S: np.ndarray) -> np.ndarray:
         # Gradient of the log-likelihood function of the POVM
 
         f = self._f
@@ -376,16 +383,12 @@ class ProcessTomographyMLE(TomographyMLE):
                     grad -= (f[m][l] / pml) * np.kron(np.transpose(B[m]), P[l])
         return grad
 
-    def chi_matrix(self, decelerate_factor: float=0.5, init_learn_rate:float=1, max_iterations :int=100):
+    def chi_matrix(self) -> np.ndarray:
         """
         Computes the chi matrix of the quantum process under study using the MLE tomography
-        # param decelerate_factor: Decreases the learning rate for a slower descent with a value in range (0,1)
-        # param init_learn_rate: initial learning rate
-        # :param max_iterations: maximum number of iterations
-
         :return: chi matrix
         """
-        choi = self._perform_mle_tomography(self._guess_choi_matrix, decelerate_factor, init_learn_rate, max_iterations)
+        choi = self._perform_mle_tomography(self._guess_choi_matrix)
         X = np.zeros((len(choi), len(choi)), dtype='complex_')
 
         for m in range(len(choi)):

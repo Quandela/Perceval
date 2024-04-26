@@ -27,9 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-from pathlib import Path
-
 import pytest
 import numpy as np
 from perceval.components import catalog, Processor, BS
