@@ -27,53 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-<<<<<<<< HEAD:tests/test_tomography_mle.py
-import pytest
-import numpy as np
-from perceval.components import catalog, Processor, BS
-from perceval.algorithm import ProcessTomographyMLE, StateTomographyMLE
-from perceval.algorithm.tomography.tomography_utils import process_fidelity
-
-CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
-
-GHZ_TARGET = np.zeros((8, 8))
-GHZ_TARGET[0, 0], GHZ_TARGET[0, -1], GHZ_TARGET[-1, 0], GHZ_TARGET[-1, -1] = 1, 1, 1, 1
-GHZ_TARGET /= 2
-
-def fidelity_op_mle_process_tomography(op_proc):
-    # create mle process tomography object
-    qpt_mle = ProcessTomographyMLE(operator_processor=op_proc)
-    chi_op = qpt_mle.chi_matrix()
-
-    chi_op_ideal = qpt_mle.chi_target(CNOT_TARGET)
-
-    op_fidelity = process_fidelity(chi_op, chi_op_ideal)
-    return op_fidelity
-
-
-def test_fidelity_heralded_cnot():
-    cnot_p = catalog["heralded cnot"].build_processor()
-    cnot_fidelity_mle = fidelity_op_mle_process_tomography(cnot_p)
-
-    assert cnot_fidelity_mle == pytest.approx(1)
-
-def test_ghz_state_tomography_mle():
-    h_cnot_circ = catalog["klm cnot"].build_processor()
-
-    ghz_state_proc = Processor("SLOS", 6)
-    ghz_state_proc.add(0, BS.H())
-    ghz_state_proc.add(0, h_cnot_circ)
-    ghz_state_proc.add(2, h_cnot_circ)
-
-    s_mle = StateTomographyMLE(ghz_state_proc)
-
-    ghz_state = s_mle.state_tomography_density_matrix()
-
-    fidelity = s_mle.state_fidelity(GHZ_TARGET, ghz_state)
-
-    assert np.trace(ghz_state) == pytest.approx(1)
-    assert fidelity == pytest.approx(1)
-========
 SEP = ":"
 PCVL_PREFIX = f"{SEP}PCVL{SEP}"
 ZIP_PREFIX = f"{PCVL_PREFIX}zip{SEP}"
@@ -88,4 +41,3 @@ BSC_TAG = "BSCount"
 BSS_TAG = "BSSamples"
 NOISE_TAG = "NoiseModel"
 POSTSELECT_TAG = "PostSelect"
->>>>>>>> release/0.11.0:perceval/serialization/_constants.py
