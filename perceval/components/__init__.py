@@ -34,7 +34,8 @@ from .generic_interferometer import GenericInterferometer
 from .processor import Processor
 from .source import Source
 from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ,
-                     get_pauli_basis_measurement_circuit, get_pauli_gate)
+                     get_pauli_basis_measurement_circuit, get_pauli_gate, get_pauli_eigenvector_matrix,
+                     get_pauli_eigenvectors)
 from .tomography_exp_configurer import processor_circuit_configurator
 from .comp_utils import decompose_perms
 from .port import Port, Herald, PortLocation, get_basic_state_from_ports

@@ -271,3 +271,22 @@ def is_physical(input_matrix: np.ndarray, nqubit: int, eigen_tolerance: float = 
         res['Completely Positive'] = True
 
     return res
+
+
+def _index_num_to_basis(index, nqubit, basis_size) -> list:
+    digits = []
+    for j in range(nqubit - 1, -1, -1):
+        digits.append(index // (basis_size ** j))
+        index = index % (basis_size ** j)
+    return digits
+
+
+def process_fidelity(computed_map: np.ndarray, ideal_map: np.ndarray) -> float:
+    """
+    Computes the process fidelity of an operator (ideal) and its implementation (realistic)
+
+    :param computed_map: process map (chi matrix) or density matrix map computed by tomography
+    :param ideal_map: ideal process map (chi matrix) or density matrix map of the process or state
+    :return: float between 0 and 1
+    """
+    return np.real(np.trace(np.dot(computed_map, ideal_map)))

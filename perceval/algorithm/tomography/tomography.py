@@ -260,17 +260,6 @@ class ProcessTomography(AAlgorithm):
         chi = _vector_to_sq_matrix(X[:, 0])
         return chi
 
-    @staticmethod
-    def process_fidelity(chi_computed: np.ndarray, chi_ideal: np.ndarray) -> float:
-        """
-        Computes the process fidelity of an operator (ideal) and its implementation (realistic)
-
-        :param chi_computed: chi matrix computed from process tomography
-        :param chi_ideal: Ideal chi matrix for the corresponding operator
-        :return: float between 0 and 1
-        """
-        return np.real(np.trace(np.dot(chi_computed, chi_ideal)))
-
     def average_fidelity(self, operator: np.ndarray) -> float:
         """
         Computes the average fidelity of an operator (ideal) and its implementation (realistic).

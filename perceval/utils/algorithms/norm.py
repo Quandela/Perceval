@@ -69,3 +69,7 @@ def frobenius(u: Matrix, v: Matrix) -> float:
     :return: real [0-1] float fidelity
     """
     return np.linalg.norm(u - v)
+
+def frobenius_inner_product(A: np.ndarray, B: np.ndarray) -> float:
+    # calculates the inner product associated to Frobenius norm
+    return np.trace(np.dot(np.transpose(np.conjugate(A)), B))

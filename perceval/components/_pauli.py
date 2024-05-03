@@ -115,6 +115,41 @@ def get_pauli_gate(pauli_type: PauliType):
         raise NotImplementedError(f"{pauli_type}")
 
 
+def get_pauli_eigenvectors(pauli_type) -> list:
+
+    if pauli_type == PauliEigenStateType.Zm:
+        return np.array([[1], [0]], dtype='complex_')
+
+    elif pauli_type == PauliEigenStateType.Zp:
+        return np.array([[0], [1]], dtype='complex_')
+
+    elif pauli_type == PauliEigenStateType.Xp:
+        return (1 / np.sqrt(2)) * np.array([[1], [1]], dtype='complex_')
+
+    elif pauli_type == PauliEigenStateType.Xm:
+        return (1 / np.sqrt(2)) * np.array([[1], [-1]], dtype='complex_')
+
+    elif pauli_type == PauliEigenStateType.Yp:
+        return (1 / np.sqrt(2)) * np.array([[1], [1j]], dtype='complex_')
+
+    elif pauli_type == PauliEigenStateType.Ym:
+        return (1 / np.sqrt(2)) * np.array([[1], [-1j]], dtype='complex_')
+
+    else:
+        raise NotImplementedError(f"{pauli_type}")
+
+
+
+
+def get_pauli_eigenvector_matrix(pauli_eigenv) -> np.ndarray:
+
+    if pauli_eigenv == PauliType.X:
+        return (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype='complex_')
+    elif pauli_eigenv == PauliType.Y:
+        return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
+    else:
+        return np.eye((2), dtype='complex_')
+
 def get_pauli_basis_measurement_circuit(pauli_type: PauliType) -> Circuit:
     """
     Uses the PauliType to choose and create LO measurement circuits in Pauli Basis (I,X,Y,Z).

@@ -32,9 +32,11 @@ import copy
 import numpy as np
 from scipy.linalg import sqrtm
 from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
-    _generate_pauli_prep_index, _generate_pauli_index
+    _generate_pauli_prep_index, _generate_pauli_index, _index_num_to_basis
 from perceval.utils import BasicState
-from perceval.components import AProcessor, PauliType, PauliEigenStateType
+from perceval.utils.algorithms.norm import frobenius_inner_product
+from perceval.components import (AProcessor, PauliType, PauliEigenStateType, get_pauli_eigenvector_matrix,
+    get_pauli_eigenvectors)
 from ..abstract_algorithm import AAlgorithm
 
 
@@ -84,7 +86,7 @@ class TomographyMLE(AAlgorithm):
         output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices, state_meas_indices,
                                                                       denormalize=False)
 
-        B = []
+        measured_output = []
         for j in range(2**self._nqubit):
             measurement_state = BasicState()
             for m in range(self._nqubit - 1, -1, -1):
@@ -93,8 +95,8 @@ class TomographyMLE(AAlgorithm):
                 else:
                     measurement_state *= self._LOGICAL1
 
-            B.append(output_distribution[measurement_state] / (3 ** self._nqubit))
-        return B
+            measured_output.append(output_distribution[measurement_state] / (3 ** self._nqubit))
+        return measured_output
 
     def _povm_state(self) -> list:
         # Gives a set of measurement states, so they form a set of informationally complete measurements.
@@ -102,76 +104,55 @@ class TomographyMLE(AAlgorithm):
         # These measurement states are eigenvectors of the tensor products of Pauli operators
 
         d = 2 ** self._nqubit
-        P = []
-        B = [np.array([[1], [0]], dtype='complex_'), np.array([[0], [1]], dtype='complex_'),
-             (1 / np.sqrt(2)) * np.array([[1], [1]], dtype='complex_'),
-             (1 / np.sqrt(2)) * np.array([[1], [-1]], dtype='complex_'),
-             (1 / np.sqrt(2)) * np.array([[1], [1j]], dtype='complex_'),
-             (1 / np.sqrt(2)) * np.array([[1], [-1j]], dtype='complex_')]  #
+        povm_state = []
+
+        basis = list(PauliEigenStateType)
+        pauli_eigen_basis = []
+        for pauli_eigenv in basis:
+            pauli_eigen_basis.append(get_pauli_eigenvectors(pauli_eigenv))
 
         for pauli_index in range(3 ** self._nqubit):
             # iterates over pauli operators I(equivalent to Z),X,Y or their tensor products
-            pauli_list = []  # saves on each element the pauli index for this qubit
+            # pauli_list = []  # saves on each element the pauli index for this qubit
+            #
+            pauli_list = _index_num_to_basis(pauli_index, self._nqubit, 3)
 
-            for j in range(self._nqubit - 1, -1, -1):
-                pauli_list.append(pauli_index // (3 ** j))
-                pauli_index = pauli_index % (3 ** j)
             X = [np.array([1], dtype='complex_')] * d  # neutral elements for tensor products
 
             for qubit_index in range(self._nqubit):
                 for eigenvector_index in range(d):  # iterates over the eigenvectors of the pauli operator
-                    eigenvector_list = []  # saves on each element the eigenvector index for this qubit
-                    k1 = eigenvector_index
-                    for j1 in range(self._nqubit - 1, -1, -1):
-                        eigenvector_list.append(k1 // (2 ** j1))
-                        k1 = k1 % (2 ** j1)
+                    eigenvector_list = _index_num_to_basis(eigenvector_index, self._nqubit, 2)
                     X[eigenvector_index] = np.kron(X[eigenvector_index],
-                                                   B[2 * pauli_list[qubit_index] + eigenvector_list[qubit_index]])
-            P += X
-        return P
+                                                   pauli_eigen_basis[2 * pauli_list[qubit_index] + eigenvector_list[qubit_index]])
+            povm_state += X
+        return povm_state
 
     def _povm_operator(self) -> list:
         # Gives a POVM (positive operator value measure) set suited for tomography
         B = self._povm_state()
-        L = []
+        povm_op = []
         for state in B:
-            L.append(_state_to_dens_matrix(state) / (3 ** self._nqubit))
-        return L
-
-    def _compute_matrix(self, j: int) -> np.ndarray:
-        if j == 0:
-            return np.eye((2), dtype='complex_')
-        if j == 1:
-            return (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype='complex_')
-        if j == 2:
-            return (1 / np.sqrt(2)) * np.array([[1, 1], [1j, -1j]], dtype='complex_')
+            povm_op.append(_state_to_dens_matrix(state) / (3 ** self._nqubit))
+        return povm_op
 
     def _input_basis(self) -> list:
         # Computes input density matrix basis (similar to POVM but not same order)
 
-        B = []
+        input_basis = []
         for j in range(6 ** self._nqubit):
-            k = []
-            for m in range(self._nqubit - 1, -1, -1):
-                k.append(j // (6 ** m))
-                j = j % (6 ** m)
-            k.reverse()
+            k = _index_num_to_basis(j, self._nqubit, 6)
+
             M = 1
             v = 1
-            for i in k:
-                M = np.kron(self._compute_matrix(i // 2), M)
+            for i in reversed(k):
+                M = np.kron(get_pauli_eigenvector_matrix(PauliType(i // 2)), M)
 
                 if i % 2 == 0:
-                    v = np.kron(np.array([[1], [0]], dtype='complex_'), v)
+                    v = np.kron([[1], [0]], v)
                 else:
-                    v = np.kron(np.array([[0], [1]], dtype='complex_'), v)
-            B.append(_state_to_dens_matrix(np.dot(M, v)))
-        return B
-
-    @staticmethod
-    def _frobenius_inner_product(A: np.ndarray, B: np.ndarray) -> float:
-        # calculates the inner product associated to Frobenius norm
-        return np.trace(np.dot(np.transpose(np.conjugate(A)), B))
+                    v = np.kron([[0], [1]], v)
+            input_basis.append(_state_to_dens_matrix(np.dot(M, v)))
+        return input_basis
 
     @staticmethod
     def _proj_simplex(eigenvalues: list) -> list:
@@ -185,23 +166,20 @@ class TomographyMLE(AAlgorithm):
             w = 0
         else:
             w = (1 / u) * (sum(eigenvalues[:u]) - 1)
-        L = []
-        for lambda_i in eigenvalues:
-            L.append(max(lambda_i - w, 0))
-        return L
+
+        return [max(lambda_i - w, 0) for lambda_i in eigenvalues]
 
     @staticmethod
     def _proj(h_matrix: np.ndarray) -> np.ndarray:
         # Projects a given hermitian matrix on the cone of positive semi-definite trace=1 matrices
         eigenvalues, eigenvectors = np.linalg.eigh(h_matrix)
-        eigenvalues2 = list(eigenvalues)
-        eigenvalues2.reverse()
-        L = TomographyMLE._proj_simplex(eigenvalues2)
+        L = TomographyMLE._proj_simplex(np.flip(eigenvalues))
         L.reverse()
-        x_0 = _state_to_dens_matrix(np.transpose(np.array([eigenvectors[:, 0]], dtype='complex_')))
+        x_0 = _state_to_dens_matrix(np.transpose([eigenvectors[:, 0]]))
         x = (L[0] / np.trace(x_0)) * x_0
-        for i in range(1, len(eigenvalues2)):
-            x_i = _state_to_dens_matrix(np.transpose(np.array([eigenvectors[:, i]], dtype='complex_')))
+
+        for i in range(1, len(eigenvalues)):
+            x_i = _state_to_dens_matrix(np.transpose([eigenvectors[:, i]]))
             x += (L[i] / np.trace(x_i)) * x_i
         return x
 
@@ -222,14 +200,14 @@ class TomographyMLE(AAlgorithm):
         log_f_guess_quantum_map = self._log_likelihood_func(guess_quantum_map)
         grad_log_f_guess_quantum_map = self._grad_log_likelihood_func(guess_quantum_map)
 
-        for i in range(self.max_iterations):
+        for _ in range(self.max_iterations):
             ith_quantum_map = self._proj(guess_quantum_map - ith_learn_rate * grad_log_f_guess_quantum_map)
 
             delta_i = ith_quantum_map - guess_quantum_map  # difference between current and target
 
             log_f_ith_quantum_map = self._log_likelihood_func(ith_quantum_map)
 
-            frob_prod_grad_log_f_delta = self._frobenius_inner_product(grad_log_f_guess_quantum_map, delta_i)
+            frob_prod_grad_log_f_delta = frobenius_inner_product(grad_log_f_guess_quantum_map, delta_i)
 
             norm_delta_i = (1 / (2 * ith_learn_rate)) * np.linalg.norm(delta_i, ord='fro') ** 2
 
@@ -241,7 +219,7 @@ class TomographyMLE(AAlgorithm):
 
             delta_i_hat = ith_quantum_map - init_quantum_map
 
-            if TomographyMLE._frobenius_inner_product(delta_i, delta_i_hat) < 0:
+            if frobenius_inner_product(delta_i, delta_i_hat) < 0:
                 # Restart by re-initializing guess maps
                 ith_quantum_map, guess_quantum_map, theta = init_quantum_map, init_quantum_map, 1
             else:
@@ -257,53 +235,49 @@ class TomographyMLE(AAlgorithm):
         return ith_quantum_map
 
 
-
 class StateTomographyMLE(TomographyMLE):
     def __init__(self, operator_processor, **kwargs):
         super().__init__(operator_processor, **kwargs)
-        self._f = self._povm_data()
         self._guess_density_matrix = np.eye(2 ** self._nqubit) / (2 ** self._nqubit)
+        self._povm_data()  # to set self._data_function -> all the measured data
 
-    def _povm_data(self) -> list:
+    def _povm_data(self):
         # Performing a POVM (positive operator value measure) on the quantum processor
         # in the informationally complete Pauli basis, i.e. choosing all the eigenvectors of the PAuli operators.
         # They are |0>,|1>,|+>,|->,|i+>,|i->
 
-        f = []
         measurement_indices = _generate_pauli_index(self._nqubit)
 
         preparation_indices = [PauliEigenStateType.Zm]  * self._nqubit
         # Input Preparation fixed to |0> for state tomography
 
+        data_function = []
         for val in measurement_indices:
             if PauliType.Z in val:
                 continue
-            f += self._collect_data(preparation_indices, state_meas_indices=val)
-
-        return f
+            data_function += self._collect_data(preparation_indices, state_meas_indices=val)
+        self._data_function = data_function
 
     def _log_likelihood_func(self, rho: np.ndarray) -> float:
         # Log-likelihood function of the POVM to minimize
 
-        f = self._f
-        P = self._povm_operator()
+        povm_op = self._povm_operator()
 
         x = 0
-        for k in range(len(f)):
-            if np.trace(np.dot(rho, P[k])) != 0:
-                x -= f[k] * np.log(np.trace(np.dot(rho, P[k])))
+        for k in range(len(self._data_function)):
+            if np.trace(np.dot(rho, povm_op[k])) != 0:
+                x -= self._data_function[k] * np.log(np.trace(np.dot(rho, povm_op[k])))
         return x
 
     def _grad_log_likelihood_func(self, rho: np.ndarray) -> float:
         # Gradient of the log-likelihood function of the POVM
 
-        f = self._f
-        P = self._povm_operator()
+        povm_op = self._povm_operator()
 
         grad = 0
-        for k in range(len(f)):
-            if np.trace(np.dot(rho, P[k])) != 0:
-                grad -= (f[k] / (np.trace(np.dot(rho, P[k])))) * P[k]
+        for k in range(len(self._data_function)):
+            if np.trace(np.dot(rho, povm_op[k])) != 0:
+                grad -= (self._data_function[k] / (np.trace(np.dot(rho, povm_op[k])))) * povm_op[k]
         return grad
 
     def state_tomography_density_matrix(self) -> np.ndarray:
@@ -325,12 +299,12 @@ class StateTomographyMLE(TomographyMLE):
 class ProcessTomographyMLE(TomographyMLE):
     def __init__(self, operator_processor, **kwargs):
         super().__init__(operator_processor, **kwargs)
-        self._f = self._povm_data()
+        self._povm_data()
         self._guess_choi_seed = np.eye((2 ** self._nqubit), dtype='complex_')
         self._guess_choi_matrix = np.kron(self._guess_choi_seed, self._guess_choi_seed) / 16
     # Todo : Discuss and fix achritecture for fidelity and chi_matrix (Abstract class?)
 
-    def _povm_data(self) -> list:
+    def _povm_data(self):
         # Performing a POVM (positive operator value measure) on the quantum processor
         # in the informationally complete Pauli basis, i.e. choosing all the eigenvectors of the Pauli operators.
         # They are |0>,|1>,|+>,|->,|i+>,|i->
@@ -339,48 +313,46 @@ class ProcessTomographyMLE(TomographyMLE):
         # prep has 6 options -> 4 pauli and 2 other are some combo
         # of that itself -> find which and decide how to implement
 
-        f = []
         preparation_states = _generate_pauli_prep_index(self._nqubit)
         measurement_states = _generate_pauli_index(self._nqubit)
 
-        for index, value in enumerate(preparation_states):
+        data_function = []
+        for value in preparation_states:
             f_per_prep = []
             for meas_indices in measurement_states:
                 if PauliType.Z in meas_indices:
                     continue
                 f_per_prep += self._collect_data(prep_state_indices=value, state_meas_indices=meas_indices)
 
-            f.append(f_per_prep)
-        return f
+            data_function.append(f_per_prep)
+        self._data_function = data_function
 
     def _log_likelihood_func(self, choi_matrix: np.ndarray) -> float:
         # Log-likelihood function of the POVM to minimize
 
-        f = self._f
-        P = self._povm_operator()
-        B = self._input_basis()
+        povm_op = self._povm_operator()
+        input_basis = self._input_basis()
 
         x = 0
-        for m in range(len(B)):
-            for l in range(len(P)):
-                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(B[m]), P[l]))))
+        for m in range(len(input_basis)):
+            for l in range(len(povm_op)):
+                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(input_basis[m]), povm_op[l]))))
                 if 0 < pml <= 1:
-                    x -= f[m][l] * np.log(pml)
+                    x -= self._data_function[m][l] * np.log(pml)
         return x
 
-    def _grad_log_likelihood_func(self, S: np.ndarray) -> np.ndarray:
+    def _grad_log_likelihood_func(self, choi_matrix: np.ndarray) -> np.ndarray:
         # Gradient of the log-likelihood function of the POVM
 
-        f = self._f
-        P = self._povm_operator()
-        B = self._input_basis()
+        povm_op = self._povm_operator()
+        input_basis = self._input_basis()
 
         grad = 0 # a numpy array, not a number
-        for l in range(len(P)):
-            for m in range(len(B)):
-                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(S, np.kron(np.transpose(B[m]), P[l]))))
+        for l in range(len(povm_op)):
+            for m in range(len(input_basis)):
+                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(input_basis[m]), povm_op[l]))))
                 if 0 < pml <= 1:
-                    grad -= (f[m][l] / pml) * np.kron(np.transpose(B[m]), P[l])
+                    grad -= (self._data_function[m][l] / pml) * np.kron(np.transpose(input_basis[m]), povm_op[l])
         return grad
 
     def chi_matrix(self) -> np.ndarray:

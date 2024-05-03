@@ -31,7 +31,7 @@ import pytest
 import numpy as np
 from perceval.components import catalog, Processor, BS
 from perceval.algorithm import ProcessTomography, ProcessTomographyMLE, StateTomographyMLE
-
+from perceval.algorithm.tomography.tomography_utils import process_fidelity
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
@@ -48,7 +48,7 @@ def fidelity_op_mle_process_tomography(op_proc):
     qpt = ProcessTomography(op_proc)
     chi_op_ideal = qpt.chi_target(CNOT_TARGET)
 
-    op_fidelity = qpt.process_fidelity(chi_op, chi_op_ideal)
+    op_fidelity = process_fidelity(chi_op, chi_op_ideal)
     return op_fidelity
 
 
