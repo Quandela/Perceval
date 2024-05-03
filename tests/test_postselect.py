@@ -56,6 +56,9 @@ def test_postselect_init_invalid():
         PostSelect("[0]==0 & (1,2)==1 & [3,4]==1 & [5]==0")  # Tuple syntax is not supported
 
     with pytest.raises(RuntimeError):
+        PostSelect("[2] >= 4 | [1] > 2")
+
+    with pytest.raises(RuntimeError):
         PostSelect("[0]==0 & [1,2]]==1 & [3,4]==1 & [5]==0")  # Too many brackets
 
 
@@ -73,6 +76,18 @@ def test_postselect_usage():
         assert not ps_cnot(bs)
     assert ps_cnot(BasicState("|0,{_:0},0,{_:1},0,0>"))
 
+
+def test_postselect_usage_advanced():
+    ps1 = PostSelect("[1,2]>=1")
+    ps2 = PostSelect("[1,2]>0")
+    ps3 = PostSelect("[1,2]<1")
+    ps4 = PostSelect("[1,2]<=0")
+    for bs in [BasicState([0, 1, 0, 1, 0, 0]), BasicState([0, 0, 1, 0, 1, 0]), BasicState([0, 1, 0, 0, 1, 0]),
+               BasicState([0, 0, 1, 1, 0, 0])]:
+        assert ps1(bs)
+        assert ps2(bs)
+        assert not ps3(bs)
+        assert not ps4(bs)
 
 def test_postselect_str():
     ps1 = PostSelect("[0]==0 & [1, 2 ]>0 & [3, 4]==1 & [5]<1")

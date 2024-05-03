@@ -51,8 +51,8 @@ class PostSelect:
     False
     """
 
-    _OPERATOR = {"==": int.__eq__, "<": int.__lt__, ">": int.__gt__}
-    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)(==|<|>)\s*(\d+\b)")
+    _OPERATOR = {"==": int.__eq__, "<": int.__lt__, ">": int.__gt__, ">=": int.__ge__, "<=": int.__le__}
+    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)(==|<|>|>=|<=)\s*(\d+\b)")
 
     def __init__(self, str_repr: str = None):
         self._conditions = {}
@@ -83,6 +83,16 @@ class PostSelect:
     def lt(self, indexes, value: int):
         """Create a new "lower than" condition for the current PostSelect instance"""
         self._add_condition(indexes, int.__lt__, value)
+        return self
+
+    def ge(self, indexes, value: int):
+        """Create a new "greater or equal than" condition for the current PostSelect instance"""
+        self._add_condition(indexes, int.__ge__, value)
+        return self
+
+    def le(self, indexes, value: int):
+        """Create a new "lower or equal than" condition for the current PostSelect instance"""
+        self._add_condition(indexes, int.__le__, value)
         return self
 
     def _add_condition(self, indexes, operator: Callable, value: int):
