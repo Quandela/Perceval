@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import os
+import json
 import shutil
 import warnings
 from typing import Union
@@ -36,6 +37,7 @@ from platformdirs import PlatformDirs
 from .metadata import PMetadata
 from ._enums import FileFormat
 
+_CONFIG_FILE_NAME = "config.json"
 
 
 def _removesuffix(data, suffix):
@@ -100,7 +102,7 @@ class PersistentData:
         return sum(os.path.getsize(os.path.join(dirpath, filename))
                    for dirpath, dirnames, filenames in os.walk(self._directory) for filename in filenames)
 
-    def _get_full_path(self, element_name: str) -> str:
+    def get_full_path(self, element_name: str) -> str:
         """Get the full path of an element supposedly in persistent data directory
 
         :param element_name: name of the element (with extension)
@@ -122,7 +124,7 @@ class PersistentData:
 
         :param filename: name of the file to delete (with extension)
         """
-        file_path = self._get_full_path(filename)
+        file_path = self.get_full_path(filename)
         if not os.path.exists(file_path):
             warnings.warn(UserWarning(f"Cannot delete {file_path}, file doesn't exist"))
             return
@@ -134,7 +136,7 @@ class PersistentData:
         :param filename: name of the file to write in (with extension)
         :param data: data to write
         """
-        file_path = self._get_full_path(filename)
+        file_path = self.get_full_path(filename)
 
         if file_format == FileFormat.BINARY:
             with open(file_path, "wb") as file:
@@ -152,7 +154,7 @@ class PersistentData:
         :raises FileNotFoundError: Raise an exception if file is not found
         :return: data
         """
-        file_path = self._get_full_path(filename)
+        file_path = self.get_full_path(filename)
         if not os.path.exists(file_path):
             raise FileNotFoundError(file_path)
         data = None
@@ -169,6 +171,33 @@ class PersistentData:
         else:
             raise NotImplementedError(f"format {format} is not supported")
         return data
+
+    def load_config(self):
+        config = {}
+        if self.has_file(_CONFIG_FILE_NAME):
+            try:
+                config = json.loads(self.read_file(_CONFIG_FILE_NAME, FileFormat.TEXT))
+            except OSError:  # TODO: add exception for badfileformat
+                warnings.warn("Cannot read config file")
+            return config
+
+    def save_config(self, config: dict):
+        """Save provided token into persistent data, replace any token previously saved
+
+        :param token: token to save
+        """
+        if self.is_writable():
+            file_config = {}
+            if self.has_file(_CONFIG_FILE_NAME):
+                # TODO: add exception for badfileformat
+                file_config = json.loads(self.read_file(_CONFIG_FILE_NAME, FileFormat.TEXT))
+            for key in config:
+                file_config[key] = config[key]
+            self.write_file(_CONFIG_FILE_NAME, json.dumps(file_config), FileFormat.TEXT)
+        else:
+            warnings.warn(UserWarning("Can't save token"))
+
+
 
     def clear_all_data(self):
         """Delete persistent data directory and recreate it

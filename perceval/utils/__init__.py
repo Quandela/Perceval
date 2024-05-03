@@ -46,4 +46,5 @@ from .persistent_data import PersistentData
 from .metadata import PMetadata
 from .density_matrix import DensityMatrix
 from .noise_model import NoiseModel
+from .logging import LOGGER as logger
 from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace

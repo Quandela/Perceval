@@ -46,6 +46,7 @@ See also:
     - Quandela cloud documentation: https://cloud.quandela.com/webide/documentation (requires a free account to access)
 """
 
+import sys
 from importlib import import_module
 from .utils import PMetadata
 
@@ -66,3 +67,20 @@ def register_plugin(name, silent=False):
     except Exception as e:
         raise RuntimeError("cannot import %s: %s" % (name, str(e)))
     return True
+
+
+def set_logger(use_python_logger: bool = False):
+    global logger
+    if use_python_logger:
+        logger = utils.logging.PythonLogger()
+        utils.logger = logger
+        utils.logging.LOGGER = logger
+        sys.excepthook = utils.logging._my_excepthook
+    else:
+        logger = utils.logging.ExqaliburLogger
+        utils.logger = logger
+        utils.logging.LOGGER = logger
+        sys.excepthook = utils.logging._my_excepthook
+
+
+set_logger(False)
