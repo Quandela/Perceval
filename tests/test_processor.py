@@ -29,18 +29,19 @@
 
 import pytest
 
+from _test_utils import assert_svd_close
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
-from perceval.utils import BasicState, StateVector, SVDistribution, Encoding
+from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
 
-def test_processor_input_generation_0():
+def test_processor_input_fock_state():
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     p.with_input(BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
 
 
-def test_processor_input_generation_1():
+def test_processor_input_fock_state_with_loss():
     p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
     p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
@@ -52,10 +53,11 @@ def test_processor_input_generation_1():
     assert pytest.approx(p.source_distribution) == expected
 
 
-def test_processor_input_generation_2():
+def test_processor_input_fock_state_with_all_noise_sources():
     source = Source(emission_probability=0.2,
                     multiphoton_component=0.1, multiphoton_model="indistinguishable",
                     indistinguishability=0.9)
+    source.simplify_distribution = True
     p = Processor("Naive", Circuit(4), source)
     p.with_input(BasicState([0, 1, 1, 0]))
 
@@ -85,11 +87,34 @@ def test_processor_input_generation_2():
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
 
 
-def test_processor_identity_sv():
+def test_processor_input_state_vector():
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}
+
+    p = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=.4, g2=.06))  # Init with noise
+    sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
+    p.with_input(sv)
+    assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
+
+
+def test_processor_source_vs_noise_model():
+    LOSS = .4
+    G2 = .06
+
+    # A Processor does not accept both a Source and a NoiseModel input
+    with pytest.raises(ValueError):
+        Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2),
+                  noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
+
+    # Check that input states are the same with equivalent parameter
+    input_state = BasicState([1, 1, 1, 1])
+    p_source = Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2))
+    p_source.with_input(input_state)
+    p_noise = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
+    p_noise.with_input(input_state)
+    assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
 def test_processor_probs():
@@ -158,6 +183,21 @@ def test_processor_composition():
         p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
 
 
+def test_composition_error_post_selection():
+    processor = catalog['postprocessed cnot'].build_processor()
+    # Composing 2 CNOTs on the exact same modes should work in theory, but not in the current implementation,
+    # it's still possible to apply a PostSelect manually to the resulting Processor.
+    with pytest.raises(AssertionError):
+        processor.add(0, processor)
+
+    processor2 = Processor("SLOS", 5)
+    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    processor2.add(0, pp_cnot)
+    # It's 100% valid that this 2nd case is blocked
+    with pytest.raises(AssertionError):
+        processor2.add(1, pp_cnot)
+
+
 def test_add_remove_ports():
     processor = Processor("SLOS", 6)
     p0 = Port(Encoding.DUAL_RAIL, "q0")
@@ -222,3 +262,26 @@ def test_add_remove_ports():
     for i in range(6):
         assert processor.get_input_port(i) is None
         assert processor.get_output_port(i) is None
+
+
+def test_phase_quantization():
+    nm = NoiseModel(phase_imprecision=0.1)
+    p0 = Processor("SLOS", catalog["mzi phase first"].build_circuit(phi_a=0.596898191919898198,
+                                                                    phi_b=0.16561561651616))
+    p1 = Processor("SLOS", catalog["mzi phase first"].build_circuit(phi_a=0.596898191919898198,
+                                                                    phi_b=0.16561561651616), noise=nm)
+    p2 = Processor("SLOS", catalog["mzi phase first"].build_circuit(phi_a=0.6,
+                                                                    phi_b=0.2))
+
+    p0.with_input(BasicState([1, 1]))
+    p1.with_input(BasicState([1, 1]))
+    p2.with_input(BasicState([1, 1]))
+    assert p0.probs()["results"] != pytest.approx(p1.probs()["results"])
+    assert p1.probs()["results"] == pytest.approx(p2.probs()["results"])
+
+    p1.noise = NoiseModel()
+    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+
+    p0.noise = nm
+    p1.noise = nm
+    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])

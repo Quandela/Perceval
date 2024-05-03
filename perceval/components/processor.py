@@ -30,8 +30,8 @@ from numpy import Inf
 
 from .abstract_processor import AProcessor, ProcessorType
 from .source import Source
-from .linear_circuit import ACircuit
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState
+from .linear_circuit import ACircuit, Circuit
+from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState, NoiseModel
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 from multipledispatch import dispatch
@@ -53,27 +53,83 @@ class Processor(AProcessor):
         >>> p = Processor("SLOS", BS() // PS() // BS())
 
     :param source: the Source used by the processor (defaults to perfect source)
+    :param noise: a NoiseModel containing noise parameters (defaults to no noise)
+                  Note: source and noise are mutually exclusive
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = Source(),
-                 name: str = None):
+    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = None,
+                 noise: NoiseModel = None, name: str = "Local processor"):
         super().__init__()
-        self._source = source
-        self.name = "Local processor" if name is None else name
+        self._init_backend(backend)
+        self._init_circuit(m_circuit)
+        self._init_noise(source, noise)
+        self.name = name
+        self._inputs_map: Union[SVDistribution, None] = None
+        self._simulator = None
 
+    def _init_noise(self, source: Source, noise: NoiseModel):
+        self._phase_quantization = 0  # Default = infinite precision
+
+        # Backward compatibility case: the user passes a Source
+        if source is not None:
+            # If he also passed noise parameters: conflict between noise parameters => raise an exception
+            if noise is not None:
+                raise ValueError("Both 'source' and 'noise' parameters were set. You should only input a NoiseModel")
+            self._source = source
+
+        # The user passes a NoiseModel
+        elif noise is not None:
+            self.noise = noise
+
+        # Default = perfect simulation
+        else:
+            self._source = Source()
+
+    @AProcessor.noise.setter
+    def noise(self, nm):
+        super(Processor, type(self)).noise.fset(self, nm)
+        self._source = Source.from_noise_model(nm)
+        self._phase_quantization = nm.phase_imprecision
+        if isinstance(self._input_state, BasicState):
+            self._generate_noisy_input()
+
+    @property
+    def source_distribution(self) -> Union[SVDistribution, None]:
+        r"""
+        Retrieve the computed input distribution.
+        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
+        """
+        return self._inputs_map
+
+    @property
+    def source(self):
+        """
+        :return: The photonic source
+        """
+        return self._source
+
+    @source.setter
+    def source(self, source: Source):
+        r"""
+        :param source: A Source instance to use as the new source for this processor.
+        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
+        """
+        self._source = source
+        self._inputs_map = None
+
+    def _init_circuit(self, m_circuit):
         if isinstance(m_circuit, ACircuit):
             self._n_moi = m_circuit.m
             self.add(0, m_circuit)
         else:
             self._n_moi = m_circuit  # number of modes of interest (MOI)
 
-        self._inputs_map: Union[SVDistribution, None] = None
+    def _init_backend(self, backend):
         if isinstance(backend, str):
             assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
             self.backend = BACKEND_LIST[backend]()
         else:
             self.backend = backend
-        self._simulator = None
 
     def type(self) -> ProcessorType:
         return ProcessorType.SIMULATOR
@@ -97,6 +153,9 @@ class Processor(AProcessor):
         encoding.
         """
         self._with_logical_input(input_state)
+
+    def _generate_noisy_input(self):
+        self._inputs_map = self._source.generate_distribution(self._input_state)
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
@@ -123,7 +182,7 @@ class Processor(AProcessor):
                 input_idx += 1
 
         self._input_state = BasicState(input_list)
-        self._inputs_map = self._source.generate_distribution(self._input_state)
+        self._generate_noisy_input()
         self._min_detected_photons = expected_photons
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
@@ -187,6 +246,27 @@ class Processor(AProcessor):
             modes_with_photons = len([n for n in output_state if n > 0])
             return modes_with_photons >= self._min_detected_photons
         return output_state.n >= self._min_detected_photons
+
+    def linear_circuit(self, flatten: bool = False) -> Circuit:
+        """
+        Creates a linear circuit from internal components, if all internal components are unitary. Takes phase
+        imprecision noise into account.
+
+        :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
+        :raises RuntimeError: If any component is non-unitary
+        :return: The resulting Circuit object
+        """
+        circuit = super().linear_circuit(flatten)
+        if not self._phase_quantization:
+            return circuit
+        # Apply phase quantization noise on all phase parameters in the circuit
+        circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
+        for _, component in circuit:
+            if "phi" in component.params:
+                phi_param = component.param("phi")
+                phi_param.set_value(self._phase_quantization * round(float(phi_param) / self._phase_quantization),
+                                    force=True)
+        return circuit
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> Dict:
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
@@ -269,19 +349,15 @@ class Processor(AProcessor):
         if precision is not None:
             self._simulator.set_precision(precision)
         res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
-        lperf = 1
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
-            if not self._state_selected_physical(state):
-                pperf -= prob
-                continue
-            if self._state_selected(state):
+            if self._state_selected_physical(state):
                 postprocessed_res[self.postprocess_output(state)] += prob
             else:
-                lperf -= prob
+                pperf -= prob
+
         postprocessed_res.normalize()
-        res['logical_perf'] = res['logical_perf']*lperf if 'logical_perf' in res else lperf
         res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
         res['results'] = postprocessed_res
         return res

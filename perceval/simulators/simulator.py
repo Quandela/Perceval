@@ -30,7 +30,8 @@
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
 from .simulator_interface import ISimulator
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, DensityMatrix
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
+    DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.backends import AProbAmpliBackend
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 
@@ -38,7 +39,7 @@ from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from typing import Callable, Set, Union, Optional
-from scipy.sparse import csc_array
+from scipy.sparse import csc_array, csr_array
 
 
 class Simulator(ISimulator):
@@ -53,11 +54,12 @@ class Simulator(ISimulator):
     def __init__(self, backend: AProbAmpliBackend):
         self._backend = backend
         self._invalidate_cache()
+        self._min_detected_photons: int = 0
         self._postselect: PostSelect = PostSelect()
+        self._heralds: dict = {}
         self._logical_perf: float = 1
         self._physical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
-        self._min_detected_photons: int = 0
 
     @property
     def precision(self):
@@ -73,11 +75,29 @@ class Simulator(ISimulator):
 
     def set_min_detected_photon_filter(self, value: int):
         """
-        Set a minimum number of detected photons in the output distributions
+        Set a minimum number of detected photons in the output distribution
 
         :param value: The minimum photon count
         """
         self._min_detected_photons = value
+
+    def set_selection(self, min_detected_photon_filter: int = None,
+                      postselect: PostSelect = None,
+                      heralds: dict = None):
+        """Set multiple selection filters at once to remove unwanted states from computed output distribution
+
+        :param min_detected_photon_filter: minimum number of detected photons in the output distribution
+        :param postselect: a post-selection function
+        :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
+                        out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
+                        on mode 6.
+        """
+        if min_detected_photon_filter is not None:
+            self._min_detected_photons = min_detected_photon_filter
+        if postselect is not None:
+            self._postselect = postselect
+        if heralds is not None:
+            self._heralds = heralds
 
     @property
     def logical_perf(self):
@@ -93,6 +113,9 @@ class Simulator(ISimulator):
     def clear_postselection(self):
         """Clear the post-selection function"""
         self._postselect = PostSelect()
+
+    def clear_heralds(self):
+        self._heralds = {}
 
     def set_circuit(self, circuit: ACircuit):
         """Set a circuit for simulation.
@@ -190,34 +213,6 @@ class Simulator(ISimulator):
             self.DEBUG_merge_count += 1
         return results
 
-    def _post_select_on_distribution(self, bsd: BSDistribution) -> BSDistribution:
-        self._logical_perf = 1
-        if not self._postselect.has_condition:
-            bsd.normalize()
-            return bsd
-        result = BSDistribution()
-        for state, prob in bsd.items():
-            if self._postselect(state):
-                result[state] = prob
-            else:
-                self._logical_perf -= prob
-        result.normalize()
-        return result
-
-    def _post_select_on_statevector(self, sv: StateVector) -> BSDistribution:
-        self._logical_perf = 1
-        if not self._postselect.has_condition:
-            sv.normalize()
-            return sv
-        result = StateVector()
-        for state, ampli in sv:
-            if self._postselect(state):
-                result += ampli*state
-            else:
-                self._logical_perf -= abs(ampli)**2
-        result.normalize()
-        return result
-
     @dispatch(BasicState)
     def probs(self, input_state: BasicState) -> BSDistribution:
         """
@@ -228,13 +223,14 @@ class Simulator(ISimulator):
         input_list = input_state.separate_state(keep_annotations=False)
         self._evolve_cache(set(input_list))
         result = self._merge_probability_dist(input_list)
-        return self._post_select_on_distribution(result)
+        result, self._logical_perf = post_select_distribution(result, self._postselect, self._heralds)
+        return result
 
     @dispatch(StateVector)
     def probs(self, input_state: StateVector) -> BSDistribution:
         if len(input_state) == 1:
             return self.probs(input_state[0])
-        return self._post_select_on_distribution(_to_bsd(self.evolve(input_state)))
+        return _to_bsd(self.evolve(input_state))
 
     def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
         decomposed_input = []
@@ -304,19 +300,20 @@ class Simulator(ISimulator):
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
         decomposed_input = []
         """decomposed input:
-       From a SVD = {
-           bs_1: p1,
-           bs_2: p2,
-           ...
-           bs_k: pk
-       }
-       the following data structure is built:
-       [
-           (p1, [bs_1,]),
-           ...
-           (pk, [bs_k,])
-       ]
-       where [bs_x,] is the list of the un-annotated separated basic state (bs_x.separate_state())"""
+           From a SVD = {
+               bs_1: p1,
+               bs_2: p2,
+               ...
+               bs_k: pk
+           }
+           the following data structure is built:
+           [
+               (p1, [bs_1,]),
+               ...
+               (pk, [bs_k,])
+           ]
+           where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
+        """
         for sv, prob in input_dist.items():
             if max(sv.n) >= self._min_detected_photons:
                 decomposed_input.append(
@@ -324,11 +321,19 @@ class Simulator(ISimulator):
                 )
             else:
                 self._physical_perf -= prob
-        input_set = set([state for s in decomposed_input for state in s[1]])
+
+        """Create a cache with strong simulation of all unique input"""
         cache = {}
-        for state in input_set:
+        input_set = set([state for s in decomposed_input for state in s[1]])
+        len_input_set = len(input_set)
+        for idx, state in enumerate(input_set):
             self._backend.set_input_state(state)
             cache[state] = self._backend.prob_distribution()
+            if progress_callback and idx % 10 == 0:
+                progress = (idx + 1) / len_input_set * 0.5  # From 0. to 0.5
+                exec_request = progress_callback(progress, 'compute probability distributions')
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    raise RuntimeError("Cancel requested")
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
@@ -351,8 +356,9 @@ class Simulator(ISimulator):
                     else:
                         self._physical_perf -= p * prob0
 
-            if progress_callback:
-                exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
+            if progress_callback and idx % 20 == 0:
+                progress = (idx + 1) / len(decomposed_input) * 0.5 + 0.5  # From 0.5 to 1
+                exec_request = progress_callback(progress, 'recombine distributions')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         res.normalize()
@@ -386,9 +392,39 @@ class Simulator(ISimulator):
         else:
             res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
-        return {'results': self._post_select_on_distribution(res),
+        res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds)
+        return {'results': res,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
+
+    def probs_density_matrix(self, dm: DensityMatrix) -> dict:
+        """
+        gives the output probability distribution, after evolving some density matrix through the simulator
+        :param dm: the input DensityMatrix
+        """
+        if not isinstance(dm, DensityMatrix):
+            raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
+
+        input_list = self._get_density_matrix_input_list(dm)
+        u_evolve = self._construct_evolve_operator(input_list, dm)
+
+        # Here I change to csr format to be able to iterate on the rows
+        u_evolve_in_row = csr_array(u_evolve)
+        res_bsd = BSDistribution()
+
+        for row_idx, fs in enumerate(dm.inverse_index):
+
+            vec = u_evolve_in_row[[row_idx]]
+            prob = abs((vec @ dm.mat @ vec.conj().T)[0, 0])
+            if fs.n >= self._min_detected_photons:
+                res_bsd[fs] += prob
+            else:
+                self._physical_perf -= prob
+
+        res_bsd, logical_perf_coeff = post_select_distribution(res_bsd, self._postselect, self._heralds)
+        return {'results': res_bsd,
+                'physical_perf': self._physical_perf,
+                'logical_perf': self._logical_perf * logical_perf_coeff}
 
     def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
         """
@@ -424,9 +460,8 @@ class Simulator(ISimulator):
                 evolved_in_s = _merge_sv(evolved_in_s, sv)
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
-
-        result_sv.normalize()
-        return self._post_select_on_statevector(result_sv)
+        result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds)
+        return result_sv
 
     def evolve_svd(self,
                    svd: Union[SVDistribution, StateVector, BasicState],
@@ -474,21 +509,28 @@ class Simulator(ISimulator):
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
-        size = dm.mat.shape[0]
 
-        # Establishing te set of FockState to evolve
-        input_list = []
-        for k in range(dm.size):
-            if dm.mat[k, k] != 0:
-                input_list.append(dm.reverse_index[k])
+        # Establishing the set of FockState to evolve
+        input_list = self._get_density_matrix_input_list(dm)
+
+        u_evolve = self._construct_evolve_operator(input_list, dm)
+
+        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
+        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
+
+        return DensityMatrix(out_matrix, index=dm.index, check_hermitian=False)
+
+    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix) -> csc_array:
+        """
+            construct the evolution operator needed to perform evolve_density_matrix.
+            Stores it in a csc sparse_matrix
+        """
 
         u_evolve_data = []
         u_evolve_indices = []
         u_evolve_indptr = [0]
-
-        # Constructing the evolution operator
         nnz_count = 0
-        for i, fs in enumerate(dm.reverse_index):
+        for i, fs in enumerate(dm.inverse_index):
             if fs in input_list:
                 self._backend.set_input_state(fs)
                 output_sv = self._backend.evolve()
@@ -497,12 +539,21 @@ class Simulator(ISimulator):
                     u_evolve_indices.append(dm.index[state])
                     nnz_count += 1
             u_evolve_indptr.append(nnz_count)
+
+        # Here we use csc array, because it is constructed row by row
         u_evolve = csc_array((u_evolve_data,
                               u_evolve_indices,
                               u_evolve_indptr),
                              shape=dm.shape)
+        return u_evolve
 
-        inter_matrix = u_evolve @ extract_upper_triangle(dm.mat) @ u_evolve.T.conj()
-        out_matrix = inter_matrix + inter_matrix.T.conjugate(copy=False)
-
-        return DensityMatrix(out_matrix, index=dm.index)
+    @staticmethod
+    def _get_density_matrix_input_list(dm: DensityMatrix) -> list:
+        """
+        get the list of Fockstates on which a DensityMatrix is embedded
+        """
+        input_list = []
+        for k in range(dm.size):
+            if dm.mat[k, k] != 0:
+                input_list.append(dm.inverse_index[k])
+        return input_list

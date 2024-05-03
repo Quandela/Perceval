@@ -70,8 +70,10 @@ class Session(ISession):
         self._url = url
         self._platform = platform
         self._deduplication_id = deduplication_id
-        self._max_idle_duration_s = self.__int_duration(max_idle_duration_s, 'max_idle_duration_s')
-        self._max_duration_s = self.__int_duration(max_duration_s, 'max_duration_s')
+        self._max_idle_duration_s = self.__int_duration(
+            max_idle_duration_s, "max_idle_duration_s"
+        )
+        self._max_duration_s = self.__int_duration(max_duration_s, "max_duration_s")
 
         self._session_id = None
 
@@ -113,6 +115,12 @@ class Session(ISession):
 
         request.raise_for_status()
 
+    def delete(self) -> None:
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
+        request = requests.delete(endpoint, headers=self._headers)
+
+        request.raise_for_status()
+
     def __fetch_platform_details(self) -> dict:
         return self._rpc_handler.fetch_platform_details()
 
@@ -129,5 +137,5 @@ class Session(ISession):
             project_id=self._project_id,
             headers=self._headers,
             name=self._platform,
-            url=self._url
+            url=self._url,
         )
