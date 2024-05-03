@@ -36,7 +36,7 @@ from perceval.algorithm import Sampler
 from perceval.utils import BasicState
 
 
-def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list) -> tuple:
+def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list, denormalize = True) -> tuple:
     """
     computes the output probability distribution for the tomography experiment
     :param tomography_experiment: Tomography experiment object with a Processor on which Tomography is to be done
@@ -55,8 +55,10 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
     output_distribution = probs["results"]
     gate_logical_perf = probs["logical_perf"]
 
-    for key in output_distribution:  # Denormalize output state distribution
-        output_distribution[key] *= gate_logical_perf
+    if denormalize:
+        for key in output_distribution:  # Denormalize output state distribution
+            output_distribution[key] *= gate_logical_perf
+
     return output_distribution, gate_logical_perf
 
 
@@ -111,7 +113,6 @@ def _vector_to_sq_matrix(vector: np.ndarray) -> np.ndarray:
     size = math.sqrt(len(vector))
     if not size.is_integer():
         raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
-    # todo: ugly to do sqrt, remove it and implement param 'd' somewhere consistently
     return np.reshape(vector, (int(size), int(size)))
 
 
@@ -147,7 +148,7 @@ def _get_fixed_basis_ops(j: int, nqubit: int) -> np.ndarray:
     fix_basis_op = get_pauli_gate(PauliType(q))
 
     # I am not sure if i completely follow the logic behind what follows. I believe the idea is
-    # to keep val between 0-3 no matter the nqubits and value of j. todo: find a better implementation
+    # to keep val between 0-3 no matter the nqubits and value of j.
     # it seems similar to many other calls of creating combinations of operators in a basis
     # but when I called similarly, values for computed fidelity was different
 
@@ -206,8 +207,8 @@ def _generate_pauli_prep_index(nqubit: int, prep_basis_size: int = None) -> list
         # uses the full set Zm, Zp, Xp, Xm, Yp, Ym
         s = [pt for pt in PauliEigenStateType]
     else:
-        # standard tomography needs only the first four Zm, Zp, Xp, Yp eigenstates
-        s = [pt for pt in PauliEigenStateType][:4]
+        # standard tomography requires only 4 eigenstates - Zm, Zp, Xp, Yp
+        s = [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp, PauliEigenStateType.Yp]
 
     return [list(p) for p in product(s, repeat=nqubit)]
 
@@ -269,3 +270,22 @@ def is_physical(input_matrix: np.ndarray, nqubit: int, eigen_tolerance: float = 
         res['Completely Positive'] = True
 
     return res
+
+
+def _index_num_to_basis(index, nqubit, basis_size) -> list:
+    digits = []
+    for j in range(nqubit - 1, -1, -1):
+        digits.append(index // (basis_size ** j))
+        index = index % (basis_size ** j)
+    return digits
+
+
+def process_fidelity(computed_map: np.ndarray, ideal_map: np.ndarray) -> float:
+    """
+    Computes the process fidelity of an operator (ideal) and its implementation (realistic)
+
+    :param computed_map: process map (chi matrix) or density matrix map computed by tomography
+    :param ideal_map: ideal process map (chi matrix) or density matrix map of the process or state
+    :return: float between 0 and 1
+    """
+    return np.real(np.trace(np.dot(computed_map, ideal_map)))

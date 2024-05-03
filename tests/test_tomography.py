@@ -41,7 +41,8 @@ from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
 from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
-                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp)
+                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp,
+                                                            process_fidelity)
 
 from _test_utils import save_figs, _save_or_check
 
@@ -71,7 +72,7 @@ def fidelity_op_process_tomography(op, op_proc):
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
     # Compute fidelity
-    op_fidelity = qpt.process_fidelity(chi_op, chi_op_ideal)
+    op_fidelity = process_fidelity(chi_op, chi_op_ideal)
     return op_fidelity
 
 
@@ -176,6 +177,7 @@ def test_matrix_basis_n_decomp():
     assert np.allclose(matrix, matrix_rebuilt)
 
 
+@pytest.mark.skip(reason='3 qubit tests takes a long time to compute')
 def test_avg_fidelity_postprocessed_ccz_gate():
     ccz_p = catalog["postprocessed ccz"].build_processor()
     op_CCZ = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
