@@ -31,6 +31,7 @@ from abc import abstractmethod
 import copy
 import numpy as np
 from scipy.linalg import sqrtm
+from .abstract_process_tomography import AProcessTomography
 from .tomography_utils import _state_to_dens_matrix, _matrix_to_vector, _get_fixed_basis_ops, _compute_probs, \
     _generate_pauli_prep_index, _generate_pauli_index, _index_num_to_basis
 from perceval.utils import BasicState
@@ -123,7 +124,9 @@ class TomographyMLE(AAlgorithm):
                 for eigenvector_index in range(d):  # iterates over the eigenvectors of the pauli operator
                     eigenvector_list = _index_num_to_basis(eigenvector_index, self._nqubit, 2)
                     X[eigenvector_index] = np.kron(X[eigenvector_index],
-                                                   pauli_eigen_basis[2 * pauli_list[qubit_index] + eigenvector_list[qubit_index]])
+                                                   pauli_eigen_basis[2 * pauli_list[qubit_index]
+                                                                     + eigenvector_list[qubit_index]])
+                    # X[] = Kroneckor_product (X[], pauli_eigen_basis[] + eigenvector[])
             povm_state += X
         return povm_state
 
@@ -146,7 +149,7 @@ class TomographyMLE(AAlgorithm):
             v = 1
             for i in reversed(k):
                 M = np.kron(get_pauli_eigenvector_matrix(PauliType(i // 2)), M)
-
+                # Kronecker_product(pauli_eigen_vector[index],M)
                 if i % 2 == 0:
                     v = np.kron([[1], [0]], v)
                 else:
@@ -267,6 +270,7 @@ class StateTomographyMLE(TomographyMLE):
         for k in range(len(self._data_function)):
             if np.trace(np.dot(rho, povm_op[k])) != 0:
                 x -= self._data_function[k] * np.log(np.trace(np.dot(rho, povm_op[k])))
+                # data_function[index] * Log(Tr(rho.operator))
         return x
 
     def _grad_log_likelihood_func(self, rho: np.ndarray) -> float:
@@ -278,6 +282,7 @@ class StateTomographyMLE(TomographyMLE):
         for k in range(len(self._data_function)):
             if np.trace(np.dot(rho, povm_op[k])) != 0:
                 grad -= (self._data_function[k] / (np.trace(np.dot(rho, povm_op[k])))) * povm_op[k]
+                # (data_function[index] / Tr(rho . povm_operator) ) *povm_operator
         return grad
 
     def state_tomography_density_matrix(self) -> np.ndarray:
@@ -296,13 +301,14 @@ class StateTomographyMLE(TomographyMLE):
         return np.real(np.trace(sqrtm(z)) ** 2)
 
 
-class ProcessTomographyMLE(TomographyMLE):
+class ProcessTomographyMLE(TomographyMLE, AProcessTomography):
     def __init__(self, operator_processor, **kwargs):
-        super().__init__(operator_processor, **kwargs)
+        TomographyMLE.__init__(self, operator_processor=operator_processor, **kwargs)
+        AProcessTomography.__init__(self, processor=operator_processor, **kwargs)
+
         self._povm_data()
         self._guess_choi_seed = np.eye((2 ** self._nqubit), dtype='complex_')
         self._guess_choi_matrix = np.kron(self._guess_choi_seed, self._guess_choi_seed) / 16
-    # Todo : Discuss and fix achritecture for fidelity and chi_matrix (Abstract class?)
 
     def _povm_data(self):
         # Performing a POVM (positive operator value measure) on the quantum processor
@@ -336,7 +342,9 @@ class ProcessTomographyMLE(TomographyMLE):
         x = 0
         for m in range(len(input_basis)):
             for l in range(len(povm_op)):
-                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(input_basis[m]), povm_op[l]))))
+                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(input_basis[m]),
+                                                                                       povm_op[l]))))
+                # 2^n * Real(Tr(choi_matrix . Kronecker_product(basis[index1].T, povm_operator[index])))
                 if 0 < pml <= 1:
                     x -= self._data_function[m][l] * np.log(pml)
         return x
@@ -350,9 +358,12 @@ class ProcessTomographyMLE(TomographyMLE):
         grad = 0 # a numpy array, not a number
         for l in range(len(povm_op)):
             for m in range(len(input_basis)):
-                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(input_basis[m]), povm_op[l]))))
+                pml = 2 ** self._nqubit * np.real(np.trace(np.dot(choi_matrix, np.kron(np.transpose(input_basis[m]),
+                                                                                       povm_op[l]))))
+                # 2^n * Real(Tr(choi_matrix . Kronecker_product(basis[index1].T, povm_operator[index])))
                 if 0 < pml <= 1:
                     grad -= (self._data_function[m][l] / pml) * np.kron(np.transpose(input_basis[m]), povm_op[l])
+                    # (data_func / pml) * Kronecker_product(basis[index1].T, povm_operator[index])))
         return grad
 
     def chi_matrix(self) -> np.ndarray:

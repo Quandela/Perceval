@@ -30,3 +30,4 @@
 from .tomography_utils import is_physical
 from .tomography import ProcessTomography, StateTomography
 from .tomography_mle import ProcessTomographyMLE, StateTomographyMLE
+from .abstract_process_tomography import AProcessTomography

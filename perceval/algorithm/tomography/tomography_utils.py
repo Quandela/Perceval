@@ -113,7 +113,6 @@ def _vector_to_sq_matrix(vector: np.ndarray) -> np.ndarray:
     size = math.sqrt(len(vector))
     if not size.is_integer():
         raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
-    # todo: ugly to do sqrt, remove it and implement param 'd' somewhere consistently
     return np.reshape(vector, (int(size), int(size)))
 
 
@@ -149,7 +148,7 @@ def _get_fixed_basis_ops(j: int, nqubit: int) -> np.ndarray:
     fix_basis_op = get_pauli_gate(PauliType(q))
 
     # I am not sure if i completely follow the logic behind what follows. I believe the idea is
-    # to keep val between 0-3 no matter the nqubits and value of j. todo: find a better implementation
+    # to keep val between 0-3 no matter the nqubits and value of j.
     # it seems similar to many other calls of creating combinations of operators in a basis
     # but when I called similarly, values for computed fidelity was different
 
