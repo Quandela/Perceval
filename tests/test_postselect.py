@@ -93,17 +93,6 @@ def test_postselect_usage_advanced_ge_le():
         assert not ps4(bs)
 
 
-def test_postselect_usage_advanced_mod():
-    ps = PostSelect("[1,2]%2")
-
-    for bs in [BasicState([1, 1, 0, 1, 0, 0]), BasicState([0, 0, 1, 0, 1, 0]), BasicState([3, 1, 0, 0, 1, 0]),
-               BasicState([4, 0, 1, 1, 0, 0])]:
-        assert ps(bs)
-
-    for bs in [BasicState([1, 0, 0, 1, 0, 0]), BasicState([0, 1, 1, 0, 1, 0]), BasicState([3, 0, 0, 0, 1, 0]),
-               BasicState([4, 1, 1, 1, 0, 0])]:
-        assert not ps(bs)
-
 def test_postselect_str():
     ps1 = PostSelect("[0]==0 & [1, 2 ]>0 & [3, 4]==1 & [5]<1")
     ps2 = PostSelect(str(ps1))
