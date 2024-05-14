@@ -7,6 +7,16 @@ code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 0.11
+--------------------------------
+
+AnnotatedBasicState
+^^^^^^^^^^^^^^^^^^^
+:code:`set_postprocess` and :code:`clear_postprocess` have been deprecated since Perceval 0.9.0 and are no more available.
+
+See :ref:`Simulation rework: processor`
+
+
 Breaking changes in Perceval 0.10
 ---------------------------------
 The main changes between versions 0.9 and 0.10 comes from the migration of the :code:`StateVector` code into our C++ library, Exqalibur.
@@ -92,6 +102,7 @@ AnnotatedBasicState
 :code:`AnnotatedBasicState` has been deprecated since Perceval 0.7.0, it's time to say goodbye.
 
 See :ref:`AnnotatedBasicState was deprecated`
+
 
 Breaking changes in Perceval 0.9
 --------------------------------
