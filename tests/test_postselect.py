@@ -56,10 +56,13 @@ def test_postselect_init_invalid():
         PostSelect("[0]==0 & (1,2)==1 & [3,4]==1 & [5]==0")  # Tuple syntax is not supported
 
     with pytest.raises(RuntimeError):
-        PostSelect("[2] >= 4 | [1] > 2")
+        PostSelect("[2] >= 4 | [1] > 2")  # Invalid separator
 
-    with pytest.raises(RuntimeError):
-        PostSelect("[0]==0 & [1,2]]==1 & [3,4]==1 & [5]==0")  # Too many brackets
+    with pytest.raises(KeyError):
+        PostSelect("[2] >> 4")  # Invalid operator
+
+    with pytest.raises(KeyError):
+        PostSelect("[0]==0 & [1,2]]==1 & [3,4]==1 & [5]==0")  # Too many brackets => Invalid operator
 
 
 def test_postselect_usage():
@@ -77,7 +80,7 @@ def test_postselect_usage():
     assert ps_cnot(BasicState("|0,{_:0},0,{_:1},0,0>"))
 
 
-def test_postselect_usage_advanced():
+def test_postselect_usage_advanced_ge_le():
     ps1 = PostSelect("[1,2]>=1")
     ps2 = PostSelect("[1,2]>0")
     ps3 = PostSelect("[1,2]<1")
@@ -88,6 +91,18 @@ def test_postselect_usage_advanced():
         assert ps2(bs)
         assert not ps3(bs)
         assert not ps4(bs)
+
+
+def test_postselect_usage_advanced_mod():
+    ps = PostSelect("[1,2]%2")
+
+    for bs in [BasicState([1, 1, 0, 1, 0, 0]), BasicState([0, 0, 1, 0, 1, 0]), BasicState([3, 1, 0, 0, 1, 0]),
+               BasicState([4, 0, 1, 1, 0, 0])]:
+        assert ps(bs)
+
+    for bs in [BasicState([1, 0, 0, 1, 0, 0]), BasicState([0, 1, 1, 0, 1, 0]), BasicState([3, 0, 0, 0, 1, 0]),
+               BasicState([4, 1, 1, 1, 0, 0])]:
+        assert not ps(bs)
 
 def test_postselect_str():
     ps1 = PostSelect("[0]==0 & [1, 2 ]>0 & [3, 4]==1 & [5]<1")
