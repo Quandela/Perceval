@@ -10,8 +10,8 @@ This section lists the major breaking changes introduced.
 Breaking changes in Perceval 0.11
 --------------------------------
 
-AnnotatedBasicState
-^^^^^^^^^^^^^^^^^^^
+postprocess
+^^^^^^^^^^^
 :code:`set_postprocess` and :code:`clear_postprocess` have been deprecated since Perceval 0.9.0 and are no more available.
 
 See :ref:`Simulation rework: processor`
