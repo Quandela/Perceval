@@ -93,6 +93,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Remote_computing
    notebooks/Graph_States_generation_and_display
    notebooks/Tomography_walkthrough
+   notebooks/Density_matrix_Fock_space
 
 .. toctree::
    :caption: Boson sampling

@@ -532,7 +532,6 @@ class Simulator(ISimulator):
         nnz_count = 0
         for i, fs in enumerate(dm.inverse_index):
             if fs in input_list:
-                self._backend.set_input_state(fs)
                 output_sv = self.evolve(fs)
                 for state, amplitude in output_sv:
                     u_evolve_data.append(amplitude)
