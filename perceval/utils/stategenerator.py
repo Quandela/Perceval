@@ -181,8 +181,8 @@ class StateGenerator:
             - For Raw encoding: k
             - For Dual rail and Polarization encoding: n
 
-        :param n: Number of qubits or modes
-        :param k: Weight (Number of qubits equal to |1>L or photons)
+        :param n: Number of qubits equal to |1>L or photons
+        :param k: Weight (Number of qubits or modes)
         :return: Dicke state vector
         """
 
