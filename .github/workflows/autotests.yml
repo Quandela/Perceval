@@ -18,7 +18,7 @@ on:
       python_v:
         description: 'python version'
         required: true
-        default: '3.12'
+        default: '3.10'
         type: choice
         options:
           - '3.8'
