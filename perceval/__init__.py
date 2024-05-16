@@ -56,6 +56,7 @@ from .backends import *
 from .utils import *
 from .rendering import *
 from .runtime import *
+from .error_mitigation import loss_mitigation
 from .simulators import Simulator, SimulatorFactory, DelaySimulator, LossSimulator, PolarizationSimulator
 
 
