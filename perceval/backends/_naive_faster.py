@@ -26,34 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import warnings
 
-from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
-from ._clifford2017 import Clifford2017Backend
-from ._naive import NaiveBackend
-from ._naive_faster import NaiveFasterBackend
-from ._slos import SLOSBackend
-from ._mps import MPSBackend
+import exqalibur as xq
+from . import NaiveBackend
 
 
-BACKEND_LIST = {
-    "CliffordClifford2017": Clifford2017Backend,
-    "MPS": MPSBackend,
-    "Naive": NaiveBackend,
-    "NaiveFaster": NaiveFasterBackend,
-    "SLOS": SLOSBackend
-}
+class NaiveFasterBackend(NaiveBackend):
+    """Naive algorithm with Gurvitz computations of permanents"""
 
+    def __init__(self, gurvitz_iterations = 10000):
+        NaiveBackend.__init__(self, lambda M : xq.estimate_permanent_cx(M, gurvitz_iterations=10000, n_threads=1))
 
-class BackendFactory:
-    @staticmethod
-    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name](**kwargs)
-        warnings.warn(f'Backend "{name}" not found. Falling back on SLOS')
-        return BACKEND_LIST['SLOS'](**kwargs)
-
-    @staticmethod
-    def list():
-        return list(BACKEND_LIST.keys())
+    @property
+    def name(self) -> str:
+        return "NaiveFaster"
