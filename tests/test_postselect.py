@@ -59,6 +59,9 @@ def test_postselect_init_invalid():
         PostSelect("[2] >= 4 | [1] > 2")  # Invalid separator
 
     with pytest.raises(KeyError):
+        PostSelect("[2] % 4 | [1] > 2")  # Invalid separator
+
+    with pytest.raises(KeyError):
         PostSelect("[2] >> 4")  # Invalid operator
 
     with pytest.raises(KeyError):
