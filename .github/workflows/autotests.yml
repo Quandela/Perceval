@@ -18,16 +18,17 @@ on:
       python_v:
         description: 'python version'
         required: true
-        default: '3.10'
+        default: '3.12'
         type: choice
         options:
           - '3.8'
           - '3.9'
           - '3.10'
           - '3.11'
+          - '3.12'
 
 env:
-  PYTHON_V: ${{ github.event.inputs.python_v || '3.9' }}
+  PYTHON_V: ${{ github.event.inputs.python_v || '3.12' }}
 
 jobs:
   perceval-autotests:
