@@ -164,10 +164,6 @@ class AProcessor(ABC):
     def post_select_fn(self):
         return self._postselect
 
-    @deprecated(version="0.9", reason="use set_postselection(PostSelect) instead")
-    def set_postprocess(self, postprocess_func: Callable):  # Deprecated in order to avoid free Python function
-        self._postselect = postprocess_func
-
     def set_postselection(self, postselect: PostSelect):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
@@ -179,10 +175,6 @@ class AProcessor(ABC):
         if not isinstance(postselect, PostSelect):
             raise TypeError("Parameter must be a PostSelect object")
         self._postselect = postselect
-
-    @deprecated(version="0.9", reason="use clear_postselection() instead")
-    def clear_postprocess(self):
-        self.clear_postselection()
 
     def clear_postselection(self):
         self._postselect = None

@@ -155,17 +155,12 @@ def test_inverted_cnot(cnot_gate):
     processor = Processor("SLOS", 4)
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
-    # Commented lines are use to compare with a26b0bd (0.8.1 before cnot fix)
-    # processor.add([2, 3, 0, 1], catalog["postprocessed cnot"].as_processor().build()) # < 0.9.0
-    # processor.clear_postprocess() # < 0.9.0
-    processor.add([2, 3, 0, 1], catalog[cnot_gate].build_processor())  # >= 0.9.0
+    processor.add([2, 3, 0, 1], catalog[cnot_gate].build_processor())
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
-    # processor.set_postprocess(lambda o: (o[0] + o[1] == 1) and (o[2] + o[3] == 1)) # < 0.9.0
 
-    # state_dict = {BasicState("|1,0,1,0>"): '00', BasicState("|1,0,0,1>"): '01', BasicState("|0,1,1,0>"): '10', BasicState("|0,1,0,1>"): '11'} # < 0.9.0
     state_dict = {pcvl.components.get_basic_state_from_ports(processor._out_ports, state): str(
-        state) for state in pcvl.utils.generate_all_logical_states(2)}  # >= 0.9.0
+        state) for state in pcvl.utils.generate_all_logical_states(2)}
     analyzer = Analyzer(processor, state_dict)
     analyzer.compute(expected={"00": "00", "01": "01", "10": "11", "11": "10"})
 
