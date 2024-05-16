@@ -28,7 +28,7 @@ on:
           - '3.12'
 
 env:
-  PYTHON_V: ${{ github.event.inputs.python_v || '3.12' }}
+  PYTHON_V: ${{ github.event.inputs.python_v || '3.11' }}
 
 jobs:
   perceval-autotests:
