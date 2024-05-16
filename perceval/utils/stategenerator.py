@@ -27,11 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .statevector import BasicState, StateVector
-from ._enums import Encoding
+from math import sqrt
+from typing import List
+import itertools
 
 import networkx as nx
-from typing import List
+
+from .statevector import BasicState, StateVector
+from .qmath import distinct_permutations
+from ._enums import Encoding
 
 
 class StateGenerator:
@@ -46,7 +50,7 @@ class StateGenerator:
     def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
 
         assert isinstance(encoding, Encoding), "You need to provide an encoding"
-
+        self._encoding = encoding
         if encoding == Encoding.RAW:
             self._zero_state = BasicState("|0>")
             self._one_state = BasicState("|1>")
@@ -155,3 +159,51 @@ class StateGenerator:
                 sv = sv + StateVector(bs)
         sv.normalize()
         return sv
+
+    def _get_state_from_str(self, str_state: str):
+        if self._encoding == Encoding.RAW:
+            return str_state
+        if str_state == '0':
+            return str(self._zero_state)[1:-1]
+        elif str_state == '1':
+            return str(self._one_state)[1:-1]
+        else:
+            raise ValueError(f"cannot get state from {str_state}")
+
+    def dicke_state(self, n: int, k: int = None) -> StateVector:
+        """Get the Dicke state |D(n,k)> which is the equal superposition state of all C(n,k) basis states of weight k
+
+        Mode number:
+            - For RAW and Polarization: n
+            - For Dual rail encoding: 2*n
+
+        Photon number:
+            - For Raw encoding: k
+            - For Dual rail and Polarization encoding: n
+
+        :param n: Number of qubits or modes
+        :param k: Weight (Number of qubits equal to |1>L or photons)
+        :return: Dicke state vector
+        """
+
+        if not isinstance(n, int):
+            raise TypeError(f"n parameter should be an int and not {type(n)}")
+
+        if n < 1:
+            raise ValueError("Only support strictly positive one state number")
+
+        if not k:
+            k = 2*n
+        else:
+            if not isinstance(k, int):
+                raise TypeError(f"k parameter should be an int and not {type(k)}")
+            if k < n:
+                raise ValueError(
+                    f"Cannot generate Dicke state with less weight({k}) than qubits or modes ({n}) ")
+
+        dicke_state = StateVector()
+        array = ['1']*n + ['0']*(k-n)
+        for state in distinct_permutations(array, k):
+            state = [self._get_state_from_str(b) for b in state]
+            dicke_state += BasicState(f"|{','.join(state)}>")
+        return dicke_state

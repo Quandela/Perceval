@@ -51,8 +51,8 @@ def test_basic_state():
 
 def test_str_state_vector():
     sv = (1 + 1j) * StateVector("|0,1>") + (1 - 1j) * StateVector("|1,0>")
-    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>" \
-           or str(sv) == "(1/2-I/2)*|1,0>+(1/2+I/2)*|0,1>"  # Order doesn't matter
+    assert str(sv) == "(0.5+0.5I)*|0,1>+(0.5-0.5I)*|1,0>" \
+        or str(sv) == "(0.5-0.5I)*|1,0>+(0.5+0.5I)*|0,1>"  # Order doesn't matter
 
 
 def test_tensor_product_0():

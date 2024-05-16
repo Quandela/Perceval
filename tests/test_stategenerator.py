@@ -167,3 +167,56 @@ def test_graph_state_polarization():
     assert pytest.approx(sv[pcvl.BasicState('|{P:V},{P:H},{P:V}>')]) == sqrt2_4
     assert pytest.approx(sv[pcvl.BasicState('|{P:H},{P:V},{P:V}>')]) == -sqrt2_4
     assert pytest.approx(sv[pcvl.BasicState('|{P:V},{P:V},{P:V}>')]) == sqrt2_4
+
+
+def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.Encoding):
+    state_number = math.comb(k, n)
+    assert len(state) == len(set(state.keys()))
+    assert state_number == len(state)
+
+    photon_number = k
+    if encoding == pcvl.Encoding.RAW:
+        photon_number = n
+
+    if isinstance(state.n, int):
+        assert state.n == photon_number
+    else:
+        assert all([s_n == photon_number for s_n in state.n])
+
+    if encoding == pcvl.Encoding.DUAL_RAIL:
+        assert 2*k == state.m
+    else:
+        if isinstance(state.m, int):
+            assert state.m == k
+        else:
+            assert all([s_p == k for s_p in state.m])
+
+    ps = pcvl.PostSelect('&'.join([f"[{i}]<2" for i in range(k)]))
+    amp = None
+    for s, a in state:
+        assert ps(s)
+        if not amp:
+            amp = a
+        else:
+            assert amp == a
+    assert amp*amp == pytest.approx(1/state_number)
+
+
+@pytest.mark.parametrize("encoding", [pcvl.Encoding.RAW, pcvl.Encoding.POLARIZATION, pcvl.Encoding.DUAL_RAIL])
+def test_dicke_state(encoding):
+    n = 2
+    k = 2*n
+    ds = pcvl.StateGenerator(encoding).dicke_state(n)
+    check_dicke_state(ds, n, k, encoding)
+    assert ds == pcvl.StateGenerator(encoding).dicke_state(n, k)
+
+    n = 4
+    k = 6
+    ds = pcvl.StateGenerator(encoding).dicke_state(n, k)
+    check_dicke_state(ds, n, k, encoding)
+
+    with pytest.raises(ValueError):
+        pcvl.StateGenerator(encoding).dicke_state(-1)
+
+    with pytest.raises(ValueError):
+        pcvl.StateGenerator(encoding).dicke_state(4, 2)

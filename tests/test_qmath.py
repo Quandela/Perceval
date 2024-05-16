@@ -27,8 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import itertools
+import pytest
+import time
+
 from perceval import BasicState, StateVector, BSDistribution, SVDistribution
-from perceval.utils.qmath import exponentiation_by_squaring
+from perceval.utils.qmath import exponentiation_by_squaring, distinct_permutations
 from _test_utils import assert_sv_close, assert_svd_close
 
 
@@ -70,3 +74,12 @@ def test_exponentiation():
     assert_svd_close(svd, svd)
     assert_svd_close(svd**2, svd * svd)
     assert_svd_close(svd**5, svd * svd * svd * svd * svd)
+
+
+@pytest.mark.parametrize("parameters", [([1, 2, 3, 4], 4), ("1234", 4), ([1, 2, 3, 4, 0, 0, 0], 7)])
+def test_distinct_permutations(parameters):
+    a = parameters[0]
+    r = parameters[1]
+    dp = distinct_permutations(a, r)
+    dp_iter = set(itertools.permutations(a, r))
+    assert sorted(list(dp)) == sorted(list(dp_iter))
