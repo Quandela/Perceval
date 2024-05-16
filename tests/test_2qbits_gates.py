@@ -63,7 +63,6 @@ def test_fidelity_and_performance_cnot():
 
     assert analyzer_postprocessed_cnot.performance > analyzer_heralded_cnot.performance > analyzer_klm_cnot.performance
 
-
 def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
     """Check if the cz is correct
 
@@ -109,18 +108,16 @@ def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
                 assert pytest.approx(modulus) == 0
     return modulus_value
 
-
 def test_cz_and_cnot_phases_and_modulus():
     # Testing phases and modulus of CCZ
-    check_cz_with_heralds_or_ancillaries(catalog["heralded cz"].build_processor(), BasicState("|1,1>"), 1E-3)
+    check_cz_with_heralds_or_ancillaries(catalog["heralded cz"].build_processor(), BasicState("|1,1>"))
 
     # Testing phases and modulus of heralded cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
     processor.add(2, BS.H())
     processor.add(0, catalog["heralded cnot"].build_processor())
     processor.add(2, BS.H())
-    check_cz_with_heralds_or_ancillaries(processor, BasicState("|1,1>"), 1E-3)
-
+    check_cz_with_heralds_or_ancillaries(processor, BasicState("|1,1>"))
     # Testing phases and modulus of klm cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
     processor.add(2, BS.H())

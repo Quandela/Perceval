@@ -27,6 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math as m
+
 from deprecated import deprecated
 from perceval.components import Circuit, Processor
 from perceval.components.unitary_components import *
@@ -44,11 +46,7 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
 data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
-
-    theta1 = 2*math.pi*54.74/180
-    theta2 = 2*math.pi*17.63/180
-    #The additional 2 factor takes into account the difference between the beam-splitter conventions of Perceval and the paper
-
+    
     def __init__(self):
         super().__init__("heralded cz")
         self._default_opts['type'] = AsType.PROCESSOR
@@ -61,21 +59,21 @@ data (dual rail) ─────┤     ├───── data (dual rail)
             return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs) -> Circuit:
-        # the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
-        last_modes_cz = (Circuit(4)
-                         .add(0, PS(math.pi), x_grid=1)
-                         .add(3, PS(math.pi), x_grid=1)
-                         .add((1, 2), PERM([1, 0]), x_grid=1)
-                         .add((0, 1), BS.H(theta=self.theta1), x_grid=2)
-                         .add((2, 3), BS.H(theta=self.theta1), x_grid=2)
-                         .add((1, 2), PERM([1, 0]))
-                         .add((0, 1), BS.H(theta=-self.theta1))
-                         .add((2, 3), BS.H(theta=self.theta2)))
+        U = Matrix(
+            np.array(
+                [[1,0,0,0,0,0],
+                 [0,1,0,0,0,0],
+                 [0,0,-1/3,-m.sqrt(2)/3,m.sqrt(2)/3,2/3],
+                 [0,0,m.sqrt(2)/3,-1/3,-2/3,m.sqrt(2)/3],
+                 [0,0,-m.sqrt(3+m.sqrt(6))/3,m.sqrt(3-m.sqrt(6))/3,-m.sqrt((3+m.sqrt(6))/2)/3,m.sqrt(1/6-1/(3*m.sqrt(6)))],
+                 [0,0,-m.sqrt(3-m.sqrt(6))/3,-m.sqrt(3+m.sqrt(6))/3,-m.sqrt(1/6-1/(3*m.sqrt(6))),-m.sqrt((3+m.sqrt(6))/2)/3]]))
+
+
 
         return (Circuit(6, name="Heralded CZ")
-                .add(1, PERM([1, 0]))
-                .add(2, last_modes_cz, merge=True)
-                .add(1, PERM([1, 0])))
+                .add(0, PERM([0,2,1,3]))
+                .add(0, Unitary(U), merge=True)
+                .add(0, PERM([0,2,1,3])))
 
     def build_processor(self, **kwargs) -> Processor:
         p = self._init_processor(**kwargs)
