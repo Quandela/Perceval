@@ -74,13 +74,19 @@ def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_
                 assert pytest.approx(modulus, error) == modulus_value
                 assert modulus != 0
 
+                # if i_state != data_state:
+                #     if phase_value is None:
+                #         phase_value = phase
+                #     assert pytest.approx(phase) == phase_value
+                # else:
+                #     assert pytest.approx(phase) == phase_value + cm.pi
                 if i_state != data_state:
                     if phase_value is None:
                         phase_value = phase
-                    assert pytest.approx(phase) == phase_value
+                    assert pytest.approx((phase - phase_value + cm.pi)% ( 2 * cm.pi) - cm.pi) ==  0
                 else:
-                    assert pytest.approx(phase) == phase_value + cm.pi
-
+                    delta_phase = (phase - (phase_value + cm.pi)+ cm.pi) % (2*cm.pi) - cm.pi
+                    assert pytest.approx(delta_phase) == 0 
             else:
                 assert pytest.approx(modulus) == 0
     return modulus_value
