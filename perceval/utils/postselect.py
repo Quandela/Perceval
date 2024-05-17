@@ -51,8 +51,17 @@ class PostSelect:
     False
     """
 
-    _OPERATOR = {"==": int.__eq__, "<": int.__lt__, ">": int.__gt__}
-    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)(==|<|>)\s*(\d+\b)")
+    _OPERATORS = {"==": int.__eq__,
+                  "<": int.__lt__,
+                  ">": int.__gt__,
+                  ">=": int.__ge__,
+                  "<=": int.__le__}
+
+    # Regexp explanations:
+    # first group: index(es) of modes between '[]' and separated with ','
+    # second group: operator (listed in _OPERATORS). We suppose there is no digit character in operators
+    # third group: number of photons
+    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)([^\d]*)\s*(\d+\b)")
 
     def __init__(self, str_repr: str = None):
         self._conditions = {}
@@ -61,10 +70,16 @@ class PostSelect:
             try:
                 for match in self._PATTERN.finditer(str_repr):
                     indexes = tuple(json.loads(match.group(1)))
+
+                    operator = match.group(2).strip()
+                    if operator not in self._OPERATORS:
+                        raise KeyError(f"Unsupported operator: {operator}")
+
                     self._add_condition(indexes=indexes,
-                                        operator=self._OPERATOR[match.group(2)],
+                                        operator=self._OPERATORS[operator],
                                         value=int(match.group(3)))
                     condition_count += 1
+
             except json.decoder.JSONDecodeError as e:
                 raise RuntimeError(f"Could not interpret input string '{str_repr}': {e}")
             if condition_count != str_repr.count("&") + 1:
@@ -83,6 +98,16 @@ class PostSelect:
     def lt(self, indexes, value: int):
         """Create a new "lower than" condition for the current PostSelect instance"""
         self._add_condition(indexes, int.__lt__, value)
+        return self
+
+    def ge(self, indexes, value: int):
+        """Create a new "greater or equal than" condition for the current PostSelect instance"""
+        self._add_condition(indexes, int.__ge__, value)
+        return self
+
+    def le(self, indexes, value: int):
+        """Create a new "lower or equal than" condition for the current PostSelect instance"""
+        self._add_condition(indexes, int.__le__, value)
         return self
 
     def _add_condition(self, indexes, operator: Callable, value: int):
@@ -107,7 +132,7 @@ class PostSelect:
     def __repr__(self):
         strlist = []
         for operator, cond in self._conditions.items():
-            operator_str = [o for o in self._OPERATOR if self._OPERATOR[o] == operator][0]
+            operator_str = [o for o in self._OPERATORS if self._OPERATORS[o] == operator][0]
             for indexes, value in cond:
                 strlist.append(f"{list(indexes)}{operator_str}{value}")
         return "&".join(strlist)
@@ -159,7 +184,7 @@ class PostSelect:
 
     def can_compose_with(self, modes: List[int]) -> bool:
         """
-        Check if all conditions are compatible with a compisition on given modes
+        Check if all conditions are compatible with a composition on given modes
 
         :param modes: Modes used in the composition
         :return: `True` if the composition is allowed without mixing conditions, `False` otherwise
