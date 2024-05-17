@@ -34,8 +34,10 @@ from itertools import combinations, cycle
 from scipy.optimize import curve_fit
 from ..utils import BasicState
 
+MAX_LOST_PHOTONS = 2
 
 def check_no_collision(state) -> bool:
+    # verifies absence of bunching in a given state
     return all(i <= 1 for i in state)
 
 
@@ -76,33 +78,28 @@ def _generate_one_photon_per_mode_mapping(m, n):
     return {perm: index for perm, index in zip(perms, range(len(perms)))}
 
 
-def _gen_lossy_dists(noisy_input, ideal_photon_count, m, threshold_stats=False):
-    """
-    Takes as input non-collision samples.
-    Outputs an approximate distributions for each number of lost photon statistics.
-    """
-    max_lost_photons = 2
-    # TODO: ask why
-    # here it is only generating bitstrings for 2 photons lost, can be generalized to n.
-    # realistically, 2 is good enough
-    pattern_map = _generate_one_photon_per_mode_mapping(m, ideal_photon_count)
+def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map, threshold_stats=False):
+    # Takes as input non-collision (no bunching) samples.
+    # Outputs an approximate distributions for each number of lost photon statistics.
+    # MAX_LOST_PHOTONS controls upto how many are considered
 
-    noisy_distributions = [np.zeros(len(pattern_map)) for _ in range(max_lost_photons + 1)]
+    noisy_distributions = [np.zeros(len(pattern_map)) for _ in range(MAX_LOST_PHOTONS + 1)]
 
     for noisy_state, count in noisy_input.items():  # loop through all the noisy states
 
         if threshold_stats:
-            # todo: ask what would be values for threshold here? like min detected photon?
-            # max detected photon =1 always -> no bunching. output-dist needs to bit strings for recycling function
+            # current implementation works with no bunching,
+            # if threshold is true -> bunching will be removed before further processing
             noisy_state = BasicState([i if i <= 1 else 1 for i in noisy_state])
         else:
             noisy_state = noisy_state
 
-        if noisy_state.n < (ideal_photon_count - max_lost_photons) or not check_no_collision(noisy_state):
+        if noisy_state.n < (ideal_photon_count - MAX_LOST_PHOTONS) or not check_no_collision(noisy_state):
             continue
         actual_photon_count = noisy_state.n
 
-        if actual_photon_count == ideal_photon_count:  # technically a loss less simulation with postselection
+        if actual_photon_count == ideal_photon_count:
+            # technically a post-selected distribution from the noisy data
             _handle_zero_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
         elif actual_photon_count == ideal_photon_count - 1:
@@ -111,13 +108,13 @@ def _gen_lossy_dists(noisy_input, ideal_photon_count, m, threshold_stats=False):
         elif actual_photon_count == ideal_photon_count - 2:
             _handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
-    for i in range(max_lost_photons + 1):
+    for i in range(MAX_LOST_PHOTONS + 1):
         noisy_distributions[i] = noisy_distributions[i] / sum(noisy_distributions[i])
-    # todo: ask, 1st element is without photon loss becaue it is the ideal photon count?
     return noisy_distributions
 
 
 def _get_avg_exp_from_uni_dist(noisy_distributions, m, n):
+    # fits a noisy data to provide parameters to generate mitigated distribution
     def func(x, b):
         return uni_value * np.exp(-b * x)
 

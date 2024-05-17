@@ -30,8 +30,9 @@
 import pytest
 
 from perceval.error_mitigation import photon_loss_mitigation
-from perceval.utils import BSCount
-
+from perceval.utils import BSCount, BasicState
+from perceval.components import catalog, Source
+from perceval.algorithm import Sampler
 
 NOISY_INPUT = BSCount(
         {'|0,0,0,0,0,0,0,0,0>': 10137,
@@ -124,19 +125,36 @@ NOISY_INPUT = BSCount(
         '|0,0,0,0,2,0,1,0,0>': 1})
 
 def test_photon_loss_mitigated():
-    mitigated_dist = photon_loss_mitigation(NOISY_INPUT, ideal_photon_count=3)
-    print('DONE')
-    print(mitigated_dist)
-    import matplotlib.pyplot as plt
-    plt.plot(range(len(mitigated_dist)), mitigated_dist)
-    plt.show()
-    assert pytest.approx(sum(mitigated_dist), 1e-5) == 1
+    # Simply tests a run of recycled mitigation on the NOISY_INPUT BSCount (from Alexia's code)
+    mitigated_dist, post_selected_dist = photon_loss_mitigation(NOISY_INPUT, ideal_photon_count=3)
+    assert pytest.approx(sum(mitigated_dist.values()), 1e-5) == 1
 
 
 def test_simple_loss_mitigation():
+    # WIP - my idea is to see if I can reproduce with a CNOT
     # create a simple unitary with ideal output dist
     # add loss > 0.5
     # create lossy output dist
     # perform loss mitigation
     # check that it is better than post selected one
-    pass
+
+    pr = catalog['heralded cnot'].build()
+    input_state = BasicState([0, 1] * 2)
+    pr.with_input(input_state)
+
+    sampler = Sampler(pr)
+    probs = sampler.probs()
+    output_distribution = probs["results"]
+    print(output_distribution)
+
+    src = Source(emission_probability=0.80)
+    # Changing emission probability does not affect output, indistinguishability=0.8 does
+    # is this equivalent to loss>0.5 ?
+    cnot_imperfect_src = pr
+    cnot_imperfect_src.source = src
+    cnot_imperfect_src.with_input(input_state)
+
+    sampler_lossy = Sampler(cnot_imperfect_src)
+    probs_lossy = sampler_lossy.probs()
+    output_distribution_lossy = probs_lossy["results"]
+    print(output_distribution_lossy)
