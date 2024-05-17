@@ -115,7 +115,7 @@ class ExqaliburLogger():
     @staticmethod
     def initialize():
         persistent_data = PersistentData()
-        log_path = persistent_data.get_full_path("log")
+        log_path = ExqaliburLogger.get_log_file_path()
         if persistent_data.is_writable():
             exqalibur_logging.initialize(log_path)
         else:
@@ -134,9 +134,13 @@ class ExqaliburLogger():
                 exqalibur_logging.set_level(_LEVEL_CONVERTER[value["level"]], _CHANNEL_CONVERTER[name])
 
     @staticmethod
+    def get_log_file_path():
+        return PersistentData().get_full_path('log')
+
+    @staticmethod
     def enable_file():
         CONFIG[_ENABLE_FILE] = True
-        print(f"starting to write logs in {PersistentData().get_full_path('log')}")
+        print(f"starting to write logs in {ExqaliburLogger.get_log_file_path()}")
         exqalibur_logging.enable_file()
 
     @staticmethod
