@@ -76,10 +76,11 @@ def test_exponentiation():
     assert_svd_close(svd**5, svd * svd * svd * svd * svd)
 
 
-@pytest.mark.parametrize("parameters", [([1, 2, 3, 4], 4), ("1234", 4), ([1, 2, 3, 4, 0, 0, 0], 7)])
+@pytest.mark.parametrize("parameters", [[1, 2, 3, 4], "1234", [1, 2, 3, 4, 0, 0, 0]])
 def test_distinct_permutations(parameters):
-    a = parameters[0]
-    r = parameters[1]
+    a = parameters
+    r = len(parameters)
     dp = distinct_permutations(a, r)
-    dp_iter = set(itertools.permutations(a, r))
+    dp_iter = set(itertools.permutations(a))
     assert sorted(list(dp)) == sorted(list(dp_iter))
+    assert list(dp) == list(distinct_permutations(a))

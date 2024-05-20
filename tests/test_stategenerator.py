@@ -171,7 +171,6 @@ def test_graph_state_polarization():
 
 def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.Encoding):
     state_number = math.comb(k, n)
-    assert len(state) == len(set(state.keys()))
     assert state_number == len(state)
 
     photon_number = k
@@ -186,20 +185,13 @@ def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.En
     if encoding == pcvl.Encoding.DUAL_RAIL:
         assert 2*k == state.m
     else:
-        if isinstance(state.m, int):
-            assert state.m == k
-        else:
-            assert all([s_p == k for s_p in state.m])
+        assert state.m == k
 
     ps = pcvl.PostSelect('&'.join([f"[{i}]<2" for i in range(k)]))
-    amp = None
+    amp = 1/math.sqrt(state_number)
     for s, a in state:
         assert ps(s)
-        if not amp:
-            amp = a
-        else:
-            assert amp == a
-    assert amp*amp == pytest.approx(1/state_number)
+        assert a == pytest.approx(amp)
 
 
 @pytest.mark.parametrize("encoding", [pcvl.Encoding.RAW, pcvl.Encoding.POLARIZATION, pcvl.Encoding.DUAL_RAIL])
@@ -209,6 +201,7 @@ def test_dicke_state(encoding):
     ds = pcvl.StateGenerator(encoding).dicke_state(n)
     check_dicke_state(ds, n, k, encoding)
     assert ds == pcvl.StateGenerator(encoding).dicke_state(n, k)
+    check_dicke_state(ds, n, k, encoding)
 
     n = 4
     k = 6

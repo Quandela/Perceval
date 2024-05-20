@@ -160,15 +160,13 @@ class StateGenerator:
         sv.normalize()
         return sv
 
-    def _get_state_from_str(self, str_state: str):
-        if self._encoding == Encoding.RAW:
-            return str_state
-        if str_state == '0':
+    def _get_state_from_generic_state(self, generic_state: str) -> str:
+        if generic_state == '0':
             return str(self._zero_state)[1:-1]
-        elif str_state == '1':
+        elif generic_state == '1':
             return str(self._one_state)[1:-1]
         else:
-            raise ValueError(f"cannot get state from {str_state}")
+            raise ValueError(f"cannot get state from {generic_state}")
 
     def dicke_state(self, n: int, k: int = None) -> StateVector:
         """Get the Dicke state |D(n,k)> which is the equal superposition state of all C(n,k) basis states of weight k
@@ -203,7 +201,6 @@ class StateGenerator:
 
         dicke_state = StateVector()
         array = ['1']*n + ['0']*(k-n)
-        for state in distinct_permutations(array, k):
-            state = [self._get_state_from_str(b) for b in state]
-            dicke_state += BasicState(f"|{','.join(state)}>")
+        for state in distinct_permutations(array):
+            dicke_state += BasicState(f"|{','.join([self._get_state_from_generic_state(b) for b in state])}>")
         return dicke_state
