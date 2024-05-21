@@ -27,11 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+from pathlib import Path
+
 import pytest
 import numpy as np
 from perceval.components import catalog, Processor, BS
 from perceval.algorithm import ProcessTomographyMLE, StateTomographyMLE
-from perceval.algorithm.tomography.tomography_utils import process_fidelity
+from perceval.algorithm.tomography.tomography_utils import process_fidelity, is_physical
+from _test_utils import save_figs, _save_or_check
+
+TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
@@ -72,3 +78,18 @@ def test_ghz_state_tomography_mle():
 
     assert np.trace(ghz_state) == pytest.approx(1)
     assert fidelity == pytest.approx(1)
+
+def test_chi_cnot_from_mle_is_physical_and_display(tmp_path, save_figs):
+    cnot_p = catalog["klm cnot"].build_processor()
+
+    qpt = ProcessTomographyMLE(operator_processor=cnot_p)
+
+    chi_op = qpt.chi_matrix()
+    res = is_physical(chi_op, nqubit=2)
+
+    assert res['Trace=1'] is True  # if Chi has Trace = 1
+    assert res['Hermitian'] is True  # if Chi is Hermitian
+    assert res['Completely Positive'] is True  # if input Chi is Completely Positive
+
+    # display
+    _save_or_check(qpt, tmp_path, sys._getframe().f_code.co_name, save_figs)
