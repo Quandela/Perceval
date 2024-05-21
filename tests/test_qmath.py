@@ -37,6 +37,8 @@ from _test_utils import assert_sv_close, assert_svd_close
 
 
 def test_exponentiation():
+    with pytest.raises(ValueError):
+        exponentiation_by_squaring(12, 0)
     # Numbers
     assert exponentiation_by_squaring(12, 1), 12
     assert exponentiation_by_squaring(8, 2), 64
@@ -76,10 +78,23 @@ def test_exponentiation():
     assert_svd_close(svd**5, svd * svd * svd * svd * svd)
 
 
-@pytest.mark.parametrize("parameter", [[1, 2, 3, 4], "1234", [1, 2, 3, 4, 0, 0, 0]])
-def test_distinct_permutations(parameter):
-    a = parameter
-    r = len(a)
-    dp = distinct_permutations(a, r)
-    dp_iter = set(itertools.permutations(a, r))
-    assert sorted(list(dp)) == sorted(list(dp_iter))
+@pytest.mark.parametrize("parameters", [('mississippi', 0),
+                                        ('mississippi', 1),
+                                        ('mississippi', 6),
+                                        ('mississippi', 7),
+                                        ('mississippi', 12),
+                                        ([0, 1, 1, 0], 0),
+                                        ([0, 1, 1, 0], 1),
+                                        ([0, 1, 1, 0], 2),
+                                        ([0, 1, 1, 0], 3),
+                                        ([0, 1, 1, 0], 4),
+                                        ([0, 1, 1, 0], None),
+                                        (['a'], 0),
+                                        (['a'], 1),
+                                        (['a'], 5),
+                                        ([], 0),
+                                        ([], 1),
+                                        ([], 4),])
+def test_distinct_permutations(parameters):
+    iterable, r = parameters
+    assert sorted(set(itertools.permutations(iterable, r))) == sorted(distinct_permutations(iter(iterable), r))

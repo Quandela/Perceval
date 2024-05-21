@@ -50,7 +50,6 @@ class StateGenerator:
     def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
 
         assert isinstance(encoding, Encoding), "You need to provide an encoding"
-        self._encoding = encoding
         if encoding == Encoding.RAW:
             self._zero_state = BasicState("|0>")
             self._one_state = BasicState("|1>")
@@ -160,14 +159,6 @@ class StateGenerator:
         sv.normalize()
         return sv
 
-    def _get_state_from_generic_state(self, generic_state: str) -> str:
-        if generic_state == '0':
-            return str(self._zero_state)[1:-1]
-        elif generic_state == '1':
-            return str(self._one_state)[1:-1]
-        else:
-            raise ValueError(f"cannot get state from {generic_state}")
-
     def dicke_state(self, n: int, k: int = None) -> StateVector:
         """Get the Dicke state |D(n,k)> which is the equal superposition state of all C(n,k) basis states of weight k
 
@@ -200,7 +191,7 @@ class StateGenerator:
                     f"Cannot generate Dicke state with less weight({k}) than qubits or modes ({n}) ")
 
         dicke_state = StateVector()
-        array = ['1']*n + ['0']*(k-n)
+        array = [str(self._one_state)[1:-1]]*n + [str(self._zero_state)[1:-1]]*(k-n)
         for state in distinct_permutations(array):
-            dicke_state += BasicState(f"|{','.join([self._get_state_from_generic_state(b) for b in state])}>")
+            dicke_state += BasicState(f"|{','.join(state)}>")
         return dicke_state

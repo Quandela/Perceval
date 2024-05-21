@@ -177,10 +177,7 @@ def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.En
     if encoding == pcvl.Encoding.RAW:
         photon_number = n
 
-    if isinstance(state.n, int):
-        assert state.n == photon_number
-    else:
-        assert all([s_n == photon_number for s_n in state.n])
+    assert all([s_n == photon_number for s_n in state.n])
 
     if encoding == pcvl.Encoding.DUAL_RAIL:
         assert 2*k == state.m
