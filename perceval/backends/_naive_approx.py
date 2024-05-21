@@ -31,12 +31,16 @@ import exqalibur as xq
 from . import NaiveBackend
 
 
-class NaiveFasterBackend(NaiveBackend):
-    """Naive algorithm with Gurvitz computations of permanents"""
+class NaiveApproxBackend(NaiveBackend):
+    """Naive algorithm with Gurvits computations of permanents"""
 
-    def __init__(self, gurvitz_iterations = 10000):
-        NaiveBackend.__init__(self, lambda M : xq.estimate_permanent_cx(M, gurvitz_iterations=10000, n_threads=1))
+    def __init__(self, gurvits_iterations = 10000):
+        self._gurvits_iterations = gurvits_iterations
+        NaiveBackend.__init__(self)
 
     @property
     def name(self) -> str:
-        return "NaiveFaster"
+        return "NaiveApprox"
+
+    def _compute_permanent(self, M):
+        return xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)

@@ -39,10 +39,6 @@ class NaiveBackend(AProbAmpliBackend):
     """Naive algorithm, no clever calculation path, does not cache anything,
        recompute all states on the fly"""
 
-    def __init__(self, permanentor = lambda M : xq.permanent_cx(M, n_threads=1)):
-        AProbAmpliBackend.__init__(self)
-        self._permanentor = permanentor
-
     @property
     def name(self) -> str:
         return "Naive"
@@ -65,4 +61,7 @@ class NaiveBackend(AProbAmpliBackend):
                         u_st[rowidx, colidx] = self._umat[ok, ik]
                         rowidx += 1
                 colidx += 1
-        return self._permanentor(u_st)/math.sqrt(p)
+        return self._compute_permanent(u_st)/math.sqrt(p)
+
+    def _compute_permanent(self, M):
+        return xq.permanent_cx(M, n_threads=1)
