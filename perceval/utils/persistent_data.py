@@ -68,7 +68,7 @@ class PersistentData:
         self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
         try:
             self._create_directory()
-        except (PermissionError, OSError) as exc:
+        except OSError as exc:
             warnings.warn(UserWarning(f"{exc}"))
             return
         if not self.is_writable() or not self.is_readable():
@@ -128,7 +128,10 @@ class PersistentData:
         if not os.path.exists(file_path):
             warnings.warn(UserWarning(f"Cannot delete {file_path}, file doesn't exist"))
             return
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except OSError:
+           warnings.warn(UserWarning(f"Cannot delete persistant file {file}"))
 
     def write_file(self, filename: str, data: Union[bytes, str], file_format: FileFormat):
         """Write data into a file in persistent data directory
@@ -136,16 +139,22 @@ class PersistentData:
         :param filename: name of the file to write in (with extension)
         :param data: data to write
         """
-        file_path = self.get_full_path(filename)
-
-        if file_format == FileFormat.BINARY:
-            with open(file_path, "wb") as file:
-                file.write(data)
-        elif file_format == FileFormat.TEXT:
-            with open(file_path, "wt", encoding="UTF-8") as file:
-                file.write(data)
-        else:
+        if file_format != FileFormat.BINARY and file_format != FileFormat.TEXT:
             raise NotImplementedError(f"format {format} is not supported")
+        if self.is_writable():
+            file_path = self.get_full_path(filename)
+
+            try:
+                if file_format == FileFormat.BINARY:
+                    with open(file_path, "wb") as file:
+                        file.write(data)
+                elif file_format == FileFormat.TEXT:
+                    with open(file_path, "wt", encoding="UTF-8") as file:
+                        file.write(data)
+            except OSError:
+                warnings.warn(UserWarning("Can't save {filename}"))
+        else:
+            warnings.warn(UserWarning("Can't save {filename}"))
 
     def read_file(self, filename: str, file_format: FileFormat) -> Union[bytes, str]:
         """Read data from a file in persistent data directory
@@ -172,27 +181,27 @@ class PersistentData:
             raise NotImplementedError(f"format {format} is not supported")
         return data
 
-    def load_config(self):
+    def load_config(self) -> dict:
+        """Load config from persistent data
+
+        :return: config
+        """
         config = {}
         if self.has_file(_CONFIG_FILE_NAME):
             try:
                 config = json.loads(self.read_file(_CONFIG_FILE_NAME, FileFormat.TEXT))
-            except OSError:  # TODO: add exception for badfileformat
+            except (OSError, json.JSONDecodeError):
                 warnings.warn("Cannot read config file")
             return config
 
     def save_config(self, config: dict):
-        """Save provided token into persistent data, replace any token previously saved
+        """Save config into persistent data, update any config previously saved
 
-        :param token: token to save
+        :param config: config to save
         """
         if self.is_writable():
-            file_config = {}
-            if self.has_file(_CONFIG_FILE_NAME):
-                # TODO: add exception for badfileformat
-                file_config = json.loads(self.read_file(_CONFIG_FILE_NAME, FileFormat.TEXT))
-            for key in config:
-                file_config[key] = config[key]
+            file_config = self.load_config()
+            file_config.update(config)
             self.write_file(_CONFIG_FILE_NAME, json.dumps(file_config), FileFormat.TEXT)
         else:
             warnings.warn(UserWarning("Can't save token"))
@@ -200,10 +209,10 @@ class PersistentData:
 
 
     def clear_all_data(self):
-        """Delete persistent data directory and recreate it
+        """Delete all persistent data
         """
-        shutil.rmtree(self._directory)
-        self._create_directory()
+        for file in os.listdir(self._directory):
+            self.delete_file(file)
 
     @property
     def directory(self) -> str:
