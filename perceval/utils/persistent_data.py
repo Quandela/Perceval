@@ -191,7 +191,7 @@ class PersistentData:
                 config = json.loads(self.read_file(_CONFIG_FILE_NAME, FileFormat.TEXT))
             except (OSError, json.JSONDecodeError):
                 warnings.warn("Cannot read config file")
-            return config
+        return config
 
     def save_config(self, config: dict):
         """Save config into persistent data, update any config previously saved
