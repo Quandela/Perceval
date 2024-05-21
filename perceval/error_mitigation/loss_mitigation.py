@@ -37,7 +37,7 @@ from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist
 
 def photon_loss_mitigation(noisy_input: BSCount, ideal_photon_count: int, threshold_stats = False) -> tuple:
     """
-    Classical statistical technique to mitigate errors in output svd cause by photon loss
+    Statistical technique to mitigate errors caused by photon loss in the output distribution
 
     :param noisy_input: Noisy Basic State Samples
     :param ideal_photon_count: Photon count expected in an ideal loss-less situation
