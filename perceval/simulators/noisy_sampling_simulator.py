@@ -31,7 +31,7 @@ from typing import Callable, Dict
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSCount, BSSamples, SVDistribution
+from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect
 
 
 class SamplesProvider:
@@ -43,12 +43,12 @@ class SamplesProvider:
         self._sample_coeff = 1.1
         self._min_samples = 100
 
-    def prepare(self, noisy_input: SVDistribution, n_samples: int):
+    def prepare(self, noisy_input: BSDistribution, n_samples: int):
         # print("SamplesProvider - prepare")
-        for sv, prob in noisy_input.items():
+        for noisy_s, prob in noisy_input.items():
             # ns = int(max(prob * self._sample_coeff * n_samples, self._min_samples))
-            ns = int(math.floor(prob * n_samples))
-            for bs in sv[0].separate_state(keep_annotations=False):
+            ns = int(math.ceil(prob * n_samples))
+            for bs in noisy_s.separate_state(keep_annotations=False):
                 # print(f" ** {bs} component : add {ns}")
                 self._weights.add(bs, ns)
 
@@ -71,7 +71,7 @@ class SamplesProvider:
         # print(f"SamplesProvider - compute {self._weights[fock_state]} additional samples for {fock_state}")
         self._backend.set_input_state(fock_state)
         self._pools[fock_state] += self._backend.samples(self._weights[fock_state])
-        self._weights[fock_state] = int(self._weights[fock_state] * self._sample_coeff)
+        self._weights[fock_state] = max(int(self._weights[fock_state] * self._sample_coeff), 16)
 
     def sample_from(self, input_state: BasicState) -> BasicState:
         # print(f"SamplesProvider - pop 1 sample from {input_state}")
@@ -85,6 +85,41 @@ class NoisySamplingSimulator:
     def __init__(self, sampling_backend: ASamplingBackend):
         self._backend = sampling_backend
         self._min_detected_photon_filter = 0
+        self._postselect: PostSelect = PostSelect()
+        self._heralds: dict = {}
+        self._threshold_detector = False
+
+    def set_threshold_detector(self, value: bool):
+        self._threshold_detector = value
+
+    def set_selection(self, min_detected_photon_filter: int = None,
+                      postselect: PostSelect = None,
+                      heralds: dict = None):
+        """Set multiple selection filters at once to remove unwanted states from computed output distribution
+
+        :param min_detected_photon_filter: minimum number of detected photons in the output distribution
+        :param postselect: a post-selection function
+        :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
+                        out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
+                        on mode 6.
+        """
+        if min_detected_photon_filter is not None:
+            self._min_detected_photon_filter = min_detected_photon_filter
+        if postselect is not None:
+            self._postselect = postselect
+        if heralds is not None:
+            self._heralds = heralds
+
+    def _state_selected(self, state: BasicState) -> bool:
+        """
+        Computes if the state is selected given heralds and post selection function
+        """
+        for m, v in self._heralds.items():
+            if state[m] != v:
+                return False
+        if self._postselect is not None:
+            return self._postselect(state)
+        return True
 
     def set_circuit(self, circuit: ACircuit):
         self._backend.set_circuit(circuit)
@@ -97,7 +132,7 @@ class NoisySamplingSimulator:
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: Callable = None) -> Dict:
-        new_svd = SVDistribution()
+        new_input = BSDistribution()
         physical_perf = 1
         zpp = 0
         for sv, p in svd.items():
@@ -111,13 +146,13 @@ class NoisySamplingSimulator:
                 # print(f"remove {sv}")
                 physical_perf -= p
             else:
-                new_svd[sv] = p
+                new_input[sv[0]] = p
 
         if max_shots is not None:
             max_shots = round(max_shots*(1 - zpp))
 
         provider = SamplesProvider(self._backend)
-        provider.prepare(new_svd, max_samples)
+        provider.prepare(new_input, max_samples)
 
         output = BSSamples()
         idx = 0
@@ -128,8 +163,8 @@ class NoisySamplingSimulator:
         while len(output) < max_samples and (max_shots is None or shots < max_shots):
             if idx == len(selected_inputs):
                 idx = 0
-                selected_inputs = new_svd.sample(max_samples, non_null=False)
-            selected_bs = selected_inputs[idx][0]
+                selected_inputs = new_input.sample(max_samples, non_null=False)
+            selected_bs = selected_inputs[idx]
             idx += 1
 
             # Sampling
@@ -143,23 +178,31 @@ class NoisySamplingSimulator:
                     sampled_state = sampled_state.merge(component)
             else:
                 sampled_state = provider.sample_from(selected_bs)
-            output.append(sampled_state) ## TODO remove this and fix post-processing below
+
+            if self._threshold_detector:
+                sampled_state = sampled_state.threshold_detection()
+
             # Post-processing
             shots += 1
-            # if not self._state_selected_physical(sampled_state):
-            #     not_selected_physical += 1
-            #     continue
-            # if self._state_selected(sampled_state):
-            #     output.append(self.postprocess_output(sampled_state))
-            # else:
-            #     not_selected += 1
+            if sampled_state.n < self._min_detected_photon_filter:
+                not_selected_physical += 1
+                continue
+            if self._state_selected(sampled_state):
+                output.append(sampled_state)
+            else:
+                not_selected += 1
 
             # Progress handling
             if progress_callback:
                 exec_request = progress_callback(len(output)/max_samples, "sampling")
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     break
-        for in_state, out_list in provider._pools.items():
-            if len(out_list):
-                print(f"for {in_state}, {len(out_list)} samples remaining")
-        return {"results": output, "physical_perf": physical_perf}
+        # for in_state, out_list in provider._pools.items():
+        #     if len(out_list):
+        #         print(f"for {in_state}, {len(out_list)} samples remaining")
+        selected = len(output)
+        logical_perf = 0
+        if selected > 0:
+            physical_perf *= (selected + not_selected) / (selected + not_selected + not_selected_physical)
+            logical_perf = selected / (selected + not_selected)
+        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
