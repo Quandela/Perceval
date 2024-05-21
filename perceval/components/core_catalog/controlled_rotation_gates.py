@@ -47,7 +47,7 @@ def build_control_gate_unitary(n: int, alpha: float) -> Matrix:
     :param alpha: rotation angle of the gate
     :return: Unitary matrix of the post-selected gate
              Ref : https://arxiv.org/abs/2405.01395
-       
+
     """
 
     I = Matrix.eye(n)
@@ -76,18 +76,18 @@ def build_control_gate_unitary(n: int, alpha: float) -> Matrix:
 class PostProcessedControledRotationsItem(CatalogItem):
     article_ref = "https://arxiv.org/abs/2405.01395"
     description = r"""n-qubit controlled roation gate C...CZ(alpha) with 2n heralded modes and a post-selection function"""
-    str_repr = r"""                       ╭─────╮
-ctrl0 (dual rail) ─────┤     ├───── ctrl0 (dual rail)
-                  ─────┤     ├─────
-                       │     │
-ctrl1 (dual rail) ─────┤     ├───── ctrl1 (dual rail)
-                  ─────┤     ├─────
-                          .
-                          .
-                          .
-data (dual rail)  ─────┤     ├───── data (dual rail)
-                  ─────┤     ├─────
-                       ╰─────╯"""
+    str_repr = r"""                         ╭─────╮
+ctrl0 (dual rail)  ─────┤     ├───── ctrl0 (dual rail)
+                   ─────┤     ├─────
+                        │     │
+ctrl1 (dual rail)  ─────┤     ├───── ctrl1 (dual rail)
+                   ─────┤     ├─────
+    .                      .           .
+    .                      .           .
+    .                      .           .
+ctrln (dual rail)  ─────┤     ├───── ctrln (dual rail)
+                   ─────┤     ├─────
+                        ╰─────╯"""
 
     def __init__(self):
         super().__init__("postprocessed controlled gate")
@@ -104,33 +104,33 @@ data (dual rail)  ─────┤     ├───── data (dual rail)
         if not "n" in kwargs:
             raise KeyError("Missing input n")
         n = kwargs["n"]
-        if n<2 :
+        if not isinstance(n, int):
+            raise TypeError("n must be of type int.")
+        if n < 2:
             raise ValueError(f"n must be at least 2. Here n = {n}.")
-        if type(n) != int:
-             raise ValueError("n must be of type int.")
 
         alpha = kwargs.get("alpha", math.pi)
-        if type(alpha) != float:
-             raise ValueError("alpha must be of type float.")
-    
+        if not isinstance(alpha, float):
+            raise TypeError("alpha must be of type float.")
+
         m = build_control_gate_unitary(n, alpha)
-        return Circuit(4*n, name = "postprocessed controlled gate").add(0, Unitary(m))
-    
+        return Circuit(4*n, name="postprocessed controlled gate").add(0, Unitary(m))
+
     def build_processor(self, **kwargs):
-        
+
         p = self._init_processor(**kwargs)
         n = kwargs["n"]
 
         postselection_condition = "[0,1]==1 "
         for i in range(1, n):
-                postselection_condition += f" & [{2 * i},{2 * i + 1}]==1"
+            postselection_condition += f" & [{2 * i},{2 * i + 1}]==1"
         p.set_postselection(PostSelect(postselection_condition))
 
         for i in range(n - 1):
-             p.add_port(2 * i, Port(Encoding.DUAL_RAIL, f"ctrl{i}"))
-        p.add_port(2  * (n - 1), Port(Encoding.DUAL_RAIL, "data"))
+            p.add_port(2 * i, Port(Encoding.DUAL_RAIL, f"ctrl{i}"))
+        p.add_port(2 * (n - 1), Port(Encoding.DUAL_RAIL, "data"))
 
         for i in range(2 * n, 4 * n):
-            p.add_herald(i, 0) 
+            p.add_herald(i, 0)
 
         return p

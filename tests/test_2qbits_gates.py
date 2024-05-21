@@ -44,24 +44,28 @@ def test_fidelity_and_performance_cnot():
     expected = {"00": "00", "01": "01", "10": "11", "11": "10"}
 
     # KLM CNOT
-    analyzer_klm_cnot = Analyzer(catalog["klm cnot"].build_processor(), state_dict)
+    analyzer_klm_cnot = Analyzer(
+        catalog["klm cnot"].build_processor(), state_dict)
     analyzer_klm_cnot.compute(expected=expected)
 
     assert pytest.approx(analyzer_klm_cnot.fidelity) == 1
 
     # Postprocessed CNOT
-    analyzer_postprocessed_cnot = Analyzer(catalog["postprocessed cnot"].build_processor(), state_dict)
+    analyzer_postprocessed_cnot = Analyzer(
+        catalog["postprocessed cnot"].build_processor(), state_dict)
     analyzer_postprocessed_cnot.compute(expected=expected)
 
     assert pytest.approx(analyzer_postprocessed_cnot.fidelity) == 1
 
     # CNOT using CZ : called - Heralded CNOT
-    analyzer_heralded_cnot = Analyzer(catalog["heralded cnot"].build_processor(), state_dict)
+    analyzer_heralded_cnot = Analyzer(
+        catalog["heralded cnot"].build_processor(), state_dict)
     analyzer_heralded_cnot.compute(expected=expected)
 
     assert pytest.approx(analyzer_heralded_cnot.fidelity) == 1
 
     assert analyzer_postprocessed_cnot.performance > analyzer_heralded_cnot.performance > analyzer_klm_cnot.performance
+
 
 def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
     """Check if the cz is correct
@@ -81,7 +85,8 @@ def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
     This param represent whether this cz gate is balanced
     """
     ports = [pcvl.Port(pcvl.Encoding.DUAL_RAIL, "")] * 2
-    states = [get_basic_state_from_ports(ports, state) * herald_states for state in generate_all_logical_states(2)]
+    states = [get_basic_state_from_ports(
+        ports, state) * herald_states for state in generate_all_logical_states(2)]
     sim = SimulatorFactory().build(processor)
     data_state = BasicState("|0,1,0,1>") * herald_states
     modulus_value = None
@@ -108,9 +113,11 @@ def check_cz_with_heralds_or_ancillaries(processor, herald_states, error=1E-6):
                 assert pytest.approx(modulus) == 0
     return modulus_value
 
+
 def test_cz_and_cnot_phases_and_modulus():
     # Testing phases and modulus of CCZ
-    check_cz_with_heralds_or_ancillaries(catalog["heralded cz"].build_processor(), BasicState("|1,1>"))
+    check_cz_with_heralds_or_ancillaries(
+        catalog["heralded cz"].build_processor(), BasicState("|1,1>"))
 
     # Testing phases and modulus of heralded cnot by transforming it in a CZ gate with Hadamard gates
     processor = Processor("SLOS", 4)
@@ -152,7 +159,11 @@ def test_inverted_cnot(cnot_gate):
     processor = Processor("SLOS", 4)
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
-    processor.add([2, 3, 0, 1], catalog[cnot_gate].build_processor())
+    # Commented lines are use to compare with a26b0bd (0.8.1 before cnot fix)
+    # processor.add([2, 3, 0, 1], catalog["postprocessed cnot"].as_processor().build()) # < 0.9.0
+    # processor.clear_postprocess() # < 0.9.0
+    processor.add(
+        [2, 3, 0, 1], catalog[cnot_gate].build_processor())  # >= 0.9.0
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
 
