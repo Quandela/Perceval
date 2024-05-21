@@ -131,7 +131,7 @@ class PersistentData:
         try:
             os.remove(file_path)
         except OSError:
-           warnings.warn(UserWarning(f"Cannot delete persistant file {file}"))
+           warnings.warn(UserWarning(f"Cannot delete persistant file {file_path}"))
 
     def write_file(self, filename: str, data: Union[bytes, str], file_format: FileFormat):
         """Write data into a file in persistent data directory
@@ -143,7 +143,6 @@ class PersistentData:
             raise NotImplementedError(f"format {format} is not supported")
         if self.is_writable():
             file_path = self.get_full_path(filename)
-
             try:
                 if file_format == FileFormat.BINARY:
                     with open(file_path, "wb") as file:
@@ -152,9 +151,9 @@ class PersistentData:
                     with open(file_path, "wt", encoding="UTF-8") as file:
                         file.write(data)
             except OSError:
-                warnings.warn(UserWarning("Can't save {filename}"))
+                warnings.warn(UserWarning(f"Can't save {filename}"))
         else:
-            warnings.warn(UserWarning("Can't save {filename}"))
+            warnings.warn(UserWarning(f"Can't save {filename}"))
 
     def read_file(self, filename: str, file_format: FileFormat) -> Union[bytes, str]:
         """Read data from a file in persistent data directory
