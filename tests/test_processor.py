@@ -165,10 +165,10 @@ def test_processor_samples_max_shots():
     p.with_input(BasicState([0, 1, 0, 1]))
     max_samples = 100
     result_len = {}
-    for max_shots in [400, 1_000, 10_000]:
+    for max_shots in [400, 2_000, 10_000]:
         result_len[max_shots] = len(p.samples(max_samples, max_shots)['results'])
-    assert result_len[400] < result_len[1_000]
-    assert result_len[1_000] < result_len[10_000]
+    assert result_len[400] < result_len[2_000]
+    assert result_len[2_000] < result_len[10_000]
     assert result_len[10_000] == max_samples  # 10k shots is enough to get the expected sample count
 
 
