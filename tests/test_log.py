@@ -43,19 +43,12 @@ def log_test():
                 logger.set_level(level, channel)
                 logger.warn("test", channel)
                 pcvl.utils.logger.warn("test", channel)
-                pcvl.logging.LOGGER.warn("test", channel)
+                pcvl.logging.logging.LOGGER.warn("test", channel)
 
 
 def test_file():
     file_path = logger.get_log_file_path()
     assert os.path.exists(file_path)
-
-    logger.reset_config()
-    logger.save_config()
-
-    config = pcvl.utils.PersistentData().load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
-                                 'channels': {'general': {'level': 60}, 'resources': {'level': 60}, 'user': {'level': 30}}}
 
     if os.path.exists(file_path):
         open(file_path, 'w').close()
@@ -73,7 +66,22 @@ def test_file():
         assert all(["R[W] test" in line for line in lines[3:5]])
         assert all([" [W] test" in line for line in lines[6:8]])
 
-    logger.save_config()
+
+def test_logger_config():
+    logger_config = pcvl.utils.logging.config.LoggerConfig()
+    logger_config.reset()
+    logger_config.save()
+
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
+                                 'channels': {'general': {'level': 60}, 'resources': {'level': 60}, 'user': {'level': 30}}}
+
+    logger_config.enable_file()
+    logger_config.set_level(logging.WARNING, "general")
+    logger_config.set_level(logging.WARNING, "resources")
+    logger_config.set_level(logging.WARNING, "user")
+    logger_config.save()
+
     config = pcvl.utils.PersistentData().load_config()
     assert config["logging"] == {'use_python_logger': False, 'enable_file': True,
                                  'channels': {'general': {'level': 30}, 'resources': {'level': 30}, 'user': {'level': 30}}}

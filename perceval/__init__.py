@@ -69,14 +69,4 @@ def register_plugin(name, silent=False):
     return True
 
 
-def set_logger(use_python_logger: bool = False):
-    global logger
-    if use_python_logger:
-        utils.logging.LOGGER = utils.logging.PythonLogger()
-        sys.excepthook = utils.logging._my_excepthook
-    else:
-        utils.logging.LOGGER = utils.logging.ExqaliburLogger
-        sys.excepthook = utils.logging._my_excepthook
-
-
-set_logger(False)
+utils.logging.logging.set_logger(False)
