@@ -45,6 +45,8 @@ def photon_loss_mitigation(noisy_input: BSCount, ideal_photon_count: int, thresh
 
     :return (loss mitigated distribution, post-selected not mitigated distribution)
     """
+    # todo: add checks here for BSCount, the code works with svd too
+
     m = next(iter(noisy_input)).m
 
     pattern_map = _generate_one_photon_per_mode_mapping(m, ideal_photon_count)
@@ -89,7 +91,7 @@ def photon_loss_mitigation(noisy_input: BSCount, ideal_photon_count: int, thresh
 
     for index, keys in enumerate(pattern_map.keys()):
         state = BasicState(keys)
-        mitigated_distribution[state] = mitigated_probs[index]
-        post_selected_distribution[state] = post_selected_probs[index]
+        mitigated_distribution.add(state, mitigated_probs[index])
+        post_selected_distribution.add(state, post_selected_probs[index])
 
     return mitigated_distribution, post_selected_distribution
