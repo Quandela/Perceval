@@ -36,6 +36,7 @@ from perceval.components import catalog, Processor, BS
 from perceval.algorithm import ProcessTomographyMLE, StateTomographyMLE
 from perceval.algorithm.tomography.tomography_utils import process_fidelity, is_physical
 
+
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
 
 GHZ_TARGET = np.zeros((8, 8))
