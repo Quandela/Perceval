@@ -27,9 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from math import sqrt
 from typing import List
-import itertools
+import warnings
 
 import networkx as nx
 
@@ -170,7 +169,7 @@ class StateGenerator:
             - For Raw encoding: k
             - For Dual rail and Polarization encoding: n
 
-        :param n: Number of qubits equal to |1>L or photons
+        :param n: Number of qubits equal to |1>_L or photons
         :param k: Weight (Number of qubits or modes)
         :return: Dicke state vector
         """
@@ -187,8 +186,8 @@ class StateGenerator:
             if not isinstance(k, int):
                 raise TypeError(f"k parameter should be an int and not {type(k)}")
             if k < n:
-                raise ValueError(
-                    f"Cannot generate Dicke state with less weight({k}) than qubits or modes ({n}) ")
+                warnings.warn(UserWarning(f"Generating an empty state since {k} is smaller than {n}"))
+                return StateVector()
 
         dicke_state = StateVector()
         array = [str(self._one_state)[1:-1]]*n + [str(self._zero_state)[1:-1]]*(k-n)

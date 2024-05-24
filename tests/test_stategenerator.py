@@ -208,5 +208,5 @@ def test_dicke_state(encoding):
     with pytest.raises(ValueError):
         pcvl.StateGenerator(encoding).dicke_state(-1)
 
-    with pytest.raises(ValueError):
-        pcvl.StateGenerator(encoding).dicke_state(4, 2)
+    with pytest.warns(UserWarning):
+        assert pcvl.StateGenerator(encoding).dicke_state(4, 2) == pcvl.StateVector()
