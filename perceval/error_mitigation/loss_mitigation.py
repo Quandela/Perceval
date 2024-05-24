@@ -36,7 +36,7 @@ from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist
 
 
 
-def photon_recycled_distribution(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int) -> BSDistribution:
+def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int) -> BSDistribution:
     """
     A classical technique to mitigate errors in the output distribution caused by photon
     loss in LO quantum circuits (ref: https://arxiv.org/abs/2405.02278)
