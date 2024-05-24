@@ -30,22 +30,26 @@
 import numpy as np
 from math import comb
 from scipy.optimize import curve_fit
+from typing import Union
 from ..utils.statevector import BSCount, BSDistribution, BasicState
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
 
 
-def photon_loss_mitigation(noisy_input: BSCount, ideal_photon_count: int, threshold_stats = False) -> tuple:
+def photon_loss_mitigation(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int,
+                           threshold_stats = False) -> BSDistribution:
     """
     Statistical technique to mitigate errors caused by photon loss in the output state distribution
 
     :param noisy_input: Noisy Basic State Samples
     :param ideal_photon_count: Photon count expected in an ideal loss-less situation
     :param threshold_stats: If True would set a noisy sample with bunching to max 1 photon per state
-
     :return (loss mitigated distribution, post-selected not mitigated distribution)
     """
     # todo: add checks here for BSCount, the code works with svd too
+    if not (isinstance(noisy_input, BSCount) or isinstance(noisy_input, BSDistribution)):
+        raise TypeError(f'Noisy input should be of type BSCount or BSDistribution')
+
 
     m = next(iter(noisy_input)).m
 
@@ -64,12 +68,10 @@ def photon_loss_mitigation(noisy_input: BSCount, ideal_photon_count: int, thresh
     def func1(x, a):
         return a * np.exp(-median_of_means * x) + c_mn_inv
 
-    # print("\n Now generate mitigated distributions")
-
     for k in range(len(noisy_distributions[0])):
-        z, _ = curve_fit(func1,
-                         [1, 2, 50],
-                         [noisy_distributions[1][k], noisy_distributions[2][k], c_mn_inv],
+        z, _ = curve_fit(f=func1,
+                         xdata=[1, 2, 50],
+                         ydata=[noisy_distributions[1][k], noisy_distributions[2][k], c_mn_inv],
                          bounds=([-5], [5]),
                          maxfev=2000000)
         if noisy_distributions[1][k] > c_mn_inv > noisy_distributions[2][k]:
@@ -83,15 +85,9 @@ def photon_loss_mitigation(noisy_input: BSCount, ideal_photon_count: int, thresh
 
     mitigated_probs = mitigated_probs / np.sum(mitigated_probs)
 
-    post_selected_probs = noisy_distributions[0]
-    # a post selected case by choosing zero photon loss statistics - not mitigation
-
     mitigated_distribution = BSDistribution()
-    post_selected_distribution = BSDistribution()
-
     for index, keys in enumerate(pattern_map.keys()):
         state = BasicState(keys)
         mitigated_distribution.add(state, mitigated_probs[index])
-        post_selected_distribution.add(state, post_selected_probs[index])
 
-    return mitigated_distribution, post_selected_distribution
+    return mitigated_distribution
