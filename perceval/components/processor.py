@@ -269,74 +269,14 @@ class Processor(AProcessor):
         return circuit
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> Dict:
+        from perceval.simulators import NoisySamplingSimulator
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
-        pre_physical_perf = 1
-        # Rework input map so that it contains only states with enough photons
-        input_svd = SVDistribution()
-        zpp = 0  # Zero photon probability
-        for sv, p in self._inputs_map.items():
-            if max(sv.n) == 0:
-                zpp += p
-            if self._state_preselected_physical(sv):
-                if len(sv) > 1:
-                    raise RuntimeError("Cannot sample on a superposed state")
-                input_svd[sv] = p
-            else:
-                pre_physical_perf -= p
-        if max_shots is not None:
-            max_shots = round(max_shots*(1 - zpp))
-
-        self.backend.set_circuit(self.linear_circuit())
-        output = BSSamples()
-        selected_inputs = []
-        idx = 0
-        not_selected_physical = 0
-        not_selected = 0
-        shots = 0
-        while len(output) < max_samples and (max_shots is None or shots < max_shots):
-            if idx == len(selected_inputs):
-                idx = 0
-                selected_inputs = input_svd.sample(max_samples)
-            selected_bs = selected_inputs[idx][0]
-            idx += 1
-
-            # Sampling
-            if selected_bs.has_annotations:  # In case of annotations, input must be separately sampled, then recombined
-                bs_list = selected_bs.separate_state()
-                sampled_components = []
-                for bs in bs_list:
-                    self.backend.set_input_state(bs)
-                    sampled_components.append(self.backend.sample())
-                sampled_state = sampled_components.pop()
-                for component in sampled_components:
-                    sampled_state = sampled_state.merge(component)
-            else:
-                self.backend.set_input_state(selected_bs)
-                sampled_state = self.backend.sample()
-
-            # Post-processing
-            shots += 1
-            if not self._state_selected_physical(sampled_state):
-                not_selected_physical += 1
-                continue
-            if self._state_selected(sampled_state):
-                output.append(self.postprocess_output(sampled_state))
-            else:
-                not_selected += 1
-
-            # Progress handling
-            if progress_callback:
-                exec_request = progress_callback(len(output)/max_samples, "sampling")
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
-                    break
-
-        selected = len(output)
-        physical_perf = 0
-        logical_perf = 0
-        if selected > 0:
-            physical_perf = pre_physical_perf * (selected + not_selected) / (selected + not_selected + not_selected_physical)
-            logical_perf = selected / (selected + not_selected)
-        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+        sampling_simulator = NoisySamplingSimulator(self.backend)
+        sampling_simulator.set_circuit(self.linear_circuit())
+        sampling_simulator.set_selection(self._min_detected_photons, self.post_select_fn, self.heralds)
+        sampling_simulator.set_threshold_detector(self.is_threshold)
+        sampling_simulator.keep_heralds(False)
+        return sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
 
     def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"

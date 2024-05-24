@@ -30,7 +30,14 @@
 from perceval.simulators.noisy_sampling_simulator import SamplesProvider
 from perceval.backends import Clifford2017Backend
 from perceval.components import Circuit, Source
-from perceval.utils import BasicState, NoiseModel
+from perceval.utils import BasicState, NoiseModel, BSDistribution
+
+
+def _svd2bsd(svd):
+    res = BSDistribution()
+    for state, prob in svd.items():
+        res.add(state[0], prob)
+    return res
 
 
 def test_samples_provider():
@@ -44,7 +51,7 @@ def test_samples_provider():
     possible_fock_input = [BasicState([0, 0]), BasicState([1, 0]), BasicState([0, 1]), BasicState([1, 1])]
 
     provider = SamplesProvider(clifford)
-    provider.prepare(noisy_input, 1000)
+    provider.prepare(_svd2bsd(noisy_input), 1000)
 
     assert provider._pools and provider._weights
     for state in possible_fock_input:

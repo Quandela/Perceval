@@ -35,6 +35,7 @@ from ._abstract_backends import ASamplingBackend
 
 class Clifford2017Backend(ASamplingBackend):
     def __init__(self):
+        super().__init__()
         self._clifford = xq.Clifford2017()
 
     def set_circuit(self, circuit: ACircuit):

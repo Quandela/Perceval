@@ -68,7 +68,17 @@ def _sv__str__(self, nsimplify=True):
     return "+".join(ls).replace("+-", "-")
 
 
+def _basicstate_remove_modes(self, index_list: List[int]):
+    new_state = []
+    for idx, k in enumerate(self):
+        if idx in index_list:
+            continue
+        new_state.append(k)
+    return BasicState(new_state)
+
+
 BasicState = xq.FockState
+BasicState.remove_modes = _basicstate_remove_modes
 StateVector = xq.StateVector
 StateVector.__str__ = _sv__str__
 
@@ -326,14 +336,7 @@ class BSDistribution(ProbabilityDistribution):
             raise RuntimeError("No state to sample from")
         states = list(d.keys())
         probs = list(d.values())
-        rng = np.random.default_rng()
-        results = rng.choice(states, count, p=probs)
-        # numpy transforms iterables of ints to a nparray in rng.choice call
-        # Thus, we need to convert back the results to BasicStates
-        output = BSSamples()
-        for s in results:
-            output.append(BasicState(s))
-        return output
+        return random.choices(states, k=count, weights=probs)
 
     def __mul__(self, other):
         return BSDistribution.tensor_product(self, other)

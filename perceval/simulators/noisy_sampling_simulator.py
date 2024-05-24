@@ -88,9 +88,13 @@ class NoisySamplingSimulator:
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._threshold_detector = False
+        self._keep_heralds = True
 
     def set_threshold_detector(self, value: bool):
         self._threshold_detector = value
+
+    def keep_heralds(self, value: bool):
+        self._keep_heralds = value
 
     def set_selection(self, min_detected_photon_filter: int = None,
                       postselect: PostSelect = None,
@@ -142,17 +146,19 @@ class NoisySamplingSimulator:
             n_photons = next(iter(sv.n))
             if n_photons == 0:
                 zpp += p
-            if n_photons < self._min_detected_photon_filter or max_samples * p < 10:
+            if n_photons < self._min_detected_photon_filter: # or max_samples * p < 10:
                 # print(f"remove {sv}")
                 physical_perf -= p
             else:
                 new_input[sv[0]] = p
 
+        prepare_samples = max_samples
         if max_shots is not None:
             max_shots = round(max_shots*(1 - zpp))
+            prepare_samples = min(max_samples, max_shots)
 
         provider = SamplesProvider(self._backend)
-        provider.prepare(new_input, max_samples)
+        provider.prepare(new_input, prepare_samples)
 
         output = BSSamples()
         idx = 0
@@ -188,6 +194,8 @@ class NoisySamplingSimulator:
                 not_selected_physical += 1
                 continue
             if self._state_selected(sampled_state):
+                if self._heralds and not self._keep_heralds:  # Remove ancillary modes
+                    sampled_state = sampled_state.remove_modes(self._heralds.keys())
                 output.append(sampled_state)
             else:
                 not_selected += 1
