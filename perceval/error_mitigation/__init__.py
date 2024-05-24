@@ -27,4 +27,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .loss_mitigation import photon_loss_mitigation
+from .loss_mitigation import photon_recycled_distribution

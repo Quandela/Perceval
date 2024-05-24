@@ -36,26 +36,21 @@ from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist
 
 
 
-def photon_loss_mitigation(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int,
-                           threshold_stats = False) -> BSDistribution:
+def photon_recycled_distribution(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int) -> BSDistribution:
     """
-    Statistical technique to mitigate errors caused by photon loss in the output state distribution
+    A classical technique to mitigate errors in the output distribution caused by photon
+    loss in LO quantum circuits (ref: https://arxiv.org/abs/2405.02278)
 
-    :param noisy_input: Noisy Basic State Samples
-    :param ideal_photon_count: Photon count expected in an ideal loss-less situation
-    :param threshold_stats: If True would set a noisy sample with bunching to max 1 photon per state
-    :return (loss mitigated distribution, post-selected not mitigated distribution)
+    :param noisy_input: Noisy output (Basic State Samples or a distribution)
+    :param ideal_photon_count: expected photon count for a loss-less system
+    :return photon loss mitigated distribution
     """
-    # todo: add checks here for BSCount, the code works with svd too
-    if not (isinstance(noisy_input, BSCount) or isinstance(noisy_input, BSDistribution)):
+    if not isinstance(noisy_input, (BSCount, BSDistribution)):
         raise TypeError(f'Noisy input should be of type BSCount or BSDistribution')
 
-
-    m = next(iter(noisy_input)).m
-
+    m = next(iter(noisy_input)).m  # number of modes
     pattern_map = _generate_one_photon_per_mode_mapping(m, ideal_photon_count)
-
-    noisy_distributions = _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map, threshold_stats)
+    noisy_distributions = _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map)
 
     # GET AVERAGE EXPONENT USING AVERAGE DISTANCE FROM UNIFORM PROBABILITY
     z = _get_avg_exp_from_uni_dist(noisy_distributions, m, ideal_photon_count)
@@ -74,6 +69,7 @@ def photon_loss_mitigation(noisy_input: Union[BSCount, BSDistribution], ideal_ph
                          ydata=[noisy_distributions[1][k], noisy_distributions[2][k], c_mn_inv],
                          bounds=([-5], [5]),
                          maxfev=2000000)
+
         if noisy_distributions[1][k] > c_mn_inv > noisy_distributions[2][k]:
             mitigated_probs.append(c_mn_inv)
         elif noisy_distributions[1][k] < c_mn_inv < noisy_distributions[2][k]:
@@ -82,7 +78,6 @@ def photon_loss_mitigation(noisy_input: Union[BSCount, BSDistribution], ideal_ph
             mitigated_probs.append(func1(0, z[0]))
 
     mitigated_probs = [0 if i < 0 else i for i in mitigated_probs]
-
     mitigated_probs = mitigated_probs / np.sum(mitigated_probs)
 
     mitigated_distribution = BSDistribution()

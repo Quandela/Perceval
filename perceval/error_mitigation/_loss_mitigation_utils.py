@@ -32,7 +32,6 @@ from math import comb
 from copy import copy
 from itertools import combinations, cycle
 from scipy.optimize import curve_fit
-from ..utils import BasicState
 
 MAX_LOST_PHOTONS = 2
 
@@ -78,28 +77,19 @@ def _generate_one_photon_per_mode_mapping(m, n):
     return {perm: index for perm, index in zip(perms, range(len(perms)))}
 
 
-def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map, threshold_stats=False):
-    # Takes as input non-collision (no bunching) samples.
-    # Outputs an approximate distributions for each number of lost photon statistics.
+def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map):
+    # Takes non-collision (no bunching) samples as input and
+    # outputs approximate distributions for each number of lost photon statistics.
     # MAX_LOST_PHOTONS controls upto how many are considered
 
     noisy_distributions = [np.zeros(len(pattern_map)) for _ in range(MAX_LOST_PHOTONS + 1)]
 
     for noisy_state, count in noisy_input.items():  # loop through all the noisy states
-
-        if threshold_stats:
-            # current implementation works with no bunching,
-            # if threshold is true -> bunching will be removed before further processing
-            noisy_state = BasicState([i if i <= 1 else 1 for i in noisy_state])
-        else:
-            noisy_state = noisy_state
-
         if noisy_state.n < (ideal_photon_count - MAX_LOST_PHOTONS) or not check_no_collision(noisy_state):
             continue
         actual_photon_count = noisy_state.n
 
         if actual_photon_count == ideal_photon_count:
-            # technically a post-selected distribution from the noisy data
             _handle_zero_photon_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
         elif actual_photon_count == ideal_photon_count - 1:
@@ -124,7 +114,10 @@ def _get_avg_exp_from_uni_dist(noisy_distributions, m, n):
 
     uni_value = noisy_distributions_from_uni[0]
 
-    z, _ = curve_fit(func, [0, 1, 2, 50], [uni_value, noisy_distributions_from_uni[1],
-                                           noisy_distributions_from_uni[2], 0], bounds=([-5], [5]), maxfev=2000000)
+    z, _ = curve_fit(f=func,
+                     xdata=[0, 1, 2, 50],
+                     ydata=[uni_value, noisy_distributions_from_uni[1], noisy_distributions_from_uni[2], 0],
+                     bounds=([-5], [5]),
+                     maxfev=2000000)
 
     return z

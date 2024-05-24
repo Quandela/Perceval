@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval.error_mitigation import photon_loss_mitigation
+from perceval.error_mitigation import photon_recycled_distribution
 from perceval.utils import BasicState
 from perceval.components import catalog, Source
 from perceval.algorithm import Sampler
@@ -66,7 +66,7 @@ def test_photon_loss_mitigation(result_type):
     lossy_sampling = _sampler_setup_cnot(output_type=result_type)
 
     ideal_photon_count = 4
-    mitigated_dist = photon_loss_mitigation(lossy_sampling, ideal_photon_count)
+    mitigated_dist = photon_recycled_distribution(lossy_sampling, ideal_photon_count)
 
     for keys, value in mitigated_dist.items():
         assert sum(keys) == ideal_photon_count
