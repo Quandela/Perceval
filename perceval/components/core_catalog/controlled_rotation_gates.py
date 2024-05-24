@@ -121,10 +121,7 @@ ctrln (dual rail)  ─────┤     ├───── ctrln (dual rail)
         p = self._init_processor(**kwargs)
         n = kwargs["n"]
 
-        postselection_condition = "[0,1]==1 "
-        for i in range(1, n):
-            postselection_condition += f" & [{2 * i},{2 * i + 1}]==1"
-        p.set_postselection(PostSelect(postselection_condition))
+        p.set_postselection(PostSelect('&'.join([f"[{2*n},{2*n+1}]==1" for n in range(n)])))
 
         for i in range(n - 1):
             p.add_port(2 * i, Port(Encoding.DUAL_RAIL, f"ctrl{i}"))
