@@ -26,5 +26,30 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import sys
 
-from .logging import LOGGER as logger, set_logger
+from exqalibur import logging
+from .config import LoggerConfig
+from .loggers import ExqaliburLogger, PythonLogger
+
+
+LOGGER = ExqaliburLogger()
+LOGGER.initialize()
+
+
+def _my_excepthook(excType, excValue, this_traceback):
+    # only works for the main thread
+    LOGGER.error("Logging an uncaught exception", channel="general",
+                 exc_info=(excType, excValue, this_traceback))
+
+
+def use_python_logger():
+    global LOGGER
+    LOGGER = PythonLogger()
+    sys.excepthook = _my_excepthook
+
+
+def use_perceval_logger():
+    global LOGGER
+    LOGGER = ExqaliburLogger()
+    sys.excepthook = _my_excepthook

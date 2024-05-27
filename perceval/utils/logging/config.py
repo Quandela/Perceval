@@ -27,10 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import warnings
 import logging as python_logging
 
-from ..persistent_data import PersistentData
 from exqalibur import logging as exqalibur_logging
+from ..persistent_data import PersistentData
 
 _LOGGING = "logging"
 _CHANNELS = "channels"
@@ -38,60 +39,41 @@ _ENABLE_FILE = "enable_file"
 _USE_PYTHON_LOGGER = "use_python_logger"
 _CHANNEL_NAMES = ["user", "general", "resources"]
 
-_LOGGING_OFF = python_logging.CRITICAL + 10
-
-_LEVEL_CONVERTER = {
-    python_logging.DEBUG: exqalibur_logging.level.debug,
-    python_logging.INFO: exqalibur_logging.level.info,
-    python_logging.WARNING: exqalibur_logging.level.warn,
-    python_logging.ERROR: exqalibur_logging.level.err,
-    python_logging.CRITICAL: exqalibur_logging.level.critical,
-    _LOGGING_OFF: exqalibur_logging.level.off,
-}
-
-_CHANNEL_CONVERTER = {
-    "general": exqalibur_logging.channel.general,
-    "resources": exqalibur_logging.channel.resources,
-    "user": exqalibur_logging.channel.user,
-}
-
-
 class LoggerConfig(dict):
     def __init__(self):
         super().__init__()
         self.reset()
         self._load_from_persistent_data()
 
-    def _init_channel(self, name: str, level: int = _LOGGING_OFF):
-        if name not in _CHANNEL_NAMES:
-            raise KeyError(f"Unknown channel {name}")
-        if level and level not in _LEVEL_CONVERTER.keys():
-            raise KeyError(f"Unknown level {level} for channel {name}")
-        self[_CHANNELS][name] = {}
-        self[_CHANNELS][name]["level"] = level
+    def _init_channel(self, channel: exqalibur_logging.channel, level: exqalibur_logging.level = exqalibur_logging.level.off):
+        self[_CHANNELS][channel.name] = {}
+        self[_CHANNELS][channel.name]["level"] = level.name
 
     def reset(self):
         self[_USE_PYTHON_LOGGER] = False
         self[_ENABLE_FILE] = False
         self[_CHANNELS] = {}
-        for name in ["general", "resources"]:
+        for name in [exqalibur_logging.channel.general, exqalibur_logging.channel.resources]:
             self._init_channel(name)
-        self._init_channel("user", python_logging.WARNING)
+        self._init_channel(exqalibur_logging.channel.user, exqalibur_logging.level.warn)
 
     def _load_from_persistent_data(self) -> str:
         persistent_data = PersistentData()
         config = persistent_data.load_config()
-        if config and _LOGGING in config:
-            config = config[_LOGGING]
-            if _CHANNELS in config:
-                for key in config[_CHANNELS]:
-                    if key in _CHANNEL_NAMES:
-                        self[_CHANNELS][key] = config[_CHANNELS][key]
-            if _ENABLE_FILE in config:
-                self[_ENABLE_FILE] = config[_ENABLE_FILE]
+        try:
+            if config and _LOGGING in config:
+                config = config[_LOGGING]
+                if _CHANNELS in config:
+                    for key in config[_CHANNELS]:
+                        if key in _CHANNEL_NAMES:
+                            self[_CHANNELS][key] = config[_CHANNELS][key]
+                if _ENABLE_FILE in config:
+                    self[_ENABLE_FILE] = config[_ENABLE_FILE]
+        except KeyError as e:
+            warnings.warn(UserWarning(f"Incorrect logger config, try to reset and save it. {e}"))
 
-    def set_level(self, level: int, channel: str = "user"):
-        self[_CHANNELS][channel]["level"] = level
+    def set_level(self, level: exqalibur_logging.level, channel: exqalibur_logging.channel):
+        self[_CHANNELS][channel.name]["level"] = level.name
 
     def enable_file(self):
         self[_ENABLE_FILE] = True

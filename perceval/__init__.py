@@ -69,4 +69,4 @@ def register_plugin(name, silent=False):
     return True
 
 
-utils.logging.logging.set_logger(False)
+use_perceval_logger()

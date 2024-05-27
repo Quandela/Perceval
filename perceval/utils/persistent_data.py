@@ -29,7 +29,6 @@
 
 import os
 import json
-import shutil
 import warnings
 from typing import Union
 from platformdirs import PlatformDirs
@@ -208,10 +207,11 @@ class PersistentData:
 
 
     def clear_all_data(self):
-        """Delete all persistent data
+        """Delete all persistent data except for log
         """
         for file in os.listdir(self._directory):
-            self.delete_file(file)
+            if "log" not in file:
+                self.delete_file(file)
 
     @property
     def directory(self) -> str:
