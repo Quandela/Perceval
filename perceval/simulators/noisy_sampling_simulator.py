@@ -82,6 +82,13 @@ class SamplesProvider:
 
 
 class NoisySamplingSimulator:
+    """
+    Simulates a sampling, using a perfect sampling algorithm. It is used to take advantage of a parallel sampling
+    algorithm, by computing multiple output states at once, while taking noise and post-processing (heralds,
+    post-selection, detector characteristics) into account
+
+    :param sampling_backend: Instance of a sampling-capable back-end
+    """
 
     def __init__(self, sampling_backend: ASamplingBackend):
         self._backend = sampling_backend
@@ -92,9 +99,19 @@ class NoisySamplingSimulator:
         self._keep_heralds = True
 
     def set_threshold_detector(self, value: bool):
+        """
+        Change detectors from PNR to threshold
+
+        :param value: True for threshold detectors, False to get back to PNR ones (default is PNR).
+        """
         self._threshold_detector = value
 
     def keep_heralds(self, value: bool):
+        """
+        Tells the simulator to keep or discard ancillary modes in output states
+
+        :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
+        """
         self._keep_heralds = value
 
     def set_selection(self, min_detected_photon_filter: int = None,
@@ -127,9 +144,19 @@ class NoisySamplingSimulator:
         return True
 
     def set_circuit(self, circuit: ACircuit):
+        """
+        Set the circuit to simulate the sampling on
+
+        :param circuit: A unitary circuit
+        """
         self._backend.set_circuit(circuit)
 
     def set_min_detected_photon_filter(self, value: int):
+        """
+        Set the physical detection filter. Any output state with less than this threshold gets discarded.
+
+        :param value: Minimal photon count in output states of interest.
+        """
         self._min_detected_photon_filter = value
 
     def _perfect_samples_no_selection(self,
@@ -163,6 +190,18 @@ class NoisySamplingSimulator:
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: Callable = None) -> Dict:
+        """
+        Run a noisy sampling simulation and retrieve the results
+
+        :param svd: The noisy input, expressed as a mixed state
+        :param max_samples: Max expected samples of interest in the results
+        :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
+        :param progress_callback: A progress callback
+        :return: A dictionary of the form { "results": BSSamples, "physical_perf": float, "logical_perf": float }
+        * results is the post-selected output state distribution
+        * physical_perf is the performance computed from the detected photon filter
+        * logical_perf is the performance computed from the post-selection
+        """
         # Check input SVD and compute samples/shots ratio
         zpp = 0
         max_p = 0
