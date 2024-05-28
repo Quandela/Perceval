@@ -232,10 +232,11 @@ class NoisySamplingSimulator:
         physical_perf = 1
         for sv, p in svd.items():
             n_photons = next(iter(sv.n))
-            if n_photons < self._min_detected_photon_filter or p < p_threshold:
+            if n_photons < self._min_detected_photon_filter:
                 physical_perf -= p
-            else:
+            elif p > p_threshold:
                 new_input[sv[0]] = p
+        new_input.normalize()
 
         # Prepare pools of pre-computed samples
         provider = SamplesProvider(self._backend)
