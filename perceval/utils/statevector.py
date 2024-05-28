@@ -45,29 +45,6 @@ from .qmath import exponentiation_by_squaring
 import exqalibur as xq
 
 
-def _sv__str__(self, nsimplify=True):
-    if not self.keys():
-        return "|>"
-    self_copy = copy(self)
-    self_copy.normalize()
-    ls = []
-    for key, value in self_copy:
-        if value == 1:
-            ls.append(str(key))
-        else:
-            if isinstance(value, sp.Expr):
-                ls.append(str(value) + "*" + str(key))
-            else:
-                if nsimplify:
-                    value = simple_complex(value)[1]
-                    if value[1:].find("-") != -1 or value.find("+") != -1:
-                        value = f"({value})"
-                else:
-                    value = str(value)
-                ls.append(value + "*" + str(key))
-    return "+".join(ls).replace("+-", "-")
-
-
 def _basicstate_remove_modes(self, index_list: List[int]):
     new_state = []
     for idx, k in enumerate(self):
@@ -80,7 +57,6 @@ def _basicstate_remove_modes(self, index_list: List[int]):
 BasicState = xq.FockState
 BasicState.remove_modes = _basicstate_remove_modes
 StateVector = xq.StateVector
-StateVector.__str__ = _sv__str__
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:

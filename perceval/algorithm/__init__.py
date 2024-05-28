@@ -29,4 +29,4 @@
 
 from .sampler import Sampler
 from .analyzer import Analyzer
-from .tomography import ProcessTomography, StateTomography, ProcessTomographyMLE, StateTomographyMLE
+from .tomography import ProcessTomography, StateTomography, ProcessTomographyMLE, StateTomographyMLE, AProcessTomography
