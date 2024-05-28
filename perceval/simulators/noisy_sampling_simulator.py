@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import math
+import time
 from typing import Callable, Dict
 
 from perceval.backends import ASamplingBackend
@@ -131,11 +132,38 @@ class NoisySamplingSimulator:
     def set_min_detected_photon_filter(self, value: int):
         self._min_detected_photon_filter = value
 
+    def _perfect_samples_no_selection(self,
+                         input_state: BasicState,
+                         n_samples: int,
+                         progress_callback: Callable = None) -> Dict:
+        self._backend.set_input_state(input_state)
+        samples_acquired = 0
+        results = BSSamples()
+        while samples_acquired < n_samples:
+            loop_sample_count = min(1000, n_samples - samples_acquired)
+
+            results += self._backend.samples(loop_sample_count)
+
+            samples_acquired += loop_sample_count
+
+            if progress_callback:
+                cancel_request = progress_callback(samples_acquired / n_samples, 'sampling')
+                time.sleep(0.2)  # else callback method doesn't have time to be called
+                if cancel_request is not None and cancel_request.get('cancel_requested', False):
+                    break
+
+        return {
+            "results": results,
+            "physical_perf": 1,
+            "logical_perf": 1
+        }
+
     def samples(self,
                 svd: SVDistribution,
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: Callable = None) -> Dict:
+        # Check input SVD and compute samples/shots ratio
         zpp = 0
         max_p = 0
         for sv, p in svd.items():
@@ -148,10 +176,17 @@ class NoisySamplingSimulator:
             if n_photons >= self._min_detected_photon_filter:
                 max_p = max(max_p, p)
 
+        # Choose a consistent samples limit
         prepare_samples = max_samples
         if max_shots is not None:
             max_shots = round(max_shots * (1 - zpp))
             prepare_samples = min(max_samples, max_shots)
+
+        # Rework the input distribution to get rid of improbable states
+        if not self._heralds and not self._postselect.has_condition and len(svd) == 1:
+            only_input = next(iter(svd))[0]
+            if not only_input.has_annotations:
+                return self._perfect_samples_no_selection(only_input, prepare_samples, progress_callback)
 
         p_threshold = min(max_p, max_p / prepare_samples * 10)
         new_input = BSDistribution()
@@ -163,6 +198,7 @@ class NoisySamplingSimulator:
             else:
                 new_input[sv[0]] = p
 
+        # Prepare pools of pre-computed samples
         provider = SamplesProvider(self._backend)
         provider.prepare(new_input, prepare_samples)
 
@@ -211,9 +247,8 @@ class NoisySamplingSimulator:
                 exec_request = progress_callback(len(output)/max_samples, "sampling")
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     break
-        # for in_state, out_list in provider._pools.items():
-        #     if len(out_list):
-        #         print(f"for {in_state}, {len(out_list)} samples remaining")
+
+        # Performance estimate
         selected = len(output)
         logical_perf = 0
         if selected > 0:
