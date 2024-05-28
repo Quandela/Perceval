@@ -184,7 +184,6 @@ class Source:
                 svd.add(StateVector(BasicState([len(photons)], {0: photons})), prob)
         return svd
 
-    def generate_distribution(self, expected_input: BasicState):
     def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
