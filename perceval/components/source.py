@@ -185,6 +185,7 @@ class Source:
         return svd
 
     def generate_distribution(self, expected_input: BasicState):
+    def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
@@ -192,9 +193,11 @@ class Source:
         :param expected_input: Expected input BasicState
             The properties of the source will alter the input state. A perfect source always delivers the expected state
             as an input. Imperfect ones won't.
+        :param prob_threshold: Probability threshold under which the resulting state is filtered out. By default,
+            `global_params['min_p']` value is used.
         """
         dist = SVDistribution()
-        prob_threshold = global_params['min_p']
+        prob_threshold = max(prob_threshold, global_params['min_p'])
         for photon_count in expected_input:
             dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
         dist.normalize()

@@ -136,9 +136,8 @@ class NoisySamplingSimulator:
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: Callable = None) -> Dict:
-        new_input = BSDistribution()
-        physical_perf = 1
         zpp = 0
+        max_p = 0
         for sv, p in svd.items():
             if len(sv) > 1:
                 raise ValueError(f"Noisy sampling does not support superposed states, got {sv}")
@@ -146,16 +145,23 @@ class NoisySamplingSimulator:
             n_photons = next(iter(sv.n))
             if n_photons == 0:
                 zpp += p
-            if n_photons < self._min_detected_photon_filter: # or max_samples * p < 10:
-                # print(f"remove {sv}")
-                physical_perf -= p
-            else:
-                new_input[sv[0]] = p
+            if n_photons >= self._min_detected_photon_filter:
+                max_p = max(max_p, p)
 
         prepare_samples = max_samples
         if max_shots is not None:
-            max_shots = round(max_shots*(1 - zpp))
+            max_shots = round(max_shots * (1 - zpp))
             prepare_samples = min(max_samples, max_shots)
+
+        p_threshold = min(max_p, max_p / prepare_samples * 10)
+        new_input = BSDistribution()
+        physical_perf = 1
+        for sv, p in svd.items():
+            n_photons = next(iter(sv.n))
+            if n_photons < self._min_detected_photon_filter or p < p_threshold:
+                physical_perf -= p
+            else:
+                new_input[sv[0]] = p
 
         provider = SamplesProvider(self._backend)
         provider.prepare(new_input, prepare_samples)
