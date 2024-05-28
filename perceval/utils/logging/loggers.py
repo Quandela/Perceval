@@ -95,6 +95,7 @@ class ExqaliburLogger(ILogger):
             channels = list(exq_log.channel.__members__)
             levels = list(exq_log.level.__members__)
             for channel, level in config[_CHANNELS].items():
+                level = level['level']
                 if channel not in channels:
                     warnings.warn(UserWarning(f"Unknown channel {channel}"))
                     return
@@ -102,7 +103,7 @@ class ExqaliburLogger(ILogger):
                     warnings.warn(UserWarning(f"Unknown level {level}"))
                     return
                 exq_log.set_level(
-                    exq_log.level.__members__[level["level"]],
+                    exq_log.level.__members__[level],
                     exq_log.channel.__members__[channel])
 
     def get_log_file_path(self):
