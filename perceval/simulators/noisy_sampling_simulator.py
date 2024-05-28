@@ -227,14 +227,14 @@ class NoisySamplingSimulator:
             if not only_input.has_annotations:
                 return self._perfect_samples_no_selection(only_input, prepare_samples, progress_callback)
 
-        p_threshold = min(max_p, max_p / prepare_samples * 10)
+        p_threshold = max_p / prepare_samples
         new_input = BSDistribution()
         physical_perf = 1
         for sv, p in svd.items():
             n_photons = next(iter(sv.n))
             if n_photons < self._min_detected_photon_filter:
                 physical_perf -= p
-            elif p > p_threshold:
+            elif p >= p_threshold:
                 new_input[sv[0]] = p
         new_input.normalize()
 
