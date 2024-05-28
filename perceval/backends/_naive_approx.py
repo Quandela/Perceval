@@ -43,4 +43,5 @@ class NaiveApproxBackend(NaiveBackend):
         return "NaiveApprox"
 
     def _compute_permanent(self, M):
-        return xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        return permanent_with_error[0]
