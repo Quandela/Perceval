@@ -44,15 +44,19 @@ class NaiveBackend(AProbAmpliBackend):
         return "Naive"
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
+        p = output_state.prodnfact() * self._input_state.prodnfact()
+        M = self._compute_submatrix(output_state)
+        return self._compute_permanent(M) / math.sqrt(p) if M.size > 1 else M[0, 0]
+
+    def _compute_submatrix(self, output_state: BasicState) -> np.matrix:
         n = self._input_state.n
         m = self._input_state.m
         if n != output_state.n:
-            return complex(0)
+            return np.matrix([[complex(0)]], dtype=complex)
         if n == 0:
-            return complex(1)
+            return np.matrix([[complex(1)]], dtype=complex)
         u_st = np.empty((n, n), dtype=complex)
         colidx = 0
-        p = output_state.prodnfact() * self._input_state.prodnfact()
         for ik in range(m):
             for i in range(self._input_state[ik]):
                 rowidx = 0
@@ -61,7 +65,7 @@ class NaiveBackend(AProbAmpliBackend):
                         u_st[rowidx, colidx] = self._umat[ok, ik]
                         rowidx += 1
                 colidx += 1
-        return self._compute_permanent(u_st)/math.sqrt(p)
+        return u_st
 
     def _compute_permanent(self, M):
         return xq.permanent_cx(M, n_threads=1)

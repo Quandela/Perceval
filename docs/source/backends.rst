@@ -47,7 +47,7 @@ like loss of photons, noise, time delays, and more. Ideal simulators should take
 The Backends
 ------------
 
-Perceval has 5 different built-in back-ends with the support of optimized C++ library.
+Perceval has 6 different built-in back-ends with the support of optimized C++ library.
 
 Comparison Table
 ^^^^^^^^^^^^^^^^
@@ -63,6 +63,7 @@ Comparison Table
      - :ref:`CliffordClifford2017`
      - :ref:`SLOS`
      - :ref:`Naive`
+     - :ref:`NaiveApprox`
      - :ref:`Stepper`
      - :ref:`MPS`
    * - Sampling Efficiency
@@ -71,16 +72,19 @@ Comparison Table
      - *N/A* [1]_
      - *N/A* [1]_
      - *N/A* [1]_
+     - *N/A* [1]_
    * - Single output Efficiency
      - *N/A*
      - *N/A*
      - :math:`\mathrm{O}(n2^n)`
+     - :math:`\mathrm{O}(n)`
      - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
      - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
    * - Full Distribution Efficiency
      - *N/A*
      - :math:`\mathrm{O}(nC_n^{n+m-1})`
      - :math:`\mathrm{O}(n2^nC_n^{n+m-1})`
+     - :math:`\mathrm{O}(nC_n^{n+m-1})`
      - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
      - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
    * - Probability Amplitude
@@ -89,13 +93,16 @@ Comparison Table
      - **Yes**
      - **Yes**
      - **Yes**
+     - **Yes**
    * - Support Symbolic Computation
      - **No**
      - **Yes**
      - **No**
+     - **No**
      - **Yes**
      - **No**
    * - Support of Time-Circuit
+     - **No**
      - **No**
      - **No**
      - **No**
@@ -105,6 +112,7 @@ Comparison Table
      - :math:`n\approx30`
      - :math:`n,m<20`
      - :math:`n\approx30`
+     -
      -
      -
 
@@ -167,6 +175,16 @@ algorithms and comparison with the implementation present in the
     The Glynn implementation is run on a single thread.
     What is interesting to note is that all implementations have convergence to the theoretical performance but the
     factor between optimised and less optimised implementation still makes a perceptible time difference for the end-user.
+
+
+NaiveApprox
+^^^^^^^^^^^
+
+This backend does the same computations that Naive, but uses Gurvits approximation to compute the permanent.
+Aside of usual probability() and prob_amplitude() methods, it offers a 99% confidence interval on the probability, or an 99% sure error bound on the amplitude.
+A better accuracy can be obtained with a higher terms count.
+The default 10'000 value leads to a relative error less than 1%.
+
 
 MPS
 ^^^
