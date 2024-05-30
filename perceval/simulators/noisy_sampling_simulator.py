@@ -32,7 +32,8 @@ from typing import Callable, Dict
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect
+from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
+    samples_to_sample_count
 
 
 class SamplesProvider:
@@ -220,6 +221,8 @@ class NoisySamplingSimulator:
         if max_shots is not None:
             max_shots = round(max_shots * (1 - zpp))
             prepare_samples = min(max_samples, max_shots)
+        if prepare_samples == 0:
+            return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
 
         # Rework the input distribution to get rid of improbable states
         if not self._heralds and not self._postselect.has_condition and len(svd) == 1:
@@ -295,3 +298,12 @@ class NoisySamplingSimulator:
             physical_perf *= (selected + not_selected) / (selected + not_selected + not_selected_physical)
             logical_perf = selected / (selected + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+
+    def sample_count(self,
+                     svd: SVDistribution,
+                     max_samples: int,
+                     max_shots: int = None,
+                     progress_callback: Callable = None) -> Dict:
+        sampling = self.samples(svd, max_samples, max_shots, progress_callback)
+        sampling['results'] = samples_to_sample_count(sampling['results'])
+        return sampling

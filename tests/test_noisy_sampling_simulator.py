@@ -57,6 +57,14 @@ def _build_noisy_simulator(size: int):
     return sim
 
 
+def test_sample_0_samples():
+    sim = _build_noisy_simulator(6)
+    source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
+    input_state = source.generate_distribution(BasicState([1, 0] * 3))
+    sampling = sim.samples(input_state, 0)
+    assert len(sampling['results']) == 0
+
+
 def test_noisy_sampling():
     sim = _build_noisy_simulator(6)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
@@ -71,6 +79,12 @@ def test_noisy_sampling():
     assert sampling['physical_perf'] < 1
     assert sampling['logical_perf'] == 1
     assert len(sampling['results']) == 100
+
+    # test sample_count too
+    sim.sample_count(input_state, 100)
+    assert sampling['physical_perf'] < 1
+    assert sampling['logical_perf'] == 1
+    assert sampling['results'].total() == 100
 
 
 def test_noisy_sampling_with_heralds():
@@ -89,7 +103,7 @@ def test_noisy_sampling_with_heralds():
         assert output_state[0] == 0  # Fixed by the heralding
 
     sim.keep_heralds(False)
-    sampling = sim.samples(input_state, 100)
+    sampling = sim.sample_count(input_state, 100)
     assert sampling['logical_perf'] < 1
     for output_state in sampling['results']:
         assert len(output_state) == 5  # The ancillary mode was removed from all output states
