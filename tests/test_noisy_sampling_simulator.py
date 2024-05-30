@@ -81,7 +81,7 @@ def test_noisy_sampling():
     assert len(sampling['results']) == 100
 
     # test sample_count too
-    sim.sample_count(input_state, 100)
+    sampling = sim.sample_count(input_state, 100)
     assert sampling['physical_perf'] < 1
     assert sampling['logical_perf'] == 1
     assert sampling['results'].total() == 100

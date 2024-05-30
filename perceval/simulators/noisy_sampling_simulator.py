@@ -43,27 +43,28 @@ class SamplesProvider:
         self._pools = {}
         self._weights = BSCount()
         self._sample_coeff = 1.1
-        self._min_samples = 100
+        self._min_samples = 100  # to be sampled at once
+        self._max_samples = 2000  # to be sampled at once
 
-    def prepare(self, noisy_input: BSDistribution, n_samples: int):
-        # print("SamplesProvider - prepare")
+    def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: Callable = None):
         for noisy_s, prob in noisy_input.items():
-            # ns = int(max(prob * self._sample_coeff * n_samples, self._min_samples))
-            ns = int(math.ceil(prob * n_samples))
+            ns = min(math.ceil(prob * n_samples), self._max_samples)
             for bs in noisy_s.separate_state(keep_annotations=False):
-                # print(f" ** {bs} component : add {ns}")
                 self._weights.add(bs, ns)
 
         for input_state, count in self._weights.items():
-            # print(f"                - {count} samples from {input_state}")
             if input_state.n == 0:
                 self._pools[input_state] = [input_state]*count
             else:
                 self._backend.set_input_state(input_state)
                 self._pools[input_state] = self._backend.samples(count)
             self._weights[input_state] = math.ceil(0.1 * self._weights[input_state])
-        # print("WEIGHTS AFTER PREPARE")
-        # print(self._weights)
+
+            if progress_callback:
+                cancel_request = progress_callback(0, 'prepare')
+                time.sleep(0.1)  # else callback method doesn't have time to be called
+                if cancel_request is not None and cancel_request.get('cancel_requested', False):
+                    break
 
     def _compute_samples(self, fock_state: BasicState):
         if fock_state not in self._pools:
@@ -243,7 +244,7 @@ class NoisySamplingSimulator:
 
         # Prepare pools of pre-computed samples
         provider = SamplesProvider(self._backend)
-        provider.prepare(new_input, prepare_samples)
+        provider.prepare(new_input, prepare_samples, progress_callback)
 
         output = BSSamples()
         idx = 0
