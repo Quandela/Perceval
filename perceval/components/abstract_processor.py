@@ -239,7 +239,8 @@ class AProcessor(ABC):
         """
         if self._n_moi is None:
             if isinstance(mode_mapping, int):
-                self._n_moi = (component.m if isinstance(component, ACircuit) else component.circuit_size) + mode_mapping
+                self._n_moi = (component.m if isinstance(component, ACircuit) or isinstance(
+                    component, AProcessor) else component.circuit_size) + mode_mapping
             else:
                 self._n_moi = max(mode_mapping) + 1  # max of keys in case of dict
         connector = ModeConnector(self, component, mode_mapping)
