@@ -29,14 +29,15 @@
 
 from perceval.components import PERM, IDENTITY, AProcessor
 
+
 class ComponentHeraldInfo:
     """
     Store, for a component, indices of the heralds attached to its inputs or
     outputs
     """
     def __init__(self):
-        self.input_heralds = { }
-        self.output_heralds = { }
+        self.input_heralds = {}
+        self.output_heralds = {}
 
     def register_herald(self, forward_pass, mode_index, herald_mode):
         if forward_pass:
@@ -56,7 +57,7 @@ def collect_herald_info(processor: AProcessor):
     then output mode 0 of the component is the herald at final mode 5.
     """
     component_list = processor.flatten()
-    herald_info = { }
+    herald_info = {}
     for herald_mode in processor.heralds.keys():
         # Do one forward pass to identify heralds on inputs, and one
         # backward pass to identify heralds "plugged" on outputs
@@ -73,7 +74,7 @@ def collect_herald_info(processor: AProcessor):
                         mode = component.perm_vector[mode - m0] + m0
                     else:
                         mode = component.perm_vector.index(mode - m0) + m0
-                elif type(component) == IDENTITY:
+                elif type(component) is IDENTITY:
                     # Heralds can be moved across identity elements. However
                     # They are not moved across barriers.
                     pass

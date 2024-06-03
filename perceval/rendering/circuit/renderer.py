@@ -108,17 +108,17 @@ class ICircuitRenderer(ABC):
                     for r, _ in group:
                         pos = max(pos, self.max_pos(r[0], r[-1]))
                 for r, c in group:
-                    shiftr = [p+shift for p in r]
+                    shiftr = [p + shift for p in r]
                     if c.is_composite() and c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})
                             self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
                             self.render_circuit(
-                                    c,
-                                    shift=shiftr[0],
-                                    map_param_kid=map_param_kid,
-                                    precision=precision,
-                                    nsimplify=nsimplify)
+                                c,
+                                shift=shiftr[0],
+                                map_param_kid=map_param_kid,
+                                precision=precision,
+                                nsimplify=nsimplify)
                             self.close_subblock(shiftr)
                         else:
                             component_vars = c.get_variables(map_param_kid)
@@ -232,9 +232,9 @@ class TextRenderer(ICircuitRenderer):
     def __init__(self, nsize, hc=3, min_box_size=5):
         super().__init__(nsize)
         self._hc = hc
-        self._h = ['']*(hc*nsize+2)
-        self.extend_pos(0, self._nsize-1)
-        self._depth = [0]*nsize
+        self._h = [''] * (hc * nsize + 2)
+        self.extend_pos(0, self._nsize - 1)
+        self._depth = [0] * nsize
         self._offset = 0
         self.min_box_size = min_box_size
 
@@ -243,16 +243,16 @@ class TextRenderer(ICircuitRenderer):
 
     def open(self):
         for k in range(self._nsize):
-            self._h[self._hc*k+2] += "──"
+            self._h[self._hc * k + 2] += "──"
 
     def close(self):
-        self.extend_pos(0, self._nsize-1)
+        self.extend_pos(0, self._nsize - 1)
         for k in range(self._nsize):
-            self._h[self._hc*k+2] += "──"
+            self._h[self._hc * k + 2] += "──"
 
     def max_pos(self, start, end, header=False):
         maxpos = 0
-        for nl in range(start*self._hc+(not header and 1 or 0), end*self._hc+4+(header and 1 or 0)):
+        for nl in range(start * self._hc + (not header and 1 or 0), end * self._hc + 4 + (header and 1 or 0)):
             if len(self._h[nl]) > maxpos:
                 maxpos = len(self._h[nl])
         return maxpos
@@ -262,37 +262,37 @@ class TextRenderer(ICircuitRenderer):
             maxpos = self.max_pos(start, end, header)
         else:
             maxpos = pos
-        for i in range(start*self._hc+(not header and 1 or 0), end*self._hc+4+((header and not internal) and 1 or 0)):
+        for i in range(start * self._hc + (not header and 1 or 0), end * self._hc + 4 + ((header and not internal) and 1 or 0)):
             if internal:
-                self._h[i] += char*(maxpos-len(self._h[i]))
+                self._h[i] += char * (maxpos - len(self._h[i]))
             else:
-                self._h[i] += ((i % self._hc) == 2 and "─" or char)*(maxpos-len(self._h[i]))
+                self._h[i] += ((i % self._hc) == 2 and "─" or char) * (maxpos - len(self._h[i]))
 
     def open_subblock(self, lines, name, size, color=None):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, header=True)
-        for k in range(start*self._hc, end*self._hc+4):
-            if k == start*self._hc:
-                self._h[k] += "╔["+name+"]"
+        for k in range(start * self._hc, end * self._hc + 4):
+            if k == start * self._hc:
+                self._h[k] += "╔[" + name + "]"
             elif k % self._hc == 2:
                 self._h[k] += "╫"
             else:
                 self._h[k] += "║"
-        self._h[end*self._hc+4] += "╚"
+        self._h[end * self._hc + 4] += "╚"
 
     def close_subblock(self, lines):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, header=True)
-        for k in range(start*self._hc, end*self._hc+4):
-            if k == start*self._hc:
+        for k in range(start * self._hc, end * self._hc + 4):
+            if k == start * self._hc:
                 self._h[k] += "╗"
             elif k % self._hc == 2:
                 self._h[k] += "╫"
             else:
                 self._h[k] += "║"
-        self._h[end*self._hc+4] += "╝"
+        self._h[end * self._hc + 4] += "╝"
 
     def append_subcircuit(self, lines, circuit, content):
         self.open_subblock(lines, circuit.name, None)
@@ -318,12 +318,12 @@ class TextRenderer(ICircuitRenderer):
             return
 
         # put variables on the right number of lines
-        content = circuit.name + (content and "\n"+content or "")
+        content = circuit.name + (content and "\n" + content or "")
         lcontents = content.split("\n")
         if start == end:
             content = " ".join(lcontents)
         else:
-            nperlines = math.ceil((len(lcontents)-1)/((end-start)*self._hc))
+            nperlines = math.ceil((len(lcontents) - 1) / ((end - start) * self._hc))
             nlcontents = [lcontents[0]]
             idx = 1
             pnlcontent = []
@@ -338,16 +338,16 @@ class TextRenderer(ICircuitRenderer):
             content = "\n".join(nlcontents)
 
         # display box opening
-        for k in range(start, end+1):
+        for k in range(start, end + 1):
             self._depth[k] += 1
-        for k in range(start*self._hc+1, end*self._hc+3):
-            if k == start*self._hc+1:
+        for k in range(start * self._hc + 1, end * self._hc + 3):
+            if k == start * self._hc + 1:
                 self._h[k] += "╭"
             elif k % self._hc == 2:
                 self._h[k] += "┤"
             else:
                 self._h[k] += "│"
-        self._h[end*self._hc+3] += "╰"
+        self._h[end * self._hc + 3] += "╰"
 
         lcontents = content.split("\n")
         maxw = max(len(nl) for nl in lcontents)
@@ -355,24 +355,24 @@ class TextRenderer(ICircuitRenderer):
         # check if there are some "special effects" (centering _, right adjusting)
         for idx, l in enumerate(lcontents):
             if l.startswith("_"):
-                lcontents[idx] = (" " * ((maxw-(len(l)-1))//2)) + l[1:]
+                lcontents[idx] = (" " * ((maxw - (len(l) - 1)) // 2)) + l[1:]
 
         for i in range(maxw):
-            self._h[start*self._hc+1] += "─"
-            self._h[end*self._hc+3] += "─"
+            self._h[start * self._hc + 1] += "─"
+            self._h[end * self._hc + 3] += "─"
             for j, l in enumerate(lcontents):
                 if i < len(l):
-                    self._h[self._hc*start+2+j] += l[i]
+                    self._h[self._hc * start + 2 + j] += l[i]
         self.extend_pos(start, end, True)
         # closing the box
-        for k in range(start*self._hc+1, end*self._hc+3):
-            if k == start*self._hc+1:
+        for k in range(start * self._hc + 1, end * self._hc + 3):
+            if k == start * self._hc + 1:
                 self._h[k] += "╮"
             elif k % self._hc == 2:
                 self._h[k] += "├"
             else:
                 self._h[k] += "│"
-        self._h[end*self._hc+3] += "╯"
+        self._h[end * self._hc + 3] += "╯"
 
     def draw(self):
         return "\n".join(self._h)
@@ -383,22 +383,22 @@ class TextRenderer(ICircuitRenderer):
             return
         self._offset = offset
         for nl in range(len(self._h)):
-            self._h[nl] = ' '*offset_diff + self._h[nl]
+            self._h[nl] = ' ' * offset_diff + self._h[nl]
 
     def add_mode_index(self):
-        offset = len(str(self._nsize))+1
+        offset = len(str(self._nsize)) + 1
         self._set_offset(offset)
         for k in range(self._nsize):
-            self._h[self._hc*k + 2] = f'{k:{offset-1}d}:' + self._h[self._hc*k + 2][offset:]
-            self._h[self._hc*k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
+            self._h[self._hc * k + 2] = f'{k:{offset-1}d}:' + self._h[self._hc * k + 2][offset:]
+            self._h[self._hc * k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
     def add_out_port(self, n_mode, port, **opts):
         content = ''
         if isinstance(port, Herald):
             content = port.expected
         for i in range(port.m):
-            self._h[self._hc*(n_mode+i) + 2] += f'[{content})'
-            self._h[self._hc*(n_mode+i) + 3] += f"[{port.name}]"
+            self._h[self._hc * (n_mode + i) + 2] += f'[{content})'
+            self._h[self._hc * (n_mode + i) + 3] += f"[{port.name}]"
 
     def add_in_port(self, n_mode, port, **opts):
         content = ''
@@ -409,10 +409,12 @@ class TextRenderer(ICircuitRenderer):
         name_size = len(name)
         self._set_offset(max(shape_size, name_size))
         for i in range(port.m):
-            self._h[self._hc*(n_mode+i) + 2] = f'({content}]' + '─'*(self._offset-shape_size) \
-                                      + self._h[self._hc*(n_mode+i) + 2][self._offset:]
-            self._h[self._hc*(n_mode+i) + 3] = name + ' '*(self._offset-name_size) + \
-                                               self._h[self._hc*(n_mode+i) + 3][self._offset:]
+            self._h[self._hc * (n_mode + i) + 2] = f'({content}]' + \
+                '─' * (self._offset - shape_size) + \
+                self._h[self._hc * (n_mode + i) + 2][self._offset:]
+            self._h[self._hc * (n_mode + i) + 3] = name + ' ' * \
+                (self._offset - name_size) + \
+                self._h[self._hc * (n_mode + i) + 3][self._offset:]
 
 
 class CanvasRenderer(ICircuitRenderer):
@@ -424,7 +426,7 @@ class CanvasRenderer(ICircuitRenderer):
     def __init__(self, nsize, canvas: Canvas, skin):
         super().__init__(nsize)
         # first position available for row n
-        self._chart = [0] * (nsize+1)
+        self._chart = [0] * (nsize + 1)
 
         self._canvas = canvas
         self._skin = skin
@@ -432,7 +434,7 @@ class CanvasRenderer(ICircuitRenderer):
             (0, 0),
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE * (nsize + 1))
-        self._n_font_size = min(10, max(6, self._nsize+1))
+        self._n_font_size = min(10, max(6, self._nsize + 1))
 
         self._herald_info = None
 
@@ -442,8 +444,7 @@ class CanvasRenderer(ICircuitRenderer):
             if mode_style['stroke']:
                 self._canvas.add_mpath([
                     "M",
-                    CanvasRenderer.AFFIX_ALL_SIZE - \
-                        CanvasRenderer.AFFIX_PORT_SIZE,
+                    CanvasRenderer.AFFIX_ALL_SIZE - CanvasRenderer.AFFIX_PORT_SIZE,
                     CanvasRenderer.SCALE / 2 + CanvasRenderer.SCALE * k,
                     "l",
                     CanvasRenderer.AFFIX_PORT_SIZE, 0], **mode_style)
@@ -467,10 +468,11 @@ class CanvasRenderer(ICircuitRenderer):
             CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
             if self._mode_style[k] != ModeStyle.HERALD:
-                self._canvas.add_text((
+                self._canvas.add_text(
+                    (
                         0,
-                        CanvasRenderer.SCALE / 2 + 3 + \
-                            CanvasRenderer.SCALE * k),
+                        CanvasRenderer.SCALE / 2 + 3 + CanvasRenderer.SCALE * k
+                    ),
                     str(k),
                     self._n_font_size,
                     ta="left")
@@ -479,10 +481,11 @@ class CanvasRenderer(ICircuitRenderer):
         max_pos = max(self._chart[0:self._nsize])
         h_pos = self._out_port_pos[n_mode].x
         v_pos = self._out_port_pos[n_mode].y
-        self._canvas.set_offset((
-                CanvasRenderer.AFFIX_ALL_SIZE + \
-                    CanvasRenderer.SCALE * (h_pos or max_pos),
-                CanvasRenderer.SCALE * v_pos),
+        self._canvas.set_offset(
+            (
+                CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * (h_pos or max_pos),
+                CanvasRenderer.SCALE * v_pos
+            ),
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE)
         opts['starting_mode'] = n_mode
@@ -517,9 +520,11 @@ class CanvasRenderer(ICircuitRenderer):
             start,
             size[0] + margins[0] + margins[1],
             size[1])
-        self._canvas.set_offset((
+        self._canvas.set_offset(
+            (
                 CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * area[0],
-                CanvasRenderer.SCALE * area[1]),
+                CanvasRenderer.SCALE * area[1]
+            ),
             CanvasRenderer.SCALE * area[2],
             CanvasRenderer.SCALE * area[3])
         if color is None:
@@ -548,28 +553,31 @@ class CanvasRenderer(ICircuitRenderer):
         self.extend_pos(start, end, subblock_end + right_margins)
 
     def max_pos(self, start, end, _=None):
-        return max(self._chart[start:end+1])
+        return max(self._chart[start:end + 1])
 
     def extend_pos(self, start, end, pos=None):
         if pos is None:
             maxpos = self.max_pos(start, end)
         else:
             maxpos = pos
-        for p in range(start, end+1):
+        for p in range(start, end + 1):
             if self._chart[p] != maxpos:
-                self._canvas.set_offset((
-                            CanvasRenderer.AFFIX_ALL_SIZE + self._chart[p] * \
-                                CanvasRenderer.SCALE,
-                            p * CanvasRenderer.SCALE),
-                        (maxpos-self._chart[p]) * CanvasRenderer.SCALE,
-                        CanvasRenderer.SCALE)
+                self._canvas.set_offset(
+                    (
+                        CanvasRenderer.AFFIX_ALL_SIZE + self._chart[p] * CanvasRenderer.SCALE,
+                        p * CanvasRenderer.SCALE
+                    ),
+                    (maxpos - self._chart[p]) * CanvasRenderer.SCALE,
+                    CanvasRenderer.SCALE)
                 style = self._skin.style[self._mode_style[p]]
                 if style['stroke']:
                     self._canvas.add_mline(
-                        [0,
-                        CanvasRenderer.SCALE / 2,
-                        (maxpos-self._chart[p]) * CanvasRenderer.SCALE,
-                            CanvasRenderer.SCALE / 2],
+                        [
+                            0,
+                            CanvasRenderer.SCALE / 2,
+                            (maxpos - self._chart[p]) * CanvasRenderer.SCALE,
+                            CanvasRenderer.SCALE / 2
+                        ],
                         **style)
             self._chart[p] = maxpos
 
@@ -580,10 +588,11 @@ class CanvasRenderer(ICircuitRenderer):
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
         max_pos = self.max_pos(start, end)
-        self._canvas.set_offset((
-                CanvasRenderer.AFFIX_ALL_SIZE + \
-                    CanvasRenderer.SCALE * max_pos,
-                CanvasRenderer.SCALE * start),
+        self._canvas.set_offset(
+            (
+                CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * max_pos,
+                CanvasRenderer.SCALE * start
+            ),
             CanvasRenderer.SCALE * w,
             CanvasRenderer.SCALE * (end - start + 1))
         modes = self._mode_style[start:(end + 1)]
@@ -638,7 +647,7 @@ class CanvasRenderer(ICircuitRenderer):
         if isinstance(circuit, PERM):
             out_modes = copy.copy(self._mode_style)
             for m_input, m_output in enumerate(circuit.perm_vector):
-                out_modes[m_output+m0] = self._mode_style[m_input+m0]
+                out_modes[m_output + m0] = self._mode_style[m_input + m0]
             self._mode_style = out_modes
 
         for p in self._in_port_pos:
@@ -664,11 +673,11 @@ class CanvasRenderer(ICircuitRenderer):
 
     def close(self):
         self.extend_pos(0, self._nsize - 1)
-        max_pos = self.max_pos(0, self._nsize-1)
+        max_pos = self.max_pos(0, self._nsize - 1)
         self._canvas.set_offset(
             (CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * max_pos, 0),
             CanvasRenderer.AFFIX_ALL_SIZE,
-            CanvasRenderer.SCALE * (self._nsize+1))
+            CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
             mode_style = self._skin.style[self._mode_style[k]]
             if mode_style['stroke']:
@@ -682,7 +691,6 @@ class CanvasRenderer(ICircuitRenderer):
 
     def draw(self):
         return self._canvas.draw()
-
 
 
 class PreRenderer(ICircuitRenderer):
@@ -750,16 +758,13 @@ class PreRenderer(ICircuitRenderer):
             maxpos = self.max_pos(start, end)
         else:
             maxpos = pos
-        for p in range(start, end+1):
+        for p in range(start, end + 1):
             self._chart[p] = maxpos
 
     def _add_shape(self, lines, circuit, content, w, shape_fn=None, pos=None):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
-
-    def set_herald_info(self, info):
-        self._herald_info = info
 
     def _update_mode_style(self, lines, circuit, w: int, subc_mode: bool = False):
         if not isinstance(circuit, PERM) and not subc_mode:
@@ -772,12 +777,12 @@ class PreRenderer(ICircuitRenderer):
 
             for out_mode, herald_out_mode in output_heralds.items():
                 self._herald_range[1] = max(
-                        self._herald_range[1],
-                        self._chart[lines[0] + out_mode] + w)
+                    self._herald_range[1],
+                    self._chart[lines[0] + out_mode] + w)
             for in_mode, herald_in_mode in input_heralds.items():
                 self._herald_range[0] = min(
-                        self._herald_range[0],
-                        self._chart[lines[0] + in_mode])
+                    self._herald_range[0],
+                    self._chart[lines[0] + in_mode])
 
     def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
@@ -794,12 +799,11 @@ class PreRenderer(ICircuitRenderer):
             self._chart[i] += w
 
 
-
 def create_renderer(
-        n: int,  # number of modes
-        output_format: Format = Format.TEXT,  # rendering method
-        skin: ASkin = None,  # skin (unused in text rendering)
-        **opts
+    n: int,  # number of modes
+    output_format: Format = Format.TEXT,  # rendering method
+    skin: ASkin = None,  # skin (unused in text rendering)
+    **opts
 ) -> ICircuitRenderer:
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
