@@ -593,7 +593,8 @@ class CanvasRenderer(ICircuitRenderer):
     def set_herald_info(self, info):
         self._herald_info = info
 
-    def _update_mode_style(self, lines, circuit, w: int, subc_mode: bool = False):
+    def _update_mode_style(
+            self, lines, circuit, w: int, subc_mode: bool = False):
         if not isinstance(circuit, PERM) and not subc_mode:
             input_heralds = {}
             output_heralds = {}
@@ -634,7 +635,8 @@ class CanvasRenderer(ICircuitRenderer):
     def append_subcircuit(self, lines, circuit, content):
         w = self._skin.style_subcircuit['width']
         if w:
-            self._add_shape(lines, circuit, content, w, self._skin.subcircuit_shape)
+            self._add_shape(
+                lines, circuit, content, w, self._skin.subcircuit_shape)
             self._update_mode_style(lines, circuit, w, True)
             for i in range(lines[0], lines[-1] + 1):
                 self._chart[i] += w
