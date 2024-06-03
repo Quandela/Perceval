@@ -77,6 +77,18 @@ class AGateConverter(ABC):
             self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))
             self._input_list[i * 2] = 1
 
+    def _configure_processor_from_nqubits(self, n_qbits, **kwargs):
+        """
+        Sets port Encoding and default input state for the Processor using n_quibts as input
+        """
+        qname = kwargs.get("qname", "Q")  # Default value, set any name provided by the gate circuit
+        n_moi = n_qbits * 2  # number of modes of interest = 2 * number of qbits
+        self._input_list = [0] * n_moi
+        self._converted_processor = Processor(self._backend_name, n_moi, self._source)
+        for i in range(n_qbits):
+            self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))
+            self._input_list[i * 2] = 1
+
     def apply_input_state(self):
         default_input_state = BasicState(self._input_list)
         self._converted_processor.with_input(default_input_state)
