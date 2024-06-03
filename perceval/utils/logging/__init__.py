@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import sys
+from exqalibur import logging as xq_log
 
 from .config import LoggerConfig
 from .loggers import ExqaliburLogger, PythonLogger
@@ -35,6 +36,8 @@ from .loggers import ExqaliburLogger, PythonLogger
 LOGGER = ExqaliburLogger()
 LOGGER.initialize()
 
+level = xq_log.level
+channel = xq_log.channel
 
 def _my_excepthook(excType, excValue, this_traceback):
     # only works for the main thread
