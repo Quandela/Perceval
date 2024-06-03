@@ -434,3 +434,35 @@ class PBS(Unitary):
     # noinspection PyMethodMayBeStatic
     def describe(self, _=None):
         return "PBS()"
+
+
+class IDENTITY(Unitary):
+    """Identity. This element is not rendered in a visual representation of
+    a circuit."""
+    DEFAULT_NAME = "I"
+
+    def __init__(self, num_modes):
+        assert isinstance(num_modes, int), "identity Operator needs list parameter"
+        self.num_modes = num_modes
+        u = Matrix.eye(num_modes, use_symbolic=False)
+        super().__init__(U=u)
+
+    def describe(self, _=None):
+        return f"I{ self.num_modes }"
+
+    def definition(self):
+        return self.U
+
+    def apply(self, r, sv):
+        return sv
+
+    def inverse(self, v=False, h=False):
+        pass
+
+
+class BARRIER(IDENTITY):
+    """Barrier. At the simulation level, it behaves like IDENTITY, but
+    is rendered with a specific symbol."""
+
+    def __init__(self, num_modes):
+        super().__init__(num_modes)

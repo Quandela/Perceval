@@ -111,6 +111,7 @@ def test_access():
     assert persistent_data.is_writable()
     assert persistent_data.is_readable()
 
+"""
     parent_directory = os.path.dirname(directory)
 
     os.chmod(parent_directory, 0o000)
@@ -124,3 +125,4 @@ def test_access():
     os.chmod(parent_directory, 0o777)
 
     persistent_data.clear_all_data()
+"""

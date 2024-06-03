@@ -315,6 +315,28 @@ def test_visualization_ucircuit(capfd):
 """.strip()
 
 
+def test_visualization_barrier(capfd):
+    u = comp.Unitary(U=Matrix.random_unitary(2), name="U")
+    c = Circuit(4) // u @ (2, u) // comp.IDENTITY(4) // (1, u) @ u // comp.IDENTITY(4)
+    pdisplay(c, output_format=Format.TEXT)
+    out, err = capfd.readouterr()
+    print(out)
+    assert out.strip() == """
+    ╭─────╮  ║                  ║  ╭─────╮
+0:──┤U    ├──║──────────────────║──┤U    ├──:0 (depth 2)
+    │     │  ║                  ║  │     │
+    │     │  ║         ╭─────╮  ║  │     │
+1:──┤     ├──║─────────┤U    ├──║──┤     ├──:1 (depth 3)
+    ╰─────╯  ║         │     │  ║  ╰─────╯
+             ║  ╭─────╮│     │  ║         
+2:───────────║──┤U    ├┤     ├──║───────────:2 (depth 2)
+             ║  │     │╰─────╯  ║         
+             ║  │     │         ║         
+3:───────────║──┤     ├─────────║───────────:3 (depth 1)
+             ║  ╰─────╯         ║         
+""".strip()
+
+
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 

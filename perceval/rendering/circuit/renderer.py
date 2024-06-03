@@ -35,7 +35,7 @@ from typing import Any, Tuple
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas, LatexCanvas
-from perceval.components import ACircuit, Circuit, PortLocation, PERM, Herald
+from perceval.components import ACircuit, Circuit, PortLocation, PERM, IDENTITY, BARRIER, Herald
 from perceval.utils.format import format_parameters
 
 
@@ -68,6 +68,15 @@ class ICircuitRenderer(ABC):
             self._in_port_pos.append(PortPos(0, i))
         for i in range(nsize):
             self._out_port_pos.append(PortPos(0, i))
+
+        # A dictionary mapping a subblock to information pertaining to its
+        # rendering. This is written by the pre-rendering pass, and read by
+        # the main rendering pass.
+        self._subblock_info = {}
+
+        # Custom settings for the subblock being rendered.
+        # They are loaded before open_subblock is invoked.
+        self._current_subblock_info = {}
 
     def set_mode_style(self, index, style):
         self._mode_style[index] = style
@@ -102,9 +111,14 @@ class ICircuitRenderer(ABC):
                     shiftr = [p+shift for p in r]
                     if c.is_composite() and c._components:
                         if recursive:
+                            self._current_subblock_info = self._subblock_info.setdefault(c, {})
                             self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
-                            self.render_circuit(c, shift=shiftr[0], map_param_kid=map_param_kid,
-                                                precision=precision, nsimplify=nsimplify)
+                            self.render_circuit(
+                                    c,
+                                    shift=shiftr[0],
+                                    map_param_kid=map_param_kid,
+                                    precision=precision,
+                                    nsimplify=nsimplify)
                             self.close_subblock(shiftr)
                         else:
                             component_vars = c.get_variables(map_param_kid)
@@ -114,7 +128,6 @@ class ICircuitRenderer(ABC):
                         component_vars = c.get_variables(map_param_kid)
                         description = format_parameters(component_vars, precision, nsimplify)
                         self.append_circuit(shiftr, c, description, pos=pos)
-
         self.extend_pos(0, circuit.m - 1)
 
     @abstractmethod
@@ -197,12 +210,22 @@ class ICircuitRenderer(ABC):
         Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
         """
 
-    def set_out_herald_info(self, info):
+    def set_herald_info(self, info):
         """
-        Handles a very specific need for canvas rendering: moving out heralds as left as possible in the displayed
-        processor. See usage in CanvasRenderer
+        Provides the renderer with a pre-computed dict mapping a component to
+        information about which heralds are attached to its input and output
+        ports. This is used to correctly position the Heralds within the
+        circuit box, and not with the input and output ports.
         """
         pass
+
+    @property
+    def subblock_info(self) -> dict:
+        """
+        A dictionary mapping a subblock to a dictionary of settings relevant
+        to its rendering.
+        """
+        return self._subblock_info
 
 
 class TextRenderer(ICircuitRenderer):
@@ -280,7 +303,20 @@ class TextRenderer(ICircuitRenderer):
         # opening the box
         start = lines[0]
         end = lines[-1]
-        self.extend_pos(start, end, pos=pos)
+
+        self.extend_pos(start, end)
+
+        if isinstance(circuit, BARRIER):
+            for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
+                if k % self._hc == 2:
+                    self._h[k] += "──║──"
+                else:
+                    self._h[k] += "  ║  "
+            self.extend_pos(start, end, pos=pos)
+            return
+        elif isinstance(circuit, IDENTITY):
+            return
+
         # put variables on the right number of lines
         content = circuit.name + (content and "\n"+content or "")
         lcontents = content.split("\n")
@@ -380,27 +416,37 @@ class TextRenderer(ICircuitRenderer):
 
 
 class CanvasRenderer(ICircuitRenderer):
-    affix_port_size = 15
-    affix_all_size = 25
+
+    AFFIX_PORT_SIZE = 15
+    AFFIX_ALL_SIZE = 25
+    SCALE = 50
 
     def __init__(self, nsize, canvas: Canvas, skin):
         super().__init__(nsize)
         # first position available for row n
         self._chart = [0] * (nsize+1)
+
         self._canvas = canvas
         self._skin = skin
-        self._canvas.set_offset((0, 0),
-                                CanvasRenderer.affix_all_size, 50 * (nsize + 1))
+        self._canvas.set_offset(
+            (0, 0),
+            CanvasRenderer.AFFIX_ALL_SIZE,
+            CanvasRenderer.SCALE * (nsize + 1))
         self._n_font_size = min(10, max(6, self._nsize+1))
 
-        self._out_herald_info = None
+        self._herald_info = None
 
     def open(self):
         for k in range(self._nsize):
             mode_style = self._skin.style[self._mode_style[k]]
             if mode_style['stroke']:
-                self._canvas.add_mpath(["M", CanvasRenderer.affix_all_size-CanvasRenderer.affix_port_size, 25 + 50 * k,
-                                        "l", CanvasRenderer.affix_port_size, 0], **mode_style)
+                self._canvas.add_mpath([
+                    "M",
+                    CanvasRenderer.AFFIX_ALL_SIZE - \
+                        CanvasRenderer.AFFIX_PORT_SIZE,
+                    CanvasRenderer.SCALE / 2 + CanvasRenderer.SCALE * k,
+                    "l",
+                    CanvasRenderer.AFFIX_PORT_SIZE, 0], **mode_style)
 
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
         return self._skin.get_size(circuit, recursive)
@@ -408,46 +454,98 @@ class CanvasRenderer(ICircuitRenderer):
     def add_mode_index(self):
         for k in range(self._nsize):
             if self._mode_style[k] != ModeStyle.HERALD:
-                self._canvas.add_text((CanvasRenderer.affix_all_size, 28 + 50 * k), str(k), self._n_font_size, ta="right")
+                self._canvas.add_text(
+                    (CanvasRenderer.AFFIX_ALL_SIZE,
+                     CanvasRenderer.SCALE / 2 + 3 + CanvasRenderer.SCALE * k),
+                    str(k),
+                    self._n_font_size,
+                    ta="right")
 
-        self._canvas.set_offset((0, 0), CanvasRenderer.affix_all_size, 50 * (self._nsize + 1))
+        self._canvas.set_offset(
+            (0, 0),
+            CanvasRenderer.AFFIX_ALL_SIZE,
+            CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
             if self._mode_style[k] != ModeStyle.HERALD:
-                self._canvas.add_text((0, 28 + 50 * k), str(k), self._n_font_size, ta="left")
+                self._canvas.add_text((
+                        0,
+                        CanvasRenderer.SCALE / 2 + 3 + \
+                            CanvasRenderer.SCALE * k),
+                    str(k),
+                    self._n_font_size,
+                    ta="left")
 
     def add_out_port(self, n_mode, port, **opts):
         max_pos = max(self._chart[0:self._nsize])
         h_pos = self._out_port_pos[n_mode].x
         v_pos = self._out_port_pos[n_mode].y
-        self._canvas.set_offset((CanvasRenderer.affix_all_size + 50*(h_pos or max_pos), 50*v_pos),
-                                CanvasRenderer.affix_all_size, 50)
+        self._canvas.set_offset((
+                CanvasRenderer.AFFIX_ALL_SIZE + \
+                    CanvasRenderer.SCALE * (h_pos or max_pos),
+                CanvasRenderer.SCALE * v_pos),
+            CanvasRenderer.AFFIX_ALL_SIZE,
+            CanvasRenderer.SCALE)
         opts['starting_mode'] = n_mode
-        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.OUTPUT), port, None, None, **opts)
+        self._canvas.add_shape(
+            self._skin.get_shape(
+                port, PortLocation.OUTPUT), port, None, None, **opts)
 
     def add_in_port(self, n_mode, port, **opts):
-        h_pos = self._in_port_pos[n_mode].x*50
-        v_pos = self._in_port_pos[n_mode].y*50
-        self._canvas.set_offset((h_pos, v_pos), CanvasRenderer.affix_all_size, 50)
+        h_pos = self._in_port_pos[n_mode].x * CanvasRenderer.SCALE
+        v_pos = self._in_port_pos[n_mode].y * CanvasRenderer.SCALE
+        self._canvas.set_offset(
+            (h_pos, v_pos),
+            CanvasRenderer.AFFIX_ALL_SIZE,
+            CanvasRenderer.SCALE)
         opts['starting_mode'] = n_mode
-        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.INPUT), port, None, None, **opts)
+        self._canvas.add_shape(
+            self._skin.get_shape(port, PortLocation.INPUT),
+            port,
+            None,
+            None,
+            **opts)
 
     def open_subblock(self, lines, name, size, color=None):
+        # Get recommended margins for this block
+        margins = self._current_subblock_info.get('margins', (0, 0))
+
         start = lines[0]
         end = lines[-1]
-
-        self.extend_pos(start, end)
-        area = (self.max_pos(start, end), start, size[0], size[1])
-        self._canvas.set_offset((CanvasRenderer.affix_all_size + 50 * area[0], 50 * area[1]),
-                                50 * area[2], 50 * area[3])
+        subblock_start = self.max_pos(start, end)
+        area = (
+            subblock_start,
+            start,
+            size[0] + margins[0] + margins[1],
+            size[1])
+        self._canvas.set_offset((
+                CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * area[0],
+                CanvasRenderer.SCALE * area[1]),
+            CanvasRenderer.SCALE * area[2],
+            CanvasRenderer.SCALE * area[3])
         if color is None:
             color = "lightblue"
-        self._canvas.add_rect((2, 2), 50 * area[2] - 4, 50 * area[3] - 4, fill=color, stroke_dasharray="1,2")
-        self._canvas.add_text((4, 50 * (end - start + 1) + 5), name.upper(), 8)
+        self._canvas.add_rect(
+            (2, 2),
+            CanvasRenderer.SCALE * area[2] - 4,
+            CanvasRenderer.SCALE * area[3] - 4,
+            fill=color,
+            stroke_dasharray="1,2")
+        self._canvas.set_background_color(color)
+        self._canvas.add_text(
+            (4, CanvasRenderer.SCALE * (end - start + 1) + 5),
+            name.upper(), 8)
+        # Extend lines on the left side
+        if margins[0]:
+            self.extend_pos(start, end, self.max_pos(start, end) + margins[0])
+        self._margins = margins
 
     def close_subblock(self, lines):
         start = lines[0]
         end = lines[-1]
-        self.extend_pos(start, end)
+        subblock_end = self.max_pos(start, end)
+        # Extend lines on the right side
+        right_margins = self._current_subblock_info.get('margins', (0, 0))[1]
+        self.extend_pos(start, end, subblock_end + right_margins)
 
     def max_pos(self, start, end, _=None):
         return max(self._chart[start:end+1])
@@ -459,11 +557,20 @@ class CanvasRenderer(ICircuitRenderer):
             maxpos = pos
         for p in range(start, end+1):
             if self._chart[p] != maxpos:
-                self._canvas.set_offset((CanvasRenderer.affix_all_size+self._chart[p]*50, p*50),
-                                        (maxpos-self._chart[p])*50, 50)
+                self._canvas.set_offset((
+                            CanvasRenderer.AFFIX_ALL_SIZE + self._chart[p] * \
+                                CanvasRenderer.SCALE,
+                            p * CanvasRenderer.SCALE),
+                        (maxpos-self._chart[p]) * CanvasRenderer.SCALE,
+                        CanvasRenderer.SCALE)
                 style = self._skin.style[self._mode_style[p]]
                 if style['stroke']:
-                    self._canvas.add_mline([0, 25, (maxpos-self._chart[p])*50, 25], **style)
+                    self._canvas.add_mline(
+                        [0,
+                        CanvasRenderer.SCALE / 2,
+                        (maxpos-self._chart[p]) * CanvasRenderer.SCALE,
+                            CanvasRenderer.SCALE / 2],
+                        **style)
             self._chart[p] = maxpos
 
     def _add_shape(self, lines, circuit, content, w, shape_fn=None, pos=None):
@@ -473,34 +580,27 @@ class CanvasRenderer(ICircuitRenderer):
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
         max_pos = self.max_pos(start, end)
-        self._canvas.set_offset((CanvasRenderer.affix_all_size + 50 * max_pos, 50 * start), 50 * w,
-                                50 * (end - start + 1))
-
+        self._canvas.set_offset((
+                CanvasRenderer.AFFIX_ALL_SIZE + \
+                    CanvasRenderer.SCALE * max_pos,
+                CanvasRenderer.SCALE * start),
+            CanvasRenderer.SCALE * w,
+            CanvasRenderer.SCALE * (end - start + 1))
         modes = self._mode_style[start:(end + 1)]
         self._canvas.add_shape(shape_fn, circuit, content, modes)
 
-    def set_out_herald_info(self, hinf):
-        self._out_herald_info = hinf
-
-    def _search_component_in_out_herald_info(self, c):
-        if self._out_herald_info is None:
-            return None, None
-        for k, v in self._out_herald_info.items():
-            if c is v[1]:
-                return k, v[0]
-        return None, None
+    def set_herald_info(self, info):
+        self._herald_info = info
 
     def _update_mode_style(self, lines, circuit, w: int, subc_mode: bool = False):
         # BEGIN Mode tracking + herald positionning algo
         m0 = lines[0]
         for i in lines:
-
             ppos = None
             for p in self._in_port_pos:
                 if p.y == i and p.fixed is False:
                     ppos = p
                     break
-
             if ppos is not None:
                 if not isinstance(circuit, PERM):
                     ppos.x = self._chart[i]
@@ -515,13 +615,25 @@ class CanvasRenderer(ICircuitRenderer):
                     ppos.y = circuit.perm_vector[ppos.y - lines[0]] + lines[0]
                     ppos.fixed = None
 
-        # Out heralds
         if not isinstance(circuit, PERM) and not subc_mode:
-            herald_out_mode, component_out_mode = self._search_component_in_out_herald_info(circuit)
-            if herald_out_mode is not None:
-                self._mode_style[lines[0] + component_out_mode] = ModeStyle.HERALD
-                self._out_port_pos[herald_out_mode].y = lines[0] + component_out_mode
-                self._out_port_pos[herald_out_mode].x = self._chart[lines[0] + component_out_mode] + w
+            # Position input and output heralds
+            input_heralds = {}
+            output_heralds = {}
+
+            herald_info = self._herald_info if self._herald_info else {}
+            if circuit in herald_info:
+                output_heralds = herald_info[circuit].output_heralds
+                input_heralds = herald_info[circuit].input_heralds
+
+            for out_mode, herald_out_mode in output_heralds.items():
+                self._mode_style[lines[0] + out_mode] = ModeStyle.HERALD
+                self._out_port_pos[herald_out_mode].y = lines[0] + out_mode
+                self._out_port_pos[herald_out_mode].x = \
+                    self._chart[lines[0] + out_mode] + w
+            for in_mode, herald_in_mode in input_heralds.items():
+                self._in_port_pos[herald_in_mode].y = lines[0] + in_mode
+                self._in_port_pos[herald_in_mode].x = \
+                    self._chart[lines[0] + in_mode]
 
         if isinstance(circuit, PERM):
             out_modes = copy.copy(self._mode_style)
@@ -533,6 +645,139 @@ class CanvasRenderer(ICircuitRenderer):
             if p.fixed is None:
                 p.fixed = False
         # END Mode tracking + herald positionning algo
+
+    def append_circuit(self, lines, circuit, content, pos=None):
+        w = self._skin.get_width(circuit)
+        if w:
+            self._add_shape(lines, circuit, content, w, pos=pos)
+            self._update_mode_style(lines, circuit, w)
+            for i in range(lines[0], lines[-1] + 1):
+                self._chart[i] += w
+
+    def append_subcircuit(self, lines, circuit, content):
+        w = self._skin.style_subcircuit['width']
+        if w:
+            self._add_shape(lines, circuit, content, w, self._skin.subcircuit_shape)
+            self._update_mode_style(lines, circuit, w, True)
+            for i in range(lines[0], lines[-1] + 1):
+                self._chart[i] += w
+
+    def close(self):
+        self.extend_pos(0, self._nsize - 1)
+        max_pos = self.max_pos(0, self._nsize-1)
+        self._canvas.set_offset(
+            (CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * max_pos, 0),
+            CanvasRenderer.AFFIX_ALL_SIZE,
+            CanvasRenderer.SCALE * (self._nsize+1))
+        for k in range(self._nsize):
+            mode_style = self._skin.style[self._mode_style[k]]
+            if mode_style['stroke']:
+                self._canvas.add_mpath([
+                    "M",
+                    0,
+                    CanvasRenderer.SCALE / 2 + CanvasRenderer.SCALE * k,
+                    "l",
+                    CanvasRenderer.AFFIX_PORT_SIZE, 0],
+                    **mode_style)
+
+    def draw(self):
+        return self._canvas.draw()
+
+
+
+class PreRenderer(ICircuitRenderer):
+    """
+    This performs a dummy rendering pass to keep track of potential
+    layout issues to be fixed in the main rendering.
+
+    At the moment it is keeping track of the recommended margins
+    for each subblock.
+    """
+    def __init__(self, nsize, skin):
+        super().__init__(nsize)
+        self._chart = [0] * (nsize + 1)
+        self._herald_info = None
+        self._skin = skin
+
+        # All these are relative to the subblock currently being rendered
+        self._herald_range = [0, 0]
+        self._subblock_start = 0
+
+    def open(self):
+        pass
+
+    def draw(self):
+        pass
+
+    def close(self):
+        pass
+
+    def add_mode_index(self) -> None:
+        pass
+
+    def add_out_port(self, m: int, content: str, **opts) -> None:
+        pass
+
+    def add_in_port(self, m: int, content: str, **opts) -> None:
+        pass
+
+    def set_herald_info(self, info):
+        self._herald_info = info
+
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
+        return None
+
+    def open_subblock(self, lines, name, size, color=None):
+        start = lines[0]
+        end = lines[-1]
+        self._subblock_start = self.max_pos(start, end)
+        self._herald_range = [1 << 32, -1]
+
+    def close_subblock(self, lines):
+        start = lines[0]
+        end = lines[-1]
+        subblock_end = self.max_pos(start, end)
+        # Add the margin requirements for this subblock
+        self._current_subblock_info['margins'] = (
+            int(self._herald_range[0] == self._subblock_start),
+            int(self._herald_range[1] == subblock_end))
+
+    def max_pos(self, start, end, _=None):
+        return max(self._chart[start:end + 1])
+
+    def extend_pos(self, start, end, pos=None):
+        if pos is None:
+            maxpos = self.max_pos(start, end)
+        else:
+            maxpos = pos
+        for p in range(start, end+1):
+            self._chart[p] = maxpos
+
+    def _add_shape(self, lines, circuit, content, w, shape_fn=None, pos=None):
+        start = lines[0]
+        end = lines[-1]
+        self.extend_pos(start, end, pos=pos)
+
+    def set_herald_info(self, info):
+        self._herald_info = info
+
+    def _update_mode_style(self, lines, circuit, w: int, subc_mode: bool = False):
+        if not isinstance(circuit, PERM) and not subc_mode:
+            input_heralds = {}
+            output_heralds = {}
+            herald_info = self._herald_info if self._herald_info else {}
+            if circuit in herald_info:
+                output_heralds = herald_info[circuit].output_heralds
+                input_heralds = herald_info[circuit].input_heralds
+
+            for out_mode, herald_out_mode in output_heralds.items():
+                self._herald_range[1] = max(
+                        self._herald_range[1],
+                        self._chart[lines[0] + out_mode] + w)
+            for in_mode, herald_in_mode in input_heralds.items():
+                self._herald_range[0] = min(
+                        self._herald_range[0],
+                        self._chart[lines[0] + in_mode])
 
     def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
@@ -548,19 +793,6 @@ class CanvasRenderer(ICircuitRenderer):
         for i in range(lines[0], lines[-1] + 1):
             self._chart[i] += w
 
-    def close(self):
-        self.extend_pos(0, self._nsize - 1)
-        max_pos = self.max_pos(0, self._nsize-1)
-        self._canvas.set_offset((CanvasRenderer.affix_all_size+50*max_pos, 0),
-                                CanvasRenderer.affix_all_size, 50*(self._nsize+1))
-        for k in range(self._nsize):
-            mode_style = self._skin.style[self._mode_style[k]]
-            if mode_style['stroke']:
-                self._canvas.add_mpath(["M", 0, 25 + 50 * k,
-                                        "l", CanvasRenderer.affix_port_size, 0], **mode_style)
-
-    def draw(self):
-        return self._canvas.draw()
 
 
 def create_renderer(
@@ -572,10 +804,14 @@ def create_renderer(
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
     A skin object is needed for circuit graphic rendering.
+
+    This returns a (renderer, pre_renderer) tuple. It is recommended to
+    invoke the pre-renderer on the circuit to correctly pre-compute
+    additional position information that cannot be guessed in a single pass.
     """
     if output_format == Format.TEXT:
-        return TextRenderer(n)
-    
+        return TextRenderer(n), None
+
     assert skin is not None, "A skin must be selected for circuit graphical rendering"
     if output_format == Format.HTML:
         canvas = SvgCanvas(**opts)
@@ -583,4 +819,4 @@ def create_renderer(
         canvas = LatexCanvas(**opts)
     else:
         canvas = MplotCanvas(**opts)
-    return CanvasRenderer(n, canvas, skin)
+    return CanvasRenderer(n, canvas, skin), PreRenderer(n, skin)
