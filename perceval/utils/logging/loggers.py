@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from os import path
 import warnings
 import traceback
 import logging as py_log
@@ -107,7 +107,7 @@ class ExqaliburLogger(ILogger):
                     exq_log.channel.__members__[channel])
 
     def get_log_file_path(self):
-        return PersistentData().get_full_path('log')
+        return path.join(PersistentData().directory, "logs", "perceval.log")
 
     def enable_file(self):
         print(f"starting to write logs in {self.get_log_file_path()}")

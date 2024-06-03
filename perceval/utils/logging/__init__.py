@@ -28,7 +28,6 @@
 # SOFTWARE.
 import sys
 
-from exqalibur import logging
 from .config import LoggerConfig
 from .loggers import ExqaliburLogger, PythonLogger
 

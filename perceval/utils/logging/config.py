@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 import warnings
-import logging as python_logging
 
 from exqalibur import logging as exqalibur_logging
 from ..persistent_data import PersistentData
@@ -57,7 +56,7 @@ class LoggerConfig(dict):
             self._init_channel(name)
         self._init_channel(exqalibur_logging.channel.user, exqalibur_logging.level.warn)
 
-    def _load_from_persistent_data(self) -> str:
+    def _load_from_persistent_data(self):
         persistent_data = PersistentData()
         config = persistent_data.load_config()
         try:
