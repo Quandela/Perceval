@@ -43,12 +43,6 @@ class PortPos:
     def __init__(self, x, y, fixed=True):
         self.x = x
         self.y = y
-        self.fixed = fixed
-        self._initial_mode = y
-
-    @property
-    def initial_mode(self):
-        return self._initial_mode
 
 
 class ICircuitRenderer(ABC):
@@ -80,8 +74,6 @@ class ICircuitRenderer(ABC):
 
     def set_mode_style(self, index, style):
         self._mode_style[index] = style
-        if style == ModeStyle.HERALD:
-            self._in_port_pos[index].fixed = False
 
     def render_circuit(self,
                        circuit: ACircuit,
@@ -602,30 +594,7 @@ class CanvasRenderer(ICircuitRenderer):
         self._herald_info = info
 
     def _update_mode_style(self, lines, circuit, w: int, subc_mode: bool = False):
-        # BEGIN Mode tracking + herald positionning algo
-        m0 = lines[0]
-        for i in lines:
-            ppos = None
-            for p in self._in_port_pos:
-                if p.y == i and p.fixed is False:
-                    ppos = p
-                    break
-            if ppos is not None:
-                if not isinstance(circuit, PERM):
-                    ppos.x = self._chart[i]
-                    ppos.fixed = True
-                    if subc_mode:
-                        self._out_port_pos[ppos.initial_mode].x = ppos.x + w
-                        self._out_port_pos[ppos.initial_mode].y = ppos.y
-                    else:
-                        self._mode_style[i] = ModeStyle.PHOTONIC
-
-                else:
-                    ppos.y = circuit.perm_vector[ppos.y - lines[0]] + lines[0]
-                    ppos.fixed = None
-
         if not isinstance(circuit, PERM) and not subc_mode:
-            # Position input and output heralds
             input_heralds = {}
             output_heralds = {}
 
@@ -634,26 +603,25 @@ class CanvasRenderer(ICircuitRenderer):
                 output_heralds = herald_info[circuit].output_heralds
                 input_heralds = herald_info[circuit].input_heralds
 
-            for out_mode, herald_out_mode in output_heralds.items():
-                self._mode_style[lines[0] + out_mode] = ModeStyle.HERALD
-                self._out_port_pos[herald_out_mode].y = lines[0] + out_mode
-                self._out_port_pos[herald_out_mode].x = \
-                    self._chart[lines[0] + out_mode] + w
+            # Position input and output heralds
             for in_mode, herald_in_mode in input_heralds.items():
                 self._in_port_pos[herald_in_mode].y = lines[0] + in_mode
                 self._in_port_pos[herald_in_mode].x = \
                     self._chart[lines[0] + in_mode]
-
+                # Start drawing this mode in "photonic" style
+                self._mode_style[lines[0] + in_mode] = ModeStyle.PHOTONIC
+            for out_mode, herald_out_mode in output_heralds.items():
+                self._out_port_pos[herald_out_mode].y = lines[0] + out_mode
+                self._out_port_pos[herald_out_mode].x = \
+                    self._chart[lines[0] + out_mode] + w
+                # Stop drawing this mode (set it in "herald" style)
+                self._mode_style[lines[0] + out_mode] = ModeStyle.HERALD
         if isinstance(circuit, PERM):
+            m0 = lines[0]
             out_modes = copy.copy(self._mode_style)
             for m_input, m_output in enumerate(circuit.perm_vector):
-                out_modes[m_output + m0] = self._mode_style[m_input + m0]
+                out_modes[m_output + lines[0]] = self._mode_style[m_input + m0]
             self._mode_style = out_modes
-
-        for p in self._in_port_pos:
-            if p.fixed is None:
-                p.fixed = False
-        # END Mode tracking + herald positionning algo
 
     def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
