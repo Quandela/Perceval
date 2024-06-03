@@ -26,25 +26,33 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import sys
+from exqalibur import logging as xq_log
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator
-from .logical_state import LogicalState, generate_all_logical_states
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, postselect_independent, post_select_distribution, post_select_statevector
-from ._random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
-from .persistent_data import PersistentData
-from .metadata import PMetadata
-from .density_matrix import DensityMatrix
-from .noise_model import NoiseModel
-from .logging import LOGGER as logger, use_perceval_logger, use_python_logger, LoggerConfig
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+from .config import LoggerConfig
+from .loggers import ExqaliburLogger, PythonLogger
+
+
+LOGGER = ExqaliburLogger()
+LOGGER.initialize()
+
+level = xq_log.level
+channel = xq_log.channel
+
+
+def _my_excepthook(excType, excValue, this_traceback):
+    # only works for the main thread
+    LOGGER.error("Logging an uncaught exception", channel=channel.general,
+                 exc_info=(excType, excValue, this_traceback))
+
+
+def use_python_logger():
+    global LOGGER
+    LOGGER = PythonLogger()
+    sys.excepthook = _my_excepthook
+
+
+def use_perceval_logger():
+    global LOGGER
+    LOGGER = ExqaliburLogger()
+    sys.excepthook = _my_excepthook
