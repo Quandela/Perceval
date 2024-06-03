@@ -39,9 +39,10 @@ LOGGER.initialize()
 level = xq_log.level
 channel = xq_log.channel
 
+
 def _my_excepthook(excType, excValue, this_traceback):
     # only works for the main thread
-    LOGGER.error("Logging an uncaught exception", channel="general",
+    LOGGER.error("Logging an uncaught exception", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
 
