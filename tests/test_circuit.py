@@ -317,7 +317,7 @@ def test_visualization_ucircuit(capfd):
 
 def test_visualization_barrier(capfd):
     u = comp.Unitary(U=Matrix.random_unitary(2), name="U")
-    c = Circuit(4) // u @ (2, u) // comp.IDENTITY(4) // (1, u) @ u // comp.IDENTITY(4)
+    c = Circuit(4) // u @ (2, u) // (1, u) @ u
     pdisplay(c, output_format=Format.TEXT)
     out, err = capfd.readouterr()
     assert out.strip() == """

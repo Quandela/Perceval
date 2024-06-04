@@ -436,9 +436,8 @@ class PBS(Unitary):
         return "PBS()"
 
 
-class IDENTITY(Unitary):
-    """Identity. This element is not rendered in a visual representation of
-    a circuit."""
+class Barrier(Unitary):
+    """Behaves like an identity unitary, visually represented as a barrier."""
     DEFAULT_NAME = "I"
 
     def __init__(self, num_modes):
@@ -460,9 +459,3 @@ class IDENTITY(Unitary):
         pass
 
 
-class BARRIER(IDENTITY):
-    """Barrier. At the simulation level, it behaves like IDENTITY, but
-    is rendered with a specific symbol."""
-
-    def __init__(self, num_modes):
-        super().__init__(num_modes)

@@ -36,7 +36,7 @@ from .source import Source
 from ._pauli import PauliType, get_preparation_circuit, get_measurement_circuit, get_pauli_gate
 
 from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, IDENTITY, BARRIER
+from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, Barrier
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException

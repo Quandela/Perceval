@@ -434,15 +434,15 @@ class Circuit(ACircuit):
         r"""Add a barrier to a circuit
 
         The barrier is a visual marker to break down a circuit into sections.
-        Behind the scenes, it is implemented as an BARRIER unitary operating
+        Behind the scenes, it is implemented as a Barrier unitary operating
         on all modes.
 
         At the moment, the barrier behaves exactly like a component with a
         unitary equal to identity.
         """
         # Hack to prevent circular definitions
-        from perceval.components.unitary_components import BARRIER
-        return self.add(0, BARRIER(self._m))
+        from perceval.components.unitary_components import Barrier
+        return self.add(0, Barrier(self._m))
 
     def __imatmul__(self, component: Union[ACircuit, Tuple[int, ACircuit]]) -> Circuit:
         r"""Add a barrier and a `component` to the current circuit

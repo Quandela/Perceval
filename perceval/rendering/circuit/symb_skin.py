@@ -57,11 +57,7 @@ class SymbSkin(ASkin):
     def get_width(self, c) -> int:
         return 2
 
-    @dispatch((cp.IDENTITY))
-    def get_width(self, c) -> int:
-        return 0
-
-    @dispatch((cp.BARRIER))
+    @dispatch((cp.Barrier))
     def get_width(self, c) -> int:
         return 1
 
@@ -118,7 +114,7 @@ class SymbSkin(ASkin):
     def get_shape(self, c):
         return self.pr_shape
 
-    @dispatch(cp.BARRIER)
+    @dispatch(cp.Barrier)
     def get_shape(self, c):
         return self.barrier_shape
 

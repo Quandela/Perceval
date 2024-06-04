@@ -35,7 +35,7 @@ from typing import Any, Tuple
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas, LatexCanvas
-from perceval.components import ACircuit, Circuit, PortLocation, PERM, IDENTITY, BARRIER, Herald
+from perceval.components import ACircuit, Circuit, PortLocation, PERM, Barrier, Herald
 from perceval.utils.format import format_parameters
 
 
@@ -298,15 +298,13 @@ class TextRenderer(ICircuitRenderer):
 
         self.extend_pos(start, end)
 
-        if isinstance(circuit, BARRIER):
+        if isinstance(circuit, Barrier):
             for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
                 if k % self._hc == 2:
                     self._h[k] += "──║──"
                 else:
                     self._h[k] += "  ║  "
             self.extend_pos(start, end, pos=pos)
-            return
-        elif isinstance(circuit, IDENTITY):
             return
 
         # put variables on the right number of lines

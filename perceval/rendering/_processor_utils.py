@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import PERM, IDENTITY, AProcessor
+from perceval.components import PERM, AProcessor, Barrier
 
 
 class ComponentHeraldInfo:
@@ -74,10 +74,9 @@ def collect_herald_info(processor: AProcessor):
                         mode = component.perm_vector[mode - m0] + m0
                     else:
                         mode = component.perm_vector.index(mode - m0) + m0
-                elif type(component) is IDENTITY:
-                    # Heralds can be moved across identity elements. However
-                    # They are not moved across barriers.
-                    pass
+                # Can heralds cross barriers? For now, no.
+                # elif type(component) is Barrier:
+                # pass
                 else:
                     h_info = herald_info.setdefault(
                         component, ComponentHeraldInfo())

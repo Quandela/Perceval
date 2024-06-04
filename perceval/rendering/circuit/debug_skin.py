@@ -63,10 +63,6 @@ class DebugSkin(ASkin):
     def get_width(self, c) -> int:
         return 1
 
-    @dispatch((cp.IDENTITY))
-    def get_width(self, c) -> int:
-        return 0
-
     @dispatch(AComponent)
     def get_shape(self, c):
         return self.default_shape
@@ -103,7 +99,7 @@ class DebugSkin(ASkin):
     def get_shape(self, c):
         return self.pr_shape
 
-    @dispatch(cp.BARRIER)
+    @dispatch(cp.Barrier)
     def get_shape(self, c):
         return self.barrier_shape
 
