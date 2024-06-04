@@ -61,6 +61,9 @@ _CQASM_1_QUBIT_GATES = {
 
     "Z": Circuit(2, name="Z") // (1, PS(-np.pi)),
     "Rz": lambda theta: Circuit(2, name="Rz({theta})") // (0, PS(-theta)) // (1, PS(theta)),
+
+    # For v1 compatibility
+    "I": Circuit(2, name="H"),
 }
 
 _CQASM_2_QUBIT_GATES = {
@@ -146,13 +149,12 @@ class CQASMConverter(AGateConverter):
             parameter = statement.operands[2].value
 
         num_controls = len(controls)
-        # print(gate_name, controls, targets)
         if num_controls >= 2:
             raise ConversionUnsupportedFeatureError(
                 f"Gate { gate_name } has more than one control (n = { num_controls })")
 
         if not controls:
-            circuit_template = _CQASM_1_QUBIT_GATES[gate_name]
+            circuit_template = _CQASM_1_QUBIT_GATES.get(gate_name, None)
             if not circuit_template:
                 raise ConversionUnsupportedFeatureError(
                     f"Unsupported 1-qubit gate { gate_name }")
@@ -226,3 +228,104 @@ class CQASMConverter(AGateConverter):
         """
         ast = cqasm.Analyzer().analyze_file(source_file_name)
         return self.convert(ast, use_postselection)
+
+    def convert_string_v1(
+            self,
+            source_string: str,
+            use_postselection: bool = True) -> Processor:
+        r"""Convert a cQASM v1 quantum program into a `Processor`.
+
+        :param source_string: The cQASM program stored in a string
+        :param use_postselection: when True, uses a `postprocessed CNOT`
+        as the last gate. Otherwise, uses only `heralded CNOT`
+        :return: the converted processor
+        """
+        lines = source_string.split('\n')
+        ast = self._v3_ast_from_v1_source(lines)
+        return self.convert(ast, use_postselection)
+
+    def convert_file_v1(
+            self,
+            source_file_name: str,
+            use_postselection: bool = False) -> Processor:
+        r"""Convert a cQASM v1 quantum program into a `Processor`.
+
+        :param source_file_name: The path to the cQASM program to load
+        :param use_postselection: when True, uses a `postprocessed CNOT`
+        as the last gate. Otherwise, uses only `heralded CNOT`
+        :return: the converted processor
+        """
+        lines = open(source_file_name, 'r').readlines()
+        ast = self._v3_ast_from_v1_source(lines)
+        return self.convert(ast, use_postselection)
+
+    def _v3_ast_from_v1_source(self, lines):
+        r""""Converts a cQASM v1 quantum program into a cQASM v3 AST"""
+
+        # Parsing code from https://github.com/maxwell04-wq original submission,
+        # with just enough changes to make it parse the example on:
+        # https://www.quantum-inspire.com/kbase/cqasm/
+
+        # Create an empty Program object to store the v3 AST
+        ast = cqasm.semantic.Program(
+            api_version=cqasm.primitives.Version([3]),
+            block=cqasm.semantic.Block(
+                statements=cqasm.semantic.MultiStatement()),
+            variables=cqasm.semantic.MultiVariable()
+        )
+
+        # read QASM instructions line-by-line
+        for line in lines:
+            line = line.strip()
+            if len(line) <= 0 or line[0] == '#':
+                #empty line or comment
+                continue
+
+            instruction = line.split(" ")
+            if instruction[0] == "version":
+                version = instruction[1]
+                continue
+
+            if instruction[0] == "qubits":
+                typ = cqasm.types.QubitArray(size=int(instruction[1]))
+                ast.variables.append(
+                    cqasm.semantic.Variable(name="b'q'", typ=typ))
+                continue
+
+            # Ignore anything with only one keyword:
+            if len(instruction) <= 1:
+                continue
+
+            # Ignore barriers classical bits
+            if line.find("b[") != -1:
+                continue
+
+            # Ignore non-gate instructions
+            if instruction[0] in ['prep_z', 'measure']:
+                continue
+
+            # Parse the argument list.
+            # TODO: parse this properly to implement:
+            # - qubit ranges such as: q[0:2]
+            # - qubit number with more than 1 digit
+            # - second argument as a number/expression for controlled gates
+            ins_n_qubits = 0
+            ins_qubits = []
+            for remaining_token in instruction[1:]:
+                ins_params = remaining_token.split(",")
+                for param in ins_params:
+                    indx = param.find("q[")
+                    if indx  != -1:
+                        ins_qubits.append(param[indx+2])
+            ins_n_qubits = len(ins_qubits)
+
+            statement = cqasm.semantic.Instruction()
+            statement.name = f"b'{ instruction[0] }'"
+            for qubit_index in ins_qubits:
+                index = cqasm.values.IndexRef(
+                    variable=cqasm.semantic.Variable(name = "b'q'"))
+                index.indices = cqasm.values.MultiConstInt()
+                index.indices.append(cqasm.values.ConstInt(qubit_index))
+                statement.operands.append(index)
+            ast.block.statements.append(statement)
+        return ast

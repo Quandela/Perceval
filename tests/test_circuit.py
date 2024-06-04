@@ -320,7 +320,6 @@ def test_visualization_barrier(capfd):
     c = Circuit(4) // u @ (2, u) // comp.IDENTITY(4) // (1, u) @ u // comp.IDENTITY(4)
     pdisplay(c, output_format=Format.TEXT)
     out, err = capfd.readouterr()
-    print(out)
     assert out.strip() == """
     ╭─────╮  ║                  ║  ╭─────╮
 0:──┤U    ├──║──────────────────║──┤U    ├──:0 (depth 2)

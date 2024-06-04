@@ -222,8 +222,33 @@ qubit q
 
 def test_converter_from_file():
     TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
-    prepare_state_11_source_file = TEST_DATA_DIR / 'bell_state_preparation.cqasm3'
-    pc = CQASMConverter(catalog).convert_file(str(prepare_state_11_source_file))
+    source_file = TEST_DATA_DIR / 'bell_state_preparation.cqasm3'
+    pc = CQASMConverter(catalog).convert_file(str(source_file))
+    assert pc.circuit_size == 8
+    assert pc.m == 4
+    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert len(pc._components) == 2  # should be  BS.H // CNOT
+
+
+def test_converter_v1():
+    source = f"""
+version 1.0
+
+# a basic cQASM example
+qubits 2
+
+.prepare
+    prep_z q[0:1]
+
+.entangle
+    H q[0]
+    CNOT q[0], q[1]
+
+.measurement
+    measure_all
+"""
+    pc = CQASMConverter(catalog).convert_string_v1(
+        source, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
