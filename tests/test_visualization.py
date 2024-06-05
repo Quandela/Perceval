@@ -320,3 +320,13 @@ def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
     pc.add_herald(1, 0)
     p.add(2, pc)
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_dump_barrier_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_dump_barrier_symb(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, skin_type=SymbSkin)
