@@ -32,7 +32,7 @@ from multipledispatch import dispatch
 from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source, AComponent, Circuit
+from perceval.components import ACircuit, Processor, Source, AComponent
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
@@ -60,8 +60,8 @@ class RemoteProcessor(AProcessor):
             name=name,
             token=token,
             url=url,
-            rpc_handler=rpc_handler,
-            noise=processor.noise)
+            rpc_handler=rpc_handler)
+        rp.noise = processor.noise
         rp.add(0, processor)
         return rp
 

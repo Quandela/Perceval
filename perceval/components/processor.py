@@ -64,13 +64,12 @@ class Processor(AProcessor):
         super().__init__()
         self._init_backend(backend)
         self._init_circuit(m_circuit)
-        self._init_noise(source, noise)
+        self._init_noise(noise, source)
         self.name = name
         self._inputs_map: Union[SVDistribution, None] = None
         self._simulator = None
 
-    @deprecated(version="0.11.0", reason="Construct a Processor with a noise model instead of a source")
-    def _init_noise(self, source: Source, noise: NoiseModel):
+    def _init_noise(self, noise: NoiseModel, source: Source):
         self._phase_quantization = 0  # Default = infinite precision
 
         # Backward compatibility case: the user passes a Source
@@ -78,7 +77,7 @@ class Processor(AProcessor):
             # If he also passed noise parameters: conflict between noise parameters => raise an exception
             if noise is not None:
                 raise ValueError("Both 'source' and 'noise' parameters were set. You should only input a NoiseModel")
-            self._source = source
+            self.source = source
 
         # The user passes a NoiseModel
         elif noise is not None:
@@ -112,6 +111,7 @@ class Processor(AProcessor):
         return self._source
 
     @source.setter
+    # When removing this method don't forget to also change the _init_noise method
     @deprecated(version="0.11.0", reason="Use noise model instead of source")
     def source(self, source: Source):
         r"""
