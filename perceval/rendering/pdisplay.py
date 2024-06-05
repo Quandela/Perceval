@@ -56,7 +56,7 @@ from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
-from ._processor_utils import precompute_herald_pos
+from ._processor_utils import collect_herald_info
 
 
 in_notebook = False
@@ -91,8 +91,14 @@ def pdisplay_circuit(
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
     w, h = skin.get_size(circuit, recursive)
-    renderer = create_renderer(circuit.m, output_format=output_format, skin=skin,
-                               total_width=w, total_height=h, **opts)
+    renderer, _ = create_renderer(
+        circuit.m,
+        output_format=output_format,
+        skin=skin,
+        total_width=w,
+        total_height=h,
+        **opts)
+
     if map_param_kid is None:
         map_param_kid = circuit.map_parameters()
     renderer.open()
@@ -114,25 +120,41 @@ def pdisplay_processor(processor: AProcessor,
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
     w, h = skin.get_size(processor, recursive)
-    renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
-                               total_width=w, total_height=h, compact=compact, **opts)
+    renderer, pre_renderer = create_renderer(
+        n_modes,
+        output_format=output_format,
+        skin=skin,
+        total_width=w,
+        total_height=h,
+        compact=compact,
+        **opts)
+
+    herald_info = {}
     if len(processor.heralds):
         for k in processor.heralds.keys():
             renderer.set_mode_style(k, ModeStyle.HERALD)
         if recursive:
-            out_herald_info = precompute_herald_pos(processor)
-            renderer.set_out_herald_info(out_herald_info)
-    renderer.open()
-    for r, c in processor.components:
-        shift = r[0]
-        if isinstance(c, Circuit):
-            c = Circuit(c.m).add(0, c)
-        renderer.render_circuit(c,
-                                recursive=recursive,
-                                precision=precision,
-                                nsimplify=nsimplify,
-                                shift=shift)
-    renderer.close()
+            herald_info = collect_herald_info(processor)
+
+    for rendering_pass in [pre_renderer, renderer]:
+        if not rendering_pass:
+            continue
+        rendering_pass.set_herald_info(herald_info)
+        rendering_pass.open()
+        for r, c in processor.components:
+            shift = r[0]
+            if isinstance(c, Circuit):
+                c = Circuit(c.m).add(0, c)
+            rendering_pass.render_circuit(
+                c,
+                recursive=recursive,
+                precision=precision,
+                nsimplify=nsimplify,
+                shift=shift)
+        rendering_pass.close()
+        if pre_renderer:
+            # Pass pre-computed subblock info to the main rendering pass.
+            renderer.subblock_info.update(pre_renderer.subblock_info)
 
     for port, port_range in processor._in_ports.items():
         renderer.add_in_port(port_range[0], port)
