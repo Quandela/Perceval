@@ -26,7 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+from deprecated import deprecated
+from multipledispatch import dispatch
 from numpy import Inf
+from typing import Dict, Callable, Union, List
 
 from .abstract_processor import AProcessor, ProcessorType
 from .source import Source
@@ -34,8 +38,6 @@ from .linear_circuit import ACircuit, Circuit
 from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState, NoiseModel
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
-from multipledispatch import dispatch
-from typing import Dict, Callable, Union, List
 
 
 class Processor(AProcessor):
@@ -67,6 +69,7 @@ class Processor(AProcessor):
         self._inputs_map: Union[SVDistribution, None] = None
         self._simulator = None
 
+    @deprecated(version="0.11.0", reason="Construct a Processor with a noise model instead of a source")
     def _init_noise(self, source: Source, noise: NoiseModel):
         self._phase_quantization = 0  # Default = infinite precision
 
@@ -109,6 +112,7 @@ class Processor(AProcessor):
         return self._source
 
     @source.setter
+    @deprecated(version="0.11.0", reason="Use noise model instead of source")
     def source(self, source: Source):
         r"""
         :param source: A Source instance to use as the new source for this processor.
@@ -138,12 +142,6 @@ class Processor(AProcessor):
     def is_remote(self) -> bool:
         return False
 
-    def check_input(self, input_state: BasicState):
-        assert self.m is not None, "A circuit has to be set before the input state"
-        expected_input_length = self.m
-        assert len(input_state) == expected_input_length, \
-            f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
-
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState) -> None:
         r"""
@@ -167,23 +165,8 @@ class Processor(AProcessor):
         The properties of the source will alter the input state. A perfect source always delivers the expected state as
         an input. Imperfect ones won't.
         """
-        self.check_input(input_state)
-        input_list = [0] * self.circuit_size
-        input_idx = 0
-        expected_photons = 0
-        # Build real input state (merging ancillas + expected input) and compute expected photon count
-        for k in range(self.circuit_size):
-            if k in self.heralds:
-                input_list[k] = self.heralds[k]
-                expected_photons += self.heralds[k]
-            else:
-                input_list[k] = input_state[input_idx]
-                expected_photons += input_state[input_idx]
-                input_idx += 1
-
-        self._input_state = BasicState(input_list)
+        super().with_input(input_state)
         self._generate_noisy_input()
-        self._min_detected_photons = expected_photons
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
 

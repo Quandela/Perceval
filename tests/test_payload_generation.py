@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
+
 from _mock_rpc_handler import MockRPCHandler
 from perceval import RemoteProcessor, Circuit, BasicState, PostSelect, catalog
 from perceval.serialization._constants import ZIP_PREFIX, BS_TAG, SEP, PCVL_PREFIX, POSTSELECT_TAG
@@ -114,7 +115,7 @@ def test_payload_cnot():
 
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'input_state' in payload
-    assert payload['input_state'] == f"{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}"
+    assert payload['input_state'] == f"{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state*BasicState('|1,1,0,0,0,0>'))}"
 
     # Heralds come from the 3 CNOT gates
     assert 'heralds' in payload and len(payload['heralds']) == 6
