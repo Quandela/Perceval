@@ -40,6 +40,10 @@ def _create_mode_map(c_idx: int, c_data: int) -> dict:
     return {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
 
 
+class UnknownGateError(Exception):
+    pass
+
+
 class AGateConverter(ABC):
     r"""
     Converter class for gate based Circuits to perceval processor
@@ -70,11 +74,15 @@ class AGateConverter(ABC):
         """
         qname = kwargs.get("qname", "Q")  # Default value, set any name provided by the gate circuit
         n_qbits = self.count_qubits(gate_circuit)
+
+        qubit_names = kwargs.get(
+            "qubit_names", [f'{qname}{i}' for i in range(n_qbits)])
+
         n_moi = n_qbits * 2  # number of modes of interest = 2 * number of qbits
         self._input_list = [0] * n_moi
         self._converted_processor = Processor(self._backend_name, n_moi, self._source)
         for i in range(n_qbits):
-            self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, f'{qname}{i}'))
+            self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, qubit_names[i]))
             self._input_list[i * 2] = 1
 
     def apply_input_state(self):
@@ -89,6 +97,8 @@ class AGateConverter(ABC):
         # universal method, takes in unitary and approximates one using
         # Frobenius method
 
+        # TODO: from the name of the gate, one could instantiate a more
+        # optically meaningful circuit than an opaque unitary.
         if abs(u[1, 0]) + abs(u[0, 1]) < 2 * global_params["min_precision_gate"]:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
@@ -115,14 +125,15 @@ class AGateConverter(ABC):
         CZ - Heralded
         SWAP
         """
-        if gate_name == "CNOT" or gate_name == "cx":
+        # TODO: implement other controlled gates through AXBXC decomposition
+        if gate_name in ["CNOT", "cx"]:
             self._cnot_idx += 1
             if use_postselection and self._cnot_idx == n_cnot:
                 cnot_processor = self._postprocessed_cnot_builder.build_processor(backend=self._backend_name)
             else:
                 cnot_processor = self._heralded_cnot_builder.build_processor(backend=self._backend_name)
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
-        elif gate_name == "CSIGN" or gate_name == "cz":
+        elif gate_name in ["CSIGN", "cz", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self._heralded_cz_builder.build_processor(backend=self._backend_name)
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cz_processor)
