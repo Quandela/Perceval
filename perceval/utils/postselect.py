@@ -222,14 +222,18 @@ def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
     return True
 
 
-def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, heralds: dict = None
-                             ) -> Tuple[BSDistribution, float]:
+def post_select_distribution(
+        bsd: BSDistribution,
+        postselect: PostSelect,
+        heralds: dict = None,
+        keep_heralds=True) -> Tuple[BSDistribution, float]:
     if not (postselect.has_condition or heralds):
         bsd.normalize()
         return bsd, 1
 
     if heralds is None:
         heralds = {}
+    heralds_to_remove = heralds.keys()
     logical_perf = 1
     result = BSDistribution()
     for state, prob in bsd.items():
@@ -238,6 +242,8 @@ def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, herald
             if state[m] != v:
                 heralds_ok = False
         if heralds_ok and postselect(state):
+            if not keep_heralds:
+                state = state.remove_modes(heralds_to_remove)
             result[state] = prob
         else:
             logical_perf -= prob
@@ -245,13 +251,18 @@ def post_select_distribution(bsd: BSDistribution, postselect: PostSelect, herald
     return result, logical_perf
 
 
-def post_select_statevector(sv: StateVector, postselect: PostSelect, heralds: dict = None) -> Tuple[StateVector, float]:
+def post_select_statevector(
+        sv: StateVector,
+        postselect: PostSelect,
+        heralds: dict = None,
+        keep_heralds=True) -> Tuple[StateVector, float]:
     if not (postselect.has_condition or heralds):
         sv.normalize()
         return sv, 1
 
     if heralds is None:
         heralds = {}
+    heralds_to_remove = heralds.keys()
     logical_perf = 1
     result = StateVector()
     for state, ampli in sv:
@@ -260,6 +271,8 @@ def post_select_statevector(sv: StateVector, postselect: PostSelect, heralds: di
             if state[m] != v:
                 heralds_ok = False
         if heralds_ok and postselect(state):
+            if not keep_heralds:
+                state = state.remove_modes(heralds_to_remove)
             result += ampli*state
         else:
             logical_perf -= abs(ampli)**2
