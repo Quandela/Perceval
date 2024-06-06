@@ -1,9 +1,0 @@
-// Sample cQASM (v3) file to test parsing
-version 3
-
-// Qubit declaration
-qubit[2] q
-
-// Gates
-H q[0]
-CNOT q[0], q[1]

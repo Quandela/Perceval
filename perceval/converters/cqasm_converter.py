@@ -47,12 +47,12 @@ _CQASM_1_QUBIT_GATES = {
     "X": Circuit(2, name="X") // PERM([1, 0]),
     "X90": Circuit(2, name="Rx(π / 2)") // BS.Rx(theta=-np.pi / 2),
     "mX90": Circuit(2, name="Rx(-π / 2)") // BS.Rx(theta=np.pi / 2),
-    "Rx": lambda theta: Circuit(2, name=f"Rx({theta})") // BS.Rx(theta=-theta),
+    "Rx": lambda theta: Circuit(2, name=f"Rx({theta:.3})") // BS.Rx(theta=-theta),
 
     "Y": Circuit(2, name="Y") // PERM([1, 0]) // (1, PS(np.pi / 2)) // (0, PS(-np.pi / 2)),
     "Y90": Circuit(2, name="Ry(π / 2)") // BS.Ry(theta=np.pi / 2),
     "mY90": Circuit(2, name="Ry(-π / 2)") // BS.Ry(theta=-np.pi / 2),
-    "Ry": lambda theta: Circuit(2, name=f"Ry({theta})") // BS.Ry(theta=theta),
+    "Ry": lambda theta: Circuit(2, name=f"Ry({theta:.3})") // BS.Ry(theta=theta),
 
     "S": Circuit(2, name="S") // (1, PS(np.pi / 2)),
     "Sdag": Circuit(2, name="Sdag") // (1, PS(-np.pi / 2)),
@@ -60,7 +60,7 @@ _CQASM_1_QUBIT_GATES = {
     "Tdag": Circuit(2, name="Tdag") // (1, PS(-np.pi / 4)),
 
     "Z": Circuit(2, name="Z") // (1, PS(-np.pi)),
-    "Rz": lambda theta: Circuit(2, name="Rz({theta})") // (0, PS(-theta / 2)) // (1, PS(theta / 2)),
+    "Rz": lambda theta: Circuit(2, name="Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2)),
 
     # For v1 compatibility
     "I": Circuit(2, name="I"),

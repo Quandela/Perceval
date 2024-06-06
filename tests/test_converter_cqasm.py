@@ -242,12 +242,53 @@ qubit q
 
 def test_converter_from_file():
     TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
-    source_file = TEST_DATA_DIR / 'bell_state_preparation.cqasm3'
+    source_file = TEST_DATA_DIR / 'state_preparation_5.cqasm3'
     pc = CQASMConverter(catalog).convert_file(str(source_file))
-    assert pc.circuit_size == 8
-    assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
-    assert len(pc._components) == 2  # should be  BS.H // CNOT
+
+    assert pc.circuit_size == 14
+    assert len(pc.heralds) == 8
+    assert pc.m == 6
+    assert len(pc._components) == 12
+    r = pc.probs()['results']
+    assert np.allclose(r[BasicState("|1, 0, 1, 0, 1, 0>")], 0.2, atol=0.01)
+    assert np.allclose(r[BasicState("|1, 0, 1, 0, 0, 1>")], 0.2, atol=0.01)
+    assert np.allclose(r[BasicState("|1, 0, 0, 1, 1, 0>")], 0.2, atol=0.01)
+    assert np.allclose(r[BasicState("|1, 0, 0, 1, 0, 1>")], 0.2, atol=0.01)
+    assert np.allclose(r[BasicState("|0, 1, 1, 0, 1, 0>")], 0.2, atol=0.01)
+
+
+def test_converter_longer_program():
+    source = """
+// This program prepares a uniform superposition of 7 basis states
+version 3
+qubit[3] q
+X q[1]
+X q[0]
+Ry(-0.75324 * pi) q[1]
+X q[1]
+Ry(0.25 * pi) q[2]
+CNOT q[1], q[2]
+Ry(-0.25 * pi) q[2]
+Rx(0.5 * pi) q[0]
+CR(-0.608173 * pi) q[1], q[0]
+Rx(-0.5 * pi) q[0]
+X q[1]
+X q[0]
+Ry(0.25 * pi) q[1]
+CNOT q[0], q[1]
+Ry(-0.25 * pi) q[1]
+"""
+    pc = CQASMConverter(catalog).convert_string(source, use_postselection=True)
+    assert pc.circuit_size == 20
+    assert len(pc.heralds) == 14
+    assert pc.m == 6
+    assert len(pc._components) == 24
+
+    # This is a fairly long computation (about 2 mins) and it is thus not
+    # part of the regular test suite.
+    if False:
+        r = pc.probs()['results']
+        assert np.allclose(np.array(list(r.values())), 1/7.0, atol=0.01)
 
 
 def test_converter_v1():
