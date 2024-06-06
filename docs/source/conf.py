@@ -47,6 +47,8 @@ from pathlib import Path
 from git import Repo
 
 sys.path.insert(0, os.path.relpath("../"))
+
+from source import build_catalog
 from perceval import PMetadata
 
 
@@ -81,6 +83,8 @@ def keep_latest_versions(versions, mini=None):
 
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
+
+build_catalog.build_catalog_rst(os.path.join(REPO_PATH, "docs", "build", "catalog.rst"))
 
 repo = Repo(REPO_PATH)
 tags = [tag.name for tag in repo.tags]
