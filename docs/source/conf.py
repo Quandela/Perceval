@@ -84,7 +84,10 @@ def keep_latest_versions(versions, mini=None):
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
 
-build_catalog.build_catalog_rst(os.path.join(REPO_PATH, "docs", "build", "catalog.rst"))
+build_directory = os.path.join(REPO_PATH, "docs", "build")
+if not os.path.exists(build_directory):
+    os.makedirs(build_directory)
+build_catalog.build_catalog_rst(os.path.join(build_directory, "catalog.rst"))
 
 repo = Repo(REPO_PATH)
 tags = [tag.name for tag in repo.tags]
