@@ -96,9 +96,6 @@ class AGateConverter(ABC):
     def _create_generic_1_qubit_gate(self, u) -> Circuit:
         # universal method, takes in unitary and approximates one using
         # Frobenius method
-
-        # TODO: from the name of the gate, one could instantiate a more
-        # optically meaningful circuit than an opaque unitary.
         if abs(u[1, 0]) + abs(u[0, 1]) < 2 * global_params["min_precision_gate"]:
             # diagonal matrix - we can handle with phases, we consider that gate unitary parameters has
             # limited numeric precision
