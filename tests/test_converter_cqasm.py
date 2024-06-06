@@ -233,10 +233,6 @@ qubit q
     assert tuple(modes) == (0, 1)
 
     u = circuit.compute_unitary()
-    print(gate_name)
-    print(expected_unitary)
-    print(u)
-    print()
     assert np.allclose(u, expected_unitary)
 
 
