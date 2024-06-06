@@ -148,6 +148,7 @@ def pdisplay_processor(processor: AProcessor,
 
 def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Format = Format.TEXT) -> str:
     """
+    :meta private:
     Generates representation of a matrix
     """
 
@@ -206,6 +207,7 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
 def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCount],
                            output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
+    :meta private:
     Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
     StateVector's case)
     """
@@ -344,6 +346,7 @@ def pdisplay_density_matrix(dm,
                             mplot_noshow: bool = False,
                             mplot_savefig: str = None):
     """
+    :meta private:
     :param dm:
     :param output_format:
     :param color: whether to display the phase according to some circular cmap
