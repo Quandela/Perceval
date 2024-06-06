@@ -145,8 +145,8 @@ class CQASMConverter(AGateConverter):
             controls = targets
             targets = self._operand_to_qubit_indices(statement.operands[1])
             parameter = statement.operands[2].value
-        else:
-            raise ConversionUnsupportedFeatureError(f"Statement with unsupported number of operands, n = { num_controls }")
+        elif num_operands >= 4:
+            raise ConversionUnsupportedFeatureError(f"Statement with unsupported number of operands, n { num_operands }")
 
         num_controls = len(controls)
         if num_controls >= 2:
