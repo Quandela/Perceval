@@ -121,7 +121,6 @@ class CQASMConverter(AGateConverter):
                       for index in operand.indices]
         else:
             raise ConversionUnsupportedFeatureError(f"Cannot map variable { name } to a declared qubit")
-        return qubits
 
     def _convert_statement(self, statement):
         gate_name = _cs(statement.name)
@@ -146,6 +145,8 @@ class CQASMConverter(AGateConverter):
             controls = targets
             targets = self._operand_to_qubit_indices(statement.operands[1])
             parameter = statement.operands[2].value
+        else:
+            raise ConversionUnsupportedFeatureError(f"Statement with unsupported number of operands, n = { num_controls }")
 
         num_controls = len(controls)
         if num_controls >= 2:
