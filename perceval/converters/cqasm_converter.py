@@ -60,7 +60,7 @@ _CQASM_1_QUBIT_GATES = {
     "Tdag": Circuit(2, name="Tdag") // (1, PS(-np.pi / 4)),
 
     "Z": Circuit(2, name="Z") // (1, PS(-np.pi)),
-    "Rz": lambda theta: Circuit(2, name="Rz({theta})") // (0, PS(-theta)) // (1, PS(theta)),
+    "Rz": lambda theta: Circuit(2, name="Rz({theta})") // (0, PS(-theta / 2)) // (1, PS(theta / 2)),
 
     # For v1 compatibility
     "I": Circuit(2, name="I"),
@@ -189,7 +189,8 @@ class CQASMConverter(AGateConverter):
 
         self._collect_qubit_list(ast)
         self._num_cnots = sum(
-            _cs(s.name) == "CNOT" for s in ast.block.statements)
+            (_cs(s.name) == "CNOT") + 2 * (_cs(s.name) in ["CR", "CRk"])
+            for s in ast.block.statements)
         self._use_postselection = use_postselection
 
         qubit_names = [
@@ -199,7 +200,7 @@ class CQASMConverter(AGateConverter):
             self._convert_statement(statement)
         self.apply_input_state()
         return self._converted_processor
-
+        
     def convert_string(
             self,
             source_string: str,

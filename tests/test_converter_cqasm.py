@@ -194,7 +194,7 @@ expected_unitaries = [
     ("Sdag", np.diag([1, -1j])),
     ("T", np.diag([1, _eipi4])),
     ("Tdag", np.diag([1, _eipi4.conj()])),
-    ("Rz(pi / 4)", np.diag([_eipi4.conj(), _eipi4])),
+    ("Rz(pi / 2)", np.diag([_eipi4.conj(), _eipi4])),
 ]
 
 
