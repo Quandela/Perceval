@@ -37,6 +37,7 @@ import perceval.components.unitary_components as components
 from perceval.components import catalog
 from perceval.rendering.format import Format
 from perceval.utils import BasicState
+from _test_utils import assert_sv_close
 
 import numpy as np
 
@@ -84,6 +85,9 @@ CNOT q[0], q[1]
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(pc._components) == 2  # should be  BS.H // CNOT
+    r = pc.probs()['results']
+    assert np.allclose(r[BasicState("|0, 1, 0, 1>")], 0.5)
+    assert np.allclose(r[BasicState("|1, 0, 1, 0>")], 0.5)
 
 
 def test_converter_bell_state_swapped():
