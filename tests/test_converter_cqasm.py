@@ -36,6 +36,7 @@ from perceval.converters import CQASMConverter, ConversionSyntaxError, Conversio
 import perceval.components.unitary_components as components
 from perceval.components import catalog
 from perceval.rendering.format import Format
+from perceval.utils import BasicState
 
 import numpy as np
 
@@ -67,15 +68,6 @@ qubit[3] q
 CNOT q[0:2], q[2]
 """
     # Caught early: two controls for one target
-    with pytest.raises(ConversionUnsupportedFeatureError):
-        CQASMConverter(catalog).convert_string(source)
-
-    source = """
-version 3
-qubit[2] q
-CR(pi) q[0], q[1]
-"""
-    # Caught later in the abstract class
     with pytest.raises(ConversionUnsupportedFeatureError):
         CQASMConverter(catalog).convert_string(source)
 
@@ -167,9 +159,37 @@ qubit[3] q
 CNOT q[0], q[1:2]
 """
     pc = CQASMConverter(catalog).convert_string(source, use_postselection=False)
-    pdisplay(pc, output_format=Format.TEXT)
     # Two heralded CNOTs sandwiched between PERMs
     assert len(pc.components) == 5
+
+
+def test_converter_controlled_rotation():
+    source_template = """
+version 3
+qubit[2] q
+%s
+// This circuit should be equivalent to a CNOT up to a phase
+// with unitary [[1 0 0 0] [0 1 0 0] [0 0 0 -i] [0 0 i 0]]
+H q[1]
+CR(pi) q[0], q[1]
+H q[1]
+"""
+    for q0_state in [0, 1]:
+        source = source_template % ("" if q0_state == 0 else "X q[0]")
+        pc = CQASMConverter(catalog).convert_string(
+            source, use_postselection=False)
+        # 1 prep gate on q[0], 2 H, 2 Rz, 2 CNOT, 2 PERMs for the second CNOT
+        assert len(pc.components) == 8 + q0_state
+        # 4 heralds per CNOT
+        assert len(pc.heralds) == 8
+
+        # We verify that we get a CNOT: no change in the first case, flip
+        # of both qubits in the second case.
+        results = pc.probs()
+        expected_state =  "|0, 1, 0, 1>" if q0_state else "|1, 0, 1, 0>"
+        assert results['results'][BasicState(expected_state)] == 1.0
+        # Lots of unusable samples due to high number of heralds!
+        assert results['logical_perf'] < 0.003
 
 
 """

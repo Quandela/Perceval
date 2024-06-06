@@ -29,7 +29,7 @@
 
 from abc import ABC, abstractmethod
 
-from perceval.components import Port, Circuit, Processor, Source
+from perceval.components import Port, Circuit, Processor, Source, PS
 from perceval.utils import P, BasicState, Encoding, global_params
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
@@ -117,30 +117,66 @@ class AGateConverter(ABC):
             optimize(ins, u, frobenius, sign=-1)
         return ins
 
-    def _create_2_qubit_gates_from_catalog(self, gate_name: str, n_cnot, c_idx, c_data, c_first,
-                                           use_postselection):
+    def _create_2_qubit_gates_from_catalog(
+            self,
+            gate_name: str,
+            n_cnot,
+            c_idx,
+            c_data,
+            use_postselection,
+            parameter=None):
         r"""
         List of Gates implemented:
         CNOT - Heralded and post-processed
         CZ - Heralded
+        CRz - Heralded and post-processed (uses two CNOTs)
         SWAP
         """
         # TODO: implement other controlled gates through AXBXC decomposition
-        if gate_name in ["CNOT", "cx"]:
+        gate_name = gate_name.upper()
+        if gate_name in ["CNOT", "CX"]:
             self._cnot_idx += 1
             if use_postselection and self._cnot_idx == n_cnot:
                 cnot_processor = self._postprocessed_cnot_builder.build_processor(backend=self._backend_name)
             else:
                 cnot_processor = self._heralded_cnot_builder.build_processor(backend=self._backend_name)
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
-        elif gate_name in ["CSIGN", "cz", "CZ"]:
+        elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self._heralded_cz_builder.build_processor(backend=self._backend_name)
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cz_processor)
-        elif gate_name.lower() == "swap":
-            # c_idx and c_data are consecutive - not necessarily ordered
-            self._converted_processor.add(c_first, comp.PERM([2, 3, 0, 1]))
+        elif gate_name in ["CRZ", "CR", "CRK"]:
+            theta = np.pi / (2**parameter) if gate_name == "CRK" else parameter
+            theta /= 2
+            rz_plus_name = "Rz(%.2f)" % theta
+            rz_plus = Circuit(2, rz_plus_name) // (0, PS(-theta / 2)) // (1, PS(theta / 2))
+            rz_minus_name = "Rz(-%.2f)" % theta
+            rz_minus = Circuit(2, rz_minus_name) // (0, PS(theta / 2)) // (1, PS(-theta / 2))
+            # Break down the controlled Z rotation into this circuit.
+            # Equivalent to:
+            #   Rz(0)     if the first qubit is  |0>
+            #   Rz(theta) if the second qubit is |1>
+            # 0: ─────────────────@──────────────────@───
+            #                     │                  │
+            # 1: ───Rz(theta/2)───X───Rz(-theta/2)───X───
+            self._converted_processor.add(c_data, rz_plus)
+            self._create_2_qubit_gates_from_catalog(
+                "CNOT", n_cnot, c_idx, c_data, use_postselection)
+            self._converted_processor.add(c_data, rz_minus)
+            self._create_2_qubit_gates_from_catalog(
+                "CNOT", n_cnot, c_idx, c_data, use_postselection)
+        elif gate_name == "SWAP":
+            # Works for any FIRST and LAST, everything in-between is unchanged.
+            c_first = min(c_idx, c_data)
+            c_last = max(c_idx, c_data)
+            n = (c_last - c_first) // 2 + 1
+            perm = [i for i in range(n * 2)]
+            perm[0] = c_last - c_first
+            perm[1] = perm[0] + 1
+            perm[perm[0]] = 0
+            perm[perm[1]] = 1
+            self._converted_processor.add(c_first, comp.PERM(perm))
         else:
-            raise RuntimeError(f"Gate not yet supported: {gate_name}")
+            raise UnknownGateError(f"Gate not yet supported: {gate_name}")
 
         return self._converted_processor

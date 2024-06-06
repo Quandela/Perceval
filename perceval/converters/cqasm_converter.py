@@ -67,7 +67,7 @@ _CQASM_1_QUBIT_GATES = {
 }
 
 _CQASM_2_QUBIT_GATES = {
-    "CNOT", "CZ"
+    "CNOT", "CZ", "CR", "CRk"
 }
 
 
@@ -172,8 +172,8 @@ class CQASMConverter(AGateConverter):
                     self._num_cnots,
                     controls[0] * 2,
                     target * 2,
-                    min(target, controls[0]) * 2,
-                    self._use_postselection)
+                    self._use_postselection,
+                    parameter=parameter)
 
     def convert(self, ast, use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.

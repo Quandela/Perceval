@@ -107,6 +107,18 @@ def test_basic_circuit_swap_indirect():
     assert c0.perm_vector == [2, 3, 0, 1]
 
 
+def test_basic_circuit_swap_with_gap():
+    convertor = QiskitConverter(catalog)
+    qc = qiskit.QuantumCircuit(5)
+    qc.swap(1, 3)
+    pc = convertor.convert(qc)
+    assert len(pc._components) == 1
+    r0, c0 = pc._components[0]
+    assert r0 == [2, 3, 4, 5, 6, 7]
+    assert isinstance(c0, comp.PERM)
+    assert c0.perm_vector == [4, 5, 2, 3, 0, 1]
+
+
 def test_cnot_1_heralded():
     convertor = QiskitConverter(catalog)
     qc = qiskit.QuantumCircuit(2)

@@ -92,10 +92,12 @@ class MyQLMConverter(AGateConverter):
                     raise ValueError(f"Gates with number of Qbits higher than 2 not implemented")
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
-                c_first = min(c_idx, c_data)  # used in SWAP
-
-                self._create_2_qubit_gates_from_catalog(instruction_name, n_cnot, c_idx, c_data,
-                                                               c_first, use_postselection)
+                self._create_2_qubit_gates_from_catalog(
+                    instruction_name,
+                    n_cnot,
+                    c_idx,
+                    c_data,
+                    c_first, use_postselection)
 
         self.apply_input_state()
         return self._converted_processor
