@@ -152,13 +152,14 @@ class AGateConverter(ABC):
             rz_plus = Circuit(2, rz_plus_name) // (0, PS(-theta / 2)) // (1, PS(theta / 2))
             rz_minus_name = "Rz(-%.2f)" % theta
             rz_minus = Circuit(2, rz_minus_name) // (0, PS(theta / 2)) // (1, PS(-theta / 2))
-            # Break down the controlled Z rotation into this circuit.
-            # Equivalent to:
-            #   Rz(0)     if the first qubit is  |0>
-            #   Rz(theta) if the second qubit is |1>
+            # Break down the controlled Z rotation into this circuit:
+            #
             # 0: ─────────────────@──────────────────@───
             #                     │                  │
             # 1: ───Rz(theta/2)───X───Rz(-theta/2)───X───
+            #
+            #   Rz(0)     if the first qubit is  |0>
+            #   Rz(theta) if the first qubit is |1>
             self._converted_processor.add(c_data, rz_plus)
             self._create_2_qubit_gates_from_catalog(
                 "CNOT", n_cnot, c_idx, c_data, use_postselection)
