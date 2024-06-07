@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import warnings
 
 import numpy as np
 from math import comb
@@ -45,6 +46,9 @@ def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_c
     :param ideal_photon_count: expected photon count for a loss-less system
     :return photon loss mitigated distribution
     """
+    if not any([states.n == ideal_photon_count for states in noisy_input.keys()]):
+        warnings.warn("Ideal photon count value lower than ideal", UserWarning)
+
     if not isinstance(noisy_input, (BSCount, BSDistribution)):
         raise TypeError(f'Noisy input should be of type BSCount or BSDistribution')
 
