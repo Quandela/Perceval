@@ -447,7 +447,7 @@ class Barrier(Unitary):
         super().__init__(U=u)
 
     def describe(self, _=None):
-        return f"I{ self.num_modes }"
+        return f"Barrier({self.num_modes})"
 
     def definition(self):
         return self.U
