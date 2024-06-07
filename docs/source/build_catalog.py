@@ -55,7 +55,7 @@ def build_catalog_rst(path: str):
         if item.params_doc:
             out += 'Parameters:\n'
             for param_name, param_descr in item.params_doc.items():
-                out += f' * ``{param_name}``: {param_descr}\n'
+                out += f'    * ``{param_name}``: {param_descr}\n'
             out += '\n'
 
         out += '.. code-block::\n\n'

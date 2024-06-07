@@ -38,13 +38,13 @@ from ._enums import Encoding
 
 
 class StateGenerator:
-    r"""
+    """
     StateGenerator class for conveniently generating common complex StateVectors
 
     :param encoding: for specifying the output format of the StateVector
         supported are Encoding.RAW, Encoding.DUAL_RAIL, Encoding.POLARIZATION
-    :param polarization_base: (optional) you can provide your own polarization basis as a tuple of BasicStates
-        default=(BasicState("|{P:H}>"), BasicState("|{P:V}>")
+    :param polarization_base: (optional) you can provide your own polarization basis as a tuple of BasicStates.
+        default=(BasicState("\|{P:H}>"), BasicState("\|{P:V}>")
     """
     def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
 
@@ -64,7 +64,7 @@ class StateGenerator:
             raise ValueError("Only use RAW, DUAL_RAIL or POLARIZATION encoding.")
 
     def logical_state(self, state: List[int]):
-        r"""
+        """
         Generate a StateVector from a list of logical state
 
         :param state: list of bits
@@ -83,14 +83,15 @@ class StateGenerator:
         return sv
 
     def bell_state(self, state: str):
-        r"""
+        """
         Generate a StateVector representing a Bell state
 
         :param state: name of the bell state you want to generate:
-            \"phi+\" = (|0,0>+|1,1>)/sqrt(2)
-            \"phi-\" = (|0,0>-|1,1>)/sqrt(2)
-            \"psi+\" = (|0,1>+|1,0>)/sqrt(2)
-            \"psi-\" = (|0,1>-|1,0>)/sqrt(2)
+
+            * "phi+" = (\|0,0>+\|1,1>)/sqrt(2)
+            * "phi-" = (\|0,0>-\|1,1>)/sqrt(2)
+            * "psi+" = (\|0,1>+\|1,0>)/sqrt(2)
+            * "psi-" = (\|0,1>-\|1,0>)/sqrt(2)
         :return: StateVector for a bell state
         """
 
@@ -110,18 +111,18 @@ class StateGenerator:
         raise ValueError("The state parameter must contain one of the Bell states as a string: phi+,phi-,psi+,psi-")
 
     def ghz_state(self, n: int):
-        r"""
-        Generate a StateVector representing a (generalized) Greenberger–Horne–Zeilinger state
+        """
+        Generate a StateVector representing a (generalized) Greenberger-Horne-Zeilinger state
 
         :param n: order of the GHZ state
         :return: StateVector representing the GHZ state
         """
-        assert n>2, "A (generalized) Greenberger–Horne–Zeilinger state is only defined for n>2"
+        assert n > 2, "A (generalized) Greenberger-Horne-Zeilinger state is only defined for n>2"
         sv = StateVector(self._zero_state ** n) + StateVector(self._one_state ** n)
         return sv
 
     def graph_state(self, graph: nx.Graph):
-        r"""
+        """
         Generate a StateVector representing a graph state.
 
         :param graph: networkx.Graph object. Edge weights are ignored.
@@ -135,7 +136,7 @@ class StateGenerator:
         basicstates = [self._one_state, self._zero_state]
 
         # generate all basic states
-        for i in range(1,graph.number_of_nodes()):
+        for _ in range(1, graph.number_of_nodes()):
             for j in range(len(basicstates)):
                 basicstates.append(basicstates[j] * self._one_state)
                 basicstates[j] = basicstates[j] * self._zero_state
@@ -159,17 +160,17 @@ class StateGenerator:
         return sv
 
     def dicke_state(self, n: int, k: int = None) -> StateVector:
-        """Get the Dicke state |D(n,k)> which is the equal superposition state of all C(n,k) basis states of weight k
+        """Get the Dicke state \|D(n,k)> which is the equal superposition state of all C(n,k) basis states of weight k
 
         Mode number:
-            - For RAW and Polarization: n
-            - For Dual rail encoding: 2*n
+            * For RAW and Polarization: n
+            * For Dual rail encoding: 2*n
 
         Photon number:
-            - For Raw encoding: k
-            - For Dual rail and Polarization encoding: n
+            * For Raw encoding: k
+            * For Dual rail and Polarization encoding: n
 
-        :param n: Number of qubits equal to |1>_L or photons
+        :param n: Number of qubits equal to \|1>_L or photons
         :param k: Weight (Number of qubits or modes)
         :return: Dicke state vector
         """

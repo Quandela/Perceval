@@ -128,8 +128,9 @@ class CatalogItem(ABC):
     @abstractmethod
     def build_processor(self, **kwargs) -> Processor:
         """Build the component as processor
+
         kwargs:
-            - backend: Union[ABackend, str] Name or instance of a simulation backend. Default "SLOS"
+            * backend(Union[ABackend, str]): Name or instance of a simulation backend. Default "SLOS"
 
         :return: A Perceval processor
         """

@@ -8,7 +8,7 @@ code base.
 This section lists the major breaking changes introduced.
 
 Breaking changes in Perceval 0.11
---------------------------------
+---------------------------------
 
 postprocess
 ^^^^^^^^^^^

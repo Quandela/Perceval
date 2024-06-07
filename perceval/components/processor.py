@@ -46,11 +46,11 @@ class Processor(AProcessor):
     :param backend: Name or instance of a simulation backend
     :param m_circuit: can either be:
 
-        - an int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
-        >>> p = Processor("SLOS", 5)
+        * an int: number of modes of interest (MOI). A mode of interest is any non-heralded mode.
+            >>> p = Processor("SLOS", 5)
 
-        - a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
-        >>> p = Processor("SLOS", BS() // PS() // BS())
+        * a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
+            >>> p = Processor("SLOS", BS() // PS() // BS())
 
     :param source: the Source used by the processor (defaults to perfect source)
     :param noise: a NoiseModel containing noise parameters (defaults to no noise)

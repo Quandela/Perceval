@@ -1,7 +1,7 @@
 Catalog
 =======
 
-The concept of the *catalog* is to provide the user a set of basic of qbit or photonic gates or circuit.
+The concept of the *catalog* is to provide the user a set of basic of qbit or photonic gate or circuit.
 
 All circuits share the same interface that is describe by the following class ``CatalogItem``:
 
