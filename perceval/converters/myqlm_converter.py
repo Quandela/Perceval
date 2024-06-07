@@ -97,7 +97,7 @@ class MyQLMConverter(AGateConverter):
                     n_cnot,
                     c_idx,
                     c_data,
-                    c_first, use_postselection)
+                    use_postselection)
 
         self.apply_input_state()
         return self._converted_processor
