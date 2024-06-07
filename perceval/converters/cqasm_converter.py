@@ -146,7 +146,7 @@ class CQASMConverter(AGateConverter):
             targets = self._operand_to_qubit_indices(statement.operands[1])
             parameter = statement.operands[2].value
         elif num_operands >= 4:
-            raise ConversionUnsupportedFeatureError(f"Statement with unsupported number of operands, n { num_operands }")
+            raise ConversionUnsupportedFeatureError(f"Statement with unsupported number of operands, n = { num_operands }")
 
         num_controls = len(controls)
         if num_controls >= 2:
@@ -162,7 +162,7 @@ class CQASMConverter(AGateConverter):
                 circuit_template = circuit_template(parameter)
             for target in targets:
                 circuit = circuit_template.copy()
-                self._converted_processor.add(target * 2, circuit.copy())
+                self._converted_processor.add(target * 2, circuit)
         else:
             if gate_name not in _CQASM_2_QUBIT_GATES:
                 raise ConversionUnsupportedFeatureError(
