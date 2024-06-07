@@ -59,7 +59,7 @@ Note: using a ``with`` block you do not need to start and stop your session: it 
 Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommand using directly ``start`` and ``stop`` methods.
 
 Using an existing Scaleway QPU session
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you created your session from the `Scaleway console <https://console.scaleway.com/qaas>`_, you can retrieve it from Perceval.
 
 For this, you only have to go to your session's settings on the console, copy the deduplication identifier and put it to the session creation on your Perceval code.
@@ -71,7 +71,7 @@ A session can be fetched until termination or timeout. If there is no alive sess
 It is highly convenient if you wish to keep a specific amount of session alive at a time.
 
 Send a circuit to a Scaleway QPU session
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Now you are handling a session, you can instantiate a ``RemoteProcessor`` linked to the session:
 
