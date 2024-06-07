@@ -42,100 +42,112 @@ from _test_utils import assert_sv_close
 import numpy as np
 
 
+def check_circuit_names(circuit, expected_names):
+    for component in circuit:
+        print(component.name)
+
 def test_converter_syntax_error():
-    source = """
+    cqasm_program = """
 version 3
 rabbit r
 """
     with pytest.raises(ConversionSyntaxError):
-        CQASMConverter(catalog).convert_string(source)
+        CQASMConverter(catalog).convert_string(cqasm_program)
 
 
 def test_converter_unsupported_classical_variable():
-    source = """
+    cqasm_program = """
 version 3
 qubit[2] q
 bit b
 X q[0]
 """
     with pytest.raises(ConversionUnsupportedFeatureError):
-        CQASMConverter(catalog).convert_string(source)
+        CQASMConverter(catalog).convert_string(cqasm_program)
 
 
 def test_converter_unsupported_gates():
-    source = """
+    cqasm_program = """
 version 3
 qubit[3] q
 CNOT q[0:2], q[2]
 """
     # Caught early: two controls for one target
     with pytest.raises(ConversionUnsupportedFeatureError):
-        CQASMConverter(catalog).convert_string(source)
+        CQASMConverter(catalog).convert_string(cqasm_program)
 
 
 def test_converter_bell_state():
-    source = """
+    cqasm_program = """
 version 3
 qubit[2] q
 H q[0]
 CNOT q[0], q[1]
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=False)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
-    assert len(pc._components) == 2  # should be  BS.H // CNOT
+    assert len(pc._components) == 2
+    assert pc.components[0][1].name == "H"
+    assert pc.components[1][1].name == "Heralded CNOT"
     r = pc.probs()['results']
     assert np.allclose(r[BasicState("|0, 1, 0, 1>")], 0.5)
     assert np.allclose(r[BasicState("|1, 0, 1, 0>")], 0.5)
 
 
 def test_converter_bell_state_swapped():
-    source = """
+    cqasm_program = """
 version 3
 qubit[2] q
 H q[0]
 CNOT q[1], q[0]
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=False)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(pc._components) == 4  # should be  BS.H // PERM // CNOT // PERM
+    assert pc.components[0][1].name == "H"
+    assert pc.components[1][1].name == "PERM"
+    assert pc.components[2][1].name == "Heralded CNOT"
+    assert pc.components[3][1].name == "PERM"
 
 
 def test_converter_postselection():
-    source = """
+    cqasm_program = """
 version 3
 qubit[2] q
 H q[0]
 CNOT q[0], q[1]
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=True)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program, use_postselection=True)
     bsd_out = pc.probs()['results']
     assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
-    assert len(pc._components) == 2  # No permutation needed
+    assert len(pc._components) == 2
+    assert pc.components[0][1].name == "H"
+    assert pc.components[1][1].name == "PostProcessed CNOT"
     assert len(bsd_out) == 2
 
-    source = """
+    cqasm_program = """
 version 3
 qubit[2] q
 H q[0]
 CNOT q[0], q[1]
 H q[0]
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=True)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program, use_postselection=True)
     assert isinstance(pc._components[-1][1]._components[0][1], components.BS)
 
 
 def test_converter_multi_target_gates(capfd):
-    source = """
+    cqasm_program = """
 version 3
 qubit[2] q
 H q[0:1]
 """
-    pc = CQASMConverter(catalog).convert_string(source)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program)
     pdisplay(pc, output_format=Format.TEXT)
     out, err = capfd.readouterr()
     assert out.strip() == """
@@ -157,18 +169,23 @@ q[1]       ║░░░║[q[1]]
 
 
 def test_converter_multi_target_cnot():
-    source = """
+    cqasm_program = """
 version 3
 qubit[3] q
 CNOT q[0], q[1:2]
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=False)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program, use_postselection=False)
     # Two heralded CNOTs sandwiched between PERMs
     assert len(pc.components) == 5
+    assert pc.components[0][1].name == "PERM"
+    assert pc.components[1][1].name == "Heralded CNOT"
+    assert pc.components[2][1].name == "PERM"
+    assert pc.components[3][1].name == "Heralded CNOT"
+    assert pc.components[4][1].name == "PERM"
 
 
 def test_converter_controlled_rotation():
-    source_template = """
+    program_template = """
 version 3
 qubit[2] q
 %s
@@ -179,9 +196,9 @@ CR(pi) q[0], q[1]
 H q[1]
 """
     for q0_state in [0, 1]:
-        source = source_template % ("" if q0_state == 0 else "X q[0]")
+        cqasm_program = program_template % ("" if q0_state == 0 else "X q[0]")
         pc = CQASMConverter(catalog).convert_string(
-            source, use_postselection=False)
+            cqasm_program, use_postselection=False)
         # 1 prep gate on q[0], 2 H, 2 Rz, 2 CNOT, 2 PERMs for the second CNOT
         assert len(pc.components) == 8 + q0_state
         # 4 heralds per CNOT
@@ -227,12 +244,13 @@ expected_unitaries = [
     expected_unitaries
 )
 def test_converter_one_qubit_gate(gate_name, expected_unitary):
-    source = f"""
+    cqasm_program_template = f"""
 version 3
 qubit q
 { gate_name } q
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=False)
+    pc = CQASMConverter(catalog).convert_string(
+        cqasm_program_template, use_postselection=False)
     modes, circuit = pc.components[0]
     assert tuple(modes) == (0, 1)
 
@@ -242,8 +260,8 @@ qubit q
 
 def test_converter_from_file():
     TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
-    source_file = TEST_DATA_DIR / 'state_preparation_5.cqasm3'
-    pc = CQASMConverter(catalog).convert_file(str(source_file))
+    cqasm_program_file = TEST_DATA_DIR / 'state_preparation_5.cqasm3'
+    pc = CQASMConverter(catalog).convert_file(str(cqasm_program_file))
 
     assert pc.circuit_size == 14
     assert len(pc.heralds) == 8
@@ -258,7 +276,7 @@ def test_converter_from_file():
 
 
 def test_converter_longer_program():
-    source = """
+    cqasm_program = """
 // This program prepares a uniform superposition of 7 basis states
 version 3
 qubit[3] q
@@ -278,7 +296,7 @@ Ry(0.25 * pi) q[1]
 CNOT q[0], q[1]
 Ry(-0.25 * pi) q[1]
 """
-    pc = CQASMConverter(catalog).convert_string(source, use_postselection=True)
+    pc = CQASMConverter(catalog).convert_string(cqasm_program, use_postselection=True)
     assert pc.circuit_size == 20
     assert len(pc.heralds) == 14
     assert pc.m == 6
@@ -292,7 +310,7 @@ Ry(-0.25 * pi) q[1]
 
 
 def test_converter_v1():
-    source = f"""
+    cqasm_program = f"""
 version 1.0
 
 # a basic cQASM example
@@ -309,8 +327,10 @@ qubits 2
     measure_all
 """
     pc = CQASMConverter(catalog).convert_string_v1(
-        source, use_postselection=False)
+        cqasm_program, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
-    assert len(pc._components) == 2  # should be  BS.H // CNOT
+    assert len(pc._components) == 2
+    assert pc.components[0][1].name == "H"
+    assert pc.components[1][1].name == "Heralded CNOT"
