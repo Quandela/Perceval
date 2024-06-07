@@ -35,6 +35,8 @@ from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
 
+import numpy as np
+
 
 def _create_mode_map(c_idx: int, c_data: int) -> dict:
     return {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
