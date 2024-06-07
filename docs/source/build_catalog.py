@@ -34,35 +34,38 @@ def get_pretty_string(s: str):
     out = ''
     for i, c in enumerate(s):
         if i == 0:
-            out += s[0].upper()
+            out += c.upper()
             continue
         if s[i-1] == ' ':
-            out += s[i].upper()
+            out += c.upper()
             continue
-        out += s[i]
+        out += c
     return out
 
 
 def build_catalog_rst(path: str):
-    out = ""
+    out = ''
     for key in catalog.list():
         item = catalog[key]
         out += get_pretty_string(item.name) + '\n'
         out += '-'*len(item.name) + '\n\n'
-        out += "Catalog key: ``" + item.name + '``\n\n'
+        out += f'Catalog key: ``{item.name}``\n\n'
         out += item.description + '\n\n'
 
         if item.params_doc:
             out += 'Parameters:\n'
             for param_name, param_descr in item.params_doc.items():
-                out += f'    * {param_name}: {param_descr}\n'
+                out += f' * ``{param_name}``: {param_descr}\n'
             out += '\n'
 
         out += '.. code-block::\n\n'
-        out += '    ' + item.str_repr.replace('\n', '\n    ') + '\n\n'
+        out += '    ' + item.str_repr.replace('\n', '\n    ')+'\n\n'
+
         if item.see_also:
-            out += "See also: " + item.see_also + '\n\n'
+            out += f'See also: {item.see_also}\n\n'
+
         if item.article_ref:
-            out += "Scientific article reference: " + item.article_ref + '\n\n'
-    with open(path, "w") as file:
+            out += f'Scientific article reference: {item.article_ref}\n\n'
+
+    with open(path, 'w') as file:
         file.write(out)

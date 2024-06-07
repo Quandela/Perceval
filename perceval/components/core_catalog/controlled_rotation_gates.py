@@ -121,7 +121,6 @@ ctrln (dual rail)  ─────┤     ├───── ctrln (dual rail)
         return Circuit(4*n, name="postprocessed controlled gate").add(0, Unitary(m))
 
     def build_processor(self, **kwargs):
-
         p = self._init_processor(**kwargs)
         n = kwargs["n"]
 
