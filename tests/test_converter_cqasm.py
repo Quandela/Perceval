@@ -182,6 +182,21 @@ q[1]       ║░░░║[q[1]]
     """.strip()
 
 
+def test_converter_qubit_names():
+    cqasm_program = """
+version 3
+qubit alice
+qubit bob
+qubit[2] psi
+X alice
+Y bob
+Z psi[0:1]
+"""
+    pc = CQASMConverter(catalog).convert_string(cqasm_program)
+    assert tuple(pc.in_port_names) == \
+        ("alice", "alice", "bob", "bob", "psi[0]", "psi[0]", "psi[1]", "psi[1]")
+
+
 def test_converter_multi_target_cnot():
     cqasm_program = """
 version 3
