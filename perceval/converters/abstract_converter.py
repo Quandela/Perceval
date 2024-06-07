@@ -131,7 +131,6 @@ class AGateConverter(ABC):
         CRz - Heralded and post-processed (uses two CNOTs)
         SWAP
         """
-        # TODO: implement other controlled gates through AXBXC decomposition
         gate_name = gate_name.upper()
         if gate_name in ["CNOT", "CX"]:
             self._cnot_idx += 1
