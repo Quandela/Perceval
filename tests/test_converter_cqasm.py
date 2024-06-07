@@ -32,7 +32,7 @@ import pytest
 from pathlib import Path
 
 from perceval import StateVector, pdisplay
-from perceval.converters import CQASMConverter, ConversionSyntaxError, ConversionUnsupportedFeatureError
+from perceval.converters import CQASMConverter, ConversionSyntaxError, ConversionUnsupportedFeatureError, ConversionBadVersionError
 import perceval.components.unitary_components as components
 from perceval.components import catalog
 from perceval.rendering.format import Format
@@ -42,9 +42,23 @@ from _test_utils import assert_sv_close
 import numpy as np
 
 
-def check_circuit_names(circuit, expected_names):
-    for component in circuit:
-        print(component.name)
+def test_converter_version_check():
+    assert CQASMConverter.check_version("// Comment\n\nversion 3\nq") == (3, 0)
+    assert CQASMConverter.check_version("version 1.0\nqubits 2") == (1, 0)
+    assert CQASMConverter.check_version(" version 2.5 ") == (2, 5)
+    with pytest.raises(ConversionSyntaxError):
+        assert CQASMConverter.check_version("version Z.X\n")
+    with pytest.raises(ConversionSyntaxError):
+        assert CQASMConverter.check_version("inversion 1.0\n")
+    with pytest.raises(ConversionSyntaxError):
+        assert CQASMConverter.check_version("//Comment \nvresion 4.0")
+
+
+def test_converter_bad_version():
+    v7_program = """version 7\nqubit q\n"""
+    with pytest.raises(ConversionBadVersionError):
+        CQASMConverter(catalog).convert_string(v7_program)
+
 
 def test_converter_syntax_error():
     cqasm_program = """
@@ -326,7 +340,7 @@ qubits 2
 .measurement
     measure_all
 """
-    pc = CQASMConverter(catalog).convert_string_v1(
+    pc = CQASMConverter(catalog).convert_string(
         cqasm_program, use_postselection=False)
     assert pc.circuit_size == 8
     assert pc.m == 4
