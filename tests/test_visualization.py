@@ -320,3 +320,24 @@ def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
     pc.add_herald(1, 0)
     p.add(2, pc)
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+# For now, this is broken, but once the heralds change is merged, this will
+# generate a correct image.
+def test_svg_processor_with_heralds_and_barriers_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) @ (1, PERM([1, 0])) // (1, BS()) // (0, PERM([1, 0])) // BS() // (1, PERM([1, 0]))
+    c.barrier()
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(0,0)
+    pc.add_herald(2,1)
+    _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_dump_barrier_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_dump_barrier_symb(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, skin_type=SymbSkin)

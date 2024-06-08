@@ -35,7 +35,7 @@ from typing import Any, Tuple
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas, LatexCanvas
-from perceval.components import ACircuit, Circuit, PortLocation, PERM, Herald
+from perceval.components import ACircuit, Circuit, PortLocation, PERM, Herald, Barrier
 from perceval.utils.format import format_parameters
 
 
@@ -281,6 +281,16 @@ class TextRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
+        
+        if isinstance(circuit, Barrier):
+            for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
+                if k % self._hc == 2:
+                    self._h[k] += "──║──"
+                else:
+                    self._h[k] += "  ║  "
+            self.extend_pos(start, end, pos=pos)
+            return
+
         # put variables on the right number of lines
         content = circuit.name + (content and "\n"+content or "")
         lcontents = content.split("\n")
@@ -442,6 +452,7 @@ class CanvasRenderer(ICircuitRenderer):
         if color is None:
             color = "lightblue"
         self._canvas.add_rect((2, 2), 50 * area[2] - 4, 50 * area[3] - 4, fill=color, stroke_dasharray="1,2")
+        self._canvas.set_background_color(color)
         self._canvas.add_text((4, 50 * (end - start + 1) + 5), name.upper(), 8)
 
     def close_subblock(self, lines):
