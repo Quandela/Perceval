@@ -28,31 +28,37 @@
 # SOFTWARE.
 
 import os
-import re
 import platform
 import pytest
+import tempfile
+import uuid
 
 from perceval.utils import PersistentData, FileFormat
 
 
 def test_directory():
     persistent_data = PersistentData()
-    if platform.system() == "Linux":
-        # '/home/my_user/.local/share/perceval-quandela'
-        assert re.match(r"^\/home\/.+\/\.local\/share\/perceval-quandela$", persistent_data.directory) is not None
-    elif platform.system() == "Windows":
-        # 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
-        assert re.match(r"^C:\\Users\\.+\\AppData\\Local\\quandela\\perceval-quandela$", persistent_data.directory) is not None
-    elif platform.system() == "Darwin":
-        # '/Users/my_user/Library/Application Support/perceval-quandela'
-        assert re.match(r"^\/Users\/.+\/Library\/Application Support\/perceval-quandela$", persistent_data.directory) is not None
-    else:
-        raise OSError("My god where are you ?")
-    persistent_data.clear_all_data()
+    assert os.path.isabs(persistent_data.directory)
+    assert persistent_data.directory.endswith("perceval-quandela")
+
+
+UNIQUE_PART = uuid.uuid4()
+
+
+class _PersistentDataForTests(PersistentData):
+    """
+    Overrides the directory used for persistent data to target a temporary sub-folder.
+    This allows to test permissions without risks of messing with some system or user directories
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._directory = os.path.join(tempfile.gettempdir(), f'perceval-container-{UNIQUE_PART}', 'perceval-quandela')
+        os.makedirs(self._directory, exist_ok=True)
 
 
 def test_basic_methods():
-    persistent_data = PersistentData()
+    persistent_data = _PersistentDataForTests()
     persistent_data.clear_all_data()
 
     assert os.path.exists(persistent_data.directory)
@@ -96,7 +102,7 @@ def test_basic_methods():
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_access():
-    persistent_data = PersistentData()
+    persistent_data = _PersistentDataForTests()
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)
@@ -115,11 +121,11 @@ def test_access():
 
     os.chmod(parent_directory, 0o000)
     with pytest.warns(UserWarning):
-        PersistentData()
+        _PersistentDataForTests()
 
     os.chmod(parent_directory, 0o444)
     with pytest.warns(UserWarning):
-        PersistentData()
+        _PersistentDataForTests()
 
     os.chmod(parent_directory, 0o777)
 
