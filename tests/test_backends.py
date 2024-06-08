@@ -30,9 +30,8 @@
 import math
 import pytest
 
-from perceval.backends import Clifford2017Backend, NaiveBackend, AProbAmpliBackend, SLOSBackend, MPSBackend,\
-    BackendFactory
-from perceval.components import BS, PS, Circuit, catalog
+from perceval.backends import Clifford2017Backend, AProbAmpliBackend, SLOSBackend, BackendFactory
+from perceval.components import BS, PS, PERM, Circuit, catalog
 from perceval.utils import BSCount, BasicState, Parameter, StateVector
 from _test_utils import assert_sv_close
 
@@ -257,3 +256,33 @@ def test_evolve_indistinguishable(backend_name):
     backend.set_input_state(BasicState([1, 1]))
     sv_out = backend.evolve()
     assert_sv_close(sv_out, math.sqrt(2)/2*StateVector([2, 0]) - math.sqrt(2)/2*StateVector([0, 2]))
+
+
+def test_backend_mps_n_mode_perm_decomp():
+    backend = BackendFactory.get_backend("MPS")
+    backend.set_circuit(Circuit(3) // (0, PERM([2, 0, 1])) // (1, BS.H()))
+
+    for r, c in backend._circuit:
+        if isinstance(c, PERM):
+            assert c.m == 2
+
+    check_output_distribution(backend, BasicState("|2,0,0>"),
+                              {BasicState("|0,2,0>"): 0.25,
+                               BasicState("|0,1,1>"): 0.5,
+                               BasicState("|0,0,2>"): 0.25})
+    check_output_distribution(backend, BasicState("|1,0,0>"),
+                              {BasicState("|0,1,0>"): 0.5,
+                               BasicState("|0,0,1>"): 0.5})
+    check_output_distribution(backend, BasicState("|1,0,1>"),
+                              {BasicState("|0,2,0>"): 0.5,
+                               BasicState("|0,0,2>"): 0.5})
+
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
+def test_probampli_iterator_cache(backend_name):
+    b = BackendFactory.get_backend(backend_name)
+    b.set_circuit(Circuit(5).add(0, BS.H()))
+    b.set_input_state(BasicState([1, 1, 0, 0, 0]))
+    b.evolve()
+    assert len(b._cache_iterator) != 0
+    b.set_circuit(Circuit(7).add(3, BS.H()))
+    assert len(b._cache_iterator) == 0

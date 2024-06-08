@@ -51,8 +51,8 @@ def test_basic_state():
 
 def test_str_state_vector():
     sv = (1 + 1j) * StateVector("|0,1>") + (1 - 1j) * StateVector("|1,0>")
-    assert str(sv) == "(1/2+I/2)*|0,1>+(1/2-I/2)*|1,0>" \
-           or str(sv) == "(1/2-I/2)*|1,0>+(1/2+I/2)*|0,1>"  # Order doesn't matter
+    assert str(sv) == "(0.5+0.5I)*|0,1>+(0.5-0.5I)*|1,0>" \
+        or str(sv) == "(0.5-0.5I)*|1,0>+(0.5+0.5I)*|0,1>"  # Order doesn't matter
 
 
 def test_tensor_product_0():
@@ -159,6 +159,10 @@ def test_bsdistribution():
     assert len(bsd_mult) == 2
     assert bsd_mult[bs1 * bs1] == pytest.approx(0.4)
     assert bsd_mult[bs1 * bs2] == pytest.approx(0.6)
+    assert bsd.m == 2
+    assert bsd_squared.m == 4
+    with pytest.raises(ValueError):
+        pcvl.BSDistribution({BasicState("|1>"): .5, BasicState("|1,1>"): .5})
 
 
 def test_svdistribution():
@@ -181,6 +185,13 @@ def test_svdistribution():
     assert svd_squared[StateVector("|1,0,0,1>")] == pytest.approx(1 / 4)
     assert svd_squared[StateVector("|0,1,1,0>")] == pytest.approx(1 / 4)
     assert svd_squared[StateVector("|0,1,0,1>")] == pytest.approx(1 / 4)
+    assert svd.m == 2
+    assert svd.n_max == 1
+    assert svd_squared.m == 4
+    assert svd_squared.n_max == 2
+    with pytest.raises(ValueError):
+        svd[StateVector("|1>")] = 1/7
+        SVDistribution({StateVector("|1>"): .5, StateVector("|1,1>"): .5})
 
 
 def test_separate_state_without_annots():
@@ -375,6 +386,17 @@ def test_statevector_arithmetic():
     sv5 += 0.2j * sv1
     sv5 += -0.6j * sv2
     assert_sv_close(sv5, -math.sqrt(5) / 5 * 1j * StateVector([0, 1]) + math.sqrt(5) / 5 * 2j * StateVector([1, 0]))
+
+
+def test_max_photon_state_iterator():
+    l = [[0, 0, 0],
+         [1, 0, 0], [0, 1, 0], [0, 0, 1],
+         [2, 0, 0], [1, 1, 0], [1, 0, 1], [0, 2, 0], [0, 1, 1], [0, 0, 2]
+         ]
+    i = 0
+    for bs in pcvl.utils.max_photon_state_iterator(3,2):
+        assert bs == pcvl.BasicState(l[i])
+        i += 1
 
 
 def test_allstate_iterator():

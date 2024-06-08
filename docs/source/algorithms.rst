@@ -17,10 +17,11 @@ A :ref:`Processor` is a composite element aiming at simulating an actual QPU, in
 Create a local processor
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-To create a local processor, you just need to start with a :ref:`Circuit`, provide a backend name, and an optional
-:ref:`Source` with the following syntax:
+To create a local processor, you just need to start with a :ref:`Circuit`, provide a backend name, and either an
+optional :ref:`Source` or a :code:`NoiseModel` with the following syntax:
 
->>> processor = pcvl.Processor("MY_BACKEND", my_circuit, my_source)
+>>> processor = pcvl.Processor("MY_BACKEND", my_circuit, source=my_source)
+>>> processor = pcvl.Processor("MY_BACKEND", my_circuit, noise=my_noise_model)
 
 If omitted, the source is a perfect single photon source.
 

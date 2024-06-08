@@ -45,32 +45,8 @@ from .qmath import exponentiation_by_squaring
 import exqalibur as xq
 
 
-def _sv__str__(self, nsimplify=True):
-    if not self.keys():
-        return "|>"
-    self_copy = copy(self)
-    self_copy.normalize()
-    ls = []
-    for key, value in self_copy:
-        if value == 1:
-            ls.append(str(key))
-        else:
-            if isinstance(value, sp.Expr):
-                ls.append(str(value) + "*" + str(key))
-            else:
-                if nsimplify:
-                    value = simple_complex(value)[1]
-                    if value[1:].find("-") != -1 or value.find("+") != -1:
-                        value = f"({value})"
-                else:
-                    value = str(value)
-                ls.append(value + "*" + str(key))
-    return "+".join(ls).replace("+-", "-")
-
-
 BasicState = xq.FockState
 StateVector = xq.StateVector
-StateVector.__str__ = _sv__str__
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
@@ -89,6 +65,19 @@ def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) ->
             output_array = xq.FSArray(m, n, mask)
         else:
             output_array = xq.FSArray(m, n)
+        for output_state in output_array:
+            yield output_state
+
+def max_photon_state_iterator(m: int, n_max: int):
+    """
+    Iterator on all possible output state on m modes with at most n_max photons
+
+    :param m: number of modes
+    :param n_max: maximum number of photons
+    :return: list of BasicState
+    """
+    for n in range(n_max+1):
+        output_array = xq.FSArray(m,n)
         for output_state in output_array:
             yield output_state
 
@@ -143,6 +132,8 @@ class SVDistribution(ProbabilityDistribution):
     """
     def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
         super().__init__()
+        self._n_max = 0
+        self._m = None
         if sv is not None:
             if isinstance(sv, (BasicState, StateVector)):
                 self[sv] = 1
@@ -156,8 +147,20 @@ class SVDistribution(ProbabilityDistribution):
         if isinstance(key, BasicState):
             key = StateVector(key)
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
+
+        # number of modes verification
+        if self._m is None:
+            self._m = key.m
+        if self._m != key.m:
+            raise ValueError("Number of modes is not consistent")
+
         key.normalize()
         super().__setitem__(key, value)
+
+        # Update max number of photons :
+        n_max = max(key.n)
+        if n_max > self._n_max:
+            self._n_max = n_max
 
     def __getitem__(self, key):
         if isinstance(key, BasicState):
@@ -204,6 +207,30 @@ class SVDistribution(ProbabilityDistribution):
         results = random.choices(states, k=count, weights=probs)
         return list(results)
 
+    @property
+    def m(self):
+        return self._m
+
+    @property
+    def n_max(self):
+        return self._n_max
+
+    @staticmethod
+    def tensor_product(svd1, svd2, prob_threshold: float = 0):
+        """
+        Compute the tensor product of two SVDistribution with an optional probability threshold
+        """
+        if len(svd1) == 0:
+            return svd2
+        new_dist = SVDistribution()
+        for sv1, proba1 in svd1.items():
+            for sv2, proba2 in svd2.items():
+                if proba1 * proba2 < prob_threshold:
+                    continue
+                sv = sv1 * sv2
+                new_dist[sv] += proba1 * proba2
+        return new_dist
+
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
@@ -239,6 +266,7 @@ class BSDistribution(ProbabilityDistribution):
     """
     def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()
+        self._m = None
         if d is not None:
             if isinstance(d, BasicState):
                 self[d] = 1
@@ -250,6 +278,10 @@ class BSDistribution(ProbabilityDistribution):
 
     def __setitem__(self, key, value):
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
+        if self._m is None:
+            self._m = key.m
+        if self._m != key.m:
+            raise ValueError("Number of modes is not consistent")
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
@@ -300,6 +332,11 @@ class BSDistribution(ProbabilityDistribution):
                     bs = bs1 * bs2
                 new_dist[bs] += proba1 * proba2
         return new_dist
+
+    @property
+    def m(self):
+        return self._m
+
 
 
 class BSCount(defaultdict):

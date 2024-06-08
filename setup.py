@@ -26,11 +26,12 @@ setuptools.setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.3.1', 'multipledispatch',
+    install_requires=['sympy', 'numpy', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.5.0', 'multipledispatch',
                       'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec',
                       'platformdirs'],
     extras_require={
@@ -39,6 +40,6 @@ setuptools.setup(
         "myqlm_bridge": ["myqlm~=1.9.5"]
     },
     setup_requires=["scmver"],
-    python_requires=">=3.8,<3.12",
+    python_requires=">=3.8",
     scmver=True
 )

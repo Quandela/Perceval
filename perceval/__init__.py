@@ -46,6 +46,7 @@ See also:
     - Quandela cloud documentation: https://cloud.quandela.com/webide/documentation (requires a free account to access)
 """
 
+import sys
 from importlib import import_module
 from .utils import PMetadata
 
@@ -56,6 +57,7 @@ from .backends import *
 from .utils import *
 from .rendering import *
 from .runtime import *
+from .error_mitigation import photon_recycling
 from .simulators import Simulator, SimulatorFactory, DelaySimulator, LossSimulator, PolarizationSimulator
 
 
@@ -66,3 +68,6 @@ def register_plugin(name, silent=False):
     except Exception as e:
         raise RuntimeError("cannot import %s: %s" % (name, str(e)))
     return True
+
+
+use_perceval_logger()

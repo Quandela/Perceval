@@ -27,39 +27,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import get_preparation_circuit, get_measurement_circuit
-from typing import List
+import os
+import time
+
+import perceval as pcvl
+from perceval import logger
 
 
-class StatePreparation:
-    """
-    Builds preparation circuits to prepare an input photon in each of the following
-    logical qubit state states: |0>,|1>,|+>,|+i> using Pauli Gates.
+def test_logger_config():
+    logger_config = pcvl.LoggerConfig()
+    logger_config.reset()
+    logger_config.save()
 
-    :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
-    """
-    def __init__(self, prep_state_indices: List):
-        self._prep_state_indices = prep_state_indices
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
+                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
 
-    def __iter__(self):
-        """
-        Returns preparation circuits qubit by qubit
-        """
-        for i, pauli_type in enumerate(self._prep_state_indices):
-            yield i*2, get_preparation_circuit(pauli_type)
+    logger_config.enable_file()
+    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.general)
+    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.resources)
+    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.user)
+    logger_config.save()
 
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': True,
+                                 'channels': {'general': {'level': 'warn'}, 'resources': {'level': 'warn'}, 'user': {'level': 'warn'}}}
 
-class MeasurementCircuit:
-    """
-    Builds a measurement circuit to measure photons created in the Pauli Basis (I,X,Y,Z) to perform
-    tomography experiments.
+    logger_config.reset()
+    logger_config.save()
 
-    :param pauli_indices: List of 'n'(=nqubit) indices to choose a circuit to measure the prepared state at nth qubit
-    """
-
-    def __init__(self, pauli_indices: List):
-        self._pauli_indices = pauli_indices
-
-    def __iter__(self):
-        for i, pauli_type in enumerate(self._pauli_indices):
-            yield i*2, get_measurement_circuit(pauli_type)
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
+                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}

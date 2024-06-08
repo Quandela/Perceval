@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from multipledispatch import dispatch
 from .simulator_interface import ASimulatorDecorator
 from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector, SVDistribution, BSDistribution
 from perceval.components import Unitary
@@ -68,8 +67,7 @@ class PolarizationSimulator(ASimulatorDecorator):
             s_odd *= fs[slice(i + 1, i + 2)]
         return s_odd, s_even
 
-    @dispatch(StateVector)
-    def _postprocess_results(self, results) -> StateVector:
+    def _postprocess_sv_impl(self, results: StateVector) -> StateVector:
         output = StateVector()
         for out_state, out_amplitude in results:
             s_odd, s_even = self._split_odd_even(out_state)
@@ -80,8 +78,7 @@ class PolarizationSimulator(ASimulatorDecorator):
             output += out_amplitude * reduced_out_state
         return output
 
-    @dispatch(BSDistribution)
-    def _postprocess_results(self, results) -> BSDistribution:
+    def _postprocess_bsd_impl(self, results: BSDistribution) -> BSDistribution:
         output = BSDistribution()
         for out_state, output_prob in results.items():
             s_odd, s_even = self._split_odd_even(out_state)

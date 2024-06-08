@@ -35,14 +35,12 @@ from typing import Any, Dict, List, Union, Callable, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
+from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
-from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
-from perceval.utils import LogicalState
 
 
 class ProcessorType(Enum):
@@ -54,17 +52,19 @@ class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict = {}
+        self._parameters: Dict[str, Any] = {}
+
+        self._noise: Union[NoiseModel, None] = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons = None
+        self._min_detected_photons: Union[int, None] = None
 
         self._reset_circuit()
 
     def _reset_circuit(self):
         self._in_ports: Dict = {}
         self._out_ports: Dict = {}
-        self._postselect: PostSelect = None
+        self._postselect: Union[PostSelect, None] = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
@@ -89,10 +89,13 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict):
-        self._parameters.update(params)
+    def set_parameters(self, params: Dict[str, Any]):
+        for key, value in params.items():
+            self.set_parameter(key, value)
 
     def set_parameter(self, key: str, value: Any):
+        if not isinstance(key, str):
+            raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
 
     @property
@@ -130,6 +133,17 @@ class AProcessor(ABC):
         return self._input_state
 
     @property
+    def noise(self):
+        return self._noise
+
+    @noise.setter
+    def noise(self, nm: NoiseModel):
+        if nm is None or isinstance(nm, NoiseModel):
+            self._noise = nm
+        else:
+            raise TypeError("noise type has to be 'NoiseModel'")
+
+    @property
     @abstractmethod
     def available_commands(self) -> List[str]:
         pass
@@ -150,10 +164,6 @@ class AProcessor(ABC):
     def post_select_fn(self):
         return self._postselect
 
-    @deprecated(version="0.9", reason="use set_postselection(PostSelect) instead")
-    def set_postprocess(self, postprocess_func: Callable):  # Deprecated in order to avoid free Python function
-        self._postselect = postprocess_func
-
     def set_postselection(self, postselect: PostSelect):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
@@ -162,12 +172,9 @@ class AProcessor(ABC):
         :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
         """
-        assert isinstance(postselect, PostSelect), "Parameter must be a PostSelect object"
+        if not isinstance(postselect, PostSelect):
+            raise TypeError("Parameter must be a PostSelect object")
         self._postselect = postselect
-
-    @deprecated(version="0.9", reason="use clear_postselection() instead")
-    def clear_postprocess(self):
-        self.clear_postselection()
 
     def clear_postselection(self):
         self._postselect = None
@@ -184,7 +191,7 @@ class AProcessor(ABC):
         return True
 
     def copy(self, subs: Union[dict, list] = None):
-        new_proc = copy.deepcopy(self)
+        new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))
@@ -256,8 +263,7 @@ class AProcessor(ABC):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
-        if not (self._postselect is None or processor._postselect is None):
-            raise RuntimeError("Cannot automatically compose two processors with post-selection conditions")
+
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new processor
@@ -304,11 +310,17 @@ class AProcessor(ABC):
 
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
+            c_first = perm_modes[0]
             if perm_component is None:
-                self._postselect = processor._postselect
+                other_postselect = copy.copy(processor._postselect)
             else:
-                c_first = perm_modes[0]
-                self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+                other_postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+            other_postselect.shift_modes(c_first)
+            if not (self._postselect is None or other_postselect is None
+                    or postselect_independent(self._postselect, other_postselect)):
+                raise RuntimeError("Cannot automatically compose processor's post-selection conditions")
+            self._postselect = self._postselect or PostSelect()
+            self._postselect.merge(other_postselect)
 
     def _add_component(self, mode_mapping, component):
         self._validate_postselect_composition(mode_mapping)
@@ -332,6 +344,7 @@ class AProcessor(ABC):
             self._anon_herald_num += 1
         self._in_ports[Herald(expected, name)] = [mode]
         self._out_ports[Herald(expected, name)] = [mode]
+        self._circuit_changed()
 
     def add_herald(self, mode: int, expected: int, name: str = None):
         r"""
@@ -363,6 +376,8 @@ class AProcessor(ABC):
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
+        if self._n_moi is None:
+            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -538,30 +553,6 @@ class AProcessor(ABC):
     @abstractmethod
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
-
-    @property
-    def source_distribution(self) -> Union[SVDistribution, None]:
-        r"""
-        Retrieve the computed input distribution.
-        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
-        """
-        return self._inputs_map
-
-    @property
-    def source(self):
-        r"""
-        :return: The photonic source
-        """
-        return self._source
-
-    @source.setter
-    def source(self, source: Source):
-        r"""
-        :param source: A Source instance to use as the new source for this processor.
-        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
-        """
-        self._source = source
-        self._inputs_map = None
 
     def flatten(self) -> List:
         """
