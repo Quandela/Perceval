@@ -47,6 +47,7 @@ class Canvas(ABC):
         else:
             self._opts = opts
         self._inverse_Y = inverse_Y and -1 or 1
+        self._background_color = None
 
     def set_offset(self, v: Tuple[float, float], width: float, height: float):
         self._offset_x = v[0]
@@ -256,6 +257,18 @@ class Canvas(ABC):
 
     def add_shape(self, shape_fn, circuit, content, mode_style, **opt):
         shape_fn(circuit, self, content, mode_style, **opt)
+
+    def set_background_color(self, background_color):
+        """
+        The canvas is not expected to change its background color in response
+        to this, but a drawable element can retrieve this property to know
+        whether it is drawn on a white or a colored surface.
+        """
+        self._background_color = background_color
+
+    @property
+    def background_color(self):
+        return self._background_color
 
     def draw(self):
         assert not self._drawn, "calling draw on drawn canvas"
