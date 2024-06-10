@@ -40,7 +40,7 @@ from perceval.utils.format import format_parameters
 
 
 class PortPos:
-    def __init__(self, x, y, fixed=True):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
 
@@ -518,6 +518,7 @@ class CanvasRenderer(ICircuitRenderer):
             CanvasRenderer.SCALE * area[3])
         if color is None:
             color = "lightblue"
+        self._canvas.set_background_color(color)
         self._canvas.add_rect(
             (2, 2),
             CanvasRenderer.SCALE * area[2] - 4,
@@ -751,17 +752,20 @@ class PreRenderer(ICircuitRenderer):
 
     def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
-        self._add_shape(lines, circuit, content, w, pos=pos)
-        self._update_mode_style(lines, circuit, w)
-        for i in range(lines[0], lines[-1] + 1):
-            self._chart[i] += w
+        if w:
+            self._add_shape(lines, circuit, content, w, pos=pos)
+            self._update_mode_style(lines, circuit, w)
+            for i in range(lines[0], lines[-1] + 1):
+                self._chart[i] += w
 
     def append_subcircuit(self, lines, circuit, content):
         w = self._skin.style_subcircuit['width']
-        self._add_shape(lines, circuit, content, w, self._skin.subcircuit_shape)
-        self._update_mode_style(lines, circuit, w, True)
-        for i in range(lines[0], lines[-1] + 1):
-            self._chart[i] += w
+        if w:
+            self._add_shape(
+                lines, circuit, content, w, self._skin.subcircuit_shape)
+            self._update_mode_style(lines, circuit, w, True)
+            for i in range(lines[0], lines[-1] + 1):
+                self._chart[i] += w
 
 
 def create_renderer(
