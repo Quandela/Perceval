@@ -43,6 +43,10 @@ from qiskit.circuit.random import random_circuit
 
 
 def gates_and_qubits(qiskit_circuit):
+    '''''
+    :rtype gates_names: list of strings
+    :rtype gates_qubits: list of lists of ints
+    '''''
     # will be used in both classes.
     gates_names = []
     gates_qubits = []
@@ -62,9 +66,15 @@ class CircuitToGraphConverter:
     With this output or if the user already has the two lists, it converts it into
     a graph where the vertices are the qubits and the edges the gates acting on them,
     the weight of its edges depends on the type of gate.
+    :param qiskit_circuit: Quantum circuit to convert.
+    :type qiskit_circuit: QuantumCircuit
     '"""
 
-    def __init__(self, qiskit_circuit=None, gates=None, qubits=None):
+    def __init__(self, qiskit_circuit: QuantumCircuit = None, gates=None, qubits=None):
+        '''''
+        :type gates: list of strings
+        :type qubits: list of lists of ints
+        '''''
         if gates is not None and qubits is not None:
             self.gates = gates
             self.qubits = qubits
@@ -73,7 +83,7 @@ class CircuitToGraphConverter:
         else:
             raise ValueError("Either a Qiskit circuit or both gates and qubits lists must be provided")
 
-    def graph_generator(self):
+    def graph_generator(self) -> nx.Graph:
         elements_set = set(item for sublist in self.qubits for item in sublist)  # nodes
         g = nx.Graph()
         g.add_nodes_from(elements_set)
@@ -115,13 +125,17 @@ class CircuitToGraphConverter:
         plt.show()
 
     def graph_k_clustering_and_cnots_needed(self,
-                                            compute_with_min_cnots=False):
+                                            compute_with_min_cnots: bool = False) -> tuple[list[list[int]], list[int]]:
         """''
         Computes the laplacian matrix of the graph, compute its eigenvectors sorted by their
         eigenvalues. For all the possible subpartitions of the graph, it will compute the
         kmeans clustering with the respective number of eigenvectors as features.
         Given the random initial state for the kmeans method, the user has the option to compute
         multiple repetitions and choose the partition that gives the smallest number of CNOTs.
+        :param compute_with_min_cnots: Whether to compute it 30 times and choose the output yielding to the minimum of CNOTs.
+        :type compute_with_min_cnots: bool
+        :return: Clustering result and CNOT counts.
+        :rtype: tuple[list[list[int]], list[int]]
         '"""
         graph = self.graph_generator()
         laplacian_matrix = nx.normalized_laplacian_matrix(graph).toarray()

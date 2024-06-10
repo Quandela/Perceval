@@ -29,10 +29,19 @@
 
 from perceval.converters.circuit_to_graph_converter import CircuitToGraphConverter, gates_and_qubits
 import numpy as np
+from qiskit import QuantumCircuit
 
 
 class ResourcesEstimator:
-    def __init__(self, qiskit_circuit, encoding=None):
+    """
+       Estimate the resources required for a given Qiskit Quantum Circuit.
+
+       :param qiskit_circuit: Quantum circuit to estimate resources for.
+       :type qiskit_circuit: QuantumCircuit
+       :param encoding: Custom encoding to use.
+       :type encoding: Optional[List[List[int]]]
+       """
+    def __init__(self, qiskit_circuit: QuantumCircuit, encoding: list[list[int]] = None):
         self.circuit = qiskit_circuit
         self.gates, self.qubits = gates_and_qubits(self.circuit)
         if encoding is None:
@@ -51,7 +60,11 @@ class ResourcesEstimator:
             same_subset_list.append(same_subset)
         return same_subset_list
 
-    def resources(self):
+    def resources(self) -> tuple[int, int, int]:
+        '''''
+        :return: num_cnots, num_photons, num_modes needed to simulate the circuit with the specific encoding
+        :rtype:  tuple[int, int, int]
+        '''''
         partition = self.encoding
         bool_list = self.check_same_subset()
         false_indices = [index for index, value in enumerate(bool_list) if not value]
