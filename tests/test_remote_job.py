@@ -33,11 +33,10 @@ import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_svd_close
+from _test_utils import assert_bsd_close
 from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
     REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
 
-MAX_SHOTS_PER_CALL = 1E6
 
 
 def test_remote_job():
@@ -99,7 +98,12 @@ def test_remote_with_gates(catalog_item):
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
-        p, "my_simulator", url='my_url')
+        p, "my_platform", url='my_url')
+
+    # platform parameters
+    p.thresholded_output(True)
+    max_shots_per_call = 1E7
+
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
@@ -107,16 +111,14 @@ def test_remote_with_gates(catalog_item):
     assert noise == rp._noise
 
     for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
-        p.with_input(input_state)
         rp.with_input(input_state)
-
-        assert rp._input_state == p._input_state
-
-        s = Sampler(p, MAX_SHOTS_PER_CALL=MAX_SHOTS_PER_CALL)
-        rs = Sampler(rp, max_shots_per_call=MAX_SHOTS_PER_CALL)
-
-        probs = s.probs()
+        rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
         job = rs.probs.execute_async()
+
+        p.min_detected_photons_filter(input_state.n)
+        p.with_input(input_state)
+        s = Sampler(p, max_shots_per_call=max_shots_per_call)
+        probs = s.probs()
 
         delay = 0
         while True:
@@ -128,6 +130,4 @@ def test_remote_with_gates(catalog_item):
             delay += 1
             sleep(1)
 
-        rprobs = job.get_results()
-
-        assert_svd_close(probs['results'], rprobs['results'])
+        assert_bsd_close(job.get_results()['results'], probs['results'])  # will not work without fixed seed

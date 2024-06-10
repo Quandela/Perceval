@@ -86,6 +86,16 @@ def assert_svd_close(lhsvd, rhsvd):
         assert found_in_rh, f"sv not found {lh_sv}"
 
 
+def assert_bsd_close(lhbsd, rhbsd):
+    assert len(lhbsd) == len(rhbsd), f"len are different, {len(lhbsd)} vs {len(rhbsd)}"
+
+    for lh_bs in lhbsd.keys():
+        if lh_bs not in rhbsd:
+            assert False, f"bs not found {lh_bs}"
+        assert pytest.approx(lhbsd[lh_bs]) == rhbsd[lh_bs], \
+            f"different probabilities for {lh_bs}, {lhbsd[lh_bs]} vs {rhbsd[lh_bs]}"
+
+
 def  dict2svd(d: dict):
     return SVDistribution({StateVector(k): v for k, v in d.items()})
 
