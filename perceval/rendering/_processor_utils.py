@@ -46,7 +46,7 @@ class ComponentHeraldInfo:
             self.output_heralds[mode_index] = herald_mode
 
 
-def collect_herald_info(processor: AProcessor):
+def collect_herald_info(processor: AProcessor, recursive: bool):
     """
     Return a dictionary mapping a component to a HeraldInfo object.
 
@@ -55,8 +55,16 @@ def collect_herald_info(processor: AProcessor):
 
     For example, if d[my_component].output_heralds[0] == 5,
     then output mode 0 of the component is the herald at final mode 5.
+
+    For correct rendering, the information should be collected at the same
+    level of granularity as the drawing: for individual circuit elements when
+    recursive is True, for blocks when recursive is False.
     """
-    component_list = processor.flatten()
+    if recursive:
+        component_list = processor.flatten()
+    else:
+        component_list = processor._components
+
     herald_info = {}
     for herald_mode in processor.heralds.keys():
         # Do one forward pass to identify heralds on inputs, and one

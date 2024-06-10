@@ -133,8 +133,7 @@ def pdisplay_processor(processor: AProcessor,
     if len(processor.heralds):
         for k in processor.heralds.keys():
             renderer.set_mode_style(k, ModeStyle.HERALD)
-        if recursive:
-            herald_info = collect_herald_info(processor)
+        herald_info = collect_herald_info(processor, recursive)
 
     for rendering_pass in [pre_renderer, renderer]:
         if not rendering_pass:
