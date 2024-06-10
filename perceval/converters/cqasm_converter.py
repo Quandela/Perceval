@@ -276,56 +276,63 @@ class CQASMConverter(AGateConverter):
 
         # read QASM instructions line-by-line
         for line in lines:
-            line = line.strip()
-            if len(line) <= 0 or line[0] == '#':
-                #empty line or comment
-                continue
+            try:
+                line = line.strip()
+                if len(line) <= 0 or line[0] == '#':
+                    #empty line or comment
+                    continue
 
-            instruction = line.split(" ")
-            if instruction[0] == "version":
-                version = instruction[1]
-                continue
+                instruction = line.split(" ")
+                if instruction[0] == "version":
+                    version = instruction[1]
+                    continue
 
-            if instruction[0] == "qubits":
-                typ = cqasm.types.QubitArray(size=int(instruction[1]))
-                ast.variables.append(
-                    cqasm.semantic.Variable(name="b'q'", typ=typ))
-                continue
+                if instruction[0] == "qubits":
+                    typ = cqasm.types.QubitArray(size=int(instruction[1]))
+                    ast.variables.append(
+                        cqasm.semantic.Variable(name="b'q'", typ=typ))
+                    continue
 
-            # Ignore anything with only one keyword:
-            if len(instruction) <= 1:
-                continue
+                # Ignore anything with only one keyword:
+                if len(instruction) <= 1:
+                    continue
 
-            # Ignore barriers classical bits
-            if line.find("b[") != -1:
-                continue
+                # Ignore classical bits
+                if line.find("b[") != -1:
+                    continue
 
-            # Ignore non-gate instructions
-            if instruction[0] in ['prep_z', 'measure']:
-                continue
+                # Ignore non-gate instructions
+                if instruction[0] in ['prep_z', 'measure']:
+                    continue
 
-            # Parse the argument list.
-            # TODO: parse this properly to implement:
-            # - qubit ranges such as: q[0:2]
-            # - qubit number with more than 1 digit
-            # - second argument as a number/expression for controlled gates
-            ins_n_qubits = 0
-            ins_qubits = []
-            for remaining_token in instruction[1:]:
-                ins_params = remaining_token.split(",")
-                for param in ins_params:
-                    indx = param.find("q[")
-                    if indx  != -1:
-                        ins_qubits.append(param[indx+2])
-            ins_n_qubits = len(ins_qubits)
+                # Parse the argument list.
+                # TODO: parse this properly to implement:
+                # - qubit ranges such as: q[0:2]                # handled by elimination             
+                # - qubit number with more than 1 digit         # done
+                # - second argument as a number/expression for controlled gates 
+                                                                # cQASM v1 does not use numbers/
+                                                                # expressions for qubits 
+                ins_qubits = []
+                for remaining_token in instruction[1:]:
+                    ins_params = remaining_token.split(",")
+                    for param in ins_params:
+                        # only 2 qubit gates
+                        if param.find(":") != -1 or len(ins_params) > 2: 
+                            raise ValueError("Gates with number of Qubits higher than 2 not implemented")
+                        start_indx = param.find("q[")
+                        if start_indx  != -1:
+                            end_indx = param.find("]")
+                            ins_qubits.append(param[start_indx+2:end_indx])
 
-            statement = cqasm.semantic.Instruction()
-            statement.name = f"b'{ instruction[0] }'"
-            for qubit_index in ins_qubits:
-                index = cqasm.values.IndexRef(
-                    variable=cqasm.semantic.Variable(name = "b'q'"))
-                index.indices = cqasm.values.MultiConstInt()
-                index.indices.append(cqasm.values.ConstInt(qubit_index))
-                statement.operands.append(index)
-            ast.block.statements.append(statement)
+                statement = cqasm.semantic.Instruction()
+                statement.name = f"b'{ instruction[0] }'"
+                for qubit_index in ins_qubits:
+                    index = cqasm.values.IndexRef(
+                        variable=cqasm.semantic.Variable(name = "b'q'"))
+                    index.indices = cqasm.values.MultiConstInt()
+                    index.indices.append(cqasm.values.ConstInt(qubit_index))
+                    statement.operands.append(index)
+                ast.block.statements.append(statement)
+            except ValueError:
+                print("An error in parsing the cQASM v1 file.")
         return ast
