@@ -68,7 +68,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    polarization
    backends
    components
-   catalog
    tools
    algorithms
    providers
@@ -145,6 +144,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/statevector
    reference/polarization
    reference/circuit
+   reference/catalog
    reference/circuit_optimizer
    reference/utils
    reference/source

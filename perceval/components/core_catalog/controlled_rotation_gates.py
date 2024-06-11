@@ -47,7 +47,6 @@ def build_control_gate_unitary(n: int, alpha: float) -> Matrix:
     :param alpha: rotation angle of the gate
     :return: Unitary matrix of the post-selected gate
              Ref : https://arxiv.org/abs/2405.01395
-
     """
 
     I = Matrix.eye(n)
@@ -65,17 +64,16 @@ def build_control_gate_unitary(n: int, alpha: float) -> Matrix:
     initial_modes = [i for i in range(4*n)]
     final_modes = [
         2*i for i in range(n)] + [2*i+1 for i in range(n)] + [i for i in range(2*n, 4*n)]
-    Perm = Matrix.zeros((4*n, 4*n))
-    Perm[initial_modes, final_modes] = 1
+    perm = Matrix.zeros((4*n, 4*n))
+    perm[initial_modes, final_modes] = 1
 
-    U = Perm.T @ U0 @ Perm
-
+    U = perm.T @ U0 @ perm
     return U
 
 
 class PostProcessedControledRotationsItem(CatalogItem):
     article_ref = "https://arxiv.org/abs/2405.01395"
-    description = r"""n-qubit controlled roation gate C...CZ(alpha) with 2n heralded modes and a post-selection function"""
+    description = r"""n-qubit controlled rotation gate C...CZ(alpha) with 2*n ancillary modes and a post-selection function"""
     params_doc = {
         "n": "number of qubit of the gate",
         "alpha": "angle of the controlled-rotation"
@@ -83,13 +81,13 @@ class PostProcessedControledRotationsItem(CatalogItem):
     str_repr = r"""                        ╭─────╮
 ctrl0 (dual rail)  ─────┤     ├───── ctrl0 (dual rail)
                    ─────┤     ├─────
-                        │     │
-ctrl1 (dual rail)  ─────┤     ├───── ctrl1 (dual rail)
+    .                      .           .
+    .                      .           .
+    .                      .           .
+ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
                    ─────┤     ├─────
-    .                      .           .
-    .                      .           .
-    .                      .           .
-ctrln (dual rail)  ─────┤     ├───── ctrln (dual rail)
+                        │     │
+target (dual rail) ─────┤     ├───── target (dual rail)
                    ─────┤     ├─────
                         ╰─────╯"""
 
@@ -100,8 +98,8 @@ ctrln (dual rail)  ─────┤     ├───── ctrln (dual rail)
     def build_circuit(self, **kwargs):
         """
         kwargs:
-            - n : int,  number of qubit of the gate.
-            - alpha : float,  angle of the controlled-rotation.
+            - n : int, number of qubit of the gate.
+            - alpha : float, angle of the controlled-rotation.
 
         :return: Circuit implementing the post-selected n-qubit controlled gate.
         """

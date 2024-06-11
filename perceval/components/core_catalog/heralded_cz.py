@@ -30,7 +30,7 @@
 import math as m
 
 from deprecated import deprecated
-from perceval.components import Circuit, Processor
+from perceval.components import Processor
 from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.port import Port, Encoding
@@ -38,7 +38,7 @@ from perceval.components.port import Port, Encoding
 
 class HeraldedCzItem(CatalogItem):
     article_ref = "https://arxiv.org/abs/quant-ph/0110144"
-    description = r"""CZ gate with 2 heralded modes"""
+    description = r"""Knill CZ gate with 2 heralded modes"""
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
