@@ -31,7 +31,7 @@ from numpy import Inf
 from .abstract_processor import AProcessor, ProcessorType
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
-from perceval.utils import SVDistribution, BSDistribution, BSSamples, BasicState, StateVector, LogicalState, NoiseModel
+from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 from multipledispatch import dispatch

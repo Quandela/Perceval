@@ -33,7 +33,7 @@ from perceval.components import Circuit, Source
 from perceval.utils import BasicState, NoiseModel, BSDistribution
 
 
-def _svd2bsd(svd):
+def _svd_to_bsd(svd):
     res = BSDistribution()
     for state, prob in svd.items():
         res.add(state[0], prob)
@@ -51,7 +51,7 @@ def test_samples_provider():
     possible_fock_input = [BasicState([0, 0]), BasicState([1, 0]), BasicState([0, 1]), BasicState([1, 1])]
 
     provider = SamplesProvider(clifford)
-    provider.prepare(_svd2bsd(noisy_input), 1000)
+    provider.prepare(_svd_to_bsd(noisy_input), 1000)
 
     assert provider._pools and provider._weights
     for state in possible_fock_input:
