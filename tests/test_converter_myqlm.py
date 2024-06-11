@@ -77,11 +77,9 @@ def test_cnot_1_heralded():
     myqlmc = qprog.to_circ()
 
     pc = convertor.convert(myqlmc, use_postselection=False)
-    c = pc.linear_circuit()
-
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
 
 
 def test_cnot_H():
@@ -93,9 +91,9 @@ def test_cnot_H():
     myqlmc = qprog.to_circ()
 
     pc = convertor.convert(myqlmc, use_postselection=False)
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
 
 
 def test_cnot_1_postprocessed():
@@ -214,7 +212,7 @@ def test_converter_ghz_state():
 
     pc = convertor.convert(myqlmc, use_postselection=True)
     assert pc.m == 6
-    assert pc.circuit_size == 12 # m + heralded modes
+    assert pc.circuit_size == 10 # m + heralded modes = m + nb_cnot*2
     import perceval as pcvl
     pc.with_input(pcvl.LogicalState([0, 0, 0]))
     sampler = Sampler(pc)
