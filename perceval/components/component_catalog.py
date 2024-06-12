@@ -75,7 +75,11 @@ class CatalogItem(ABC):
         return self._default_opts[key] if key in self._default_opts else None
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Name of the component
+
+        :return: Name of the component
+        """
         return self._name
 
     @property
@@ -115,10 +119,21 @@ class CatalogItem(ABC):
 
     @abstractmethod
     def build_circuit(self, **kwargs) -> Circuit:
+        """Build the component as circuit
+
+        :return: A Perceval circuit
+        """
         pass
 
     @abstractmethod
     def build_processor(self, **kwargs) -> Processor:
+        """Build the component as processor
+
+        kwargs:
+            * backend(Union[ABackend, str]): Name or instance of a simulation backend. Default "SLOS"
+
+        :return: A Perceval processor
+        """
         pass
 
 

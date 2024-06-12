@@ -144,12 +144,14 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/statevector
    reference/polarization
    reference/circuit
+   reference/catalog
    reference/circuit_optimizer
    reference/utils
    reference/source
    reference/simulator
    reference/processor
    reference/postselect
+   reference/pdisplay
    reference/qiskit_converter
    reference/stategenerator
    reference/scaleway_session
