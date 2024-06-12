@@ -28,9 +28,30 @@
 # SOFTWARE.
 
 import pytest
+import numpy as np
 from perceval.converters.circuit_to_graph_converter import CircuitToGraphConverter
 from perceval.converters.resources_estimator import ResourcesEstimator
 from qiskit.circuit.random import random_circuit
+from perceval.utils.qmath import kmeans
+
+
+def test_kmeans():
+    # Simple dataset with two clear clusters
+    data = np.array([[1.0, 2.0], [1.1, 2.1], [5.0, 6.0], [5.1, 6.1]])
+    expected_labels = [0, 0, 1, 1]
+
+    labels = kmeans(data, n_clusters=2, n_init=10)
+
+    assert set(labels) == {0, 1}  # Ensure we have two clusters
+    assert (np.array_equal(np.sort(labels[:2]), np.sort(expected_labels[:2])) or
+            np.array_equal(np.sort(labels[:2]), np.sort(expected_labels[2:])))  # Check first cluster
+    assert (np.array_equal(np.sort(labels[2:]), np.sort(expected_labels[2:])) or
+            np.array_equal(np.sort(labels[2:]), np.sort(expected_labels[:2])))  # Check second cluster
+
+    # Test for a larger number of clusters
+    data = np.random.rand(100, 2)
+    labels = kmeans(data, n_clusters=5, n_init=10)
+    assert len(set(labels)) == 5  # Ensure we have 5 clusters
 
 
 def test_circuit_to_graph_converter():

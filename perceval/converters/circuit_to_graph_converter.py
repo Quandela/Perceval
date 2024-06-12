@@ -36,10 +36,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-from sklearn.cluster import KMeans
 from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector
-from qiskit.circuit.random import random_circuit
+from perceval.utils.qmath import kmeans
 
 
 def gates_and_qubits(qiskit_circuit):
@@ -132,6 +130,7 @@ class CircuitToGraphConverter:
         kmeans clustering with the respective number of eigenvectors as features.
         Given the random initial state for the kmeans method, the user has the option to compute
         multiple repetitions and choose the partition that gives the smallest number of CNOTs.
+
         :param compute_with_min_cnots: Whether to compute it 30 times and choose the output yielding to the minimum of CNOTs.
         :type compute_with_min_cnots: bool
         :return: Clustering result and CNOT counts.
@@ -151,9 +150,7 @@ class CircuitToGraphConverter:
                 best_partition = None
                 min_cnots = float('inf')
                 for _ in range(30):
-                    kmeans = KMeans(n_clusters=k)
-                    labels = kmeans.fit_predict(features)
-
+                    labels = kmeans(features, k)
                     real_weight = 0
                     for u, v in graph.edges():
                         # Check if the nodes belong to different clusters
@@ -168,8 +165,7 @@ class CircuitToGraphConverter:
                 possible_partitions.append(best_partition)
                 number_of_cnots.append(min_cnots)
             else:
-                kmeans = KMeans(n_clusters=k)
-                labels = kmeans.fit_predict(features)
+                labels = kmeans(features, k)
                 possible_partitions.append(labels)
 
                 real_weight = 0
