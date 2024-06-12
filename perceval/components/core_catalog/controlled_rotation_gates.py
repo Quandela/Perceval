@@ -81,13 +81,13 @@ class PostProcessedControledRotationsItem(CatalogItem):
     str_repr = r"""                        ╭─────╮
 ctrl0 (dual rail)  ─────┤     ├───── ctrl0 (dual rail)
                    ─────┤     ├─────
+                        │     │
+ctrl1 (dual rail)  ─────┤     ├───── ctrl1 (dual rail)
+                   ─────┤     ├─────
     .                      .           .
     .                      .           .
     .                      .           .
 ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
-                   ─────┤     ├─────
-                        │     │
-target (dual rail) ─────┤     ├───── target (dual rail)
                    ─────┤     ├─────
                         ╰─────╯"""
 
