@@ -229,7 +229,7 @@ class NoisySamplingSimulator:
                 continue
             if self._state_selected(sampled_state):
                 if self._heralds and not self._keep_heralds:  # Remove ancillary modes
-                    sampled_state = sampled_state.remove_modes(self._heralds.keys())
+                    sampled_state = sampled_state.remove_modes(list(self._heralds.keys()))
                 output.append(sampled_state)
             else:
                 not_selected += 1
