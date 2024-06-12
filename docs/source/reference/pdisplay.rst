@@ -25,7 +25,7 @@ Then, add ``pcvl.pdisplay()`` of your circuit.
 
 >>> pcvl.pdisplay(mzi)
 
-.. figure:: _static/img/mzi.png
+.. figure:: ../_static/img/mzi.png
   :align: center
   :width: 75%
 
@@ -40,9 +40,9 @@ Then, add ``pcvl.pdisplay()`` of your circuit.
        * - Text Console
          - Jupyter Notebook
          - IDE (Pycharm, Spyder, etc)
-       * - .. image:: _static/img/terminal-screenshot.jpg
-         - .. image:: _static/img/jupyter-screenshot.jpg
-         - .. image:: _static/img/ide-screenshot.jpg
+       * - .. image:: ../_static/img/terminal-screenshot.jpg
+         - .. image:: ../_static/img/jupyter-screenshot.jpg
+         - .. image:: ../_static/img/ide-screenshot.jpg
 
 Also, you can change the display of the circuit using a different skin which can itself be configured.
 Indeed, a boolean can be set to obtain a more compact display (if the circuit is too wide for example).
@@ -55,14 +55,14 @@ Indeed, a boolean can be set to obtain a more compact display (if the circuit is
 >>> symbolic_skin = SymbSkin(compact_display=True)
 >>> pcvl.pdisplay(C, skin=symbolic_skin)
 
-.. figure:: _static/img/decomposition_symb_compact.png
+.. figure:: ../_static/img/decomposition_symb_compact.png
   :align: center
   :width: 25%
 
 >>> symbolic_skin = SymbSkin(compact_display=False)
 >>> pcvl.pdisplay(C, skin=symbolic_skin)
 
-.. figure:: _static/img/decomposition_symb_compact_false.png
+.. figure:: ../_static/img/decomposition_symb_compact_false.png
   :align: center
   :width: 25%
 

@@ -134,7 +134,7 @@ Perceval provides ``pdisplay`` function as an easy and ergonomic way to display 
 execution context (Jupyter notebook, IDE, command line script). Circuit rendering is built upon a skin system allowing
 to style your output image.
 
-See :ref:`PDisplay - Pretty Display`
+See :ref:`pdisplay`
 
 Perceval comes with two built-in skins:
 
