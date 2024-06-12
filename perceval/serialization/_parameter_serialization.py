@@ -37,7 +37,8 @@ def serialize_parameter(param: Union[Parameter, float]):
     if isinstance(param, float):
         pb_param.real_value = param
     else:
-        pb_param.name = param.name
+        if param._symbol is not None:
+            pb_param.name = str(param._symbol)
         if param.defined:
             pb_param.real_value = float(param)
         elif param._is_expression:
@@ -51,7 +52,9 @@ def deserialize_parameter(serial_param: pb.Parameter):
     t = serial_param.WhichOneof('type')
     if t == 'real_value':
         if serial_param.name:
-            return Parameter(serial_param.name, serial_param.real_value)
+            p = Parameter(serial_param.name)
+            p.set_value(serial_param.real_value)
+            return p
         return serial_param.real_value
     elif t == 'symbol':
         return Parameter(serial_param.symbol)
