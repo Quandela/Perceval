@@ -28,44 +28,36 @@
 # SOFTWARE.
 
 import math
-import numpy as np
+from typing import List, Tuple
 
 import exqalibur as xq
-from ._abstract_backends import AProbAmpliBackend
+from . import NaiveBackend
 from perceval.utils import BasicState
 
+class NaiveApproxBackend(NaiveBackend):
+    """Naive algorithm with Gurvits computations of permanents"""
 
-class NaiveBackend(AProbAmpliBackend):
-    """Naive algorithm, no clever calculation path, does not cache anything,
-       recompute all states on the fly"""
+    def __init__(self, gurvits_iterations = 10000):
+        self._gurvits_iterations = gurvits_iterations
+        NaiveBackend.__init__(self)
 
     @property
     def name(self) -> str:
-        return "Naive"
-
-    def prob_amplitude(self, output_state: BasicState) -> complex:
-        p = output_state.prodnfact() * self._input_state.prodnfact()
-        M = self._compute_submatrix(output_state)
-        return self._compute_permanent(M) / math.sqrt(p) if M.size > 1 else M[0, 0]
-
-    def _compute_submatrix(self, output_state: BasicState) -> np.matrix:
-        n = self._input_state.n
-        m = self._input_state.m
-        if n != output_state.n:
-            return np.matrix([[complex(0)]], dtype=complex)
-        if n == 0:
-            return np.matrix([[complex(1)]], dtype=complex)
-        u_st = np.empty((n, n), dtype=complex)
-        colidx = 0
-        for ik in range(m):
-            for i in range(self._input_state[ik]):
-                rowidx = 0
-                for ok in range(m):
-                    for j in range(output_state[ok]):
-                        u_st[rowidx, colidx] = self._umat[ok, ik]
-                        rowidx += 1
-                colidx += 1
-        return u_st
+        return "NaiveApprox"
 
     def _compute_permanent(self, M):
-        return xq.permanent_cx(M, n_threads=1)
+        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        return permanent_with_error[0]
+
+    def prob_amplitude_with_error(self, output_state: BasicState) -> Tuple[complex, float]:
+        M = self._compute_submatrix(output_state)
+        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        normalization_coeff = math.sqrt(output_state.prodnfact() * self._input_state.prodnfact())
+        return (permanent_with_error[0]/normalization_coeff, permanent_with_error[1]/normalization_coeff) \
+            if M.size > 1 else (M[0, 0], 0)
+
+    def probability_confidence_interval(self, output_state: BasicState) -> List[float]:
+        mean, err = self.prob_amplitude_with_error(output_state)
+        min_prob = max((abs(mean) - err) ** 2, 0)
+        max_prob = min((abs(mean) + err) ** 2, 1)
+        return [min_prob, max_prob]
