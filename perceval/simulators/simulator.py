@@ -382,9 +382,10 @@ class Simulator(ISimulator):
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
         :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output state distribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+            * results is the post-selected output state distribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
 
         """Trim input SVD given _rel_precision threshold"""
@@ -483,9 +484,10 @@ class Simulator(ISimulator):
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
         :return: A dictionary of the form { "results": SVDistribution, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output SVDistribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+            * results is the post-selected output SVDistribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))

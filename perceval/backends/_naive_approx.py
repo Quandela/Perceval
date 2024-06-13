@@ -27,24 +27,37 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator
-from .logical_state import LogicalState, generate_all_logical_states
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, postselect_independent, post_select_distribution, post_select_statevector
-from ._random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
-from .persistent_data import PersistentData
-from .metadata import PMetadata
-from .density_matrix import DensityMatrix
-from .noise_model import NoiseModel
-from .logging import LOGGER as logger, use_perceval_logger, use_python_logger, LoggerConfig
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+import math
+from typing import List, Tuple
+
+import exqalibur as xq
+from . import NaiveBackend
+from perceval.utils import BasicState
+
+class NaiveApproxBackend(NaiveBackend):
+    """Naive algorithm with Gurvits computations of permanents"""
+
+    def __init__(self, gurvits_iterations = 10000):
+        self._gurvits_iterations = gurvits_iterations
+        NaiveBackend.__init__(self)
+
+    @property
+    def name(self) -> str:
+        return "NaiveApprox"
+
+    def _compute_permanent(self, M):
+        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        return permanent_with_error[0]
+
+    def prob_amplitude_with_error(self, output_state: BasicState) -> Tuple[complex, float]:
+        M = self._compute_submatrix(output_state)
+        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        normalization_coeff = math.sqrt(output_state.prodnfact() * self._input_state.prodnfact())
+        return (permanent_with_error[0]/normalization_coeff, permanent_with_error[1]/normalization_coeff) \
+            if M.size > 1 else (M[0, 0], 0)
+
+    def probability_confidence_interval(self, output_state: BasicState) -> List[float]:
+        mean, err = self.prob_amplitude_with_error(output_state)
+        min_prob = max((abs(mean) - err) ** 2, 0)
+        max_prob = min((abs(mean) + err) ** 2, 1)
+        return [min_prob, max_prob]

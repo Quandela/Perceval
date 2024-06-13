@@ -35,27 +35,13 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
-from typing import Dict, List, Union, Tuple, Optional
-import sympy as sp
-import numpy as np
+from typing import Dict, List, Union, Optional
 
-from .format import simple_complex
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
 import exqalibur as xq
 
-
-def _basicstate_remove_modes(self, index_list: List[int]):
-    new_state = []
-    for idx, k in enumerate(self):
-        if idx in index_list:
-            continue
-        new_state.append(k)
-    return BasicState(new_state)
-
-
 BasicState = xq.FockState
-BasicState.remove_modes = _basicstate_remove_modes
 StateVector = xq.StateVector
 
 

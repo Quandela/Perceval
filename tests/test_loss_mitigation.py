@@ -27,24 +27,47 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator
-from .logical_state import LogicalState, generate_all_logical_states
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, postselect_independent, post_select_distribution, post_select_statevector
-from ._random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
-from .persistent_data import PersistentData
-from .metadata import PMetadata
-from .density_matrix import DensityMatrix
-from .noise_model import NoiseModel
-from .logging import LOGGER as logger, use_perceval_logger, use_python_logger, LoggerConfig
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+import pytest
+from perceval.error_mitigation import photon_recycling
+from perceval.utils import BasicState
+from perceval.components import catalog, Source
+from perceval.algorithm import Sampler
+from perceval import Processor
+
+
+def _sampler_setup_cnot(output_type: str):
+    # Processor config
+    processor = Processor("SLOS")
+    processor.min_detected_photons_filter(0)
+    processor.thresholded_output(True)
+
+    # Circuit
+    circ = catalog['heralded cnot'].build_circuit()
+    processor.set_circuit(circ)
+
+    # Source poperties
+    src = Source(emission_probability=0.3)
+    processor.source = src
+
+    # Input state
+    input_state = BasicState([0, 1, 0, 1, 1, 1])
+    processor.with_input(input_state)
+
+    # Sampler
+    sampler = Sampler(processor)
+    if output_type == 'samples':
+        return sampler.sample_count(20000)['results']
+    elif output_type == 'probs':
+        return sampler.probs()['results']
+
+@pytest.mark.parametrize('result_type', ['probs', 'samples'])
+def test_photon_loss_mitigation(result_type):
+
+    lossy_sampling = _sampler_setup_cnot(output_type=result_type)
+
+    ideal_photon_count = 4
+    mitigated_dist = photon_recycling(lossy_sampling, ideal_photon_count)
+
+    for keys, value in mitigated_dist.items():
+        assert sum(keys) == ideal_photon_count
+        assert value > 1e-6

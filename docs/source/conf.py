@@ -47,6 +47,8 @@ from pathlib import Path
 from git import Repo
 
 sys.path.insert(0, os.path.relpath("../"))
+
+from source import build_catalog
 from perceval import PMetadata
 
 
@@ -69,7 +71,10 @@ def keep_latest_versions(versions, mini=None):
 
     for one_version in versions:
         # major_version = re.match(r"v\d+", one_version).group()
-        major_version = re.match(r"v\d+\.(\d+)", one_version).groups()
+        try:
+            major_version = re.match(r"v\d+\.(\d+)", one_version).groups()
+        except AttributeError:
+            major_version = '0.0.0'
         if (
             major_version not in version_dict
             or one_version > version_dict[major_version]
@@ -81,6 +86,11 @@ def keep_latest_versions(versions, mini=None):
 
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
+
+build_directory = os.path.join(REPO_PATH, "docs", "build")
+if not os.path.exists(build_directory):
+    os.makedirs(build_directory)
+build_catalog.build_catalog_rst(os.path.join(build_directory, "catalog.rst"))
 
 repo = Repo(REPO_PATH)
 tags = [tag.name for tag in repo.tags]

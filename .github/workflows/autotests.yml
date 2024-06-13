@@ -115,7 +115,7 @@ jobs:
     - name: Build docs
       run: |
         cd docs
-        make multiversion
+        make html
 
     - name: 'Create docs Artefact'
       uses: actions/upload-artifact@v4
