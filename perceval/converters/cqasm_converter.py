@@ -31,10 +31,9 @@ from perceval.components import Processor, Source
 from perceval.components import Circuit, BS, PS, PERM
 from .abstract_converter import AGateConverter
 
-import cqasm.v3x as cqasm
 import numpy as np
 import re
-
+from multipledispatch import dispatch
 
 # A collection of gates for which meaningful optical circuits (beam splitter,
 # phase shifter, permutation) exist.
@@ -43,8 +42,6 @@ import re
 _CQASM_1_QUBIT_GATES = {
     "H": Circuit(2, name="H") // BS.H(),
 
-    # TODO: Something seems to be wrong with the RX rotation, we need
-    # to flip the angle to get the same results as qiskit/cirq
     "X": Circuit(2, name="X") // PERM([1, 0]),
     "X90": Circuit(2, name="Rx(π / 2)") // BS.Rx(theta=-np.pi / 2),
     "mX90": Circuit(2, name="Rx(-π / 2)") // BS.Rx(theta=np.pi / 2),
@@ -68,7 +65,7 @@ _CQASM_1_QUBIT_GATES = {
 }
 
 _CQASM_2_QUBIT_GATES = {
-    "CNOT", "CZ", "CR", "CRk"
+    "CNOT", "CZ"
 }
 
 
@@ -90,6 +87,8 @@ class ConversionUnsupportedFeatureError(Exception):
 
 
 class CQASMConverter(AGateConverter):
+    import cqasm.v3x as cqasm
+
     r"""cQASM quantum circuit to perceval processor converter.
 
     :param catalog: a component library to use for the conversion. It must contain CNOT gates.
@@ -109,19 +108,19 @@ class CQASMConverter(AGateConverter):
     def _collect_qubit_list(self, ast):
         self._qubit_list = []
         for variable in ast.variables:
-            if type(variable.typ) is cqasm.types.QubitArray:
+            if type(variable.typ) is CQASMConverter.cqasm.types.QubitArray:
                 for i in range(variable.typ.size):
                     self._qubit_list.append((_cs(variable.name), i))
-            elif type(variable.typ) is cqasm.types.Qubit:
+            elif type(variable.typ) is CQASMConverter.cqasm.types.Qubit:
                 self._qubit_list.append((_cs(variable.name), -1))
             else:
                 raise ConversionUnsupportedFeatureError(f"Classical variable { variable.name } not supported")
 
     def _operand_to_qubit_indices(self, operand):
         name = _cs(operand.variable.name)
-        if type(operand) is cqasm.values.VariableRef:
+        if type(operand) is CQASMConverter.cqasm.values.VariableRef:
             return [self._qubit_list.index((name, -1))]
-        elif type(operand) is cqasm.values.IndexRef:
+        elif type(operand) is CQASMConverter.cqasm.values.IndexRef:
             return [self._qubit_list.index((name, index.value))
                       for index in operand.indices]
         else:
@@ -138,7 +137,7 @@ class CQASMConverter(AGateConverter):
 
         # Match other statement patterns
         if num_operands == 2:
-            if type(statement.operands[1]) is cqasm.values.ConstFloat:
+            if type(statement.operands[1]) is CQASMConverter.cqasm.values.ConstFloat:
                 # Statement pattern is OP(r) q
                 parameter = statement.operands[1].value
             else:
@@ -181,7 +180,11 @@ class CQASMConverter(AGateConverter):
                     self._use_postselection,
                     parameter=parameter)
 
-    def convert(self, ast, use_postselection: bool = True) -> Processor:
+    @dispatch(cqasm.semantic.Program, use_postselection=bool)
+    def convert(
+            self,
+            ast: cqasm.semantic.Program,
+            use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
 
         :param ast: the AST of a cQASM program
@@ -190,9 +193,6 @@ class CQASMConverter(AGateConverter):
         as the last gate. Otherwise, uses only `heralded CNOT`
         :return: the converted processor
         """
-        if not type(ast) is cqasm.semantic.Program:
-            raise ConversionSyntaxError(f"cQASM parser error: { ast[0] }")
-
         self._collect_qubit_list(ast)
         self._num_cnots = sum(
             (_cs(s.name) == "CNOT") + 2 * (_cs(s.name) in ["CR", "CRk"])
@@ -223,40 +223,43 @@ class CQASMConverter(AGateConverter):
         else:
             raise ConversionSyntaxError(f"Missing version number")
 
-    def convert_string(
+    @dispatch(str, use_postselection=bool)
+    def convert(
             self,
-            source_string: str,
+            source: str,
             use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
 
-        :param source_string: The cQASM program stored in a string
+        :param source: a string containing the cQASM program to convert, or the path to a file storing itm
         :param use_postselection: when True, uses a `postprocessed CNOT`
         as the last gate. Otherwise, uses only `heralded CNOT`
         :return: the converted processor
         """
+        source_string = source
+
+        # The string contains a single line, it might be a path
+        if not "\n" in source:
+            try:
+                with open(source) as source_file:
+                    source_string = source_file.read()
+            except IOError:
+                # File not found, It might be a single line program instead
+                # of a name, so we can attempt to parse it.
+                pass
+
         major, minor = CQASMConverter.check_version(source_string)
         if major == 3:
-            ast = cqasm.Analyzer().analyze_string(source_string)
+            ast = CQASMConverter.cqasm.Analyzer().analyze_string(
+                source_string)
         elif major == 1:
             ast = self._v3_ast_from_v1_source(source_string.split('\n'))
         else:
             raise ConversionBadVersionError(f"Unsupported version {major}.{minor}")
-        return self.convert(ast, use_postselection)
 
-    def convert_file(
-            self,
-            source_file_name: str,
-            use_postselection: bool = False) -> Processor:
-        r"""Convert a cQASM quantum program into a `Processor`.
+        if not isinstance(ast, CQASMConverter.cqasm.semantic.Program):
+            raise ConversionSyntaxError(f"cQASM parser error: { ast[0] }")
 
-        :param source_file_name: The path to the cQASM program to load
-        :param use_postselection: when True, uses a `postprocessed CNOT`
-        as the last gate. Otherwise, uses only `heralded CNOT`
-        :return: the converted processor
-        """
-        return self.convert_string(
-            open(source_file_name, "r").read(),
-            use_postselection)
+        return self.convert(ast, use_postselection=use_postselection)
 
     def _v3_ast_from_v1_source(self, lines):
         r""""Converts a cQASM v1 quantum program into a cQASM v3 AST"""
@@ -264,6 +267,8 @@ class CQASMConverter(AGateConverter):
         # Parsing code from https://github.com/maxwell04-wq original submission,
         # with just enough changes to make it parse the example on:
         # https://www.quantum-inspire.com/kbase/cqasm/
+
+        cqasm = CQASMConverter.cqasm
 
         # Create an empty Program object to store the v3 AST
         ast = cqasm.semantic.Program(
@@ -304,10 +309,6 @@ class CQASMConverter(AGateConverter):
                 continue
 
             # Parse the argument list.
-            # TODO: parse this properly to implement:
-            # - qubit ranges such as: q[0:2]
-            # - qubit number with more than 1 digit
-            # - second argument as a number/expression for controlled gates
             ins_n_qubits = 0
             ins_qubits = []
             for remaining_token in instruction[1:]:

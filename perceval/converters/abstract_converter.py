@@ -49,7 +49,6 @@ class UnknownGateError(Exception):
 class AGateConverter(ABC):
     r"""
     Converter class for gate based Circuits to perceval processor
-    Qiskit or MyQLM
     """
 
     def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
@@ -143,27 +142,6 @@ class AGateConverter(ABC):
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self._heralded_cz_builder.build_processor(backend=self._backend_name)
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cz_processor)
-        elif gate_name in ["CRZ", "CR", "CRK"]:
-            theta = np.pi / (2**parameter) if gate_name == "CRK" else parameter
-            theta /= 2
-            rz_plus_name = "Rz(%.2f)" % theta
-            rz_plus = Circuit(2, rz_plus_name) // (0, PS(-theta / 2)) // (1, PS(theta / 2))
-            rz_minus_name = "Rz(-%.2f)" % theta
-            rz_minus = Circuit(2, rz_minus_name) // (0, PS(theta / 2)) // (1, PS(-theta / 2))
-            # Break down the controlled Z rotation into this circuit:
-            #
-            # 0: ─────────────────@──────────────────@───
-            #                     │                  │
-            # 1: ───Rz(theta/2)───X───Rz(-theta/2)───X───
-            #
-            #   Rz(0)     if the first qubit is  |0>
-            #   Rz(theta) if the first qubit is |1>
-            self._converted_processor.add(c_data, rz_plus)
-            self._create_2_qubit_gates_from_catalog(
-                "CNOT", n_cnot, c_idx, c_data, use_postselection)
-            self._converted_processor.add(c_data, rz_minus)
-            self._create_2_qubit_gates_from_catalog(
-                "CNOT", n_cnot, c_idx, c_data, use_postselection)
         elif gate_name == "SWAP":
             # Works for any FIRST and LAST, everything in-between is unchanged.
             c_first = min(c_idx, c_data)
