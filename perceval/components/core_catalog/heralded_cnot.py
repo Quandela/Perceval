@@ -36,7 +36,7 @@ from perceval.utils import Encoding
 
 class HeraldedCnotItem(CatalogItem):
     article_ref = ""
-    description = r"""CNOT gate with 2 heralded modes (built using Heralded CZ and H)."""
+    description = r"""Knill CNOT gate with 2 heralded modes (built using Heralded CZ and H)."""
     str_repr = r"""                              ╭──────────╮
 ctrl (dual rail) ─────────────┤          ├───────────── ctrl (dual rail)
                  ─────────────┤ Heralded ├─────────────
@@ -44,7 +44,7 @@ ctrl (dual rail) ─────────────┤          ├──�
 data (dual rail) ─────┤ H ├───┤          ├───┤ H ├───── data (dual rail)
                  ─────┤   ├───┤          ├───┤   ├─────
                       ╰───╯   ╰──────────╯   ╰───╯"""
-    see_also = "postprocessed cnot and klm cnot"
+    see_also = "heralded cz, postprocessed cnot and klm cnot"
 
     def __init__(self):
         super().__init__("heralded cnot")

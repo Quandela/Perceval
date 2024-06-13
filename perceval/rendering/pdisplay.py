@@ -48,7 +48,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.algorithm import ProcessTomography
+from perceval.algorithm import AProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks, _complex_to_rgb
@@ -148,6 +148,7 @@ def pdisplay_processor(processor: AProcessor,
 
 def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Format = Format.TEXT) -> str:
     """
+    :meta private:
     Generates representation of a matrix
     """
 
@@ -206,6 +207,7 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
 def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCount],
                            output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
+    :meta private:
     Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
     StateVector's case)
     """
@@ -302,7 +304,7 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     ax.view_init(elev=30, azim=45)
 
 
-def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
+def pdisplay_tomography_chi(qpt: AProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
                             render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
     if output_format == Format.TEXT or output_format == Format.LATEX:
         raise TypeError(f"Tomography plot does not support {output_format}")
@@ -344,6 +346,7 @@ def pdisplay_density_matrix(dm,
                             mplot_noshow: bool = False,
                             mplot_savefig: str = None):
     """
+    :meta private:
     :param dm:
     :param output_format:
     :param color: whether to display the phase according to some circular cmap
@@ -381,7 +384,7 @@ def _pdisplay(o, **kwargs):
 def _pdisplay(dm, **kwargs):
     return pdisplay_density_matrix(dm, **kwargs)
 
-@dispatch(ProcessTomography)
+@dispatch(AProcessTomography)
 def _pdisplay(qpt, **kwargs):
     return pdisplay_tomography_chi(qpt, **kwargs)
 
@@ -445,7 +448,7 @@ def _default_output_format(o):
         if isinstance(o, Matrix):
             return Format.LATEX
         return Format.HTML
-    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, ProcessTomography))):
+    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, AProcessTomography))):
         return Format.MPLOT
     return Format.TEXT
 

@@ -35,6 +35,7 @@ from typing import Iterator, Optional, Union, Tuple
 import warnings
 import numpy as np
 import sympy as sp
+from scipy.linalg import sqrtm, block_diag, svd
 
 
 class Matrix(ABC):
@@ -177,6 +178,42 @@ class Matrix(ABC):
         np.fill_diagonal(n_u, val=r_diag)
         return MatrixN(np.matmul(q, n_u))
 
+    @staticmethod
+    def get_unitary_extension(M: np.ndarray) -> MatrixN:
+        """Embed the input matrix M into an unitary matrix  U 
+
+                    U = | M/σ * |
+                        | *   * |
+
+        :param M: np.ndarray describing a row x col complex matrix
+        :return: np.ndarray describing a (row + col) x (row + col) complex unitary matrix
+        """
+
+        row, col = M.shape
+
+        flag_transpose = row > col
+        if flag_transpose:
+            M = M.T
+            row, col = M.shape
+
+        # Singular value decomposition and normalisation
+        v1, s, v2h = svd(M)
+        d = np.diag(s / np.max(s))
+
+        # # Unitary extension
+        V1 = block_diag(v1, v2h.T.conj())
+        V2h = block_diag(v2h, v1.T.conj())
+        D = np.block([[d, np.zeros((row, col - row)), sqrtm(np.eye(row) - d**2)],
+                    [np.zeros((col - row, row)), np.eye(col - row),
+                    np.zeros((col - row, row))],
+                    [sqrtm(np.eye(row) - d**2), np.zeros((row, col - row)), -d]])
+
+        U = V1 @ D @ V2h
+
+        if flag_transpose:
+            U = U.T
+        return MatrixN(U)
+
     def simp(self):
         """Simplify the matrix - only implemented for symbolic matrix"""
         return self
@@ -268,7 +305,6 @@ class MatrixS(Matrix, sp.Matrix):
             return np.allclose(np.array(p_trans).astype(complex), np.zeros(self.shape))
         else:
             return np.allclose(self.tonp().dot(self.tonp().T.conj()), np.eye(self.shape[0]))
-
 
 class MatrixN(np.ndarray, Matrix):
 

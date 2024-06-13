@@ -11,14 +11,14 @@
 
 Through a simple object-oriented python API, Perceval provides tools for building a circuit with linear optics components,
 defining single-photon sources and their error model, manipulating Fock states, running simulations, reproducing published experimental papers results,
-and experimenting a new generation of quantum algorithms.
+and experimenting with a new generation of quantum algorithms.
 
 It is interfaced with the available QPUs on
 the [Quandela cloud](https://cloud.quandela.com/webide/), so it is possible to run computations on an
 actual photonic computer.
 
 Perceval aims to be a companion tool for developing discrete-variable photonics circuits
-- while simulating their design, modeling their ideal and real-life behaviour;
+- while simulating their design, modelling their ideal and real-life behaviour;
 - and proposing a normalized interface to control photonic quantum computers;
 - while using powerful simulation backends to get state-of-the-art simulation;
 - and also allowing direct access to the QPUs of Quandela.
@@ -65,7 +65,7 @@ then to install Perceval:
 ```bash
 pip install .
 ```
-Or for developpers:
+Or for developers:
 ```bash
 pip install -e .
 ```
@@ -95,7 +95,7 @@ Benchmark tests for computing-intensive functions are in `benchmark/` and can be
 pytest benchmark/benchmark_*.py
 ```
 
-Comparison benchmarks for different platforms are also commit in `.benchmarks/` - see [pytest-benchmark documentation](https://pytest-benchmark.readthedocs.io/en/stable/usage.html) for more information.
+Comparison benchmarks for different platforms are also committed in `.benchmarks/` - see [pytest-benchmark documentation](https://pytest-benchmark.readthedocs.io/en/stable/usage.html) for more information.
 
 # Documentation and Forum
 

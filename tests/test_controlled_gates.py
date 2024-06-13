@@ -36,31 +36,25 @@ from perceval.simulators import SimulatorFactory
 from perceval.components import catalog, BS, get_basic_state_from_ports
 
 
-def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_states, error=1E-6):
-    """Check if the CCZ is correct
+def check_controlled_gates_and_get_performance(n, alpha, processor, herald_states, error=1E-6):
+    """Check if the CC..Z(alpha) is correct
 
-    Meaning checking that the CCZ gate probability amplitude matrix should be:
-    ⎡r*exp(iθ)  0           0           0           0           0           0           0             ⎤
-    ⎢0          r*exp(iθ)   0           0           0           0           0           0             ⎥
-    ⎢0          0           r*exp(iθ)   0           0           0           0           0             ⎥
-    ⎢0          0           0           r*exp(iθ)   0           0           0           0             ⎥
-    ⎢0          0           0           0           r*exp(iθ)   0           0           0             ⎥
-    ⎢0          0           0           0           0           r*exp(iθ)   0           0             ⎥
-    ⎢0          0           0           0           0           0           r*exp(iθ)   0             ⎥
-    ⎣0          0           0           0           0           0           0           r*exp(i(θ+φ)) ⎦
-    With r the modulus (r!=0), θ the global phase and φ the rotation angle of our gate (for CCZ is φ=π)
+    Meaning checking that the CC...Z(alpha) gate probability amplitude matrix should be: 
+                        Id_(2^n) +(exp(i.alpha)-1) |1...1><1...1|
 
-    :param processor: CCZ processor to check, we assume that ctrl is on [0,1]
-    and data on [2,3]
+    :param processor: CCZ processor to check, we assume that ctrl is on [0,1] and [2,3]
+    and data on [4,5]
     :param herald_states: Basic state corresponding to the heralded or ancillary modes
     at the end of the circuit
     :param error: Tolerance for the modulus of the prob_amplitude (when not expecting 0), defaults to 1E-6
     This param represent whether this CCZ gate is balanced
     """
-    ports = [Port(Encoding.DUAL_RAIL, "")] * 3
-    states = [get_basic_state_from_ports(ports, state) * herald_states for state in generate_all_logical_states(3)]
+    ports = [Port(Encoding.DUAL_RAIL, "")] * n
+    states = [get_basic_state_from_ports(
+        ports, state) * herald_states for state in generate_all_logical_states(n)]
     sim = SimulatorFactory().build(processor)
-    data_state = BasicState("|0,1,0,1,0,1>") * herald_states
+
+    data_state = BasicState("|0,1"+(n-1)*",0,1"+">") * herald_states
     modulus_value = None
     phase_value = None
     for i_state in states:
@@ -77,27 +71,40 @@ def check_ccz_with_heralds_or_ancillaries_and_get_performance(processor, herald_
                 if i_state != data_state:
                     if phase_value is None:
                         phase_value = phase
-                    assert pytest.approx(phase) == phase_value
+                    assert pytest.approx(phase) == phase_value % (2 * cm.pi)
                 else:
-                    assert pytest.approx(phase) == phase_value + cm.pi
+                    delta_phase = (phase - (phase_value + alpha) +
+                                   cm.pi) % (2*cm.pi) - cm.pi
+                    assert pytest.approx(delta_phase) == 0
 
             else:
                 assert pytest.approx(modulus) == 0
     return modulus_value
 
 
+def test_controlled_gates():
+    for n in [2, 3, 4]:
+        for alpha in [cm.pi, cm.pi/3, -cm.pi/4, 1.]:
+
+            # Testing phases and modulus of CCZ
+            check_controlled_gates_and_get_performance(n, alpha,
+                                                       catalog['postprocessed controlled gate'].build_processor(n=n, alpha=alpha), BasicState("|0"+(2*n-1)*",0"+">"))
+
+
 def test_ccz_and_toffoli_phases_and_modulus():
     # Testing phases and modulus of CCZ
-    modulus_ccz = check_ccz_with_heralds_or_ancillaries_and_get_performance(
-        catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
+    modulus_ccz = check_controlled_gates_and_get_performance(3,
+                                                             cm.pi,
+                                                             catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
 
     # Testing phases and modulus of Toffoli by transforming it in a CCZ gate with Hadamard gates
     ccz = Processor("SLOS", 6)
     ccz.add(4, BS.H()) \
         .add(0, catalog["toffoli"].build_processor()) \
         .add(4, BS.H())
-    modulus_ccz_with_toffoli = check_ccz_with_heralds_or_ancillaries_and_get_performance(
-        ccz, BasicState("|0,0,0,0,0,0>"))
+    modulus_ccz_with_toffoli = check_controlled_gates_and_get_performance(3,
+                                                                          cm.pi,
+                                                                          catalog['postprocessed ccz'].build_processor(), BasicState("|0,0,0,0,0,0>"))
     assert modulus_ccz == pytest.approx(modulus_ccz_with_toffoli)
 
     # Testing truth table of Toffoli (redundant with above test)

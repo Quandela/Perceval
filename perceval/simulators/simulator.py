@@ -372,9 +372,10 @@ class Simulator(ISimulator):
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
         :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output state distribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+            * results is the post-selected output state distribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
 
         """Trim input SVD given _rel_precision threshold"""
@@ -472,9 +473,10 @@ class Simulator(ISimulator):
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
         :return: A dictionary of the form { "results": SVDistribution, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output SVDistribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+            * results is the post-selected output SVDistribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
@@ -532,8 +534,7 @@ class Simulator(ISimulator):
         nnz_count = 0
         for i, fs in enumerate(dm.inverse_index):
             if fs in input_list:
-                self._backend.set_input_state(fs)
-                output_sv = self._backend.evolve()
+                output_sv = self.evolve(fs)
                 for state, amplitude in output_sv:
                     u_evolve_data.append(amplitude)
                     u_evolve_indices.append(dm.index[state])

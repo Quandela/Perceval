@@ -27,24 +27,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator
-from .logical_state import LogicalState, generate_all_logical_states
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, postselect_independent, post_select_distribution, post_select_statevector
-from ._random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
-from .persistent_data import PersistentData
-from .metadata import PMetadata
-from .density_matrix import DensityMatrix
-from .noise_model import NoiseModel
-from .logging import LOGGER as logger, use_perceval_logger, use_python_logger, LoggerConfig
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+import os
+import time
+
+import perceval as pcvl
+from perceval import logger
+
+
+def test_logger_config():
+    logger_config = pcvl.LoggerConfig()
+    logger_config.reset()
+    logger_config.save()
+
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
+                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
+
+    logger_config.enable_file()
+    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.general)
+    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.resources)
+    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.user)
+    logger_config.save()
+
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': True,
+                                 'channels': {'general': {'level': 'warn'}, 'resources': {'level': 'warn'}, 'user': {'level': 'warn'}}}
+
+    logger_config.reset()
+    logger_config.save()
+
+    config = pcvl.utils.PersistentData().load_config()
+    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
+                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
