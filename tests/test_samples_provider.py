@@ -27,10 +27,34 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .delay_simulator import DelaySimulator
-from .loss_simulator import LossSimulator
-from .polarization_simulator import PolarizationSimulator
-from .simulator import Simulator
-from .simulator_factory import SimulatorFactory
-from .stepper import Stepper
-from .noisy_sampling_simulator import NoisySamplingSimulator
+from perceval.simulators.noisy_sampling_simulator import SamplesProvider
+from perceval.backends import Clifford2017Backend
+from perceval.components import Circuit, Source
+from perceval.utils import BasicState, NoiseModel, BSDistribution
+
+
+def _svd_to_bsd(svd):
+    res = BSDistribution()
+    for state, prob in svd.items():
+        res.add(state[0], prob)
+    return res
+
+
+def test_samples_provider():
+    size = 2
+    clifford = Clifford2017Backend()
+    clifford.set_circuit(Circuit(size))  # Identity circuit
+
+    ideal_input = BasicState([1]*size)
+    noisy_input = Source.from_noise_model(
+        NoiseModel(transmittance=0.2, g2=0.05, indistinguishability=0.75)).generate_distribution(ideal_input)
+    possible_fock_input = [BasicState([0, 0]), BasicState([1, 0]), BasicState([0, 1]), BasicState([1, 1])]
+
+    provider = SamplesProvider(clifford)
+    provider.prepare(_svd_to_bsd(noisy_input), 1000)
+
+    assert provider._pools and provider._weights
+    for state in possible_fock_input:
+        assert state in provider._pools and state in provider._weights
+        res = provider.sample_from(state)
+        assert res == state

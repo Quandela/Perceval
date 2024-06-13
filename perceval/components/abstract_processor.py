@@ -149,16 +149,11 @@ class AProcessor(ABC):
         pass
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if (not self.heralds or keep_herald) and not self.is_threshold:
-            return s
-        new_state = []
-        for idx, k in enumerate(s):
-            if idx in self.heralds:
-                continue
-            if k > 0 and self.is_threshold:
-                k = 1
-            new_state.append(k)
-        return BasicState(new_state)
+        if not keep_herald and self.heralds:
+            s = s.remove_modes(list(self.heralds.keys()))
+        if self._thresholded_output:
+            s = s.threshold_detection()
+        return s
 
     @property
     def post_select_fn(self):

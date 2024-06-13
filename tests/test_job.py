@@ -28,34 +28,38 @@
 # SOFTWARE.
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
+from perceval.algorithm import Sampler
 
 import pytest
 import time
 
 
-def quadratic_count_down(n, speed=0.1, progress_callback=None):
+PERIOD = 0.1
+
+def quadratic_count_down(n, period=PERIOD, progress_callback=None):
     l = []
     for i in range(n):
-        time.sleep(speed)
+        time.sleep(period)
         if progress_callback:
             progress_callback(i / n, "counting %d" % i)
         l.append(i ** 2)
-    assert speed >= 0.1
+    assert period >= 0.1  # Dummy failure condition
     return l
 
 
 def test_run_sync_0():
-    assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])(5) == [0, 1, 4, 9, 16])
+    assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])(5) == [0, 1, 4, 9, 16])
 
 
 def test_run_sync_1():
-    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
-    assert job.execute_sync(5) == [0, 1, 4, 9, 16]
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
+    n = 5
+    assert job.execute_sync(n) == [0, 1, 4, 9, 16]
     assert job.is_complete
     assert job.status.success
     assert job.get_results() == [0, 1, 4, 9, 16]
-    # should be ~ 0.5 s
-    assert job.status.running_time < 1
+    # Each iteration sleeps for
+    assert job.status.running_time > PERIOD * n
     assert job.status.status == RunningStatus.SUCCESS
 
     job.status.status = RunningStatus.UNKNOWN
@@ -64,8 +68,10 @@ def test_run_sync_1():
 
 
 def test_run_async():
-    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
-    assert job.execute_async(5, 0.3) is job
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
+    n = 5
+    new_period = 0.3
+    assert job.execute_async(n, new_period) is job
     assert not job.is_complete
     counter = 0
     while not job.is_complete:
@@ -77,12 +83,12 @@ def test_run_async():
     assert job.get_results() == [0, 1, 4, 9, 16]
     assert job.status.progress == 1
     # should be at least 1.5s
-    assert job.status.running_time > 1
+    assert job.status.running_time > new_period * n
     assert job.status.status == RunningStatus.SUCCESS
 
 
 def test_run_async_fail():
-    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     assert job.execute_async(5, 0.01) is job
 
     with pytest.warns(UserWarning):
@@ -92,7 +98,6 @@ def test_run_async_fail():
     assert job.status.progress == 0.8
     assert job.status.status == RunningStatus.ERROR
     assert "AssertionError" in job.status.stop_message
-    # should be ~0.05 s
     assert job.status.running_time < 0.5
 
     job.status.status = RunningStatus.UNKNOWN
@@ -101,7 +106,7 @@ def test_run_async_fail():
 
 
 def test_run_async_cancel():
-    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'speed'])
+    job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     assert job.execute_async(5, 0.3) is job
     job.cancel()
     while job.is_running:
@@ -114,7 +119,7 @@ def test_get_res_run_async():
     bs = pcvl.BasicState("|1,0,1,0,1,0>")  # basic state
     proc = pcvl.Processor("SLOS", u)  # a processor with a circuit formed of random unitary matrix
     proc.with_input(bs)  # setting up the input to the processor
-    job = pcvl.algorithm.Sampler(proc).sample_count  # create a sampler job
+    job = Sampler(proc).sample_count  # create a sampler job
     job.execute_async(10000)
     while not job.is_complete:
         time.sleep(0.01)

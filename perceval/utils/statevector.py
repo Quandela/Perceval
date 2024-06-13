@@ -35,15 +35,11 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
-from typing import Dict, List, Union, Tuple, Optional
-import sympy as sp
-import numpy as np
+from typing import Dict, List, Union, Optional
 
-from .format import simple_complex
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
 import exqalibur as xq
-
 
 BasicState = xq.FockState
 StateVector = xq.StateVector
@@ -302,14 +298,7 @@ class BSDistribution(ProbabilityDistribution):
             raise RuntimeError("No state to sample from")
         states = list(d.keys())
         probs = list(d.values())
-        rng = np.random.default_rng()
-        results = rng.choice(states, count, p=probs)
-        # numpy transforms iterables of ints to a nparray in rng.choice call
-        # Thus, we need to convert back the results to BasicStates
-        output = BSSamples()
-        for s in results:
-            output.append(BasicState(s))
-        return output
+        return random.choices(states, k=count, weights=probs)
 
     def __mul__(self, other):
         return BSDistribution.tensor_product(self, other)
