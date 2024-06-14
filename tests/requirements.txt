@@ -5,3 +5,4 @@ flake8
 qiskit~=0.45.1
 qutip~=4.7.5
 myqlm~=1.9.5
+libqasm~=0.6.6
