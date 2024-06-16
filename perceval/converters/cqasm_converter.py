@@ -304,14 +304,7 @@ class CQASMConverter(AGateConverter):
                 # Ignore non-gate instructions
                 if instruction[0] in ['prep_z', 'measure']:
                     continue
-
-                # Parse the argument list.
-                # TODO: parse this properly to implement:
-                # - qubit ranges such as: q[0:2]                # handled by elimination             
-                # - qubit number with more than 1 digit         # done
-                # - second argument as a number/expression for controlled gates 
-                                                                # cQASM v1 does not use numbers/
-                                                                # expressions for qubits 
+                
                 ins_qubits = []
                 for remaining_token in instruction[1:]:
                     ins_params = remaining_token.split(",")
@@ -334,5 +327,5 @@ class CQASMConverter(AGateConverter):
                     statement.operands.append(index)
                 ast.block.statements.append(statement)
             except ValueError:
-                print("An error in parsing the cQASM v1 file.")
+                print("An error occurred in parsing the cQASM v1 file.")
         return ast
