@@ -285,7 +285,7 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     # get range of colorbars so we can normalize
     max_height = numpy.max(dz)
     min_height = numpy.min(dz)
-    color_map = plt.cm.get_cmap('viridis_r')
+    color_map = plt.get_cmap('viridis_r')
     if max_height != min_height:
         has_only_one_value = False
         # scale each z to [0,1], and get their rgb values
@@ -293,7 +293,6 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     else:
         has_only_one_value = True
         rgba = [color_map(0)]
-
 
     # Caption
     font_size = 6
