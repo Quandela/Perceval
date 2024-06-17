@@ -49,6 +49,22 @@ DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
+    @staticmethod
+    def from_local_processor(
+            processor: Processor,
+            name: str = None,
+            token: str = None,
+            url: str = QUANDELA_CLOUD_URL,
+            rpc_handler: RPCHandler = None):
+        rp = RemoteProcessor(
+            name=name,
+            token=token,
+            url=url,
+            rpc_handler=rpc_handler)
+        rp.noise = processor.noise
+        rp.add(0, processor)
+        return rp
+
     def __init__(self,
                  name: str = None,
                  token: str = None,
@@ -153,10 +169,8 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
         if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
             raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
-        if self._input_state is not None:
-            input_size = self._input_state.m + len(self.heralds)
-            if input_size != circuit.m:
-                raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m} + {len(self.heralds)} heralds)")
+        if self._input_state is not None and self._input_state.m != circuit.m:
+            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
 
     def set_circuit(self, circuit: ACircuit):
         self.check_circuit(circuit)
@@ -182,10 +196,10 @@ class RemoteProcessor(AProcessor):
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
-        self.check_input(input_state)
-        self._input_state = input_state
+        super().with_input(input_state)
 
     def check_input(self, input_state: BasicState) -> None:
+        super().check_input(input_state)
         n_heralds = sum(self.heralds.values())
         n_photons = input_state.n + n_heralds
         if 'max_photon_count' in self.constraints and n_photons > self.constraints['max_photon_count']:

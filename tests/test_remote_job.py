@@ -26,13 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from perceval.runtime import RemoteJob, RunningStatus
-
+from time import sleep
 import pytest
 
+import perceval as pcvl
+from perceval.algorithm import Sampler
+from perceval.runtime import RemoteJob, RunningStatus
+
+from _test_utils import assert_bsd_close
 from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
     REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
+
 
 
 def test_remote_job():
@@ -63,3 +67,67 @@ def test_remote_job():
     assert rj.status.creation_timestamp == REMOTE_JOB_CREATION_TIMESTAMP
     assert rj.status.start_timestamp == REMOTE_JOB_START_TIMESTAMP
     assert rj.status.duration == REMOTE_JOB_DURATION
+
+
+@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
+def test_mock_remote_with_gates(catalog_item):
+    noise = pcvl.NoiseModel(
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+    p = pcvl.catalog[catalog_item].build_processor()
+    p.noise = noise
+    rp = pcvl.RemoteProcessor.from_local_processor(
+        p, rpc_handler=MockRPCHandler())
+
+    assert p.heralds == rp.heralds
+    assert p.post_select_fn == rp.post_select_fn
+    assert p._noise == rp._noise
+    assert noise == rp._noise
+
+    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
+        p.with_input(input_state)
+        rp.with_input(input_state)
+
+        assert p._input_state == rp._input_state
+
+
+@pytest.mark.skip(reason="need a token and a worker available")
+@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
+def test_remote_with_gates(catalog_item):
+    noise = pcvl.NoiseModel(
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+    p = pcvl.catalog[catalog_item].build_processor()
+    p.noise = noise
+    rp = pcvl.RemoteProcessor.from_local_processor(
+        p, "my_platform", url='my_url')
+
+    # platform parameters
+    p.thresholded_output(True)
+    max_shots_per_call = 1E7
+
+
+    assert p.heralds == rp.heralds
+    assert p.post_select_fn == rp.post_select_fn
+    assert p._noise == rp._noise
+    assert noise == rp._noise
+
+    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
+        rp.with_input(input_state)
+        rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
+        job = rs.probs.execute_async()
+
+        p.min_detected_photons_filter(input_state.n)
+        p.with_input(input_state)
+        s = Sampler(p, max_shots_per_call=max_shots_per_call)
+        probs = s.probs()
+
+        delay = 0
+        while True:
+            if job.is_complete:
+                break
+            assert not job.is_failed
+            if delay == 20:
+                assert False, "timeout for job"
+            delay += 1
+            sleep(1)
+
+        assert_bsd_close(job.get_results()['results'], probs['results'])  # will not work without fixed seed

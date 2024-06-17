@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
 import copy
-from deprecated import deprecated
+from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Union, Callable, Tuple
+from multipledispatch import dispatch
+from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -233,10 +233,8 @@ class AProcessor(ABC):
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
         if self._n_moi is None:
-            if isinstance(mode_mapping, int):
-                self._n_moi = (component.m if isinstance(component, ACircuit) else component.circuit_size) + mode_mapping
-            else:
-                self._n_moi = max(mode_mapping) + 1  # max of keys in case of dict
+            self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
+
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):
             self._compose_processor(connector, component, keep_port)
@@ -545,9 +543,34 @@ class AProcessor(ABC):
         input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         self.with_input(input_state)
 
-    @abstractmethod
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
+        assert self.m is not None, "A circuit has to be set before the input state"
+        expected_input_length = self.m
+        assert len(input_state) == expected_input_length, \
+            f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
+
+    @dispatch(BasicState)
+    def with_input(self, input_state: BasicState) -> None:
+        self.check_input(input_state)
+        input_list = [0] * self.circuit_size
+        input_idx = 0
+        expected_photons = 0
+        # Build real input state (merging ancillas + expected input) and compute expected photon count
+        for k in range(self.circuit_size):
+            if k in self.heralds:
+                input_list[k] = self.heralds[k]
+                expected_photons += self.heralds[k]
+            else:
+                input_list[k] = input_state[input_idx]
+                expected_photons += input_state[input_idx]
+                input_idx += 1
+
+        self._input_state = BasicState(input_list)
+
+        if self._min_detected_photons is None:
+            self._min_detected_photons = expected_photons
+
 
     def flatten(self) -> List:
         """
