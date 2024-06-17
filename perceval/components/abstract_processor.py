@@ -233,11 +233,8 @@ class AProcessor(ABC):
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
         if self._n_moi is None:
-            if isinstance(mode_mapping, int):
-                self._n_moi = (component.m if isinstance(component, ACircuit) or isinstance(
-                    component, AProcessor) else component.circuit_size) + mode_mapping
-            else:
-                self._n_moi = max(mode_mapping) + 1  # max of keys in case of dict
+            self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
+
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):
             self._compose_processor(connector, component, keep_port)

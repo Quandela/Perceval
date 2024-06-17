@@ -36,10 +36,8 @@ from perceval.serialization import deserialize
 
 COMMAND_NAME = 'my_command'
 
-def _get_remote_processor():
-    rp = RemoteProcessor(rpc_handler=MockRPCHandler())
-    rp.set_circuit(Circuit(8))
-    return rp
+def _get_remote_processor(m: int = 8):
+    return RemoteProcessor(rpc_handler=MockRPCHandler(), m=m)
 
 
 def test_payload_basics():
