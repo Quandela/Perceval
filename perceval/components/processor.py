@@ -29,7 +29,7 @@
 
 from deprecated import deprecated
 from multipledispatch import dispatch
-from numpy import Inf
+from numpy import inf
 from typing import Dict, Callable, Union, List
 
 from .abstract_processor import AProcessor, ProcessorType
@@ -189,7 +189,7 @@ class Processor(AProcessor):
         """
         assert self.m is not None, "A circuit has to be set before the input distribution"
         self._input_state = svd
-        expected_photons = Inf
+        expected_photons = inf
         for sv in svd:
             for state in sv.keys():
                 expected_photons = min(expected_photons, state.n)
