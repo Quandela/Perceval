@@ -31,9 +31,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy', 'numpy<2', 'scipy', 'tabulate', 'matplotlib', 'exqalibur~=0.5.1', 'multipledispatch',
-                      'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated', 'requests', 'networkx~=3.1', 'latexcodec',
-                      'platformdirs'],
+    install_requires=['sympy<2', 'numpy<2', 'scipy<2', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.5.1',
+                      'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated~=1.2.14', 'requests<3',
+                      'networkx~=3.1', 'latexcodec<4', 'platformdirs<5'],
     extras_require={
         "qiskit_bridge": ["qiskit~=0.45.1", "seaborn~=0.13"],
         "qutip_bridge": ["qutip~=4.7.5"],

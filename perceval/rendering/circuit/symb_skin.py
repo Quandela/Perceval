@@ -57,6 +57,10 @@ class SymbSkin(ASkin):
     def get_width(self, c) -> int:
         return 2
 
+    @dispatch((cp.Barrier))
+    def get_width(self, c) -> int:
+        return 1
+
     @dispatch((cp.BS, cp.PBS))
     def get_width(self, c) -> int:
         w = 1 if self._compact else 2
@@ -109,6 +113,10 @@ class SymbSkin(ASkin):
     @dispatch(cp.PR)
     def get_shape(self, c):
         return self.pr_shape
+
+    @dispatch(cp.Barrier)
+    def get_shape(self, c):
+        return self.barrier_shape
 
     @dispatch(nu.LC)
     def get_shape(self, c):
@@ -221,6 +229,18 @@ class SymbSkin(ASkin):
              -radius, 0, -radius, -radius, -radius, -radius, "l", 0, -6 * radius],
             **self.style[ModeStyle.PHOTONIC], fill="lightyellow")
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
+
+    def barrier_shape(self, circuit, canvas, content, mode_style, **opts):
+        m = circuit.m
+        if canvas.background_color is None:
+            canvas.add_rect((10, 10), 30, 50 * m - 20,
+                fill="whitesmoke", stroke="whitesmoke")
+        for i in range(m):
+            canvas.add_mpath(
+                ["M", 0, 25 + i*50, "l", 50, 0],
+                **self.style[ModeStyle.PHOTONIC])
+        canvas.add_rect((24, 10), 2, 50 * m - 20,
+            fill="dimgrey", stroke="dimgrey")
 
     def perm_shape(self, circuit, canvas, content, mode_style, **opts):
         for an_input, an_output in enumerate(circuit.perm_vector):

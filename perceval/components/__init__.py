@@ -39,7 +39,7 @@ from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_
 from .tomography_exp_configurer import processor_circuit_configurator
 from .comp_utils import decompose_perms
 from .port import Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS
+from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, Barrier
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException
