@@ -30,25 +30,61 @@
 from perceval.components import PERM, AProcessor
 
 
-def precompute_herald_pos(processor: AProcessor):
+class ComponentHeraldInfo:
     """
-    Precompute output herald position, following modes until it finds the first non-PERM component
-    Works in recursive display mode (which is the worst case scenario)
+    Store, for a component, indices of the heralds attached to its inputs or
+    outputs
     """
-    component_list = processor.flatten()
-    component_list.reverse()  # iterate in reverse (right to left)
-    result = {}
-    for k in processor.heralds.keys():
-        initial_y = k
-        y = k
-        # search the first component on which the herald is plugged
-        for m_range, cp in component_list:
-            m0 = m_range[0]
-            if y not in m_range:
-                continue
-            if isinstance(cp, PERM):
-                y = cp.perm_vector.index(y-m0) + m0
-            else:
-                result[initial_y] = (y-m0, cp)
-                break
-    return result
+    def __init__(self):
+        self.input_heralds = {}
+        self.output_heralds = {}
+
+    def register_herald(self, forward_pass, mode_index, herald_mode):
+        if forward_pass:
+            self.input_heralds[mode_index] = herald_mode
+        else:
+            self.output_heralds[mode_index] = herald_mode
+
+
+def collect_herald_info(processor: AProcessor, recursive: bool):
+    """
+    Return a dictionary mapping a component to a HeraldInfo object.
+
+    The HeraldInfo object stores information about which inputs and outputs
+    are connected to herald modes.
+
+    For example, if d[my_component].output_heralds[0] == 5,
+    then output mode 0 of the component is the herald at final mode 5.
+
+    For correct rendering, the information should be collected at the same
+    level of granularity as the drawing: for individual circuit elements when
+    recursive is True, for blocks when recursive is False.
+    """
+    if recursive:
+        component_list = processor.flatten()
+    else:
+        component_list = processor._components
+
+    herald_info = {}
+    for herald_mode in processor.heralds.keys():
+        # Do one forward pass to identify heralds on inputs, and one
+        # backward pass to identify heralds "plugged" on outputs
+        for forward_pass in [True, False]:
+            c_list = component_list if forward_pass else component_list[::-1]
+            mode = herald_mode
+            for mode_range, component in c_list:
+                m0 = mode_range[0]
+                if mode not in mode_range:
+                    continue
+                if isinstance(component, PERM):
+                    # Heralds can be moved across permutations
+                    if forward_pass:
+                        mode = component.perm_vector[mode - m0] + m0
+                    else:
+                        mode = component.perm_vector.index(mode - m0) + m0
+                else:
+                    h_info = herald_info.setdefault(
+                        component, ComponentHeraldInfo())
+                    h_info.register_herald(forward_pass, mode - m0, herald_mode)
+                    break
+    return herald_info
