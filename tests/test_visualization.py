@@ -33,6 +33,8 @@ from typing import Type
 import pytest
 
 import perceval as pcvl
+from perceval.components import Port
+from perceval.utils import Encoding
 from perceval.components.unitary_components import *
 from perceval.components.non_unitary_components import *
 from perceval.rendering import pdisplay_to_file, Format
@@ -320,3 +322,61 @@ def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
     pc.add_herald(1, 0)
     p.add(2, pc)
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_processor_with_heralds_phys_not_recursive(tmp_path, save_figs):
+    p = pcvl.components.catalog['klm cnot'].build_processor()
+    c = pcvl.Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(1, 0)
+    p.add(2, pc)
+    _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)
+
+
+def test_svg_processor_with_heralds_margin_overflow_left_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(3) // BS() // (1, BS())
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(0, 0)
+    _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_processor_with_heralds_margin_overflow_right_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // (1, BS()) //  BS()
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(0, 0)
+    pc.add_herald(2, 1)
+    _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_processor_with_heralds_margin_overflow_left_right_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(2) // BS()
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(0, 0)
+    _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_processor_with_heralds_perm_following_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // (1, PERM([1, 0])) // (1, BS()) // (0, PERM([1, 0])) // BS() // (1, PERM([1, 0]))
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(0, 0)
+    pc.add_herald(2, 1)
+    _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_processor_with_heralds_and_barriers_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) @ (1, PERM([1, 0])) // (1, BS()) // (0, PERM([1, 0])) // BS() // (1, PERM([1, 0]))
+    c.barrier()
+    pc = pcvl.Processor('SLOS', c)
+    pc.add_herald(0, 0)
+    pc.add_herald(2, 1)
+    _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_dump_barrier_phys(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+
+def test_svg_dump_barrier_symb(tmp_path, save_figs):
+    c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
+    _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, skin_type=SymbSkin)
