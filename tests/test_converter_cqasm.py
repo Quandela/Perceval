@@ -174,10 +174,10 @@ H q[0:1]
     out, err = capfd.readouterr()
     assert out.strip() == """
       ╔[H]╗
-      ║░░░║     
+      ║░░░║
 (]────╫░░░╫───────[)
 q[0]  ║░░░║     [q[0]]
-      ║░░░║     
+      ║░░░║
 (]────╫░░░╫───────[)
 q[0]  ║░░░║╔[H]╗[q[0]]
       ╚   ╝║░░░║
@@ -290,6 +290,7 @@ def test_converter_from_ast():
     assert len(pc._components) == 1
 
 
+# Tests for v1 converter
 def test_converter_v1():
     cqasm_program = f"""
 version 1.0
@@ -315,3 +316,85 @@ qubits 2
     assert len(pc._components) == 2
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "Heralded CNOT"
+
+
+def test_converter_v1_qubits_ge_10():
+    source = f"""
+version 1.0
+
+# a basic cQASM example
+qubits 11
+
+.prepare
+    prep_z q[0:1]
+
+.entangle
+    H q[0]
+    CNOT q[10], q[6]
+    Z q[5]
+
+.measurement
+    measure_all
+"""
+    pc = CQASMConverter(catalog).convert_string_v1(
+        source, use_postselection=False)
+    assert pc.circuit_size == 26
+    assert pc.m == 22
+    assert len(pc._components) == 5
+
+
+def test_converter_v1_controls_g2():
+    source = f"""
+version 1.0
+# a simple cQASM v1 file
+
+qubits 3
+
+.entangle
+    H q[0]
+    Toffoli q[0], q[1], q[3]
+
+.measurement
+    measure_all
+"""
+    with pytest.raises(ConversionUnsupportedFeatureError):
+        CQASMConverter(catalog).convert_string_v1(source)
+
+
+def test_converter_v1_syntax_error():
+    source = f"""
+version 1.0
+
+qubits 3
+
+.entangle
+    hjcd q[0]
+"""
+    with pytest.raises(ConversionUnsupportedFeatureError):
+        CQASMConverter(catalog).convert_string_v1(source)
+
+def test_converter_v1_qubits_error():
+    source = f"""
+version 1.0
+
+qubits w
+
+.entangle
+    H q[0]
+"""
+    with pytest.raises(ConversionSyntaxError):
+        CQASMConverter(catalog).convert_string_v1(source)
+
+
+# def test_converter_v1_rotation_gates():
+#     source = f"""
+# version 1.0
+
+# qubits 2
+
+# .rotation
+#     Rx q[0], 3.14
+# """
+#     pc = CQASMConverter(catalog).convert_string_v1(
+#         source, use_postselection=False)
+#     assert pc.circuit_size == 26

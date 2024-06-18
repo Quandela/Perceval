@@ -291,6 +291,9 @@ class CQASMConverter(AGateConverter):
                     continue
 
                 if instruction[0] == "qubits":
+                    if not instruction[1].isdigit():
+                        raise ConversionSyntaxError(
+                                "Qubit number is not an integer.")
                     typ = cqasm.types.QubitArray(size=int(instruction[1]))
                     ast.variables.append(
                         cqasm.semantic.Variable(name="b'q'", typ=typ))
@@ -309,16 +312,36 @@ class CQASMConverter(AGateConverter):
                     continue
 
                 ins_qubits = []
+                theta = None
                 for remaining_token in instruction[1:]:
                     ins_params = remaining_token.split(",")
                     for param in ins_params:
-                        # only 2 qubit gates
-                        if param.find(":") != -1 or len(ins_params) > 2:
-                            raise ValueError("Gates with number of Qubits higher than 2 not implemented")
+                        if param.find(":") != -1:
+                            raise ConversionSyntaxError(
+                                "Unsuported token.")
                         start_indx = param.find("q[")
-                        if start_indx  != -1:
+                        if start_indx != -1:
                             end_indx = param.find("]")
                             ins_qubits.append(param[start_indx+2:end_indx])
+                        # Rotation gates
+                        elif self._is_float(param) and len(ins_qubits) == 1 and len(ins_params) == 2:
+                            theta = float(param)
+
+                if len(ins_qubits) > 2:
+                    raise ConversionUnsupportedFeatureError(
+                        f"Gate { instruction[0] } has more than one control (n = { len(ins_params) })"
+                    )
+
+                # Check if valid gate
+                if len(ins_qubits) == 1:
+                    if instruction[0] not in _CQASM_1_QUBIT_GATES:
+                        raise ConversionUnsupportedFeatureError(
+                            f"Unsupported 1-qubit gate { instruction[0] }")
+
+                elif len(ins_qubits) == 2:
+                    if instruction[0] not  in _CQASM_2_QUBIT_GATES:
+                        raise ConversionUnsupportedFeatureError(
+                            f"Unsupported 2-qubit gate { instruction[0] }")
 
                 statement = cqasm.semantic.Instruction()
                 statement.name = f"b'{ instruction[0] }'"
@@ -328,6 +351,10 @@ class CQASMConverter(AGateConverter):
                     index.indices = cqasm.values.MultiConstInt()
                     index.indices.append(cqasm.values.ConstInt(qubit_index))
                     statement.operands.append(index)
+                if theta is not None:
+                    # Facing trouble with adding parameter
+                    parameter = cqasm.values.ConstFloat(theta)
+                    statement.operands.append(parameter)
                 ast.block.statements.append(statement)
             except ValueError:
                 print("An error in parsing the cQASM v1 file.")
