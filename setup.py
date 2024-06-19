@@ -37,7 +37,8 @@ setuptools.setup(
     extras_require={
         "qiskit_bridge": ["qiskit~=0.45.1", "seaborn~=0.13"],
         "qutip_bridge": ["qutip~=4.7.5"],
-        "myqlm_bridge": ["myqlm~=1.9.5"]
+        "myqlm_bridge": ["myqlm~=1.9.5"],
+        "cqasm_bridge": ["libqasm~=0.6.6"],
     },
     setup_requires=["scmver"],
     python_requires=">=3.8",
