@@ -86,8 +86,6 @@ class ConversionUnsupportedFeatureError(Exception):
 
 
 class CQASMConverter(AGateConverter):
-    import cqasm.v3x as cqasm
-
     r"""cQASM quantum circuit to perceval processor converter.
 
     :param catalog: a component library to use for the conversion. It must contain CNOT gates.
@@ -96,10 +94,12 @@ class CQASMConverter(AGateConverter):
     """
     def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
         super().__init__(catalog, backend_name, source)
+        import cqasm.v3x as cqasm
 
         self._qubit_list = []
         self._num_cnots = 0
         self._use_postselection = False
+        self._cqasm = cqasm
 
     def count_qubits(self, ast) -> int:
         return len(self._qubit_list)
@@ -107,19 +107,19 @@ class CQASMConverter(AGateConverter):
     def _collect_qubit_list(self, ast):
         self._qubit_list = []
         for variable in ast.variables:
-            if type(variable.typ) is CQASMConverter.cqasm.types.QubitArray:
+            if type(variable.typ) is self._cqasm.types.QubitArray:
                 for i in range(variable.typ.size):
                     self._qubit_list.append((_cs(variable.name), i))
-            elif type(variable.typ) is CQASMConverter.cqasm.types.Qubit:
+            elif type(variable.typ) is self._cqasm.types.Qubit:
                 self._qubit_list.append((_cs(variable.name), -1))
             else:
                 raise ConversionUnsupportedFeatureError(f"Classical variable { variable.name } not supported")
 
     def _operand_to_qubit_indices(self, operand):
         name = _cs(operand.variable.name)
-        if type(operand) is CQASMConverter.cqasm.values.VariableRef:
+        if type(operand) is self._cqasm.values.VariableRef:
             return [self._qubit_list.index((name, -1))]
-        elif type(operand) is CQASMConverter.cqasm.values.IndexRef:
+        elif type(operand) is self._cqasm.values.IndexRef:
             return [self._qubit_list.index((name, index.value))
                       for index in operand.indices]
         else:
@@ -136,7 +136,7 @@ class CQASMConverter(AGateConverter):
 
         # Match other statement patterns
         if num_operands == 2:
-            if type(statement.operands[1]) is CQASMConverter.cqasm.values.ConstFloat:
+            if type(statement.operands[1]) is self._cqasm.values.ConstFloat:
                 # Statement pattern is OP(r) q
                 parameter = statement.operands[1].value
             else:
@@ -179,10 +179,9 @@ class CQASMConverter(AGateConverter):
                     self._use_postselection,
                     parameter=parameter)
 
-    @dispatch(cqasm.semantic.Program, use_postselection=bool)
     def convert(
             self,
-            ast: cqasm.semantic.Program,
+            ast,
             use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
 
@@ -192,6 +191,9 @@ class CQASMConverter(AGateConverter):
         as the last gate. Otherwise, uses only `heralded CNOT`
         :return: the converted processor
         """
+        if isinstance(ast, str):
+            return self._convert_from_string(ast, use_postselection)
+
         self._collect_qubit_list(ast)
         self._num_cnots = sum(
             (_cs(s.name) == "CNOT") + 2 * (_cs(s.name) in ["CR", "CRk"])
@@ -222,8 +224,7 @@ class CQASMConverter(AGateConverter):
         else:
             raise ConversionSyntaxError(f"Missing version number")
 
-    @dispatch(str, use_postselection=bool)
-    def convert(
+    def _convert_from_string(
             self,
             source: str,
             use_postselection: bool = True) -> Processor:
@@ -248,14 +249,14 @@ class CQASMConverter(AGateConverter):
 
         major, minor = CQASMConverter.check_version(source_string)
         if major == 3:
-            ast = CQASMConverter.cqasm.Analyzer().analyze_string(
+            ast = self._cqasm.Analyzer().analyze_string(
                 source_string)
         elif major == 1:
             ast = self._v3_ast_from_v1_source(source_string.split('\n'))
         else:
             raise ConversionBadVersionError(f"Unsupported version {major}.{minor}")
 
-        if not isinstance(ast, CQASMConverter.cqasm.semantic.Program):
+        if not isinstance(ast, self._cqasm.semantic.Program):
             raise ConversionSyntaxError(f"cQASM parser error: { ast[0] }")
 
         return self.convert(ast, use_postselection=use_postselection)
@@ -267,7 +268,7 @@ class CQASMConverter(AGateConverter):
         # with just enough changes to make it parse the example on:
         # https://www.quantum-inspire.com/kbase/cqasm/
 
-        cqasm = CQASMConverter.cqasm
+        cqasm = self._cqasm
 
         # Create an empty Program object to store the v3 AST
         ast = cqasm.semantic.Program(
@@ -276,6 +277,13 @@ class CQASMConverter(AGateConverter):
                 statements=cqasm.semantic.MultiStatement()),
             variables=cqasm.semantic.MultiVariable()
         )
+
+        def _is_float(ins):
+            try:
+                float(ins)
+                return True
+            except ValueError:
+                return False
 
         # read QASM instructions line-by-line
         for line in lines:
@@ -324,7 +332,7 @@ class CQASMConverter(AGateConverter):
                             end_indx = param.find("]")
                             ins_qubits.append(param[start_indx+2:end_indx])
                         # Rotation gates
-                        elif self._is_float(param) and len(ins_qubits) == 1 and len(ins_params) == 2:
+                        elif _is_float(param):
                             theta = float(param)
 
                 if len(ins_qubits) > 2:
@@ -352,9 +360,8 @@ class CQASMConverter(AGateConverter):
                     index.indices.append(cqasm.values.ConstInt(qubit_index))
                     statement.operands.append(index)
                 if theta is not None:
-                    # Facing trouble with adding parameter
-                    parameter = cqasm.values.ConstFloat(theta)
-                    statement.operands.append(parameter)
+                    angle = cqasm.values.ConstFloat(value=theta)
+                    statement.operands.append(angle)
                 ast.block.statements.append(statement)
             except ValueError:
                 print("An error in parsing the cQASM v1 file.")

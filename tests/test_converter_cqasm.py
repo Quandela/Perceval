@@ -174,10 +174,10 @@ H q[0:1]
     out, err = capfd.readouterr()
     assert out.strip() == """
       ╔[H]╗
-      ║░░░║
+      ║░░░║     
 (]────╫░░░╫───────[)
 q[0]  ║░░░║     [q[0]]
-      ║░░░║
+      ║░░░║     
 (]────╫░░░╫───────[)
 q[0]  ║░░░║╔[H]╗[q[0]]
       ╚   ╝║░░░║
@@ -284,8 +284,9 @@ def test_converter_from_file():
 
 
 def test_converter_from_ast():
-    ast = CQASMConverter.cqasm.Analyzer().analyze_string("version 3\nqubit q\nH q")
-    pc = CQASMConverter(catalog).convert(ast)
+    converter = CQASMConverter(catalog)
+    ast = converter._cqasm.Analyzer().analyze_string("version 3\nqubit q\nH q")
+    pc = converter.convert(ast)
     assert pc.circuit_size == 2
     assert len(pc._components) == 1
 
@@ -336,8 +337,7 @@ qubits 11
 .measurement
     measure_all
 """
-    pc = CQASMConverter(catalog).convert_string_v1(
-        source, use_postselection=False)
+    pc = CQASMConverter(catalog).convert(source, use_postselection=False)
     assert pc.circuit_size == 26
     assert pc.m == 22
     assert len(pc._components) == 5
@@ -358,7 +358,7 @@ qubits 3
     measure_all
 """
     with pytest.raises(ConversionUnsupportedFeatureError):
-        CQASMConverter(catalog).convert_string_v1(source)
+        CQASMConverter(catalog).convert(source)
 
 
 def test_converter_v1_syntax_error():
@@ -371,7 +371,7 @@ qubits 3
     hjcd q[0]
 """
     with pytest.raises(ConversionUnsupportedFeatureError):
-        CQASMConverter(catalog).convert_string_v1(source)
+        CQASMConverter(catalog).convert(source)
 
 def test_converter_v1_qubits_error():
     source = f"""
@@ -383,18 +383,18 @@ qubits w
     H q[0]
 """
     with pytest.raises(ConversionSyntaxError):
-        CQASMConverter(catalog).convert_string_v1(source)
+        CQASMConverter(catalog).convert(source)
 
 
-# def test_converter_v1_rotation_gates():
-#     source = f"""
-# version 1.0
+def test_converter_v1_rotation_gates():
+    source = f"""
+version 1.0
 
-# qubits 2
+qubits 2
 
-# .rotation
-#     Rx q[0], 3.14
-# """
-#     pc = CQASMConverter(catalog).convert_string_v1(
-#         source, use_postselection=False)
-#     assert pc.circuit_size == 26
+.rotation
+    Rx q[0], 3.14
+"""
+    pc = CQASMConverter(catalog).convert(source, use_postselection=False)
+    assert pc.circuit_size == 4
+    assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
