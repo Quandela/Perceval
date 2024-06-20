@@ -45,7 +45,7 @@ def _sampler_setup_cnot(output_type: str):
     circ = catalog['heralded cnot'].build_circuit()
     processor.set_circuit(circ)
 
-    # Source poperties
+    # Source properties
     src = Source(emission_probability=0.3)
     processor.source = src
 
@@ -64,7 +64,6 @@ def _sampler_setup_cnot(output_type: str):
 def test_photon_loss_mitigation(result_type):
 
     lossy_sampling = _sampler_setup_cnot(output_type=result_type)
-
     ideal_photon_count = 4
     mitigated_dist = photon_recycling(lossy_sampling, ideal_photon_count)
 
