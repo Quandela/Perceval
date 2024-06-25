@@ -30,6 +30,7 @@
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
+import warnings
 from multipledispatch import dispatch
 from typing import Any, Dict, List, Union, Tuple
 
@@ -550,6 +551,12 @@ class AProcessor(ABC):
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
 
+    def _deduct_min_detected_photons(self, expected_photons: int) -> None:
+        warnings.warn(UserWarning(
+            "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly"))
+        self._min_detected_photons = expected_photons
+
+
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         self.check_input(input_state)
@@ -569,7 +576,7 @@ class AProcessor(ABC):
         self._input_state = BasicState(input_list)
 
         if self._min_detected_photons is None:
-            self._min_detected_photons = expected_photons
+            self._deduct_min_detected_photons(expected_photons)
 
 
     def flatten(self) -> List:
