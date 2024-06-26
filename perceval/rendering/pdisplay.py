@@ -57,7 +57,7 @@ from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
 from ._processor_utils import precompute_herald_pos
-
+import networkx as nx
 
 in_notebook = False
 
@@ -327,6 +327,22 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     plt.show()
 
 
+def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
+    if output_format not in {Format.MPLOT, Format.LATEX}:
+        raise TypeError(f"Graph plot does not support {output_format}")
+    if output_format == Format.LATEX:
+        print(nx.to_latex(g))
+        return
+
+    pos = nx.spring_layout(g, seed=42)
+    nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
+    nx.draw_networkx_edges(g, pos)
+    nx.draw_networkx_labels(g, pos, font_size=10, font_color='white', font_family="sans-serif")
+    edge_labels = nx.get_edge_attributes(g, "weight")
+    nx.draw_networkx_edge_labels(g, pos, edge_labels)
+    plt.show()
+
+
 @dispatch(object)
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
@@ -386,6 +402,10 @@ def _pdisplay(f, **kwargs):
 @dispatch(complex)
 def _pdisplay(c, **kwargs):
     return simple_complex(c, **_get_simple_number_kwargs(**kwargs))[1]
+
+@dispatch(nx.Graph)
+def _pdisplay(g, **kwargs):
+    return pdisplay_graph(g, **kwargs)
 
 
 def _default_output_format(o):

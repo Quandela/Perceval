@@ -68,26 +68,23 @@ def exponentiation_by_squaring(base, power: int):
 
 def kmeans(features: np.ndarray, n_clusters: int, n_init: int = 10) -> np.ndarray:
     """
-    Manual KMeans implementation.
+    Manual KMeans implementation. Clusterizes the system in k subsets.
 
     :param features: Data points for clustering.
-    :type features: np.ndarray
     :param n_clusters: Number of clusters.
-    :type n_clusters: int
     :param n_init: Number of times the k-means algorithm will be run with different centroid seeds.
-    :type n_init: int
     :return: Cluster labels.
     :rtype: np.ndarray
     """
     best_labels = None
     best_inertia = float('inf')
-
+    MAX_ITERATIONS = 300
     for _ in range(n_init):
         # Initialize centroids randomly
         indices = np.random.choice(features.shape[0], n_clusters, replace=False)
         centroids = features[indices]
 
-        for _ in range(300):  # Maximum number of iterations
+        for _ in range(MAX_ITERATIONS):  # Maximum number of iterations
             # Assign points to the nearest centroid
             distances = cdist(features, centroids, 'euclidean')
             labels = np.argmin(distances, axis=1)

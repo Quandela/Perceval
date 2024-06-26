@@ -29,10 +29,12 @@
 
 import pytest
 import numpy as np
-from perceval.converters.circuit_to_graph_converter import CircuitToGraphConverter
-from perceval.converters.resources_estimator import ResourcesEstimator
+from perceval.converters import CircuitToGraphConverter
+from perceval.converters import ResourcesEstimator
 from qiskit.circuit.random import random_circuit
 from perceval.utils.qmath import kmeans
+from perceval import pdisplay
+import matplotlib.pyplot as plt
 
 
 def test_kmeans():
@@ -58,18 +60,14 @@ def test_circuit_to_graph_converter():
     qiskit_circuit = random_circuit(8, 10, max_operands=2)
     converter = CircuitToGraphConverter(qiskit_circuit=qiskit_circuit)
 
-    # Generate the graph
-    graph = converter.graph_generator()
-
-    # Plot the graph (optional)
+    # Generate the graph to plot it
+    # graph = converter.graph_generator()
     # converter.plot_graph(graph)
 
     # Check calculation
-    single_calc_result = converter.graph_k_clustering_and_cnots_needed()[0]
-    cx_count = converter.graph_k_clustering_and_cnots_needed()[1]
+    single_calc_result, cx_count = converter.graph_k_clustering_and_cnots_needed()
     # Check calculation with minimum CNOTs
-    min_cnot_calc_result = converter.graph_k_clustering_and_cnots_needed(compute_with_min_cnots=True)[0]
-    min_cx_count = converter.graph_k_clustering_and_cnots_needed(compute_with_min_cnots=True)[1]
+    min_cnot_calc_result, min_cx_count = converter.graph_k_clustering_and_cnots_needed(compute_with_min_cnots=True)
 
     assert single_calc_result is not None
     assert all(c >= 0 for c in cx_count)
@@ -81,25 +79,15 @@ def test_resources_estimator():
     qiskit_circuit = random_circuit(8, 10, max_operands=2)  # Generate a random circuit for demonstration
     estimator = ResourcesEstimator(qiskit_circuit)
 
-    optimal_encoding = estimator.encoding
-    entangling_gates = estimator.needed_entangling_gates
-    needed_modes = estimator.needed_modes
-    needed_photons = estimator.needed_photons
-
-    assert isinstance(optimal_encoding, list)
-    assert entangling_gates >= 0
-    assert needed_modes > 0
-    assert needed_photons > 0
+    assert type(estimator.encoding) == list
+    assert estimator.num_entangling_gates_needed > 0
+    assert estimator.num_modes_needed > 0
+    assert estimator.num_photons_needed > 0
 
     custom_encoding = [[0, 1], [2, 3], [4], [5], [6, 7]]
     estimator_with_encoding = ResourcesEstimator(qiskit_circuit, custom_encoding)
 
-    custom_enc = estimator_with_encoding.encoding
-    custom_entangling_gates = estimator_with_encoding.needed_entangling_gates
-    custom_needed_modes = estimator_with_encoding.needed_modes
-    custom_needed_photons = estimator_with_encoding.needed_photons
-
-    assert custom_enc == custom_encoding
-    assert custom_entangling_gates >= 0
-    assert custom_needed_modes > 0
-    assert custom_needed_photons > 0
+    assert estimator_with_encoding.encoding == custom_encoding
+    assert estimator_with_encoding.num_entangling_gates_needed >= 0
+    assert estimator_with_encoding.num_modes_needed > 0
+    assert estimator_with_encoding.num_photons_needed > 0

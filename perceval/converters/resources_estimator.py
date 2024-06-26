@@ -35,13 +35,12 @@ from qiskit import QuantumCircuit
 class ResourcesEstimator:
     """
        Estimate the resources required for a given Qiskit Quantum Circuit.
-
-       :param qiskit_circuit: Quantum circuit to estimate resources for.
-       :type qiskit_circuit: QuantumCircuit
-       :param encoding: Custom encoding to use.
-       :type encoding: Optional[List[List[int]]]
        """
     def __init__(self, qiskit_circuit: QuantumCircuit, encoding: list[list[int]] = None):
+        """
+       :param qiskit_circuit: Quantum circuit to estimate resources for.
+       :param encoding: Custom encoding to use.
+        """
         self.circuit = qiskit_circuit
         self.gates, self.qubits = gates_and_qubits(self.circuit)
         if encoding is None:
@@ -51,9 +50,9 @@ class ResourcesEstimator:
             # In most cases this will obviously be dual rail. Try to see if you can do it recursively for many of them
         else:
             self.encoding = encoding
-        self.needed_entangling_gates, self.needed_photons, self.needed_modes = self.resources()
+        self.num_entangling_gates_needed, self.num_photons_needed, self.num_modes_needed = self.resources()
 
-    def check_same_subset(self):
+    def _check_same_subset(self):
         same_subset_list = []
         for gate_qubits_sublist in self.qubits:
             same_subset = any(all(qubit in subset for qubit in gate_qubits_sublist) for subset in self.encoding)
@@ -61,17 +60,15 @@ class ResourcesEstimator:
         return same_subset_list
 
     def resources(self) -> tuple[int, int, int]:
-        '''''
+        """
         :return: num_cnots, num_photons, num_modes needed to simulate the circuit with the specific encoding
         :rtype:  tuple[int, int, int]
-        '''''
-        partition = self.encoding
-        bool_list = self.check_same_subset()
+        """
+        bool_list = self._check_same_subset()
         false_indices = [index for index, value in enumerate(bool_list) if not value]
         gates_diff_qudits = [self.gates[i] for i in false_indices]
         qubits_diff_qudits = [self.qubits[i] for i in false_indices]
-
-        K = []
+        k_list = []
         for i in range(len(qubits_diff_qudits)):
             subpartition_lengths = []
             for qubit in qubits_diff_qudits[i]:
@@ -82,12 +79,12 @@ class ResourcesEstimator:
             a, b = subpartition_lengths
             k = 2 ** (a + b - 2)
             if gates_diff_qudits[i] in ['cx', 'cy', 'cz', 'ch', 'cp']:
-                K.append(k)
+                k_list.append(k)
             elif gates_diff_qudits[i] in ['swap', 'iswap']:
-                K.append(0)
+                k_list.append(0)
             else:
-                K.append(2 * k)
-        num_cnots = sum(K)
-        num_photons = len(self.encoding) + 2*sum(K)  # Assuming all CX are heralded
+                k_list.append(2 * k)
+        num_cnots = sum(k_list)
+        num_photons = len(self.encoding) + 2*sum(k_list)  # Assuming all CX are heralded
         num_modes = sum(2 ** len(sublist) for sublist in self.encoding)
         return num_cnots, num_photons, num_modes

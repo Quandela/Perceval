@@ -28,11 +28,6 @@
 # SOFTWARE.
 
 # ========================================
-# Main processing
-# 1. Function Qiskit gate based circuit => list of gates and modes they act on
-# 2. Convert the previous list to a weighted graph
-# 3. Cut the graph the best way possible
-# 4. Plot the graph
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -41,11 +36,11 @@ from perceval.utils.qmath import kmeans
 
 
 def gates_and_qubits(qiskit_circuit):
-    '''''
+    """
     :rtype gates_names: list of strings
     :rtype gates_qubits: list of lists of ints
-    '''''
-    # will be used in both classes.
+    """
+    # will be used in CircuitToGraphConverter and in ResourcesEstimator.
     gates_names = []
     gates_qubits = []
     for instr in qiskit_circuit.data:
@@ -57,22 +52,25 @@ def gates_and_qubits(qiskit_circuit):
     return gates_names, gates_qubits
 
 
+NUMBER_REPETITIONS_IF_MIN_CNOTS = 30
+
+
 class CircuitToGraphConverter:
-    """''
+    """
     Takes a qiskit circuit and converts it into a graph.
     Initially get the list of gates and the qubits on which each gate is acting on.
     With this output or if the user already has the two lists, it converts it into
     a graph where the vertices are the qubits and the edges the gates acting on them,
     the weight of its edges depends on the type of gate.
-    :param qiskit_circuit: Quantum circuit to convert.
-    :type qiskit_circuit: QuantumCircuit
-    '"""
+    """
 
     def __init__(self, qiskit_circuit: QuantumCircuit = None, gates=None, qubits=None):
-        '''''
+        """
+        :param qiskit_circuit: Quantum circuit to convert.
+        :type qiskit_circuit: QuantumCircuit
         :type gates: list of strings
         :type qubits: list of lists of ints
-        '''''
+        """
         if gates is not None and qubits is not None:
             self.gates = gates
             self.qubits = qubits
@@ -82,6 +80,10 @@ class CircuitToGraphConverter:
             raise ValueError("Either a Qiskit circuit or both gates and qubits lists must be provided")
 
     def graph_generator(self) -> nx.Graph:
+        """
+        The qubits of the circuit are interpreted as nodes. The weight of the edges
+        connecting them will depend on the number and type of gates.
+        """
         elements_set = set(item for sublist in self.qubits for item in sublist)  # nodes
         g = nx.Graph()
         g.add_nodes_from(elements_set)
@@ -99,9 +101,6 @@ class CircuitToGraphConverter:
                             edge_weights[edge] += 1
                         else:
                             edge_weights[edge] = 1
-                    elif self.gates[l] in ['swap', 'iswap']:
-                        # Free operations.
-                        pass
                     else:
                         if edge in edge_weights:
                             edge_weights[edge] += 2
@@ -124,7 +123,7 @@ class CircuitToGraphConverter:
 
     def graph_k_clustering_and_cnots_needed(self,
                                             compute_with_min_cnots: bool = False) -> tuple[list[list[int]], list[int]]:
-        """''
+        """
         Computes the laplacian matrix of the graph, compute its eigenvectors sorted by their
         eigenvalues. For all the possible subpartitions of the graph, it will compute the
         kmeans clustering with the respective number of eigenvectors as features.
@@ -135,7 +134,7 @@ class CircuitToGraphConverter:
         :type compute_with_min_cnots: bool
         :return: Clustering result and CNOT counts.
         :rtype: tuple[list[list[int]], list[int]]
-        '"""
+        """
         graph = self.graph_generator()
         laplacian_matrix = nx.normalized_laplacian_matrix(graph).toarray()
         eigenvalues, eigenvectors = np.linalg.eigh(laplacian_matrix)
@@ -149,7 +148,7 @@ class CircuitToGraphConverter:
             if compute_with_min_cnots:
                 best_partition = None
                 min_cnots = float('inf')
-                for _ in range(30):
+                for _ in range(NUMBER_REPETITIONS_IF_MIN_CNOTS):
                     labels = kmeans(features, k)
                     real_weight = 0
                     for u, v in graph.edges():
@@ -175,7 +174,7 @@ class CircuitToGraphConverter:
                         b = len(np.where(labels == labels[v])[0])
                         real_weight += graph[u][v]['weight'] * 2 ** (a + b - 2)
                 number_of_cnots.append(real_weight)
-            # Conversor from ([0,0,1,1,0]) to [[0,1,4],[2,3]] format
+            # Convertor from ([0,0,1,1,0]) to [[0,1,4],[2,3]] format
 
             possible_partitions_qudit_format = []
             for labels in possible_partitions:
