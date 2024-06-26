@@ -167,7 +167,7 @@ class Processor(AProcessor):
         """
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
-        if not self._min_detected_photons and self._source == Source():
+        if not self._min_detected_photons and self._source.is_perfect():
             self._min_detected_photons = input_state.n + list(self.heralds.values()).count(1)
         super().with_input(input_state)
         self._generate_noisy_input()
@@ -202,7 +202,7 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
         if self._min_detected_photons is None:
-            self._deduct_min_detected_photons(expected_photons)
+            self._deduce_min_detected_photons(expected_photons)
 
     def _circuit_changed(self):
         # Override parent's method to reset the internal simulator as soon as the component list changes
@@ -215,7 +215,7 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons = self._parameters['min_detected_photons']
         if self._min_detected_photons is None:
-            self._deduct_min_detected_photons(bs.n)
+            self._deduce_min_detected_photons(bs.n)
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)

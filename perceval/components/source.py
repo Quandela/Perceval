@@ -204,6 +204,13 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
+    def is_perfect(self) -> bool:
+        return \
+            self._emission_probability == 1 and \
+            self._multiphoton_component == 0 and \
+            self._indistinguishability == 1 and \
+            self._losses == 0
+
     def __eq__(self, value: object) -> bool:
         return \
             self._emission_probability == value._emission_probability and \
