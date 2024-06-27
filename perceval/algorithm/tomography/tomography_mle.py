@@ -51,9 +51,6 @@ class TomographyMLE(AAlgorithm):
             raise ValueError(
                 f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
 
-        if self._processor.is_remote:
-            raise TypeError("Tomography does not support Remote Processor yet")
-
         self._gate_logical_perf = None
 
         # following parameters are for the reconstruction algorithm
