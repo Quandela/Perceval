@@ -67,9 +67,8 @@ class SimulatorFactory:
         post_select = None
         heralds = None
         m = 0
-        if isinstance(circuit, ACircuit):
-            sim_polarization = circuit.requires_polarization
-        else:
+
+        if not isinstance(circuit, ACircuit):
             convert_to_circuit = True
             if isinstance(circuit, Processor):
                 m = circuit.circuit_size
@@ -94,6 +93,10 @@ class SimulatorFactory:
                         convert_to_circuit = False
                     if not sim_polarization and isinstance(cp, ACircuit):
                         sim_polarization = cp.requires_polarization
+
+        if isinstance(circuit, ACircuit):
+            sim_polarization = circuit.requires_polarization
+
 
         if backend is None:
             backend = SLOSBackend()  # The default is SLOS
