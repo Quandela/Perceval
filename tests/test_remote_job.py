@@ -33,7 +33,7 @@ import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close_enough
 from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
     REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
 
@@ -93,12 +93,14 @@ def test_mock_remote_with_gates(catalog_item):
 @pytest.mark.skip(reason="need a token and a worker available")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
 def test_remote_with_gates(catalog_item):
-    noise = pcvl.NoiseModel(
-        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+    # noise = pcvl.NoiseModel(
+    #     g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+    noise = pcvl.NoiseModel()
     p = pcvl.catalog[catalog_item].build_processor()
+    p.min_detected_photons_filter(2 + list(p.heralds.values()).count(1))
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
-        p, "my_platform", url='my_url')
+        p, "sim:altair", url='https://api.cloud.quandela.com')
 
     # platform parameters
     p.thresholded_output(True)
@@ -115,7 +117,6 @@ def test_remote_with_gates(catalog_item):
         rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
         job = rs.probs.execute_async()
 
-        p.min_detected_photons_filter(input_state.n)
         p.with_input(input_state)
         s = Sampler(p, max_shots_per_call=max_shots_per_call)
         probs = s.probs()
@@ -130,4 +131,4 @@ def test_remote_with_gates(catalog_item):
             delay += 1
             sleep(1)
 
-        assert_bsd_close(job.get_results()['results'], probs['results'])  # will not work without fixed seed
+        assert_bsd_close_enough(probs['results'], job.get_results()['results'])  # will not work without fixed seed

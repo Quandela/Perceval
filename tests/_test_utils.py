@@ -96,6 +96,15 @@ def assert_bsd_close(lhbsd, rhbsd):
             f"different probabilities for {lh_bs}, {lhbsd[lh_bs]} vs {rhbsd[lh_bs]}"
 
 
+def assert_bsd_close_enough(ref_bsd: pcvl.BSDistribution, bsd_to_check: pcvl.BSDistribution, threshold=0.8):
+    for lh_bs in ref_bsd.keys():
+        if ref_bsd[lh_bs] > threshold:
+            assert lh_bs in bsd_to_check
+            assert bsd_to_check[lh_bs] > threshold
+            return
+    assert False, f"No state has probability above {threshold} for bsd {ref_bsd}"
+
+
 def  dict2svd(d: dict):
     return SVDistribution({StateVector(k): v for k, v in d.items()})
 

@@ -301,7 +301,6 @@ def _simplify_perm(components, m, display):
                 _update_adjacent(adjacent_modes, mid_r)
                 in_components.append([mid_r, mid_c])
 
-            in_components.reverse()
             break
 
     if found_other_perm and i == len(components) - 1:  # The permutations are successive
