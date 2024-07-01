@@ -30,6 +30,7 @@
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
+import warnings
 from multipledispatch import dispatch
 from typing import Any, Dict, List, Union, Tuple
 
@@ -249,7 +250,7 @@ class AProcessor(ABC):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
             impacted_modes = list(mode_mapping.keys())
             # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
-            assert self._postselect.can_compose_with(impacted_modes),\
+            assert self._postselect.can_compose_with(impacted_modes), \
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
     def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
@@ -550,6 +551,13 @@ class AProcessor(ABC):
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
 
+    def _deduce_min_detected_photons(self, expected_photons: int) -> None:
+        warnings.warn(UserWarning(
+            f"Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly\n" +
+            "Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)\n" +
+            "The current deduced value of min_detected_photons is {expected_photons}"))
+        self._min_detected_photons = expected_photons
+
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         self.check_input(input_state)
@@ -569,8 +577,7 @@ class AProcessor(ABC):
         self._input_state = BasicState(input_list)
 
         if self._min_detected_photons is None:
-            self._min_detected_photons = expected_photons
-
+            self._deduce_min_detected_photons(expected_photons)
 
     def flatten(self) -> List:
         """
