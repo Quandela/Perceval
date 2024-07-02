@@ -170,10 +170,13 @@ class AProcessor(ABC):
         """
         if not isinstance(postselect, PostSelect):
             raise TypeError("Parameter must be a PostSelect object")
+        self._circuit_changed()
         self._postselect = postselect
 
     def clear_postselection(self):
-        self._postselect = None
+        if self._postselect is not None:
+            self._circuit_changed()
+            self._postselect = None
 
     def _state_selected(self, state: BasicState) -> bool:
         """

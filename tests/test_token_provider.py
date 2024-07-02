@@ -26,13 +26,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
 import pytest
 import platform
 
 from perceval.runtime._token_management import TokenProvider, save_token, _TOKEN_FILE_NAME
 from perceval import PersistentData
 
-import os
+
 
 MISSING_KEY = "MISSING_ENV_VAR"
 ENV_VAR_KEY = "DUMMY_ENV_VAR"
@@ -44,7 +45,7 @@ os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variab
 
 def test_token_provider_env_var_vs_cache():
     provider = TokenProvider(env_var=MISSING_KEY)
-    assert provider.get_token() is None
+    assert provider._from_environment_variable() is None
     assert provider.cache is None
 
     provider = TokenProvider(env_var=ENV_VAR_KEY)
@@ -60,11 +61,13 @@ def test_token_provider_env_var_vs_cache():
 
     del os.environ[ENV_VAR_KEY]  # Remove the environment variable
     provider.clear_cache()
-    assert provider.get_token() is None
+    assert provider._from_environment_variable() is None
 
 
 def test_token_provider_from_file():
     persistent_data = PersistentData()
+    if persistent_data.load_config():
+        pytest.skip("Skipping this test because of an existing user config")
     persistent_data.clear_all_data()
 
     provider = TokenProvider()
@@ -92,6 +95,8 @@ def test_token_provider_from_file():
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_token_file_access():
     persistent_data = PersistentData()
+    if persistent_data.load_config():
+        pytest.skip("Skipping this test because of an existing user config")
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)
