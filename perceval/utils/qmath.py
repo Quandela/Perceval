@@ -74,7 +74,6 @@ def kmeans(features: np.ndarray, n_clusters: int, n_init: int = 10) -> np.ndarra
     :param n_clusters: Number of clusters.
     :param n_init: Number of times the k-means algorithm will be run with different centroid seeds.
     :return: Cluster labels.
-    :rtype: np.ndarray
     """
     best_labels = None
     best_inertia = float('inf')

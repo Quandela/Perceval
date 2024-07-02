@@ -67,7 +67,6 @@ class CircuitToGraphConverter:
     def __init__(self, qiskit_circuit: QuantumCircuit = None, gates=None, qubits=None):
         """
         :param qiskit_circuit: Quantum circuit to convert.
-        :type qiskit_circuit: QuantumCircuit
         :type gates: list of strings
         :type qubits: list of lists of ints
         """
@@ -131,9 +130,7 @@ class CircuitToGraphConverter:
         multiple repetitions and choose the partition that gives the smallest number of CNOTs.
 
         :param compute_with_min_cnots: Whether to compute it 30 times and choose the output yielding to the minimum of CNOTs.
-        :type compute_with_min_cnots: bool
         :return: Clustering result and CNOT counts.
-        :rtype: tuple[list[list[int]], list[int]]
         """
         graph = self.graph_generator()
         laplacian_matrix = nx.normalized_laplacian_matrix(graph).toarray()

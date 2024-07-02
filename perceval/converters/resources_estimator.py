@@ -62,7 +62,6 @@ class ResourcesEstimator:
     def resources(self) -> tuple[int, int, int]:
         """
         :return: num_cnots, num_photons, num_modes needed to simulate the circuit with the specific encoding
-        :rtype:  tuple[int, int, int]
         """
         bool_list = self._check_same_subset()
         false_indices = [index for index, value in enumerate(bool_list) if not value]
