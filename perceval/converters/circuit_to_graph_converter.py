@@ -35,11 +35,7 @@ from qiskit import QuantumCircuit
 from perceval.utils.qmath import kmeans
 
 
-def gates_and_qubits(qiskit_circuit):
-    """
-    :rtype gates_names: list of strings
-    :rtype gates_qubits: list of lists of ints
-    """
+def gates_and_qubits(qiskit_circuit) -> tuple[list[str], list[list[int]]]:
     # will be used in CircuitToGraphConverter and in ResourcesEstimator.
     gates_names = []
     gates_qubits = []
