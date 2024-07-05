@@ -178,7 +178,7 @@ def kmeans(features: np.ndarray, n_clusters: int, n_init: int = 10) -> np.ndarra
     :return: Cluster labels.
     """
     best_labels = None
-    best_inertia = float('inf')
+    best_inertia = np.inf
     MAX_ITERATIONS = 300
     for _ in range(n_init):
         # Initialize centroids randomly

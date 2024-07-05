@@ -29,17 +29,17 @@
 
 from perceval.converters.circuit_to_graph_converter import CircuitToGraphConverter, gates_and_qubits
 import numpy as np
-from qiskit import QuantumCircuit
 
 
 class ResourcesEstimator:
     """
        Estimate the resources required for a given Qiskit Quantum Circuit.
        """
-    def __init__(self, qiskit_circuit: QuantumCircuit, encoding: list[list[int]] = None):
+
+    def __init__(self, qiskit_circuit, encoding: list[list[int]] = None):
         """
-       :param qiskit_circuit: Quantum circuit to estimate resources for.
-       :param encoding: Custom encoding to use.
+        :param qiskit_circuit: Qiskit quantum circuit to estimate resources for.
+        :param encoding: Custom encoding to use.
         """
         self.circuit = qiskit_circuit
         self.gates, self.qubits = gates_and_qubits(self.circuit)
