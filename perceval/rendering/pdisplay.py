@@ -331,8 +331,8 @@ def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
     if output_format not in {Format.MPLOT, Format.LATEX}:
         raise TypeError(f"Graph plot does not support {output_format}")
     if output_format == Format.LATEX:
-        print(nx.to_latex(g))
-        return
+        return nx.to_latex(g)
+
 
     pos = nx.spring_layout(g, seed=42)
     nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')

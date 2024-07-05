@@ -74,7 +74,7 @@ class CircuitToGraphConverter:
         else:
             raise ValueError("Either a Qiskit circuit or both gates and qubits lists must be provided")
 
-    def graph_generator(self) -> nx.Graph:
+    def generate_graph(self) -> nx.Graph:
         """
         The qubits of the circuit are interpreted as nodes. The weight of the edges
         connecting them will depend on the number and type of gates.
@@ -106,16 +106,6 @@ class CircuitToGraphConverter:
             g.add_edge(*edge, weight=weight)
         return g
 
-    @staticmethod
-    def plot_graph(g):  # g is the graph created in graph_generator
-        pos = nx.spring_layout(g, seed=42)
-        nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
-        nx.draw_networkx_edges(g, pos)
-        nx.draw_networkx_labels(g, pos, font_size=10, font_color='white', font_family="sans-serif")
-        edge_labels = nx.get_edge_attributes(g, "weight")
-        nx.draw_networkx_edge_labels(g, pos, edge_labels)
-        plt.show()
-
     def graph_k_clustering_and_cnots_needed(self,
                                             compute_with_min_cnots: bool = False) -> tuple[list[list[int]], list[int]]:
         """
@@ -128,7 +118,7 @@ class CircuitToGraphConverter:
         :param compute_with_min_cnots: Whether to compute it 30 times and choose the output yielding to the minimum of CNOTs.
         :return: Clustering result and CNOT counts.
         """
-        graph = self.graph_generator()
+        graph = self.generate_graph()
         laplacian_matrix = nx.normalized_laplacian_matrix(graph).toarray()
         eigenvalues, eigenvectors = np.linalg.eigh(laplacian_matrix)
         n = len(graph.nodes)  # number of qubits
