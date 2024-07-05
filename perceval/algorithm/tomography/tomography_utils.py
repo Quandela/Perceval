@@ -55,7 +55,12 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
                                +str().join([x.name for x in prep_state_indices])+'_'\
                                +str().join([x.name for x in meas_pauli_basis_indices])
     probs = sampler.probs()
+
     output_distribution = probs["results"]
+    if sum(list(output_distribution.values())) == 0:
+        raise ValueError("Null probabilities detected. Increase the number of max_shots_per_call for "
+                         "better samples in Tomography experiments")
+
     gate_logical_perf = probs["logical_perf"]
 
     if denormalize:
