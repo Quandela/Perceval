@@ -28,31 +28,22 @@
 # SOFTWARE.
 
 import os
-import re
 import platform
 import pytest
 
 from perceval.utils import PersistentData, FileFormat
 
+from _test_utils import PersistentDataForTests
+
 
 def test_directory():
     persistent_data = PersistentData()
-    if platform.system() == "Linux":
-        # '/home/my_user/.local/share/perceval-quandela'
-        assert re.match(r"^\/home\/.+\/\.local\/share\/perceval-quandela$", persistent_data.directory) is not None
-    elif platform.system() == "Windows":
-        # 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
-        assert re.match(r"^C:\\Users\\.+\\AppData\\Local\\quandela\\perceval-quandela$", persistent_data.directory) is not None
-    elif platform.system() == "Darwin":
-        # '/Users/my_user/Library/Application Support/perceval-quandela'
-        assert re.match(r"^\/Users\/.+\/Library\/Application Support\/perceval-quandela$", persistent_data.directory) is not None
-    else:
-        raise OSError("My god where are you ?")
-    persistent_data.clear_all_data()
+    assert os.path.isabs(persistent_data.directory)
+    assert persistent_data.directory.endswith("perceval-quandela")
 
 
 def test_basic_methods():
-    persistent_data = PersistentData()
+    persistent_data = PersistentDataForTests()
     persistent_data.clear_all_data()
 
     assert os.path.exists(persistent_data.directory)
@@ -96,7 +87,7 @@ def test_basic_methods():
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_access():
-    persistent_data = PersistentData()
+    persistent_data = PersistentDataForTests()
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)
@@ -110,17 +101,5 @@ def test_access():
     os.chmod(directory, 0o777)
     assert persistent_data.is_writable()
     assert persistent_data.is_readable()
-
-    parent_directory = os.path.dirname(directory)
-
-    os.chmod(parent_directory, 0o000)
-    with pytest.warns(UserWarning):
-        PersistentData()
-
-    os.chmod(parent_directory, 0o444)
-    with pytest.warns(UserWarning):
-        PersistentData()
-
-    os.chmod(parent_directory, 0o777)
 
     persistent_data.clear_all_data()

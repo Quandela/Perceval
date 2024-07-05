@@ -31,7 +31,7 @@ from perceval.simulators.delay_simulator import _retrieve_mode_count, DelaySimul
 from perceval.simulators.simulator import Simulator
 from perceval.backends._naive import NaiveBackend
 from perceval.components import Circuit, BS, TD
-from perceval.utils import BasicState, BSDistribution
+from perceval.utils import BasicState, BSDistribution, PostSelect
 
 import pytest
 
@@ -70,3 +70,16 @@ def test_delay_simulation():
     expected[BasicState([0, 2])] = 0.125
 
     assert pytest.approx(res) == expected
+
+    simulator.set_selection(postselect=PostSelect('[1]>0'))
+
+    heralded_res = simulator.probs(BasicState([1, 0]))
+    expected = BSDistribution()
+    expected[BasicState([0, 1])] = 0.666666666666667
+    expected[BasicState([0, 2])] = 0.333333333333333
+    assert pytest.approx(heralded_res) == expected
+
+    sv = simulator.evolve(BasicState([1, 0]))
+    assert len(sv.keys()) == 2
+    assert BasicState([0, 1]) in sv.keys()
+    assert BasicState([0, 2]) in sv.keys()

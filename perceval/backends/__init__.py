@@ -31,6 +31,7 @@ import warnings
 from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
 from ._clifford2017 import Clifford2017Backend
 from ._naive import NaiveBackend
+from ._naive_approx import NaiveApproxBackend
 from ._slos import SLOSBackend
 from ._mps import MPSBackend
 
@@ -39,6 +40,7 @@ BACKEND_LIST = {
     "CliffordClifford2017": Clifford2017Backend,
     "MPS": MPSBackend,
     "Naive": NaiveBackend,
+    "NaiveApprox": NaiveApproxBackend,
     "SLOS": SLOSBackend
 }
 

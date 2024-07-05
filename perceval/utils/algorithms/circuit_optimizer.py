@@ -45,6 +45,7 @@ class CircuitOptimizer:
     unitary and the optimized interferometer is the matrix fidelity available in `perceval.utils.algorithms.norm`.
 
     CircuitOptimizer can be configured with the following parameters:
+
     :param threshold: Error threshold = 1-fidelity - i.e. the lower the threshold, the better the output fidelity
                       (default 1e-6)
     :param ntrials: Number of optimization trials (default 4)

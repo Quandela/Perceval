@@ -27,5 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .tomography_utils import is_physical
+from .tomography_utils import is_physical, process_fidelity
 from .tomography import ProcessTomography, StateTomography
+from .tomography_mle import ProcessTomographyMLE, StateTomographyMLE
+from .abstract_process_tomography import AProcessTomography

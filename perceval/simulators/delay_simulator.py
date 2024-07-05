@@ -30,10 +30,10 @@
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
 from perceval.components import ACircuit, PERM, TD
-from perceval.utils import BasicState, global_params
+from perceval.utils import BasicState, BSDistribution, StateVector, global_params
 
 from enum import Enum
-from typing import List
+from typing import List, Tuple
 
 
 class _CType(Enum):
@@ -91,13 +91,25 @@ class DelaySimulator(ASimulatorDecorator):
         self._expanded_m = expanded_mode_count
         return expanded_circuit
 
-    def _postprocess_results(self, results):
-        output = type(results)()
-        mode_range = [(self._depth - 1) * self._original_m, self._depth * self._original_m]
+    def _mode_range(self) -> Tuple[int, int]:
+        return (self._depth - 1) * self._original_m, self._depth * self._original_m
+
+    def _postprocess_bsd_impl(self, results):
+        output = BSDistribution()
+        m = self._mode_range()
         for out_state, output_prob in results.items():
             if output_prob > global_params['min_p']:
-                reduced_out_state = out_state[mode_range[0]:mode_range[1]]
+                reduced_out_state = out_state[m[0]:m[1]]
                 output[reduced_out_state] += output_prob
+        return output
+
+    def _postprocess_sv_impl(self, results: StateVector) -> StateVector:
+        output = StateVector()
+        m = self._mode_range()
+        for out_state, probampli in results:
+            if abs(probampli) > global_params['min_complex_component']:
+                reduced_out_state = out_state[m[0]:m[1]]
+                output += probampli*reduced_out_state
         return output
 
     def _expand_td(self, component_list: List):

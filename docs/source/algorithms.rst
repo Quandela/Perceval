@@ -17,10 +17,11 @@ A :ref:`Processor` is a composite element aiming at simulating an actual QPU, in
 Create a local processor
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-To create a local processor, you just need to start with a :ref:`Circuit`, provide a backend name, and an optional
-:ref:`Source` with the following syntax:
+To create a local processor, you just need to start with a :ref:`Circuit`, provide a backend name, and either an
+optional :ref:`Source` or a :code:`NoiseModel` with the following syntax:
 
->>> processor = pcvl.Processor("MY_BACKEND", my_circuit, my_source)
+>>> processor = pcvl.Processor("MY_BACKEND", my_circuit, source=my_source)
+>>> processor = pcvl.Processor("MY_BACKEND", my_circuit, noise=my_noise_model)
 
 If omitted, the source is a perfect single photon source.
 
@@ -93,11 +94,11 @@ versus an input state. Hardware constraints might also enforce the coincidence c
 
 When creating a :code:`RemoteProcessor`, you can query its capabilities
 
->>> remote_simulator = RemoteProcessor("qpu:ascella")
+>>> remote_simulator = RemoteProcessor("qpu:altair")
 >>> print(remote_simulator.available_commands)
 ['sample_count', 'samples']
 
-This means `sim:ascella` is only able to natively answer to `sample_count` and `samples` commands (i.e. return the
+This means `sim:altair` is only able to natively answer to `sample_count` and `samples` commands (i.e. return the
 results of a sample acquisition task).
 
 Work with algorithms
@@ -212,7 +213,7 @@ you can set values for:
 * the `detected photons filter`.
 
 >>> c = BS() // PS(phi=pcvl.P("my_phase")) // BS()  # Define a circuit containing "my_phase" variable
->>> processor = pcvl.RemoteProcessor("qpu:ascella", token_qcloud)
+>>> processor = pcvl.RemoteProcessor("qpu:altair", token_qcloud)
 >>> processor.set_circuit(c)
 >>> sampler = Sampler(processor)
 >>> sampler.add_iteration(circuit_params={"my_phase": 0.1},

@@ -37,6 +37,8 @@ from collections import defaultdict
 from ._abstract_backends import AProbAmpliBackend
 from perceval.utils import BasicState
 from perceval.components import ACircuit
+from perceval.components.unitary_components import PERM
+from perceval.components.comp_utils import decompose_perms
 
 
 class MPSBackend(AProbAmpliBackend):
@@ -77,9 +79,17 @@ class MPSBackend(AProbAmpliBackend):
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)
         C = self._circuit
+        decomp_perm = False
         for r, c in C:
-            assert c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
-                "MPS backend can not be used with components of using more than 2 modes"
+            assert isinstance(c, PERM) or c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
+                "MPS backend can not be used with components of using more than 2 modes other than a PERM"
+            if isinstance(c, PERM) and c.m > 2:
+                # sets the flag to True if n-mode PERM (n>2) is found in the circuit
+                decomp_perm = True
+
+        if decomp_perm:
+            # decompose any n(>2) mode perm into 2-mode perms in the circuit
+            self._circuit = decompose_perms(C)
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)

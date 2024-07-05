@@ -44,7 +44,7 @@ def generate_circuit(n_mode):
            // (0, comp.PS(phi=pcvl.P("φ_a")))
            // comp.BS()
            // (0, comp.PS(phi=pcvl.P("φ_b"))))
-    return pcvl.Circuit.decomposition(u, mzi, shape="triangle")
+    return pcvl.Circuit.decomposition(u, mzi, shape=pcvl.InterferometerShape.TRIANGLE)
 
 
 c6 = generate_circuit(6)

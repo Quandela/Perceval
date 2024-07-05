@@ -34,7 +34,7 @@ from enum import Enum
 import numpy as np
 import sympy as sp
 
-from .linear_circuit import ACircuit
+from .linear_circuit import ACircuit, Circuit
 from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
 
 
@@ -415,6 +415,31 @@ class PERM(Unitary):
         })
         return nsv
 
+    def break_in_2_mode_perms(self):
+        """
+        Breaks any n-mode PERM into an equivalent circuit with only 2 mode PERMs
+
+        :return: An equivalent Circuit with only 2 mode PERM components
+        """
+
+        perm_vec_req = self.perm_vector
+        perm_len = len(perm_vec_req)
+
+        if perm_len == 2:
+            return self
+
+        circ = Circuit(perm_len, name="Decomposed PERM")
+        new_perm_vec = list(range(perm_len))
+
+        for in_m_pos in range(perm_len):
+            out_m_pos = perm_vec_req.index(in_m_pos)
+            while new_perm_vec[in_m_pos] != out_m_pos:
+                swap_idx = new_perm_vec.index(out_m_pos)
+                new_perm_vec[swap_idx], new_perm_vec[swap_idx - 1] = new_perm_vec[swap_idx - 1], new_perm_vec[swap_idx]
+                circ.add(swap_idx - 1, PERM([1, 0]))
+
+        return circ
+
 
 class PBS(Unitary):
     """Polarized beam spliter"""
@@ -434,3 +459,26 @@ class PBS(Unitary):
     # noinspection PyMethodMayBeStatic
     def describe(self, _=None):
         return "PBS()"
+
+
+class Barrier(Unitary):
+    """Behaves like an identity unitary, visually represented as a barrier."""
+    DEFAULT_NAME = "I"
+
+    def __init__(self, num_modes):
+        assert isinstance(num_modes, int), "identity Operator needs list parameter"
+        self.num_modes = num_modes
+        u = Matrix.eye(num_modes, use_symbolic=False)
+        super().__init__(U=u)
+
+    def describe(self, _=None):
+        return f"Barrier({self.num_modes})"
+
+    def definition(self):
+        return self.U
+
+    def apply(self, r, sv):
+        return sv
+
+    def inverse(self, v=False, h=False):
+        pass

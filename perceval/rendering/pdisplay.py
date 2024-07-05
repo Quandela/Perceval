@@ -43,20 +43,23 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawsvg
 
+import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from perceval.algorithm.analyzer import Analyzer
-from perceval.algorithm import ProcessTomography
+from perceval.algorithm import AProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
+from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks, _complex_to_rgb
 from perceval.utils.format import simple_float, simple_complex
 from perceval.utils.matrix import Matrix
+from perceval.utils import DensityMatrix
 from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
-from ._processor_utils import precompute_herald_pos
+from ._processor_utils import collect_herald_info
+import math
 import networkx as nx
 
 in_notebook = False
@@ -91,8 +94,14 @@ def pdisplay_circuit(
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
     w, h = skin.get_size(circuit, recursive)
-    renderer = create_renderer(circuit.m, output_format=output_format, skin=skin,
-                               total_width=w, total_height=h, **opts)
+    renderer, _ = create_renderer(
+        circuit.m,
+        output_format=output_format,
+        skin=skin,
+        total_width=w,
+        total_height=h,
+        **opts)
+
     if map_param_kid is None:
         map_param_kid = circuit.map_parameters()
     renderer.open()
@@ -114,25 +123,40 @@ def pdisplay_processor(processor: AProcessor,
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
     w, h = skin.get_size(processor, recursive)
-    renderer = create_renderer(n_modes, output_format=output_format, skin=skin,
-                               total_width=w, total_height=h, compact=compact, **opts)
+    renderer, pre_renderer = create_renderer(
+        n_modes,
+        output_format=output_format,
+        skin=skin,
+        total_width=w,
+        total_height=h,
+        compact=compact,
+        **opts)
+
+    herald_info = {}
     if len(processor.heralds):
         for k in processor.heralds.keys():
             renderer.set_mode_style(k, ModeStyle.HERALD)
-        if recursive:
-            out_herald_info = precompute_herald_pos(processor)
-            renderer.set_out_herald_info(out_herald_info)
-    renderer.open()
-    for r, c in processor.components:
-        shift = r[0]
-        if isinstance(c, Circuit):
-            c = Circuit(c.m).add(0, c)
-        renderer.render_circuit(c,
-                                recursive=recursive,
-                                precision=precision,
-                                nsimplify=nsimplify,
-                                shift=shift)
-    renderer.close()
+        herald_info = collect_herald_info(processor, recursive)
+
+    for rendering_pass in [pre_renderer, renderer]:
+        if not rendering_pass:
+            continue
+        rendering_pass.set_herald_info(herald_info)
+        rendering_pass.open()
+        for r, c in processor.components:
+            shift = r[0]
+            if isinstance(c, Circuit):
+                c = Circuit(c.m).add(0, c)
+            rendering_pass.render_circuit(
+                c,
+                recursive=recursive,
+                precision=precision,
+                nsimplify=nsimplify,
+                shift=shift)
+        rendering_pass.close()
+        if pre_renderer:
+            # Pass pre-computed subblock info to the main rendering pass.
+            renderer.subblock_info.update(pre_renderer.subblock_info)
 
     for port, port_range in processor._in_ports.items():
         renderer.add_in_port(port_range[0], port)
@@ -144,6 +168,7 @@ def pdisplay_processor(processor: AProcessor,
 
 def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Format = Format.TEXT) -> str:
     """
+    :meta private:
     Generates representation of a matrix
     """
 
@@ -202,6 +227,7 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
 def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCount],
                            output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
+    :meta private:
     Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
     StateVector's case)
     """
@@ -264,7 +290,7 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     # get range of colorbars so we can normalize
     max_height = numpy.max(dz)
     min_height = numpy.min(dz)
-    color_map = plt.cm.get_cmap('viridis_r')
+    color_map = plt.get_cmap('viridis_r')
     if max_height != min_height:
         has_only_one_value = False
         # scale each z to [0,1], and get their rgb values
@@ -298,8 +324,8 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     ax.view_init(elev=30, azim=45)
 
 
-def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Format.MPLOT, precision=1E-6,
-                            render_size=None):
+def pdisplay_tomography_chi(qpt: AProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
+                            render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
     if output_format == Format.TEXT or output_format == Format.LATEX:
         raise TypeError(f"Tomography plot does not support {output_format}")
 
@@ -324,7 +350,50 @@ def pdisplay_tomography_chi(qpt: ProcessTomography, output_format: Format = Form
     imag_chi = numpy.round(chi_op.imag, significant_digit)
     _get_sub_figure(ax, imag_chi, pauli_captions)
 
-    plt.show()
+    if not mplot_noshow:
+        plt.show()
+    if mplot_savefig:
+        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
+        return ""
+
+    return None
+
+
+def pdisplay_density_matrix(dm,
+                            output_format: Format = Format.MPLOT,
+                            color: bool = True,
+                            cmap='hsv',
+                            mplot_noshow: bool = False,
+                            mplot_savefig: str = None):
+    """
+    :meta private:
+    :param dm:
+    :param output_format:
+    :param color: whether to display the phase according to some circular cmap
+    :param cmap: the cmap to use fpr the phase indication
+    """
+
+    if output_format == Format.TEXT or output_format == Format.LATEX:
+        raise TypeError(f"DensityMatrix plot does not support {output_format}")
+    fig = plt.figure()
+
+    if color:
+        img = _csr_to_rgb(dm.mat, cmap)
+        plt.imshow(img)
+    else:
+        img = _csr_to_greyscale(dm.mat)
+        plt.imshow(img, cmap='gray')
+
+    l1, l2 = generate_ticks(dm)
+
+    plt.yticks(l1, l2)
+    plt.xticks([])
+
+    if not mplot_noshow:
+        plt.show()
+    if mplot_savefig:
+        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
+        return ""
 
 
 def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
@@ -347,8 +416,11 @@ def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
 
+@dispatch(DensityMatrix)
+def _pdisplay(dm, **kwargs):
+    return pdisplay_density_matrix(dm, **kwargs)
 
-@dispatch(ProcessTomography)
+@dispatch(AProcessTomography)
 def _pdisplay(qpt, **kwargs):
     return pdisplay_tomography_chi(qpt, **kwargs)
 
@@ -416,7 +488,7 @@ def _default_output_format(o):
         if isinstance(o, Matrix):
             return Format.LATEX
         return Format.HTML
-    elif in_ide() and (isinstance(o, ACircuit) or isinstance(o, AProcessor)):
+    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, AProcessTomography))):
         return Format.MPLOT
     return Format.TEXT
 

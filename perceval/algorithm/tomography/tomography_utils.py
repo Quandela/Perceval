@@ -30,7 +30,36 @@
 import numpy as np
 import math
 from itertools import product, combinations
-from perceval.components import PauliType, get_pauli_gate, get_preparation_circuit
+from perceval.components import (PauliType, PauliEigenStateType, get_pauli_gate, get_pauli_eigen_state_prep_circ,
+                                 processor_circuit_configurator)
+from perceval.algorithm import Sampler
+from perceval.utils import BasicState
+
+
+def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_basis_indices: list, denormalize = True) -> tuple:
+    """
+    computes the output probability distribution for the tomography experiment
+    :param tomography_experiment: Tomography experiment object with a Processor on which Tomography is to be done
+    :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
+    :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
+     circuit
+    :return: Output state probability distribution
+    """
+    p = processor_circuit_configurator(tomography_experiment._processor, prep_state_indices, meas_pauli_basis_indices)
+
+    input_state = BasicState([1, 0] * tomography_experiment._nqubit)
+    p.with_input(input_state)
+
+    sampler = Sampler(p, max_shots_per_call=tomography_experiment._max_shots)
+    probs = sampler.probs()
+    output_distribution = probs["results"]
+    gate_logical_perf = probs["logical_perf"]
+
+    if denormalize:
+        for key in output_distribution:  # Denormalize output state distribution
+            output_distribution[key] *= gate_logical_perf
+
+    return output_distribution, gate_logical_perf
 
 
 def _state_to_dens_matrix(state: np.ndarray) -> np.ndarray:
@@ -51,15 +80,15 @@ def _matrix_basis(nqubit: int, d: int) -> list:
     :return: list of basis matrices
     """
     B = []
-    pauli_indices = _generate_pauli_index(nqubit)
+    pauli_indices = _generate_pauli_prep_index(nqubit, prep_basis_size=4)
     v = np.zeros((d, 1), dtype='complex_')
     v[0] = 1
 
     for elem in pauli_indices:
-        M = get_preparation_circuit(elem[0]).compute_unitary()
+        M = get_pauli_eigen_state_prep_circ(elem[0]).compute_unitary()
         if len(elem) > 1:
             for i in elem[1:]:
-                M = np.kron(M, get_preparation_circuit(i).compute_unitary())
+                M = np.kron(M, get_pauli_eigen_state_prep_circ(i).compute_unitary())
         B.append(_state_to_dens_matrix(np.dot(M, v)))
 
     return B
@@ -84,7 +113,6 @@ def _vector_to_sq_matrix(vector: np.ndarray) -> np.ndarray:
     size = math.sqrt(len(vector))
     if not size.is_integer():
         raise ValueError("Vector length incompatible to turn into a square matrix")  # checks integer repr of float
-    # todo: ugly to do sqrt, remove it and implement param 'd' somewhere consistently
     return np.reshape(vector, (int(size), int(size)))
 
 
@@ -120,7 +148,7 @@ def _get_fixed_basis_ops(j: int, nqubit: int) -> np.ndarray:
     fix_basis_op = get_pauli_gate(PauliType(q))
 
     # I am not sure if i completely follow the logic behind what follows. I believe the idea is
-    # to keep val between 0-3 no matter the nqubits and value of j. todo: find a better implementation
+    # to keep val between 0-3 no matter the nqubits and value of j.
     # it seems similar to many other calls of creating combinations of operators in a basis
     # but when I called similarly, values for computed fidelity was different
 
@@ -160,12 +188,29 @@ def _krauss_repr_ops(m: int, rhoj: np.ndarray, n: int, nqubit: int) -> np.ndarra
 
 def _generate_pauli_index(nqubit: int) -> list:
     """
-    generates all possible combinations of Pauli indices repeated n times
+    generates all possible combinations of Pauli operator indices repeated n times
     :param nqubit: number of qubits
-    :return: List of Pauli indices
+    :return: List of Pauli operator indices
     """
     s = [pt for pt in PauliType]
     return [list(p) for p in product(s, repeat=nqubit)]  # takes Cartesian product of s with itself repeating 'n' times
+
+
+def _generate_pauli_prep_index(nqubit: int, prep_basis_size: int = None) -> list:
+    """
+    generates all possible combinations of indices for pauli eigenstates repeated n times
+    :param nqubit: number of qubits
+    :param prep_basis_size: allows choosing a subset of states from Pauli eigenstates
+    :return: List of Pauli eigenstate indices
+    """
+    if prep_basis_size is None:
+        # uses the full set Zm, Zp, Xp, Xm, Yp, Ym
+        s = [pt for pt in PauliEigenStateType]
+    else:
+        # standard tomography requires only 4 eigenstates - Zm, Zp, Xp, Yp
+        s = [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp, PauliEigenStateType.Yp]
+
+    return [list(p) for p in product(s, repeat=nqubit)]
 
 
 def _list_subset_k_from_n(k: int, n: int) -> list:
@@ -213,8 +258,6 @@ def is_physical(input_matrix: np.ndarray, nqubit: int, eigen_tolerance: float = 
     # check if completely positive with Choi–Jamiołkowski isomorphism
     choi = 0
     for n in range(d2):
-        # there were 2 transpose to compute P_n, removed. I do not know if one is important and there is another error
-        # Todo : find out about the comment in previous line
         P_n = np.conjugate([_matrix_to_vector(np.transpose(_get_fixed_basis_ops(n, nqubit)))])
         for m in range(d2):
             choi += input_matrix[m, n] \
@@ -227,3 +270,22 @@ def is_physical(input_matrix: np.ndarray, nqubit: int, eigen_tolerance: float = 
         res['Completely Positive'] = True
 
     return res
+
+
+def _index_num_to_basis(index, nqubit, basis_size) -> list:
+    digits = []
+    for j in range(nqubit - 1, -1, -1):
+        digits.append(index // (basis_size ** j))
+        index = index % (basis_size ** j)
+    return digits
+
+
+def process_fidelity(computed_map: np.ndarray, ideal_map: np.ndarray) -> float:
+    """
+    Computes the process fidelity of an operator (ideal) and its implementation (realistic)
+
+    :param computed_map: process map (chi matrix) or density matrix map computed by tomography
+    :param ideal_map: ideal process map (chi matrix) or density matrix map of the process or state
+    :return: float between 0 and 1
+    """
+    return np.real(np.trace(np.dot(computed_map, ideal_map)))
