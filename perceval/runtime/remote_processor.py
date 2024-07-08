@@ -63,6 +63,7 @@ class RemoteProcessor(AProcessor):
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
+        rp.min_detected_photons_filter(processor._min_detected_photons)
         return rp
 
     def __init__(self,
@@ -244,6 +245,8 @@ class RemoteProcessor(AProcessor):
             payload['heralds'] = self.heralds
         if self._noise is not None:
             payload['noise'] = serialize(self._noise)
+        if self._min_detected_photons is not None:
+            payload['min_detected_photons'] = serialize(self._min_detected_photons)
         j['payload'] = payload
         return j
 
