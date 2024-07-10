@@ -30,6 +30,7 @@
 import os
 import re
 import uuid
+import math
 import tempfile
 from typing import Type
 from pathlib import Path
@@ -106,6 +107,17 @@ def assert_bsd_close_enough(ref_bsd: pcvl.BSDistribution, bsd_to_check: pcvl.BSD
             assert bsd_to_check[lh_bs] > threshold
             return
     assert False, f"No state has probability above {threshold} for bsd {ref_bsd}"
+
+
+def assert_bsc_close_enough(ref_bsc: pcvl.BSCount, bsc_to_check: pcvl.BSCount):
+    total = ref_bsc.total()
+    assert total == bsc_to_check.total()
+    threshold = math.sqrt(total)
+    for lh_bs in ref_bsc.keys():
+        if ref_bsc[lh_bs] < 5:
+            continue
+        assert lh_bs in bsc_to_check
+        assert ref_bsc[lh_bs] == pytest.approx(bsc_to_check[lh_bs], ref_bsc[lh_bs]/threshold)
 
 
 def  dict2svd(d: dict):
