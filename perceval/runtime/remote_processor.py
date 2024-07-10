@@ -245,8 +245,6 @@ class RemoteProcessor(AProcessor):
             payload['heralds'] = self.heralds
         if self._noise is not None:
             payload['noise'] = serialize(self._noise)
-        if self._min_detected_photons is not None:
-            payload['min_detected_photons'] = serialize(self._min_detected_photons)
         j['payload'] = payload
         return j
 

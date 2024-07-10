@@ -101,11 +101,11 @@ def test_payload_postselect():
 def test_payload_min_detected_photons():
     rp = _get_remote_processor()
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'min_detected_photons' not in payload
+    assert 'min_detected_photons' not in payload['parameters']
 
     rp.min_detected_photons_filter(2)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'min_detected_photons' in payload
+    assert 'min_detected_photons' in payload['parameters']
     assert payload['min_detected_photons'] == 2
 
 
