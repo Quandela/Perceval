@@ -57,14 +57,16 @@ def _assert_cnot(backend: AProbAmpliBackend):
 
 
 def test_backends_getter():
-    """ test backend listing and getter"""
-    # test listing
+    """test backend listing and getter"""
     backend_list = BackendFactory.list()
     for one_backend_name in backend_list:
         curr_back = BackendFactory.get_backend(one_backend_name)
         backend_name = curr_back.name
         assert one_backend_name == backend_name
-    # test getter with wrong name
+
+
+def test_backends_getter_wrong_name():
+    """test backend getter with wrong name"""
     with warnings.catch_warnings(record=True) as caught_warnings:
         fake_backend_name = "this_backend_is_not_present"
         not_found_backend = BackendFactory.get_backend(fake_backend_name)
