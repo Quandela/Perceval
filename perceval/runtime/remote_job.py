@@ -45,7 +45,7 @@ def _extract_job_times(response):
         creation_datetime = float(response['creation_datetime'])
         start_time = float(response['start_time'])
         duration = int(response['duration'])
-    except:
+    except Exception:
         pass
     return creation_datetime, duration, start_time
 
