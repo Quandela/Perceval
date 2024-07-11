@@ -30,7 +30,7 @@
 from pathlib import Path
 import numpy as np
 import sympy as sp
-from pytest import raises
+import pytest
 import warnings
 
 import perceval as pcvl
@@ -61,7 +61,7 @@ def test_wrong_input_struct():
 
         pass
 
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
         pcvl.Matrix(TestStruct())
 
 

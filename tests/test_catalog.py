@@ -28,7 +28,7 @@
 # SOFTWARE.
 """module test_catalog"""
 
-from pytest import raises
+import pytest
 from perceval.components import Catalog
 
 
@@ -42,7 +42,7 @@ def test_catalog():
 
 def test_wrong_catalog():
     """test catalog with non existent path"""
-    with raises(ModuleNotFoundError):
+    with pytest.raises(ModuleNotFoundError):
         Catalog("custom_catalog_non_existent")
 
 
