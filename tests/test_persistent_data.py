@@ -37,7 +37,10 @@ from perceval.utils import PersistentData, FileFormat
 
 
 def test_directory():
+    """test PersistentData"""
     persistent_data = PersistentData()
+    assert persistent_data.is_readable()
+    assert persistent_data.is_writable()
     assert os.path.isabs(persistent_data.directory)
     assert persistent_data.directory.endswith("perceval-quandela")
 

@@ -27,10 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from pytest import raises
 from perceval import BasicState, StateVector, BSDistribution, SVDistribution
 from perceval.utils.qmath import exponentiation_by_squaring
 from _test_utils import assert_sv_close, assert_svd_close
-
 
 def test_exponentiation():
     # Numbers
@@ -70,3 +70,10 @@ def test_exponentiation():
     assert_svd_close(svd, svd)
     assert_svd_close(svd**2, svd * svd)
     assert_svd_close(svd**5, svd * svd * svd * svd * svd)
+
+
+def test_wrong_base():
+    """check some case of exponentiation_by_squaring"""
+    assert exponentiation_by_squaring(1, 1), 1
+    with raises(ValueError):
+        exponentiation_by_squaring(1, 0)

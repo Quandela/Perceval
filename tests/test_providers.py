@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # As a special exception, the copyright holders of exqalibur library give you
 # permission to combine exqalibur with code included in the standard release of
@@ -26,15 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""module test_metadata"""
+"""module test_providers"""
 
-from perceval import PMetadata, __version__
+from requests import HTTPError
+from perceval.providers.quandela.quandela_session import Session
 
 
-def test_metadata():
-    """check PMetadata class"""
-    assert PMetadata.package_name() == "perceval-quandela"
-    assert PMetadata.name() == "perceval"
-    assert PMetadata.author() == "quandela"
-    assert PMetadata.version() == __version__
-    assert __version__.startswith(PMetadata.short_version())
+def test_quandela_session():
+    """test quandela session"""
+    platform_name = "sim:sampling:h100"
+    token = "your-token"
+    try:
+        sess = Session(platform_name, token)
+        sess.build_remote_processor()
+    except HTTPError as e:
+        assert e.response.status_code == 401

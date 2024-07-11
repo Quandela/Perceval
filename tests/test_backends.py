@@ -56,6 +56,20 @@ def _assert_cnot(backend: AProbAmpliBackend):
     assert pytest.approx(backend.probability(s10)) == 1 / 9
 
 
+def test_backends_getter():
+    """ test backend listing and getter"""
+    # test listing
+    backend_list = BackendFactory.list()
+    for one_backend_name in backend_list:
+        curr_back = BackendFactory.get_backend(one_backend_name)
+        backend_name = curr_back.name
+        assert one_backend_name == backend_name
+    # test getter with wrong name
+    fake_backend_name = "this_backend_is_not_present"
+    not_found_backend = BackendFactory.get_backend(fake_backend_name)
+    assert not_found_backend.name == "SLOS"
+
+
 def test_clifford_bs():
     cliff_bs = Clifford2017Backend()
     cliff_bs.set_circuit(BS.H())

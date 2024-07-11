@@ -30,6 +30,7 @@
 from pathlib import Path
 import numpy as np
 import sympy as sp
+from pytest import raises
 
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
@@ -49,6 +50,18 @@ def test_new_textarray():
     M = pcvl.Matrix("1 2 3\n4 5 6\n7 8 9")
     assert np.array_equal(M, np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
     assert not M.is_symbolic()
+
+
+def test_wrong_input_struct():
+    """check if pcvl.Matrix raise an error when we're using a custom struct"""
+
+    class TestStruct:
+        """empty test class"""
+
+        pass
+
+    with raises(NotImplementedError):
+        pcvl.Matrix(TestStruct())
 
 
 def test_new_shape0():
