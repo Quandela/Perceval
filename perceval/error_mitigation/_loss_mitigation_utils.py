@@ -99,7 +99,9 @@ def _gen_lossy_dists(noisy_input, ideal_photon_count, pattern_map):
             _handle_two_photons_lost_dist(noisy_distributions, pattern_map, noisy_state, count)
 
     for i in range(MAX_LOST_PHOTONS + 1):
-        noisy_distributions[i] = noisy_distributions[i] / sum(noisy_distributions[i])
+        summed = sum(noisy_distributions[i])
+        if summed > 0:
+            noisy_distributions[i] = noisy_distributions[i] / summed
     return noisy_distributions
 
 
