@@ -34,6 +34,7 @@ from collections import Counter
 from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor, GenericInterferometer
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
+from perceval.utils import InterferometerShape
 import perceval.algorithm as algo
 import perceval.components.unitary_components as comp
 from _test_utils import strip_line_12
@@ -353,7 +354,7 @@ def test_depths_ncomponents():
               // (0, comp.PS(phi=P("φ_a")))
               // comp.BS()
               // (0, comp.PS(phi=P("φ_b"))))
-        c1 = Circuit.decomposition(m, ub, shape="triangle")
+        c1 = Circuit.decomposition(m, ub, shape=InterferometerShape.TRIANGLE)
         assert c1 is not None and c1.depths() == [28, 38, 32, 26, 20, 14, 8, 2]
         assert c1.ncomponents() == 112
 

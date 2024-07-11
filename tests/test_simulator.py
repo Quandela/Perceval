@@ -32,9 +32,9 @@ import pytest
 
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
-from perceval.components import Circuit, BS, PS
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect
-from _test_utils import assert_sv_close
+from perceval.components import Circuit, BS, PS, Source, unitary_components
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
+from _test_utils import assert_sv_close, assert_svd_close
 
 
 class MockBackend(AProbAmpliBackend):
@@ -293,7 +293,7 @@ def test_statevector_polar_evolve():
     assert pytest.approx(1) == sum_p
 
 
-def test_evovle_phase():
+def test_evolve_phase():
     input_state = StateVector([2, 0]) + StateVector([1, 1])
     c = Circuit(2).add(1, PS(phi=math.pi/3))
     simu = Simulator(SLOSBackend())
@@ -303,3 +303,60 @@ def test_evovle_phase():
 
     input_state2 = StateVector([0, 0])
     assert simu.evolve(input_state2) == StateVector([0,0])
+
+
+def test_simulator_evolve_svd():
+    input_svd = SVDistribution({StateVector([1, 1]): 0.2,
+                                StateVector([2, 0]): 0.8})
+    b = SLOSBackend()
+    b.set_circuit(Circuit(2).add(0, BS.H()))
+    sim = Simulator(b)
+    svd_expected = SVDistribution({(math.sqrt(2)/2)*BasicState([2,0])-(math.sqrt(2)/2)*BasicState([0,2]): 0.2,
+                                   0.5*BasicState([2,0])+0.5*BasicState([0,2])+(math.sqrt(2)/2)*BasicState([1,1]): 0.8})
+
+    assert_svd_close(sim.evolve_svd(input_svd)['results'], svd_expected)
+
+    ps = PostSelect("[0] == 1")
+    sv = BasicState([0, 1]) + BasicState([1, 0])
+    sv.normalize()
+    input_svd_2 = SVDistribution({sv: 0.2,
+                                  StateVector([1,0]): 0.8})
+    sim.set_postselection(ps)
+    output_svd_2 = sim.evolve_svd(input_svd_2)["results"]
+    assert len(output_svd_2) == 1
+    assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
+
+
+def get_comparison_setup():
+    s = Source(.9)
+    svd = s.generate_distribution(BasicState([1, 1, 1, 1]))
+    U = Matrix.random_unitary(4)
+    circuit = Circuit(4).add(0, unitary_components.Unitary(U))
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    dm = DensityMatrix.from_svd(svd)
+    return sim, dm, svd
+
+
+def test_evolve_density_matrix():
+
+    sim, dm, svd = get_comparison_setup()
+    final_svd = sim.evolve_svd(svd)["results"]
+    final_dm = sim.evolve_density_matrix(dm)
+    comparing_dm = DensityMatrix.from_svd(final_svd)
+
+    assert max((final_dm.mat-comparing_dm.mat).data) < 1e-10
+
+
+def test_probs_density_matrix():
+
+    sim, dm, svd = get_comparison_setup()
+
+    probs_1 = sim.probs_svd(svd)["results"]
+    probs_2 = sim.probs_density_matrix(dm)["results"]
+
+    for key, value in probs_1.items():
+        assert probs_2[key] == pytest.approx(value)
+
+    for key, value in probs_2.items():
+        assert probs_1[key] == pytest.approx(value)

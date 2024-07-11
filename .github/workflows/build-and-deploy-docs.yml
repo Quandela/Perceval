@@ -24,7 +24,7 @@ jobs:
         submodules: recursive
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -42,7 +42,7 @@ jobs:
     - name: Build docs
       run: |
         cd docs
-        make html
+        make multiversion
 
     - name: Install SSH Key
       uses: shimataro/ssh-key-action@v2
@@ -51,4 +51,4 @@ jobs:
         known_hosts: ${{ secrets.PERCEVAL_WEB_KNOWN_HOST }}
 
     - name: Deploy
-      run: rsync -avz docs/build/html/ ${{secrets.PERCEVAL_WEB_USER}}@${{secrets.PERCEVAL_WEB_HOST}}:/var/www/html-perceval
+      run: rsync -avz --delete docs/build/html/ ${{secrets.PERCEVAL_WEB_USER}}@${{secrets.PERCEVAL_WEB_HOST}}:/var/www/html-perceval

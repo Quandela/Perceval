@@ -35,14 +35,13 @@ from typing import Any, Dict, List, Union, Callable, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, SVDistribution, Parameter, PostSelect
+from perceval.utils import BasicState, Parameter, PostSelect
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
-from .source import Source
 from perceval.utils.algorithms.simplification import perm_compose, simplify
-from perceval.utils import LogicalState
+from perceval.utils import LogicalState, NoiseModel
 
 
 class ProcessorType(Enum):
@@ -54,17 +53,19 @@ class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict = {}
+        self._parameters: Dict[str, Any] = {}
+
+        self._noise: Union[NoiseModel, None] = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons = None
+        self._min_detected_photons: Union[int, None] = None
 
         self._reset_circuit()
 
     def _reset_circuit(self):
         self._in_ports: Dict = {}
         self._out_ports: Dict = {}
-        self._postselect: PostSelect = None
+        self._postselect: Union[PostSelect, None] = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
@@ -89,10 +90,13 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict):
-        self._parameters.update(params)
+    def set_parameters(self, params: Dict[str, Any]):
+        for key, value in params.items():
+            self.set_parameter(key, value)
 
     def set_parameter(self, key: str, value: Any):
+        if not isinstance(key, str):
+            raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
 
     @property
@@ -128,6 +132,17 @@ class AProcessor(ABC):
     @property
     def input_state(self):
         return self._input_state
+
+    @property
+    def noise(self):
+        return self._noise
+
+    @noise.setter
+    def noise(self, nm: NoiseModel):
+        if nm is None or isinstance(nm, NoiseModel):
+            self._noise = nm
+        else:
+            raise TypeError("noise type has to be 'NoiseModel'")
 
     @property
     @abstractmethod
@@ -184,7 +199,7 @@ class AProcessor(ABC):
         return True
 
     def copy(self, subs: Union[dict, list] = None):
-        new_proc = copy.deepcopy(self)
+        new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))
@@ -332,6 +347,7 @@ class AProcessor(ABC):
             self._anon_herald_num += 1
         self._in_ports[Herald(expected, name)] = [mode]
         self._out_ports[Herald(expected, name)] = [mode]
+        self._circuit_changed()
 
     def add_herald(self, mode: int, expected: int, name: str = None):
         r"""
@@ -363,6 +379,8 @@ class AProcessor(ABC):
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
+        if self._n_moi is None:
+            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -538,30 +556,6 @@ class AProcessor(ABC):
     @abstractmethod
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
-
-    @property
-    def source_distribution(self) -> Union[SVDistribution, None]:
-        r"""
-        Retrieve the computed input distribution.
-        :return: the input SVDistribution if `with_input` was called previously, otherwise None.
-        """
-        return self._inputs_map
-
-    @property
-    def source(self):
-        r"""
-        :return: The photonic source
-        """
-        return self._source
-
-    @source.setter
-    def source(self, source: Source):
-        r"""
-        :param source: A Source instance to use as the new source for this processor.
-        Input distribution is reset when a source is set, so `with_input` has to be called again afterwards.
-        """
-        self._source = source
-        self._inputs_map = None
 
     def flatten(self) -> List:
         """

@@ -81,7 +81,7 @@ jobs:
       # install python, already DL on MiniMac_arm64
       - if:  ${{ needs.setup.outputs.runner != 'MiniMac_arm64' }}
         name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ needs.setup.outputs.python_v }}
 
@@ -103,7 +103,7 @@ jobs:
 
       # upload the result on action GitHub
       - name: upload the log result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pytest_benchmarks_log_${{ needs.setup.outputs.folder_env }}_${{ github.run_number }}
           path: ${{ needs.setup.outputs.folder_file_json }}
@@ -149,7 +149,7 @@ jobs:
           alert-threshold: '120%'
           comment-on-alert: true
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: Quandela/Perceval-PrivateBenchmark
           ref: ${{ needs.setup.outputs.gh_branch }}
@@ -159,7 +159,7 @@ jobs:
           fetch-depth: 0
 
       - name: upload the log result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: benchmarks_graph
           path: Perceval-PrivateBenchmark/.benchmarks/${{ needs.setup.outputs.folder_env }}/

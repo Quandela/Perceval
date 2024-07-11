@@ -29,7 +29,7 @@
 import pytest
 from perceval import Processor, Source, BS, TD, BasicState, BSDistribution
 
-p = Processor("SLOS", 2, source=Source(1))
+p = Processor("SLOS", 2)
 
 p.add(0, BS())
 p.add(0, TD(1))

@@ -28,15 +28,15 @@
 # SOFTWARE.
 
 import numpy as np
+from collections import defaultdict
 
-from perceval.components import AProcessor, Processor, PauliType
+from perceval.components import AProcessor, PauliType
 from perceval.utils import BasicState
 
-from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
-    _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
-from ._prep_n_meas_circuits import StatePreparation, MeasurementCircuit
+from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
+                               _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index,
+                               _generate_pauli_prep_index, _list_subset_k_from_n, _compute_probs)
 from ..abstract_algorithm import AAlgorithm
-from ..sampler import Sampler
 
 
 class StateTomography(AAlgorithm):
@@ -65,58 +65,10 @@ class StateTomography(AAlgorithm):
 
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
+        self._qst_cache = defaultdict(lambda: defaultdict(lambda: dict))
 
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
-
-    def _configure_processor(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> Processor:
-        """
-        Adds preparation and measurement circuit to input processor (with the gate operation under study) and
-        computes the output probability distribution
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-         circuit
-        :return: the configured processor to perform state tomography experiment
-        """
-
-        p = self._processor.copy()
-        p.clear_input_and_circuit(self._nqubit*2)  # Clear processor content but keep its size
-
-        pc = StatePreparation(prep_state_indices)
-        for c in pc:
-            p.add(*c)  # Add state preparation circuit to the left of the operator
-
-        p.add(0, self._processor)  # including the operator (as a processor)
-
-        mc = MeasurementCircuit(meas_pauli_basis_indices)
-        for c in mc:
-            p.add(*c)  # Add measurement basis circuit to the right of the operator
-
-        p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
-
-        input_state = BasicState([1, 0]*self._nqubit)
-        p.with_input(input_state)
-
-        return p
-
-    def _compute_probs(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> dict:
-        """
-        computes the output probability distribution for the state tomography experiment
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-         circuit
-        :return: Output state probability distribution
-        """
-
-        p = self._configure_processor(prep_state_indices, meas_pauli_basis_indices)
-        sampler = Sampler(p, max_shots_per_call=self._max_shots)
-        probs = sampler.probs()
-        output_distribution = probs["results"]
-        self._gate_logical_perf = probs["logical_perf"]
-
-        for key in output_distribution:  # Denormalize output state distribution
-            output_distribution[key] *= self._gate_logical_perf
-        return output_distribution
 
     def _stokes_parameter(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> float:
         """
@@ -127,7 +79,13 @@ class StateTomography(AAlgorithm):
         :return: Value of Stokes parameter for a given combination of input and output state -> a complex float
         """
 
-        output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+        if PauliType.Z not in meas_pauli_basis_indices:
+            output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices,
+                                                                          meas_pauli_basis_indices)
+            self._qst_cache[tuple(prep_state_indices)][tuple(meas_pauli_basis_indices)] = output_distribution
+        else:
+            meas_indices_Z_to_I = [elem if elem != PauliType.Z else PauliType.I for elem in meas_pauli_basis_indices]
+            output_distribution = self._qst_cache[tuple(prep_state_indices)][tuple(meas_indices_Z_to_I)]
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0
@@ -155,8 +113,9 @@ class StateTomography(AAlgorithm):
         """
         density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype='complex_')
 
-        pauli_indices = _generate_pauli_index(self._nqubit)
-        for index, elem in enumerate(pauli_indices):
+        pauli_meas_indices = _generate_pauli_index(self._nqubit)  # generates indices for measurement
+
+        for index, elem in enumerate(pauli_meas_indices):
             density_matrix += self._stokes_parameter(prep_state_indices, elem) \
                               * _get_fixed_basis_ops(index, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
@@ -194,6 +153,8 @@ class ProcessTomography(AAlgorithm):
         self.chi_normalized = None
         self.chi_unnormalized = None
         self.gate_efficiency = None
+        self._prep_basis_size = 4
+        # Standard Process tomography works with a subset of pauli eigenstates prepared at input : |0>, |1>, |+>, |i+>
 
     def _beta_tensor_elem(self, j: int, k: int, m: int, n: int, nqubit: int) -> np.ndarray:
         """
@@ -233,9 +194,9 @@ class ProcessTomography(AAlgorithm):
         :return: Lambda vector for Chi computation
         """
         density_matrices = []  # stores a list of density matrices for each measurement
-        pauli_indices = _generate_pauli_index(self._nqubit)
 
-        for prep_state_indices in pauli_indices:
+        pauli_prep_indices = _generate_pauli_prep_index(self._nqubit, self._prep_basis_size)
+        for prep_state_indices in pauli_prep_indices:
             # compute state of system for each preparation state - perform state tomography
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
 
@@ -324,8 +285,9 @@ class ProcessTomography(AAlgorithm):
 
         # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
         density_matrices = []   # stores a list of density matrices for each measurement
-        pauli_indices = _generate_pauli_index(self._nqubit)
-        for prep_state_indices in pauli_indices:
+
+        pauli_prep_indices = _generate_pauli_prep_index(self._nqubit, self._prep_basis_size)
+        for prep_state_indices in pauli_prep_indices:
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
             # setting values
 

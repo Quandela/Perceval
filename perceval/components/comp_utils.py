@@ -27,39 +27,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import get_preparation_circuit, get_measurement_circuit
-from typing import List
+from .unitary_components import PERM
+from .linear_circuit import Circuit
 
 
-class StatePreparation:
+def decompose_perms(circuit: Circuit, merge: bool=True) -> Circuit:
     """
-    Builds preparation circuits to prepare an input photon in each of the following
-    logical qubit state states: |0>,|1>,|+>,|+i> using Pauli Gates.
-
-    :param prep_state_indices: List of 'n'(=nqubit) indices to choose one of the logical states for each qubit
+    Sweeps through a Circuit to find any complex n-mode PERM componets to output an equivalent circuit containing
+    only 2-mode PERMS
     """
-    def __init__(self, prep_state_indices: List):
-        self._prep_state_indices = prep_state_indices
+    decomp_c = Circuit(circuit.m, name="Decomposed Circuit")
+    for r, c in circuit:
+        if isinstance(c, PERM):
+            new_c = c.break_in_2_mode_perms()
+            decomp_c.add(r, new_c, merge=merge)
+        else:
+            decomp_c.add(r, c)
 
-    def __iter__(self):
-        """
-        Returns preparation circuits qubit by qubit
-        """
-        for i, pauli_type in enumerate(self._prep_state_indices):
-            yield i*2, get_preparation_circuit(pauli_type)
-
-
-class MeasurementCircuit:
-    """
-    Builds a measurement circuit to measure photons created in the Pauli Basis (I,X,Y,Z) to perform
-    tomography experiments.
-
-    :param pauli_indices: List of 'n'(=nqubit) indices to choose a circuit to measure the prepared state at nth qubit
-    """
-
-    def __init__(self, pauli_indices: List):
-        self._pauli_indices = pauli_indices
-
-    def __iter__(self):
-        for i, pauli_type in enumerate(self._pauli_indices):
-            yield i*2, get_measurement_circuit(pauli_type)
+    return decomp_c
