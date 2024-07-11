@@ -27,11 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
 from typing import Union
 
 import numpy as np
-from scipy.sparse import sparray, csr_array
-
+from scipy.sparse import csr_array
+if sys.version.startswith('3.8.'):
+    from scipy.sparse import spmatrix as sparray
+else:
+    from scipy.sparse import sparray
 
 from perceval.utils.statevector import StateVector
 
