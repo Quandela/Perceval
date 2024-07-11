@@ -482,5 +482,3 @@ class Barrier(Unitary):
 
     def inverse(self, v=False, h=False):
         pass
-
-

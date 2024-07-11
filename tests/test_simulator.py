@@ -30,6 +30,7 @@
 import math
 import pytest
 
+from perceval import catalog
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
@@ -325,6 +326,35 @@ def test_simulator_evolve_svd():
     output_svd_2 = sim.evolve_svd(input_svd_2)["results"]
     assert len(output_svd_2) == 1
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
+
+
+def test_heralds():
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(catalog['heralded cnot'].build_circuit())
+    heralds = {4: 1, 5: 1}
+    sim.set_selection(heralds=heralds)
+
+    input_state = StateVector("|0,1,0,1,1,1>") + StateVector("|0,1,1,0,1,1>")
+    assert_sv_close(sim.evolve(input_state), input_state)
+    sim.keep_heralds(False)
+    assert_sv_close(sim.evolve(input_state), StateVector("|0,1,0,1>") + StateVector("|0,1,1,0>"))
+
+    input_state = BasicState("|0,1,0,1,1,1>")
+    sim.keep_heralds(True)
+    assert_sv_close(sim.evolve(input_state), StateVector("|0,1,1,0,1,1>"))
+    sim.keep_heralds(False)
+    assert_sv_close(sim.evolve(input_state), StateVector("|0,1,1,0>"))
+
+    s = Source(.9)
+    svd = s.generate_distribution(input_state)
+    sim.keep_heralds(True)
+    keep_heralds_output = sim.evolve_svd(svd)
+    sim.keep_heralds(False)
+    discard_heralds_output = sim.evolve_svd(svd)
+
+    for kh_state, dh_state in zip(keep_heralds_output['results'].keys(), discard_heralds_output['results'].keys()):
+        assert_sv_close(kh_state, dh_state * StateVector([1, 1]))
+
 
 
 def get_comparison_setup():

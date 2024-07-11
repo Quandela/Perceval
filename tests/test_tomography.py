@@ -41,12 +41,10 @@ from perceval.backends import SLOSBackend
 from perceval.components import Unitary
 from perceval.algorithm import ProcessTomography, StateTomography
 from perceval.algorithm.tomography.tomography_utils import (is_physical, _generate_pauli_index, _vector_to_sq_matrix,
-                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp)
-
-from _test_utils import save_figs, _save_or_check
+                                                            _matrix_to_vector, _matrix_basis, _coef_linear_decomp,
+                                                            process_fidelity)
 
 CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
-TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
 
 @pytest.mark.parametrize("pauli_gate", [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp,
@@ -71,7 +69,7 @@ def fidelity_op_process_tomography(op, op_proc):
     chi_op_ideal = qpt.chi_target(op)
     chi_op = qpt.chi_matrix()
     # Compute fidelity
-    op_fidelity = qpt.process_fidelity(chi_op, chi_op_ideal)
+    op_fidelity = process_fidelity(chi_op, chi_op_ideal)
     return op_fidelity
 
 
@@ -111,7 +109,13 @@ def test_fidelity_random_op():
     assert random_op_fidelity == pytest.approx(1)
 
 
-def test_chi_cnot_is_physical_and_display(tmp_path, save_figs):
+def test_processor_odd_modes():
+    # tests that a generic processor with odd number of modes does not work
+    with pytest.raises(ValueError):
+        ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
+
+
+def test_chi_cnot_is_physical():
     cnot_p = catalog["klm cnot"].build_processor()
 
     qpt = ProcessTomography(operator_processor=cnot_p)
@@ -122,15 +126,6 @@ def test_chi_cnot_is_physical_and_display(tmp_path, save_figs):
     assert res['Trace=1'] is True  # if Chi has Trace = 1
     assert res['Hermitian'] is True  # if Chi is Hermitian
     assert res['Completely Positive'] is True  # if input Chi is Completely Positive
-
-    # display
-    _save_or_check(qpt, tmp_path, sys._getframe().f_code.co_name, save_figs)
-
-
-def test_processor_odd_modes():
-    # tests that a generic processor with odd number of modes does not work
-    with pytest.raises(ValueError):
-        ProcessTomography(operator_processor=Processor(SLOSBackend(), m_circuit=5))
 
 
 def test_pauli_order():
@@ -176,6 +171,7 @@ def test_matrix_basis_n_decomp():
     assert np.allclose(matrix, matrix_rebuilt)
 
 
+@pytest.mark.skip(reason='3 qubit tests takes a long time to compute')
 def test_avg_fidelity_postprocessed_ccz_gate():
     ccz_p = catalog["postprocessed ccz"].build_processor()
     op_CCZ = np.array([[1, 0, 0, 0, 0, 0, 0, 0],

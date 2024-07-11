@@ -37,7 +37,7 @@ import perceval as pcvl
 from perceval.utils import StateVector, SVDistribution
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
-from perceval.algorithm import ProcessTomography
+from perceval.algorithm import AProcessTomography
 
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
@@ -84,6 +84,16 @@ def assert_svd_close(lhsvd, rhsvd):
                 f"different probabilities for {lh_sv}, {lhsvd[lh_sv]} vs {rhsvd[rh_sv]}"
             break
         assert found_in_rh, f"sv not found {lh_sv}"
+
+
+def assert_bsd_close(lhbsd, rhbsd):
+    assert len(lhbsd) == len(rhbsd), f"len are different, {len(lhbsd)} vs {len(rhbsd)}"
+
+    for lh_bs in lhbsd.keys():
+        if lh_bs not in rhbsd:
+            assert False, f"bs not found {lh_bs}"
+        assert pytest.approx(lhbsd[lh_bs]) == rhbsd[lh_bs], \
+            f"different probabilities for {lh_bs}, {lhbsd[lh_bs]} vs {rhbsd[lh_bs]}"
 
 
 def  dict2svd(d: dict):
@@ -136,7 +146,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         Path(circuit_name + ".svg")
     skin = skin_type(compact)
 
-    if isinstance(c, ProcessTomography):
+    if isinstance(c, AProcessTomography):
         pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT)
     elif isinstance(c, pcvl.AComponent) or isinstance(c, pcvl.components.ACircuit) or isinstance(c, pcvl.AProcessor):
         pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
@@ -151,7 +161,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         with open(img_path, "w") as fw_saved:
             fw_saved.write(saved)
     else:
-        if isinstance(c, ProcessTomography):
+        if isinstance(c, AProcessTomography):
             ok, msg = _check_qpt(img_path, TEST_IMG_DIR /
                                  Path(circuit_name + ".svg"))
         elif isinstance(c, pcvl.AComponent) or isinstance(c, pcvl.components.ACircuit) or isinstance(c, pcvl.AProcessor):

@@ -27,17 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
+
 from _mock_rpc_handler import MockRPCHandler
-from perceval import RemoteProcessor, Circuit, BasicState, PostSelect
+from perceval import RemoteProcessor, Circuit, BasicState, PostSelect, catalog
 from perceval.serialization._constants import ZIP_PREFIX, BS_TAG, SEP, PCVL_PREFIX, POSTSELECT_TAG
+from perceval.serialization import deserialize
 
 
 COMMAND_NAME = 'my_command'
 
-def _get_remote_processor():
-    rp = RemoteProcessor(rpc_handler=MockRPCHandler())
-    rp.set_circuit(Circuit(8))
-    return rp
+def _get_remote_processor(m: int = 8):
+    return RemoteProcessor(rpc_handler=MockRPCHandler(), m=m)
 
 
 def test_payload_basics():
@@ -96,3 +96,34 @@ def test_payload_postselect():
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'postselect' in payload
     assert payload['postselect'].startswith(f"{PCVL_PREFIX}{POSTSELECT_TAG}{SEP}")
+
+
+def test_payload_cnot():
+    rp = _get_remote_processor()
+    heralded_cnot = catalog['heralded cnot'].build_processor()
+    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    rp.add(0, heralded_cnot)
+    rp.add(0, pp_cnot)
+    rp.add(4, pp_cnot)
+    assert rp.m == 8
+    assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
+
+    input_state = BasicState([1, 0]*4)
+    rp.with_input(input_state)
+
+    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
+    assert 'input_state' in payload
+    assert payload['input_state'] == f"{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state*BasicState('|1,1,0,0,0,0>'))}"
+
+    # Heralds come from the 3 CNOT gates
+    assert 'heralds' in payload and len(payload['heralds']) == 6
+    # Heralds from the heralded CNOT are put after the modes of interest (0 to 7) and 1 photon is injected in each
+    assert payload['heralds'][8] == 1 and payload['heralds'][9] == 1
+    # Herlads from the postprocessed CNOT come last (because it was added last) and no photon is required ...
+    assert payload['heralds'][10] == 0 and payload['heralds'][11] == 0
+    assert payload['heralds'][12] == 0 and payload['heralds'][13] == 0
+
+    # ... but a post-selection function was added
+    assert 'postselect' in payload
+    ps = deserialize(payload['postselect'])
+    assert ps == PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1 & [6,7]==1")

@@ -27,21 +27,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
 import copy
-from deprecated import deprecated
+from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Union, Callable, Tuple
+from multipledispatch import dispatch
+from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
-from perceval.utils import BasicState, Parameter, PostSelect
+from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
 from .non_unitary_components import TD
 from perceval.utils.algorithms.simplification import perm_compose, simplify
-from perceval.utils import LogicalState, NoiseModel
 
 
 class ProcessorType(Enum):
@@ -150,24 +149,15 @@ class AProcessor(ABC):
         pass
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if (not self.heralds or keep_herald) and not self.is_threshold:
-            return s
-        new_state = []
-        for idx, k in enumerate(s):
-            if idx in self.heralds:
-                continue
-            if k > 0 and self.is_threshold:
-                k = 1
-            new_state.append(k)
-        return BasicState(new_state)
+        if not keep_herald and self.heralds:
+            s = s.remove_modes(list(self.heralds.keys()))
+        if self._thresholded_output:
+            s = s.threshold_detection()
+        return s
 
     @property
     def post_select_fn(self):
         return self._postselect
-
-    @deprecated(version="0.9", reason="use set_postselection(PostSelect) instead")
-    def set_postprocess(self, postprocess_func: Callable):  # Deprecated in order to avoid free Python function
-        self._postselect = postprocess_func
 
     def set_postselection(self, postselect: PostSelect):
         r"""
@@ -177,12 +167,9 @@ class AProcessor(ABC):
         :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
         """
-        assert isinstance(postselect, PostSelect), "Parameter must be a PostSelect object"
+        if not isinstance(postselect, PostSelect):
+            raise TypeError("Parameter must be a PostSelect object")
         self._postselect = postselect
-
-    @deprecated(version="0.9", reason="use clear_postselection() instead")
-    def clear_postprocess(self):
-        self.clear_postselection()
 
     def clear_postselection(self):
         self._postselect = None
@@ -246,10 +233,8 @@ class AProcessor(ABC):
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
         if self._n_moi is None:
-            if isinstance(mode_mapping, int):
-                self._n_moi = (component.m if isinstance(component, ACircuit) else component.circuit_size) + mode_mapping
-            else:
-                self._n_moi = max(mode_mapping) + 1  # max of keys in case of dict
+            self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
+
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):
             self._compose_processor(connector, component, keep_port)
@@ -271,8 +256,7 @@ class AProcessor(ABC):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         mode_mapping = connector.resolve()
-        if not (self._postselect is None or processor._postselect is None):
-            raise RuntimeError("Cannot automatically compose two processors with post-selection conditions")
+
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new processor
@@ -319,11 +303,17 @@ class AProcessor(ABC):
 
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
+            c_first = perm_modes[0]
             if perm_component is None:
-                self._postselect = processor._postselect
+                other_postselect = copy.copy(processor._postselect)
             else:
-                c_first = perm_modes[0]
-                self._postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+                other_postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+            other_postselect.shift_modes(c_first)
+            if not (self._postselect is None or other_postselect is None
+                    or postselect_independent(self._postselect, other_postselect)):
+                raise RuntimeError("Cannot automatically compose processor's post-selection conditions")
+            self._postselect = self._postselect or PostSelect()
+            self._postselect.merge(other_postselect)
 
     def _add_component(self, mode_mapping, component):
         self._validate_postselect_composition(mode_mapping)
@@ -553,9 +543,34 @@ class AProcessor(ABC):
         input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         self.with_input(input_state)
 
-    @abstractmethod
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
+        assert self.m is not None, "A circuit has to be set before the input state"
+        expected_input_length = self.m
+        assert len(input_state) == expected_input_length, \
+            f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
+
+    @dispatch(BasicState)
+    def with_input(self, input_state: BasicState) -> None:
+        self.check_input(input_state)
+        input_list = [0] * self.circuit_size
+        input_idx = 0
+        expected_photons = 0
+        # Build real input state (merging ancillas + expected input) and compute expected photon count
+        for k in range(self.circuit_size):
+            if k in self.heralds:
+                input_list[k] = self.heralds[k]
+                expected_photons += self.heralds[k]
+            else:
+                input_list[k] = input_state[input_idx]
+                expected_photons += input_state[input_idx]
+                input_idx += 1
+
+        self._input_state = BasicState(input_list)
+
+        if self._min_detected_photons is None:
+            self._min_detected_photons = expected_photons
+
 
     def flatten(self) -> List:
         """

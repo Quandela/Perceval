@@ -102,6 +102,12 @@ def test_backend_factory_default():
                               {BasicState("|1,0>"): 0.5, BasicState("|0,1>"): 0.5})
 
 
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "NaiveApprox"])
+def test_backend_wiring(backend_name):
+    backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
+    backend.set_circuit(Circuit(1))  # Identity circuit, 2 modes
+    check_output_distribution(backend, BasicState([1]), {BasicState("|1>"): 1})
+
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
 def test_backend_identity(backend_name):
     backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)

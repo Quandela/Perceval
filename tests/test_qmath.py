@@ -27,12 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from pytest import raises
+import itertools
+import pytest
+import time
+
 from perceval import BasicState, StateVector, BSDistribution, SVDistribution
-from perceval.utils.qmath import exponentiation_by_squaring
+from perceval.utils.qmath import exponentiation_by_squaring, distinct_permutations
 from _test_utils import assert_sv_close, assert_svd_close
 
 def test_exponentiation():
+    with pytest.raises(ValueError):
+        exponentiation_by_squaring(12, 0)
     # Numbers
     assert exponentiation_by_squaring(12, 1), 12
     assert exponentiation_by_squaring(8, 2), 64
@@ -75,5 +80,27 @@ def test_exponentiation():
 def test_wrong_base():
     """check some case of exponentiation_by_squaring"""
     assert exponentiation_by_squaring(1, 1), 1
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         exponentiation_by_squaring(1, 0)
+
+
+@pytest.mark.parametrize("parameters", [('mississippi', 0),
+                                        ('mississippi', 1),
+                                        ('mississippi', 6),
+                                        ('mississippi', 7),
+                                        ('mississippi', 12),
+                                        ([0, 1, 1, 0], 0),
+                                        ([0, 1, 1, 0], 1),
+                                        ([0, 1, 1, 0], 2),
+                                        ([0, 1, 1, 0], 3),
+                                        ([0, 1, 1, 0], 4),
+                                        ([0, 1, 1, 0], None),
+                                        (['a'], 0),
+                                        (['a'], 1),
+                                        (['a'], 5),
+                                        ([], 0),
+                                        ([], 1),
+                                        ([], 4),])
+def test_distinct_permutations(parameters):
+    iterable, r = parameters
+    assert sorted(set(itertools.permutations(iterable, r))) == sorted(distinct_permutations(iter(iterable), r))

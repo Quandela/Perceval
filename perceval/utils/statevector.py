@@ -35,42 +35,14 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
-from typing import Dict, List, Union, Tuple, Optional
-import sympy as sp
-import numpy as np
+from typing import Dict, List, Union, Optional
 
-from .format import simple_complex
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
 import exqalibur as xq
 
-
-def _sv__str__(self, nsimplify=True):
-    if not self.keys():
-        return "|>"
-    self_copy = copy(self)
-    self_copy.normalize()
-    ls = []
-    for key, value in self_copy:
-        if value == 1:
-            ls.append(str(key))
-        else:
-            if isinstance(value, sp.Expr):
-                ls.append(str(value) + "*" + str(key))
-            else:
-                if nsimplify:
-                    value = simple_complex(value)[1]
-                    if value[1:].find("-") != -1 or value.find("+") != -1:
-                        value = f"({value})"
-                else:
-                    value = str(value)
-                ls.append(value + "*" + str(key))
-    return "+".join(ls).replace("+-", "-")
-
-
 BasicState = xq.FockState
 StateVector = xq.StateVector
-StateVector.__str__ = _sv__str__
 
 
 def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
@@ -326,14 +298,7 @@ class BSDistribution(ProbabilityDistribution):
             raise RuntimeError("No state to sample from")
         states = list(d.keys())
         probs = list(d.values())
-        rng = np.random.default_rng()
-        results = rng.choice(states, count, p=probs)
-        # numpy transforms iterables of ints to a nparray in rng.choice call
-        # Thus, we need to convert back the results to BasicStates
-        output = BSSamples()
-        for s in results:
-            output.append(BasicState(s))
-        return output
+        return random.choices(states, k=count, weights=probs)
 
     def __mul__(self, other):
         return BSDistribution.tensor_product(self, other)

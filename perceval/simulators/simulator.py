@@ -60,6 +60,7 @@ class Simulator(ISimulator):
         self._logical_perf: float = 1
         self._physical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
+        self._keep_heralds = True
 
     @property
     def precision(self):
@@ -80,6 +81,14 @@ class Simulator(ISimulator):
         :param value: The minimum photon count
         """
         self._min_detected_photons = value
+
+    def keep_heralds(self, value: bool):
+        """
+        Tells the simulator to keep or discard ancillary modes in output states
+
+        :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
+        """
+        self._keep_heralds = value
 
     def set_selection(self, min_detected_photon_filter: int = None,
                       postselect: PostSelect = None,
@@ -223,7 +232,8 @@ class Simulator(ISimulator):
         input_list = input_state.separate_state(keep_annotations=False)
         self._evolve_cache(set(input_list))
         result = self._merge_probability_dist(input_list)
-        result, self._logical_perf = post_select_distribution(result, self._postselect, self._heralds)
+        result, self._logical_perf = post_select_distribution(
+            result, self._postselect, self._heralds, self._keep_heralds)
         return result
 
     @dispatch(StateVector)
@@ -372,9 +382,10 @@ class Simulator(ISimulator):
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
         :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output state distribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+            * results is the post-selected output state distribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
 
         """Trim input SVD given _rel_precision threshold"""
@@ -392,7 +403,7 @@ class Simulator(ISimulator):
         else:
             res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
-        res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds)
+        res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
         return {'results': res,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
@@ -421,7 +432,8 @@ class Simulator(ISimulator):
             else:
                 self._physical_perf -= prob
 
-        res_bsd, logical_perf_coeff = post_select_distribution(res_bsd, self._postselect, self._heralds)
+        res_bsd, logical_perf_coeff = post_select_distribution(
+            res_bsd, self._postselect, self._heralds, self._keep_heralds)
         return {'results': res_bsd,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf * logical_perf_coeff}
@@ -460,7 +472,7 @@ class Simulator(ISimulator):
                 evolved_in_s = _merge_sv(evolved_in_s, sv)
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
-        result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds)
+        result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
         return result_sv
 
     def evolve_svd(self,
@@ -472,9 +484,10 @@ class Simulator(ISimulator):
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
         :return: A dictionary of the form { "results": SVDistribution, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output SVDistribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+            * results is the post-selected output SVDistribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
@@ -532,8 +545,7 @@ class Simulator(ISimulator):
         nnz_count = 0
         for i, fs in enumerate(dm.inverse_index):
             if fs in input_list:
-                self._backend.set_input_state(fs)
-                output_sv = self._backend.evolve()
+                output_sv = self.evolve(fs)
                 for state, amplitude in output_sv:
                     u_evolve_data.append(amplitude)
                     u_evolve_indices.append(dm.index[state])

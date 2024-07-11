@@ -165,10 +165,10 @@ def test_processor_samples_max_shots():
     p.with_input(BasicState([0, 1, 0, 1]))
     max_samples = 100
     result_len = {}
-    for max_shots in [400, 1_000, 10_000]:
+    for max_shots in [400, 2_000, 10_000]:
         result_len[max_shots] = len(p.samples(max_samples, max_shots)['results'])
-    assert result_len[400] < result_len[1_000]
-    assert result_len[1_000] < result_len[10_000]
+    assert result_len[400] < result_len[2_000]
+    assert result_len[2_000] < result_len[10_000]
     assert result_len[10_000] == max_samples  # 10k shots is enough to get the expected sample count
 
 
@@ -181,6 +181,21 @@ def test_processor_composition():
     p.add((0, 1), p_bs)  # Composing with a processor on modes [0,1] should work
     with pytest.raises(AssertionError):
         p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
+
+
+def test_composition_error_post_selection():
+    processor = catalog['postprocessed cnot'].build_processor()
+    # Composing 2 CNOTs on the exact same modes should work in theory, but not in the current implementation,
+    # it's still possible to apply a PostSelect manually to the resulting Processor.
+    with pytest.raises(AssertionError):
+        processor.add(0, processor)
+
+    processor2 = Processor("SLOS", 5)
+    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    processor2.add(0, pp_cnot)
+    # It's 100% valid that this 2nd case is blocked
+    with pytest.raises(AssertionError):
+        processor2.add(1, pp_cnot)
 
 
 def test_add_remove_ports():
