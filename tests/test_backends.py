@@ -29,6 +29,7 @@
 
 import math
 import pytest
+import warnings
 
 from perceval.backends import Clifford2017Backend, AProbAmpliBackend, SLOSBackend, BackendFactory
 from perceval.components import BS, PS, PERM, Circuit, catalog
@@ -64,9 +65,12 @@ def test_backends_getter():
         backend_name = curr_back.name
         assert one_backend_name == backend_name
     # test getter with wrong name
-    fake_backend_name = "this_backend_is_not_present"
-    not_found_backend = BackendFactory.get_backend(fake_backend_name)
-    assert not_found_backend.name == "SLOS"
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        fake_backend_name = "this_backend_is_not_present"
+        not_found_backend = BackendFactory.get_backend(fake_backend_name)
+        assert not_found_backend.name == "SLOS"
+        assert len(caught_warnings) == 1
+        assert issubclass(caught_warnings[0].category, UserWarning)
 
 
 def test_clifford_bs():

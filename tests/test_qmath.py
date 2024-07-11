@@ -35,6 +35,7 @@ from perceval import BasicState, StateVector, BSDistribution, SVDistribution
 from perceval.utils.qmath import exponentiation_by_squaring, distinct_permutations
 from _test_utils import assert_sv_close, assert_svd_close
 
+
 def test_exponentiation():
     with pytest.raises(ValueError):
         exponentiation_by_squaring(12, 0)
