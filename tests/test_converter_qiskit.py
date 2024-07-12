@@ -113,9 +113,9 @@ def test_cnot_1_heralded():
     qc.h(0)
     qc.cx(0, 1)
     pc = convertor.convert(qc, use_postselection=False)
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
     assert len(pc._components) == 2  # should be BS.H//CNOT
 
 
@@ -125,9 +125,9 @@ def test_cnot_1_inverse_heralded():
     qc.h(0)
     qc.cx(1, 0)
     pc = convertor.convert(qc, use_postselection=False)
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
     assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = pc._components[1][1]
@@ -145,9 +145,9 @@ def test_cnot_2_heralded():
     qc.h(0)
     qc.cx(0, 2)
     pc = convertor.convert(qc, use_postselection=False)
-    assert pc.circuit_size == 10
+    assert pc.circuit_size == 8
     assert pc.m == 6
-    assert pc.source_distribution[StateVector('|1,0,1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,0,1,1>')] == 1
     assert len(pc._components) == 4
     # should be BS//PERM//CNOT//PERM
     perm1 = pc._components[1][1]
@@ -155,8 +155,8 @@ def test_cnot_2_heralded():
     perm2 = pc._components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [6, 7, 0, 1, 2, 3, 4, 5]
-    assert perm2.perm_vector == [2, 3, 4, 5, 6, 7, 0, 1]
+    assert perm1.perm_vector == [4, 5, 0, 1, 2, 3]
+    assert perm2.perm_vector == [2, 3, 4, 5, 0, 1]
 
 
 def test_cnot_1_postprocessed():

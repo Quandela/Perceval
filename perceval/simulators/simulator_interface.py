@@ -31,7 +31,8 @@ from abc import ABC, abstractmethod
 from typing import Callable, Dict
 
 from perceval.components import ACircuit
-from perceval.utils import BSDistribution, StateVector, SVDistribution
+from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
+    post_select_statevector
 
 
 class ISimulator(ABC):
@@ -62,6 +63,18 @@ class ISimulator(ABC):
 class ASimulatorDecorator(ISimulator, ABC):
     def __init__(self, simulator: ISimulator):
         self._simulator = simulator
+        self._postselect: PostSelect = PostSelect()
+        self._heralds: dict = {}
+
+    def set_selection(self, min_detected_photon_filter: int = None,
+                      postselect: PostSelect = None,
+                      heralds: dict = None):
+        if min_detected_photon_filter is not None:
+            self.set_min_detected_photon_filter(min_detected_photon_filter)
+        if postselect is not None:
+            self._postselect = postselect
+        if heralds is not None:
+            self._heralds = heralds
 
     @abstractmethod
     def _prepare_input(self, input_state):
@@ -72,24 +85,43 @@ class ASimulatorDecorator(ISimulator, ABC):
         pass
 
     @abstractmethod
-    def _postprocess_results(self, results):
+    def _postprocess_bsd_impl(self, bsd: BSDistribution) -> BSDistribution:
         pass
+
+    @abstractmethod
+    def _postprocess_sv_impl(self, sv: StateVector) -> StateVector:
+        pass
+
+    def _postprocess_bsd(self, results: BSDistribution):
+        results = self._postprocess_bsd_impl(results)
+        logical_perf = 1
+        if self._postselect is not None or self._heralds is not None:
+            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds)
+        return results, logical_perf
+
+    def _postprocess_sv(self, sv: StateVector) -> StateVector:
+        sv = self._postprocess_sv_impl(sv)
+        if self._postselect is not None or self._heralds is not None:
+            sv, _ = post_select_statevector(sv, self._postselect, self._heralds)
+        return sv
 
     def set_circuit(self, circuit):
         self._simulator.set_circuit(self._prepare_circuit(circuit))
 
-    def probs(self, input_state):
+    def probs(self, input_state) -> BSDistribution:
         results = self._simulator.probs(self._prepare_input(input_state))
-        return self._postprocess_results(results)
+        results, _ = self._postprocess_bsd(results)
+        return results
 
     def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
-        probs = self._simulator.probs_svd(self._prepare_input(svd))
-        probs['results'] = self._postprocess_results(probs['results'])
+        probs = self._simulator.probs_svd(self._prepare_input(svd), progress_callback)
+        probs['results'], logical_perf_coeff = self._postprocess_bsd(probs['results'])
+        probs['logical_perf'] *= logical_perf_coeff
         return probs
 
-    def evolve(self, input_state):
+    def evolve(self, input_state) -> StateVector:
         results = self._simulator.evolve(self._prepare_input(input_state))
-        return self._postprocess_results(results)
+        return self._postprocess_sv(results)
 
     def set_min_detected_photon_filter(self, value: int):
         self._simulator.set_min_detected_photon_filter(value)

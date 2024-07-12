@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import BasicState
+from .statevector import BasicState, BSDistribution, StateVector
 
 import json
 import re
-from typing import Callable, List
+from typing import Callable, List, Tuple
 
 
 class PostSelect:
@@ -51,20 +51,35 @@ class PostSelect:
     False
     """
 
-    _OPERATOR = {"==": int.__eq__, "<": int.__lt__, ">": int.__gt__}
-    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)(==|<|>)\s*(\d+\b)")
+    _OPERATORS = {"==": int.__eq__,
+                  "<": int.__lt__,
+                  ">": int.__gt__,
+                  ">=": int.__ge__,
+                  "<=": int.__le__}
+
+    # Regexp explanations:
+    # first group: index(es) of modes between '[]' and separated with ','
+    # second group: operator (listed in _OPERATORS). We suppose there is no digit character in operators
+    # third group: number of photons
+    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)([^\d]*)\s*(\d+\b)")
 
     def __init__(self, str_repr: str = None):
         self._conditions = {}
         condition_count = 0
-        if str_repr is not None:
+        if str_repr:
             try:
                 for match in self._PATTERN.finditer(str_repr):
                     indexes = tuple(json.loads(match.group(1)))
+
+                    operator = match.group(2).strip()
+                    if operator not in self._OPERATORS:
+                        raise KeyError(f"Unsupported operator: {operator}")
+
                     self._add_condition(indexes=indexes,
-                                        operator=self._OPERATOR[match.group(2)],
+                                        operator=self._OPERATORS[operator],
                                         value=int(match.group(3)))
                     condition_count += 1
+
             except json.decoder.JSONDecodeError as e:
                 raise RuntimeError(f"Could not interpret input string '{str_repr}': {e}")
             if condition_count != str_repr.count("&") + 1:
@@ -83,6 +98,16 @@ class PostSelect:
     def lt(self, indexes, value: int):
         """Create a new "lower than" condition for the current PostSelect instance"""
         self._add_condition(indexes, int.__lt__, value)
+        return self
+
+    def ge(self, indexes, value: int):
+        """Create a new "greater or equal than" condition for the current PostSelect instance"""
+        self._add_condition(indexes, int.__ge__, value)
+        return self
+
+    def le(self, indexes, value: int):
+        """Create a new "lower or equal than" condition for the current PostSelect instance"""
+        self._add_condition(indexes, int.__le__, value)
         return self
 
     def _add_condition(self, indexes, operator: Callable, value: int):
@@ -107,7 +132,7 @@ class PostSelect:
     def __repr__(self):
         strlist = []
         for operator, cond in self._conditions.items():
-            operator_str = [o for o in self._OPERATOR if self._OPERATOR[o] == operator][0]
+            operator_str = [o for o in self._OPERATORS if self._OPERATORS[o] == operator][0]
             for indexes, value in cond:
                 strlist.append(f"{list(indexes)}{operator_str}{value}")
         return "&".join(strlist)
@@ -145,9 +170,21 @@ class PostSelect:
                 output._conditions[operator].append((tuple(new_indexes), value))
         return output
 
+    def shift_modes(self, shift: int):
+        """
+        Shift all mode indexes inside this instance
+
+        :param shift: Value to shift all mode indexes with
+        """
+        for operator, cond in self._conditions.items():
+            for c, (indexes, value) in enumerate(cond):
+                assert min(indexes) + shift >= 0, f"A shift of {shift} would lead to negative mode# on {self}"
+                new_indexes = tuple(i + shift for i in indexes)
+                cond[c] = (new_indexes, value)
+
     def can_compose_with(self, modes: List[int]) -> bool:
         """
-        Check if all conditions are compatible with a compisition on given modes
+        Check if all conditions are compatible with a composition on given modes
 
         :param modes: Modes used in the composition
         :return: `True` if the composition is allowed without mixing conditions, `False` otherwise
@@ -159,3 +196,83 @@ class PostSelect:
                 if i_set.intersection(m_set) and not i_set.issuperset(m_set):
                     return False
         return True
+
+    def merge(self, other):
+        """
+        Merge with other PostSelect. Updates the current instance.
+
+        :param other: Another PostSelect instance
+        """
+        for operator, cond in other._conditions.items():
+            for indexes, value in cond:
+                self._add_condition(indexes, operator, value)
+
+
+def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
+    ps1_mode_set = set()
+    for _, cond in ps1._conditions.items():
+        for (indexes, _) in cond:
+            for i in indexes:
+                ps1_mode_set.add(i)
+    for _, cond in ps2._conditions.items():
+        for (indexes, _) in cond:
+            for i in indexes:
+                if i in ps1_mode_set:
+                    return False
+    return True
+
+
+def post_select_distribution(
+        bsd: BSDistribution,
+        postselect: PostSelect,
+        heralds: dict = None,
+        keep_heralds: bool = True) -> Tuple[BSDistribution, float]:
+    if not (postselect.has_condition or heralds):
+        bsd.normalize()
+        return bsd, 1
+
+    if heralds is None:
+        heralds = {}
+    logical_perf = 1
+    result = BSDistribution()
+    for state, prob in bsd.items():
+        heralds_ok = True
+        for m, v in heralds.items():
+            if state[m] != v:
+                heralds_ok = False
+        if heralds_ok and postselect(state):
+            if not keep_heralds:
+                state = state.remove_modes(list(heralds.keys()))
+            result[state] = prob
+        else:
+            logical_perf -= prob
+    result.normalize()
+    return result, logical_perf
+
+
+def post_select_statevector(
+        sv: StateVector,
+        postselect: PostSelect,
+        heralds: dict = None,
+        keep_heralds: bool = True) -> Tuple[StateVector, float]:
+    if not (postselect.has_condition or heralds):
+        sv.normalize()
+        return sv, 1
+
+    if heralds is None:
+        heralds = {}
+    logical_perf = 1
+    result = StateVector()
+    for state, ampli in sv:
+        heralds_ok = True
+        for m, v in heralds.items():
+            if state[m] != v:
+                heralds_ok = False
+        if heralds_ok and postselect(state):
+            if not keep_heralds:
+                state = state.remove_modes(list(heralds.keys()))
+            result += ampli*state
+        else:
+            logical_perf -= abs(ampli)**2
+    result.normalize()
+    return result, logical_perf

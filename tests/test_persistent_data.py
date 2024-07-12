@@ -30,10 +30,10 @@
 import os
 import platform
 import pytest
-import tempfile
-import uuid
 
 from perceval.utils import PersistentData, FileFormat
+
+from _test_utils import PersistentDataForTests
 
 
 def test_directory():
@@ -42,26 +42,8 @@ def test_directory():
     assert persistent_data.directory.endswith("perceval-quandela")
 
 
-UNIQUE_PART = uuid.uuid4()
-
-
-class _PersistentDataForTests(PersistentData):
-    """
-    Overrides the directory used for persistent data to target a temporary sub-folder.
-    This allows to run tests without removing actual persistent data or risking messing up system or user directories
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._directory = os.path.join(tempfile.gettempdir(), f'perceval-container-{UNIQUE_PART}', 'perceval-quandela')
-        try:
-            os.makedirs(self._directory, exist_ok=True)
-        except OSError:
-            pass
-
-
 def test_basic_methods():
-    persistent_data = _PersistentDataForTests()
+    persistent_data = PersistentDataForTests()
     persistent_data.clear_all_data()
 
     assert os.path.exists(persistent_data.directory)
@@ -105,7 +87,7 @@ def test_basic_methods():
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_access():
-    persistent_data = _PersistentDataForTests()
+    persistent_data = PersistentDataForTests()
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)

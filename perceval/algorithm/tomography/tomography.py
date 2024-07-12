@@ -28,15 +28,16 @@
 # SOFTWARE.
 
 import numpy as np
+from collections import defaultdict
 
-from perceval.components import AProcessor, Processor, PauliType
+from perceval.components import AProcessor, PauliType
 from perceval.utils import BasicState
 
-from .tomography_utils import _matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp, \
-    _get_fixed_basis_ops, _get_canonical_basis_ops, _krauss_repr_ops, _generate_pauli_index, _list_subset_k_from_n
-from ._prep_n_meas_circuits import StatePreparation, MeasurementCircuit
+from .abstract_process_tomography import AProcessTomography
+from .tomography_utils import (_matrix_basis, _matrix_to_vector, _vector_to_sq_matrix, _coef_linear_decomp,
+                               _get_fixed_basis_ops, _get_canonical_basis_ops, _generate_pauli_index,
+                               _generate_pauli_prep_index, _list_subset_k_from_n, _compute_probs)
 from ..abstract_algorithm import AAlgorithm
-from ..sampler import Sampler
 
 
 class StateTomography(AAlgorithm):
@@ -60,63 +61,12 @@ class StateTomography(AAlgorithm):
             raise ValueError(
                 f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
 
-        if self._processor.is_remote:
-            raise TypeError("Tomography does not support Remote Processor yet")
-
         self._size_hilbert = 2 ** self._nqubit
         self._gate_logical_perf = None
+        self._qst_cache = defaultdict(lambda: defaultdict(lambda: dict))
 
     _LOGICAL0 = BasicState([1, 0])
     _LOGICAL1 = BasicState([0, 1])
-
-    def _configure_processor(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> Processor:
-        """
-        Adds preparation and measurement circuit to input processor (with the gate operation under study) and
-        computes the output probability distribution
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-         circuit
-        :return: the configured processor to perform state tomography experiment
-        """
-
-        p = self._processor.copy()
-        p.clear_input_and_circuit(self._nqubit*2)  # Clear processor content but keep its size
-
-        pc = StatePreparation(prep_state_indices)
-        for c in pc:
-            p.add(*c)  # Add state preparation circuit to the left of the operator
-
-        p.add(0, self._processor)  # including the operator (as a processor)
-
-        mc = MeasurementCircuit(meas_pauli_basis_indices)
-        for c in mc:
-            p.add(*c)  # Add measurement basis circuit to the right of the operator
-
-        p.min_detected_photons_filter(0)  # QPU would have a problem with this - Eric
-
-        input_state = BasicState([1, 0]*self._nqubit)
-        p.with_input(input_state)
-
-        return p
-
-    def _compute_probs(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> dict:
-        """
-        computes the output probability distribution for the state tomography experiment
-        :param prep_state_indices: List of "nqubit" indices selecting the circuit at each qubit for a preparation state
-        :param meas_pauli_basis_indices: List of "nqubit" indices selecting the circuit at each qubit for a measurement
-         circuit
-        :return: Output state probability distribution
-        """
-
-        p = self._configure_processor(prep_state_indices, meas_pauli_basis_indices)
-        sampler = Sampler(p, max_shots_per_call=self._max_shots)
-        probs = sampler.probs()
-        output_distribution = probs["results"]
-        self._gate_logical_perf = probs["logical_perf"]
-
-        for key in output_distribution:  # Denormalize output state distribution
-            output_distribution[key] *= self._gate_logical_perf
-        return output_distribution
 
     def _stokes_parameter(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> float:
         """
@@ -127,7 +77,13 @@ class StateTomography(AAlgorithm):
         :return: Value of Stokes parameter for a given combination of input and output state -> a complex float
         """
 
-        output_distribution = self._compute_probs(prep_state_indices, meas_pauli_basis_indices)
+        if PauliType.Z not in meas_pauli_basis_indices:
+            output_distribution, self._gate_logical_perf = _compute_probs(self, prep_state_indices,
+                                                                          meas_pauli_basis_indices)
+            self._qst_cache[tuple(prep_state_indices)][tuple(meas_pauli_basis_indices)] = output_distribution
+        else:
+            meas_indices_Z_to_I = [elem if elem != PauliType.Z else PauliType.I for elem in meas_pauli_basis_indices]
+            output_distribution = self._qst_cache[tuple(prep_state_indices)][tuple(meas_indices_Z_to_I)]
 
         # calculation of the Stokes parameter begins here
         stokes_param = 0
@@ -155,8 +111,9 @@ class StateTomography(AAlgorithm):
         """
         density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype='complex_')
 
-        pauli_indices = _generate_pauli_index(self._nqubit)
-        for index, elem in enumerate(pauli_indices):
+        pauli_meas_indices = _generate_pauli_index(self._nqubit)  # generates indices for measurement
+
+        for index, elem in enumerate(pauli_meas_indices):
             density_matrix += self._stokes_parameter(prep_state_indices, elem) \
                               * _get_fixed_basis_ops(index, self._nqubit)
         density_matrix = ((1 / 2) ** self._nqubit) * density_matrix
@@ -164,12 +121,12 @@ class StateTomography(AAlgorithm):
         return density_matrix
 
 
-class ProcessTomography(AAlgorithm):
+class ProcessTomography(AProcessTomography):
     """
     Experiment to reconstruct the process map of the gate operation by tomography experiment.
     - Computes the mathematical tensors/matrices defined by theory required to perform process tomography
 
-    - Computes :math:'$\chi$' matrix form of the operation process map
+    - Computes Chi matrix form of the operation process map
 
     - Provides analysis methods to investigate the results of process tomography
 
@@ -183,49 +140,13 @@ class ProcessTomography(AAlgorithm):
         needs to be performed. By default, it will have a perfect source and use the SLOSBackend() for computations.
         """
         super().__init__(processor=operator_processor, **kwargs)
-        self._nqubit = operator_processor.m // 2
-        if self._nqubit > 3:
-            raise ValueError(
-                f"Input gate too large. Tomography supports up to 3-qubit gates ({self._nqubit}-qubit gate passed).")
-
-        self._size_hilbert = 2 ** self._nqubit
         self._qst = StateTomography(operator_processor=self._processor, **kwargs)
 
         self.chi_normalized = None
         self.chi_unnormalized = None
         self.gate_efficiency = None
-
-    def _beta_tensor_elem(self, j: int, k: int, m: int, n: int, nqubit: int) -> np.ndarray:
-        """
-        computes the elements of beta^{mn}_{jk}, a rank 4 tensor, each index of which can
-        take values between 0 and d^2-1  [d = _size_hilbert]
-
-        :param j: one of the indices for the beta tensor, value between 0 and d**2-1
-        :param k: one of the indices for the beta tensor, value between 0 and d**2-1
-        :param m: one of the indices for the beta tensor, value between 0 and d**2-1
-        :param n: one of the indices for the beta tensor, value between 0 and d**2-1
-        :param nqubit: numbero f qubits
-        :return:
-        """
-
-        b = _krauss_repr_ops(m, _get_canonical_basis_ops(j, self._size_hilbert), n, nqubit)
-        q, r = divmod(k, self._size_hilbert)  # quotient, remainder
-        return b[q, r]
-
-    def _beta_as_matrix(self) -> np.ndarray:
-        """
-        compiles the 2D beta matrix by extracting elements of the rank 4 tensor computed by method _beta_tensor_elem
-        :return: Beta Matrix for Chi computation
-        """
-        num_meas = self._size_hilbert ** 4  # Total number of measurements needed for process tomography
-        beta_matrix = np.zeros((num_meas, num_meas), dtype='complex_')
-        for a in range(num_meas):
-            j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
-            for b in range(num_meas):
-                # j,k,m,n are indices for _beta_tensor_elem
-                m, n = divmod(b, self._size_hilbert ** 2)
-                beta_matrix[a, b] = self._beta_tensor_elem(j, k, m, n, self._nqubit)
-        return beta_matrix
+        self._prep_basis_size = 4
+        # Standard Process tomography works with a subset of pauli eigenstates prepared at input : |0>, |1>, |+>, |i+>
 
     def _lambda_vector(self) -> np.ndarray:
         """
@@ -233,12 +154,11 @@ class ProcessTomography(AAlgorithm):
         :return: Lambda vector for Chi computation
         """
         density_matrices = []  # stores a list of density matrices for each measurement
-        pauli_indices = _generate_pauli_index(self._nqubit)
 
-        for prep_state_indices in pauli_indices:
+        pauli_prep_indices = _generate_pauli_prep_index(self._nqubit, self._prep_basis_size)
+        for prep_state_indices in pauli_prep_indices:
             # compute state of system for each preparation state - perform state tomography
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
-
         # this creates the fixed basis for the Pauli states prepared 0, 1, + and i
 
         lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
@@ -251,26 +171,6 @@ class ProcessTomography(AAlgorithm):
                 quotient, remainder = divmod(k, self._size_hilbert)
                 lambda_matrix[j, k] = eps_rhoj[quotient, remainder]
         return _matrix_to_vector(lambda_matrix)
-
-    def _lambda_target(self, operator: np.ndarray) -> np.ndarray:
-        """
-        Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        :param operator: Target operator matrix
-        :return: lambda vector to compute chi for the target operator
-        """
-        lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
-        for j in range(self._size_hilbert ** 2):
-            rhoj = _get_canonical_basis_ops(j, self._size_hilbert)
-            eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
-            for k in range(self._size_hilbert ** 2):
-                quotient, remainder = divmod(k, self._size_hilbert)
-                lambda_matrix[j, k] = eps_rhoj[quotient, remainder]
-
-        L1 = np.zeros((self._size_hilbert ** 4, 1), dtype='complex_')
-        for i in range(self._size_hilbert ** 4):
-            quotient, remainder = divmod(i, self._size_hilbert ** 2)
-            L1[i] = lambda_matrix[quotient, remainder]
-        return L1
 
     def chi_matrix(self) -> np.ndarray:
         """
@@ -286,30 +186,6 @@ class ProcessTomography(AAlgorithm):
             self.chi_normalized = self.chi_unnormalized / self.gate_efficiency
         return self.chi_normalized  # always returns normalized chi map
 
-    def chi_target(self, operator: np.ndarray) -> np.ndarray:
-        """
-        Implements a mathematical formula for ideal gate (given operator) to compute process fidelity
-        :param operator: Target operator matrix
-        :return: Target Chi matrix
-        """
-
-        beta_inv = np.linalg.pinv(self._beta_as_matrix())
-        lambd = self._lambda_target(operator)
-        X = np.dot(beta_inv, lambd)  # X is a matrix here
-        chi = _vector_to_sq_matrix(X[:, 0])
-        return chi
-
-    @staticmethod
-    def process_fidelity(chi_computed: np.ndarray, chi_ideal: np.ndarray) -> float:
-        """
-        Computes the process fidelity of an operator (ideal) and its implementation (realistic)
-
-        :param chi_computed: chi matrix computed from process tomography
-        :param chi_ideal: Ideal chi matrix for the corresponding operator
-        :return: float between 0 and 1
-        """
-        return np.real(np.trace(np.dot(chi_computed, chi_ideal)))
-
     def average_fidelity(self, operator: np.ndarray) -> float:
         """
         Computes the average fidelity of an operator (ideal) and its implementation (realistic).
@@ -324,8 +200,9 @@ class ProcessTomography(AAlgorithm):
 
         # compute the map on a basis of states (tensor products of |0>, |1>, |+>,|i+>)
         density_matrices = []   # stores a list of density matrices for each measurement
-        pauli_indices = _generate_pauli_index(self._nqubit)
-        for prep_state_indices in pauli_indices:
+
+        pauli_prep_indices = _generate_pauli_prep_index(self._nqubit, self._prep_basis_size)
+        for prep_state_indices in pauli_prep_indices:
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
             # setting values
 

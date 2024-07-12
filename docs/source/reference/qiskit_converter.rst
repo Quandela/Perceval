@@ -5,6 +5,7 @@ Overview
 --------
 
 .. note::
+
   Qiskit is not listed as a Perceval dependency. Users wishing to use Qiskit shall install it by themselves.
 
 `Qiskit <https://qiskit.org/>`_ is an opensource quantum development library. A Qiskit ``QuantumCircuit`` can be

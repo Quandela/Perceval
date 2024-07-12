@@ -27,8 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math as m
+
 from deprecated import deprecated
-from perceval.components import Circuit, Processor
+from perceval.components import Processor
 from perceval.components.unitary_components import *
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.port import Port, Encoding
@@ -36,7 +38,7 @@ from perceval.components.port import Port, Encoding
 
 class HeraldedCzItem(CatalogItem):
     article_ref = "https://arxiv.org/abs/quant-ph/0110144"
-    description = r"""CZ gate with 2 heralded modes"""
+    description = r"""Knill CZ gate with 2 heralded modes"""
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
@@ -45,9 +47,8 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
 
-    theta1 = 2*math.pi*54.74/180
-    theta2 = 2*math.pi*17.63/180
-    #The additional 2 factor takes into account the difference between the beam-splitter conventions of Perceval and the paper
+    theta1 = m.acos(m.sqrt(1/3))*2
+    theta2 = m.acos(m.sqrt((3+m.sqrt(6))/6))*2
 
     def __init__(self):
         super().__init__("heralded cz")

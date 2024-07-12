@@ -30,6 +30,7 @@
 from pathlib import Path
 import numpy as np
 import sympy as sp
+import warnings
 
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
@@ -41,7 +42,7 @@ TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 def test_new_np():
     u = sp.eye(3)
     M = pcvl.Matrix(u)
-    assert not(M is u) and np.array_equal(M, u)
+    assert np.array_equal(M, u)
     assert not M.is_symbolic()
 
 
@@ -183,3 +184,26 @@ def test_genunitary():
     assert isinstance(M, pcvl.Matrix)
     assert M.shape == (3, 3)
     assert M.is_unitary()
+
+
+def test_param_unitary():
+    with warnings.catch_warnings(record=True) as caught_warnings:
+
+        M = pcvl.Matrix.random_unitary(2, np.arange(8))
+
+        # Check if the expected warning was issued
+        assert len(caught_warnings) == 1
+        assert issubclass(caught_warnings[0].category, DeprecationWarning)
+
+        # output Matrix
+        assert isinstance(M, pcvl.Matrix)
+        assert M.shape == (2, 2)
+        assert M.is_unitary()
+
+    # Testing the use of new method - parametrized_unitary()
+
+    PM = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
+
+    assert isinstance(PM, pcvl.Matrix)
+    assert PM.shape == (2, 2)
+    assert PM.is_unitary()
