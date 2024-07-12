@@ -60,10 +60,6 @@ def test_circuit_to_graph_converter():
     qiskit_circuit = random_circuit(8, 10, max_operands=2)
     converter = CircuitToGraphConverter(qiskit_circuit=qiskit_circuit)
 
-    # Generate the graph to plot it
-    # graph = converter.graph_generator()
-    # converter.plot_graph(graph)
-
     # Check calculation
     single_calc_result, cx_count = converter.graph_k_clustering_and_cnots_needed()
     # Check calculation with minimum CNOTs
