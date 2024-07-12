@@ -26,23 +26,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""module test remote job"""
+
 from time import sleep
 import pytest
+
+from _test_utils import assert_bsd_close
+from _mock_rpc_handler import (
+    get_rpc_handler,
+    REMOTE_JOB_DURATION,
+    REMOTE_JOB_RESULTS,
+    REMOTE_JOB_CREATION_TIMESTAMP,
+    REMOTE_JOB_START_TIMESTAMP,
+    REMOTE_JOB_NAME,
+)
 
 import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_bsd_close
-from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
-    REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
 
-
-
-def test_remote_job():
-    _FIRST_JOB_NAME = "job name"
-    _SECOND_JOB_NAME = "another name"
-    rj = RemoteJob({}, MockRPCHandler(), _FIRST_JOB_NAME)
+def test_remote_job(requests_mock):
+    """test remote job"""
+    _FIRST_JOB_NAME = 'job name'
+    _SECOND_JOB_NAME = 'another name'
+    rj = RemoteJob({}, get_rpc_handler(requests_mock), _FIRST_JOB_NAME)
     assert rj.name == _FIRST_JOB_NAME
     rj.name = _SECOND_JOB_NAME
     assert rj.name == _SECOND_JOB_NAME
@@ -58,8 +66,8 @@ def test_remote_job():
     with pytest.warns(UserWarning):
         assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
-    _TEST_JOB_ID = "any"
-    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
+    _TEST_JOB_ID = 'any'
+    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, get_rpc_handler(requests_mock))
     assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
     assert rj.is_complete == job_status.completed
@@ -69,48 +77,61 @@ def test_remote_job():
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
-@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
-def test_mock_remote_with_gates(catalog_item):
+@pytest.mark.parametrize(
+    'catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz']
+)
+def test_mock_remote_with_gates(requests_mock, catalog_item):
+    """test mock remote with gates"""
     noise = pcvl.NoiseModel(
-        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92
+    )
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
-        p, rpc_handler=MockRPCHandler())
+        p, rpc_handler=get_rpc_handler(requests_mock)
+    )
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
     assert p._noise == rp._noise
     assert noise == rp._noise
 
-    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
+    for input_state in [
+        pcvl.BasicState(state)
+        for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]
+    ]:
         p.with_input(input_state)
         rp.with_input(input_state)
 
         assert p._input_state == rp._input_state
 
 
-@pytest.mark.skip(reason="need a token and a worker available")
-@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
+@pytest.mark.skip(reason='need a token and a worker available')
+@pytest.mark.parametrize(
+    'catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz']
+)
 def test_remote_with_gates(catalog_item):
+    """test remote with gates"""
     noise = pcvl.NoiseModel(
-        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92
+    )
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
-    rp = pcvl.RemoteProcessor.from_local_processor(
-        p, "my_platform", url='my_url')
+    rp = pcvl.RemoteProcessor.from_local_processor(p, 'my_platform', url='my_url')
 
     # platform parameters
     p.thresholded_output(True)
-    max_shots_per_call = 1E7
-
+    max_shots_per_call = 1e7
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
     assert p._noise == rp._noise
     assert noise == rp._noise
 
-    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
+    for input_state in [
+        pcvl.BasicState(state)
+        for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]
+    ]:
         rp.with_input(input_state)
         rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
         job = rs.probs.execute_async()
@@ -126,8 +147,10 @@ def test_remote_with_gates(catalog_item):
                 break
             assert not job.is_failed
             if delay == 20:
-                assert False, "timeout for job"
+                assert False, 'timeout for job'
             delay += 1
             sleep(1)
 
-        assert_bsd_close(job.get_results()['results'], probs['results'])  # will not work without fixed seed
+        assert_bsd_close(
+            job.get_results()['results'], probs['results']
+        )  # will not work without fixed seed

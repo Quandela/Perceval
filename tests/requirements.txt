@@ -3,3 +3,4 @@ pytest
 pytest-cov
 pytest-benchmark
 flake8
+requests-mock
