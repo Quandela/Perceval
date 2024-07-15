@@ -41,47 +41,63 @@
 #
 import os
 import sys
+import re
 from datetime import datetime
 from pathlib import Path
+from git import Repo
 
 sys.path.insert(0, os.path.relpath("../"))
 
-from source import build_catalog
 from perceval import PMetadata
+
+
+def version_highter_then(v1, v2):
+    """compare two version"""
+    v1 = list(map(int, re.findall(r"\d+", v1)[0:3]))
+    v2 = list(map(int, re.findall(r"\d+", v2)[0:3]))
+    for i, charac in enumerate(v1):
+        if i < len(v2):
+            if v2[i] > charac:
+                return False
+            elif v2[i] == charac:
+                continue
+    return True
+
+
+def keep_latest_versions(versions, mini=None):
+    """keep latest version"""
+    version_dict = {}
+
+    for one_version in versions:
+        # major_version = re.match(r"v\d+", one_version).group()
+        try:
+            major_version = re.match(r"v\d+\.(\d+)", one_version).groups()
+        except AttributeError:
+            major_version = "0.0.0"
+        if "-" not in one_version:
+            # filter alpha,beta...
+            if (
+                major_version not in version_dict
+                or one_version > version_dict[major_version]
+            ) and (mini is not None and version_highter_then(one_version, mini)):
+                version_dict[major_version] = one_version
+
+    latest_versions = list(version_dict.values())
+    return sorted(latest_versions, key=lambda x: tuple(map(int, re.findall(r"\d+", x))))
+
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
 
-files_directory = os.path.join(REPO_PATH, "docs", "source")
-if not os.path.exists(files_directory):
-    os.makedirs(files_directory)
-build_catalog.build_catalog_rst(os.path.join(files_directory, "catalog.rst"))
+repo = Repo(REPO_PATH)
+tags = [tag.name for tag in repo.tags]
+versions = keep_latest_versions(tags, "v0.6")
+versions_string = "".join([f"({one_version})|" for one_version in versions])[:-1]
+versions_regex = re.compile(f"^{versions_string}$")
 
-
-# -- Project information -----------------------------------------------------
-
-project = PMetadata.name()
-copyright = f"{datetime.now().year}, {PMetadata.author()[0].capitalize() + PMetadata.author()[1:]}"
-author = PMetadata.author()
-release = PMetadata.short_version()
-
-
-# -- General configuration ---------------------------------------------------
-
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.mathjax",
-    "sphinx_autodoc_typehints",
-    "sphinx.ext.autosectionlabel",
-    "sphinxcontrib.bibtex",
-    "nbsphinx",
-    "sphinx_multiversion",
-]
+print(f"Building {versions_regex}")
 
 # Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = None
+smv_tag_whitelist = versions_regex
 
 # Whitelist pattern for branches (set to None to ignore all branches)
 smv_branch_whitelist = None
@@ -93,42 +109,3 @@ smv_remote_whitelist = None
 smv_released_pattern = r".*"
 
 smv_regex_name = r"(.*)\..*"
-
-bibtex_bibfiles = ["references.bib"]
-bibtex_reference_style = "author_year"
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
-
-
-# -- Options for HTML output -------------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = "sphinx_rtd_theme"
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
-
-html_theme_options = {
-    "navigation_depth": 2,
-    "titles_only": False,
-    "display_version": True,
-}
-
-html_style = "css/style.css"
-html_logo = "_static/img/Perceval logo white 160X160.png"
-html_favicon = "_static/img/Perceval icon white 32x32.ico"
-
-nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg', 'pdf'}",
-    "--InlineBackend.rc={'figure.dpi': 96}",
-]
