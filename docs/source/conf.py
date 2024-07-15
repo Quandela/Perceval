@@ -74,12 +74,14 @@ def keep_latest_versions(versions, mini=None):
         try:
             major_version = re.match(r"v\d+\.(\d+)", one_version).groups()
         except AttributeError:
-            major_version = '0.0.0'
-        if (
-            major_version not in version_dict
-            or one_version > version_dict[major_version]
-        ) and (mini is not None and version_highter_then(one_version, mini)):
-            version_dict[major_version] = one_version
+            major_version = "0.0.0"
+        if "-" not in one_version:
+            # filter alpha,beta...
+            if (
+                major_version not in version_dict
+                or one_version > version_dict[major_version]
+            ) and (mini is not None and version_highter_then(one_version, mini)):
+                version_dict[major_version] = one_version
 
     latest_versions = list(version_dict.values())
     return sorted(latest_versions, key=lambda x: tuple(map(int, re.findall(r"\d+", x))))
