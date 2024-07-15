@@ -20,7 +20,7 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 multiversion:
-	python -m sphinx_multiversion -c $(shell pwd)/multiversion source build/html
+	python -m sphinx_multiversion -f $(shell pwd)/multiversion source build/html
 
 clean:
 	rm -rf build
