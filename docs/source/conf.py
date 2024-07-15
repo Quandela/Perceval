@@ -39,6 +39,13 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+"""
+conf.py used by sphinx to build docs
+
+The repo is copied to the correct commit of the tag
+Then this file is interpreted
+
+"""
 import os
 import sys
 from datetime import datetime
@@ -79,20 +86,6 @@ extensions = [
     "nbsphinx",
     "sphinx_multiversion",
 ]
-
-# Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = None
-
-# Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = None
-
-# Whitelist pattern for remotes (set to None to use local branches only)
-smv_remote_whitelist = None
-
-# Pattern for released versions
-smv_released_pattern = r".*"
-
-smv_regex_name = r"(.*)\..*"
 
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
