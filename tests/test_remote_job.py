@@ -31,11 +31,11 @@
 from time import sleep
 import pytest
 
-from _test_utils import (
-  assert_bsd_close_enough,
-  assert_bsd_close,
-  assert_bsc_close_enough
-)
+import perceval as pcvl
+from perceval.algorithm import Sampler
+from perceval.runtime import RemoteJob, RunningStatus
+
+from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough
 from _mock_rpc_handler import (
     get_rpc_handler,
     REMOTE_JOB_DURATION,
@@ -44,10 +44,6 @@ from _mock_rpc_handler import (
     REMOTE_JOB_START_TIMESTAMP,
     REMOTE_JOB_NAME,
 )
-
-import perceval as pcvl
-from perceval.algorithm import Sampler
-from perceval.runtime import RemoteJob, RunningStatus
 
 
 def test_remote_job(requests_mock):
@@ -70,7 +66,7 @@ def test_remote_job(requests_mock):
     with pytest.warns(UserWarning):
         assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
-    _TEST_JOB_ID = 'any'
+    _TEST_JOB_ID = "any"
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, get_rpc_handler(requests_mock))
     assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
@@ -81,14 +77,11 @@ def test_remote_job(requests_mock):
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
-@pytest.mark.parametrize(
-    'catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz']
-)
+@pytest.mark.parametrize('catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz'])
 def test_mock_remote_with_gates(requests_mock, catalog_item):
     """test mock remote with gates"""
     noise = pcvl.NoiseModel(
-        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92
-    )
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
@@ -113,31 +106,26 @@ def test_mock_remote_with_gates(requests_mock, catalog_item):
         assert p._input_state == rp._input_state
 
 
-@pytest.mark.skip(reason="need a token and a worker available")
-@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
+@pytest.mark.skip(reason='need a token and a worker available')
+@pytest.mark.parametrize('catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz'])
 def test_remote_with_gates_probs(catalog_item):
     noise = pcvl.NoiseModel(
-        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92
-    )
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
     p = pcvl.catalog[catalog_item].build_processor()
     p.min_detected_photons_filter(2 + list(p.heralds.values()).count(1))
     p.noise = noise
-    rp = pcvl.RemoteProcessor.from_local_processor(
-        p, "sim:altair", url='https://api.cloud.quandela.com')
+    rp = pcvl.RemoteProcessor.from_local_processor(p, 'sim:altair', url='https://api.cloud.quandela.com')
 
     # platform parameters
     p.thresholded_output(True)
-    max_shots_per_call = 1E7
+    max_shots_per_call = 1e7
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
     assert p._noise == rp._noise
     assert noise == rp._noise
 
-    for input_state in [
-        pcvl.BasicState(state)
-        for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]
-    ]:
+    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
         rp.with_input(input_state)
         rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
         job = rs.probs.execute_async()
@@ -152,7 +140,7 @@ def test_remote_with_gates_probs(catalog_item):
                 break
             assert not job.is_failed
             if delay == 20:
-                assert False, 'timeout for job'
+                assert False, "timeout for job"
             delay += 1
             sleep(1)
 
