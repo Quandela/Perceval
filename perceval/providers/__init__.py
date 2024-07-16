@@ -26,3 +26,27 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import warnings
+
+from perceval.runtime import ISession
+from .quandela import Session as QandelaSession
+from .scaleway import Session as ScalewaySession
+
+PROVIDER_LIST = {
+    "Quandela": QandelaSession,
+    "Scaleway": ScalewaySession,
+}
+
+
+class ProviderFactory:
+    @staticmethod
+    def get_provider(provider_name: str = 'Quandela', **kwargs) -> ISession:
+        name = provider_name
+        if name in PROVIDER_LIST:
+            return PROVIDER_LIST[name](**kwargs)
+        warnings.warn(f'Backend "{name}" not found. Falling back on Quandela')
+        return PROVIDER_LIST['Quandela'](**kwargs)
+
+    @staticmethod
+    def list():
+        return list(PROVIDER_LIST.keys())
