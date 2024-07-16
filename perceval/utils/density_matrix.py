@@ -30,17 +30,17 @@
 import random
 from copy import copy
 from math import comb, sqrt
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, List, Tuple
 
 import numpy as np
 from numpy import conj
 from scipy.linalg import eigh
 from scipy.sparse.linalg import LinearOperator, eigsh
-from scipy.sparse import dok_array, sparray, csr_array, kron
+from scipy.sparse import dok_array, csr_array, kron
 
 import exqalibur as xq
-from perceval.utils.statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
-from perceval.utils.density_matrix_utils import array_to_statevector, is_hermitian
+from .statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
+from .density_matrix_utils import array_to_statevector, is_hermitian, sparray
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
 # The first one is well suited for matrix-vector product, the other one is easier to construct from scratch
@@ -49,7 +49,9 @@ SPARSE_THRESHOLD = 50
 
 
 class FockBasis(dict):
+
     def __init__(self, m, n_max):
+        super().__init__()
         for i, st in enumerate(max_photon_state_iterator(m, n_max)):
             self[st] = i
         self._m = m
@@ -398,7 +400,7 @@ class DensityMatrix:
             output.append(state)
         return output
 
-    def measure(self, modes: Union[list[int], int]):
+    def measure(self, modes: Union[List[int], int]):
         """
         Makes a measure on a list of modes.
         :param modes: a list of integer for the modes you want to measure
@@ -420,7 +422,7 @@ class DensityMatrix:
                 res[key_fs] = (prob, resulting_dm)
         return res
 
-    def _construct_projector_one_sample(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
+    def _construct_projector_one_sample(self, modes, fock_state) -> Tuple[FockBasis, dok_array]:
         """
         Construct the projection operator onto the subspace of some number photons on some mode
         """
@@ -437,7 +439,7 @@ class DensityMatrix:
 
         return basis, projector
 
-    def _construct_all_projectors(self, modes: list[int]) -> dict:
+    def _construct_all_projectors(self, modes: List[int]) -> dict:
         """
         construct all the projectors associated with some modes
         :return: a dictionary with for each measured state a list [fock_basis, projector, probability]

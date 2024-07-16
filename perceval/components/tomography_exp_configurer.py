@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from typing import List
-from .processor import Processor
+from .processor import AProcessor
 from ._pauli import PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ, get_pauli_basis_measurement_circuit
 
 
@@ -62,7 +62,7 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
      circuit
     :return: the configured processor to perform state tomography experiment
     """
-    if not isinstance(processor, Processor):
+    if not isinstance(processor, AProcessor):
         raise TypeError(f"{processor} is not a Processor and hence cannot be configured")
 
     if not all(isinstance(p_index, PauliEigenStateType) for p_index in prep_state_indices):

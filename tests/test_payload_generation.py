@@ -61,17 +61,14 @@ def test_payload_basics(requests_mock):
 
     payload = data['payload']
     assert 'command' in payload and payload['command'] == COMMAND_NAME
-    assert 'circuit' in payload and payload['circuit'].startswith(
-        ZIP_PREFIX
-    )  # Circuits are compressed in payloads
+    assert 'circuit' in payload and payload['circuit'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
     assert 'input_state' not in payload  # No input state was passed
 
     input_state = BasicState([1, 0] * 4)
     rp.with_input(input_state)
     new_payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert (
-        'input_state' in new_payload
-        and new_payload['input_state'] == f'{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}'
+        'input_state' in new_payload and new_payload['input_state'] == f'{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}'
     )
 
 
@@ -115,6 +112,18 @@ def test_payload_postselect(requests_mock):
     assert 'postselect' in payload
     str_start = f'{PCVL_PREFIX}{POSTSELECT_TAG}{SEP}'
     assert payload['postselect'].startswith(str_start)
+
+
+def test_payload_min_detected_photons(requests_mock):
+    """test payload with min_detected_photons"""
+    rp = _get_remote_processor(requests_mock)
+    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
+    assert 'parameters' not in payload
+
+    rp.min_detected_photons_filter(2)
+    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
+    assert 'min_detected_photons' in payload['parameters']
+    assert payload['parameters']['min_detected_photons'] == 2
 
 
 def test_payload_cnot(requests_mock):

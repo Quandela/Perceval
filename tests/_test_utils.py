@@ -27,14 +27,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
 import re
+import uuid
+import math
+import tempfile
 from typing import Type
 from pathlib import Path
 
 import pytest
 
 import perceval as pcvl
-from perceval.utils import StateVector, SVDistribution
+from perceval.utils import StateVector, SVDistribution, PersistentData
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
@@ -94,6 +98,26 @@ def assert_bsd_close(lhbsd, rhbsd):
             assert False, f"bs not found {lh_bs}"
         assert pytest.approx(lhbsd[lh_bs]) == rhbsd[lh_bs], \
             f"different probabilities for {lh_bs}, {lhbsd[lh_bs]} vs {rhbsd[lh_bs]}"
+
+
+def assert_bsd_close_enough(ref_bsd: pcvl.BSDistribution, bsd_to_check: pcvl.BSDistribution, threshold=0.8):
+    for lh_bs in ref_bsd.keys():
+        if ref_bsd[lh_bs] > threshold:
+            assert lh_bs in bsd_to_check
+            assert bsd_to_check[lh_bs] > threshold
+            return
+    assert False, f"No state has probability above {threshold} for bsd {ref_bsd}"
+
+
+def assert_bsc_close_enough(ref_bsc: pcvl.BSCount, bsc_to_check: pcvl.BSCount):
+    total = ref_bsc.total()
+    assert total == bsc_to_check.total()
+    threshold = math.sqrt(total)
+    for lh_bs in ref_bsc.keys():
+        if ref_bsc[lh_bs] < 5:
+            continue
+        assert lh_bs in bsc_to_check
+        assert ref_bsc[lh_bs] == pytest.approx(bsc_to_check[lh_bs], ref_bsc[lh_bs]/threshold)
 
 
 def  dict2svd(d: dict):
@@ -198,3 +222,21 @@ if __name__ == "__main__":
         assert_sv_close(sv4, sv1)
     except AssertionError:
         print("detected sv are different")
+
+
+UNIQUE_PART = uuid.uuid4()
+
+
+class PersistentDataForTests(PersistentData):
+    """
+    Overrides the directory used for persistent data to target a temporary sub-folder.
+    This allows to run tests without removing actual persistent data or risking messing up system or user directories
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._directory = os.path.join(tempfile.gettempdir(), f'perceval-container-{UNIQUE_PART}', 'perceval-quandela')
+        try:
+            os.makedirs(self._directory, exist_ok=True)
+        except OSError:
+            pass

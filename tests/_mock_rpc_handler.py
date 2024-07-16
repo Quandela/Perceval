@@ -94,7 +94,7 @@ class MockRPCHandler(RPCHandler):
                     'min_mode_count': 1,
                     'min_photon_count': 1,
                 },
-                'description': 'Simulator of sim:ascella qpu',
+                'description': 'Simulator of sim:altair qpu',
                 'detector': 'threshold',
                 'parameters': {
                     'HOM': 'indistinguishability value, using HOM model (default 1)',

@@ -17,6 +17,16 @@ postprocess
 See :ref:`Simulation rework: processor`
 
 
+min_detected_photons_filter
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We will now entice users to set a value for :code:`min_detected_photons_filter`. Previously it was the number of photon in the input state (and still is until a future release).
+A warning will now be displayed when this value is not set. This value will progressively be mandatory for remote platforms.
+
+This value will be mandatory in the future and will cause a error if not set.
+
+.. note:: This change does not affect the perfect local simulation (local simulation without noise model)
+
+
 Breaking changes in Perceval 0.10
 ---------------------------------
 The main changes between versions 0.9 and 0.10 comes from the migration of the :code:`StateVector` code into our C++ library, Exqalibur.
