@@ -8,6 +8,3 @@ dist/
 venv*/
 *.whl
 .ipynb_checkpoints/
-
-# build by docs
-docs/source/catalog.rst
