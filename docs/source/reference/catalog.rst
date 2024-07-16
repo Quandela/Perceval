@@ -34,4 +34,4 @@ If a gate have parameters, like for instance a Mach-Zehnder interferometer phase
    circuit = catalog["mzi phase first"].build_circuit(phi_a=math.pi,
                                                       phi_b=math.pi))
 
-.. include:: ../../build/catalog.rst
+.. include:: ../catalog.rst
