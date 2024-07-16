@@ -203,3 +203,20 @@ class Source:
         if self.simplify_distribution and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
+
+    def is_perfect(self) -> bool:
+        return \
+            self._emission_probability == 1 and \
+            self._multiphoton_component == 0 and \
+            self._indistinguishability == 1 and \
+            self._losses == 0
+
+    def __eq__(self, value: object) -> bool:
+        return \
+            self._emission_probability == value._emission_probability and \
+            self._losses == value._losses and \
+            self._multiphoton_component == value._multiphoton_component and \
+            self._multiphoton_model == value._multiphoton_model and \
+            self._indistinguishability == value._indistinguishability and \
+            self._context == value._context and \
+            self.simplify_distribution == value.simplify_distribution

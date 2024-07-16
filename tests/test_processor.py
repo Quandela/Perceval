@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import pytest
+import warnings
 
 from _test_utils import assert_svd_close
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
@@ -37,7 +38,9 @@ from perceval.backends import Clifford2017Backend
 
 def test_processor_input_fock_state():
     p = Processor("Naive", Circuit(4))  # Init with perfect source
-    p.with_input(BasicState([0, 1, 1, 0]))
+    with warnings.catch_warnings():  # ensure no warnings is raises
+        warnings.simplefilter("error")
+        p.with_input(BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
 
 
@@ -59,7 +62,8 @@ def test_processor_input_fock_state_with_all_noise_sources():
                     indistinguishability=0.9)
     source.simplify_distribution = True
     p = Processor("Naive", Circuit(4), source)
-    p.with_input(BasicState([0, 1, 1, 0]))
+    with pytest.warns():
+        p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
                 '|0,0,2{_:0},0>': 0.0015490319977879558,

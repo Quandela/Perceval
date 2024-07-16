@@ -33,7 +33,7 @@ import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close_enough, assert_bsd_close, assert_bsc_close_enough
 from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
     REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
 
@@ -83,27 +83,33 @@ def test_mock_remote_with_gates(catalog_item):
     assert p._noise == rp._noise
     assert noise == rp._noise
 
-    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
-        p.with_input(input_state)
-        rp.with_input(input_state)
+    for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
+        if i == 0:
+            with pytest.warns():
+                p.with_input(input_state)
+            with pytest.warns():
+                rp.with_input(input_state)
+        else:
+            p.with_input(input_state)
+            rp.with_input(input_state)
 
         assert p._input_state == rp._input_state
 
 
 @pytest.mark.skip(reason="need a token and a worker available")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
-def test_remote_with_gates(catalog_item):
+def test_remote_with_gates_probs(catalog_item):
     noise = pcvl.NoiseModel(
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
     p = pcvl.catalog[catalog_item].build_processor()
+    p.min_detected_photons_filter(2 + list(p.heralds.values()).count(1))
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
-        p, "my_platform", url='my_url')
+        p, "sim:altair", url='https://api.cloud.quandela.com')
 
     # platform parameters
     p.thresholded_output(True)
     max_shots_per_call = 1E7
-
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
@@ -115,7 +121,6 @@ def test_remote_with_gates(catalog_item):
         rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
         job = rs.probs.execute_async()
 
-        p.min_detected_photons_filter(input_state.n)
         p.with_input(input_state)
         s = Sampler(p, max_shots_per_call=max_shots_per_call)
         probs = s.probs()
@@ -130,4 +135,47 @@ def test_remote_with_gates(catalog_item):
             delay += 1
             sleep(1)
 
-        assert_bsd_close(job.get_results()['results'], probs['results'])  # will not work without fixed seed
+        assert_bsd_close_enough(probs['results'], job.get_results()['results'])  # will not work without fixed seed
+
+
+@pytest.mark.skip(reason="need a token and a worker available")
+@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
+def test_remote_with_gates_samples(catalog_item):
+    noise = pcvl.NoiseModel(
+        g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
+    p = pcvl.catalog[catalog_item].build_processor()
+    p.min_detected_photons_filter(2 + list(p.heralds.values()).count(1))
+    p.noise = noise
+    rp = pcvl.RemoteProcessor.from_local_processor(
+        p, "sim:altair", url='https://api.cloud.quandela.com')
+
+    # platform parameters
+    p.thresholded_output(True)
+    max_shots_per_call = 1E7
+    nsamples = 1000
+
+    assert p.heralds == rp.heralds
+    assert p.post_select_fn == rp.post_select_fn
+    assert p._noise == rp._noise
+    assert noise == rp._noise
+
+    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
+        rp.with_input(input_state)
+        rs = Sampler(rp, max_shots_per_call=max_shots_per_call)
+        job = rs.sample_count.execute_async(nsamples)
+
+        p.with_input(input_state)
+        s = Sampler(p, max_shots_per_call=max_shots_per_call)
+        samples = s.sample_count(nsamples)
+
+        delay = 0
+        while True:
+            if job.is_complete:
+                break
+            assert not job.is_failed
+            if delay == 20:
+                assert False, "timeout for job"
+            delay += 1
+            sleep(1)
+
+        assert_bsc_close_enough(samples['results'], job.get_results()['results'])
