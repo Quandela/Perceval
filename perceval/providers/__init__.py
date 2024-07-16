@@ -47,7 +47,7 @@ class ProviderFactory:
         if name in PROVIDER_LIST:
             return PROVIDER_LIST[name](**kwargs)
         warnings.warn(f'Backend "{name}" not found.')
-        return None #PROVIDER_LIST['Quandela'](**kwargs)
+        return None
 
     @staticmethod
     def list():
