@@ -42,11 +42,12 @@ PROVIDER_LIST = {
 
 class ProviderFactory:
     @staticmethod
-    def get_provider(provider_name: str = 'Quandela', **kwargs) -> ISession:
+    def get_provider(provider_name: str, **kwargs) -> ISession:
         name = provider_name
         if name in PROVIDER_LIST:
             return PROVIDER_LIST[name](**kwargs)
-        warnings.warn(f'Backend "{name}" not found.')
+        warnings.warn(f'Cloud Provider "{name}" not found.')
+        warnings.warn(f'Available providers are: {ProviderFactory.list()}.')
         return None
 
     @staticmethod
