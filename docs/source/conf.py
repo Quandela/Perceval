@@ -59,7 +59,7 @@ from perceval import PMetadata
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
 
-files_directory = os.path.join(REPO_PATH, "docs", "build")
+files_directory = os.path.join(REPO_PATH, "docs", "source")
 if not os.path.exists(files_directory):
     os.makedirs(files_directory)
 build_catalog.build_catalog_rst(os.path.join(files_directory, "catalog.rst"))
