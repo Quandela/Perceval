@@ -33,7 +33,7 @@ from .linear_circuit import Circuit
 
 def decompose_perms(circuit: Circuit, merge: bool=True) -> Circuit:
     """
-    Sweeps through a Circuit to find any complex n-mode PERM componets to output an equivalent circuit containing
+    Sweeps through a Circuit to find any complex n-mode PERM components to output an equivalent circuit containing
     only 2-mode PERMS
     """
     decomp_c = Circuit(circuit.m, name="Decomposed Circuit")

@@ -48,7 +48,7 @@ def test_exponentiation():
     bs = BasicState("|1,0,1,0,0>")
     assert bs**3 == bs * bs * bs
 
-    # Annoted basic state
+    # Annotated basic state
     annot_bs = BasicState("|0,0,{_:0}{_:1},0>")
     assert annot_bs**5 == annot_bs * annot_bs * annot_bs * annot_bs * annot_bs
 

@@ -52,7 +52,7 @@ from source import build_catalog
 from perceval import PMetadata
 
 
-def version_highter_then(v1, v2):
+def version_higher_then(v1, v2):
     """compare two version"""
     v1 = list(map(int, re.findall(r"\d+", v1)[0:3]))
     v2 = list(map(int, re.findall(r"\d+", v2)[0:3]))
@@ -80,7 +80,7 @@ def keep_latest_versions(versions, mini=None):
             if (
                 major_version not in version_dict
                 or one_version > version_dict[major_version]
-            ) and (mini is not None and version_highter_then(one_version, mini)):
+            ) and (mini is not None and version_higher_then(one_version, mini)):
                 version_dict[major_version] = one_version
 
     latest_versions = list(version_dict.values())
