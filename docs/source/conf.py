@@ -59,10 +59,10 @@ from perceval import PMetadata
 
 REPO_PATH = Path(__file__).parent.parent.parent.resolve()
 
-files_directory = os.path.join(REPO_PATH, "docs", "build")
-if not os.path.exists(files_directory):
-    os.makedirs(files_directory)
-build_catalog.build_catalog_rst(os.path.join(files_directory, "catalog.rst"))
+build_directory = os.path.join(REPO_PATH, "docs", "build")
+if not os.path.exists(build_directory):
+    os.makedirs(build_directory)
+build_catalog.build_catalog_rst(os.path.join(build_directory, "catalog.rst"))
 
 
 # -- Project information -----------------------------------------------------
@@ -77,7 +77,7 @@ release = PMetadata.short_version()
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones
+# ones.
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
