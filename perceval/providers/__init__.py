@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""Provider related imports and classes"""
+
 import warnings
 
 from perceval.runtime import ISession
@@ -44,8 +46,8 @@ class ProviderFactory:
         name = provider_name
         if name in PROVIDER_LIST:
             return PROVIDER_LIST[name](**kwargs)
-        warnings.warn(f'Backend "{name}" not found. Falling back on Quandela')
-        return PROVIDER_LIST['Quandela'](**kwargs)
+        warnings.warn(f'Backend "{name}" not found.')
+        return None #PROVIDER_LIST['Quandela'](**kwargs)
 
     @staticmethod
     def list():
