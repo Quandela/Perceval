@@ -296,7 +296,7 @@ class TextRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
-        
+
         if isinstance(circuit, Barrier):
             for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
                 if k % self._hc == 2:
