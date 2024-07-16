@@ -41,9 +41,19 @@ _ENDPOINT_JOB_RESULT = '/api/job/result/'
 
 
 class RPCHandler:
-    """Remote Call Procedure Handler"""
+    """Remote Call Procedure Handler
+
+    A classe to call the API
+
+    """
 
     def __init__(self, name, url, token):
+        """Remote Call Procedure Handler
+
+        :param name: name of the plateform
+        :param url: api URL to call
+        :param token: token used for identification
+        """
         self.name = name
         self.url = url
         self.token = token
@@ -51,7 +61,11 @@ class RPCHandler:
         self.def_t = 10  # default timeout
 
     def build_endpoint(self, endpoint, *args):
-        """build the default endpoint url"""
+        """build the default endpoint url
+
+        :param endpoint: first part of the endpoint
+        :return: the full endpoint url from the args
+        """
         endpath = ''
         if len(args) > 0:
             endpath = f"/{'/'.join(str(x) for x in args)}"
@@ -66,7 +80,12 @@ class RPCHandler:
         return resp.json()
 
     def create_job(self, payload):
-        """create a job"""
+        """create a job
+
+        :param payload: the payload to send
+        :raises HTTPError: when the API don't accept the payload
+        :return: job id
+        """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
         request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.def_t)
         try:
@@ -80,13 +99,20 @@ class RPCHandler:
         return json_res['job_id']
 
     def cancel_job(self, job_id: str):
-        """cancel a job"""
+        """cancel a job
+
+        :param job_id: id of the job
+        """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
         req = requests.post(endpoint, headers=self.headers, timeout=self.def_t)
         req.raise_for_status()
 
     def get_job_status(self, job_id: str):
-        """get the status of a job"""
+        """get the status of a job
+
+        :param job_id: if of the job
+        :return: status of the job
+        """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
@@ -95,7 +121,11 @@ class RPCHandler:
         return res.json()
 
     def get_job_results(self, job_id: str):
-        """get job results"""
+        """get job results
+
+        :param job_id: id of the job
+        :return: results of the job
+        """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
