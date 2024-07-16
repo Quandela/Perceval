@@ -77,7 +77,7 @@ def test_remote_job(requests_mock):
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
-@pytest.mark.parametrize('catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz'])
+@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
 def test_mock_remote_with_gates(requests_mock, catalog_item):
     """test mock remote with gates"""
     noise = pcvl.NoiseModel(
@@ -106,8 +106,8 @@ def test_mock_remote_with_gates(requests_mock, catalog_item):
         assert p._input_state == rp._input_state
 
 
-@pytest.mark.skip(reason='need a token and a worker available')
-@pytest.mark.parametrize('catalog_item', ['klm cnot', 'heralded cnot', 'postprocessed cnot', 'heralded cz'])
+@pytest.mark.skip(reason="need a token and a worker available")
+@pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
 def test_remote_with_gates_probs(catalog_item):
     noise = pcvl.NoiseModel(
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
@@ -118,7 +118,7 @@ def test_remote_with_gates_probs(catalog_item):
 
     # platform parameters
     p.thresholded_output(True)
-    max_shots_per_call = 1e7
+    max_shots_per_call = 1E7
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
