@@ -43,7 +43,7 @@ _ENDPOINT_JOB_RESULT = '/api/job/result/'
 class RPCHandler:
     """Remote Call Procedure Handler
 
-    A classe to call the API
+    A class to call the API
 
     """
 
