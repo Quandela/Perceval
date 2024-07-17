@@ -117,8 +117,8 @@ SPECIAL_OUTPUTS = {
 
 def format_parameters(params: dict, precision: float = 1e-6, nsimplify: bool = True, separator: str = '\n') -> str:
     """
-    Prepares a string output from a dictionnary of paramaters.
-    params: dictionnary where keys are the parameter names and values are the corresponding parameter value. Values can
+    Prepares a string output from a dictionary of parameters.
+    params: dictionary where keys are the parameter names and values are the corresponding parameter value. Values can
             either be a string or a float.
             If a key is found in SPECIAL_OUTPUTS, the value is replaced by the hardcoded value.
     precision: Rounds a float value to the given precision

@@ -56,7 +56,7 @@ You can also create a Scaleway session using a ``with`` block:
 
 Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
-Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommand using directly ``start`` and ``stop`` methods.
+Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
 
 Using an existing Scaleway QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

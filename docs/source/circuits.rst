@@ -73,7 +73,7 @@ In particular, note that:
 .. warning::
    An *optical circuit* (just called
    "circuit" here) isn't the same as a *quantum circuit*. Quantum
-   circuits act on *qubits*, i.e. abstract systems in a 2-dimentional
+   circuits act on *qubits*, i.e. abstract systems in a 2-dimensional
    Hilbert space; while optical circuits act on *photons*
    distributed in spatial modes. It is possible to simply encode
    qubits with photons in an optical circuit; some encodings are
@@ -214,7 +214,7 @@ Circuit(3).add((0, 1), phys.BS()).add(0, phys.PS(phi=pi)).add((0, 1), phys.BS())
 
 .. image:: _static/img/decompose-matrix.png
 
-Some additional parameters can simplifiy the decomposition:
+Some additional parameters can simplify the decomposition:
 
 * `permutation`: if set to a permutation component, permutations will be used when possible instead of a unitary block
 
@@ -392,7 +392,7 @@ The complete sequence is the following:
 >>> while True:
 ...    # identify one instance of the parameterized "pattern" within a circuit
 ...    matched = circuit.match(pattern, browse=True)
-...    # check if an occurence was found
+...    # check if an occurrence was found
 ...    if matched is None:
 ...       break
 ...    # transform the list of matched components into a sub-circuit

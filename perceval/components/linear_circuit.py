@@ -254,7 +254,7 @@ class ACircuit(AParametrizedComponent, ABC):
         r"""transfer parameters from a Circuit to another - should be the same circuit"""
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
-            assert p in self._params, "missing parameter %s when transfering component" % p
+            assert p in self._params, "missing parameter %s when transferring component" % p
             param = c.param(p)
             if param.defined:
                 try:

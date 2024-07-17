@@ -40,7 +40,7 @@ import math
 def _oracle(mark):
     """Values 0, 1, 2 and 3 for parameter 'mark' respectively mark the elements "00", "01", "10" and "11" of the list."""
     oracle_circuit = Circuit(m=2, name='Oracle')
-    # The following dictionnary translates n into the corresponding component settings
+    # The following dictionary translates n into the corresponding component settings
     oracle_dict = {0: (1, 0), 1: (0, 1), 2: (1, 1), 3: (0, 0)}
     PC_state, LC_state = oracle_dict[mark]
     # Mode b

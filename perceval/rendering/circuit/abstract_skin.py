@@ -72,7 +72,7 @@ class ASkin(ABC):
             return self.measure(c)
 
         # w represents the graph of the circuit.
-        # Each value being the ouput of the rightmost component on the corresponding mode
+        # Each value being the output of the rightmost component on the corresponding mode
         w = [0] * c.m
         for modes, comp in c._components:
             r = slice(modes[0], modes[0]+comp.m)
@@ -89,7 +89,7 @@ class ASkin(ABC):
     def get_size(self, p: AProcessor, recursive: bool = False) -> Tuple[int, int]:
         height = p.m
         # w represents the graph of the circuit.
-        # Each value being the ouput of the rightmost component on the corresponding mode
+        # Each value being the output of the rightmost component on the corresponding mode
         w = [0] * p.circuit_size
         for modes, comp in p._components:
             if not isinstance(comp, PERM):
