@@ -26,7 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import urllib
+"""rpc handler module"""
+
+from urllib.parse import quote_plus
 
 import requests
 from requests import HTTPError
@@ -39,57 +41,94 @@ _ENDPOINT_JOB_RESULT = '/api/job/result/'
 
 
 class RPCHandler:
+    """Remote Call Procedure Handler
+
+    A class to call the API
+
+    """
+
     def __init__(self, name, url, token):
+        """Remote Call Procedure Handler
+
+        :param name: name of the plateform
+        :param url: api URL to call
+        :param token: token used for identification
+        """
         self.name = name
         self.url = url
         self.token = token
-        self.headers = {
-            'Authorization': f'Bearer {token}'
-        }
+        self.headers = {'Authorization': f'Bearer {token}'}
+        self.request_timeout = 10  # default timeout
 
-    def build_endpoint(self, endpoint):
-        return f"{self.url}{endpoint}"
+    def build_endpoint(self, endpoint: str, *args: str):
+        """build the default endpoint url
+
+        :param endpoint: first part of the endpoint
+        :return: the full endpoint url from the args
+        """
+        endpath = ''
+        if len(args) > 0:
+            endpath = f"/{'/'.join(str(x).strip('/') for x in args)}"
+        return f'{self.url}/{endpoint.strip("/")}{endpath}'
 
     def fetch_platform_details(self):
-        endpoint = f"{self.url}{_ENDPOINT_PLATFORM_DETAILS}{urllib.parse.quote_plus(self.name)}"
-        resp = requests.get(endpoint,
-                            headers=self.headers)
+        """fetch platform details and settings"""
+        quote_name = quote_plus(self.name)
+        endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
+        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
         resp.raise_for_status()
         return resp.json()
 
     def create_job(self, payload):
-        endpoint = f"{self.url}{_ENDPOINT_JOB_CREATE}"
-        request = requests.post(endpoint,
-                                headers=self.headers,
-                                json=payload)
+        """create a job
+
+        :param payload: the payload to send
+        :raises HTTPError: when the API don't accept the payload
+        :return: job id
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
+        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout)
         try:
-            jsonres = request.json()
+            json_res = request.json()
         except Exception as e:
-            jsonres = {'error': f'{e}'}
+            json_res = {'error': f'{e}'}
 
         if request.status_code != 200:
-            raise HTTPError(jsonres.get('error', 'Unspecified error'))
+            raise HTTPError(json_res.get('error', 'Unspecified error'))
 
-        return jsonres['job_id']
+        return json_res['job_id']
 
     def cancel_job(self, job_id: str):
-        endpoint = f"{self.url}{_ENDPOINT_JOB_CANCEL}{str(job_id)}"
-        request = requests.post(endpoint,
-                                headers=self.headers)
-        request.raise_for_status()
+        """cancel a job
+
+        :param job_id: id of the job
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
+        req.raise_for_status()
 
     def get_job_status(self, job_id: str):
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS) + str(job_id)
+        """get the status of a job
+
+        :param job_id: if of the job
+        :return: status of the job
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
         res.raise_for_status()
         return res.json()
 
     def get_job_results(self, job_id: str):
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT) + str(job_id)
+        """get job results
+
+        :param job_id: id of the job
+        :return: results of the job
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
         res.raise_for_status()
         return res.json()
