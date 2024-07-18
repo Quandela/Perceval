@@ -53,7 +53,6 @@ from .utils import PMetadata
 __version__ = PMetadata.version()
 
 from .providers import *
-from .converters import *
 from .components import *
 from .backends import *
 from .utils import *
