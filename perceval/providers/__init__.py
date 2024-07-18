@@ -46,9 +46,8 @@ class ProviderFactory:
         name = provider_name
         if name in PROVIDER_LIST:
             return PROVIDER_LIST[name](**kwargs)
-        else:
-            raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
-        return None
+
+        raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
 
     @staticmethod
     def list():
