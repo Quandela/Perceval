@@ -31,11 +31,11 @@
 import warnings
 
 from perceval.runtime import ISession
-from .quandela import Session as QandelaSession
+from .quandela import Session as QuandelaSession
 from .scaleway import Session as ScalewaySession
 
 PROVIDER_LIST = {
-    "Quandela": QandelaSession,
+    "Quandela": QuandelaSession,
     "Scaleway": ScalewaySession,
 }
 
@@ -46,8 +46,8 @@ class ProviderFactory:
         name = provider_name
         if name in PROVIDER_LIST:
             return PROVIDER_LIST[name](**kwargs)
-        warnings.warn(f'Cloud Provider "{name}" not found.')
-        warnings.warn(f'Available providers are: {ProviderFactory.list()}.')
+        else:
+            raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
         return None
 
     @staticmethod
