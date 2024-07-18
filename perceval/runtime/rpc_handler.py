@@ -68,7 +68,7 @@ class RPCHandler:
         """
         endpath = ''
         if len(args) > 0:
-            endpath = f"/{'/'.join(str(x.strip('/')) for x in args)}"
+            endpath = f"/{'/'.join(str(x).strip('/') for x in args)}"
         return f'{self.url}/{endpoint.strip("/")}{endpath}'
 
     def fetch_platform_details(self):
