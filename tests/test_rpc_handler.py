@@ -50,6 +50,9 @@ def test_build_endpoint(requests_mock):
     wanted = 'https://example.org/endpoint/path/with/slash'
     assert rpc.build_endpoint('/endpoint/', '/path/', 'with/', '/slash/') == wanted
 
+    wanted = 'https://example.org/endpoint/with/number/1/8/789'
+    assert rpc.build_endpoint('/endpoint/', '/with/number', 1, '/8/', 789) == wanted
+
 
 def test_rpc_handler(requests_mock):
     """test rpc handler calls"""
