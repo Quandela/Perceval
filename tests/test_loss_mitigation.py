@@ -100,8 +100,14 @@ def test_input_validation_loss_mitigation():
     with pytest.raises(ValueError):
         photon_recycling(perfect_bsd, 3)
 
+    with pytest.raises(ValueError):
         photon_recycling(lossy_bsd1, 3)
+
+    with pytest.raises(ValueError):
         photon_recycling(lossy_bsd2, 3)
 
+    with pytest.raises(ValueError):
         photon_recycling(lossy_bsd1, 6)  # incorrect count
+
+    with pytest.raises(ValueError):
         photon_recycling(lossy_bsd2, 6)
