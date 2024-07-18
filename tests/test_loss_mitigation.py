@@ -31,7 +31,7 @@ import pytest
 import numpy as np
 from perceval.error_mitigation import photon_recycling
 from perceval.utils import BasicState
-from perceval.components import catalog, Source, Unitary
+from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
 from perceval import Processor
@@ -42,17 +42,13 @@ from perceval.error_mitigation.loss_mitigation import _generate_one_photon_per_m
 
 def _sampler_setup_cnot(output_type: str):
     # Processor config
-    processor = Processor("SLOS")
+    processor = Processor("SLOS", noise=NoiseModel(transmittance=0.3))
     processor.min_detected_photons_filter(0)
     processor.thresholded_output(True)
 
     # Circuit
     circ = catalog['heralded cnot'].build_circuit()
     processor.set_circuit(circ)
-
-    # Source properties
-    src = Source(emission_probability=0.3)
-    processor.source = src
 
     # Input state
     input_state = BasicState([0, 1, 0, 1, 1, 1])
