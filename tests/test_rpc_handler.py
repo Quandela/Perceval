@@ -34,12 +34,21 @@ from _mock_rpc_handler import get_rpc_handler
 def test_build_endpoint(requests_mock):
     """test build endpoint function"""
     rpc = get_rpc_handler(requests_mock, url='https://example.org')
-    wanted = 'https://example.org/end'
-    assert rpc.build_endpoint('/end') == wanted
-    wanted = 'https://example.org/end/id'
-    assert rpc.build_endpoint('/end', 'id') == wanted
-    wanted = 'https://example.org/end/path/id'
-    assert rpc.build_endpoint('/end', 'path', 'id') == wanted
+
+    wanted = 'https://example.org/endpoint'
+    assert rpc.build_endpoint('/endpoint') == wanted
+
+    wanted = 'https://example.org/endpoint/id'
+    assert rpc.build_endpoint('/endpoint', 'id') == wanted
+
+    wanted = 'https://example.org/endpoint/path/id'
+    assert rpc.build_endpoint('/endpoint', 'path', 'id') == wanted
+
+    wanted = 'https://example.org/endpoint/with/trailing/slash'
+    assert rpc.build_endpoint('/endpoint/', 'with', 'trailing/slash') == wanted
+
+    wanted = 'https://example.org/endpoint/path/with/slash'
+    assert rpc.build_endpoint('/endpoint/', '/path/', 'with/', '/slash/') == wanted
 
 
 def test_rpc_handler(requests_mock):

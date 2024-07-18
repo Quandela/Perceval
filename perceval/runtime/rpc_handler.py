@@ -58,9 +58,9 @@ class RPCHandler:
         self.url = url
         self.token = token
         self.headers = {'Authorization': f'Bearer {token}'}
-        self.def_t = 10  # default timeout
+        self.request_timeout = 10  # default timeout
 
-    def build_endpoint(self, endpoint, *args):
+    def build_endpoint(self, endpoint: str, *args: str):
         """build the default endpoint url
 
         :param endpoint: first part of the endpoint
@@ -68,14 +68,14 @@ class RPCHandler:
         """
         endpath = ''
         if len(args) > 0:
-            endpath = f"/{'/'.join(str(x) for x in args)}"
-        return f'{self.url}{endpoint}{endpath}'
+            endpath = f"/{'/'.join(str(x.strip('/')) for x in args)}"
+        return f'{self.url}/{endpoint.strip("/")}{endpath}'
 
     def fetch_platform_details(self):
         """fetch platform details and settings"""
         quote_name = quote_plus(self.name)
         endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
-        resp = requests.get(endpoint, headers=self.headers, timeout=self.def_t)
+        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
         resp.raise_for_status()
         return resp.json()
 
@@ -87,7 +87,7 @@ class RPCHandler:
         :return: job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.def_t)
+        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout)
         try:
             json_res = request.json()
         except Exception as e:
@@ -104,7 +104,7 @@ class RPCHandler:
         :param job_id: id of the job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.def_t)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
         req.raise_for_status()
 
     def get_job_status(self, job_id: str):
@@ -116,7 +116,7 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.def_t)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
         res.raise_for_status()
         return res.json()
 
@@ -129,6 +129,6 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.def_t)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
         res.raise_for_status()
         return res.json()
