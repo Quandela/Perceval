@@ -30,7 +30,7 @@
 import pytest
 import numpy as np
 from perceval.error_mitigation import photon_recycling
-from perceval.utils import BasicState
+from perceval.utils import BasicState, BSDistribution
 from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
@@ -71,6 +71,47 @@ def test_photon_loss_mitigation(result_type):
     for keys, value in mitigated_dist.items():
         assert sum(keys) == ideal_photon_count
         assert value > 1e-6
+
+def test_input_validation_loss_mitigation():
+    bs1 = BasicState([1, 1, 1, 0, 0, 0, 0])
+    bs2 = BasicState([1, 0, 0, 1, 1, 0, 0])
+    bs3 = BasicState([1, 0, 0, 0, 0, 0, 0])
+    bs4 = BasicState([0, 0, 0, 1, 1, 0, 0])
+
+    with pytest.raises(TypeError):
+        photon_recycling(bs1, 3)
+
+    # perfect bsd
+    perfect_bsd = BSDistribution()
+    perfect_bsd[bs1] = 0.9
+    perfect_bsd[bs2] = 0.1
+
+    # missing n-1 state
+    lossy_bsd1 = BSDistribution()
+    lossy_bsd1[bs1] = 0.3333
+    lossy_bsd1[bs2] = 0.3333
+    lossy_bsd1[bs3] = 0.3333
+
+    # missing n-2 state
+    lossy_bsd2 = BSDistribution()
+    lossy_bsd2[bs1] = 0.3333
+    lossy_bsd2[bs2] = 0.3333
+    lossy_bsd2[bs4] = 0.3333
+
+    with pytest.raises(ValueError):
+        photon_recycling(perfect_bsd, 3)
+
+    with pytest.raises(ValueError):
+        photon_recycling(lossy_bsd1, 3)
+
+    with pytest.raises(ValueError):
+        photon_recycling(lossy_bsd2, 3)
+
+    with pytest.raises(ValueError):
+        photon_recycling(lossy_bsd1, 6)  # incorrect count
+
+    with pytest.raises(ValueError):
+        photon_recycling(lossy_bsd2, 6)
 
 def _compute_random_circ_probs(source_emission, num_photons):
 
