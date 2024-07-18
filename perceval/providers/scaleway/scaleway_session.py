@@ -45,7 +45,7 @@ class Session(ISession):
 
     :param token: authentication token required to access the Scaleway API
 
-    :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session amongs multiple users
+    :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session among multiple users
 
     :param max_idle_duration_s: optional value, duration in seconds that can elapsed without activity before the session terminates
 

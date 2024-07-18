@@ -84,7 +84,7 @@ conventions are defined, with a single :math:`\theta` parameter, as follow:
      - :math:`\left[\begin{matrix}1 & 1\\1 & -1\end{matrix}\right]`
      - Hadamard gate, ``HH=I``, non symmetrical
 
-Each convention also accepts up to four additional phases, mimicing a phase shifter on each mode connected to the beam
+Each convention also accepts up to four additional phases, mimicking a phase shifter on each mode connected to the beam
 splitter. For instance, with the ``Rx`` convention, the unitary matrix is defined by:
 
 :math:`\left[\begin{matrix}e^{i(\phi_{tl}+\phi_{tr})} \cos{\left(\theta/2 \right)} & i e^{i (\phi_{tr}+\phi_{bl})} \sin{\left(\theta/2 \right)}\\i e^{i \left(\phi_{tl} + \phi_{br}\right)} \sin{\left(\theta/2 \right)} & e^{i (\phi_{br}+\phi_{bl})} \cos{\left(\theta/2 \right)}\end{matrix}\right]`

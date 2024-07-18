@@ -28,26 +28,27 @@
 # SOFTWARE.
 
 import pytest
+import numpy as np
 from perceval.error_mitigation import photon_recycling
 from perceval.utils import BasicState, BSDistribution
-from perceval.components import catalog, Source
+from perceval.components import catalog, Unitary
+from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
 from perceval import Processor
+from perceval.error_mitigation._loss_mitigation_utils import _gen_lossy_dists
+from perceval.error_mitigation.loss_mitigation import _generate_one_photon_per_mode_mapping
+
 
 
 def _sampler_setup_cnot(output_type: str):
     # Processor config
-    processor = Processor("SLOS")
+    processor = Processor("SLOS", noise=NoiseModel(transmittance=0.3))
     processor.min_detected_photons_filter(0)
     processor.thresholded_output(True)
 
     # Circuit
     circ = catalog['heralded cnot'].build_circuit()
     processor.set_circuit(circ)
-
-    # Source properties
-    src = Source(emission_probability=0.3)
-    processor.source = src
 
     # Input state
     input_state = BasicState([0, 1, 0, 1, 1, 1])
@@ -111,3 +112,55 @@ def test_input_validation_loss_mitigation():
 
     with pytest.raises(ValueError):
         photon_recycling(lossy_bsd2, 6)
+
+def _compute_random_circ_probs(source_emission, num_photons):
+
+    random_loc = Unitary(Matrix.random_unitary(20))
+    # Processor config
+    processor = Processor("SLOS", random_loc, noise=NoiseModel(transmittance=source_emission))
+    processor.min_detected_photons_filter(0)
+    processor.thresholded_output(True)
+
+    # Input state
+    input_state = BasicState([1] * num_photons + [0] * (random_loc.m - num_photons))
+
+    processor.with_input(input_state)
+
+    # Sampler
+    sampler = Sampler(processor)
+    return sampler.probs()['results']
+
+def total_variation_distance(p1, p2):
+    # calculate Total Variation distance between 2 probability distributions
+    tvd = 0.5 * np.sum(np.abs(np.array(p1) - np.array(p2)))
+    return tvd
+
+def test_mitigation_over_postselect_tvd():
+
+    ideal_photon_count = 4
+    # lossless distribution
+    ideal_dist = _compute_random_circ_probs(source_emission=1, num_photons=ideal_photon_count)
+    # lossy distribution
+    lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
+
+    # compute the migitated distribution from
+    mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
+
+    # computing the postselected distribution for this random computation.
+    # Using the internal methods of loss_mitigation codes for this
+    # as the PostSelect function to set on Processor is not known
+
+    num_modes = next(iter(lossy_dist)).m  # number of modes
+    pattern_map = _generate_one_photon_per_mode_mapping(num_modes, ideal_photon_count)
+    noisy_distributions = _gen_lossy_dists(lossy_dist, ideal_photon_count, pattern_map)
+    post_dist = noisy_distributions[0]
+
+    for key, values in ideal_dist.items():
+        if key not in mitigated_dist.keys():
+            mitigated_dist[key] = 0.0
+
+    # computing tvd
+    tvd_miti = total_variation_distance(list(ideal_dist.values()), list(mitigated_dist.values()))
+    tvd_ps = total_variation_distance(list(ideal_dist.values()), list(post_dist))
+
+    assert tvd_miti < tvd_ps  # checks that mitigated is closer to ideal than post-selected distribution

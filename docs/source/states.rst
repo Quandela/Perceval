@@ -121,7 +121,7 @@ See reference :class:`perceval.utils.StateVector` for detailed information.
 .. WARNING::
   ``StateVector`` will normalize themselves at usage so normalization terms will be added to any combination.
 
-``StateVector`` can also be multiplied through a tensor product - and exponentation is also built-in.
+``StateVector`` can also be multiplied through a tensor product - and exponentiation is also built-in.
 
 >>> import perceval as pcvl
 
@@ -179,7 +179,7 @@ Basic State Distribution
 ------------------------
 
 The class ``BSDistribution`` represent a probability distribution of Basic States.
-It is a dictionnary were the keys are the Basic States and the values are the probability associated.
+It is a dictionary were the keys are the Basic States and the values are the probability associated.
 It is the type of object given by the method ``probs`` of the ``Processor`` class.
 
 State Vector Distribution
@@ -217,7 +217,7 @@ Many of the above methods extends to Density Matrices, such as ``sample`` and ``
 For example, the ``apply_loss`` method is already build-in to simulate the probabilistic loss of photons. It is also handled by the simulator for unitary evolutions
 with the method ``evolve_density_matrix``.
 
-The ``pdisplay()`` function also allows to easily see the coherence of your state by highlighting the non diagonal coefficients. For exemple, here is the resulting density matrix
+The ``pdisplay()`` function also allows to easily see the coherence of your state by highlighting the non diagonal coefficients. For example, here is the resulting density matrix
 when we try to create a bell state with a Post-Selected CNOT:
 
 .. figure:: _static/img/bell.svg

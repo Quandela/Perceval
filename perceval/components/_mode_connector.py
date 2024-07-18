@@ -72,7 +72,7 @@ class ModeConnector:
         self._n_modes_to_connect = right_obj.m
 
     def _mapping_type_checks(self):
-        assert isinstance(self._map, dict), f"Mapping should be a Python dictionnary, got {type(self._map)}"
+        assert isinstance(self._map, dict), f"Mapping should be a Python dictionary, got {type(self._map)}"
         for k, v in self._map.items():
             assert isinstance(k, int) or isinstance(k, str), f"Mapping keys supported types are str and int, found {k}"
             if self._r_is_component:
@@ -97,11 +97,11 @@ class ModeConnector:
 
         :return: the resolved mapping containing mode indexes
 
-        self._map can be an integer, a list or a dictionnary.
+        self._map can be an integer, a list or a dictionary.
          Case int:
-            Creates a dictionnary { mapping: 0, mapping+1: 1, ..., mapping+n: n }
+            Creates a dictionary { mapping: 0, mapping+1: 1, ..., mapping+n: n }
          Case list:
-            Creates a dictionnary { mapping[0]: 0, mapping[1]: 1, ..., mapping[n]: n}
+            Creates a dictionary { mapping[0]: 0, mapping[1]: 1, ..., mapping[n]: n}
          Case dict:
             keys and values can either be integers or strings. If strings, it expects port names of the same size.
 
