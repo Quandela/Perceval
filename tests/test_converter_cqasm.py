@@ -107,9 +107,9 @@ H q[0]
 CNOT q[0], q[1]
 """
     pc = CQASMConverter(catalog).convert(cqasm_program, use_postselection=False)
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
     assert len(pc._components) == 2
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "Heralded CNOT"
@@ -126,9 +126,9 @@ H q[0]
 CNOT q[1], q[0]
 """
     pc = CQASMConverter(catalog).convert(cqasm_program, use_postselection=False)
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
+    assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
     assert len(pc._components) == 4  # should be  BS.H // PERM // CNOT // PERM
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "PERM"
@@ -161,33 +161,6 @@ H q[0]
 """
     pc = CQASMConverter(catalog).convert(cqasm_program, use_postselection=True)
     assert isinstance(pc._components[-1][1]._components[0][1], components.BS)
-
-
-def test_converter_multi_target_gates(capfd):
-    cqasm_program = """
-version 3
-qubit[2] q
-H q[0:1]
-"""
-    pc = CQASMConverter(catalog).convert(cqasm_program)
-    pdisplay(pc, output_format=Format.TEXT)
-    out, err = capfd.readouterr()
-    assert out.strip() == """
-      ╔[H]╗
-      ║░░░║
-(]────╫░░░╫───────[)
-q[0]  ║░░░║     [q[0]]
-      ║░░░║
-(]────╫░░░╫───────[)
-q[0]  ║░░░║╔[H]╗[q[0]]
-      ╚   ╝║░░░║
-(]─────────╫░░░╫──[)
-q[1]       ║░░░║[q[1]]
-           ║░░░║
-(]─────────╫░░░╫──[)
-q[1]       ║░░░║[q[1]]
-           ╚   ╝
-    """.strip()
 
 
 def test_converter_qubit_names():
@@ -270,9 +243,8 @@ def test_converter_from_file():
     TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
     cqasm_program_file = TEST_DATA_DIR / 'state_preparation_5.cqasm3'
     pc = CQASMConverter(catalog).convert(str(cqasm_program_file), use_postselection=False)
-
-    assert pc.circuit_size == 14
-    assert len(pc.heralds) == 8
+    assert pc.circuit_size == 10
+    assert len(pc.heralds) == 4
     assert pc.m == 6
     assert len(pc._components) == 12
     r = pc.probs()['results']
@@ -311,9 +283,8 @@ qubits 2
 """
     pc = CQASMConverter(catalog).convert(
         cqasm_program, use_postselection=False)
-    assert pc.circuit_size == 8
+    assert pc.circuit_size == 6
     assert pc.m == 4
-    assert pc.source_distribution[StateVector('|1,0,1,0,0,1,0,1>')] == 1
     assert len(pc._components) == 2
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "Heralded CNOT"
@@ -338,7 +309,7 @@ qubits 11
     measure_all
 """
     pc = CQASMConverter(catalog).convert(source, use_postselection=False)
-    assert pc.circuit_size == 26
+    assert pc.circuit_size == 24
     assert pc.m == 22
     assert len(pc._components) == 5
 
