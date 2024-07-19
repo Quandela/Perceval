@@ -52,10 +52,10 @@ class AComponent(ABC):
         if self._name is None:
             return self.DEFAULT_NAME
         return self._name
-    
+
     @name.setter
     def name(self, new_name: str = None) -> None:
-        """Sets new componet name"""
+        """Sets new component name"""
         self._name = new_name
 
     def is_composite(self) -> bool:
