@@ -39,7 +39,7 @@ from perceval.components import catalog, BS, get_basic_state_from_ports
 def check_controlled_gates_and_get_performance(n, alpha, processor, herald_states, error=1E-6):
     """Check if the CC..Z(alpha) is correct
 
-    Meaning checking that the CC...Z(alpha) gate probability amplitude matrix should be: 
+    Meaning checking that the CC...Z(alpha) gate probability amplitude matrix should be:
                         Id_(2^n) +(exp(i.alpha)-1) |1...1><1...1|
 
     :param processor: CCZ processor to check, we assume that ctrl is on [0,1] and [2,3]
