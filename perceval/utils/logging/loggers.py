@@ -76,25 +76,26 @@ class ILogger(ABC):
 class ExqaliburLogger(ILogger):
     def initialize(self):
         persistent_data = PersistentData()
-        log_path = self.get_log_file_path()
         if persistent_data.is_writable():
-            exq_log.initialize(log_path)
+            exq_log.initialize(self.get_log_file_path())
         else:
             exq_log.initialize()
 
-        config = LoggerConfig()
-        if _ENABLE_FILE in config and config[_ENABLE_FILE]:
-            print(f"starting to write logs in {log_path}")
+        self._config = LoggerConfig()
+        self._configure_logger()
+
+    def _configure_logger(self):
+        if _ENABLE_FILE in self._config and self._config[_ENABLE_FILE]:
+            print(f"starting to write logs in {self.get_log_file_path()}")
             exq_log.enable_file()
         else:
             exq_log.disable_file()
 
         exq_log.enable_console()
-
-        if _CHANNELS in config:
+        if _CHANNELS in self._config:
             channels = list(exq_log.channel.__members__)
             levels = list(exq_log.level.__members__)
-            for channel, level in config[_CHANNELS].items():
+            for channel, level in self._config[_CHANNELS].items():
                 level = level['level']
                 if channel not in channels:
                     warnings.warn(UserWarning(f"Unknown channel {channel}"))

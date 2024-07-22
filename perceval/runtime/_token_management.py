@@ -52,19 +52,19 @@ class TokenProvider:
         :param file_path: Path to search for a file containing a token (default None)
         """
         self._env_var = env_var
+        self._persistent_data = PersistentData()
 
     def _from_environment_variable(self) -> str:
         if not self._env_var:
-            return None
+            return ''
         TokenProvider._CACHED_TOKEN = os.getenv(self._env_var)
         return TokenProvider._CACHED_TOKEN
 
     def _from_file(self) -> str:
         token = None
-        persistent_data = PersistentData()
-        if persistent_data.has_file(_TOKEN_FILE_NAME):
+        if self._persistent_data.has_file(_TOKEN_FILE_NAME):
             try:
-                token = persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
+                token = self._persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
             except OSError:
                 warnings.warn("Cannot read token persistent file")
         return token
@@ -75,6 +75,14 @@ class TokenProvider:
         :return: A token, or None if no token was found
         """
         return TokenProvider._CACHED_TOKEN or self._from_environment_variable() or self._from_file()
+
+    def save_token(self) -> str:
+        """Save the current cache token
+        """
+        if self._persistent_data.is_writable():
+            self._persistent_data.write_file(_TOKEN_FILE_NAME, TokenProvider._CACHED_TOKEN, FileFormat.TEXT)
+        else:
+            warnings.warn(UserWarning("Can't save token"))
 
     @staticmethod
     def clear_cache():
@@ -96,8 +104,6 @@ def save_token(token: str):
 
     :param token: token to save
     """
-    persistent_data = PersistentData()
-    if persistent_data.is_writable():
-        persistent_data.write_file(_TOKEN_FILE_NAME, token, FileFormat.TEXT)
-    else:
-        warnings.warn(UserWarning("Can't save token"))
+    token_provider = TokenProvider()
+    token_provider.force_token(token)
+    token_provider.save_token()
