@@ -26,3 +26,29 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""Provider related imports and classes"""
+
+import warnings
+
+from perceval.runtime import ISession
+from .quandela import Session as QuandelaSession
+from .scaleway import Session as ScalewaySession
+
+PROVIDER_LIST = {
+    "Quandela": QuandelaSession,
+    "Scaleway": ScalewaySession,
+}
+
+
+class ProviderFactory:
+    @staticmethod
+    def get_provider(provider_name: str, **kwargs) -> ISession:
+        name = provider_name
+        if name in PROVIDER_LIST:
+            return PROVIDER_LIST[name](**kwargs)
+
+        raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
+
+    @staticmethod
+    def list():
+        return list(PROVIDER_LIST.keys())
