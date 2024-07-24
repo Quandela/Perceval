@@ -63,6 +63,7 @@ class Session(ISession):
         max_idle_duration_s: int = 1200,
         max_duration_s: int = 3600,
         url: str = _ENDPOINT_URL,
+        **kwargs
     ) -> None:
 
         self._token = token
