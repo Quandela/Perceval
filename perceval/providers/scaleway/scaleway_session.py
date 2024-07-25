@@ -39,7 +39,7 @@ _ENDPOINT_SESSION = "/sessions"
 
 class Session(ISession):
     """
-    :param platform: platform on which circuits will be executed
+    :param platform_name: mane of a platform on which circuits will be executed
 
     :param project_id: UUID of the Scaleway Project the session is attached to
 
@@ -56,7 +56,7 @@ class Session(ISession):
 
     def __init__(
         self,
-        platform: str,
+        platform_name: str,
         project_id: str,
         token: str,
         deduplication_id: str = "",
@@ -69,7 +69,7 @@ class Session(ISession):
         self._token = token
         self._project_id = project_id
         self._url = url
-        self._platform = platform
+        self._platform_name = platform_name
         self._deduplication_id = deduplication_id
         self._max_idle_duration_s = self.__int_duration(
             max_idle_duration_s, "max_idle_duration_s"
@@ -137,6 +137,6 @@ class Session(ISession):
         return RPCHandler(
             project_id=self._project_id,
             headers=self._headers,
-            name=self._platform,
+            name=self._platform_name,
             url=self._url,
         )
