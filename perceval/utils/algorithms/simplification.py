@@ -364,26 +364,27 @@ def _simplify_PS(components, m, display):
     [r, c] = components.pop()
     r0 = r[0]
 
-    found_PS = False
+    PS_found_n_simplified = False
 
-    phi = c.get_variables()["phi"]
+    phi = c.param("phi")
 
-    if not isinstance(phi, str):
+    if not phi.is_variable:
+        # encountered a PS with numeric value of phase - simplifying
         for i in range(len(components) - 1, -1, -1):
 
             [old_r, old_c] = components[i]
             if isinstance(old_c, comp.PS) and r0 == old_r[0]:
-                found_PS = True
 
-                old_phi = old_c.get_variables()["phi"]
-                if not isinstance(old_phi, str):
-                    new_phi = phi + old_phi
+                old_phi = old_c.param("phi")
+                if not old_phi.is_variable:
+                    PS_found_n_simplified = True
+                    # previous PS does not have a variable phi -> simplify both together
+                    new_phi = float(phi) + float(old_phi)
                     if new_phi % (2 * np.pi) != 0 or display:
                         new_c = comp.PS(new_phi)
-
                         components[i] = [old_r, new_c]
-
                     else:
+                        # simplification summed to phase=0
                         components.pop(i)
 
                     break
@@ -393,12 +394,14 @@ def _simplify_PS(components, m, display):
                 r0 = invert_permutation(perm_list)[r0]
 
             elif r0 in old_r:
+                # a component other than PS or PERM in the same mode as current PS
                 break
 
-        if not found_PS and (c.get_variables()["phi"] % (2 * np.pi) or display):
+        if not PS_found_n_simplified and (float(phi) % (2 * np.pi) or display):
             components.append([r, c])
 
     else:
+        # No simplification of PS if one with a variable parameter is being added
         components.append([r, c])
 
     return components
