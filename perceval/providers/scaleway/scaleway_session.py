@@ -76,13 +76,15 @@ class Session(ISession):
         )
         self._max_duration_s = self.__int_duration(max_duration_s, "max_duration_s")
 
-        self._session_id = None
+        self._session_id = kwargs.get("session_id", None)
 
         self._headers = {
             "X-Auth-Token": token,
         }
 
         self._rpc_handler = self.__build_rpc_handler()
+        if self._session_id is not None:
+            self._rpc_handler.set_session_id(self._session_id)
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
