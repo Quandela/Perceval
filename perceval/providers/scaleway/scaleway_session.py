@@ -39,7 +39,7 @@ _ENDPOINT_SESSION = "/sessions"
 
 class Session(ISession):
     """
-    :param platform_name: mane of a platform on which circuits will be executed
+    :param platform_name: name of a platform on which circuits will be executed
 
     :param project_id: UUID of the Scaleway Project the session is attached to
 
