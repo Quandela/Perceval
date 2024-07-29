@@ -771,8 +771,8 @@ def create_renderer(
     n: int,  # number of modes
     output_format: Format = Format.TEXT,  # rendering method
     skin: ASkin = None,  # skin (unused in text rendering)
-    **opts
-) -> ICircuitRenderer:
+    **opts,
+) -> tuple[ICircuitRenderer, ICircuitRenderer]:
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
     A skin object is needed for circuit graphic rendering.

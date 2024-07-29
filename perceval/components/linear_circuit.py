@@ -40,7 +40,7 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
-import perceval.utils.algorithms.decomposition as decomposition
+from perceval.utils.algorithms import decomposition
 from perceval.utils.algorithms.match import Match
 from perceval.utils.algorithms.solve import solve
 

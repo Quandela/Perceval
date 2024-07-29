@@ -60,8 +60,6 @@ from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSC
 from .format import Format
 from ._processor_utils import collect_herald_info
 
-import math
-
 
 in_notebook = False
 
@@ -174,14 +172,13 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
     """
 
     def simp(value):
-        if isinstance(value, complex) or isinstance(value, int) or isinstance(value, float) or\
-           isinstance(value, sp.Number) or (isinstance(value, sp.Expr) and len(value.free_symbols) == 0):
+        if isinstance(value, (complex, float, int, sp.Number)) or (isinstance(value, sp.Expr) and len(value.free_symbols) == 0):
             return simple_complex(complex(value), precision=precision)[1]
         else:
             return value.__repr__()
 
     if output_format != Format.TEXT:
-        marker = output_format == Format.HTML and "$" or ""
+        marker = output_format == "$" if Format.HTML else ""
         if isinstance(matrix, sp.Matrix):
             return marker + sp.latex(matrix) + marker
         rows = []
@@ -543,7 +540,7 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
             else:
                 res.save_svg(path)
             return
-        except:
+        except Exception:
             pass
 
     if output_format == Format.LATEX:
