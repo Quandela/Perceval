@@ -118,7 +118,7 @@ def test_perm_simp():
          .add(2, comp.BS(theta=2))
          .add(0, comp.PERM([3, 2, 1, 0])))
 
-    expected1 = [(0, [1, 0, 3, 2]), (2, 1), (0, 1), (0, [1, 0, 3, 2])]
+    expected1 = [(0, [1, 0, 3, 2]), (2, 1), (0, 2), (0, [1, 0, 3, 2])]
     expected2 = [(0, [1, 0, 3, 2]), (0, 2), (2, 1), (0, [1, 0, 3, 2])]
     real = PERM_testing(c, True)
 
