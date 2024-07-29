@@ -33,7 +33,7 @@ from perceval.runtime.rpc_handler import RPCHandler
 
 
 class Session(ISession):
-    def __init__(self, platform_name: str, token: str, url: str = None, **kwargs):
+    def __init__(self, platform_name: str, token: str, url: str = None):
         self._platform_name = platform_name
         self._token = token
         self._url = url or QUANDELA_CLOUD_URL

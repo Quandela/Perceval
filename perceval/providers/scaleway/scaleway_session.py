@@ -63,7 +63,7 @@ class Session(ISession):
         max_idle_duration_s: int = 1200,
         max_duration_s: int = 3600,
         url: str = _ENDPOINT_URL,
-        **kwargs
+        session_id: str = None
     ) -> None:
 
         self._token = token
@@ -76,7 +76,7 @@ class Session(ISession):
         )
         self._max_duration_s = self.__int_duration(max_duration_s, "max_duration_s")
 
-        self._session_id = kwargs.get("session_id", None)
+        self._session_id = session_id
 
         self._headers = {
             "X-Auth-Token": token,
