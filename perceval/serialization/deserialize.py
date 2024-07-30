@@ -35,7 +35,21 @@ from zlib import decompress
 from perceval.components import Circuit
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.serialization import _matrix_serialization, deserialize_state
-from ._constants import *
+from ._constants import (
+    SEP,
+    PCVL_PREFIX,
+    ZIP_PREFIX,
+    BS_TAG,
+    SV_TAG,
+    SVD_TAG,
+    BSD_TAG,
+    BSC_TAG,
+    BSS_TAG,
+    MATRIX_TAG,
+    CIRCUIT_TAG,
+    NOISE_TAG,
+    POSTSELECT_TAG,
+)
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
 from . import _schema_circuit_pb2 as pb

@@ -29,6 +29,8 @@
 
 import os
 
+from typing import Union
+
 from perceval.utils.logging import LOGGER as logger, channel
 
 from ..utils import PersistentData, FileFormat
@@ -53,29 +55,37 @@ class TokenProvider:
         :param file_path: Path to search for a file containing a token (default None)
         """
         self._env_var = env_var
+        self._persistent_data = PersistentData()
 
-    def _from_environment_variable(self) -> str:
+    def _from_environment_variable(self) -> Union[str, None]:
         if not self._env_var:
             return None
         TokenProvider._CACHED_TOKEN = os.getenv(self._env_var)
         return TokenProvider._CACHED_TOKEN
 
-    def _from_file(self) -> str:
+    def _from_file(self) -> Union[str, None]:
         token = None
-        persistent_data = PersistentData()
-        if persistent_data.has_file(_TOKEN_FILE_NAME):
+        if self._persistent_data.has_file(_TOKEN_FILE_NAME):
             try:
-                token = persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
+                token = self._persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
             except OSError:
                 logger.warn("Cannot read token persistent file", channel.user)
         return token
 
-    def get_token(self) -> str:
+    def get_token(self) -> Union[str, None]:
         """Search for a token to provide
 
         :return: A token, or None if no token was found
         """
         return TokenProvider._CACHED_TOKEN or self._from_environment_variable() or self._from_file()
+
+    def save_token(self):
+        """Save the current cache token
+        """
+        if self._persistent_data.is_writable():
+            self._persistent_data.write_file(_TOKEN_FILE_NAME, TokenProvider._CACHED_TOKEN, FileFormat.TEXT)
+        else:
+            warnings.warn(UserWarning("Can't save token"))
 
     @staticmethod
     def clear_cache():
@@ -83,7 +93,7 @@ class TokenProvider:
         TokenProvider._CACHED_TOKEN = None
 
     @property
-    def cache(self) -> str:
+    def cache(self) -> Union[str, None]:
         return TokenProvider._CACHED_TOKEN
 
     @staticmethod
@@ -101,4 +111,4 @@ def save_token(token: str):
     if persistent_data.is_writable():
         persistent_data.write_file(_TOKEN_FILE_NAME, token, FileFormat.TEXT)
     else:
-        logger.warn("Can't save token", channel.user)
+        warnings.warn(UserWarning("Can't save token"))
