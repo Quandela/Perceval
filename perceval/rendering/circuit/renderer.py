@@ -104,7 +104,7 @@ class ICircuitRenderer(ABC):
                     if c.is_composite() and c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})
-                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
+                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=False), c._color)
                             self.render_circuit(
                                 c,
                                 shift=shiftr[0],
