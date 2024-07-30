@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from unittest.mock import MagicMock
 import os
 import re
 import uuid
@@ -39,6 +40,7 @@ import pytest
 
 import perceval as pcvl
 from perceval.utils import StateVector, SVDistribution, PersistentData
+from perceval.utils.logging import channel
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
@@ -240,3 +242,33 @@ class PersistentDataForTests(PersistentData):
             os.makedirs(self._directory, exist_ok=True)
         except OSError:
             pass
+
+
+class WarnLogChecker():
+    def __init__(self, mock_warn: MagicMock, log_channel: channel = channel.user):
+        self._mock_warn = mock_warn
+        self._call_count = mock_warn.call_count
+        self._expected_channel = log_channel
+
+    def __enter__(self):
+        assert self._mock_warn.call_count == self._call_count
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._call_count += 1
+        assert self._mock_warn.call_count == self._call_count
+        assert isinstance(self._mock_warn.mock_calls[0].args[0], str)
+        assert self._mock_warn.mock_calls[0].args[1] == self._expected_channel
+
+
+class NoWarnLogChecker():
+    def __init__(self, mock_warn: MagicMock):
+        self._mock_warn = mock_warn
+        self._call_count = mock_warn.call_count
+
+    def __enter__(self):
+        assert self._mock_warn.call_count == self._call_count
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        assert self._mock_warn.call_count == self._call_count
