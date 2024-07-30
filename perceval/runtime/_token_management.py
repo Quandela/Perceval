@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 import os
-import warnings
+
+from perceval.utils.logging import LOGGER as logger, channel
 
 from ..utils import PersistentData, FileFormat
 
@@ -66,7 +67,7 @@ class TokenProvider:
             try:
                 token = persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
             except OSError:
-                warnings.warn("Cannot read token persistent file")
+                logger.warn("Cannot read token persistent file", channel.user)
         return token
 
     def get_token(self) -> str:
@@ -100,4 +101,4 @@ def save_token(token: str):
     if persistent_data.is_writable():
         persistent_data.write_file(_TOKEN_FILE_NAME, token, FileFormat.TEXT)
     else:
-        warnings.warn(UserWarning("Can't save token"))
+        logger.warn("Can't save token", channel.user)

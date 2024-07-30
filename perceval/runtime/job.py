@@ -27,11 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
 from abc import ABC, abstractmethod
 from typing import Dict, Callable
 
-from .job_status import JobStatus, RunningStatus
+from perceval.utils.logging import LOGGER as logger, channel
+
+from .job_status import JobStatus
 
 
 class Job(ABC):
@@ -127,10 +128,10 @@ class Job(ABC):
             raise RuntimeError('The job is still running, results are not available yet.')
 
         if job_status.canceled:
-            warnings.warn("Job has been canceled, trying to get partial result.")
+            logger.warn("Job has been canceled, trying to get partial result.", channel.user)
 
         if job_status.unknown:
-            warnings.warn("Unknown job status, trying to get result anyway.")
+            logger.warn("Unknown job status, trying to get result anyway.", channel.user)
 
         try:
             return self._get_results()
