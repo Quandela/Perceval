@@ -30,6 +30,8 @@
 import os
 import warnings
 
+from typing import Union
+
 from ..utils import PersistentData, FileFormat
 
 _TOKEN_FILE_NAME = "token"
@@ -54,13 +56,13 @@ class TokenProvider:
         self._env_var = env_var
         self._persistent_data = PersistentData()
 
-    def _from_environment_variable(self) -> str:
+    def _from_environment_variable(self) -> Union[str, None]:
         if not self._env_var:
-            return ''
+            return None
         TokenProvider._CACHED_TOKEN = os.getenv(self._env_var)
         return TokenProvider._CACHED_TOKEN
 
-    def _from_file(self) -> str:
+    def _from_file(self) -> Union[str, None]:
         token = None
         if self._persistent_data.has_file(_TOKEN_FILE_NAME):
             try:
@@ -69,14 +71,14 @@ class TokenProvider:
                 warnings.warn("Cannot read token persistent file")
         return token
 
-    def get_token(self) -> str:
+    def get_token(self) -> Union[str, None]:
         """Search for a token to provide
 
         :return: A token, or None if no token was found
         """
         return TokenProvider._CACHED_TOKEN or self._from_environment_variable() or self._from_file()
 
-    def save_token(self) -> str:
+    def save_token(self):
         """Save the current cache token
         """
         if self._persistent_data.is_writable():
@@ -90,7 +92,7 @@ class TokenProvider:
         TokenProvider._CACHED_TOKEN = None
 
     @property
-    def cache(self) -> str:
+    def cache(self) -> Union[str, None]:
         return TokenProvider._CACHED_TOKEN
 
     @staticmethod
