@@ -27,18 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
 import re
-import uuid
 import math
-import tempfile
 from typing import Type
 from pathlib import Path
 
 import pytest
 
 import perceval as pcvl
-from perceval.utils import StateVector, SVDistribution, PersistentData
+from perceval.utils import StateVector, SVDistribution
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
@@ -222,21 +219,3 @@ if __name__ == "__main__":
         assert_sv_close(sv4, sv1)
     except AssertionError:
         print("detected sv are different")
-
-
-UNIQUE_PART = uuid.uuid4()
-
-
-class PersistentDataForTests(PersistentData):
-    """
-    Overrides the directory used for persistent data to target a temporary sub-folder.
-    This allows to run tests without removing actual persistent data or risking messing up system or user directories
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._directory = os.path.join(tempfile.gettempdir(), f'perceval-container-{UNIQUE_PART}', 'perceval-quandela')
-        try:
-            os.makedirs(self._directory, exist_ok=True)
-        except OSError:
-            pass
