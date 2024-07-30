@@ -27,16 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
 import re
 import math
-from typing import Type
-from pathlib import Path
-
 import pytest
 
+from typing import Type
+from pathlib import Path
+from unittest.mock import MagicMock
+
 import perceval as pcvl
-from perceval.utils import StateVector, SVDistribution, PersistentData
+from perceval.utils import StateVector, SVDistribution
+from perceval.utils.logging import channel
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
@@ -194,34 +195,6 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         assert ok, msg
 
 
-if __name__ == "__main__":
-    sv1 = StateVector([0, 1]) + StateVector([1, 0])
-    sv1_bis = 1.0000001*StateVector([0, 1]) + 0.9999999*StateVector([1, 0])
-    assert_sv_close(sv1, sv1_bis)
-    sv2 = StateVector([0, 1]) - StateVector([1, 0])
-    try:
-        assert_sv_close(sv1, sv2)
-    except AssertionError:
-        print("detected sv are different")
-
-    sv3 = StateVector([0, 1]) + StateVector([1, 1])
-    try:
-        assert_sv_close(sv1, sv3)
-    except AssertionError:
-        print("detected sv are different")
-
-    sv4 = StateVector([0, 1])
-    try:
-        assert_sv_close(sv1, sv4)
-    except AssertionError:
-        print("detected sv are different")
-
-    try:
-        assert_sv_close(sv4, sv1)
-    except AssertionError:
-        print("detected sv are different")
-
-
 class WarnLogChecker():
     def __init__(self, mock_warn: MagicMock, log_channel: channel = channel.user):
         self._mock_warn = mock_warn
@@ -234,7 +207,7 @@ class WarnLogChecker():
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._call_count += 1
-        assert self._mock_warn.call_count == self._call_count
+        assert self._mock_warn.call_count == self._call_count, "logger.warn not called"
         assert isinstance(self._mock_warn.mock_calls[0].args[0], str)
         assert self._mock_warn.mock_calls[0].args[1] == self._expected_channel
 
@@ -249,4 +222,4 @@ class NoWarnLogChecker():
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        assert self._mock_warn.call_count == self._call_count
+        assert self._mock_warn.call_count == self._call_count, "logger.warn called"

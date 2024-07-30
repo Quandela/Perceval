@@ -85,7 +85,7 @@ class TokenProvider:
         if self._persistent_data.is_writable():
             self._persistent_data.write_file(_TOKEN_FILE_NAME, TokenProvider._CACHED_TOKEN, FileFormat.TEXT)
         else:
-            warnings.warn(UserWarning("Can't save token"))
+            logger.warn("Can't save token", channel.user)
 
     @staticmethod
     def clear_cache():

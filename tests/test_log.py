@@ -27,12 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-import time
-
 import perceval as pcvl
 
-from _mock_persistent_data import LoggerConfigForTest, PersistentDataForTests
+from _mock_persistent_data import LoggerConfigForTest
 
 
 def test_logger_config():
