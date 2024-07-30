@@ -562,9 +562,9 @@ class AProcessor(ABC):
 
     def _deduce_min_detected_photons(self, expected_photons: int) -> None:
         logger.warn(
-            "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly\n" +
-            "Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)\n" +
-            f"The current deduced value of min_detected_photons is {expected_photons}", channel.user)
+            "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
+            " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
+            f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
         self._min_detected_photons = expected_photons
 
     @dispatch(BasicState)

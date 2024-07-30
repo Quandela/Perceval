@@ -27,13 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from deprecated import deprecated
 from math import sqrt
 
 from perceval.components import Circuit, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.utils import Encoding
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import LOGGER as logger, channel, deprecated
 
 _WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
                        "better in every aspect (see 'heralded cnot' in the catalog)"

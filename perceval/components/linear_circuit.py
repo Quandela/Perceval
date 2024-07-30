@@ -28,10 +28,11 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import copy
-from deprecated import deprecated
 import random
+
+from abc import ABC, abstractmethod
 from typing import Callable, Optional, Union, Tuple, Type, List
 
 import numpy as np
@@ -43,6 +44,7 @@ from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_par
 from perceval.utils.algorithms import decomposition
 from perceval.utils.algorithms.match import Match
 from perceval.utils.algorithms.solve import solve
+from perceval.utils.logging import deprecated
 
 
 class ACircuit(AParametrizedComponent, ABC):
