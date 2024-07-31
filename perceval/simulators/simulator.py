@@ -27,19 +27,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
-from .simulator_interface import ISimulator
-from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
-    DensityMatrix, post_select_distribution, post_select_statevector
-from perceval.backends import AProbAmpliBackend
-from perceval.utils.density_matrix_utils import extract_upper_triangle
+import sys
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
-from typing import Callable, Set, Union, Optional, List
 from scipy.sparse import csc_array, csr_array
+from typing import Callable, Set, Union, Optional, List
+
+from perceval.backends import AProbAmpliBackend
+from perceval.components import ACircuit
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
+    DensityMatrix, post_select_distribution, post_select_statevector
+from perceval.utils.density_matrix_utils import extract_upper_triangle
+from perceval.utils.logging import LOGGER as logger, channel
+
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
+from .simulator_interface import ISimulator
 
 
 class Simulator(ISimulator):
@@ -404,6 +408,7 @@ class Simulator(ISimulator):
             res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
         res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
+        self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
         return {'results': res,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
@@ -473,6 +478,8 @@ class Simulator(ISimulator):
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
         result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
+        self.log_resources(sys._getframe().f_code.co_name, {
+            'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
         return result_sv
 
     def evolve_svd(self,
@@ -569,3 +576,15 @@ class Simulator(ISimulator):
             if dm.mat[k, k] != 0:
                 input_list.append(dm.inverse_index[k])
         return input_list
+
+    def log_resources(self, method, method_parameters):
+        method_parameters = {key: value for key, value in method_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'Simulator',
+            'backend': self._backend.name,
+            'm': self._backend._circuit.m,
+            'method': method
+        }
+        if method_parameters:
+            my_dict.update(method_parameters)
+        logger.log_resources(my_dict)

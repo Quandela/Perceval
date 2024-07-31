@@ -220,3 +220,6 @@ class Source:
             self._indistinguishability == value._indistinguishability and \
             self._context == value._context and \
             self.simplify_distribution == value.simplify_distribution
+
+    def __dict__(self) -> str:
+        return {'multiphoton_component': self._multiphoton_component, 'losses': self._losses, 'emission_probability': self._emission_probability, 'indistinguishability': self._indistinguishability}

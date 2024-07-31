@@ -26,14 +26,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import math
 import time
+import sys
 from typing import Callable, Dict, Tuple
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
+from perceval.utils.logging import LOGGER as logger, channel
 
 
 class SamplesProvider:
@@ -327,6 +330,8 @@ class NoisySamplingSimulator:
 
         res = self._noisy_sampling(new_input, provider, max_samples, max_shots, progress_callback)
         res['physical_perf'] *= pre_physical_perf
+        self.log_resources(sys._getframe().f_code.co_name, {
+            'n': svd.n_max, 'max_samples': max_samples, 'max_shots': max_shots})
         return res
 
     def sample_count(self,
@@ -337,3 +342,15 @@ class NoisySamplingSimulator:
         sampling = self.samples(svd, max_samples, max_shots, progress_callback)
         sampling['results'] = samples_to_sample_count(sampling['results'])
         return sampling
+
+    def log_resources(self, method, method_parameters):
+        method_parameters = {key: value for key, value in method_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'NoisySamplingSimulator',
+            'backend': self._backend.name,
+            'm': self._backend._circuit.m,
+            'method': method
+        }
+        if method_parameters:
+            my_dict.update(method_parameters)
+        logger.log_resources(my_dict)
