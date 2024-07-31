@@ -37,13 +37,13 @@ from perceval.components import Circuit, Processor, BS, Source, catalog, Unavail
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
-from _test_utils import assert_svd_close, WarnLogChecker, NoWarnLogChecker
+from _test_utils import assert_svd_close, WarnLogChecker
 
 
 @patch.object(pcvl.logger, "warn")
 def test_processor_input_fock_state(mock_warn):
     p = Processor("Naive", Circuit(4))  # Init with perfect source
-    with NoWarnLogChecker(mock_warn):
+    with WarnLogChecker(mock_warn, expected_log_number=0):
         p.with_input(BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
 

@@ -196,30 +196,22 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
 
 
 class WarnLogChecker():
-    def __init__(self, mock_warn: MagicMock, log_channel: channel = channel.user):
+    def __init__(self, mock_warn: MagicMock, log_channel: channel = channel.user, expected_log_number: int = 1):
         self._mock_warn = mock_warn
         self._call_count = mock_warn.call_count
         self._expected_channel = log_channel
+        self._expected_log_number = expected_log_number
 
     def __enter__(self):
         assert self._mock_warn.call_count == self._call_count
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._call_count += 1
-        assert self._mock_warn.call_count == self._call_count, "logger.warn not called"
-        assert isinstance(self._mock_warn.mock_calls[0].args[0], str)
-        assert self._mock_warn.mock_calls[0].args[1] == self._expected_channel
+        self._call_count += self._expected_log_number
+        assert self._mock_warn.call_count == self._call_count, f"logger.warn: expected {self._call_count} log but got {self._mock_warn.call_count}"
+        for i in range(self._expected_log_number):
+            assert isinstance(self._mock_warn.mock_calls[-i].args[0], str)
+            assert self._mock_warn.mock_calls[-i].args[1] == self._expected_channel
 
-
-class NoWarnLogChecker():
-    def __init__(self, mock_warn: MagicMock):
-        self._mock_warn = mock_warn
-        self._call_count = mock_warn.call_count
-
-    def __enter__(self):
-        assert self._mock_warn.call_count == self._call_count
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        assert self._mock_warn.call_count == self._call_count, "logger.warn called"
+    def set_expected_log_number(self, expected_log_number: int):
+        self._expected_log_number = expected_log_number
