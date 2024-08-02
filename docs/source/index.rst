@@ -22,7 +22,7 @@ for simulating and optimising their design,
 modelling both the ideal and realistic behaviours, and proposing a normalised
 interface to control them through the concept of *backends*.
 
-Perceval is conceived as an object-oriented modular Python framework orgainised around the following elements:
+Perceval is conceived as an object-oriented modular Python framework organized around the following elements:
 
 * Tools to :ref:`build linear optical circuits <Circuits>` from a collection of pre-defined :ref:`components <Components>`
 * Powerful :ref:`computing backends <Computing Backends>` implemented in C++

@@ -46,7 +46,7 @@ class Canvas(ABC):
             self._opts = {}
         else:
             self._opts = opts
-        self._inverse_Y = inverse_Y and -1 or 1
+        self._inverse_Y = -1 if inverse_Y else 1
         self._background_color = None
 
     def set_offset(self, v: Tuple[float, float], width: float, height: float):

@@ -8,3 +8,4 @@ dist/
 venv*/
 *.whl
 .ipynb_checkpoints/
+.coverage

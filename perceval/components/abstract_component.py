@@ -48,11 +48,17 @@ class AComponent(ABC):
 
     @property
     def name(self) -> str:
+        """Returns component name"""
         if self._name is None:
             return self.DEFAULT_NAME
         return self._name
 
-    def is_composite(self):
+    @name.setter
+    def name(self, new_name: str = None) -> None:
+        """Sets new component name"""
+        self._name = new_name
+
+    def is_composite(self) -> bool:
         """
         Returns True if the component is itself composed of subcomponents
         """

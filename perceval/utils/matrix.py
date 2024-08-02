@@ -180,7 +180,7 @@ class Matrix(ABC):
 
     @staticmethod
     def get_unitary_extension(M: np.ndarray) -> MatrixN:
-        """Embed the input matrix M into an unitary matrix  U 
+        """Embed the input matrix M into an unitary matrix  U
 
                     U = | M/σ * |
                         | *   * |
@@ -218,6 +218,7 @@ class Matrix(ABC):
         """Simplify the matrix - only implemented for symbolic matrix"""
         return self
 
+    @staticmethod
     def _read(seqline: Iterator[str]) -> Matrix:
         """read a matrix from file or a string sequence"""
         rows = []

@@ -42,6 +42,7 @@ class LoggerConfig(dict):
     def __init__(self):
         super().__init__()
         self.reset()
+        self._persistent_data = PersistentData()
         self._load_from_persistent_data()
 
     def _init_channel(self, channel: exqalibur_logging.channel, level: exqalibur_logging.level = exqalibur_logging.level.off):
@@ -57,8 +58,7 @@ class LoggerConfig(dict):
         self._init_channel(exqalibur_logging.channel.user, exqalibur_logging.level.warn)
 
     def _load_from_persistent_data(self):
-        persistent_data = PersistentData()
-        config = persistent_data.load_config()
+        config = self._persistent_data.load_config()
         try:
             if config and _LOGGING in config:
                 config = config[_LOGGING]
@@ -81,5 +81,4 @@ class LoggerConfig(dict):
         self[_ENABLE_FILE] = False
 
     def save(self):
-        persistent_data = PersistentData()
-        persistent_data.save_config({_LOGGING: dict(self)})
+        self._persistent_data.save_config({_LOGGING: dict(self)})

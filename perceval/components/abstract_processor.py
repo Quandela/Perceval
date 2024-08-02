@@ -259,6 +259,11 @@ class AProcessor(ABC):
     def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
+        if processor.heralds and not processor.parameters:
+            # adding the same processor component again renders incorrect heralds if not copied
+            # This concerns our gate based processors from catalog which has no input params
+            processor = processor.copy()
+
         mode_mapping = connector.resolve()
 
         self._validate_postselect_composition(mode_mapping)

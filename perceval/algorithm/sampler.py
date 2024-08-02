@@ -153,7 +153,7 @@ class Sampler(AAlgorithm):
         assert isinstance(iter_params, dict) and iter_params, "Iteration parameters must be a valid dictionary"
         if 'circuit_params' in iter_params:
             assert isinstance(iter_params['circuit_params'], dict), \
-                "Iteration: circuit_params field must be a valid dictionnary"
+                "Iteration: circuit_params field must be a valid dictionary"
             for param_name, param_value in iter_params['circuit_params'].items():
                 assert isinstance(param_value, Number), \
                     f"Iteration: circuit parameters have to be numerical values (got {param_value})"

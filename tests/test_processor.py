@@ -29,9 +29,11 @@
 
 import pytest
 import warnings
+import numpy as np
 
 from _test_utils import assert_svd_close
-from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation
+from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
+    PS, PERM
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
@@ -289,3 +291,42 @@ def test_phase_quantization():
     p0.noise = nm
     p1.noise = nm
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+
+
+def test_processor_composition_mismatch_modes():
+    # tests composing a smaller processor into larger one works
+    # without breaking simplification (verifies it works with gates based circuits too)
+    def sub_size_processor():
+        h_cnot = catalog['heralded cnot'].build_processor()
+        p = Processor('SLOS', m_circuit=4, name='my_example')
+        p.add(0, BS.H())
+        p.add(0, h_cnot)
+        p.add(1, PS(np.pi / 4))
+        p.add(0, h_cnot)
+        return p
+
+    smaller_processor = sub_size_processor()
+    p = Processor('SLOS', m_circuit=5, name='to_Which_i_add')
+    p.add(0, smaller_processor)
+
+    assert len(p.components) == 7  # 3 PERMs get added because heralds need to move
+
+    r_list = []
+    comp_list = []
+    for r, c in p.components:
+        r_list.append(r)
+        comp_list.append(c)
+
+    # checks order of components
+    assert isinstance(comp_list[0], PERM)
+    assert isinstance(comp_list[1], BS)
+    assert isinstance(comp_list[2], Circuit)
+    assert isinstance(comp_list[3], PS)
+    assert isinstance(comp_list[4], PERM)
+    assert isinstance(comp_list[5], Circuit)
+    assert isinstance(comp_list[6], PERM)
+
+    # checks the position of elements
+    assert r_list[0] == [4, 5, 6] # checks PERM added here to move extra mode out of the way
+    assert r_list[1][0] == 0  # BS added at mode 0
+    assert r_list[3][0] == 1  # checks PS at mode 1

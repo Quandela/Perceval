@@ -38,7 +38,7 @@ from perceval.utils.density_matrix_utils import extract_upper_triangle
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
-from typing import Callable, Set, Union, Optional
+from typing import Callable, Set, Union, Optional, List
 from scipy.sparse import csc_array, csr_array
 
 
@@ -533,7 +533,7 @@ class Simulator(ISimulator):
 
         return DensityMatrix(out_matrix, index=dm.index, check_hermitian=False)
 
-    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix) -> csc_array:
+    def _construct_evolve_operator(self, input_list: List[BasicState], dm: DensityMatrix) -> csc_array:
         """
             construct the evolution operator needed to perform evolve_density_matrix.
             Stores it in a csc sparse_matrix

@@ -26,29 +26,43 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Provider related imports and classes"""
+"""module test rpc handler"""
 
-import warnings
-
-from perceval.runtime import ISession
-from .quandela import Session as QuandelaSession
-from .scaleway import Session as ScalewaySession
-
-PROVIDER_LIST = {
-    "Quandela": QuandelaSession,
-    "Scaleway": ScalewaySession,
-}
+from _mock_rpc_handler import get_rpc_handler
 
 
-class ProviderFactory:
-    @staticmethod
-    def get_provider(provider_name: str, **kwargs) -> ISession:
-        name = provider_name
-        if name in PROVIDER_LIST:
-            return PROVIDER_LIST[name](**kwargs)
+def test_build_endpoint(requests_mock):
+    """test build endpoint function"""
+    rpc = get_rpc_handler(requests_mock, url='https://example.org')
 
-        raise KeyError(f'Cloud Provider "{name}" not found, available providers are: {ProviderFactory.list()}.')
+    wanted = 'https://example.org/endpoint'
+    assert rpc.build_endpoint('/endpoint') == wanted
 
-    @staticmethod
-    def list():
-        return list(PROVIDER_LIST.keys())
+    wanted = 'https://example.org/endpoint/id'
+    assert rpc.build_endpoint('/endpoint', 'id') == wanted
+
+    wanted = 'https://example.org/endpoint/path/id'
+    assert rpc.build_endpoint('/endpoint', 'path', 'id') == wanted
+
+    wanted = 'https://example.org/endpoint/with/trailing/slash'
+    assert rpc.build_endpoint('/endpoint/', 'with', 'trailing/slash') == wanted
+
+    wanted = 'https://example.org/endpoint/path/with/slash'
+    assert rpc.build_endpoint('/endpoint/', '/path/', 'with/', '/slash/') == wanted
+
+    wanted = 'https://example.org/endpoint/with/number/1/8/789'
+    assert rpc.build_endpoint('/endpoint/', '/with/number', 1, '/8/', 789) == wanted
+
+
+def test_rpc_handler(requests_mock):
+    """test rpc handler calls"""
+    rpc = get_rpc_handler(requests_mock, url='https://example.org')
+    resp_details = rpc.fetch_platform_details()
+    assert 'name' in resp_details
+    id_job = rpc.create_job({})
+    assert isinstance(id_job, str)
+    resp_status = rpc.get_job_status(id_job)
+    assert resp_status['msg'] == 'ok'
+    rpc.cancel_job(id_job)
+    resp_result = rpc.get_job_results(id_job)
+    assert 'results' in resp_result

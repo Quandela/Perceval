@@ -258,7 +258,7 @@ def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
 
 
 class BSDistribution(ProbabilityDistribution):
-    r"""Time-Independant probabilistic distribution of Basic States
+    r"""Time-Independent probabilistic distribution of Basic States
     """
     def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()

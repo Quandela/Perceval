@@ -26,34 +26,59 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""module rpc mock handler"""
 
 import time
 import json
+from urllib.parse import quote_plus
 from perceval.utils import BSDistribution, BasicState
 from perceval.serialization import serialize
+from perceval.runtime.rpc_handler import (
+    RPCHandler,
+    _ENDPOINT_JOB_CANCEL,
+    _ENDPOINT_JOB_CREATE,
+    _ENDPOINT_JOB_RESULT,
+    _ENDPOINT_JOB_STATUS,
+    _ENDPOINT_PLATFORM_DETAILS,
+)
 
-
-REMOTE_JOB_NAME = "a remote job"
+REMOTE_JOB_NAME = 'a remote job'
 REMOTE_JOB_DURATION = 5
 REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
 REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
-REMOTE_JOB_RESULTS = BSDistribution({
-    BasicState([1, 0, 0, 0]): 0.200266,
-    BasicState([0, 1, 0, 0]): 0.09734,
-    BasicState([0, 0, 1, 0]): 0.089365,
-    BasicState([0, 0, 0, 1]): 0.223731,
-    BasicState([1, 0, 1, 0]): 0.308951
-})
+REMOTE_JOB_RESULTS = BSDistribution(
+    {
+        BasicState([1, 0, 0, 0]): 0.200266,
+        BasicState([0, 1, 0, 0]): 0.09734,
+        BasicState([0, 0, 1, 0]): 0.089365,
+        BasicState([0, 0, 0, 1]): 0.223731,
+        BasicState([1, 0, 1, 0]): 0.308951,
+    }
+)
 
 
-class MockRPCHandler:
-    _ARBITRARY_JOB_ID = "ebb1f8ec-0125-474f-9ffc-5178afef4d1a"
+def get_rpc_handler(requests_mock, url='http://test'):
+    """return a fake rpc handler"""
+    mock = MockRPCHandler(name='mocked:platform', url=url, token='no-token')
+    mock.set_mock(requests_mock)
+    return mock
+
+
+class MockRPCHandler(RPCHandler):
+    """mock of the rpc handler"""
+
     _SLEEP_SEC = 0.2
-    name = 'mocked:platform'
+    requests_mock = None
+
+    def set_mock(self, mock):
+        """set the mock request"""
+        self.requests_mock = mock
 
     def fetch_platform_details(self):
         time.sleep(self._SLEEP_SEC)
-        return {
+        quot_nam = quote_plus(self.name)
+        endpoint = super().build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quot_nam)
+        return_json = {
             'created_date': 'Mon, 31 Oct 2022 16:54:45 GMT',
             'description': 'Mocked Simulator',
             'id': 'e576e49c-7b1a-470b-5910-c04e406d40f6',
@@ -61,12 +86,13 @@ class MockRPCHandler:
             'name': self.name,
             'perfs': {},
             'specs': {
-                'available_commands': ['probs'], 'connected_input_modes': [0, 2, 4, 6, 8, 10],
+                'available_commands': ['probs'],
+                'connected_input_modes': [0, 2, 4, 6, 8, 10],
                 'constraints': {
                     'max_mode_count': 20,
                     'max_photon_count': 6,
                     'min_mode_count': 1,
-                    'min_photon_count': 1
+                    'min_photon_count': 1,
                 },
                 'description': 'Simulator of sim:altair qpu',
                 'detector': 'threshold',
@@ -77,41 +103,60 @@ class MockRPCHandler:
                     'g2': 'g2 value (default 0)',
                     'mode_post_select': 'number of required detected modes to keep a state. (default input_state.n)',
                     'phase_imprecision': 'imprecision on the phase shifter phases (default 0)',
-                    'transmittance': 'probability at each pulse that a photon is sent to the system and is detected (default 1)'
+                    'transmittance': 'probability at each pulse that a photon is sent to the system and is detected (default 1)',
                 },
             },
             'status': 'available',
             'svg': '',
             'type': 'simulator',
-            'waiting_jobs': 0
+            'waiting_jobs': 0,
         }
+        self.requests_mock.get(
+            endpoint,
+            json=return_json,
+        )
+        return super().fetch_platform_details()
 
     def create_job(self, payload):
         time.sleep(self._SLEEP_SEC)
-        return self._ARBITRARY_JOB_ID
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
+        arbitrary_job_id = 'ebb1f8ec-0125-474f-9ffc-5178afef4d1a'
+        return_json = {'job_id': arbitrary_job_id}
+        self.requests_mock.post(endpoint, json=return_json)
+        return super().create_job(payload)
 
     def cancel_job(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
+        self.requests_mock.post(endpoint, json={})
+        return super().cancel_job(job_id)
 
     def get_job_status(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
-        return {
-            "creation_datetime": REMOTE_JOB_CREATION_TIMESTAMP,
-            "duration": REMOTE_JOB_DURATION,
-            "failure_code": None,
-            "last_intermediate_results": None,
-            "msg": "ok",
-            "name": REMOTE_JOB_NAME,
-            "progress": 1.0,
-            "progress_message": "Computing phases to apply (step 2)",
-            "start_time": REMOTE_JOB_START_TIMESTAMP,
-            "status": "completed",
-            "status_message": None
+        return_json = {
+            'creation_datetime': REMOTE_JOB_CREATION_TIMESTAMP,
+            'duration': REMOTE_JOB_DURATION,
+            'failure_code': None,
+            'last_intermediate_results': None,
+            'msg': 'ok',
+            'name': REMOTE_JOB_NAME,
+            'progress': 1.0,
+            'progress_message': 'Computing phases to apply (step 2)',
+            'start_time': REMOTE_JOB_START_TIMESTAMP,
+            'status': 'completed',
+            'status_message': None,
         }
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
+        self.requests_mock.get(endpoint, json=return_json)
+        return super().get_job_status(job_id)
 
     def get_job_results(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
-        return {'results': json.dumps({
-            'results': serialize(REMOTE_JOB_RESULTS),
-            'physical_perf': 1
-        })}
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
+        return_json = {
+            'results': json.dumps(
+                {'results': serialize(REMOTE_JOB_RESULTS), 'physical_perf': 1}
+            )
+        }
+        self.requests_mock.get(endpoint, json=return_json)
+        return super().get_job_results(job_id)

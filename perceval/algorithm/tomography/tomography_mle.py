@@ -51,9 +51,6 @@ class TomographyMLE(AAlgorithm):
             raise ValueError(
                 f"Input processor has an odd mode count ({operator_processor.m}) and thus, is not a logical gate")
 
-        if self._processor.is_remote:
-            raise TypeError("Tomography does not support Remote Processor yet")
-
         self._gate_logical_perf = None
 
         # following parameters are for the reconstruction algorithm
@@ -192,7 +189,7 @@ class TomographyMLE(AAlgorithm):
         # uses measurements to reconstruct quantum maps (state or process) using MLE for Quantum Tomography
         # ref: https://doi.org/10.48550/arXiv.1609.07881
         #
-        # param init_guess_quantum_map: an initial guess ofr the quantum map
+        # param init_guess_quantum_map: an initial guess for the quantum map
 
         guess_quantum_map = copy.deepcopy(init_guess_quantum_map)
         init_quantum_map = copy.deepcopy(init_guess_quantum_map)

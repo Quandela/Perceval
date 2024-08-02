@@ -81,9 +81,11 @@ class QiskitConverter(AGateConverter):
                     raise ValueError("Gates with number of Qubits higher than 2 not implemented")
                 c_idx = qc.find_bit(instruction[1][0])[0] * 2
                 c_data = qc.find_bit(instruction[1][1])[0] * 2
-                c_first = min(c_idx, c_data)
-
-                self._create_2_qubit_gates_from_catalog(instruction[0].name, n_cnot, c_idx, c_data, c_first,
-                                                           use_postselection)
+                self._create_2_qubit_gates_from_catalog(
+                    instruction[0].name,
+                    n_cnot,
+                    c_idx,
+                    c_data,
+                    use_postselection)
         self.apply_input_state()
         return self._converted_processor

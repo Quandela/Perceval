@@ -296,7 +296,7 @@ class TextRenderer(ICircuitRenderer):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
-        
+
         if isinstance(circuit, Barrier):
             for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
                 if k % self._hc == 2:
@@ -771,8 +771,8 @@ def create_renderer(
     n: int,  # number of modes
     output_format: Format = Format.TEXT,  # rendering method
     skin: ASkin = None,  # skin (unused in text rendering)
-    **opts
-) -> ICircuitRenderer:
+    **opts,
+) -> tuple[ICircuitRenderer, ICircuitRenderer]:
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
     A skin object is needed for circuit graphic rendering.

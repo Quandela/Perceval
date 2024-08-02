@@ -320,7 +320,7 @@ class SymbSkin(ASkin):
                           "c", 0, r, -r, r, -r, r, "z"],
                          stroke="black", stroke_width=1, fill="white")
         if herald.name:
-            canvas.add_text((13, 41), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
+            canvas.add_text((13, 11), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
         canvas.add_text((8, 28), text=str(herald.expected), size=7, ta="middle")
 
     def port_shape_in(self, port, canvas, content, mode_style, **opts):
