@@ -33,7 +33,7 @@ from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source, AComponent
-from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
+from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel, logger, channel
 from perceval.serialization import deserialize, serialize
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
@@ -106,6 +106,7 @@ class RemoteProcessor(AProcessor):
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
+        logger.info(f"Connected to Cloud platform {self.name}", channel.general)
         if m is not None:
             self._n_moi = m
 

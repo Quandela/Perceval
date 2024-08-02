@@ -28,6 +28,7 @@
 # SOFTWARE.
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import RemoteProcessor
+from perceval.utils import logger, channel
 from .scaleway_rpc_handler import RPCHandler
 
 import requests
@@ -82,6 +83,7 @@ class Session(ISession):
         }
 
         self._rpc_handler = self.__build_rpc_handler()
+        logger.info(f"Creating Scaleway Session to {self._url}", channel.general)
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)

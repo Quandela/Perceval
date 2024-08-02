@@ -42,17 +42,23 @@ channel = xq_log.channel
 
 def _my_excepthook(excType, excValue, this_traceback):
     # only works for the main thread
-    LOGGER.error("Logging an uncaught exception", channel=channel.general,
+    LOGGER.error("Uncaught exception!", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
 
 def use_python_logger():
     global LOGGER
+    if isinstance(LOGGER, PythonLogger):
+        return
+    LOGGER.info("Changing to Python logger", channel.general)
     LOGGER = PythonLogger()
     sys.excepthook = _my_excepthook
 
 
 def use_perceval_logger():
     global LOGGER
+    if isinstance(LOGGER, ExqaliburLogger):
+        return
+    LOGGER.info("Changing to exqalibur logger", channel.general)
     LOGGER = ExqaliburLogger()
     sys.excepthook = _my_excepthook

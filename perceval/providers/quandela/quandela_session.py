@@ -30,6 +30,7 @@
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import QUANDELA_CLOUD_URL, RemoteProcessor
 from perceval.runtime.rpc_handler import RPCHandler
+from perceval.utils import logger, channel
 
 
 class Session(ISession):
@@ -37,6 +38,7 @@ class Session(ISession):
         self._platform_name = platform_name
         self._token = token
         self._url = url or QUANDELA_CLOUD_URL
+        logger.info(f"Creating Quandela Session to {self._url}", channel.general)
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=RPCHandler(self._platform_name, self._url, self._token))

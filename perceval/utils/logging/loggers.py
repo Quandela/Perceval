@@ -115,12 +115,14 @@ class ExqaliburLogger(ILogger):
         exq_log.enable_file()
 
     def disable_file(self):
+        self.warn("Log to file is being stopped!")
         exq_log.disable_file()
 
     def set_level(
             self,
             level: exq_log.level,
             channel: exq_log.channel = DEFAULT_CHANNEL) -> None:
+        self.info(f"Set log level to '{level.name}' for channel '{channel.name}'", channel.general)
         exq_log.set_level(level, channel)
 
     def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):

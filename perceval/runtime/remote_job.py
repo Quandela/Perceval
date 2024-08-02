@@ -35,6 +35,7 @@ from requests.exceptions import HTTPError, ConnectionError
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize, serialize
+from perceval.utils import logger, channel
 
 
 def _extract_job_times(response):
@@ -168,6 +169,7 @@ class RemoteJob(Job):
             self._request_data['job_name'] = self._name
             self._request_data['payload'].update(kwargs)
             self._id = self._rpc_handler.create_job(serialize(self._request_data))
+            logger.info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
 
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))

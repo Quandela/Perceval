@@ -43,19 +43,14 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawsvg
 
-import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
-from perceval.algorithm.analyzer import Analyzer
-from perceval.algorithm import AProcessTomography
+from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
-from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks, _complex_to_rgb
-from perceval.utils.format import simple_float, simple_complex
-from perceval.utils.matrix import Matrix
-from perceval.utils import DensityMatrix
-from perceval.utils.mlstr import mlstr
+from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
+from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr, logger, channel
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 from .format import Format
 from ._processor_utils import collect_herald_info
@@ -65,10 +60,12 @@ in_notebook = False
 
 
 def in_ide():
+    ide_detected = False
     for key in os.environ:
         if 'PYCHARM' in key or 'SPY_PYTHONPATH' in key or 'VSCODE' in key:
-            return True
-    return False
+            ide_detected = True
+    logger.debug(f"IDE detected: {ide_detected}", channel.general)
+    return ide_detected
 
 
 try:

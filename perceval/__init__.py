@@ -72,3 +72,4 @@ def register_plugin(name, silent=False):
 
 
 use_perceval_logger()
+logger.info(f"=== Starting Perceval session - process ID: {remote_processor.__process_id__} ===", channel.general)
