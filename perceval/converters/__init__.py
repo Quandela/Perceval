@@ -30,4 +30,6 @@
 from .qiskit_converter import QiskitConverter
 from .converter_statevector import StatevectorConverter
 from .myqlm_converter import MyQLMConverter
+from .circuit_to_graph_converter import CircuitToGraphConverter
+from .resources_estimator import ResourcesEstimator
 from .cqasm_converter import CQASMConverter, ConversionSyntaxError, ConversionUnsupportedFeatureError, ConversionBadVersionError
