@@ -170,19 +170,24 @@ class AParametrizedComponent(AComponent):
 
     def copy(self, subs: Union[dict, list] = None):
         nc = copy.deepcopy(self)
-
+        nc._params = {}
         if subs is None:
-            for k, p in nc._params.items():
+            for k, p in self._params.items():
                 if p.defined:
                     v = float(p)
                 else:
                     v = None
-                nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
+
+                if p.is_copyable:
+                    nc._params[k] = Parameter(p.name, v, p.min, p.max, p.is_periodic)
+                else:
+                    nc._params[k] = p
+
                 nc.__setattr__("_"+k, nc._params[k])
         else:
             if isinstance(subs, list):
                 subs = {p.name: p.spv for p in subs}
-            for k, p in nc._params.items():
+            for k, p in self._params.items():
                 name = p.name
                 min_v = p.min
                 max_v = p.max
@@ -191,10 +196,15 @@ class AParametrizedComponent(AComponent):
                     p = p._symbol.evalf(subs=subs)
                 else:
                     p = p.evalf(subs=subs)
-                if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
-                    nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
+
+                if p.is_copyable:
+                    if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
+                        nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
+                    else:
+                        nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
                 else:
-                    nc._params[k] = Parameter(name, None, min_v, max_v, is_periodic)
+                    nc._params[k] = p
+
         for k, p in nc._params.items():
             nc.__setattr__("_" + k, nc._params[k])
 

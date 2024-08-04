@@ -44,12 +44,14 @@ class Parameter:
     :param min_v: minimal value that the parameter can take, is used in circuit optimization
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
     :param is_expression: for symbolic parameter, the value is an expression to evaluate with context values
+    :param is_copyable: determines if a parameter object could be copied, or if it has to remain a reference to
+                        a variable defined by the user in the main(outer) scope. 
     """
     _id = 0
 
     def __init__(self, name: str, value: float = None,
                  min_v: float = None, max_v: float = None, periodic=True,
-                 is_expression: bool = False):
+                 is_expression: bool = False, is_copyable: bool = True):
         if min_v is not None:
             self._min = float(min_v)
         else:
@@ -71,6 +73,7 @@ class Parameter:
         self._periodic = periodic
         self._pid = Parameter._id
         self._is_expression = is_expression
+        self._is_copyable = is_copyable
         Parameter._id += 1
 
     @property
@@ -209,6 +212,15 @@ class Parameter:
         r"""Unique identifier for the parameter"""
         return self._pid
 
+    @property
+    def is_copyable(self) -> bool:
+        r"""If a Parameter object will be copied with the circuit"""
+        return self._is_copyable
+
+    @is_copyable.setter
+    def is_copyable(self, copyable: bool = True):
+        r"""Sets if a Parameter object will be copied with the circuit"""
+        self._is_copyable = copyable
 
 class Expression(Parameter):
     def __init__(self, expression: str):
