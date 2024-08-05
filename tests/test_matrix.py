@@ -35,7 +35,7 @@ import sympy as sp
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
 
-from _test_utils import WarnLogChecker
+from _test_utils import LogChecker
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
@@ -189,7 +189,7 @@ def test_genunitary():
 
 @patch.object(pcvl.logger, "warn")
 def test_param_unitary(mock_warn):
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         M = pcvl.Matrix.random_unitary(2, np.arange(8))
 
     # output Matrix

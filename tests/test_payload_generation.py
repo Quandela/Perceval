@@ -43,7 +43,7 @@ from perceval.serialization._constants import (
 from perceval.serialization import deserialize
 
 from _mock_rpc_handler import get_rpc_handler
-from _test_utils import WarnLogChecker
+from _test_utils import LogChecker
 
 
 COMMAND_NAME = 'my_command'
@@ -84,7 +84,7 @@ def test_payload_parameters(mock_warn, requests_mock):
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
 
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         rp.set_parameter('g2', 0.05)
 
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
