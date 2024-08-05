@@ -192,12 +192,13 @@ class AParametrizedComponent(AComponent):
                 min_v = p.min
                 max_v = p.max
                 is_periodic = p.is_periodic
-                if p._value is None:
-                    p = p._symbol.evalf(subs=subs)
-                else:
-                    p = p.evalf(subs=subs)
 
                 if p.is_copyable:
+                    if p._value is None:
+                        p = p._symbol.evalf(subs=subs)
+                    else:
+                        p = p.evalf(subs=subs)
+
                     if not isinstance(p, sp.Expr) or isinstance(p, sp.Number):
                         nc._params[k] = Parameter(name, float(p), min_v, max_v, is_periodic)
                     else:
