@@ -37,6 +37,7 @@ from typing import Any, Dict, List, Union, Tuple
 from perceval.components.linear_circuit import Circuit, ACircuit
 from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
+from perceval.utils import logger, channel
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .abstract_component import AComponent
 from .unitary_components import PERM, Unitary
@@ -107,6 +108,7 @@ class AProcessor(ABC):
         self._parameters = {}
 
     def clear_input_and_circuit(self, new_m=None):
+        logger.debug(f"Clear input and circuit in processor {self.name}", channel.general)
         self._reset_circuit()
         self._input_state = None
         self._circuit_changed()
@@ -190,6 +192,7 @@ class AProcessor(ABC):
         return True
 
     def copy(self, subs: Union[dict, list] = None):
+        logger.debug(f"Copy processor {self.name}", channel.general)
         new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
@@ -238,6 +241,8 @@ class AProcessor(ABC):
         """
         if self._n_moi is None:
             self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
+            logger.debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
+                         channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):

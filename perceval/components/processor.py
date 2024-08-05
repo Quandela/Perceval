@@ -36,6 +36,7 @@ from .abstract_processor import AProcessor, ProcessorType
 from .source import Source
 from .linear_circuit import ACircuit, Circuit
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
+from perceval.utils import logger, channel
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 
 
@@ -133,6 +134,7 @@ class Processor(AProcessor):
             assert backend in BACKEND_LIST, f"Simulation backend '{backend}' does not exist"
             self.backend = BACKEND_LIST[backend]()
         else:
+            assert isinstance(backend, ABackend), f"'backend' must be an ABackend (got {type(backend)})"
             self.backend = backend
 
     def type(self) -> ProcessorType:
@@ -247,6 +249,7 @@ class Processor(AProcessor):
         if not self._phase_quantization:
             return circuit
         # Apply phase quantization noise on all phase parameters in the circuit
+        logger.debug(f"Inject phase imprecision noise ({self._phase_quantization} in the circuit")
         circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
         for _, component in circuit:
             if "phi" in component.params:
@@ -263,7 +266,10 @@ class Processor(AProcessor):
         sampling_simulator.set_selection(self._min_detected_photons, self.post_select_fn, self.heralds)
         sampling_simulator.set_threshold_detector(self.is_threshold)
         sampling_simulator.keep_heralds(False)
-        return sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
+        logger.info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
+        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
+        logger.info("Local sampling complete!", channel.general)
+        return res
 
     def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
@@ -275,7 +281,10 @@ class Processor(AProcessor):
 
         if precision is not None:
             self._simulator.set_precision(precision)
+        logger.info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
+                    channel.general)
         res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
+        logger.info("Local strong simulation complete!", channel.general)
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():

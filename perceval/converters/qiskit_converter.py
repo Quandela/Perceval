@@ -78,7 +78,7 @@ class QiskitConverter(AGateConverter):
             else:
                 if instruction[0].num_qubits > 2:
                     # only 2 qubit gates
-                    raise ValueError("Gates with number of Qubits higher than 2 not implemented")
+                    raise NotImplementedError("2+ Qubit gates not implemented")
                 c_idx = qc.find_bit(instruction[1][0])[0] * 2
                 c_data = qc.find_bit(instruction[1][1])[0] * 2
                 self._create_2_qubit_gates_from_catalog(

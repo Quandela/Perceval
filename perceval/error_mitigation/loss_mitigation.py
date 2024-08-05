@@ -32,7 +32,7 @@ import numpy as np
 from math import comb
 from scipy.optimize import curve_fit
 from typing import Union
-from ..utils.statevector import BSCount, BSDistribution, BasicState
+from perceval.utils import BSCount, BSDistribution, BasicState, logger, channel
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
 
@@ -62,6 +62,8 @@ def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_c
     :param ideal_photon_count: expected photon count for a loss-less system
     :return photon loss mitigated distribution
     """
+    logger.info(f"Running Photon Recycling on a {len(noisy_input)} states distribution targetting {ideal_photon_count} ideal photons",
+                channel.general)
     # run checks on noisy input before recycling
     _validate_noisy_input(noisy_input, ideal_photon_count)
 
