@@ -33,7 +33,7 @@ from typing import Dict, Callable, Union, List
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
-from perceval.utils import logger, channel, deprecated
+from perceval.utils.logging import logger, channel, deprecated
 
 from .abstract_processor import AProcessor, ProcessorType
 from .linear_circuit import ACircuit, Circuit

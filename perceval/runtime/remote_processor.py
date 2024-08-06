@@ -32,7 +32,8 @@ from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source, AComponent
-from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel, logger, channel
+from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
+from perceval.utils.logging import logger, channel
 from perceval.serialization import deserialize, serialize
 
 from .remote_job import RemoteJob

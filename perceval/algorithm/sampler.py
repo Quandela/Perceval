@@ -31,7 +31,8 @@ from numbers import Number
 
 from .abstract_algorithm import AAlgorithm
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples,\
-                           sample_count_to_probs, probs_to_samples, probs_to_sample_count, logger, channel
+                           sample_count_to_probs, probs_to_samples, probs_to_sample_count
+from perceval.utils.logging import logger, channel
 from perceval.components.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
 from perceval.utils import BasicState

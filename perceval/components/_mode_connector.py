@@ -26,10 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.utils import logger, channel
 from typing import Dict, List, Union
 
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 from .abstract_component import AComponent
 from .unitary_components import PERM

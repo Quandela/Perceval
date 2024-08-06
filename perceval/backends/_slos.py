@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 from ._abstract_backends import AProbAmpliBackend
-from perceval.utils import Matrix, BasicState, BSDistribution, StateVector, logger, channel
+from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
+from perceval.utils.logging import logger, channel
 
 import exqalibur as xq
 import math

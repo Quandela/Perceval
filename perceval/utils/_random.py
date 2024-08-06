@@ -30,7 +30,7 @@
 import random
 import numpy as np
 import exqalibur as xq
-from .logging import LOGGER as logger, channel
+from .logging import logger, channel
 
 
 def random_seed(seed: int = None):

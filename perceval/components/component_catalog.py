@@ -34,7 +34,7 @@ from typing import List
 
 from perceval.utils import Parameter
 from perceval.components import Processor, Circuit
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 
 class AsType(Enum):

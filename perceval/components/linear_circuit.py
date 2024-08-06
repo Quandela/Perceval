@@ -41,7 +41,7 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
-from perceval.utils import logger, channel, deprecated
+from perceval.utils.logging import logger, channel, deprecated
 from perceval.utils.algorithms import decomposition, Match
 from perceval.utils.algorithms.solve import solve
 

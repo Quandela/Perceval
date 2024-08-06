@@ -30,7 +30,7 @@
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import QUANDELA_CLOUD_URL, RemoteProcessor
 from perceval.runtime.rpc_handler import RPCHandler
-from perceval.utils import logger, channel
+from perceval.utils.logging import logger, channel
 
 
 class Session(ISession):

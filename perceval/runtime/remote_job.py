@@ -35,7 +35,7 @@ from requests.exceptions import HTTPError, ConnectionError
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize, serialize
-from perceval.utils import logger, channel
+from perceval.utils.logging import logger, channel
 
 
 def _extract_job_times(response: dict):

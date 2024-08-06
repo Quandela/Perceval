@@ -31,7 +31,8 @@ import numpy as np
 from math import comb
 from scipy.optimize import curve_fit
 from typing import Union
-from perceval.utils import BSCount, BSDistribution, BasicState, logger, channel
+from perceval.utils import BSCount, BSDistribution, BasicState
+from perceval.utils.logging import logger, channel
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
 

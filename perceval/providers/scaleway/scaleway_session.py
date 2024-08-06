@@ -28,7 +28,7 @@
 # SOFTWARE.
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import RemoteProcessor
-from perceval.utils import logger, channel
+from perceval.utils.logging import logger, channel
 from .scaleway_rpc_handler import RPCHandler
 
 import requests

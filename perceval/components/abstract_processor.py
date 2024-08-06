@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
-from perceval.utils import logger, channel
+from perceval.utils.logging import logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent

@@ -51,7 +51,8 @@ from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
-from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr, logger, channel
+from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr
+from perceval.utils.logging import logger, channel
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 
 from .format import Format

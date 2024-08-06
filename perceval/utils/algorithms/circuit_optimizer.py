@@ -31,7 +31,8 @@ from typing import Callable, Tuple, Union
 
 import exqalibur as xq
 from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
-from perceval.utils import Matrix, P, logger, channel
+from perceval.utils import Matrix, P
+from perceval.utils.logging import logger, channel
 from perceval.serialization import serialize_binary, deserialize_circuit
 
 

@@ -30,7 +30,7 @@
 from typing import Callable, Optional
 import threading
 
-from perceval.utils import logger, channel
+from perceval.utils.logging import logger, channel
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 

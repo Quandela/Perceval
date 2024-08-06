@@ -34,8 +34,8 @@ from .config import LoggerConfig
 from .loggers import ExqaliburLogger, PythonLogger
 
 
-LOGGER = ExqaliburLogger()
-LOGGER.initialize()
+logger = ExqaliburLogger()
+logger.initialize()
 
 level = xq_log.level
 channel = xq_log.channel
@@ -43,7 +43,7 @@ channel = xq_log.channel
 
 def _my_excepthook(excType, excValue, this_traceback):
     # only works for the main thread
-    LOGGER.error("Uncaught exception!", channel=channel.general,
+    logger.error("Uncaught exception!", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
 
@@ -56,24 +56,25 @@ def deprecated(*decorator_args, **decorator_kwargs):
                 log += f" ({decorator_kwargs['reason']})"
             if "version" in decorator_kwargs:
                 log += f" -- Deprecated since version {decorator_kwargs['version']}"
-            LOGGER.warn(log, channel.user)
+            logger.warn(log, channel.user)
             return func(*args, **kwargs)
         return wrapper_deprecated
     return decorator_deprecated
 
+
 def use_python_logger():
-    global LOGGER
-    if isinstance(LOGGER, PythonLogger):
+    global logger
+    if isinstance(logger, PythonLogger):
         return
-    LOGGER.info("Changing to Python logger", channel.general)
-    LOGGER = PythonLogger()
+    logger.info("Changing to Python logger", channel.general)
+    logger = PythonLogger()
     sys.excepthook = _my_excepthook
 
 
 def use_perceval_logger():
-    global LOGGER
-    if isinstance(LOGGER, ExqaliburLogger):
+    global logger
+    if isinstance(logger, ExqaliburLogger):
         return
-    LOGGER.info("Changing to exqalibur logger", channel.general)
-    LOGGER = ExqaliburLogger()
+    logger.info("Changing to exqalibur logger", channel.general)
+    logger = ExqaliburLogger()
     sys.excepthook = _my_excepthook
