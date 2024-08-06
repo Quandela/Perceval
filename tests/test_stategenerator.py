@@ -34,7 +34,7 @@ from unittest.mock import patch
 import perceval as pcvl
 import networkx as nx
 
-from _test_utils import WarnLogChecker
+from _test_utils import LogChecker
 
 
 def test_logical_state_raw():
@@ -213,5 +213,5 @@ def test_dicke_state(mock_warn, encoding):
     with pytest.raises(ValueError):
         pcvl.StateGenerator(encoding).dicke_state(-1)
 
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         assert pcvl.StateGenerator(encoding).dicke_state(4, 2) == pcvl.StateVector()

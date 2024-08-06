@@ -31,12 +31,16 @@ import re
 import math
 import pytest
 
+import pytest
+
 from typing import Type
 from pathlib import Path
+from unittest.mock import MagicMock
 from unittest.mock import MagicMock
 
 import perceval as pcvl
 from perceval.utils import StateVector, SVDistribution
+from perceval.utils.logging import channel
 from perceval.utils.logging import channel
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
@@ -195,18 +199,50 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         assert ok, msg
 
 
-class WarnLogChecker():
+class LogChecker():
+    """Check if the logger as the log the expected number of log.
+
+    The syntax to use this class is:
+
+    with LogChecker(mock):
+        do_something_that_expect_log
+
+    It is inspired of the method pytest.warns()
+
+    :param mock_warn: Mock object of the logger method to check (can be logger.warn, .info, .err ...)
+    :param log_channel: Channel of the log to check, defaults to channel.user
+    :param expected_log_number: Number of log expected to check, defaults to 1
+    """
     def __init__(self, mock_warn: MagicMock, log_channel: channel = channel.user, expected_log_number: int = 1):
+
         self._mock_warn = mock_warn
         self._call_count = mock_warn.call_count
         self._expected_channel = log_channel
         self._expected_log_number = expected_log_number
 
     def __enter__(self):
+        """Begging of the with statement.
+
+        Check that no message has been log since last with statement.
+
+        :return: self
+        """
         assert self._mock_warn.call_count == self._call_count
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """End of the with statement
+
+        Check within the with statement that:
+            - expected_log_number message(s) have been log/
+            Then for each messages that:
+                - first argument is a str
+                - second argument is the expected log channel
+
+        :param exc_type: _
+        :param exc_val: _
+        :param exc_tb: _
+        """
         self._call_count += self._expected_log_number
         assert self._mock_warn.call_count == self._call_count, f"logger.warn: expected {self._call_count} log but got {self._mock_warn.call_count}"
         for i in range(self._expected_log_number):
@@ -214,4 +250,8 @@ class WarnLogChecker():
             assert self._mock_warn.mock_calls[-i].args[1] == self._expected_channel
 
     def set_expected_log_number(self, expected_log_number: int):
+        """Setter of how many log message are expected
+
+        :param expected_log_number: expected log number
+        """
         self._expected_log_number = expected_log_number

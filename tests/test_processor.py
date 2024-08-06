@@ -37,13 +37,13 @@ from perceval.components import Circuit, Processor, BS, Source, catalog, Unavail
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
-from _test_utils import assert_svd_close, WarnLogChecker
+from _test_utils import assert_svd_close, LogChecker
 
 
 @patch.object(pcvl.logger, "warn")
 def test_processor_input_fock_state(mock_warn):
     p = Processor("Naive", Circuit(4))  # Init with perfect source
-    with WarnLogChecker(mock_warn, expected_log_number=0):
+    with LogChecker(mock_warn, expected_log_number=0):
         p.with_input(BasicState([0, 1, 1, 0]))
     assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
 
@@ -67,7 +67,7 @@ def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
                     indistinguishability=0.9)
     source.simplify_distribution = True
     p = Processor("Naive", Circuit(4), source)
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
@@ -133,7 +133,7 @@ def test_processor_probs(mock_warn):
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
     qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
 
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0

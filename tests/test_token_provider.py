@@ -37,7 +37,7 @@ import perceval as pcvl
 from perceval.runtime._token_management import _TOKEN_FILE_NAME
 
 from _mock_persistent_data import TokenProviderForTest
-from _test_utils import WarnLogChecker
+from _test_utils import LogChecker
 
 
 
@@ -112,7 +112,7 @@ def test_token_file_access(mock_warn):
 
     os.chmod(directory, 0o000)
 
-    with WarnLogChecker(mock_warn) as warn_log_checker:
+    with LogChecker(mock_warn) as warn_log_checker:
         token_provider.force_token(TOKEN_FROM_FILE)
         token_provider.save_token()
 

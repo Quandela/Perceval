@@ -36,7 +36,7 @@ import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough, WarnLogChecker
+from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough, LogChecker
 from _mock_rpc_handler import (
     get_rpc_handler,
     REMOTE_JOB_DURATION,
@@ -65,7 +65,7 @@ def test_remote_job(mock_warn, requests_mock):
     assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     _TEST_JOB_ID = "any"
@@ -98,7 +98,7 @@ def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
 
     for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
         if i == 0:
-            with WarnLogChecker(mock_warn) as warn_log_checker:
+            with LogChecker(mock_warn) as warn_log_checker:
                 p.with_input(input_state)
             with warn_log_checker:
                 rp.with_input(input_state)

@@ -36,7 +36,7 @@ from perceval.utils.conversion import BSCount,  BSDistribution,  BSSamples, \
     sample_count_to_probs, sample_count_to_samples, samples_to_probs, samples_to_sample_count
 from perceval.utils import BasicState
 
-from _test_utils import WarnLogChecker
+from _test_utils import LogChecker
 
 
 b0 = BasicState([0, 0, 0, 1])
@@ -80,7 +80,7 @@ def test_sample_count_to_probs(mock_warn):
     assert output[b2] == pytest.approx(0.4)
     assert output[b3] == pytest.approx(0.2)
 
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         empty = sample_count_to_probs(BSCount())
 
     assert len(empty) == 0

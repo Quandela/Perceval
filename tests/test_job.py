@@ -31,11 +31,16 @@ import pytest
 import time
 from unittest.mock import patch
 
+
+import pytest
+import time
+from unittest.mock import patch
+
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
 from perceval.algorithm import Sampler
 
-from _test_utils import WarnLogChecker
+from _test_utils import LogChecker
 
 
 PERIOD = 0.1
@@ -68,7 +73,7 @@ def test_run_sync_1(mock_warn):
     assert job.status.status == RunningStatus.SUCCESS
 
     job.status.status = RunningStatus.UNKNOWN
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         assert job.get_results() == [0, 1, 4, 9, 16]
 
 
@@ -97,7 +102,7 @@ def test_run_async_fail(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     assert job.execute_async(5, 0.01) is job
 
-    with WarnLogChecker(mock_warn) as warn_log_checker:
+    with LogChecker(mock_warn) as warn_log_checker:
         while not job.is_complete:
             time.sleep(1)
     assert not job.status.success

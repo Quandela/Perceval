@@ -38,7 +38,7 @@ from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
 
-from _test_utils import assert_sv_close, assert_svd_close, WarnLogChecker
+from _test_utils import assert_sv_close, assert_svd_close, LogChecker
 
 
 class MockBackend(AProbAmpliBackend):
@@ -158,7 +158,7 @@ def test_simulator_probs_postselection(mock_warn):
     simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
 
-    with WarnLogChecker(mock_warn):
+    with LogChecker(mock_warn):
         output_dist = simulator.probs(input_state)
 
     assert len(output_dist) == 0
