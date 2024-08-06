@@ -35,26 +35,12 @@ from _test_utils import assert_sv_close
 def test_utils():
     sv1 = StateVector([0, 1]) + StateVector([1, 0])
     sv1_bis = 1.0000001*StateVector([0, 1]) + 0.9999999*StateVector([1, 0])
-    assert_sv_close(sv1, sv1_bis)
     sv2 = StateVector([0, 1]) - StateVector([1, 0])
-    try:
-        assert_sv_close(sv1, sv2)
-    except AssertionError:
-        print("detected sv are different")
-
     sv3 = StateVector([0, 1]) + StateVector([1, 1])
-    try:
-        assert_sv_close(sv1, sv3)
-    except AssertionError:
-        print("detected sv are different")
-
     sv4 = StateVector([0, 1])
-    try:
-        assert_sv_close(sv1, sv4)
-    except AssertionError:
-        print("detected sv are different")
 
-    try:
-        assert_sv_close(sv4, sv1)
-    except AssertionError:
-        print("detected sv are different")
+    assert_sv_close(sv1, sv1_bis)
+    assert_sv_close(sv1, sv2)
+    assert_sv_close(sv1, sv3)
+    assert_sv_close(sv1, sv4)
+    assert_sv_close(sv4, sv1)
