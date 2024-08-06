@@ -33,7 +33,7 @@ from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
 from scipy.sparse import csc_array, csr_array
-from typing import Callable, Set, Union, Optional, List
+from typing import Callable, Set, Union, Optional, List, Dict
 
 from perceval.backends import AProbAmpliBackend
 from perceval.components import ACircuit
@@ -577,14 +577,19 @@ class Simulator(ISimulator):
                 input_list.append(dm.inverse_index[k])
         return input_list
 
-    def log_resources(self, method, method_parameters):
-        method_parameters = {key: value for key, value in method_parameters.items() if value is not None}
+    def log_resources(self, method: str, extra_parameters: Dict):
+        """Log resources of the simulator
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
         my_dict = {
             'layer': 'Simulator',
             'backend': self._backend.name,
             'm': self._backend._circuit.m,
             'method': method
         }
-        if method_parameters:
-            my_dict.update(method_parameters)
+        if extra_parameters:
+            my_dict.update(extra_parameters)
         logger.log_resources(my_dict)

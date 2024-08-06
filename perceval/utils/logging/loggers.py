@@ -30,9 +30,10 @@
 import json
 import traceback
 import warnings
+import logging as py_log
 
 from abc import ABC, abstractmethod
-import logging as py_log
+from typing import Dict
 from os import path
 
 from exqalibur import logging as exq_log
@@ -76,7 +77,11 @@ class ALogger(ABC):
     def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         pass
 
-    def log_resources(self, my_dict):
+    def log_resources(self, my_dict: Dict):
+        """Log a dictionary as resources, meaning at log level info, in channel user and serialize by json module
+
+        :param my_dict: resources dictionary to log
+        """
         self.info(json.dumps(my_dict), exq_log.channel.resources)
 
 

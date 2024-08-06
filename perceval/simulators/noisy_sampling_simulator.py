@@ -344,14 +344,19 @@ class NoisySamplingSimulator:
         sampling['results'] = samples_to_sample_count(sampling['results'])
         return sampling
 
-    def log_resources(self, method, method_parameters):
-        method_parameters = {key: value for key, value in method_parameters.items() if value is not None}
+    def log_resources(self, method: str, extra_parameters: Dict):
+        """Log resources of the noisy sampling simulator
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
         my_dict = {
             'layer': 'NoisySamplingSimulator',
             'backend': self._backend.name,
             'm': self._backend._circuit.m,
             'method': method
         }
-        if method_parameters:
-            my_dict.update(method_parameters)
+        if extra_parameters:
+            my_dict.update(extra_parameters)
         logger.log_resources(my_dict)
