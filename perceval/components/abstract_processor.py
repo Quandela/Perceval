@@ -30,18 +30,19 @@
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
-import warnings
 from multipledispatch import dispatch
 from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
-from ._mode_connector import ModeConnector, UnavailableModeException
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
-from .port import Herald, PortLocation, APort, get_basic_state_from_ports
-from .abstract_component import AComponent
-from .unitary_components import PERM, Unitary
-from .non_unitary_components import TD
 from perceval.utils.algorithms.simplification import perm_compose, simplify
+from perceval.utils.logging import LOGGER as logger, channel
+
+from ._mode_connector import ModeConnector, UnavailableModeException
+from .abstract_component import AComponent
+from .non_unitary_components import TD
+from .port import Herald, PortLocation, APort, get_basic_state_from_ports
+from .unitary_components import PERM, Unitary
 
 
 class ProcessorType(Enum):
@@ -560,10 +561,10 @@ class AProcessor(ABC):
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
 
     def _deduce_min_detected_photons(self, expected_photons: int) -> None:
-        warnings.warn(UserWarning(
-            f"Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly\n" +
-            "Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)\n" +
-            "The current deduced value of min_detected_photons is {expected_photons}"))
+        logger.warn(
+            "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
+            " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
+            f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
         self._min_detected_photons = expected_photons
 
     @dispatch(BasicState)

@@ -29,12 +29,13 @@
 import uuid
 from typing import Dict, List, Any
 from multipledispatch import dispatch
-from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source, AComponent
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
+from perceval.utils.logging import LOGGER as logger, channel
 from perceval.serialization import deserialize, serialize
+
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from ._token_management import TokenProvider
@@ -89,7 +90,8 @@ class RemoteProcessor(AProcessor):
             self._rpc_handler = rpc_handler
             self.name = rpc_handler.name
             if name is not None and name != self.name:
-                warn(f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})")
+                logger.warn(
+                    f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
         else:
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
@@ -116,8 +118,8 @@ class RemoteProcessor(AProcessor):
     def noise(self, nm):
         super(RemoteProcessor, type(self)).noise.fset(self, nm)
         if nm and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
-            warn(f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
-                 UserWarning)
+            logger.warn(
+                f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored", channel.user)
 
     @property
     def is_remote(self) -> bool:
@@ -162,8 +164,8 @@ class RemoteProcessor(AProcessor):
     def set_parameter(self, key: str, value: Any):
         super().set_parameter(key, value)
         if key in DEPRECATED_NOISE_PARAMS:
-            warn(f"'{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead.",
-                 DeprecationWarning)
+            logger.warn(
+                f"DeprecationWarning: '{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead. version=0.11", channel.user)
 
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
@@ -239,8 +241,8 @@ class RemoteProcessor(AProcessor):
             if isinstance(self._postselect, PostSelect):
                 payload['postselect'] = serialize(self._postselect)
             else:
-                warn(f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect",
-                     RuntimeWarning)
+                logger.warn(
+                    f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect", channel.user)
         if self.heralds:
             payload['heralds'] = self.heralds
         if self._noise is not None:
@@ -272,7 +274,8 @@ class RemoteProcessor(AProcessor):
             transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
         else:
             transmittance = DEFAULT_TRANSMITTANCE
-            warn(f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}")
+            logger.warn(
+                f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
         losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n

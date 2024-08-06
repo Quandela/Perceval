@@ -27,15 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import math
 import copy
-import os
+import math
 import numpy
+import os
 
-from multipledispatch import dispatch
-import sympy as sp
-from tabulate import tabulate
-from typing import Union
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -43,20 +39,25 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawsvg
 
-import matplotlib
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
+from multipledispatch import dispatch
+from tabulate import tabulate
+from typing import Union
+import matplotlib.pyplot as plt
+import sympy as sp
 
-from perceval.algorithm.analyzer import Analyzer
 from perceval.algorithm import AProcessTomography
+from perceval.algorithm.analyzer import Analyzer
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
-from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks, _complex_to_rgb
-from perceval.utils.format import simple_float, simple_complex
-from perceval.utils.matrix import Matrix
+from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
 from perceval.utils import DensityMatrix
+from perceval.utils.format import simple_float, simple_complex
+from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.matrix import Matrix
 from perceval.utils.mlstr import mlstr
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
+
 from .format import Format
 from ._processor_utils import collect_herald_info
 
@@ -548,5 +549,5 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
             f_out.write(res)
         return
 
-    warnings.warn(
-        f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}")
+    logger.warn(
+        f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}", channel.user)

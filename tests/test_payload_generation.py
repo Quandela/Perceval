@@ -28,9 +28,10 @@
 # SOFTWARE.
 """module test payload generation"""
 
-import pytest
+from unittest.mock import patch
 
-from _mock_rpc_handler import get_rpc_handler
+import perceval as pcvl
+
 from perceval import RemoteProcessor, BasicState, PostSelect, catalog
 from perceval.serialization._constants import (
     ZIP_PREFIX,
@@ -40,6 +41,9 @@ from perceval.serialization._constants import (
     POSTSELECT_TAG,
 )
 from perceval.serialization import deserialize
+
+from _mock_rpc_handler import get_rpc_handler
+from _test_utils import LogChecker
 
 
 COMMAND_NAME = 'my_command'
@@ -72,14 +76,17 @@ def test_payload_basics(requests_mock):
     )
 
 
-def test_payload_parameters(requests_mock):
+@patch.object(pcvl.logger, "warn")
+def test_payload_parameters(mock_warn, requests_mock):
     """test parameters of payload"""
     n_params = 5
     rp = _get_remote_processor(requests_mock)
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
-    with pytest.warns(DeprecationWarning):
+
+    with LogChecker(mock_warn):
         rp.set_parameter('g2', 0.05)
+
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' in payload
     for i in range(n_params):

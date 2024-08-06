@@ -27,13 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
+import importlib
 from abc import ABC, abstractmethod
 from enum import Enum
-import importlib
 from typing import List
+
 from perceval.utils import Parameter
 from perceval.components import Processor, Circuit
+from perceval.utils.logging import LOGGER as logger, channel
 
 
 class AsType(Enum):
@@ -149,7 +150,7 @@ class Catalog:
             sub_catalog = getattr(module, 'catalog_items')
             self._add_sub_catalog(sub_catalog)
         else:
-            warnings.warn(f"No sub catalog found at path {path}", category=ImportWarning)
+            logger.warn(f"No sub catalog found at path {path}", channel.user)
 
     def _add_sub_catalog(self, catalog):
         for cls in catalog:
