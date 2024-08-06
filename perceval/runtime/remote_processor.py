@@ -336,14 +336,13 @@ class RemoteProcessor(AProcessor):
         my_dict = {
             'layer': 'RemoteProcessor',
             'platform': self.name,
-            'n': self._input_state.n,
             'm': self.linear_circuit().m,
             'command': command
         }
+        if self._input_state:
+            my_dict['n'] = self._input_state.n
         if self.noise:
             my_dict['noise'] = self.noise.__dict__()
-        elif self.source:
-            my_dict['source'] = self.source.__dict__()
         if method_parameters:
             my_dict.update(method_parameters)
         logger.log_resources(my_dict)
