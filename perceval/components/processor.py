@@ -27,18 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+
 from multipledispatch import dispatch
 from numpy import inf
 from typing import Dict, Callable, Union, List
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
-from perceval.utils.logging import deprecated
+from perceval.utils.logging import deprecated, LOGGER as logger, channel
 
 from .abstract_processor import AProcessor, ProcessorType
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
-
 
 
 class Processor(AProcessor):
@@ -265,6 +266,7 @@ class Processor(AProcessor):
         sampling_simulator.set_selection(self._min_detected_photons, self.post_select_fn, self.heralds)
         sampling_simulator.set_threshold_detector(self.is_threshold)
         sampling_simulator.keep_heralds(False)
+        self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         return sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
 
     def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
@@ -289,8 +291,38 @@ class Processor(AProcessor):
         postprocessed_res.normalize()
         res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
         res['results'] = postprocessed_res
+        self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res
 
     @property
     def available_commands(self) -> List[str]:
         return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
+
+    def log_resources(self, method: str, extra_parameters: Dict):
+        """Log resources of the processor
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'Processor',
+            'backend': self.backend.name,
+            'm': self.circuit_size,
+            'method': method
+        }
+        if isinstance(self._input_state, BasicState):
+            my_dict['n'] = self._input_state.n
+        elif isinstance(self._input_state, StateVector):
+            my_dict['n'] = max(self._input_state.n)
+        elif isinstance(self._input_state, SVDistribution):
+            my_dict['n'] = self._input_state.n_max
+        else:
+            logger.info(f"Cannot get n for type {type(self._input_state)}", channel.resource)
+        if extra_parameters:
+            my_dict.update(extra_parameters)
+        if self.noise:
+            my_dict['noise'] = self.noise.__dict__()
+        elif self.source:
+            my_dict['source'] = self.source.__dict__()
+        logger.log_resources(my_dict)
