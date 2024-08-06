@@ -303,7 +303,7 @@ class Processor(AProcessor):
         my_dict = {
             'layer': 'Processor',
             'backend': self.backend.name,
-            'm': self.linear_circuit(False).m,
+            'm': self.circuit_size,
             'method': method
         }
         if isinstance(self._input_state, BasicState):
