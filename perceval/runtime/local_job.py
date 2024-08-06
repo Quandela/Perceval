@@ -31,6 +31,7 @@ import warnings
 from typing import Callable, Optional
 import threading
 
+from perceval.utils import logger, channel
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 
@@ -119,6 +120,7 @@ class LocalJob(Job):
 
     def _get_results(self):
         if self._result_mapping_function:
+            logger.info(f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
                                                                          **self._delta_parameters['mapping'])

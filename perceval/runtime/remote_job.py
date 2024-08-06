@@ -198,6 +198,7 @@ class RemoteJob(Job):
         self._results = deserialize(json.loads(response['results']))
         if "job_context" in self._results and 'result_mapping' in self._results["job_context"]:
             path_parts = self._results["job_context"]["result_mapping"]
+            logger.info(f"Converting job {self._id} results with {path_parts[1]}", channel.general)
             module = __import__(path_parts[0], fromlist=path_parts[1])
             result_mapping_function = getattr(module, path_parts[1])
             # retrieve delta parameters from the response

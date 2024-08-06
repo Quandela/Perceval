@@ -140,7 +140,9 @@ class CircuitOptimizer:
             return PS(P(f"phL_{i}"))
 
         if template_component_generator_func is None:
-            template_component_generator_func = catalog["mzi phase first"].generate
+            mzi_name = "mzi phase first"
+            logger.debug(f"Using default MZI ({mzi_name}) for rectangular optimization", channel.general)
+            template_component_generator_func = catalog[mzi_name].generate
         template = GenericInterferometer(
             target.shape[0],
             template_component_generator_func,
