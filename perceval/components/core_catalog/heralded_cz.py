@@ -27,13 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import math as m
+import math
 
-from deprecated import deprecated
 from perceval.components import Processor
-from perceval.components.unitary_components import *
+from perceval.components.unitary_components import Circuit, PERM, BS, PS
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.port import Port, Encoding
+from perceval.utils.logging import deprecated
 
 
 class HeraldedCzItem(CatalogItem):
@@ -47,8 +47,8 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
 
-    theta1 = m.acos(m.sqrt(1/3))*2
-    theta2 = m.acos(m.sqrt((3+m.sqrt(6))/6))*2
+    theta1 = math.acos(math.sqrt(1/3))*2
+    theta2 = math.acos(math.sqrt((3+math.sqrt(6))/6))*2
 
     def __init__(self):
         super().__init__("heralded cz")

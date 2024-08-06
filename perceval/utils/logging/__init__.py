@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import functools
 import sys
 from exqalibur import logging as xq_log
 
@@ -45,6 +46,20 @@ def _my_excepthook(excType, excValue, this_traceback):
     LOGGER.error("Uncaught exception!", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
+
+def deprecated(*decorator_args, **decorator_kwargs):
+    def decorator_deprecated(func):
+        @functools.wraps(func)
+        def wrapper_deprecated(*args, **kwargs):
+            log = f"DeprecationWarning: Call to deprecated function (or staticmethod) {func.__name__}."
+            if "reason" in decorator_kwargs:
+                log += f" ({decorator_kwargs['reason']})"
+            if "version" in decorator_kwargs:
+                log += f" -- Deprecated since version {decorator_kwargs['version']}"
+            LOGGER.warn(log, channel.user)
+            return func(*args, **kwargs)
+        return wrapper_deprecated
+    return decorator_deprecated
 
 def use_python_logger():
     global LOGGER

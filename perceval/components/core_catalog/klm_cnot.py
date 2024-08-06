@@ -26,13 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from deprecated import deprecated
+
 from math import sqrt
-from warnings import warn
 
 from perceval.components import Circuit, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.utils import Encoding
+from perceval.utils.logging import LOGGER as logger, channel, deprecated
 
 _WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
                        "better in every aspect (see 'heralded cnot' in the catalog)"
@@ -86,7 +86,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                 .add(1, PERM([4, 3, 0, 2, 1])))
 
     def build_processor(self, **kwargs):
-        warn(_WARNING_NOT_OPTIMAL)
+        logger.warn(_WARNING_NOT_OPTIMAL, channel.user)
         p = self._init_processor(**kwargs)
         return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \

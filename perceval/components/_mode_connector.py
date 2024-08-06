@@ -28,7 +28,8 @@
 # SOFTWARE.
 from perceval.utils import logger, channel
 from typing import Dict, List, Union
-import warnings
+
+from perceval.utils.logging import LOGGER as logger, channel
 
 from .abstract_component import AComponent
 from .unitary_components import PERM
@@ -216,7 +217,7 @@ class ModeConnector:
         Add heralded mode mapping to an existing mapping
         """
         if self._r_is_component:
-            warnings.warn("Right object is not a processor, thus doesn't contain heralded modes")
+            logger.warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
             return 0
         other_herald_pos = list(self._ro.heralds.keys())
         new_mode_index = self._lp.circuit_size

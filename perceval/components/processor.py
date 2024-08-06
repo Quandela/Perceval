@@ -27,17 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from deprecated import deprecated
 from multipledispatch import dispatch
 from numpy import inf
 from typing import Dict, Callable, Union, List
 
-from .abstract_processor import AProcessor, ProcessorType
-from .source import Source
-from .linear_circuit import ACircuit, Circuit
-from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
-from perceval.utils import logger, channel
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
+from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
+from perceval.utils import logger, channel, deprecated
+
+from .abstract_processor import AProcessor, ProcessorType
+from .linear_circuit import ACircuit, Circuit
+from .source import Source
 
 
 
@@ -110,6 +110,7 @@ class Processor(AProcessor):
         :return: The photonic source
         """
         return self._source
+
 
     @source.setter
     # When removing this method don't forget to also change the _init_noise method

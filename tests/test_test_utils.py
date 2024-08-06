@@ -27,33 +27,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import perceval as pcvl
+import pytest
 
-from _mock_persistent_data import LoggerConfigForTest
+from perceval.utils import StateVector
+
+from _test_utils import assert_sv_close
 
 
-def test_logger_config():
-    logger_config = LoggerConfigForTest()
-    logger_config.reset()
-    logger_config.save()
+def test_utils():
+    sv_0_1 = StateVector([0, 1])
+    sv_1_0 = StateVector([1, 0])
+    sv_1_1 = StateVector([1, 1])
 
-    config = logger_config._persistent_data.load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
-                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
+    sv1 = sv_0_1 + sv_1_0
+    sv1_bis = 1.0000001*sv_0_1 + 0.9999999*sv_1_0
+    sv2 = sv_0_1 - sv_1_0
+    sv3 = sv_0_1 + sv_1_1
+    sv4 = sv_0_1
 
-    logger_config.enable_file()
-    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.general)
-    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.resources)
-    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.user)
-    logger_config.save()
+    assert_sv_close(sv1, sv1_bis)
 
-    config = logger_config._persistent_data.load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': True,
-                                 'channels': {'general': {'level': 'warn'}, 'resources': {'level': 'warn'}, 'user': {'level': 'warn'}}}
-
-    logger_config.reset()
-    logger_config.save()
-
-    config = logger_config._persistent_data.load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
-                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv2)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv3)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv4)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv4, sv1)

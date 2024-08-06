@@ -28,14 +28,15 @@
 # SOFTWARE.
 """module test remote job"""
 
-from time import sleep
 import pytest
+from unittest. mock import patch
+from time import sleep
 
 import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough
+from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough, LogChecker
 from _mock_rpc_handler import (
     get_rpc_handler,
     REMOTE_JOB_DURATION,
@@ -46,7 +47,8 @@ from _mock_rpc_handler import (
 )
 
 
-def test_remote_job(requests_mock):
+@patch.object(pcvl.logger, "warn")
+def test_remote_job(mock_warn, requests_mock):
     """test remote job"""
     _FIRST_JOB_NAME = 'job name'
     _SECOND_JOB_NAME = 'another name'
@@ -63,7 +65,7 @@ def test_remote_job(requests_mock):
     assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn):
         assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     _TEST_JOB_ID = "any"
@@ -77,8 +79,9 @@ def test_remote_job(requests_mock):
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
+@patch.object(pcvl.logger, "warn")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
-def test_mock_remote_with_gates(requests_mock, catalog_item):
+def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
     """test mock remote with gates"""
     noise = pcvl.NoiseModel(
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
@@ -95,9 +98,9 @@ def test_mock_remote_with_gates(requests_mock, catalog_item):
 
     for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
         if i == 0:
-            with pytest.warns():
+            with LogChecker(mock_warn) as warn_log_checker:
                 p.with_input(input_state)
-            with pytest.warns():
+            with warn_log_checker:
                 rp.with_input(input_state)
         else:
             p.with_input(input_state)

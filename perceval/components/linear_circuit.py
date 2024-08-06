@@ -28,10 +28,11 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import copy
-from deprecated import deprecated
 import random
+
+from abc import ABC, abstractmethod
 from typing import Callable, Optional, Union, Tuple, Type, List
 
 import numpy as np
@@ -40,7 +41,7 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
-from perceval.utils import logger, channel
+from perceval.utils import logger, channel, deprecated
 from perceval.utils.algorithms import decomposition, Match, solve
 
 
