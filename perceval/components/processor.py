@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import sys
+
 from multipledispatch import dispatch
 from numpy import inf
 from typing import Dict, Callable, Union, List

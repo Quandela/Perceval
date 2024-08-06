@@ -31,16 +31,12 @@ import re
 import math
 import pytest
 
-import pytest
-
 from typing import Type
 from pathlib import Path
-from unittest.mock import MagicMock
 from unittest.mock import MagicMock
 
 import perceval as pcvl
 from perceval.utils import StateVector, SVDistribution
-from perceval.utils.logging import channel
 from perceval.utils.logging import channel
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin

@@ -30,6 +30,7 @@
 import math
 import time
 import sys
+
 from typing import Callable, Dict, Tuple
 
 from perceval.backends import ASamplingBackend

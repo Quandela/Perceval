@@ -31,11 +31,6 @@ import pytest
 import time
 from unittest.mock import patch
 
-
-import pytest
-import time
-from unittest.mock import patch
-
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
 from perceval.algorithm import Sampler
