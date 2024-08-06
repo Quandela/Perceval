@@ -27,20 +27,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+
 from perceval.utils import StateVector
 
 from _test_utils import assert_sv_close
 
 
 def test_utils():
-    sv1 = StateVector([0, 1]) + StateVector([1, 0])
-    sv1_bis = 1.0000001*StateVector([0, 1]) + 0.9999999*StateVector([1, 0])
-    sv2 = StateVector([0, 1]) - StateVector([1, 0])
-    sv3 = StateVector([0, 1]) + StateVector([1, 1])
-    sv4 = StateVector([0, 1])
+    sv_0_1 = StateVector([0, 1])
+    sv_1_0 = StateVector([1, 0])
+    sv_1_1 = StateVector([1, 1])
+
+    sv1 = sv_0_1 + sv_1_0
+    sv1_bis = 1.0000001*sv_0_1 + 0.9999999*sv_1_0
+    sv2 = sv_0_1 - sv_1_0
+    sv3 = sv_0_1 + sv_1_1
+    sv4 = sv_0_1
 
     assert_sv_close(sv1, sv1_bis)
-    assert_sv_close(sv1, sv2)
-    assert_sv_close(sv1, sv3)
-    assert_sv_close(sv1, sv4)
-    assert_sv_close(sv4, sv1)
+
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv2)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv3)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv4)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv4, sv1)
