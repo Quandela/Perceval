@@ -41,8 +41,8 @@ class RectangularDecomposer:
         :param precision: precision of the decomposition, defaults to 1e-6
         """
 
-    def __init__(self, precision: float = 1e-6):
-        self.rectangular_decomposer = xq.RectangularDecomposer(precision)
+    def __init__(self):
+        self.rectangular_decomposer = xq.RectangularDecomposer()
 
     def decompose(self, target: Union[ACircuit, Matrix], add_phase_correction: bool = False) -> None:
         """compute the rectangular interferometer from the target matrix
@@ -69,8 +69,10 @@ class RectangularDecomposer:
         """
         return deserialize_circuit(self.rectangular_decomposer.get_interferometer(add_phase_correction))
 
-    def set_precision(self, precision: float) -> None:
-        self.rectangular_decomposer.set_precision(precision)
-
-    def get_precision(self) -> float:
+    @property
+    def precision(self) -> float:
         return self.rectangular_decomposer.get_precision()
+
+    @precision.setter
+    def precision(self, precision: float) -> None:
+        self.rectangular_decomposer.set_precision(precision)

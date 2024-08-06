@@ -231,8 +231,9 @@ def test_decomposition_inverse_h():
 def test_rectangular_decomposer():
     u = pcvl.Matrix.random_unitary(24)
 
+    rd = RectangularDecomposer()
     decimal_precision = 6
-    rd = RectangularDecomposer(10**-decimal_precision)
+    rd.precision = 10**-decimal_precision
 
     interferometer = rd.decompose(u, True)
     np.testing.assert_array_almost_equal(interferometer.compute_unitary(), u, decimal=decimal_precision)
