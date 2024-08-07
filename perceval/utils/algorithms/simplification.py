@@ -63,7 +63,7 @@ def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False)
     return final_circuit_comp
 
 
-def _simplify_comp(components, m, display):
+def _simplify_comp(components, m :int=None, display: bool = False):
     # Simplify the circuit according to the last added component
     [_, c] = components[-1]
 
@@ -281,7 +281,7 @@ def _evaluate_perm(left_perm_list, right_perm_list, display):
         return len(left_perm_list) + len(right_perm_list)
 
 
-def _simplify_perm(components, m, display):
+def _simplify_perm(components, m :int = None, display :bool = False):
     [r, c] = components.pop()
 
     end_components = components
@@ -359,49 +359,47 @@ def _simplify_perm(components, m, display):
 
 
 # Phase shifter simplification
-def _simplify_PS(components, m, display):
-    # For now, assume all value are numeric
-    [r, c] = components.pop()
-    r0 = r[0]
+def _simplify_PS(components, m :int = None, display :bool = False):
 
     PS_found_n_simplified = False
+    [_, c] = components[-1]
 
     phi = c.param("phi")
 
     if not phi.is_variable:
         # encountered a PS with numeric value of phase - simplifying
+
+        [r, c] = components.pop()
+        r0 = r[0]
+
         for i in range(len(components) - 1, -1, -1):
 
-            [old_r, old_c] = components[i]
-            if isinstance(old_c, comp.PS) and r0 == old_r[0]:
+            [previous_r, previous_c] = components[i]
+            if isinstance(previous_c, comp.PS) and r0 == previous_r[0]:
 
-                old_phi = old_c.param("phi")
-                if not old_phi.is_variable:
+                previous_phi = previous_c.param("phi")
+                if not previous_phi.is_variable:
                     PS_found_n_simplified = True
                     # previous PS does not have a variable phi -> simplify both together
-                    new_phi = float(phi) + float(old_phi)
+                    new_phi = float(phi) + float(previous_phi)
                     if new_phi % (2 * np.pi) != 0 or display:
                         new_c = comp.PS(new_phi)
-                        components[i] = [old_r, new_c]
+                        components[i] = [previous_r, new_c]
                     else:
                         # simplification summed to phase=0
                         components.pop(i)
 
                     break
 
-            elif isinstance(old_c, comp.PERM):
-                perm_list = extend_perm(old_r, old_c.perm_vector, m)[1]
+            elif isinstance(previous_c, comp.PERM):
+                perm_list = extend_perm(previous_r, previous_c.perm_vector, m)[1]
                 r0 = invert_permutation(perm_list)[r0]
 
-            elif r0 in old_r:
+            elif r0 in previous_r:
                 # a component other than PS or PERM in the same mode as current PS
                 break
 
         if not PS_found_n_simplified and (float(phi) % (2 * np.pi) or display):
             components.append([r, c])
-
-    else:
-        # No simplification of PS if one with a variable parameter is being added
-        components.append([r, c])
 
     return components

@@ -138,9 +138,7 @@ def test_PS_simp_variable_param():
 
     # info on Parameter not lost after simplication
     param = c_simp.get_parameters()[0]
-    assert isinstance(param, Parameter)
-    assert param.name == "phase"
-    assert param._value == phi
+    assert param == phase
 
 
 def test_PS_simp_remove_null_phase():
@@ -155,6 +153,4 @@ def test_PS_simp_remove_null_phase():
 
     # info on Parameter not lost after simplification
     param = c_simp.get_parameters()[0]
-    assert isinstance(param, Parameter)
-    assert param.name == "phase"
-    assert param._value == phi
+    assert param == phase
