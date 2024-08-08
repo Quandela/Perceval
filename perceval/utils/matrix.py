@@ -28,15 +28,17 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import io
 import re
+
+from abc import ABC, abstractmethod
+from scipy.linalg import sqrtm, block_diag, svd
 from typing import Iterator, Optional, Union, Tuple
-import warnings
 import numpy as np
 import sympy as sp
-from scipy.linalg import sqrtm, block_diag, svd
 
+from perceval.utils.logging import logger, channel
 
 class Matrix(ABC):
     """
@@ -147,8 +149,8 @@ class Matrix(ABC):
         :return: a numeric Matrix
         """
         if parameters is not None:
-            warnings.warn("use parametrized_unitary(n, parameters) instead to create a parametrized unitary "
-                          "matrix, version=0.11", DeprecationWarning)
+            logger.warn(
+                "DeprecationWarning: use parametrized_unitary(n, parameters) instead to create a parametrized unitary matrix, version=0.11", channel.user)
             return Matrix.parametrized_unitary(n, parameters)
         else:
             u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
@@ -218,6 +220,7 @@ class Matrix(ABC):
         """Simplify the matrix - only implemented for symbolic matrix"""
         return self
 
+    @staticmethod
     def _read(seqline: Iterator[str]) -> Matrix:
         """read a matrix from file or a string sequence"""
         rows = []

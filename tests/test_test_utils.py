@@ -27,24 +27,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .matrix import Matrix, MatrixN, MatrixS, matrix_double
-from .format import simple_float, simple_complex, format_parameters
-from .parameter import Parameter, P, Expression, E
-from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator
-from .logical_state import LogicalState, generate_all_logical_states
-from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
-from .postselect import PostSelect, postselect_independent, post_select_distribution, post_select_statevector
-from ._random import random_seed
-from .globals import global_params
-from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
-    probs_to_samples, probs_to_sample_count
-from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
-from .persistent_data import PersistentData
-from .metadata import PMetadata
-from .density_matrix import DensityMatrix
-from .noise_model import NoiseModel
-from .logging import logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+import pytest
+
+from perceval.utils import StateVector
+
+from _test_utils import assert_sv_close
+
+
+def test_utils():
+    sv_0_1 = StateVector([0, 1])
+    sv_1_0 = StateVector([1, 0])
+    sv_1_1 = StateVector([1, 1])
+
+    sv1 = sv_0_1 + sv_1_0
+    sv1_bis = 1.0000001*sv_0_1 + 0.9999999*sv_1_0
+    sv2 = sv_0_1 - sv_1_0
+    sv3 = sv_0_1 + sv_1_1
+    sv4 = sv_0_1
+
+    assert_sv_close(sv1, sv1_bis)
+
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv2)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv3)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv1, sv4)
+    with pytest.raises(AssertionError):
+        assert_sv_close(sv4, sv1)

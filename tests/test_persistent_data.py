@@ -33,7 +33,7 @@ import pytest
 
 from perceval.utils import PersistentData, FileFormat
 
-from _test_utils import PersistentDataForTests
+from _mock_persistent_data import PersistentDataForTests
 
 
 def test_directory():

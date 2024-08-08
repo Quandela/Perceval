@@ -27,19 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-import time
-
 import perceval as pcvl
-from perceval import logger
+
+from _mock_persistent_data import LoggerConfigForTest
 
 
 def test_logger_config():
-    logger_config = pcvl.LoggerConfig()
+    logger_config = LoggerConfigForTest()
     logger_config.reset()
     logger_config.save()
 
-    config = pcvl.utils.PersistentData().load_config()
+    config = logger_config._persistent_data.load_config()
     assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
                                  'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
 
@@ -49,13 +47,13 @@ def test_logger_config():
     logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.user)
     logger_config.save()
 
-    config = pcvl.utils.PersistentData().load_config()
+    config = logger_config._persistent_data.load_config()
     assert config["logging"] == {'use_python_logger': False, 'enable_file': True,
                                  'channels': {'general': {'level': 'warn'}, 'resources': {'level': 'warn'}, 'user': {'level': 'warn'}}}
 
     logger_config.reset()
     logger_config.save()
 
-    config = pcvl.utils.PersistentData().load_config()
+    config = logger_config._persistent_data.load_config()
     assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
                                  'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}

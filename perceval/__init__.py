@@ -46,12 +46,12 @@ See also:
     - Quandela cloud documentation: https://cloud.quandela.com/webide/documentation (requires a free account to access)
 """
 
-import sys
 from importlib import import_module
 from .utils import PMetadata
 
 __version__ = PMetadata.version()
 
+from .providers import *
 from .components import *
 from .backends import *
 from .utils import *
@@ -71,3 +71,5 @@ def register_plugin(name, silent=False):
 
 
 use_perceval_logger()
+logger.info(f"=== Starting Perceval session - process ID: {remote_processor.__process_id__} ===",
+            logging.channel.general)
