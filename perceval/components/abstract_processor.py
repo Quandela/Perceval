@@ -261,14 +261,17 @@ class AProcessor(ABC):
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
     def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
+        logger.debug(f"Compose processor {self.name} with {processor.name}", channel.general)
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         if processor.heralds and not processor.parameters:
             # adding the same processor component again renders incorrect heralds if not copied
             # This concerns our gate based processors from catalog which has no input params
+            logger.debug("  Force copy during processor compose", channel.general)
             processor = processor.copy()
 
         mode_mapping = connector.resolve()
+        logger.debug(f"  Resolved mode mapping to {mode_mapping} during processor compose", channel.general)
 
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
@@ -286,6 +289,7 @@ class AProcessor(ABC):
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
         if perm_component is not None:
+            logger.debug(f"  Add {perm_component.perm_vector} permutation before processor compose", channel.general)
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
                 # Simplify composition by merging two consecutive PERM components
                 l_perm_r = self._components[-1][0]
@@ -301,6 +305,7 @@ class AProcessor(ABC):
         if perm_component is not None:
             perm_inv = perm_component.copy()
             perm_inv.inverse(h=True)
+            logger.debug(f"  Add {perm_inv.perm_vector} permutation after processor compose", channel.general)
             new_components.append((perm_modes, perm_inv))
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components

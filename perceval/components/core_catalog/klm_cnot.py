@@ -36,11 +36,12 @@ from perceval.utils.logging import logger, channel, deprecated
 
 _WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
                        "better in every aspect (see 'heralded cnot' in the catalog)"
+_GATE_NAME = "KLM CNOT"
 
 
 class KLMCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
-    description = "KLM CNOT gate with 4 ancillary modes\n" + _WARNING_NOT_OPTIMAL
+    description = f"{_GATE_NAME} gate with 4 ancillary modes\n{_WARNING_NOT_OPTIMAL}"
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
@@ -67,7 +68,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
             return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
-        return (Circuit(8, name="Heralded CNOT")
+        return (Circuit(8, name=_GATE_NAME)
                 .add(1, PERM([2, 4, 3, 0, 1]))
                 .add(4, BS.H())
                 .add(3, PERM([1, 3, 0, 4, 2]))

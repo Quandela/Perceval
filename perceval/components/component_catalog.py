@@ -116,7 +116,8 @@ class CatalogItem(ABC):
         return value
 
     def _init_processor(self, **kwargs):
-        return Processor(kwargs.get("backend", "SLOS"), self.build_circuit(**kwargs), name=kwargs.get("name"))
+        return Processor(kwargs.get("backend", "SLOS"), self.build_circuit(**kwargs),
+                         name=kwargs.get("name") or self._name.upper())
 
     @abstractmethod
     def build_circuit(self, **kwargs) -> Circuit:

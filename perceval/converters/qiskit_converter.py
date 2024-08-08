@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 from perceval.components import Processor, Source
+from perceval.utils.logging import logger, channel
 from .abstract_converter import AGateConverter
 
 
@@ -54,6 +55,9 @@ class QiskitConverter(AGateConverter):
         :return: the converted processor
         """
         import qiskit  # this nested import fixes automatic class reference generation
+
+        logger.info(f"Convert qiskit.QuantumCircuit ({qc.num_qubits} qubits, {len(qc.data)} operations) to processor",
+                    channel.general)
 
         n_cnot = 0  # count the number of CNOT gates in circuit - needed to find the num. heralds
         for instruction in qc.data:
