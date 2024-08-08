@@ -33,7 +33,7 @@ from typing import Callable, List, Optional, Tuple
 from .linear_circuit import ACircuit, Circuit
 
 from perceval.utils import InterferometerShape
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 
 class GenericInterferometer(Circuit):

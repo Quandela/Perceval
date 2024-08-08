@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, allstate_iterator, StateVector
+from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
 
 
 class ABackend(ABC):
@@ -40,7 +40,8 @@ class ABackend(ABC):
         self._input_state = None
 
     def set_circuit(self, circuit: ACircuit):
-        assert not circuit.requires_polarization, "Circuit must not contain polarized components"
+        if circuit.requires_polarization:
+            raise RuntimeError("Circuit must not contain polarized components")
         self._input_state = None
         self._circuit = circuit
         self._umat = circuit.compute_unitary()
@@ -61,11 +62,11 @@ class ABackend(ABC):
 
 class ASamplingBackend(ABackend):
     @abstractmethod
-    def sample(self):
+    def sample(self) -> BasicState:
         """Request one sample from the circuit given an input state"""
 
     @abstractmethod
-    def samples(self, count: int):
+    def samples(self, count: int) -> BSSamples:
         """Request samples from the circuit given an input state"""
 
 
@@ -90,7 +91,6 @@ class AProbAmpliBackend(ABackend):
         if self._circuit and circuit.m != self._circuit:
             self.clear_iterator_cache()
         super().set_circuit(circuit)
-
 
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:

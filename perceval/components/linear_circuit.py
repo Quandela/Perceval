@@ -41,10 +41,9 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
-from perceval.utils.algorithms import decomposition
-from perceval.utils.algorithms.match import Match
+from perceval.utils.logging import logger, channel, deprecated
+from perceval.utils.algorithms import decomposition, Match
 from perceval.utils.algorithms.solve import solve
-from perceval.utils.logging import deprecated
 
 
 class ACircuit(AParametrizedComponent, ABC):
@@ -262,10 +261,10 @@ class ACircuit(AParametrizedComponent, ABC):
                 try:
                     self._params[p].set_value(float(param), force=force)
                 except RuntimeError:  # Error in case force = False and param is fixed
-                    assert abs(float(param) - float(self._params[p])) < global_params["min_complex_component"],\
-                        f"components don't have the same fixed value for parameter {p}"
-                except Exception:
-                    pass
+                    if abs(float(param) - float(self._params[p])) >= global_params["min_complex_component"]:
+                        raise ValueError(f"components don't have the same fixed value for parameter {p}")
+                except Exception as e:
+                    logger.error(f"Unexpected error in tranfer_from: {e}", channel.general)
 
     def depths(self):
         return [1]*self.m

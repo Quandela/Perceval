@@ -35,8 +35,6 @@ from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
 
-import numpy as np
-
 
 def _create_mode_map(c_idx: int, c_data: int) -> dict:
     return {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
@@ -79,7 +77,7 @@ class AGateConverter(ABC):
         qubit_names = kwargs.get(
             "qubit_names", [f'{qname}{i}' for i in range(n_qbits)])
 
-        n_moi = n_qbits * 2  # number of modes of interest = 2 * number of qbits
+        n_moi = n_qbits * 2  # In dual rail, number of modes of interest = 2 * number of qbits
         self._input_list = [0] * n_moi
         self._converted_processor = Processor(self._backend_name, n_moi, self._source)
         for i in range(n_qbits):

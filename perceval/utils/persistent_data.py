@@ -88,7 +88,7 @@ class PersistentData:
         return os.access(self._directory, os.R_OK)
 
     def _create_directory(self) -> None:
-        """Create the directory if if doesn't exists
+        """Create the persistent data root directory if it doesn't exist
         """
         if not os.path.exists(self._directory):
             os.makedirs(self._directory)

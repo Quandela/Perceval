@@ -26,10 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from typing import Dict, List, Union
 
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 from .abstract_component import AComponent
 from .unitary_components import PERM
@@ -116,6 +115,7 @@ class ModeConnector:
         """
         # Handle int input case
         if isinstance(self._map, int):
+            logger.debug(f"Resolve mode mapping from int {self._map}", channel.general)
             map_begin = self._map
             self._map = {}
             r_list = self._get_ordered_rmodes()
@@ -126,6 +126,7 @@ class ModeConnector:
 
         # Handle list input case
         if isinstance(self._map, list) or isinstance(self._map, tuple):
+            logger.debug("Resolve mode mapping from a list", channel.general)
             map_keys = self._map
             map_values = self._get_ordered_rmodes()
             if len(map_keys) != len(map_values):
@@ -222,7 +223,7 @@ class ModeConnector:
         for pos in other_herald_pos:
             mapping[new_mode_index] = pos
             new_mode_index += 1
-        return new_mode_index-self._lp.circuit_size
+        return new_mode_index - self._lp.circuit_size
 
     @staticmethod
     def generate_permutation(mode_mapping: Dict[int, int]):

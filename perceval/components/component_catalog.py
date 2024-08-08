@@ -34,7 +34,7 @@ from typing import List
 
 from perceval.utils import Parameter
 from perceval.components import Processor, Circuit
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 
 class AsType(Enum):
@@ -116,7 +116,8 @@ class CatalogItem(ABC):
         return value
 
     def _init_processor(self, **kwargs):
-        return Processor(kwargs.get("backend", "SLOS"), self.build_circuit(**kwargs), name=kwargs.get("name"))
+        return Processor(kwargs.get("backend", "SLOS"), self.build_circuit(**kwargs),
+                         name=kwargs.get("name") or self._name.upper())
 
     @abstractmethod
     def build_circuit(self, **kwargs) -> Circuit:

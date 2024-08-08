@@ -38,7 +38,7 @@ from typing import Iterator, Optional, Union, Tuple
 import numpy as np
 import sympy as sp
 
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 class Matrix(ABC):
     """

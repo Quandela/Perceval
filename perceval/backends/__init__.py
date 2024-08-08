@@ -27,8 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.logging import LOGGER as logger, channel
-
 from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
 from ._clifford2017 import Clifford2017Backend
 from ._naive import NaiveBackend
@@ -52,6 +50,8 @@ class BackendFactory:
         name = backend_name
         if name in BACKEND_LIST:
             return BACKEND_LIST[name](**kwargs)
+        # Do not import from top level or you'll expose what's imported
+        from perceval.utils.logging import logger, channel
         logger.warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
         return BACKEND_LIST['SLOS'](**kwargs)
 
