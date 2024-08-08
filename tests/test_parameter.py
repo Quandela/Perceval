@@ -49,6 +49,7 @@ def test_variable():
     p = Parameter("alpha")
     assert isinstance(p.spv, sp.Expr)
     assert not p.defined
+    assert p.is_variable
 
 
 def test_set_variable():
@@ -63,6 +64,7 @@ def test_fixed_0():
     p = Parameter("alpha", 2)
     assert p.fixed
     assert p.defined
+    assert not p.is_variable
     with pytest.raises(RuntimeError):
         p.set_value(1)  # Cannot set value to a fixed parameter
 
@@ -71,6 +73,7 @@ def test_fixed_1():
     p = Parameter("alpha")
     assert not p.fixed
     assert not p.defined
+    assert p.is_variable
     p.set_value(1)
     assert not p.fixed
     assert p.defined
