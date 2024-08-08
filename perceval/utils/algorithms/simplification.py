@@ -31,6 +31,7 @@ from typing import Union
 import numpy as np
 import perceval.components.unitary_components as comp
 from perceval.components.linear_circuit import ACircuit, Circuit
+from perceval.utils.logging import logger, channel
 
 
 def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False) -> Union[list, Circuit]:
@@ -290,8 +291,8 @@ def _simplify_perm(components, m :int = None, display :bool = False):
 
     for i in range(len(components) - 1, -1, -1):
 
-        [old_r, old_c] = components[i]
-        if isinstance(old_c, comp.PERM):
+        [previous_r, previous_c] = components[i]
+        if isinstance(previous_c, comp.PERM):
             found_other_perm = True
 
             adjacent_modes = [[j] for j in range(m)]
@@ -319,10 +320,10 @@ def _simplify_perm(components, m :int = None, display :bool = False):
         # Simulates an unraveling on a smaller circuit with only the permutations
         # First, we extend our permutations to the entire circuit
         extended_r, c_list = extend_perm(r, c.perm_vector, m)
-        old_c_list = extend_perm(old_r, old_c.perm_vector, m)[1]
+        previous_c_list = extend_perm(previous_r, previous_c.perm_vector, m)[1]
 
         # Then we generate permutations that are compatible with our dependent modes
-        left_right_perm, left_left_perm = _generate_compatible_perm(invert_permutation(old_c_list), adjacent_modes)
+        left_right_perm, left_left_perm = _generate_compatible_perm(invert_permutation(previous_c_list), adjacent_modes)
 
         # Now we can unravel the middle compatible permutation
         right_perm = perm_compose(extended_r, left_right_perm, extended_r, c_list)[1]
@@ -330,7 +331,7 @@ def _simplify_perm(components, m :int = None, display :bool = False):
 
         # Score evaluation
         left_r, left_perm = reduce_perm(extended_r, left_left_perm)
-        old_score = _evaluate_perm(reduce_perm(extended_r, old_c_list)[1], reduce_perm(extended_r, c_list)[1], display)
+        old_score = _evaluate_perm(reduce_perm(extended_r, previous_c_list)[1], reduce_perm(extended_r, c_list)[1], display)
         new_score = _evaluate_perm(left_perm, right_perm, display)
 
         if old_score > new_score:
@@ -367,6 +368,7 @@ def _simplify_PS(components, m :int = None, display :bool = False):
 
     if not phi.is_variable:
         # encountered a PS with numeric value of phase - simplifying
+        logger.debug(f"Enter simplification of a PS component with parameter {phi}", channel.general)
 
         [r, c] = components.pop()
         r0 = r[0]
@@ -378,6 +380,8 @@ def _simplify_PS(components, m :int = None, display :bool = False):
 
                 previous_phi = previous_c.param("phi")
                 if not previous_phi.is_variable:
+                    logger.debug(" Simplify as two consecutive PS with numerical phase values found",
+                                 channel.general)
                     PS_found_n_simplified = True
                     # previous PS does not have a variable phi -> simplify both together
                     new_phi = float(phi) + float(previous_phi)
@@ -399,6 +403,9 @@ def _simplify_PS(components, m :int = None, display :bool = False):
                 break
 
         if not PS_found_n_simplified and (float(phi) % (2 * np.pi) or display):
+            logger.debug(" Re-including the non-simplified PS if it either doesn't have a phase equal to "
+                         "multiple of 2*pi or needs to be displayed", channel.general)
+
             components.append([r, c])
 
     return components
