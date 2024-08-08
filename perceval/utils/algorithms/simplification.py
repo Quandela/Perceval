@@ -289,6 +289,8 @@ def _simplify_perm(components, m :int = None, display :bool = False):
     # Check several permutations
     found_other_perm = False
 
+    logger.debug(f"Enter PERM simplification for component {c.perm_vector}", channel.general)
+
     for i in range(len(components) - 1, -1, -1):
 
         [previous_r, previous_c] = components[i]
@@ -312,10 +314,14 @@ def _simplify_perm(components, m :int = None, display :bool = False):
         new_r, new_c_perm = perm_compose(left_r, left_perm, r, perm)
         new_r, new_c_perm = reduce_perm(new_r, new_c_perm)
 
+        logger.debug(f" Simplifying {perm} with a successive PERM component of perm vector "
+                     f"= {left_perm}", channel.general)
+
         if len(new_r):
             end_components.append([new_r, comp.PERM(new_c_perm)])
 
     elif found_other_perm and len(adjacent_modes) > 1:  # Non-successive permutations and things to do
+        logger.debug(f" Simplifying with non-successive permutation components", channel.general)
 
         # Simulates an unraveling on a smaller circuit with only the permutations
         # First, we extend our permutations to the entire circuit
