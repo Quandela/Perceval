@@ -26,21 +26,22 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from deprecated import deprecated
+
 from math import sqrt
-from warnings import warn
 
 from perceval.components import Circuit, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.utils import Encoding
+from perceval.utils.logging import logger, channel, deprecated
 
 _WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
                        "better in every aspect (see 'heralded cnot' in the catalog)"
+_GATE_NAME = "KLM CNOT"
 
 
 class KLMCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
-    description = "KLM CNOT gate with 4 ancillary modes\n" + _WARNING_NOT_OPTIMAL
+    description = f"{_GATE_NAME} gate with 4 ancillary modes\n{_WARNING_NOT_OPTIMAL}"
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
@@ -67,7 +68,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
             return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
-        return (Circuit(8, name="Heralded CNOT")
+        return (Circuit(8, name=_GATE_NAME)
                 .add(1, PERM([2, 4, 3, 0, 1]))
                 .add(4, BS.H())
                 .add(3, PERM([1, 3, 0, 4, 2]))
@@ -86,7 +87,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                 .add(1, PERM([4, 3, 0, 2, 1])))
 
     def build_processor(self, **kwargs):
-        warn(_WARNING_NOT_OPTIMAL)
+        logger.warn(_WARNING_NOT_OPTIMAL, channel.user)
         p = self._init_processor(**kwargs)
         return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \

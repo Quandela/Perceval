@@ -49,7 +49,7 @@ def test_basic_transfer_fix():
     a = comp.BS(phi_tr=0.1)
     theta = P("theta")
     b = comp.BS(theta=theta)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         b.transfer_from(a)  # By default, you cannot transfer parameter values when other parameter value differ
     b.transfer_from(a, force=True)  # Unless you force it
     assert pytest.approx(0.1) == float(b.param("phi_tr"))

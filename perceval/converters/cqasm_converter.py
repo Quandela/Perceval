@@ -26,13 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.components import Processor, Source
-from perceval.components import Circuit, BS, PS, PERM
+from perceval.components import Processor, Source, Circuit, BS, PS, PERM
+from perceval.utils.logging import logger, channel
 from .abstract_converter import AGateConverter
 
 import numpy as np
 import re
-from multipledispatch import dispatch
 
 # A collection of gates for which meaningful optical circuits (beam splitter,
 # phase shifter, permutation) exist.
@@ -179,10 +178,7 @@ class CQASMConverter(AGateConverter):
                     self._use_postselection,
                     parameter=parameter)
 
-    def convert(
-            self,
-            ast,
-            use_postselection: bool = True) -> Processor:
+    def convert(self, ast, use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
 
         :param ast: the AST of a cQASM program
@@ -194,6 +190,8 @@ class CQASMConverter(AGateConverter):
         if isinstance(ast, str):
             return self._convert_from_string(ast, use_postselection)
 
+        logger.info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
+                    channel.general)
         self._collect_qubit_list(ast)
         self._num_cnots = sum(
             (_cs(s.name) == "CNOT") + 2 * (_cs(s.name) in ["CR", "CRk"])
@@ -240,6 +238,7 @@ class CQASMConverter(AGateConverter):
         # The string contains a single line, it might be a path
         if not "\n" in source:
             try:
+                logger.debug(f"Reading cQASM file content at {source}", channel.general)
                 with open(source) as source_file:
                     source_string = source_file.read()
             except IOError:
@@ -249,9 +248,11 @@ class CQASMConverter(AGateConverter):
 
         major, minor = CQASMConverter.check_version(source_string)
         if major == 3:
+            logger.debug("Parsing cQASM v3 description", channel.general)
             ast = self._cqasm.Analyzer().analyze_string(
                 source_string)
         elif major == 1:
+            logger.debug("Converting cQASM v1 to v3", channel.general)
             ast = self._v3_ast_from_v1_source(source_string.split('\n'))
         else:
             raise ConversionBadVersionError(f"Unsupported version {major}.{minor}")

@@ -26,20 +26,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import warnings
 
 import numpy as np
 from math import comb
 from scipy.optimize import curve_fit
 from typing import Union
-from ..utils.statevector import BSCount, BSDistribution, BasicState
+from perceval.utils import BSCount, BSDistribution, BasicState
+from perceval.utils.logging import logger, channel
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
 
 def _validate_noisy_input(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int):
     if not isinstance(noisy_input, (BSCount, BSDistribution)):
         # check if the input type is correct
-        raise TypeError(f'Noisy input should be of type BSCount or BSDistribution')
+        raise TypeError('Noisy input should be of type BSCount or BSDistribution')
 
     if all([states.n == ideal_photon_count for states in noisy_input.keys()]):
         # Check if a perfect loss-less distribution was passed to mitigate
@@ -62,6 +62,8 @@ def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_c
     :param ideal_photon_count: expected photon count for a loss-less system
     :return photon loss mitigated distribution
     """
+    logger.info(f"Running Photon Recycling on a {len(noisy_input)} states distribution targetting {ideal_photon_count} ideal photons",
+                channel.general)
     # run checks on noisy input before recycling
     _validate_noisy_input(noisy_input, ideal_photon_count)
 

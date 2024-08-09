@@ -29,9 +29,11 @@
 
 import random
 import numpy as np
+import exqalibur as xq
+from .logging import logger, channel
 
 
-def random_seed(seed=None):
+def random_seed(seed: int = None):
     """
     seed: int = None
     Initialize the seed used for random number generation
@@ -41,3 +43,9 @@ def random_seed(seed=None):
     """
     random.seed(seed)
     np.random.seed(seed)
+    if seed is None:
+        logger.info(f"Reset RNG to a time-based random seed", channel.general)
+        xq.set_seed(random.randint(0, 4294967295))  # 0 to 2**32-1
+    else:
+        logger.info(f"Set seed {seed} to RNG", channel.general)
+        xq.set_seed(seed)

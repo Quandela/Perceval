@@ -27,10 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from enum import Enum
 from time import time, sleep
 from typing import Optional
-from enum import Enum
-import warnings
+
+from perceval.utils.logging import logger, channel
 
 
 class RunningStatus(Enum):
@@ -51,7 +52,7 @@ class RunningStatus(Enum):
             try:
                 return RunningStatus[res.upper()]
             except KeyError:
-                warnings.warn(f"Unknown job running status: {res}")
+                logger.warn(f"Unknown job running status: {res}", channel.user)
                 return RunningStatus.UNKNOWN
 
 class JobStatus:

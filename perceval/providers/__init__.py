@@ -28,9 +28,8 @@
 # SOFTWARE.
 """Provider related imports and classes"""
 
-import warnings
-
 from perceval.runtime import ISession
+
 from .quandela import Session as QuandelaSession
 from .scaleway import Session as ScalewaySession
 

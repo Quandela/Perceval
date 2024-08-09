@@ -27,10 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import warnings
 from typing import Callable, Optional
 import threading
 
+from perceval.utils.logging import logger, channel
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 
@@ -99,7 +99,7 @@ class LocalJob(Job):
             else:
                 self._status.stop_run()
         except Exception as e:
-            warnings.warn(f"An exception was raised during job execution.\n{type(e)}: {e}")
+            logger.warn(f"An exception was raised during job execution.\n{type(e)}: {e}", channel.user)
             self._status.stop_run(RunningStatus.ERROR, str(type(e))+": "+str(e))
 
     def execute_async(self, *args, **kwargs) -> Job:
@@ -119,6 +119,7 @@ class LocalJob(Job):
 
     def _get_results(self):
         if self._result_mapping_function:
+            logger.info(f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
                                                                          **self._delta_parameters['mapping'])

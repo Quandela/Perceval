@@ -32,6 +32,7 @@ from numbers import Number
 from .abstract_algorithm import AAlgorithm
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples,\
                            sample_count_to_probs, probs_to_samples, probs_to_sample_count
+from perceval.utils.logging import logger, channel
 from perceval.components.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
 from perceval.utils import BasicState
@@ -113,11 +114,14 @@ class Sampler(AAlgorithm):
                 payload['payload']['iterator'] = self._iterator
             payload['payload']['max_shots'] = self._max_shots
             job_name = self.default_job_name if self.default_job_name is not None else method
-            return RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
+            job = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
                              command_param_names=command_param_names,
                              delta_parameters=delta_parameters, job_context=job_context)
+            logger.info(f"Prepare remote job (command: {primitive} on {payload['platform_name']})", channel.general)
+            return job
         else:
             func_name = f"_{primitive}_iterate_locally" if self._iterator else f"_{primitive}_wrapper"
+            logger.info(f"Prepare local job (command: Sampler.{func_name})", channel.general)
             return LocalJob(getattr(self, func_name),
                             result_mapping_function=converter,
                             command_param_names=command_param_names,
@@ -136,7 +140,7 @@ class Sampler(AAlgorithm):
         return self._create_job("probs")
 
     # Iterator construction methods
-    def add_iteration(self, circuit_params: Dict = None,
+    def _add_iteration(self, circuit_params: Dict = None,
                       input_state: BasicState = None,
                       min_detected_photons: int = None):
         it = {}
@@ -166,12 +170,20 @@ class Sampler(AAlgorithm):
                 f"Iteration: input state and processor size mismatch (processor size is {self._processor.m})"
             self._processor.check_input(iter_params['input_state'])
 
+    def add_iteration(self, circuit_params: Dict = None,
+                       input_state: BasicState = None,
+                       min_detected_photons: int = None):
+        logger.info("Add 1 iteration to Sampler", channel.general)
+        self._add_iteration(circuit_params, input_state, min_detected_photons)
+
     def add_iteration_list(self, iterations: List[Dict]):
+        logger.info(f"Add {len(iterations)} iterations to Sampler", channel.general)
         for iter_params in iterations:
-            self.add_iteration(**iter_params)
+            self._add_iteration(**iter_params)
 
     def clear_iterations(self):
         # In case, the user wants to use the same sampler instance, but with a new iterator
+        logger.info(f"Clear all iterations in Sampler", channel.general)
         self._iterator = []
 
     @property

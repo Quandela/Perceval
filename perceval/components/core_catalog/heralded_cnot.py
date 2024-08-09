@@ -27,11 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from deprecated import deprecated
 from perceval.components import Circuit, BS, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.components.core_catalog.heralded_cz import HeraldedCzItem
 from perceval.utils import Encoding
+from perceval.utils.logging import deprecated
 
 
 class HeraldedCnotItem(CatalogItem):

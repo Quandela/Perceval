@@ -26,13 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import os
 import pytest
 import platform
 
+from unittest.mock import patch
+
+import perceval as pcvl
 from perceval.runtime._token_management import _TOKEN_FILE_NAME
 
-from _mock_persistent_data import TokenProviderForTest, PersistentDataForTests
+from _mock_persistent_data import TokenProviderForTest
+from _test_utils import LogChecker
 
 
 
@@ -96,9 +101,9 @@ def test_token_provider_from_file():
     assert token_provider.get_token() is None
 
 
-
+@patch.object(pcvl.logger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access():
+def test_token_file_access(mock_warn):
     token_provider = TokenProviderForTest()
     persistent_data = token_provider._persistent_data
     if persistent_data.load_config():
@@ -107,7 +112,7 @@ def test_token_file_access():
 
     os.chmod(directory, 0o000)
 
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn) as warn_log_checker:
         token_provider.force_token(TOKEN_FROM_FILE)
         token_provider.save_token()
 
@@ -122,7 +127,7 @@ def test_token_file_access():
 
     os.chmod(token_file, 0o000)
 
-    with pytest.warns(UserWarning):
+    with warn_log_checker:
         temp_token_provider = TokenProviderForTest()
         temp_token_provider._persistent_data = persistent_data
         assert temp_token_provider.get_token() is None

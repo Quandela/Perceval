@@ -26,10 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from deprecated import deprecated
-from perceval.utils.parameter import P
+
 from perceval.components import Processor, Circuit, BS
 from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.utils.parameter import P
+from perceval.utils.logging import deprecated
 
 
 class Generic2ModeItem(CatalogItem):
