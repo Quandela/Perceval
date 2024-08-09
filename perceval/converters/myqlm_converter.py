@@ -39,8 +39,8 @@ class MyQLMConverter(AGateConverter):
     :param backend_name: Backend to use in computation, defaults to SLOS
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(catalog, backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
+        super().__init__(backend_name, source)
 
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits

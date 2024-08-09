@@ -38,11 +38,10 @@ except ModuleNotFoundError as e:
 from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
 import perceval.components.unitary_components as comp
-from perceval.components import catalog
 
 
 def test_basic_circuit_h():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     pc = convertor.convert(qc)
@@ -58,7 +57,7 @@ def test_basic_circuit_h():
 
 
 def test_basic_circuit_double_h():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(1)
     qc.h(0)
     qc.h(0)
@@ -68,7 +67,7 @@ def test_basic_circuit_double_h():
 
 
 def test_basic_circuit_s():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(1)
     qc.s(0)
     pc = convertor.convert(qc)
@@ -82,7 +81,7 @@ def test_basic_circuit_s():
 
 
 def test_basic_circuit_swap_direct():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.swap(0, 1)
     pc = convertor.convert(qc)
@@ -95,7 +94,7 @@ def test_basic_circuit_swap_direct():
 
 
 def test_basic_circuit_swap_indirect():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.swap(1, 0)
     pc = convertor.convert(qc)
@@ -108,7 +107,7 @@ def test_basic_circuit_swap_indirect():
 
 
 def test_basic_circuit_swap_with_gap():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(5)
     qc.swap(1, 3)
     pc = convertor.convert(qc)
@@ -120,7 +119,7 @@ def test_basic_circuit_swap_with_gap():
 
 
 def test_cnot_1_heralded():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -132,7 +131,7 @@ def test_cnot_1_heralded():
 
 
 def test_cnot_1_inverse_heralded():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(1, 0)
@@ -152,7 +151,7 @@ def test_cnot_1_inverse_heralded():
 
 
 def test_cnot_2_heralded():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(3)
     qc.h(0)
     qc.cx(0, 2)
@@ -172,7 +171,7 @@ def test_cnot_2_heralded():
 
 
 def test_cnot_1_postprocessed():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -184,7 +183,7 @@ def test_cnot_1_postprocessed():
 
 
 def test_cnot_postprocess():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
@@ -198,7 +197,7 @@ def test_cnot_postprocess():
 
 
 def test_cnot_herald():
-    convertor = QiskitConverter(catalog)
+    convertor = QiskitConverter()
     qc = qiskit.QuantumCircuit(2)
     qc.h(0)
     qc.cx(0, 1)
