@@ -35,12 +35,11 @@ from .abstract_converter import AGateConverter
 class QiskitConverter(AGateConverter):
     r"""Qiskit quantum circuit to perceval processor converter.
 
-    :param catalog: a component library to use for the conversion. It must contain CNOT gates.
     :param backend_name: backend name used in the converted processor (default SLOS)
     :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(catalog, backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
+        super().__init__(backend_name, source)
 
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.qregs[0].size  # number of qubits

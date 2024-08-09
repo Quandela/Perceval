@@ -37,43 +37,14 @@ from perceval.components.unitary_components import PS, BS
 from perceval.utils import Encoding
 
 
-def act_on_phi(value, obj):
-    if value:
-        obj.assign({"phi": math.pi / 2})
-    else:
-        obj.assign({"phi": math.pi / 4})
-
-
-def test_digital_converter():
-    phi = pcvl.P("phi")
-    ps = PS(phi)
-    ps2 = PS(phi)
-    bs = BS()
-    detector = DigitalConverterDetector('I act on phi')
-    detector.connect_to(ps, act_on_phi)
-
-    assert detector.is_connected_to(ps)
-    assert not detector.is_connected_to(bs)
-    assert not detector.is_connected_to(ps2)
-    assert phi.is_symbolic()
-
-    detector.trigger(True)
-    assert not phi.is_symbolic()
-    assert float(phi) == math.pi / 2
-
-    detector.trigger(False)
-    assert not phi.is_symbolic()
-    assert float(phi) == math.pi / 4
-
-
 def test_basic_state_conversion():
     ports = [Herald(1), Port(Encoding.DUAL_RAIL, "belle"), Port(Encoding.RAW, "bulle"),
              Herald(1), Herald(0), Port(Encoding.TIME, "rebelle"), Herald(1)]
 
     assert BasicState([0, 1, 0, 1]) == get_basic_state_from_ports(ports, LogicalState([1, 0, 1]))
-    with pytest.raises(IndexError):
+    with pytest.raises(ValueError):
         get_basic_state_from_ports(ports, LogicalState([1, 0]))
-    with pytest.raises(IndexError):
+    with pytest.raises(ValueError):
         get_basic_state_from_ports(ports, LogicalState([1, 0, 1, 0]))
     assert BasicState([1, 0, 1, 0, 1, 0, 1, 1]) == get_basic_state_from_ports(
         ports, LogicalState([1, 0, 1]), add_herald_and_ancillary=True)

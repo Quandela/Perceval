@@ -45,12 +45,11 @@ except ModuleNotFoundError as e:
 from perceval import BasicState, StateVector
 from perceval.converters import MyQLMConverter
 import perceval.components.unitary_components as comp
-from perceval.components import catalog
 from perceval.algorithm import Sampler
 
 
 def test_basic_circuit_h():
-    convertor = MyQLMConverter(catalog)  # takes as kwargs
+    convertor = MyQLMConverter()
     qprog = Program()  # Create a Program
     qbits = qprog.qalloc(1)  # Allocate some qbits
     print(qbits, type(qbits))
@@ -70,7 +69,7 @@ def test_basic_circuit_h():
 
 
 def test_cnot_1_heralded():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter()
     qprog = Program()
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(CNOT, qbits[0], qbits[1])
@@ -83,7 +82,7 @@ def test_cnot_1_heralded():
 
 
 def test_cnot_H():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter()
     qprog = Program()
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(H, qbits[0])
@@ -97,7 +96,7 @@ def test_cnot_H():
 
 
 def test_cnot_1_postprocessed():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter()
     qprog = Program()
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(H, qbits[0])
@@ -114,7 +113,7 @@ def test_cnot_1_postprocessed():
 
 
 def test_cz_heralded():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter()
     qprog = Program()
     qbits = qprog.qalloc(2)  # AllocateS 2 qbits
     qprog.apply(CSIGN, qbits[0], qbits[1])  # CZ or Controlled Z gate is called CSIGN in myqlm
@@ -128,7 +127,7 @@ def test_cz_heralded():
 
 
 def test_basic_circuit_swap():
-    convertor = MyQLMConverter(catalog)
+    convertor = MyQLMConverter()
     qprog = Program()
     qbits = qprog.qalloc(2)
     qprog.apply(SWAP, qbits[0], qbits[1])
@@ -157,7 +156,7 @@ def test_compare_u_1qbit(Gate_Name):
     gate_id = circ.ops[0].gate
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
-    myqlm_converter = MyQLMConverter(catalog=catalog)
+    myqlm_converter = MyQLMConverter()
     myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
@@ -188,7 +187,7 @@ def test_abstract_1qbit_gate():
     gate_id = circ.ops[0].gate
     gate_matrix = circ.gateDic[gate_id].matrix  # gate matrix data from myQLM
 
-    myqlm_converter = MyQLMConverter(catalog=catalog)
+    myqlm_converter = MyQLMConverter()
     myqlm_gate_u = circ_to_np(gate_matrix)
 
     pcvl_proc = myqlm_converter.convert(circ, use_postselection=False)
@@ -202,7 +201,7 @@ def test_abstract_1qbit_gate():
 
 def test_converter_ghz_state():
     # output distribution being displayed to verify computation from converted circuit in perceval
-    convertor = MyQLMConverter(catalog, backend_name="Naive")
+    convertor = MyQLMConverter(backend_name="Naive")
     qprog = Program()
     qbits = qprog.qalloc(3)
     qprog.apply(H, qbits[0])
@@ -226,7 +225,7 @@ def test_converter_ghz_state():
 
 @pytest.mark.skip(reason="Only for Dev, takes long for computation and displays truth table")
 def test_converter_noon_state():
-    convertor = MyQLMConverter(catalog, backend_name="SLOS")
+    convertor = MyQLMConverter(backend_name="SLOS")
     qprog = Program()
     qbits = qprog.qalloc(4)
     qprog.apply(H, qbits[0])
