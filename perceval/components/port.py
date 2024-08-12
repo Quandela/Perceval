@@ -28,23 +28,11 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Union
 from enum import Enum
 
 from perceval.utils import BasicState, Encoding, LogicalState
 from .abstract_component import AComponent
-
-
-def _port_size(encoding: Encoding):
-    if encoding == Encoding.DUAL_RAIL:
-        return 2
-    elif encoding == Encoding.POLARIZATION:
-        return 1
-    elif encoding == Encoding.TIME:
-        return 1
-    elif encoding == Encoding.RAW:
-        return 1
-    return None  # Port size cannot be deduced only with encoding in case of Qudit-encoding
 
 
 class PortLocation(Enum):
@@ -67,25 +55,14 @@ class APort(AComponent):
         Returns True if the photonic mode is closed by the port
         """
 
-    @staticmethod
-    @abstractmethod
-    def has_basic_state_equivalent() -> bool:
-        """
-        Returns True if the port has a basic state equivalent
-        """
-
-    @staticmethod
-    @abstractmethod
-    def has_logical_state_equivalent() -> bool:
-        """
-        Returns True if the port has a logical state equivalent
-        """
+    @property
+    def encoding(self):
+        return None
 
 
 class Port(APort):
-    def __init__(self, encoding, name):
-        assert encoding != Encoding.QUDIT, "Qudit encoded ports must be created by instantiating QuditPort"
-        super().__init__(_port_size(encoding), name)
+    def __init__(self, encoding: Encoding, name: str):
+        super().__init__(encoding.fock_length, name)
         self._encoding = encoding
 
     @property
@@ -94,37 +71,6 @@ class Port(APort):
 
     def is_output_photonic_mode_closed(self):
         return False
-
-    @staticmethod
-    def has_basic_state_equivalent() -> bool:
-        return True
-
-    @staticmethod
-    def has_logical_state_equivalent() -> bool:
-        return True
-
-    def to_basic_state(self, qubit_state: int) -> BasicState:
-        """Return the equivalent BasicState from the qubit state
-
-        :param state: qubit state (0 or 1)
-        :raises NotImplementedError: QUBIT and POLARIZATION encoding not currently supported
-        :return: The corresponding BasicState
-        """
-        if qubit_state not in [0, 1]:
-            raise ValueError("state should be 0 or 1")
-        if self.encoding == Encoding.RAW or self.encoding == Encoding.TIME:
-            return BasicState([int(qubit_state)])
-        elif self.encoding == Encoding.DUAL_RAIL:
-            return BasicState("|0,1>") if qubit_state else BasicState("|1,0>")
-        elif self.encoding == Encoding.QUDIT or self.encoding == Encoding.POLARIZATION:
-            raise NotImplementedError
-
-
-class QuditPort(Port):
-    def __init__(self, n, name):
-        super(Port, self).__init__(2**n, name)
-        self._n = n
-        self._encoding = Encoding.QUDIT
 
 
 class Herald(APort):
@@ -149,93 +95,64 @@ class Herald(APort):
     def expected(self):
         return self._value
 
-    @staticmethod
-    def has_basic_state_equivalent() -> bool:
-        return True
-
-    @staticmethod
-    def has_logical_state_equivalent() -> bool:
-        return False
-
-    def to_basic_state(self) -> BasicState:
-        """Return the equivalent BasicState from _value
-        """
-        return BasicState([self._value])
-
-
-class ADetector(APort, ABC):
-    def __init__(self, name=''):
-        super().__init__(1, name)
-
-    @abstractmethod
-    def trigger(self, value):
-        pass
-
-    @staticmethod
-    def supports_location(loc: PortLocation) -> bool:
-        return loc == PortLocation.OUTPUT
-
-    def is_output_photonic_mode_closed(self):
-        return True
-
-    @staticmethod
-    def has_basic_state_equivalent() -> bool:
-        return False
-
-    @staticmethod
-    def has_logical_state_equivalent() -> bool:
-        return False
-
-
-class CounterDetector(ADetector):
-    def __init__(self, name=''):
-        super().__init__(name)
-        self._counter = 0
-
-    def trigger(self, value):
-        if value:
-            self._counter += 1
-
-    @property
-    def count(self):
-        return self._counter
-
-
-class DigitalConverterDetector(ADetector):
-    def __init__(self, name=''):
-        super().__init__(name)
-        self._connections = {}
-
-    def trigger(self, value):
-        for component, action in self._connections.items():
-            action(value, component)
-
-    def connect_to(self, obj, action_func):
-        self._connections[obj] = action_func
-
-    def is_connected_to(self, component) -> bool:
-        return component in self._connections
-
 
 def get_basic_state_from_ports(ports: List[APort], state: LogicalState, add_herald_and_ancillary: bool = False) -> BasicState:
     """Convert a LogicalState to a BasicState by taking in account a port list
 
     :param ports: port list.
     :param state: LogicalState to convert to BasicState.
-    :param add_herald_and_ancillary: add the herald and ancillary port to the basic state. Default to False
-    :raises ValueError: ports and state are not consistent
-    :return: corresponding LogicalState.
+    :param add_herald_and_ancillary: add the herald and ancillary port to the basic state. Default to False.
+    :return: converted BasicState.
     """
-    basic_state = BasicState()
-    i = 0
+    encodings = []
     for port in ports:
-        if not port.has_basic_state_equivalent():
-            continue
-        if port.has_logical_state_equivalent():
-            basic_state *= port.to_basic_state(state[i])
-            i += 1
-        elif add_herald_and_ancillary:
-            basic_state *= port.to_basic_state()
-    if len(state) != i:
-        raise IndexError('Logical state and port list size do not match')
-    return basic_state
+        if isinstance(port, Herald):
+            if add_herald_and_ancillary:
+                encodings.append(port.expected)
+        else:
+            encodings.append(port.encoding)
+    return get_basic_state_from_encoding(encodings, state)
+
+
+def _to_fock(encoding: Encoding, qubit_state: List[int]) -> List[int]:
+    """Return the equivalent BasicState from the qubit state, as a list of integers
+
+    :param encoding: a qubit encoding
+    :param qubit_state: logical state for the required number of qubits (only 0 or 1 values are accepted)
+    :raises NotImplementedError: QUBIT and POLARIZATION encoding not currently supported
+    :return: The corresponding Fock state
+    """
+    if encoding.logical_length != len(qubit_state):
+        raise ValueError("Encoding / logical state size mismatch")
+    if any(q not in [0, 1] for q in qubit_state):
+        raise ValueError("Qubit value should be 0 or 1")
+
+    if encoding == Encoding.RAW or encoding == Encoding.TIME:
+        return [int(qubit_state[0])]
+    elif encoding == Encoding.DUAL_RAIL:
+        return [0, 1] if qubit_state[0] else [1, 0]
+    elif encoding.name.startswith("QUDIT"):
+        fock = [0]*encoding.fock_length
+        photon_pos = sum(val*(2**idx) for idx, val in enumerate(reversed(qubit_state)))
+        fock[photon_pos] = 1
+        return fock
+    else:
+        raise NotImplementedError
+
+
+def get_basic_state_from_encoding(encoding: List[Union[Encoding, int]], logical: LogicalState) -> BasicState:
+    fock = []
+    i = 0
+    for e in encoding:
+        if isinstance(e, int):
+            fock.append(e)
+        elif isinstance(e, Encoding):
+            lsz = e.logical_length
+            ls = logical[i:i+lsz]
+            i += lsz
+            fock += _to_fock(e, ls)
+        else:
+            raise TypeError(f"Unsupported type {type(e)}")
+    if i != len(logical):
+        raise ValueError("Encoding / logical state size mismatch")
+    return BasicState(fock)
