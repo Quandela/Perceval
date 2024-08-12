@@ -174,6 +174,7 @@ class RemoteJob(Job):
             kwargs['job_context'] = self._job_context
             self._request_data['job_name'] = self._name
             self._request_data['payload'].update(kwargs)
+            self._check_max_shots_samples_validity()
             self._id = self._rpc_handler.create_job(serialize(self._request_data))
             logger.info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
 
@@ -182,6 +183,14 @@ class RemoteJob(Job):
             raise e
 
         return self
+
+    def _check_max_shots_samples_validity(self):
+        p = self._request_data['payload']
+        if "max_samples" in p and "max_shots" in p:
+            if p["max_samples"] > p["max_shots"]:
+                logger.warn(f"Lowered 'max_samples' from user defined value ({p['max_samples']}) to 'max_shots' value ({p['max_shots']}) for consistency.",
+                            channel.user)
+                p["max_samples"] = p["max_shots"]
 
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):

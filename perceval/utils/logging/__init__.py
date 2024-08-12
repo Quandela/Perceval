@@ -47,6 +47,8 @@ def _my_excepthook(excType, excValue, this_traceback):
                  exc_info=(excType, excValue, this_traceback))
 
 
+sys.excepthook = _my_excepthook
+
 def deprecated(*decorator_args, **decorator_kwargs):
     def decorator_deprecated(func):
         @functools.wraps(func)

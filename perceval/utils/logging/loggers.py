@@ -137,7 +137,7 @@ class ExqaliburLogger(ILogger):
     def _format_exception(self, exc_info=None) -> str:
         if not exc_info:
             return ""
-        return ': '+' '.join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])).replace("\n", " ").replace("    ", " ").replace("  ", ", ")
+        return '\n' + ''.join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
 
     def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         msg = str(msg)
