@@ -86,8 +86,8 @@ class CQASMConverter(AGateConverter):
     :param backend_name: backend name used in the converted processor (default SLOS)
     :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(catalog, backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
+        super().__init__(backend_name, source)
         import cqasm.v3x as cqasm
 
         self._qubit_list = []
