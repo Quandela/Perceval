@@ -40,6 +40,7 @@ tikz_implemented_colors = {
     "cyan": True,
     "darkgray": True,
     "darkred": "\\definecolor{darkred}{rgb}{0.55, 0.0, 0.0}",
+    "dimgrey": "\\definecolor{dimgrey}{rgb}{0.27, 0.27, 0.27}",
     "gray": True,
     "green": True,
     "lightblue": "\\definecolor{lightblue}{rgb}{0.68, 0.85, 0.9}",
@@ -57,6 +58,7 @@ tikz_implemented_colors = {
     "thistle": "\\definecolor{thistle}{rgb}{0.85, 0.75, 0.85}",
     "violet": True,
     "white": True,
+    "whitesmoke": "\\definecolor{whitesmoke}{rgb}{0.96, 0.96, 0.96}",
     "yellow": True,
 }
 
