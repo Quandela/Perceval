@@ -29,7 +29,7 @@
 
 from perceval.simulators.delay_simulator import _retrieve_mode_count, DelaySimulator
 from perceval.simulators.simulator import Simulator
-from perceval.backends._naive import NaiveBackend
+from perceval.backends import SLOSBackend
 from perceval.components import Circuit, BS, TD
 from perceval.utils import BasicState, BSDistribution, PostSelect
 
@@ -56,7 +56,7 @@ def test_prepare_circuit():
 
 
 def test_delay_simulation():
-    backend = NaiveBackend()
+    backend = SLOSBackend()
     simulator = DelaySimulator(Simulator(backend))
     input_circ = [((0, 1), BS()), ((0,), TD(1)), ((0, 1), BS())]
     simulator.set_circuit(input_circ)
@@ -83,3 +83,12 @@ def test_delay_simulation():
     assert len(sv.keys()) == 2
     assert BasicState([0, 1]) in sv.keys()
     assert BasicState([0, 2]) in sv.keys()
+
+
+def test_invalid_delay():
+    backend = SLOSBackend()
+    simulator = DelaySimulator(Simulator(backend))
+    input_circ = [((0, 1), BS()), ((0,), TD(0.75)), ((0, 1), BS())]
+    simulator.set_circuit(input_circ)
+    with pytest.raises(ValueError):  # TD parameter has to be an integer (number of periods)
+        simulator.probs(BasicState([1, 0]))

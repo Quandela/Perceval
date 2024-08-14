@@ -138,22 +138,19 @@ class BS(ACircuit):
             return Matrix([[1, 1], [1, -1]], use_symbolic)
         raise NotImplementedError(f'Unitary matrix computation not implemented for convention {self._convention.name}')
 
-    def get_variables(self, map_param_kid=None):
-        parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "theta", "theta", sp.pi/2, map_param_kid)
-        self.variable_def(parameters, "phi_tl", "phi_tl", 0, map_param_kid)
-        self.variable_def(parameters, "phi_bl", "phi_bl", 0, map_param_kid)
-        self.variable_def(parameters, "phi_tr", "phi_tr", 0, map_param_kid)
-        self.variable_def(parameters, "phi_br", "phi_br", 0, map_param_kid)
-        return parameters
+    def get_variables(self):
+        out = {}
+        self._populate_parameters(out, "theta", sp.pi / 2)
+        self._populate_parameters(out, "phi_tl", 0)
+        self._populate_parameters(out, "phi_bl", 0)
+        self._populate_parameters(out, "phi_tr", 0)
+        self._populate_parameters(out, "phi_br", 0)
+        return out
 
-    def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid)
-        parameters['convention'] = f'BSConvention.{self._convention.name}'
+    def describe(self):
+        parameters = self.get_variables()
         params_str = format_parameters(parameters, separator=', ')
-        return "BS(%s)" % params_str
+        return f"BS.{self._convention.name}({params_str})"
 
     def inverse(self, v=False, h=False):
         if not self.defined:
@@ -201,17 +198,14 @@ class PS(ACircuit):
         else:
             return Matrix([[math.cos(float(self._phi)) + 1j * math.sin(float(self._phi))]], False)
 
-    def get_variables(self, map_param_kid=None):
-        parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "phi", "phi", None, map_param_kid)
-        return parameters
+    def get_variables(self):
+        out = {}
+        self._populate_parameters(out, "phi")
+        return out
 
-    def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid)
-        params_str = format_parameters(parameters, separator=', ')
-        return "PS(%s)" % params_str
+    def describe(self):
+        params_str = format_parameters(self.get_variables(), separator=', ')
+        return f"PS({params_str})"
 
     def inverse(self, v=False, h=False):
         if h:
@@ -254,18 +248,15 @@ class WP(ACircuit):
                             math.cos(delta) - 1j * math.sin(delta) * math.cos(2 * xsi)
                            ]], False)
 
-    def get_variables(self, map_param_kid=None):
-        parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "xsi", "xsi", None, map_param_kid)
-        self.variable_def(parameters, "delta", "delta", None, map_param_kid)
-        return parameters
+    def get_variables(self):
+        out = {}
+        self._populate_parameters(out, "xsi")
+        self._populate_parameters(out, "delta")
+        return out
 
-    def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid)
-        params_str = format_parameters(parameters, separator=', ')
-        return "WP(%s)" % params_str
+    def describe(self):
+        params_str = format_parameters(self.get_variables(), separator=', ')
+        return f"WP({params_str})"
 
     def inverse(self, v=False, h=False):
         raise NotImplementedError("inverse not yet implemented")
@@ -313,19 +304,16 @@ class PR(ACircuit):
             return Matrix([[math.cos(delta), math.sin(delta)],
                            [-math.sin(delta), math.cos(delta)]], False)
 
-    def get_variables(self, map_param_kid=None):
-        parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "delta", "delta", None, map_param_kid)
-        return parameters
+    def get_variables(self):
+        out = {}
+        self._populate_parameters(out, "delta")
+        return out
 
-    def describe(self, map_param_kid=None):
-        parameters = self.get_variables(map_param_kid)
-        params_str = format_parameters(parameters, separator=', ')
-        return "PR(%s)" % params_str
+    def describe(self):
+        params_str = format_parameters(self.get_variables(), separator=', ')
+        return f"PR({params_str})"
 
-    def inverse(self, v=False, h=False):
+    def inverse(self, v: bool = False, h: bool = False):
         raise NotImplementedError("inverse not yet implemented")
 
 
@@ -356,7 +344,7 @@ class Unitary(ACircuit):
         if h:
             self._u = self._u.inv()
 
-    def describe(self, _=None):
+    def describe(self):
         params = [f"Matrix('''{self._u}''')"]
         if self.name != Unitary.DEFAULT_NAME:
             params.append(f"name='{self._name}'")
@@ -370,7 +358,7 @@ class PERM(Unitary):
     DEFAULT_NAME = "PERM"
 
     def __init__(self, perm):
-        assert isinstance(perm, list), "permutation Operator needs list parameter"
+        assert isinstance(perm, list), "Permutation component requires a list parameter"
         assert (min(perm) == 0 and
                 max(perm)+1 == len(perm) == len(set(perm)) == len([n for n in perm if isinstance(n, int)])),\
             "%s is not a permutation" % perm
@@ -380,11 +368,11 @@ class PERM(Unitary):
             u[v, i] = 1
         super().__init__(U=u)
 
-    def get_variables(self, _=None):
+    def get_variables(self):
         return {'PERM': ''}
 
-    def describe(self, _=None):
-        return "PERM(%s)" % str(self.perm_vector)
+    def describe(self):
+        return f"PERM({self.perm_vector})"
 
     def definition(self):
         return self.U
@@ -453,26 +441,25 @@ class PBS(Unitary):
                     [0, 0, 0, 1]])
         super().__init__(U=u, use_polarization=True)
 
-    def get_variables(self, map_param_kid=None):
-        return {}
-
     # noinspection PyMethodMayBeStatic
-    def describe(self, _=None):
+    def describe(self):
         return "PBS()"
 
 
-class Barrier(Unitary):
+class Barrier(ACircuit):
     """Behaves like an identity unitary, visually represented as a barrier."""
     DEFAULT_NAME = "I"
 
-    def __init__(self, num_modes):
-        assert isinstance(num_modes, int), "identity Operator needs list parameter"
-        self.num_modes = num_modes
-        u = Matrix.eye(num_modes, use_symbolic=False)
-        super().__init__(U=u)
+    def __init__(self, num_modes: int, display: bool = True):
+        assert isinstance(num_modes, int), "Barrier"
+        self._display = bool(display)
+        super().__init__(num_modes)
 
-    def describe(self, _=None):
-        return f"Barrier({self.num_modes})"
+    def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
+        return Matrix.eye(self._m)
+
+    def describe(self):
+        return f"Barrier({self._m})"
 
     def definition(self):
         return self.U

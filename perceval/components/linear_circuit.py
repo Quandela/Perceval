@@ -112,9 +112,6 @@ class ACircuit(AParametrizedComponent, ABC):
             component: ACircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
-    def param(self, param_name) -> Parameter:
-        return self._params[param_name]
-
     def __setitem__(self, key, value):
         self._params[key] = value
 
@@ -276,7 +273,7 @@ class ACircuit(AParametrizedComponent, ABC):
         raise NotImplementedError("component has no inverse operator")
 
     @abstractmethod
-    def describe(self, map_param_kid=None) -> str:
+    def describe(self) -> str:
         pass
 
 
@@ -335,25 +332,20 @@ class Circuit(ACircuit):
         """
         return self.getitem(idx, only_parameterized=False)
 
-    def describe(self, map_param_kid=None) -> str:
+    def describe(self) -> str:
         r"""Describe a circuit
 
-        :param map_param_kid: internal parameter
         :return: a string describing the circuit that be re-used to define the circuit
         """
-        cparams = ["%d" % self._m]
+        cparams = [f"{self._m}"]
         if self.name != Circuit.DEFAULT_NAME:
             cparams.append(f"name='{self._name}'")
-        s = "Circuit(%s)" % (", ".join(cparams))
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
+        desc = f"Circuit({', '.join(cparams)})"
         for r, c in self._components:
-            if len(r) > 1:
-                srange = str(r)
-            else:
-                srange = str(r[0])
-            s += ".add("+srange+", "+c.describe(map_param_kid)+")"
-        return s
+            if len(r) == 1:
+                r = r[0]
+            desc += f".add({r}, {c.describe()})"
+        return desc
 
     @property
     def requires_polarization(self) -> bool:

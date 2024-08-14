@@ -98,6 +98,9 @@ class AParametrizedComponent(AComponent):
     def params(self):
         return self._params.keys()
 
+    def param(self, param_name) -> Parameter:
+        return self._params[param_name]
+
     def get_parameters(self, all_params: bool = False) -> List[Parameter]:
         """Return the parameters of the circuit
 
@@ -144,29 +147,29 @@ class AParametrizedComponent(AComponent):
         self._params[name] = p
         return p
 
-    def variable_def(self, out_parameters: dict, k, pname, default_value, map_param_kid=None):
-        if map_param_kid is None:
-            map_param_kid = {}
-        if self._params[k].defined:
-            if default_value is None or self._params[k]._value != default_value:
-                v = self._params[k]._value
+    def _populate_parameters(self, out_parameters: dict, pname: str, default_value: float = None):
+        """
+        Populate an in/out dictionary with a {parameter name: best value for display} couple, if needed.
+        A value equal to the optional default value will not be injected in the dictionary.
+
+        :param out_parameters: out dictionary, where key/value pairs are added.
+        :param pname: parameter name to consider, in the component definition.
+            e.g. fto retrieve "phi0" from PS(phi=P("phi0")), ask for pname="phi", as it's the parameter name for a PS.
+        :param default_value: optional default numerical value. None means no default value.
+        """
+        p = self._params[pname]
+        if p.defined:
+            if default_value is None or p._value != default_value:
+                v = p._value
                 if isinstance(v, sp.Expr):
-                    v = str(v)
-                    out_parameters[pname] = v
-                elif default_value is None or abs(v-float(default_value)) > 1e-6:
+                    out_parameters[pname] = str(v)
+                elif default_value is None or abs(v - float(default_value)) > 1e-6:
                     out_parameters[pname] = v
         else:
-            out_parameters[pname] = map_param_kid[self._params[k]._pid]
+            out_parameters[pname] = self._params[pname].name
 
-    def get_variables(self, _=None):
+    def get_variables(self):
         return {}
-
-    def map_parameters(self):
-        map_param_kid = {}
-        for k, p in self._params.items():
-            if not p.defined:
-                map_param_kid[p._pid] = p.name
-        return map_param_kid
 
     def copy(self, subs: Union[dict, list] = None):
         nc = copy.deepcopy(self)

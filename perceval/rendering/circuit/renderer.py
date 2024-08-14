@@ -77,7 +77,6 @@ class ICircuitRenderer(ABC):
 
     def render_circuit(self,
                        circuit: ACircuit,
-                       map_param_kid: dict = None,
                        shift: int = 0,
                        recursive: bool = False,
                        precision: float = 1e-6,
@@ -85,7 +84,7 @@ class ICircuitRenderer(ABC):
         """Renders the input circuit
         """
         if not isinstance(circuit, Circuit):
-            variables = circuit.get_variables(map_param_kid)
+            variables = circuit.get_variables()
             description = format_parameters(variables, precision, nsimplify)
             self.append_circuit([p + shift for p in range(circuit.m)], circuit, description)
 
@@ -108,16 +107,15 @@ class ICircuitRenderer(ABC):
                             self.render_circuit(
                                 c,
                                 shift=shiftr[0],
-                                map_param_kid=map_param_kid,
                                 precision=precision,
                                 nsimplify=nsimplify)
                             self.close_subblock(shiftr)
                         else:
-                            component_vars = c.get_variables(map_param_kid)
+                            component_vars = c.get_variables()
                             description = format_parameters(component_vars, precision, nsimplify)
                             self.append_subcircuit(shiftr, c, description)
                     else:
-                        component_vars = c.get_variables(map_param_kid)
+                        component_vars = c.get_variables()
                         description = format_parameters(component_vars, precision, nsimplify)
                         self.append_circuit(shiftr, c, description, pos=pos)
         self.extend_pos(0, circuit.m - 1)

@@ -128,7 +128,10 @@ class DelaySimulator(ASimulatorDecorator):
                 can_output_circuit = False
 
             else:  # case time delay
-                t = int(c.get_variables()["t"])
+                t = float(c.param("t"))
+                if abs(t - int(t)) > 1e-6:
+                    raise ValueError(f"'t' parameter must be an integer, got{t}")
+                t = int(t)
                 r0 = r[0]
 
                 if r0 != mode_count - 1:
