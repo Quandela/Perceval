@@ -38,6 +38,7 @@ with warnings.catch_warnings():
         category=RuntimeWarning)
     import drawsvg
 
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 from multipledispatch import dispatch
 import networkx as nx
