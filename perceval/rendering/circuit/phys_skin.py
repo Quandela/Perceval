@@ -62,9 +62,9 @@ class PhysSkin(ASkin):
     def get_width(self, c) -> int:
         return 1
 
-    @dispatch((cp.Barrier))
+    @dispatch(cp.Barrier)
     def get_width(self, c) -> int:
-        return 1
+        return 1 if c.visible else 0
 
     @dispatch(AComponent)
     def get_shape(self, c):
@@ -250,16 +250,15 @@ class PhysSkin(ASkin):
         canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name)
 
     def barrier_shape(self, circuit, canvas, content, mode_style, **opts):
+        if not circuit.visible:
+            return
+
         m = circuit.m
         if canvas.background_color is None:
-            canvas.add_rect((10, 10), 30, 50 * m - 20,
-                fill="whitesmoke", stroke="whitesmoke")
+            canvas.add_rect((10, 10), 30, 50 * m - 20, fill="whitesmoke", stroke="whitesmoke")
         for i in range(m):
-            canvas.add_mpath(
-                ["M", 0, 25 + i*50, "l", 50, 0],
-                **self.style[ModeStyle.PHOTONIC])
-        canvas.add_rect((24, 10), 2, 50 * m - 20,
-            fill="dimgrey", stroke="dimgrey")
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_rect((24, 10), 2, 50 * m - 20, fill="dimgrey", stroke="dimgrey")
 
     def perm_shape(self, circuit, canvas, content, mode_style, **opts):
         for an_input, an_output in enumerate(circuit.perm_vector):

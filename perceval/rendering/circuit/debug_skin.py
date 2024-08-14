@@ -63,6 +63,10 @@ class DebugSkin(ASkin):
     def get_width(self, c) -> int:
         return 1
 
+    @dispatch(cp.Barrier)
+    def get_width(self, c) -> int:
+        return 1 if c.visible else 0
+
     @dispatch(AComponent)
     def get_shape(self, c):
         return self.default_shape
@@ -242,15 +246,16 @@ class DebugSkin(ASkin):
 
     def barrier_shape(self, circuit, canvas, content, mode_style, **opts):
         m = circuit.m
+        if not circuit.visible:
+            # even if invisible, draw a thin line for debug purpose
+            canvas.add_rect((0, 10), 2, 50 * m - 20, fill="whitesmoke", stroke="whitesmoke")
+            return
+
         if canvas.background_color is None:
-            canvas.add_rect((10, 10), 30, 50 * m - 20,
-                fill="whitesmoke", stroke="whitesmoke")
+            canvas.add_rect((10, 10), 30, 50 * m - 20, fill="whitesmoke", stroke="whitesmoke")
         for i in range(m):
-            canvas.add_mpath(
-                ["M", 0, 25 + i*50, "l", 50, 0],
-                **self.style[ModeStyle.PHOTONIC])
-        canvas.add_rect((24, 10), 2, 50 * m - 20,
-            fill="dimgrey", stroke="dimgrey")
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_rect((24, 10), 2, 50 * m - 20, fill="dimgrey", stroke="dimgrey")
 
     def perm_shape(self, circuit, canvas, content, mode_style, **opts):
         for an_input, an_output in enumerate(circuit.perm_vector):

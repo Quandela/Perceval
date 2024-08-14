@@ -610,7 +610,8 @@ class CanvasRenderer(ICircuitRenderer):
                     self._chart[lines[0] + out_mode] + w
                 # Stop drawing this mode (set it in "herald" style)
                 self._mode_style[lines[0] + out_mode] = ModeStyle.HERALD
-        if isinstance(circuit, PERM):
+
+        else:  # Permutation case
             m0 = lines[0]
             out_modes = copy.copy(self._mode_style)
             for m_input, m_output in enumerate(circuit.perm_vector):
@@ -619,11 +620,10 @@ class CanvasRenderer(ICircuitRenderer):
 
     def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
-        if w:
-            self._add_shape(lines, circuit, content, w, pos=pos)
-            self._update_mode_style(lines, circuit, w)
-            for i in range(lines[0], lines[-1] + 1):
-                self._chart[i] += w
+        self._add_shape(lines, circuit, content, w, pos=pos)
+        self._update_mode_style(lines, circuit, w)
+        for i in range(lines[0], lines[-1] + 1):
+            self._chart[i] += w
 
     def append_subcircuit(self, lines, circuit, content):
         w = self._skin.style_subcircuit['width']

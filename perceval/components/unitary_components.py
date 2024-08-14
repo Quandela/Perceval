@@ -450,10 +450,14 @@ class Barrier(ACircuit):
     """Behaves like an identity unitary, visually represented as a barrier."""
     DEFAULT_NAME = "I"
 
-    def __init__(self, num_modes: int, display: bool = True):
+    def __init__(self, num_modes: int, visible: bool = True):
         assert isinstance(num_modes, int), "Barrier"
-        self._display = bool(display)
+        self._visible = bool(visible)
         super().__init__(num_modes)
+
+    @property
+    def visible(self):
+        return self._visible
 
     def _compute_unitary(self, assign: dict = None, use_symbolic: bool = False) -> Matrix:
         return Matrix.eye(self._m)
@@ -464,6 +468,7 @@ class Barrier(ACircuit):
     def definition(self):
         return self.U
 
+    # noinspection PyMethodMayBeStatic
     def apply(self, r, sv):
         return sv
 
