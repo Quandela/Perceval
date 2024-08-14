@@ -108,7 +108,7 @@ class ACircuit(AParametrizedComponent, ABC):
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
-    def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
+    def add(self, port_range: Union[int, Tuple[int, ...]],
             component: ACircuit, merge: bool = None) -> Circuit:
         return Circuit(self._m).add(0, self).add(port_range, component, merge)
 
@@ -456,7 +456,7 @@ class Circuit(ACircuit):
         c @= component
         return c
 
-    def add(self, port_range: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]],
+    def add(self, port_range: Union[int, Tuple[int, ...]],
             component: ACircuit, merge: bool = False, x_grid: int = None) -> Circuit:
         r"""Add a component in a circuit
 

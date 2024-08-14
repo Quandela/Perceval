@@ -86,7 +86,7 @@ class ICircuitRenderer(ABC):
         if not isinstance(circuit, Circuit):
             variables = circuit.get_variables()
             description = format_parameters(variables, precision, nsimplify)
-            self.append_circuit([p + shift for p in range(circuit.m)], circuit, description)
+            self.append_circuit(tuple(p + shift for p in range(circuit.m)), circuit, description)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
             grouped_components = circuit.group_components_by_xgrid()
@@ -99,7 +99,7 @@ class ICircuitRenderer(ABC):
                     for r, _ in group:
                         pos = max(pos, self.max_pos(r[0], r[-1]))
                 for r, c in group:
-                    shiftr = [p + shift for p in r]
+                    shiftr = tuple(p + shift for p in r)
                     if c.is_composite() and c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})
@@ -152,13 +152,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def open_subblock(self, lines: Tuple[int, int], name: str, size: Tuple[int, int], color=None) -> None:
+    def open_subblock(self, lines: Tuple[int, ...], name: str, size: Tuple[int, int], color=None) -> None:
         """
         Opens a visual area, highlighting a part of the circuit
         """
 
     @abstractmethod
-    def close_subblock(self, lines: Tuple[int, int]) -> None:
+    def close_subblock(self, lines: Tuple[int, ...]) -> None:
         """
         Close a visual area
         """
@@ -171,13 +171,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def append_subcircuit(self, lines: Tuple[int, int], circuit: Circuit, content: str) -> None:
+    def append_subcircuit(self, lines: Tuple[int, ...], circuit: Circuit, content: str) -> None:
         """
         Add a composite circuit to the rendering. Render each subcomponent independently.
         """
 
     @abstractmethod
-    def append_circuit(self, lines: Tuple[int, int], circuit: ACircuit, content: str) -> None:
+    def append_circuit(self, lines: Tuple[int, ...], circuit: ACircuit, content: str) -> None:
         """
         Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
         """
