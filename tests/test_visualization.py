@@ -34,8 +34,8 @@ import sympy as sp
 
 import perceval as pcvl
 from perceval import catalog
-from perceval.components.unitary_components import *
-from perceval.components.non_unitary_components import *
+from perceval.components.unitary_components import BS, PS, PBS, WP, HWP, PERM, QWP, PR, Unitary
+from perceval.components.non_unitary_components import TD
 from perceval.rendering.circuit import SymbSkin
 
 from _test_utils import _save_or_check, save_figs
@@ -259,7 +259,7 @@ def test_svg_decomposition_symb_compact(tmp_path, save_figs):
 
 
 def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
-    p = pcvl.components.catalog['klm cnot'].build_processor()
+    p = catalog['klm cnot'].build_processor()
     c = pcvl.Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
     pc = pcvl.Processor('SLOS', c)
     pc.add_herald(1, 0)
@@ -268,7 +268,7 @@ def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
 
 
 def test_svg_processor_with_heralds_phys_not_recursive(tmp_path, save_figs):
-    p = pcvl.components.catalog['klm cnot'].build_processor()
+    p = catalog['klm cnot'].build_processor()
     c = pcvl.Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
     pc = pcvl.Processor('SLOS', c)
     pc.add_herald(1, 0)

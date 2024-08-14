@@ -364,7 +364,7 @@ def test_getitem1_index():
 
 def test_getitem2_value():
     c = Circuit(2) // comp.BS.H(theta=P("thet0")) // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
-    assert c[0, 0].describe() == "BS(theta=thet0, convention=BSConvention.H)"
+    assert c[0, 0].describe() == "BS.H(theta=thet0)"
     assert c[0, 1].describe() == "PS(phi=phi1)"
 
 

@@ -89,6 +89,6 @@ def test_invalid_delay():
     backend = SLOSBackend()
     simulator = DelaySimulator(Simulator(backend))
     input_circ = [((0, 1), BS()), ((0,), TD(0.75)), ((0, 1), BS())]
-    simulator.set_circuit(input_circ)
+
     with pytest.raises(ValueError):  # TD parameter has to be an integer (number of periods)
-        simulator.probs(BasicState([1, 0]))
+        simulator.set_circuit(input_circ)
