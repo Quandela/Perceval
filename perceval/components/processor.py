@@ -302,7 +302,13 @@ class Processor(AProcessor):
         """Log resources of the processor
 
         :param method: name of the method used
-        :param extra_parameters: extra parameters to log
+        :param extra_parameters: extra parameters to log.
+
+            Extra parameter can be:
+
+                - max_samples
+                - max_shots
+                - precision
         """
         extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
         my_dict = {
@@ -321,7 +327,7 @@ class Processor(AProcessor):
             logger.info(f"Cannot get n for type {type(self._input_state)}", channel.resource)
         if extra_parameters:
             my_dict.update(extra_parameters)
-        if self.noise:
+        if self.noise:  # TODO: PCVL-782
             my_dict['noise'] = self.noise.__dict__()
         elif self.source:
             my_dict['source'] = self.source.__dict__()

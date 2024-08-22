@@ -78,7 +78,12 @@ class ALogger(ABC):
         pass
 
     def log_resources(self, my_dict: Dict):
-        """Log a dictionary as resources, meaning at log level info, in channel user and serialize by json module
+        """Log a dictionary as resources
+
+            Logging as resource mean log:
+             - level: info
+             - channel: user
+             - serialize the dictionary as json so it can be deserialize easily later
 
         :param my_dict: resources dictionary to log
         """

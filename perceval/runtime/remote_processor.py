@@ -341,7 +341,7 @@ class RemoteProcessor(AProcessor):
         my_dict = {
             'layer': 'RemoteProcessor',
             'platform': self.name,
-            'm': self.linear_circuit().m,
+            'm': self.circuit_size,
             'command': command
         }
         if self._input_state:

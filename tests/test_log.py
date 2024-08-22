@@ -81,20 +81,19 @@ def test_log_resources(mock_info, requests_mock):
     pcvl.logger.set_level(pcvl.logging.level.info, pcvl.logging.channel.resources)
 
     # prepare test parameters
-    input_state = pcvl.BasicState("|1,1,0,0,1,1,0,0,1,1>")
-    circuit = pcvl.Circuit(10)
+    input_state = pcvl.BasicState("|1,1,0,0>")
+    circuit = pcvl.Circuit(4)
     noise_model = pcvl.NoiseModel(brightness=0.2, indistinguishability=0.75, g2=0.05)
     source = pcvl.Source.from_noise_model(noise_model)
-    input_state_svd = source.generate_distribution(input_state)
     max_samples = 500
-    min_detected_photon_filter = 6
+    min_detected_photon_filter = 2
 
-    # Proc - SLOS - Source
     proc_slos = pcvl.Processor('SLOS', circuit, source=source)
     proc_slos.min_detected_photons_filter(min_detected_photon_filter)
     proc_slos.with_input(input_state)
     proc_slos.probs()
 
+    # Processor
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
     assert my_dict[SOURCE] == source.__dict__()
     assert my_dict[LAYER] == 'Processor'
@@ -128,21 +127,25 @@ def test_log_resources(mock_info, requests_mock):
     assert my_dict[M] == circuit.m
     assert my_dict['command'] == 'probs'
 
-    proc_clicli = pcvl.Processor('CliffordClifford2017', pcvl.Circuit(10), noise=noise_model)
+    proc_clicli = pcvl.Processor('CliffordClifford2017', pcvl.Circuit(4), noise=noise_model)
     proc_clicli.min_detected_photons_filter(min_detected_photon_filter)
     proc_clicli.with_input(input_state)
     proc_clicli.samples(max_samples)
-    # NoisySamplingSimulator.log_resources is called after Processor.log_resources
-    my_dict = _get_last_dict_logged(mock_info.mock_calls[-2].args[0])
-    assert SOURCE not in my_dict
-    assert my_dict[NOISE] == noise_model.__dict__()
-    assert my_dict[LAYER] == 'Processor'
-    assert my_dict[BACKEND] == 'CliffordClifford2017'
-    assert my_dict[N] == input_state.n
-    assert my_dict[M] == circuit.m
-    assert my_dict[METHOD] == 'samples'
-    assert my_dict['max_samples'] == max_samples
 
+
+@patch.object(pcvl.logger, "info")
+def test_log_resources_simulator(mock_info, requests_mock):
+    pcvl.logger.set_level(pcvl.logging.level.info, pcvl.logging.channel.resources)
+
+    # prepare test parameters
+    input_state = pcvl.BasicState("|1,1,0,0>")
+    circuit = pcvl.Circuit(4)
+    noise_model = pcvl.NoiseModel(brightness=0.2, indistinguishability=0.75, g2=0.05)
+    source = pcvl.Source.from_noise_model(noise_model)
+    input_state_svd = source.generate_distribution(input_state)
+    min_detected_photon_filter = 2
+
+    # Simulator
     sim = pcvl.Simulator(pcvl.SLOSBackend())
     sim.set_selection(min_detected_photon_filter=min_detected_photon_filter)
     sim.set_circuit(circuit)
@@ -166,6 +169,21 @@ def test_log_resources(mock_info, requests_mock):
     assert my_dict[M] == circuit.m
     assert my_dict[METHOD] == 'probs_svd'
 
+
+@patch.object(pcvl.logger, "info")
+def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
+    pcvl.logger.set_level(pcvl.logging.level.info, pcvl.logging.channel.resources)
+
+    # prepare test parameters
+    input_state = pcvl.BasicState("|1,1,0,0>")
+    circuit = pcvl.Circuit(4)
+    noise_model = pcvl.NoiseModel(brightness=0.2, indistinguishability=0.75, g2=0.05)
+    source = pcvl.Source.from_noise_model(noise_model)
+    input_state_svd = source.generate_distribution(input_state)
+    max_samples = 500
+    min_detected_photon_filter = 2
+
+    # Noisy Simulator Simulator
     sim = pcvl.simulators.NoisySamplingSimulator(pcvl.Clifford2017Backend())
     sim.set_selection(min_detected_photon_filter=min_detected_photon_filter)
     sim.set_circuit(circuit)

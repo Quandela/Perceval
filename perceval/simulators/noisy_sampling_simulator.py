@@ -349,6 +349,11 @@ class NoisySamplingSimulator:
 
         :param method: name of the method used
         :param extra_parameters: extra parameters to log
+
+            Extra parameter can be:
+
+                - max_samples
+                - max_shots
         """
         extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
         my_dict = {
