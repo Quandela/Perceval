@@ -38,7 +38,7 @@ from multipledispatch import dispatch
 from typing import Dict, List, Union, Optional
 
 import exqalibur as xq
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 from .globals import global_params
 from .qmath import exponentiation_by_squaring

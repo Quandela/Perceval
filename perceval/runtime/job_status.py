@@ -31,7 +31,7 @@ from enum import Enum
 from time import time, sleep
 from typing import Optional
 
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 
 class RunningStatus(Enum):

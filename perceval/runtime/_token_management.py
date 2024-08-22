@@ -28,10 +28,9 @@
 # SOFTWARE.
 
 import os
-
 from typing import Union
 
-from perceval.utils.logging import LOGGER as logger, channel
+from perceval.utils.logging import logger, channel
 
 from ..utils import PersistentData, FileFormat
 

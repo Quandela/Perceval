@@ -28,13 +28,12 @@
 # SOFTWARE.
 
 from typing import List
-
 import networkx as nx
 
 from .statevector import BasicState, StateVector
 from .qmath import distinct_permutations
 from ._enums import Encoding
-from .logging import LOGGER as logger, channel
+from .logging import logger, channel
 
 
 class StateGenerator:
