@@ -40,7 +40,6 @@ size_identity = 6
 mzi_generator_func = catalog['mzi phase last'].generate
 
 
-# noinspection PyTypeChecker
 def test_variable_parameters_count():
     def _gen_bs(i: int):
         return BS(theta=P(f"theta{i}"))

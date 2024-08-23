@@ -129,7 +129,7 @@ class DelaySimulator(ASimulatorDecorator):
 
             else:  # case time delay
                 t = float(c.param("t"))
-                if abs(t - int(t)) > 1e-6:
+                if not t.is_integer():
                     raise ValueError(f"'t' parameter must be an integer, got {t}")
                 t = int(t)
                 r0 = r[0]
