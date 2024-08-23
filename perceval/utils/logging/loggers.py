@@ -26,20 +26,25 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from os import path
-import warnings
+
+import json
 import traceback
+import warnings
 import logging as py_log
+
 from abc import ABC, abstractmethod
+from typing import Dict
+from os import path
 
 from exqalibur import logging as exq_log
+
 from ..persistent_data import PersistentData
 from .config import LoggerConfig, _CHANNELS, _ENABLE_FILE
 
 DEFAULT_CHANNEL = exq_log.channel.user
 
 
-class ILogger(ABC):
+class ALogger(ABC):
     @abstractmethod
     def enable_file(self):
         pass
@@ -72,8 +77,19 @@ class ILogger(ABC):
     def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         pass
 
+    def log_resources(self, my_dict: Dict):
+        """Log resources as a dictionary with:
 
-class ExqaliburLogger(ILogger):
+             - level: info
+             - channel: resources
+             - serializing the dictionary as json so it can be easily deserialize
+
+        :param my_dict: resources dictionary to log
+        """
+        self.info(json.dumps(my_dict), exq_log.channel.resources)
+
+
+class ExqaliburLogger(ALogger):
     def initialize(self):
         persistent_data = PersistentData()
         if persistent_data.is_writable():
@@ -154,7 +170,7 @@ class ExqaliburLogger(ILogger):
         exq_log.critical(str(msg), channel)
 
 
-class PythonLogger(ILogger):
+class PythonLogger(ALogger):
     def __init__(self) -> None:
         self._logger = py_log.getLogger()
         self._config = LoggerConfig()
