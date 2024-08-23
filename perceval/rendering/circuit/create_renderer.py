@@ -27,22 +27,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Type
+from typing import Tuple, Union
 
-from .abstract_skin import ASkin, ModeStyle
-from .phys_skin import PhysSkin
-from .symb_skin import SymbSkin
-from .debug_skin import DebugSkin
-from .create_renderer import create_renderer
+from .renderer_interface import ICircuitRenderer
+from .abstract_skin import ASkin
+from .canvas_renderer import CanvasRenderer, PreRenderer
+from .text_renderer import TextRenderer
+from ..canvas import LatexCanvas, MplotCanvas, SvgCanvas
+from ..format import Format
 
 
-class DisplayConfig:
-    _selected_skin = PhysSkin  # Default skin is PhysSkin
+_CANVAS = {
+    Format.HTML: SvgCanvas,
+    Format.MPLOT: MplotCanvas,
+    Format.LATEX: LatexCanvas
+}
 
-    @staticmethod
-    def select_skin(skin: Type[ASkin]) -> None:
-        DisplayConfig._selected_skin = skin
 
-    @staticmethod
-    def get_selected_skin(**kwargs) -> ASkin:
-        return DisplayConfig._selected_skin(**kwargs)
+def create_renderer(
+    m: int,  # number of modes
+    output_format: Format = Format.TEXT,  # rendering method
+    skin: ASkin = None,  # skin (unused in text rendering)
+    **opts,
+) -> Tuple[ICircuitRenderer, Union[ICircuitRenderer, None]]:
+    """
+    Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
+    A skin object is needed for circuit graphic rendering.
+
+    This returns a (renderer, pre_renderer) tuple. It is recommended to
+    invoke the pre-renderer on the circuit to correctly pre-compute
+    additional position information that cannot be guessed in a single pass.
+    """
+    if output_format == Format.TEXT:
+        return TextRenderer(m), None
+
+    assert skin is not None, "A skin must be selected for circuit rendering"
+    canvas = _CANVAS[output_format](**opts)
+    return CanvasRenderer(m, canvas, skin), PreRenderer(m, skin)
