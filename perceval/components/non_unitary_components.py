@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import numpy as np
-import scipy as sc
+import scipy as sp
 
 from perceval.utils import BasicState, StateVector
 from perceval.components.abstract_component import AParametrizedComponent
@@ -41,11 +41,9 @@ class TD(AParametrizedComponent):
         super().__init__(1)
         self._dt = self._set_parameter("t", dt, 0, None, False)
 
-    def get_variables(self, map_param_kid=None):  # is this useful?
+    def get_variables(self):
         parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "t", "t", None, map_param_kid)
+        self._populate_parameters(parameters, "t")
         return parameters
 
     def describe(self):
@@ -64,12 +62,10 @@ class LC(AParametrizedComponent):
         super().__init__(1)
         self._loss = self._set_parameter("loss", loss, 0, 1, False)
 
-    def get_variables(self, map_param_kid=None):
-        parameters = {}
-        if map_param_kid is None:
-            map_param_kid = self.map_parameters()
-        self.variable_def(parameters, "loss", "loss", None, map_param_kid)
-        return parameters
+    def get_variables(self):
+        out = {}
+        self._populate_parameters(out, "loss")
+        return out
 
     def describe(self):
         if self._loss.fixed:
@@ -102,8 +98,8 @@ class LC(AParametrizedComponent):
         k = np.arange(n_max + 1)
         k = np.tile(k, (n_max+1, 1)).transpose()
 
-        prob = sc.special.comb(np.tile(N, (n_max+1, 1)), k)
-        prob *= loss ** (sc.sparse.diags([(n_max + 1 - i) * [i] for i in range(n_max + 1)],
+        prob = sp.special.comb(np.tile(N, (n_max+1, 1)), k)
+        prob *= loss ** (sp.sparse.diags([(n_max + 1 - i) * [i] for i in range(n_max + 1)],
                                          list(range(n_max + 1))).toarray())
         prob *= (1 - loss) ** k
         prob = np.sqrt(prob)

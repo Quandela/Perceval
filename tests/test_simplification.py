@@ -41,8 +41,8 @@ def PS_testing(circ, display):
     real = []
     for r, c in c2:
         if isinstance(c, comp.PS):
-            phi = c.get_variables()["phi"]
-            real.append((r[0], phi))
+            phi = c.param("phi")
+            real.append((r[0], float(phi) if phi.defined else phi.name))
 
     return real
 

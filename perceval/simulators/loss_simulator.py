@@ -77,7 +77,7 @@ class LossSimulator(ASimulatorDecorator):
                     in_perm = [next_free_mode-r[0]-1] + [m for m in range(1, next_free_mode-r[0]-1)] + [0]
                     output.append((r_ip, PERM(in_perm)))
 
-                loss = c.get_variables()["loss"]
+                loss = float(c.param("loss"))
                 bs = BS.H(BS.r_to_theta(1 - loss))
                 r_bs = (r[0], r[0]+1)
                 output.append((r_bs, bs))

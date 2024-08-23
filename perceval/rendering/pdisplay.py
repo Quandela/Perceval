@@ -81,7 +81,6 @@ except (ImportError, AttributeError):
 
 def pdisplay_circuit(
         circuit: ACircuit,
-        map_param_kid: dict = None,
         output_format: Format = Format.TEXT,
         recursive: bool = False,
         compact: bool = False,
@@ -100,10 +99,8 @@ def pdisplay_circuit(
         total_height=h,
         **opts)
 
-    if map_param_kid is None:
-        map_param_kid = circuit.map_parameters()
     renderer.open()
-    renderer.render_circuit(circuit, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
+    renderer.render_circuit(circuit, recursive=recursive, precision=precision, nsimplify=nsimplify)
     renderer.close()
     renderer.add_mode_index()
     return renderer.draw()

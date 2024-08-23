@@ -57,9 +57,9 @@ class SymbSkin(ASkin):
     def get_width(self, c) -> int:
         return 2
 
-    @dispatch((cp.Barrier))
-    def get_width(self, c) -> int:
-        return 1
+    @dispatch(cp.Barrier)
+    def get_width(self, c: cp.Barrier) -> int:
+        return 1 if c.visible else 0
 
     @dispatch((cp.BS, cp.PBS))
     def get_width(self, c) -> int:
@@ -231,16 +231,14 @@ class SymbSkin(ASkin):
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
 
     def barrier_shape(self, circuit, canvas, content, mode_style, **opts):
+        if not circuit.visible:
+            return
         m = circuit.m
-        if canvas.background_color is None:
-            canvas.add_rect((10, 10), 30, 50 * m - 20,
-                fill="whitesmoke", stroke="whitesmoke")
+        canvas.add_mline((24, 10, 24, 50 * m - 16), stroke_width=1, stroke="lightgray")
         for i in range(m):
             canvas.add_mpath(
                 ["M", 0, 25 + i*50, "l", 50, 0],
                 **self.style[ModeStyle.PHOTONIC])
-        canvas.add_rect((24, 10), 2, 50 * m - 20,
-            fill="dimgrey", stroke="dimgrey")
 
     def perm_shape(self, circuit, canvas, content, mode_style, **opts):
         for an_input, an_output in enumerate(circuit.perm_vector):

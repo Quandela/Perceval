@@ -77,7 +77,6 @@ class ICircuitRenderer(ABC):
 
     def render_circuit(self,
                        circuit: ACircuit,
-                       map_param_kid: dict = None,
                        shift: int = 0,
                        recursive: bool = False,
                        precision: float = 1e-6,
@@ -85,9 +84,9 @@ class ICircuitRenderer(ABC):
         """Renders the input circuit
         """
         if not isinstance(circuit, Circuit):
-            variables = circuit.get_variables(map_param_kid)
+            variables = circuit.get_variables()
             description = format_parameters(variables, precision, nsimplify)
-            self.append_circuit([p + shift for p in range(circuit.m)], circuit, description)
+            self.append_circuit(tuple(p + shift for p in range(circuit.m)), circuit, description)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
             grouped_components = circuit.group_components_by_xgrid()
@@ -100,7 +99,7 @@ class ICircuitRenderer(ABC):
                     for r, _ in group:
                         pos = max(pos, self.max_pos(r[0], r[-1]))
                 for r, c in group:
-                    shiftr = [p + shift for p in r]
+                    shiftr = tuple(p + shift for p in r)
                     if c.is_composite() and c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})
@@ -108,16 +107,15 @@ class ICircuitRenderer(ABC):
                             self.render_circuit(
                                 c,
                                 shift=shiftr[0],
-                                map_param_kid=map_param_kid,
                                 precision=precision,
                                 nsimplify=nsimplify)
                             self.close_subblock(shiftr)
                         else:
-                            component_vars = c.get_variables(map_param_kid)
+                            component_vars = c.get_variables()
                             description = format_parameters(component_vars, precision, nsimplify)
                             self.append_subcircuit(shiftr, c, description)
                     else:
-                        component_vars = c.get_variables(map_param_kid)
+                        component_vars = c.get_variables()
                         description = format_parameters(component_vars, precision, nsimplify)
                         self.append_circuit(shiftr, c, description, pos=pos)
         self.extend_pos(0, circuit.m - 1)
@@ -154,13 +152,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def open_subblock(self, lines: Tuple[int, int], name: str, size: Tuple[int, int], color=None) -> None:
+    def open_subblock(self, lines: Tuple[int, ...], name: str, size: Tuple[int, int], color=None) -> None:
         """
         Opens a visual area, highlighting a part of the circuit
         """
 
     @abstractmethod
-    def close_subblock(self, lines: Tuple[int, int]) -> None:
+    def close_subblock(self, lines: Tuple[int, ...]) -> None:
         """
         Close a visual area
         """
@@ -173,13 +171,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def append_subcircuit(self, lines: Tuple[int, int], circuit: Circuit, content: str) -> None:
+    def append_subcircuit(self, lines: Tuple[int, ...], circuit: Circuit, content: str) -> None:
         """
         Add a composite circuit to the rendering. Render each subcomponent independently.
         """
 
     @abstractmethod
-    def append_circuit(self, lines: Tuple[int, int], circuit: ACircuit, content: str) -> None:
+    def append_circuit(self, lines: Tuple[int, ...], circuit: ACircuit, content: str) -> None:
         """
         Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
         """
@@ -612,7 +610,8 @@ class CanvasRenderer(ICircuitRenderer):
                     self._chart[lines[0] + out_mode] + w
                 # Stop drawing this mode (set it in "herald" style)
                 self._mode_style[lines[0] + out_mode] = ModeStyle.HERALD
-        if isinstance(circuit, PERM):
+
+        else:  # Permutation case
             m0 = lines[0]
             out_modes = copy.copy(self._mode_style)
             for m_input, m_output in enumerate(circuit.perm_vector):
@@ -621,11 +620,10 @@ class CanvasRenderer(ICircuitRenderer):
 
     def append_circuit(self, lines, circuit, content, pos=None):
         w = self._skin.get_width(circuit)
-        if w:
-            self._add_shape(lines, circuit, content, w, pos=pos)
-            self._update_mode_style(lines, circuit, w)
-            for i in range(lines[0], lines[-1] + 1):
-                self._chart[i] += w
+        self._add_shape(lines, circuit, content, w, pos=pos)
+        self._update_mode_style(lines, circuit, w)
+        for i in range(lines[0], lines[-1] + 1):
+            self._chart[i] += w
 
     def append_subcircuit(self, lines, circuit, content):
         w = self._skin.style_subcircuit['width']
