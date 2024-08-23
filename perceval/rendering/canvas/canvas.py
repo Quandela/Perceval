@@ -144,12 +144,6 @@ class Canvas(ABC):
                   stroke_linejoin: str = "miter",
                   stroke_dasharray=None):
         """Draw a path
-
-        :param fill:
-        :param points:
-        :param stroke:
-        :param stroke_width:
-        :return:
         """
         assert not self._drawn, "calling add_mpath on drawn canvas"
         norm_points = []
@@ -237,7 +231,7 @@ class Canvas(ABC):
         self.position = (points[0] + r, points[1] + r)
         self.position = (points[0] - r, points[1] - r)
         self.position = points
-        return (self.position[0], self._inverse_Y * self.position[1])
+        return self.position[0], self._inverse_Y * self.position[1]
 
     def add_text(self, points: Tuple[float, float],
                  text: str, size: float,
@@ -253,10 +247,10 @@ class Canvas(ABC):
         else:
             self.position = (points[0]-size*len(text)/2, points[1]+size)
             self.position = (points[0]+size*len(text)/2, points[1]+size)
-        return (f_points[0], self._inverse_Y * f_points[1])
+        return f_points[0], self._inverse_Y * f_points[1]
 
-    def add_shape(self, shape_fn, circuit, content, mode_style, **opt):
-        shape_fn(circuit, self, content, mode_style, **opt)
+    def add_shape(self, shape_fn, circuit, mode_style):
+        shape_fn(circuit, self, mode_style)
 
     def set_background_color(self, background_color):
         """

@@ -35,7 +35,7 @@ from typing import Any, Tuple
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
 from perceval.rendering.canvas import Canvas, MplotCanvas, SvgCanvas, LatexCanvas
-from perceval.components import ACircuit, Circuit, PortLocation, PERM, Herald, Barrier
+from perceval.components import ACircuit, Circuit, APort, PortLocation, PERM, Herald, Barrier
 from perceval.utils.format import format_parameters
 
 
@@ -43,6 +43,9 @@ class PortPos:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
+
+_PERM_DESC = '_╲ ╱\n_ ╳ \n_╱ ╲'
 
 
 class ICircuitRenderer(ABC):
@@ -81,12 +84,9 @@ class ICircuitRenderer(ABC):
                        recursive: bool = False,
                        precision: float = 1e-6,
                        nsimplify: bool = True) -> None:
-        """Renders the input circuit
-        """
+        """Renders the input circuit"""
         if not isinstance(circuit, Circuit):
-            variables = circuit.get_variables()
-            description = format_parameters(variables, precision, nsimplify)
-            self.append_circuit(tuple(p + shift for p in range(circuit.m)), circuit, description)
+            self.append_circuit(tuple(p + shift for p in range(circuit.m)), circuit)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
             grouped_components = circuit.group_components_by_xgrid()
@@ -111,13 +111,9 @@ class ICircuitRenderer(ABC):
                                 nsimplify=nsimplify)
                             self.close_subblock(shiftr)
                         else:
-                            component_vars = c.get_variables()
-                            description = format_parameters(component_vars, precision, nsimplify)
-                            self.append_subcircuit(shiftr, c, description)
+                            self.append_subcircuit(shiftr, c)
                     else:
-                        component_vars = c.get_variables()
-                        description = format_parameters(component_vars, precision, nsimplify)
-                        self.append_circuit(shiftr, c, description, pos=pos)
+                        self.append_circuit(shiftr, c, pos=pos)
         self.extend_pos(0, circuit.m - 1)
 
     @abstractmethod
@@ -171,13 +167,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def append_subcircuit(self, lines: Tuple[int, ...], circuit: Circuit, content: str) -> None:
+    def append_subcircuit(self, lines: Tuple[int, ...], circuit: Circuit) -> None:
         """
         Add a composite circuit to the rendering. Render each subcomponent independently.
         """
 
     @abstractmethod
-    def append_circuit(self, lines: Tuple[int, ...], circuit: ACircuit, content: str) -> None:
+    def append_circuit(self, lines: Tuple[int, ...], circuit: ACircuit, pos=None) -> None:
         """
         Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
         """
@@ -189,13 +185,13 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def add_out_port(self, m: int, content: str, **opts) -> None:
+    def add_out_port(self, m: int, port: APort) -> None:
         """
         Render a port on the right side (outputs) of a previously rendered circuit, located on mode 'm'
         """
 
     @abstractmethod
-    def add_in_port(self, m: int, content: str, **opts) -> None:
+    def add_in_port(self, m: int, content: str) -> None:
         """
         Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
         """
@@ -284,12 +280,12 @@ class TextRenderer(ICircuitRenderer):
                 self._h[k] += "║"
         self._h[end * self._hc + 4] += "╝"
 
-    def append_subcircuit(self, lines, circuit, content):
+    def append_subcircuit(self, lines, circuit):
         self.open_subblock(lines, circuit.name, None)
         self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
         self.close_subblock(lines)
 
-    def append_circuit(self, lines, circuit, content, pos=None):
+    def append_circuit(self, lines, circuit, pos=None):
         # opening the box
         start = lines[0]
         end = lines[-1]
@@ -305,6 +301,10 @@ class TextRenderer(ICircuitRenderer):
             return
 
         # put variables on the right number of lines
+        if isinstance(circuit, PERM):
+            content = _PERM_DESC
+        else:
+            content = format_parameters(circuit.get_variables(), 1e-3, False)
         content = circuit.name + (content and "\n" + content or "")
         lcontents = content.split("\n")
         if start == end:
@@ -379,7 +379,7 @@ class TextRenderer(ICircuitRenderer):
             self._h[self._hc * k + 2] = f'{k:{offset-1}d}:' + self._h[self._hc * k + 2][offset:]
             self._h[self._hc * k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
-    def add_out_port(self, n_mode, port, **opts):
+    def add_out_port(self, n_mode: int, port: APort):
         content = ''
         if isinstance(port, Herald):
             content = port.expected
@@ -387,7 +387,7 @@ class TextRenderer(ICircuitRenderer):
             self._h[self._hc * (n_mode + i) + 2] += f'[{content})'
             self._h[self._hc * (n_mode + i) + 3] += f"[{port.name}]"
 
-    def add_in_port(self, n_mode, port, **opts):
+    def add_in_port(self, n_mode: int, port: APort):
         content = ''
         if isinstance(port, Herald):
             content = str(port.expected)
@@ -440,6 +440,10 @@ class CanvasRenderer(ICircuitRenderer):
         return self._skin.get_size(circuit, recursive)
 
     def add_mode_index(self):
+        self._canvas.set_offset(
+            (CanvasRenderer.AFFIX_ALL_SIZE + max(self._chart) * CanvasRenderer.SCALE, 0),
+            CanvasRenderer.AFFIX_ALL_SIZE,
+            CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
             if self._mode_style[k] != ModeStyle.HERALD:
                 self._canvas.add_text(
@@ -464,7 +468,7 @@ class CanvasRenderer(ICircuitRenderer):
                     self._n_font_size,
                     ta="left")
 
-    def add_out_port(self, n_mode, port, **opts):
+    def add_out_port(self, n_mode: int, port: APort):
         max_pos = max(self._chart[0:self._nsize])
         h_pos = self._out_port_pos[n_mode].x
         v_pos = self._out_port_pos[n_mode].y
@@ -475,25 +479,16 @@ class CanvasRenderer(ICircuitRenderer):
             ),
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE)
-        opts['starting_mode'] = n_mode
-        self._canvas.add_shape(
-            self._skin.get_shape(
-                port, PortLocation.OUTPUT), port, None, None, **opts)
+        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.OUTPUT), port, None)
 
-    def add_in_port(self, n_mode, port, **opts):
+    def add_in_port(self, n_mode: int, port: APort):
         h_pos = self._in_port_pos[n_mode].x * CanvasRenderer.SCALE
         v_pos = self._in_port_pos[n_mode].y * CanvasRenderer.SCALE
         self._canvas.set_offset(
             (h_pos, v_pos),
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE)
-        opts['starting_mode'] = n_mode
-        self._canvas.add_shape(
-            self._skin.get_shape(port, PortLocation.INPUT),
-            port,
-            None,
-            None,
-            **opts)
+        self._canvas.add_shape(self._skin.get_shape(port, PortLocation.INPUT), port, None)
 
     def open_subblock(self, lines, name, size, color=None):
         # Get recommended margins for this block
@@ -567,7 +562,7 @@ class CanvasRenderer(ICircuitRenderer):
                         **style)
             self._chart[p] = maxpos
 
-    def _add_shape(self, lines, circuit, content, w, shape_fn=None, pos=None):
+    def _add_shape(self, lines, circuit, w, shape_fn=None, pos=None):
         if shape_fn is None:
             shape_fn = self._skin.get_shape(circuit)
         start = lines[0]
@@ -582,7 +577,7 @@ class CanvasRenderer(ICircuitRenderer):
             CanvasRenderer.SCALE * w,
             CanvasRenderer.SCALE * (end - start + 1))
         modes = self._mode_style[start:(end + 1)]
-        self._canvas.add_shape(shape_fn, circuit, content, modes)
+        self._canvas.add_shape(shape_fn, circuit, modes)
 
     def set_herald_info(self, info):
         self._herald_info = info
@@ -618,18 +613,17 @@ class CanvasRenderer(ICircuitRenderer):
                 out_modes[m_output + lines[0]] = self._mode_style[m_input + m0]
             self._mode_style = out_modes
 
-    def append_circuit(self, lines, circuit, content, pos=None):
+    def append_circuit(self, lines, circuit, pos=None):
         w = self._skin.get_width(circuit)
-        self._add_shape(lines, circuit, content, w, pos=pos)
+        self._add_shape(lines, circuit, w, pos=pos)
         self._update_mode_style(lines, circuit, w)
         for i in range(lines[0], lines[-1] + 1):
             self._chart[i] += w
 
-    def append_subcircuit(self, lines, circuit, content):
+    def append_subcircuit(self, lines, circuit):
         w = self._skin.style_subcircuit['width']
         if w:
-            self._add_shape(
-                lines, circuit, content, w, self._skin.subcircuit_shape)
+            self._add_shape(lines, circuit, w, self._skin.subcircuit_shape)
             self._update_mode_style(lines, circuit, w)
             for i in range(lines[0], lines[-1] + 1):
                 self._chart[i] += w
@@ -686,10 +680,10 @@ class PreRenderer(ICircuitRenderer):
     def add_mode_index(self) -> None:
         pass
 
-    def add_out_port(self, m: int, content: str, **opts) -> None:
+    def add_out_port(self, m: int, port: APort) -> None:
         pass
 
-    def add_in_port(self, m: int, content: str, **opts) -> None:
+    def add_in_port(self, m: int, content: str) -> None:
         pass
 
     def set_herald_info(self, info):
@@ -724,7 +718,7 @@ class PreRenderer(ICircuitRenderer):
         for p in range(start, end + 1):
             self._chart[p] = maxpos
 
-    def _add_shape(self, lines, circuit, content, w, shape_fn=None, pos=None):
+    def _add_shape(self, lines, circuit, w, shape_fn=None, pos=None):
         start = lines[0]
         end = lines[-1]
         self.extend_pos(start, end, pos=pos)
@@ -747,19 +741,18 @@ class PreRenderer(ICircuitRenderer):
                     self._herald_range[0],
                     self._chart[lines[0] + in_mode])
 
-    def append_circuit(self, lines, circuit, content, pos=None):
+    def append_circuit(self, lines, circuit, pos=None):
         w = self._skin.get_width(circuit)
         if w:
-            self._add_shape(lines, circuit, content, w, pos=pos)
+            self._add_shape(lines, circuit, w, pos=pos)
             self._update_mode_style(lines, circuit, w)
             for i in range(lines[0], lines[-1] + 1):
                 self._chart[i] += w
 
-    def append_subcircuit(self, lines, circuit, content):
+    def append_subcircuit(self, lines, circuit):
         w = self._skin.style_subcircuit['width']
         if w:
-            self._add_shape(
-                lines, circuit, content, w, self._skin.subcircuit_shape)
+            self._add_shape(lines, circuit, w, self._skin.subcircuit_shape)
             self._update_mode_style(lines, circuit, w)
             for i in range(lines[0], lines[-1] + 1):
                 self._chart[i] += w
@@ -770,7 +763,7 @@ def create_renderer(
     output_format: Format = Format.TEXT,  # rendering method
     skin: ASkin = None,  # skin (unused in text rendering)
     **opts,
-) -> tuple[ICircuitRenderer, ICircuitRenderer]:
+) -> Tuple[ICircuitRenderer, ICircuitRenderer]:
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
     A skin object is needed for circuit graphic rendering.
