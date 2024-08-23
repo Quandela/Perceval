@@ -207,12 +207,9 @@ class SymbSkin(ASkin):
 
     def td_shape(self, circuit, canvas, mode_style):
         stroke = self.style[ModeStyle.PHOTONIC]['stroke']
-        canvas.add_circle((34, 14), 11, stroke="white", stroke_width=3)
-        canvas.add_circle((34, 14), 11, stroke=stroke, stroke_width=2)
-        canvas.add_circle((25, 14), 11, stroke="white", stroke_width=3)
-        canvas.add_circle((25, 14), 11, stroke=stroke, stroke_width=2)
-        canvas.add_circle((16, 14), 11, stroke="white", stroke_width=3)
-        canvas.add_circle((16, 14), 11, stroke=stroke, stroke_width=2)
+        for h_shift in [0, 9, 18]:
+            canvas.add_circle((34 - h_shift, 14), 11, stroke="white", stroke_width=3)
+            canvas.add_circle((34 - h_shift, 14), 11, stroke=stroke, stroke_width=2)
         canvas.add_mline([0, 25, 17, 25], stroke="white", stroke_width=3)
         canvas.add_mline([0, 25, 19, 25], stroke=stroke, stroke_width=2)
         canvas.add_mline([34, 25, 50, 25], stroke="white", stroke_width=3)
