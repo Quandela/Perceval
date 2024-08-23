@@ -102,8 +102,7 @@ class ExqaliburLogger(ALogger):
         else:
             exq_log.initialize()
 
-        self._config = LoggerConfig()
-        self._configure_logger()
+        self.apply_config(LoggerConfig())
 
     def _configure_logger(self):
         if _ENABLE_FILE in self._config and self._config[_ENABLE_FILE]:
@@ -127,6 +126,11 @@ class ExqaliburLogger(ALogger):
                 exq_log.set_level(
                     exq_log.level.__members__[level],
                     exq_log.channel.__members__[channel])
+
+    def apply_config(self, config: LoggerConfig):
+        self._config = config
+        self._configure_logger()
+
 
     def get_log_file_path(self):
         return path.join(PersistentData().directory, "logs", "perceval.log")
