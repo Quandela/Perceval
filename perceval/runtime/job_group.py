@@ -190,14 +190,20 @@ class JobGroup:
 
     @staticmethod
     def erase_all_job_groups():
-        pass
-
-    def erase_job_group(self, filename: str):
         # erase by filename
         # todo : implement
         # warning ; there is an erase method in PersistentData() -> that can
         # erase all -> add jobgroup to exclude it?
         pass
+
+    @staticmethod
+    def erase_job_group(filename: str):
+        """
+        Delete a single JobGroup file by its name
+        :param filename: a JobGroup filename with its extenstion to delete
+        """
+        ps = PersistentData()
+        ps.delete_file(filename)
 
     def erase_job_groups_date(self, date: str):
         # erase all files with date before given date
