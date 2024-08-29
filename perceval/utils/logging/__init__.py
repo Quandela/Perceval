@@ -41,7 +41,7 @@ channel = xq_log.channel
 
 def _my_excepthook(excType, excValue, this_traceback):
     # only works for the main thread
-    logger.error("Uncaught exception!", channel=channel.general,
+    logger.critical("Uncaught exception!", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
 

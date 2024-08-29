@@ -46,6 +46,10 @@ DEFAULT_CHANNEL = exq_log.channel.user
 
 class ALogger(ABC):
     @abstractmethod
+    def apply_config(self, config: LoggerConfig):
+        pass
+
+    @abstractmethod
     def enable_file(self):
         pass
 
@@ -128,6 +132,10 @@ class ExqaliburLogger(ALogger):
                     exq_log.channel.__members__[channel])
 
     def apply_config(self, config: LoggerConfig):
+        if config.python_logger_is_enabled():
+            self = PythonLogger()
+            self.apply_config(config)
+            return
         self._config = config
         self._configure_logger()
 
@@ -202,6 +210,14 @@ class PythonLogger(ALogger):
             return 50
         else:
             return 60
+
+    def apply_config(self, config: LoggerConfig):
+        if not config.python_logger_is_enabled():
+            self = ExqaliburLogger()
+            self.apply_config(config)
+            return
+        self._config = config
+        self._configure_logger()
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:

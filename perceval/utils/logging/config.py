@@ -83,7 +83,7 @@ class LoggerConfig(dict):
             warnings.warn(UserWarning(f"Incorrect logger config, try to reset and save it. {e}"))
 
     def set_level(self, level: exqalibur_logging.level, channel: exqalibur_logging.channel):
-        """Set the level of a channel
+        """Set the level of a channel in the configuration
 
         Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
 
@@ -93,15 +93,32 @@ class LoggerConfig(dict):
         """
         self[_CHANNELS][channel.name]["level"] = level.name
 
+    def enable_python_logger(self):
+        """Set the config to use the python logger
+
+        Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
+        """
+        self[_USE_PYTHON_LOGGER] = True
+
+    def enable_perceval_logger(self):
+        """Set the config to use the perceval logger
+
+        Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
+        """
+        self[_USE_PYTHON_LOGGER] = False
+
+    def python_logger_is_enabled(self):
+        return self[_USE_PYTHON_LOGGER]
+
     def enable_file(self):
-        """Enable to save the log into a file
+        """Enable to save the log into a file in the configuration
 
         Warning: this will not change the current logger file saving but only the file saving of the current LoggerConfig instance
         """
         self[_ENABLE_FILE] = True
 
     def disable_file(self):
-        """Disable to save the log into a file
+        """Disable to save the log into a file in the configuration
 
         Warning: this will not change the current logger file saving but only the file saving of the current LoggerConfig instance
         """

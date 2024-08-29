@@ -164,13 +164,34 @@ Example
     logger.set_level(logging.level.info, logging.channel.resources)
     logger.set_level(logging.level.err, logging.channel.general)
 
-The logger configuration can also be stored in the persistent data so you don't have to configure the logger each time you use perceval.
+.. note:: The logger configuration can also be stored in the persistent data so you don't have to configure the logger each time you use perceval.
 
 In order to configure it you have use the class LoggerConfig.
 
 .. automodule:: perceval.utils.logging.config
    :members:
 
-TODO: log format
-TODO: log exception
-TODO: apply_config
+After configuring your LoggerConfig, you can apply it to the current logger:
+
+.. code-block:: python
+
+    from perceval.utils import logger, logging
+    logger_config = logging.LoggerConfig()
+    logger_config.enable_file()
+    logger_config.set_level(logging.level.info, logging.channel.user)
+    logger.apply_config(logger_config)
+
+Log format
+----------
+
+In the console the log will appear with the format:
+
+[log_level] message
+
+In the file, the log will be save to the format:
+
+[yyyy-mm-dd HH:MM:SS.fff]channel_first_letter[level_first_letter] message
+
+Log exceptions
+--------------
+If the general channel level is at least on critical and save in file is enable, uncaught exception will be logged
