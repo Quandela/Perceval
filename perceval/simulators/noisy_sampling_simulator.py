@@ -37,7 +37,7 @@ from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import logger, channel, deprecated
 
 
 class SamplesProvider:
@@ -100,7 +100,7 @@ class NoisySamplingSimulator:
 
     def __init__(self, sampling_backend: ASamplingBackend):
         self._backend = sampling_backend
-        self._min_detected_photon_filter = 0
+        self._min_detected_photons_filter = 0
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._threshold_detector = False
@@ -122,19 +122,25 @@ class NoisySamplingSimulator:
         """
         self._keep_heralds = value
 
-    def set_selection(self, min_detected_photon_filter: int = None,
+    def set_selection(self,
+                      min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None):
+                      heralds: dict = None,
+                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
         """Set multiple selection filters at once to remove unwanted states from computed output distribution
 
-        :param min_detected_photon_filter: minimum number of detected photons in the output distribution
+        :param min_detected_photons_filter: minimum number of detected photons in the output distribution
         :param postselect: a post-selection function
         :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
                         out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
                         on mode 6.
         """
-        if min_detected_photon_filter is not None:
-            self._min_detected_photon_filter = min_detected_photon_filter
+        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
+            logger.warn(
+                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
+            min_detected_photons_filter = min_detected_photon_filter
+        if min_detected_photons_filter is not None:
+            self._min_detected_photons_filter = min_detected_photons_filter
         if postselect is not None:
             self._postselect = postselect
         if heralds is not None:
@@ -159,13 +165,23 @@ class NoisySamplingSimulator:
         """
         self._backend.set_circuit(circuit)
 
+    # TODO: remove for PCVL-786
+    @ deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     def set_min_detected_photon_filter(self, value: int):
         """
         Set the physical detection filter. Any output state with less than this threshold gets discarded.
 
         :param value: Minimal photon count in output states of interest.
         """
-        self._min_detected_photon_filter = value
+        self._min_detected_photons_filter = value
+
+    def set_min_detected_photons_filter(self, value: int):
+        """
+        Set the physical detection filter. Any output state with less than this threshold gets discarded.
+
+        :param value: Minimal photon count in output states of interest.
+        """
+        self._min_detected_photons_filter = value
 
     def _perfect_samples_no_selection(
             self,
@@ -232,7 +248,7 @@ class NoisySamplingSimulator:
 
             # Post-processing
             shots += 1
-            if sampled_state.n < self._min_detected_photon_filter:
+            if sampled_state.n < self._min_detected_photons_filter:
                 not_selected_physical += 1
                 continue
             if self._state_selected(sampled_state):
@@ -273,7 +289,7 @@ class NoisySamplingSimulator:
             n_photons = next(iter(sv.n))  # Number of photons in the (non superposed) state vector
             if n_photons == 0:
                 zpp += p
-            if n_photons >= self._min_detected_photon_filter:
+            if n_photons >= self._min_detected_photons_filter:
                 max_p = max(max_p, p)
         return zpp, max_p
 
@@ -287,7 +303,7 @@ class NoisySamplingSimulator:
         physical_perf = 1
         for sv, p in svd.items():
             n_photons = next(iter(sv.n))
-            if n_photons < self._min_detected_photon_filter:
+            if n_photons < self._min_detected_photons_filter:
                 physical_perf -= p
             elif p >= p_threshold:
                 new_input[sv[0]] = p

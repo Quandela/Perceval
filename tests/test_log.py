@@ -86,10 +86,10 @@ def test_log_resources(mock_info, requests_mock):
     noise_model = pcvl.NoiseModel(brightness=0.2, indistinguishability=0.75, g2=0.05)
     source = pcvl.Source.from_noise_model(noise_model)
     max_samples = 500
-    min_detected_photon_filter = 2
+    min_detected_photons_filter = 2
 
     proc_slos = pcvl.Processor('SLOS', circuit, source=source)
-    proc_slos.min_detected_photons_filter(min_detected_photon_filter)
+    proc_slos.min_detected_photons_filter(min_detected_photons_filter)
     proc_slos.with_input(input_state)
     proc_slos.probs()
 
@@ -128,7 +128,7 @@ def test_log_resources(mock_info, requests_mock):
     assert my_dict['command'] == 'probs'
 
     proc_clicli = pcvl.Processor('CliffordClifford2017', pcvl.Circuit(4), noise=noise_model)
-    proc_clicli.min_detected_photons_filter(min_detected_photon_filter)
+    proc_clicli.min_detected_photons_filter(min_detected_photons_filter)
     proc_clicli.with_input(input_state)
     proc_clicli.samples(max_samples)
 
@@ -143,11 +143,11 @@ def test_log_resources_simulator(mock_info, requests_mock):
     noise_model = pcvl.NoiseModel(brightness=0.2, indistinguishability=0.75, g2=0.05)
     source = pcvl.Source.from_noise_model(noise_model)
     input_state_svd = source.generate_distribution(input_state)
-    min_detected_photon_filter = 2
+    min_detected_photons_filter = 2
 
     # Simulator
     sim = pcvl.Simulator(pcvl.SLOSBackend())
-    sim.set_selection(min_detected_photon_filter=min_detected_photon_filter)
+    sim.set_selection(min_detected_photons_filter=min_detected_photons_filter)
     sim.set_circuit(circuit)
     sim.evolve(input_state)
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
@@ -181,11 +181,11 @@ def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
     source = pcvl.Source.from_noise_model(noise_model)
     input_state_svd = source.generate_distribution(input_state)
     max_samples = 500
-    min_detected_photon_filter = 2
+    min_detected_photons_filter = 2
 
     # Noisy Simulator Simulator
     sim = pcvl.simulators.NoisySamplingSimulator(pcvl.Clifford2017Backend())
-    sim.set_selection(min_detected_photon_filter=min_detected_photon_filter)
+    sim.set_selection(min_detected_photons_filter=min_detected_photons_filter)
     sim.set_circuit(circuit)
     sim.samples(input_state_svd, max_samples)
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])

@@ -170,9 +170,9 @@ class Processor(AProcessor):
         an input. Imperfect ones won't.
         """
         if 'min_detected_photons' in self._parameters:
-            self._min_detected_photons = self._parameters['min_detected_photons']
-        if not self._min_detected_photons and self._source.is_perfect():
-            self._min_detected_photons = input_state.n + list(self.heralds.values()).count(1)
+            self._min_detected_photons_filter = self._parameters['min_detected_photons']
+        if not self._min_detected_photons_filter and self._source.is_perfect():
+            self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
         super().with_input(input_state)
         self._generate_noisy_input()
 
@@ -204,8 +204,8 @@ class Processor(AProcessor):
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._inputs_map = svd
         if 'min_detected_photons' in self._parameters:
-            self._min_detected_photons = self._parameters['min_detected_photons']
-        if self._min_detected_photons is None:
+            self._min_detected_photons_filter = self._parameters['min_detected_photons']
+        if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
     def _circuit_changed(self):
@@ -217,8 +217,8 @@ class Processor(AProcessor):
         self._input_state = bs
         self._inputs_map = SVDistribution(bs)
         if 'min_detected_photons' in self._parameters:
-            self._min_detected_photons = self._parameters['min_detected_photons']
-        if self._min_detected_photons is None:
+            self._min_detected_photons_filter = self._parameters['min_detected_photons']
+        if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(bs.n)
 
     def clear_input_and_circuit(self, new_m=None):
@@ -230,13 +230,13 @@ class Processor(AProcessor):
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
     def _state_preselected_physical(self, input_state: StateVector) -> bool:
-        return max(input_state.n) >= self._min_detected_photons
+        return max(input_state.n) >= self._min_detected_photons_filter
 
     def _state_selected_physical(self, output_state: BasicState) -> bool:
         if self.is_threshold:
             modes_with_photons = len([n for n in output_state if n > 0])
-            return modes_with_photons >= self._min_detected_photons
-        return output_state.n >= self._min_detected_photons
+            return modes_with_photons >= self._min_detected_photons_filter
+        return output_state.n >= self._min_detected_photons_filter
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
@@ -265,7 +265,8 @@ class Processor(AProcessor):
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
         sampling_simulator.set_circuit(self.linear_circuit())
-        sampling_simulator.set_selection(self._min_detected_photons, self.post_select_fn, self.heralds)
+        sampling_simulator.set_selection(
+            min_detected_photons_filter=self._min_detected_photons_filter, postselect=self.post_select_fn, heralds=self.heralds)
         sampling_simulator.set_threshold_detector(self.is_threshold)
         sampling_simulator.keep_heralds(False)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})

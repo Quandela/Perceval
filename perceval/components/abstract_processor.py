@@ -58,7 +58,7 @@ class AProcessor(ABC):
         self._noise: Union[NoiseModel, None] = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons: Union[int, None] = None
+        self._min_detected_photons_filter: Union[int, None] = None
 
         self._reset_circuit()
 
@@ -128,7 +128,7 @@ class AProcessor(ABC):
         This post-selection has an impact on the output physical performance
         """
         self.set_parameter('min_detected_photons', n)
-        self._min_detected_photons = n
+        self._min_detected_photons_filter = n
 
     @property
     def input_state(self):
@@ -573,7 +573,7 @@ class AProcessor(ABC):
             "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
             " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
             f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
-        self._min_detected_photons = expected_photons
+        self._min_detected_photons_filter = expected_photons
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
@@ -593,7 +593,7 @@ class AProcessor(ABC):
 
         self._input_state = BasicState(input_list)
 
-        if self._min_detected_photons is None:
+        if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
     def flatten(self) -> List:
