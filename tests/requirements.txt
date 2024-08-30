@@ -1,10 +1,6 @@
-.[qiskit_bridge,qutip_bridge,myqlm_bridge]
+.[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
 pytest
 pytest-cov
 pytest-benchmark
 flake8
 requests-mock
-qiskit~=0.45.1
-qutip~=4.7.5
-myqlm~=1.9.5
-libqasm~=0.6.7
