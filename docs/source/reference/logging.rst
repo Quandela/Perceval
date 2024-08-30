@@ -1,16 +1,16 @@
 Logging
 =======
 
-To log with Perceval you can either a built-in Perceval logger or the python one. By default, our logger will be used.
+To log with Perceval you can either use a built-in Perceval logger or the python one. By default, our logger will be used.
 
-To have the perceval message log with the python logger, use this method:
+To log the perceval messages with the python logger, use this method:
 
 .. code-block:: python
 
     from perceval.utils import use_python_logger
     use_python_logger()
 
-To use back the perceval logger use this method:
+To switch back to using perceval logger, use:
 
 .. code-block:: python
 
@@ -62,7 +62,7 @@ Levels
 
 You can use the logger to log message at different level. Each level represent a different type of message.
 
-The level are listed by ascending important in the following table.
+The level are listed by ascending order of importance in the following table.
 
 .. list-table::
    :header-rows: 1
@@ -121,7 +121,7 @@ If the channel is not specified, the message will be log in the ``user`` channel
      - General info: Technical info, track the usage of features
    * - ``resources``
      - off
-     - Info about how are use our backends or remote platform GPU use (exqalibur)
+     - Usage info about our backends or remote platform GPU (exqalibur)
    * - ``user``
      - warning
      - Channel to use as a Perceval user & warnings (such as deprecated methods or arguments)
@@ -134,7 +134,7 @@ Example
     from perceval.utils.logging import logger, channel
     logger.info('I log something as info in channel user', channel.user)
 
-To set a level for a channel you can use the following method:
+To set a level for a channel, use the following method:
 
 .. code-block:: python
 
@@ -153,9 +153,9 @@ Logger configuration
 --------------------
 
 For logging to be useful, it needs to be configured, meaning setting the levels for each channel and if log are saved in a file.
-Setting a level for a channel means that any log with a less important level will not be displayed/save.
+Setting a level for a channel means that any log with a less important level will not be displayed/saved.
 
-In most cases, only the user & general channel needs to be so configured, since all relevant messages will be log here.
+In most cases, only the user & general channel needs to be so configured, since all relevant messages will be logged here.
 
 Example
 ^^^^^^^
@@ -169,7 +169,7 @@ Example
 
 .. note:: The logger configuration can be saved on your hard drive so you don't have to configure the logger each time you use perceval. When saved, it is written to a file in Perceval persistent data folder.
 
-In order to configure it you have use the :class:`LoggerConfig`.
+In order to configure it you have to use the :class:`LoggerConfig`.
 
 .. automodule:: perceval.utils.logging.config
    :members:
@@ -187,7 +187,7 @@ After configuring your LoggerConfig, you can apply it to the current logger:
 Log format
 ----------
 
-In the console the log will appear with the format:
+On the console the log will appear with the format:
 
 [log_level] message
 

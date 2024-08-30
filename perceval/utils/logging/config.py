@@ -103,7 +103,7 @@ class LoggerConfig(dict):
     def use_perceval_logger(self):
         """Set the config to use the perceval logger
 
-        Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
+        Warning: this will not change the current logger level, but only the level of the channel in the current LoggerConfig instance
         """
         self[_USE_PYTHON_LOGGER] = False
 
@@ -113,14 +113,14 @@ class LoggerConfig(dict):
     def enable_file(self):
         """Enable to save the log into a file in the configuration
 
-        Warning: this will not change the current logger file saving but only the file saving of the current LoggerConfig instance
+        Warning: this will not change the current logger file saving, but only the file saving of the current LoggerConfig instance
         """
         self[_ENABLE_FILE] = True
 
     def disable_file(self):
         """Disable to save the log into a file in the configuration
 
-        Warning: this will not change the current logger file saving but only the file saving of the current LoggerConfig instance
+        Warning: this will not change the current logger file saving, but only the file saving of the current LoggerConfig instance
         """
         self[_ENABLE_FILE] = False
 
