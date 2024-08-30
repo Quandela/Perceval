@@ -35,15 +35,19 @@ import perceval as pcvl
 from _mock_persistent_data import LoggerConfigForTest
 from _mock_rpc_handler import get_rpc_handler
 
+DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
+                  'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
 
 def test_logger_config():
     logger_config = LoggerConfigForTest()
     logger_config.reset()
     logger_config.save()
+    assert dict(logger_config) == DEFAULT_CONFIG
 
     config = logger_config._persistent_data.load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
-                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
+    assert config["logging"] == DEFAULT_CONFIG
+    pcvl.logger.apply_config(logger_config)
+    assert dict(pcvl.logger._config) == DEFAULT_CONFIG
 
     logger_config.enable_file()
     logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.general)
@@ -52,15 +56,26 @@ def test_logger_config():
     logger_config.save()
 
     config = logger_config._persistent_data.load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': True,
-                                 'channels': {'general': {'level': 'warn'}, 'resources': {'level': 'warn'}, 'user': {'level': 'warn'}}}
+    new_dict_config = {'use_python_logger': False, 'enable_file': True,
+                       'channels': {'general': {'level': 'warn'}, 'resources': {'level': 'warn'}, 'user': {'level': 'warn'}}}
+    assert config["logging"] == new_dict_config
+    pcvl.logger.apply_config(logger_config)
+    assert dict(pcvl.logger._config) == new_dict_config
 
     logger_config.reset()
     logger_config.save()
 
     config = logger_config._persistent_data.load_config()
-    assert config["logging"] == {'use_python_logger': False, 'enable_file': False,
-                                 'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
+    assert config["logging"] == DEFAULT_CONFIG
+
+
+def test_change_logger():
+    pcvl.utils.use_perceval_logger()
+    assert isinstance(pcvl.logging.logger, pcvl.logging.loggers.ExqaliburLogger)
+    pcvl.utils.use_python_logger()
+    assert isinstance(pcvl.logging.logger, pcvl.logging.loggers.PythonLogger)
+    pcvl.utils.use_perceval_logger()
+    assert isinstance(pcvl.logging.logger, pcvl.logging.loggers.ExqaliburLogger)
 
 
 def _get_last_dict_logged(mock_info_args):

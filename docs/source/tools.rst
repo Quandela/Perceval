@@ -73,7 +73,7 @@ See :ref:`pdisplay`
 Logging messages
 ----------------
 
-Perceval offers a high level class, ``pcvl.utils.logger``, to log messages.
+Perceval offers a log management package, ``pcvl.utils.logger``, to log messages.
 
 See :ref:`Logging`
 
