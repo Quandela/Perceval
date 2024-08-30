@@ -41,7 +41,7 @@ _CHANNEL_NAMES = ["user", "general", "resources"]
 
 class LoggerConfig(dict):
     """This class represent the logger configuration as a dictionary and can be used to save it into persistent data.
-    On class initialization, the configuration will be load from persistent data.
+    On class initialization, the configuration will be loaded from persistent data.
     """
     def __init__(self):
         super().__init__()
@@ -54,7 +54,7 @@ class LoggerConfig(dict):
         self[_CHANNELS][channel.name]["level"] = level.name
 
     def reset(self):
-        """Reset the logger configuration to it's default value meaning:
+        """Reset the logger configuration to its default value, which is:
             - Disable file
             - Channel user at level warning
             - Channels general & resources off
@@ -93,14 +93,14 @@ class LoggerConfig(dict):
         """
         self[_CHANNELS][channel.name]["level"] = level.name
 
-    def enable_python_logger(self):
+    def use_python_logger(self):
         """Set the config to use the python logger
 
         Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
         """
         self[_USE_PYTHON_LOGGER] = True
 
-    def enable_perceval_logger(self):
+    def use_perceval_logger(self):
         """Set the config to use the perceval logger
 
         Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance

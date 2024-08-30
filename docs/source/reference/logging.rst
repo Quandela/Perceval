@@ -1,21 +1,21 @@
 Logging
 =======
 
-To log with Perceval you can either use our logger or the python one. By default, our logger will be used.
+To log with Perceval you can either a built-in Perceval logger or the python one. By default, our logger will be used.
 
 To have the perceval message log with the python logger, use this method:
 
 .. code-block:: python
 
-    import perceval
-    perceval.utils.use_python_logger()
+    from perceval.utils import use_python_logger
+    use_python_logger()
 
 To use back the perceval logger use this method:
 
 .. code-block:: python
 
-    import perceval
-    perceval.utils.use_perceval_logger()
+    from perceval.utils import use_perceval_logger
+    use_perceval_logger()
 
 .. note:: If you use the python logger, use directly the module logging of python to configure it (except for channel configuration)
 
@@ -26,7 +26,7 @@ It is build to work similarly as the python logging module.
 Logger
 ------
 
-The logger is instantiate at perceval initialization.
+A logger instance is created the first time Perceval is imported.
 
 In order to use it you'll just need to import it:
 
@@ -45,8 +45,7 @@ To log message, you can use it the same way as the python logger:
 Saving log in file
 ^^^^^^^^^^^^^^^^^^
 
-By default the log are not save in a file.
-If this feature is activated, the log file will be in the perceval persistent data folder and the path of the file will be printed at the beginning of your perceval script.
+By default the log are not saved in a file.
 
 If order to activate / deactivate the logging in a file you can use the following methods:
 
@@ -55,6 +54,8 @@ If order to activate / deactivate the logging in a file you can use the followin
     from perceval.utils import logger
     logger.enable_file()
     logger.disable_file()
+
+If this feature is activated, the log file will be in the perceval persistent data folder and the path of the file will be printed at the beginning of your perceval script.
 
 Levels
 ------
@@ -73,20 +74,20 @@ The level are listed by ascending important in the following table.
      - Perceval call
      - Usage
    * - DEBUG
-     - ``logger.debug``
+     - ``level.debug``
      - Detailed information, typically of interest only when diagnosing problems.
    * - INFO
-     - ``logger.info``
+     - ``level.info``
      - Confirmation that things are working as expected.
    * - WARNING
-     - ``logger.warn``
-     - An indication that something unexpected happened, or indicative of some problem in the near future (e.g. ‘disk space low’). The software is still working as expected.
+     - ``level.warn``
+     - An indication that something unexpected happened, or indicative of some problem in the near future. The software is still working as expected.
    * - ERROR
-     - ``logger.error``
+     - ``level.error``
      - Due to a more serious problem, the software has not been able to perform some function.
    * - CRITICAL
-     - ``logger.critical``
-     - A serious error, indicating that the program itself may be unable to continue running.
+     - ``level.critical``
+     - A serious error, indicating that the program itself is unable to continue running normally or has crashed.
 
 Example
 ^^^^^^^
@@ -104,6 +105,8 @@ You can also log in a specific channel. A channel is like a category.
 Each channel can have its own configuration, which means each channel can have a different level.
 If the channel is not specified, the message will be log in the ``user`` channel.
 
+.. note:: If you are a Perceval user, you should only write log in the channel ``user``.
+
 .. list-table::
    :header-rows: 1
    :stub-columns: 1
@@ -115,21 +118,21 @@ If the channel is not specified, the message will be log in the ``user`` channel
      - Usage
    * - ``general``
      - off
-     - General info: Deprecated, Gate not to use, weird simulation results
+     - General info: Technical info, track the usage of features
    * - ``resources``
      - off
      - Info about how are use our backends or remote platform GPU use (exqalibur)
    * - ``user``
      - warning
-     - Channel to use as a Perceval user, this will have to be clearly stated in the documentation
+     - Channel to use as a Perceval user & warnings (such as deprecated methods or arguments)
 
 Example
 ^^^^^^^
 
 .. code-block:: python
 
-    from perceval.utils import logger, logging
-    logger.info('I log something as info in channel general', logging.channel.general)
+    from perceval.utils.logging import logger, channel
+    logger.info('I log something as info in channel user', channel.user)
 
 To set a level for a channel you can use the following method:
 
@@ -159,14 +162,14 @@ Example
 
 .. code-block:: python
 
-    from perceval.utils import logger, logging
+    from perceval.utils.logging import logger, channel, level
     logger.enable_file()
-    logger.set_level(logging.level.info, logging.channel.resources)
-    logger.set_level(logging.level.err, logging.channel.general)
+    logger.set_level(level.info, channel.resources)
+    logger.set_level(level.err, channel.general)
 
-.. note:: The logger configuration can also be stored in the persistent data so you don't have to configure the logger each time you use perceval.
+.. note:: The logger configuration can be saved on your hard drive so you don't have to configure the logger each time you use perceval. When saved, it is written to a file in Perceval persistent data folder.
 
-In order to configure it you have use the class LoggerConfig.
+In order to configure it you have use the :class:`LoggerConfig`.
 
 .. automodule:: perceval.utils.logging.config
    :members:

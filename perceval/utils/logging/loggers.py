@@ -133,9 +133,7 @@ class ExqaliburLogger(ALogger):
 
     def apply_config(self, config: LoggerConfig):
         if config.python_logger_is_enabled():
-            self = PythonLogger()
-            self.apply_config(config)
-            return
+            warnings.warn(UserWarning("Cannot change type of logger this way, use instead perceval.utils.use_python_logger"))
         self._config = config
         self._configure_logger()
 
@@ -213,11 +211,8 @@ class PythonLogger(ALogger):
 
     def apply_config(self, config: LoggerConfig):
         if not config.python_logger_is_enabled():
-            self = ExqaliburLogger()
-            self.apply_config(config)
-            return
+            warnings.warn(UserWarning("Cannot change type of logger this way, use instead perceval.utils.use_perceval_logger"))
         self._config = config
-        self._configure_logger()
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:

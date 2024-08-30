@@ -193,7 +193,7 @@ The :code:`Simulator` is also optimized to simulate a whole input distribution i
   |{_:0},0,{_:0},0>: 0.020250000000000004
   |{_:0},0,{_:1},0>: 0.002250000000000002
 }
->>> simulator.set_min_detected_photon_filter(1)
+>>> simulator.set_min_detected_photons_filter(1)
 >>> probs = simulator.probs_svd(input_distribution)
 >>> print("physical performance:", probs["physical_perf"])
 >>> print("output distribution:", probs["results"])
