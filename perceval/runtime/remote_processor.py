@@ -64,7 +64,7 @@ class RemoteProcessor(AProcessor):
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
-        rp.min_detected_photons_filter(processor._min_detected_photons)
+        rp.min_detected_photons_filter(processor._min_detected_photons_filter)
         return rp
 
     def __init__(self,
@@ -249,6 +249,7 @@ class RemoteProcessor(AProcessor):
         if self._noise is not None:
             payload['noise'] = serialize(self._noise)
         j['payload'] = payload
+        self.log_resources(command, self._parameters)
         return j
 
     def resume_job(self, job_id: str) -> RemoteJob:
@@ -280,8 +281,8 @@ class RemoteProcessor(AProcessor):
         losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n
-        if self._min_detected_photons is not None:
-            photon_filter = self._min_detected_photons
+        if self._min_detected_photons_filter is not None:
+            photon_filter = self._min_detected_photons_filter
             if photon_filter > n:
                 return 0
         if photon_filter < 2:
@@ -330,3 +331,24 @@ class RemoteProcessor(AProcessor):
         """
         p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
         return round(nshots * p_interest)
+
+    def log_resources(self, command: str, extra_parameters: Dict):
+        """Log resources of the remote processor
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'RemoteProcessor',
+            'platform': self.name,
+            'm': self.circuit_size,
+            'command': command
+        }
+        if self._input_state:
+            my_dict['n'] = self._input_state.n
+        if self.noise:
+            my_dict['noise'] = self.noise.__dict__()
+        if extra_parameters:
+            my_dict.update(extra_parameters)
+        logger.log_resources(my_dict)

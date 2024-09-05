@@ -27,19 +27,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
-from .simulator_interface import ISimulator
-from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
-    DensityMatrix, post_select_distribution, post_select_statevector
-from perceval.backends import AProbAmpliBackend
-from perceval.utils.density_matrix_utils import extract_upper_triangle
+import sys
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
-from typing import Callable, Set, Union, Optional, List
 from scipy.sparse import csc_array, csr_array
+from typing import Callable, Set, Union, Optional, List, Dict
+
+from perceval.backends import AProbAmpliBackend
+from perceval.components import ACircuit
+from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
+    DensityMatrix, post_select_distribution, post_select_statevector
+from perceval.utils.density_matrix_utils import extract_upper_triangle
+from perceval.utils.logging import logger, deprecated
+
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
+from .simulator_interface import ISimulator
 
 
 class Simulator(ISimulator):
@@ -54,7 +58,7 @@ class Simulator(ISimulator):
     def __init__(self, backend: AProbAmpliBackend):
         self._backend = backend
         self._invalidate_cache()
-        self._min_detected_photons: int = 0
+        self._min_detected_photons_filter: int = 0
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._logical_perf: float = 1
@@ -74,13 +78,23 @@ class Simulator(ISimulator):
     def set_precision(self, precision: float):
         self.precision = precision
 
+    # TODO: remove for PCVL-786
+    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     def set_min_detected_photon_filter(self, value: int):
         """
         Set a minimum number of detected photons in the output distribution
 
         :param value: The minimum photon count
         """
-        self._min_detected_photons = value
+        self._min_detected_photons_filter = value
+
+    def set_min_detected_photons_filter(self, value: int):
+        """
+        Set a minimum number of detected photons in the output distribution
+
+        :param value: The minimum photon count
+        """
+        self._min_detected_photons_filter = value
 
     def keep_heralds(self, value: bool):
         """
@@ -90,19 +104,25 @@ class Simulator(ISimulator):
         """
         self._keep_heralds = value
 
-    def set_selection(self, min_detected_photon_filter: int = None,
+    def set_selection(self,
+                      min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None):
+                      heralds: dict = None,
+                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
         """Set multiple selection filters at once to remove unwanted states from computed output distribution
 
-        :param min_detected_photon_filter: minimum number of detected photons in the output distribution
+        :param min_detected_photons_filter: minimum number of detected photons in the output distribution
         :param postselect: a post-selection function
         :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
                         out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
                         on mode 6.
         """
-        if min_detected_photon_filter is not None:
-            self._min_detected_photons = min_detected_photon_filter
+        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
+            logger.warn(
+                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
+            min_detected_photons_filter = min_detected_photon_filter
+        if min_detected_photons_filter is not None:
+            self._min_detected_photons_filter = min_detected_photons_filter
         if postselect is not None:
             self._postselect = postselect
         if heralds is not None:
@@ -269,7 +289,7 @@ class Simulator(ISimulator):
         ]
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
         for sv, prob in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons:
+            if max(sv.n) >= self._min_detected_photons_filter:
                 decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]))
             else:
                 self._physical_perf -= prob
@@ -295,7 +315,7 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                if bs.n >= self._min_detected_photons:
+                if bs.n >= self._min_detected_photons_filter:
                     res[bs] += p * prob0
                 else:
                     self._physical_perf -= p * prob0
@@ -325,7 +345,7 @@ class Simulator(ISimulator):
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
         for sv, prob in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons:
+            if max(sv.n) >= self._min_detected_photons_filter:
                 decomposed_input.append(
                     (prob, sv[0].separate_state(keep_annotations=False))
                 )
@@ -361,7 +381,7 @@ class Simulator(ISimulator):
             """Then, add the resulting distribution to the global distribution"""
             if probs_in_s:
                 for bs, p in probs_in_s.items():
-                    if bs.n >= self._min_detected_photons:
+                    if bs.n >= self._min_detected_photons_filter:
                         res[bs] += p * prob0
                     else:
                         self._physical_perf -= p * prob0
@@ -392,7 +412,7 @@ class Simulator(ISimulator):
         max_p = 0
         has_superposed_states = False
         for sv, p in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons:
+            if max(sv.n) >= self._min_detected_photons_filter:
                 max_p = max(p, max_p)
             if len(sv) > 1:
                 has_superposed_states = True
@@ -404,6 +424,7 @@ class Simulator(ISimulator):
             res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
         res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
+        self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
         return {'results': res,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
@@ -427,7 +448,7 @@ class Simulator(ISimulator):
 
             vec = u_evolve_in_row[[row_idx]]
             prob = abs((vec @ dm.mat @ vec.conj().T)[0, 0])
-            if fs.n >= self._min_detected_photons:
+            if fs.n >= self._min_detected_photons_filter:
                 res_bsd[fs] += prob
             else:
                 self._physical_perf -= prob
@@ -473,6 +494,8 @@ class Simulator(ISimulator):
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
         result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
+        self.log_resources(sys._getframe().f_code.co_name, {
+            'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
         return result_sv
 
     def evolve_svd(self,
@@ -496,7 +519,7 @@ class Simulator(ISimulator):
         intermediary_logical_perf = 1
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
-            if min(sv.n) >= self._min_detected_photons:
+            if min(sv.n) >= self._min_detected_photons_filter:
                 new_sv = self.evolve(sv)
                 intermediary_logical_perf -= p*self._logical_perf
                 if new_sv.m != 0:
@@ -569,3 +592,24 @@ class Simulator(ISimulator):
             if dm.mat[k, k] != 0:
                 input_list.append(dm.inverse_index[k])
         return input_list
+
+    def log_resources(self, method: str, extra_parameters: Dict):
+        """Log resources of the simulator
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+
+            Extra parameter can be:
+
+                - n
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'Simulator',
+            'backend': self._backend.name,
+            'm': self._backend._circuit.m,
+            'method': method
+        }
+        if extra_parameters:
+            my_dict.update(extra_parameters)
+        logger.log_resources(my_dict)
