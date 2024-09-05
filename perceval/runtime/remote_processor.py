@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import uuid
-from typing import Dict, List, Any
 from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
@@ -157,12 +156,12 @@ class RemoteProcessor(AProcessor):
         return self._perfs
 
     @property
-    def constraints(self) -> Dict:
+    def constraints(self) -> dict:
         if 'constraints' in self._specs:
             return self._specs['constraints']
         return {}
 
-    def set_parameter(self, key: str, value: Any):
+    def set_parameter(self, key: str, value: any):
         super().set_parameter(key, value)
         if key in DEPRECATED_NOISE_PARAMS:
             logger.warn(
@@ -216,11 +215,11 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
 
     @property
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         return self._specs.get("available_commands", [])
 
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
-                            ) -> Dict[str, Any]:
+                            ) -> dict[str, any]:
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),

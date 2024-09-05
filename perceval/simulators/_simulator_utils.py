@@ -31,7 +31,6 @@ from perceval.utils import BasicState, BSDistribution, StateVector, Annotation
 from perceval.components import Circuit
 from copy import copy
 from math import sqrt
-from typing import List
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
@@ -76,11 +75,11 @@ def _annot_state_mapping(bs_with_annots: BasicState):
     return mapping
 
 
-def _retrieve_mode_count(component_list: List) -> int:
+def _retrieve_mode_count(component_list: list) -> int:
     return max([m for r in component_list for m in r[0]]) + 1
 
 
-def _unitary_components_to_circuit(component_list: List, m: int = 0):
+def _unitary_components_to_circuit(component_list: list, m: int = 0):
     if not m:
         m = _retrieve_mode_count(component_list)
     circuit = Circuit(m)

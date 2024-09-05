@@ -34,7 +34,7 @@ import re
 
 from abc import ABC, abstractmethod
 from scipy.linalg import sqrtm, block_diag, svd
-from typing import Iterator, Optional, Union, Tuple
+from collections.abc import Iterator
 import numpy as np
 import sympy as sp
 
@@ -105,7 +105,7 @@ class Matrix(ABC):
         return MatrixN(np.eye(n, dtype=complex))
 
     @staticmethod
-    def zeros(shape: Tuple[int, int], use_symbolic: bool = False) -> Matrix:
+    def zeros(shape: tuple[int, int], use_symbolic: bool = False) -> Matrix:
         """Generate an empty matrix
 
         :param shape: 2D shape of the matrix
@@ -141,7 +141,7 @@ class Matrix(ABC):
         pass
 
     @staticmethod
-    def random_unitary(n: int, parameters: Optional[Union[np.ndarray, list]] = None) -> MatrixN:
+    def random_unitary(n: int, parameters: np.ndarray | list | None = None) -> MatrixN:
         r"""static method generating a random unitary matrix
 
         :param n: size of the Matrix
@@ -157,7 +157,7 @@ class Matrix(ABC):
             return Matrix._unitarize_matrix(n, u)
 
     @staticmethod
-    def parametrized_unitary(n: int, parameters: Union[np.ndarray,list]) -> MatrixN:
+    def parametrized_unitary(n: int, parameters: np.ndarray | list) -> MatrixN:
         r"""static method generating a parametrized unitary matrix
 
         :param n: size of the Matrix

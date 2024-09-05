@@ -34,7 +34,6 @@ from perceval.utils.logging import logger, channel
 import exqalibur as xq
 import math
 import numpy as np
-from typing import Dict, List
 
 
 class _Path:
@@ -121,9 +120,9 @@ class SLOSBackend(AProbAmpliBackend):
     def _reset(self):
         self._fsms = [[]]  # xq.FSMask
         self._fsas = {}  # xq.FSArray
-        self._mk_l: List[int] = [1]
-        self._path_roots: List[_Path] = []
-        self._state_mapping: Dict[BasicState, _Path] = {}
+        self._mk_l: list[int] = [1]
+        self._path_roots: list[_Path] = []
+        self._state_mapping: dict[BasicState, _Path] = {}
         self._mask = None  # xq.FSMAsk
         self.clear_iterator_cache()
 
@@ -151,7 +150,7 @@ class SLOSBackend(AProbAmpliBackend):
         self.preprocess([input_state])
         super().set_input_state(input_state)
 
-    def _deploy(self, input_list: List[BasicState]):
+    def _deploy(self, input_list: list[BasicState]):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
         # after calculation, we only need to keep fsa for input_state n
         # during calculation we need to keep current fsa and previous fsa
@@ -170,7 +169,7 @@ class SLOSBackend(AProbAmpliBackend):
             if n not in self._fsas:
                 self._fsas[n] = current_fsa
 
-    def preprocess(self, input_list: List[BasicState]) -> bool:
+    def preprocess(self, input_list: list[BasicState]) -> bool:
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:

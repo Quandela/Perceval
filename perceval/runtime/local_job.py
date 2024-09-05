@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Callable, Optional
 import threading
 
 from perceval.utils.logging import logger, channel
@@ -37,8 +36,8 @@ from .job_status import JobStatus, RunningStatus
 
 class LocalJob(Job):
     def __init__(self,
-                 fn: Callable,
-                 result_mapping_function: Callable = None,
+                 fn: callable,
+                 result_mapping_function: callable = None,
                  delta_parameters: dict = None,
                  command_param_names: list = None):
         """
@@ -58,7 +57,7 @@ class LocalJob(Job):
         self._user_cb = None
         self._cancel_requested = False
 
-    def set_progress_callback(self, callback: Callable):  # Signature must be (float, Optional[str])
+    def set_progress_callback(self, callback: callable):  # Signature must be (float, str | None)
         self._user_cb = callback
 
     @property
@@ -68,7 +67,7 @@ class LocalJob(Job):
             self._status.stop_run()
         return self._status
 
-    def _progress_cb(self, progress: float, phase: Optional[str] = None):
+    def _progress_cb(self, progress: float, phase: str | None = None):
         self._status.update_progress(progress, phase)
         if self._cancel_requested:
             return {'cancel_requested': True}

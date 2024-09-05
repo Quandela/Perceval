@@ -36,8 +36,6 @@ from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Processor
 from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST
 
-from typing import List, Union
-
 
 class SimulatorFactory:
     """
@@ -47,8 +45,8 @@ class SimulatorFactory:
     """
 
     @staticmethod
-    def build(circuit: Union[ACircuit, Processor, List],
-              backend: Union[ABackend, str] = None,
+    def build(circuit: ACircuit | Processor | list,
+              backend: ABackend | str = None,
               **kwargs) -> ISimulator:
         """
         :param circuit: The optical circuit to build the simulation layers around.

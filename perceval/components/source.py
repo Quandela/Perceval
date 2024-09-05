@@ -31,7 +31,6 @@ import math
 
 from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params
 from perceval.utils.logging import logger, channel
-from typing import Dict, List, Union
 
 
 class Source:
@@ -56,7 +55,7 @@ class Source:
                  indistinguishability: float = 1,
                  losses: float = 0,
                  multiphoton_model: str = "distinguishable",  # Literal["distinguishable", "indistinguishable"]
-                 context: Dict = None) -> None:
+                 context: dict = None) -> None:
 
         assert 0 < emission_probability <= 1, "emission_probability must be in ]0;1]"
         assert 0 <= losses <= 1, "losses must be in [0;1]"
@@ -111,7 +110,7 @@ class Source:
         return p1to1, p2to1, p2to2
 
     @staticmethod
-    def _merge_photon_distributions(d1: List, d2: List):
+    def _merge_photon_distributions(d1: list, d2: list):
         # Merges two lists of annotations (or unannotated photon count) following the tensor product rules
         if len(d1) == 0:
             return d2
@@ -128,7 +127,7 @@ class Source:
         return res
 
     @staticmethod
-    def _add(plist: List, annotations: Union[int, List], probability: float):
+    def _add(plist: list, annotations: int | list, probability: float):
         # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
         # parameter `plist`
         if probability > 0:

@@ -29,7 +29,6 @@
 
 from enum import Enum
 from time import time, sleep
-from typing import Optional
 
 from perceval.utils.logging import logger, channel
 
@@ -63,9 +62,9 @@ class JobStatus:
         self._duration = None
         self._completed_time = None
         self._running_progress: float = 0
-        self._running_phase: Optional[str] = None
+        self._running_phase: str | None = None
         self._stop_message = None
-        self._waiting_progress: Optional[int] = None
+        self._waiting_progress: int | None = None
         self._last_progress_time: float = 0
 
     def __call__(self):
@@ -83,7 +82,7 @@ class JobStatus:
         self._running_time_start = time()
         self._status = RunningStatus.RUNNING
 
-    def stop_run(self, cause: RunningStatus = RunningStatus.SUCCESS, mesg: Optional[str] = None):
+    def stop_run(self, cause: RunningStatus = RunningStatus.SUCCESS, mesg: str | None = None):
         self._status = cause
         self._completed_time = time()
         self._duration = self._completed_time - self._init_time_start
@@ -91,7 +90,7 @@ class JobStatus:
             self._running_progress = 1
         self._stop_message = mesg
 
-    def update_progress(self, progress: float, phase: Optional[str] = None):
+    def update_progress(self, progress: float, phase: str | None = None):
         if self._status == RunningStatus.WAITING:
             self.start_run()
         self._running_progress = progress

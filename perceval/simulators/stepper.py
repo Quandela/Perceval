@@ -27,7 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from collections import defaultdict
-from typing import List, Union, Callable, Dict
 import copy
 
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
@@ -62,7 +61,7 @@ class Stepper(ISimulator):
     def set_min_detected_photon_filter(self, value: int):
         self._min_detected_photons = value
 
-    def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
+    def apply(self, sv: StateVector, r: list[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position
@@ -101,7 +100,7 @@ class Stepper(ISimulator):
     def probs(self, input_state) -> BSDistribution:
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)
@@ -114,7 +113,7 @@ class Stepper(ISimulator):
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out
 
-    def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
+    def compile(self, input_states: BasicState | StateVector) -> bool:
         if isinstance(input_states, BasicState):
             sv = StateVector(input_states)
         else:

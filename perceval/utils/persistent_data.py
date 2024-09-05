@@ -30,7 +30,6 @@
 import os
 import json
 import warnings
-from typing import Union
 from platformdirs import PlatformDirs
 
 from .metadata import PMetadata
@@ -132,7 +131,7 @@ class PersistentData:
         except OSError:
             warnings.warn(UserWarning("Cannot delete persistent file {file_path}"))
 
-    def write_file(self, filename: str, data: Union[bytes, str], file_format: FileFormat):
+    def write_file(self, filename: str, data: bytes | str, file_format: FileFormat):
         """Write data into a file in persistent data directory
 
         :param filename: name of the file to write in (with extension)
@@ -154,7 +153,7 @@ class PersistentData:
         else:
             warnings.warn(UserWarning(f"Can't save {filename}"))
 
-    def read_file(self, filename: str, file_format: FileFormat) -> Union[bytes, str]:
+    def read_file(self, filename: str, file_format: FileFormat) -> bytes | str:
         """Read data from a file in persistent data directory
 
         :param filename: name of the file to read (with extension)

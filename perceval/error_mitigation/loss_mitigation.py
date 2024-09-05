@@ -30,13 +30,12 @@
 import numpy as np
 from math import comb
 from scipy.optimize import curve_fit
-from typing import Union
 from perceval.utils import BSCount, BSDistribution, BasicState
 from perceval.utils.logging import logger, channel
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
 
-def _validate_noisy_input(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int):
+def _validate_noisy_input(noisy_input: BSCount | BSDistribution, ideal_photon_count: int):
     if not isinstance(noisy_input, (BSCount, BSDistribution)):
         # check if the input type is correct
         raise TypeError('Noisy input should be of type BSCount or BSDistribution')
@@ -53,7 +52,7 @@ def _validate_noisy_input(noisy_input: Union[BSCount, BSDistribution], ideal_pho
                          "implementation requires states with n-1, n-2 photons for expected n-photon mitigation")
 
 
-def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int) -> BSDistribution:
+def photon_recycling(noisy_input: BSCount | BSDistribution, ideal_photon_count: int) -> BSDistribution:
     """
     A classical technique to mitigate errors in the output distribution caused by photon
     loss in LO quantum circuits (ref: https://arxiv.org/abs/2405.02278)

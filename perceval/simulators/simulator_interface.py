@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from typing import Callable, Dict
 
 from perceval.components import ACircuit
 from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
@@ -45,7 +44,7 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
         pass
 
     @abstractmethod
@@ -113,7 +112,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         results, _ = self._postprocess_bsd(results)
         return results
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
         probs = self._simulator.probs_svd(self._prepare_input(svd), progress_callback)
         probs['results'], logical_perf_coeff = self._postprocess_bsd(probs['results'])
         probs['logical_perf'] *= logical_perf_coeff

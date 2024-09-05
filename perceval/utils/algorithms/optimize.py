@@ -27,14 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Optional, Callable, List
+from collections.abc import Callable
 from perceval.components.linear_circuit import ACircuit
 from perceval.utils import Matrix, P, global_params
 
 from scipy import optimize as scpy_optimize
 
 
-def _min_fnc(c: ACircuit, params: List[P], x: List[int], v: Optional[Matrix],
+def _min_fnc(c: ACircuit, params: list[P], x: list[int], v: Matrix | None,
              f: Callable[[Matrix, Matrix], float], sign: float):
     for idx, p in enumerate(x):
         params[idx].set_value(p)
@@ -50,7 +50,7 @@ def _stop_criterion(f, f0, precision, accept):
 
 
 def optimize(c: ACircuit,
-             v: Optional[Matrix],
+             v: Matrix | None,
              f: Callable[[Matrix, Matrix], float],
              niter: int = 20,
              target_opt: float = 0,

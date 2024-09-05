@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Callable, Tuple, Union
+from collections.abc import Callable
 
 import exqalibur as xq
 from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
@@ -86,9 +86,9 @@ class CircuitOptimizer:
         self._max_eval_per_trial = value
 
     def optimize(self,
-                 target: Union[ACircuit, Matrix],
+                 target: ACircuit | Matrix,
                  template: ACircuit
-                 ) -> Tuple[ACircuit, float]:
+                 ) -> tuple[ACircuit, float]:
         """
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
 

@@ -31,7 +31,6 @@ import re
 import math
 import pytest
 
-from typing import Type
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -164,7 +163,7 @@ def _check_qpt(test_path, ref_path):
 
 
 def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compact=False,
-                   skin_type: Type[ASkin] = PhysSkin) -> None:
+                   skin_type: type[ASkin] = PhysSkin) -> None:
     img_path = (TEST_IMG_DIR if save_figs else tmp_path) / \
         Path(circuit_name + ".svg")
     skin = skin_type(compact)

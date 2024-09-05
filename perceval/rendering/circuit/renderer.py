@@ -30,7 +30,6 @@
 from abc import ABC, abstractmethod
 import copy
 import math
-from typing import Any, Tuple
 
 from perceval.rendering.circuit import ASkin, ModeStyle
 from perceval.rendering.format import Format
@@ -121,7 +120,7 @@ class ICircuitRenderer(ABC):
         self.extend_pos(0, circuit.m - 1)
 
     @abstractmethod
-    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> Tuple[int, int]:
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> tuple[int, int]:
         """
         Returns the circuit size (in AU)
         """
@@ -152,32 +151,32 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def open_subblock(self, lines: Tuple[int, ...], name: str, size: Tuple[int, int], color=None) -> None:
+    def open_subblock(self, lines: tuple[int, ...], name: str, size: tuple[int, int], color=None) -> None:
         """
         Opens a visual area, highlighting a part of the circuit
         """
 
     @abstractmethod
-    def close_subblock(self, lines: Tuple[int, ...]) -> None:
+    def close_subblock(self, lines: tuple[int, ...]) -> None:
         """
         Close a visual area
         """
 
     @abstractmethod
-    def draw(self) -> Any:
+    def draw(self) -> any:
         """
         Finalize drawing, returns a fully drawn circuit (type is relative to the rendering method which was used).
         This should always be the last call.
         """
 
     @abstractmethod
-    def append_subcircuit(self, lines: Tuple[int, ...], circuit: Circuit, content: str) -> None:
+    def append_subcircuit(self, lines: tuple[int, ...], circuit: Circuit, content: str) -> None:
         """
         Add a composite circuit to the rendering. Render each subcomponent independently.
         """
 
     @abstractmethod
-    def append_circuit(self, lines: Tuple[int, ...], circuit: ACircuit, content: str) -> None:
+    def append_circuit(self, lines: tuple[int, ...], circuit: ACircuit, content: str) -> None:
         """
         Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
         """
