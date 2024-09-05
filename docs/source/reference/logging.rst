@@ -83,7 +83,7 @@ The level are listed by ascending order of importance in the following table.
      - ``level.warn``
      - An indication that something unexpected happened, or indicative of some problem in the near future. The software is still working as expected.
    * - ERROR
-     - ``level.error``
+     - ``level.err``
      - Due to a more serious problem, the software has not been able to perform some function.
    * - CRITICAL
      - ``level.critical``

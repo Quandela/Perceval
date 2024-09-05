@@ -107,19 +107,13 @@ class ExqaliburLogger(ALogger):
             exq_log.initialize()
 
         self.apply_config(LoggerConfig())
-
-    def _configure_logger(self):
-        if _ENABLE_FILE in self._config and self._config[_ENABLE_FILE]:
-            print(f"starting to write logs in {self.get_log_file_path()}")
-            exq_log.enable_file()
-        else:
-            exq_log.disable_file()
-
         exq_log.enable_console()
-        if _CHANNELS in self._config:
+
+    def _configure_logger(self, logger_config: LoggerConfig):
+        if _CHANNELS in logger_config:
             channels = list(exq_log.channel.__members__)
             levels = list(exq_log.level.__members__)
-            for channel, level in self._config[_CHANNELS].items():
+            for channel, level in logger_config[_CHANNELS].items():
                 level = level['level']
                 if channel not in channels:
                     warnings.warn(UserWarning(f"Unknown channel {channel}"))
@@ -133,10 +127,9 @@ class ExqaliburLogger(ALogger):
 
     def apply_config(self, config: LoggerConfig):
         if config.python_logger_is_enabled():
-            warnings.warn(UserWarning("Cannot change type of logger this way, use instead perceval.utils.use_python_logger"))
-        self._config = config
-        self._configure_logger()
-
+            warnings.warn(UserWarning(
+                "Cannot change type of logger from logger.apply_config, use perceval.utils.apply_config instead"))
+        self._configure_logger(config)
 
     def get_log_file_path(self):
         return path.join(PersistentData().directory, "logs", "perceval.log")
@@ -188,14 +181,10 @@ class ExqaliburLogger(ALogger):
 class PythonLogger(ALogger):
     def __init__(self) -> None:
         self._logger = py_log.getLogger()
-        self._config = LoggerConfig()
+        self.apply_config(LoggerConfig())
         self._logger.addFilter(self._message_has_to_be_logged)
-        self._level = {
-            channel: self._get_levelno(channel) for channel in exq_log.channel.__members__
-        }
 
-    def _get_levelno(self, channel: str):
-        level_name = self._config[_CHANNELS][channel]["level"]
+    def _get_levelno(self, level_name):
         if level_name == "debug":
             return 10
         elif level_name == "info":
@@ -211,8 +200,12 @@ class PythonLogger(ALogger):
 
     def apply_config(self, config: LoggerConfig):
         if not config.python_logger_is_enabled():
-            warnings.warn(UserWarning("Cannot change type of logger this way, use instead perceval.utils.use_perceval_logger"))
-        self._config = config
+            warnings.warn(UserWarning(
+                "Cannot change type of logger from logger.apply_config, use perceval.utils.apply_config instead"))
+        # TODO: is this working
+        self._level = {
+            channel["name"]: self._get_levelno(channel["level"]) for channel in config[_CHANNELS]
+        }
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:

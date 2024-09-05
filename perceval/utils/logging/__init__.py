@@ -34,14 +34,19 @@ from .config import LoggerConfig, _USE_PYTHON_LOGGER
 from .loggers import ExqaliburLogger, PythonLogger
 
 
-logger = None
+_logger = None
 level = xq_log.level
 channel = xq_log.channel
 
 
+def get_logger():
+    global _logger
+    return _logger
+
+
 def _my_excepthook(excType, excValue, this_traceback):
     # only works for the main thread
-    logger.critical("Uncaught exception!", channel=channel.general,
+    _logger.critical("Uncaught exception!", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
 
@@ -54,34 +59,39 @@ def deprecated(*decorator_args, **decorator_kwargs):
                 log += f" ({decorator_kwargs['reason']})"
             if "version" in decorator_kwargs:
                 log += f" -- Deprecated since version {decorator_kwargs['version']}"
-            logger.warn(log, channel.user)
+            _logger.warn(log, channel.user)
             return func(*args, **kwargs)
         return wrapper_deprecated
     return decorator_deprecated
 
 
 def use_python_logger():
-    global logger
-    if isinstance(logger, PythonLogger):
+    global _logger
+    if isinstance(_logger, PythonLogger):
         return
-    if logger is not None:
-        logger.info("Changing to Python logger", channel.general)
-    logger = PythonLogger()
+    if _logger is not None:
+        _logger.info("Changing to Python _logger", channel.general)
+    _logger = PythonLogger()
     sys.excepthook = _my_excepthook
 
 
 def use_perceval_logger():
-    global logger
-    if isinstance(logger, ExqaliburLogger):
+    global _logger
+    if isinstance(_logger, ExqaliburLogger):
         return
-    if logger is not None:
-        logger.info("Changing to exqalibur logger", channel.general)
-    logger = ExqaliburLogger()
-    logger.initialize()
+    if _logger is not None:
+        _logger.info("Changing to exqalibur _logger", channel.general)
+    _logger = ExqaliburLogger()
+    _logger.initialize()
     sys.excepthook = _my_excepthook
 
-_cfg = LoggerConfig()
-if _cfg[_USE_PYTHON_LOGGER]:
-    use_python_logger()
-else:
-    use_perceval_logger()
+
+def apply_config(config: LoggerConfig):
+    if config.python_logger_is_enabled():
+        use_python_logger()
+    else:
+        use_perceval_logger()
+    global _logger
+    _logger.apply_config(config)
+
+use_perceval_logger()
