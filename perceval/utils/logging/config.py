@@ -68,6 +68,8 @@ class LoggerConfig(dict):
                             self[_CHANNELS][key] = config[_CHANNELS][key]
                 if _ENABLE_FILE in config:
                     self[_ENABLE_FILE] = config[_ENABLE_FILE]
+                if _USE_PYTHON_LOGGER in config:
+                    self[_USE_PYTHON_LOGGER] = config[_USE_PYTHON_LOGGER]
         except KeyError as e:
             warnings.warn(UserWarning(f"Incorrect logger config, try to reset and save it. {e}"))
 

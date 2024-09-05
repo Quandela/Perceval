@@ -30,13 +30,11 @@ import functools
 import sys
 from exqalibur import logging as xq_log
 
-from .config import LoggerConfig
+from .config import LoggerConfig, _USE_PYTHON_LOGGER
 from .loggers import ExqaliburLogger, PythonLogger
 
 
-logger = ExqaliburLogger()
-logger.initialize()
-
+logger = None
 level = xq_log.level
 channel = xq_log.channel
 
@@ -46,8 +44,6 @@ def _my_excepthook(excType, excValue, this_traceback):
     logger.error("Uncaught exception!", channel=channel.general,
                  exc_info=(excType, excValue, this_traceback))
 
-
-sys.excepthook = _my_excepthook
 
 def deprecated(*decorator_args, **decorator_kwargs):
     def decorator_deprecated(func):
@@ -68,7 +64,8 @@ def use_python_logger():
     global logger
     if isinstance(logger, PythonLogger):
         return
-    logger.info("Changing to Python logger", channel.general)
+    if logger is not None:
+        logger.info("Changing to Python logger", channel.general)
     logger = PythonLogger()
     sys.excepthook = _my_excepthook
 
@@ -77,6 +74,14 @@ def use_perceval_logger():
     global logger
     if isinstance(logger, ExqaliburLogger):
         return
-    logger.info("Changing to exqalibur logger", channel.general)
+    if logger is not None:
+        logger.info("Changing to exqalibur logger", channel.general)
     logger = ExqaliburLogger()
+    logger.initialize()
     sys.excepthook = _my_excepthook
+
+_cfg = LoggerConfig()
+if _cfg[_USE_PYTHON_LOGGER]:
+    use_python_logger()
+else:
+    use_perceval_logger()
