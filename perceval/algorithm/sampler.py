@@ -98,12 +98,12 @@ class Sampler(AAlgorithm):
         # adapt the parameters list
         command_param_names = [] if primitive_is_probs else ['max_samples']
         if not method_is_probs and primitive_is_probs:
-            delta_parameters["mapping"]['max_samples'] = None  # Is to be filled be job._handle_params
+            delta_parameters["mapping"]['max_samples'] = None  # Is to be filled by job._handle_params
             delta_parameters["mapping"]['max_shots'] = self._max_shots
         elif method_is_probs and not primitive_is_probs:
             delta_parameters["command"]['max_samples'] = self.PROBS_SIMU_SAMPLE_COUNT
         elif not method_is_probs and not primitive_is_probs:
-            delta_parameters["command"]['max_samples'] = None  # Is to be filled be job._handle_params
+            delta_parameters["command"]['max_samples'] = None  # Is to be filled by job._handle_params
 
         if self._processor.is_remote:
             job_context = None

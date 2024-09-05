@@ -79,7 +79,6 @@ class ALogger(ABC):
 
     def log_resources(self, my_dict: Dict):
         """Log resources as a dictionary with:
-
              - level: info
              - channel: resources
              - serializing the dictionary as json so it can be easily deserialize
@@ -90,7 +89,13 @@ class ALogger(ABC):
 
 
 class ExqaliburLogger(ALogger):
+    _ALREADY_INITIALIZED = False
+
     def initialize(self):
+        if ExqaliburLogger._ALREADY_INITIALIZED:
+            return
+
+        ExqaliburLogger._ALREADY_INITIALIZED = True
         persistent_data = PersistentData()
         if persistent_data.is_writable():
             exq_log.initialize(self.get_log_file_path())
@@ -153,7 +158,7 @@ class ExqaliburLogger(ALogger):
     def _format_exception(self, exc_info=None) -> str:
         if not exc_info:
             return ""
-        return ': '+' '.join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2])).replace("\n", " ").replace("    ", " ").replace("  ", ", ")
+        return '\n' + ''.join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
 
     def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         msg = str(msg)
@@ -175,21 +180,40 @@ class PythonLogger(ALogger):
         self._logger = py_log.getLogger()
         self._config = LoggerConfig()
         self._logger.addFilter(self._message_has_to_be_logged)
+        self._level = {
+            channel: self._get_levelno(channel) for channel in exq_log.channel.__members__
+        }
+
+    def _get_levelno(self, channel: str):
+        level_name = self._config[_CHANNELS][channel]["level"]
+        if level_name == "debug":
+            return 10
+        elif level_name == "info":
+            return 20
+        elif level_name == "warn":
+            return 30
+        elif level_name == "error":
+            return 40
+        elif level_name == "critical":
+            return 50
+        else:
+            return 60
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:
-            if record.levelno < self._config[_CHANNELS][record.channel]["level"]:
+            if record.levelno < self._level[record.channel]:
                 return False
         return True
 
     def enable_file(self):
-        py_log.warn("This method have no effect. Use module logging to configure python logger")
+        self.warn("This method have no effect. Use module logging to configure python logger")
 
     def disable_file(self):
-        py_log.warn("This method have no effect. Use module logging to configure python logger")
+        self.warn("This method have no effect. Use module logging to configure python logger")
 
     def set_level(self, level: int, channel: exq_log.channel = DEFAULT_CHANNEL):
         self._config.set_level(level, channel)
+        self._level[channel.name] = self._get_levelno(channel)
 
     def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
         self._logger.debug(f"[debug] {msg}", extra={"channel": channel.name})
@@ -198,7 +222,7 @@ class PythonLogger(ALogger):
         self._logger.info(f"[info] {msg}", extra={"channel": channel.name})
 
     def warn(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        self._logger.warn(f"[warning] {msg}", extra={"channel": channel.name})
+        self._logger.warning(f"[warning] {msg}", extra={"channel": channel.name})
 
     def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         self._logger.error(
