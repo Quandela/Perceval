@@ -38,7 +38,7 @@ from typing import Iterator, Optional, Union, Tuple
 import numpy as np
 import sympy as sp
 
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 class Matrix(ABC):
     """
@@ -149,7 +149,7 @@ class Matrix(ABC):
         :return: a numeric Matrix
         """
         if parameters is not None:
-            logger.warn(
+            get_logger().warn(
                 "DeprecationWarning: use parametrized_unitary(n, parameters) instead to create a parametrized unitary matrix, version=0.11", channel.user)
             return Matrix.parametrized_unitary(n, parameters)
         else:

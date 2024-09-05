@@ -35,7 +35,7 @@ from requests.exceptions import HTTPError, ConnectionError
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize, serialize
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 
 def _extract_job_times(response: dict):
@@ -110,7 +110,7 @@ class RemoteJob(Job):
         """
         self._status_refresh_error += 1
         if self._status_refresh_error == self._MAX_ERROR:
-            logger.error("Reached max number of HTTP errors in a row when updating job {self._id} status.",
+            get_logger().error("Reached max number of HTTP errors in a row when updating job {self._id} status.",
                          channel.general)
             raise error
         if isinstance(error, HTTPError):
@@ -122,7 +122,7 @@ class RemoteJob(Job):
                 423,  # Resource locked
                 429   # Too many requests
             ]:
-                logger.error(f"Got HTTP error {error_code} when updating job {self._id} status. Ignoring...",
+                get_logger().error(f"Got HTTP error {error_code} when updating job {self._id} status. Ignoring...",
                              channel.general)
             else:  # If the status code is any other error, it is considered unrecoverable
                 raise error
@@ -176,7 +176,7 @@ class RemoteJob(Job):
             self._request_data['payload'].update(kwargs)
             self._check_max_shots_samples_validity()
             self._id = self._rpc_handler.create_job(serialize(self._request_data))
-            logger.info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
+            get_logger().info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
 
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))
@@ -188,13 +188,13 @@ class RemoteJob(Job):
         p = self._request_data['payload']
         if "max_samples" in p and "max_shots" in p:
             if p["max_samples"] > p["max_shots"]:
-                logger.warn(f"Lowered 'max_samples' from user defined value ({p['max_samples']}) to 'max_shots' value ({p['max_shots']}) for consistency.",
+                get_logger().warn(f"Lowered 'max_samples' from user defined value ({p['max_samples']}) to 'max_shots' value ({p['max_shots']}) for consistency.",
                             channel.user)
                 p["max_samples"] = p["max_shots"]
 
     def cancel(self):
         if self.status.status in (RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.SUSPENDED):
-            logger.info(f"Programmatically request job {self._id} cancellation", channel.general)
+            get_logger().info(f"Programmatically request job {self._id} cancellation", channel.general)
             self._rpc_handler.cancel_job(self._id)
             self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
@@ -207,7 +207,7 @@ class RemoteJob(Job):
         self._results = deserialize(json.loads(response['results']))
         if "job_context" in self._results and 'result_mapping' in self._results["job_context"]:
             path_parts = self._results["job_context"]["result_mapping"]
-            logger.info(f"Converting job {self._id} results with {path_parts[1]}", channel.general)
+            get_logger().info(f"Converting job {self._id} results with {path_parts[1]}", channel.general)
             module = __import__(path_parts[0], fromlist=path_parts[1])
             result_mapping_function = getattr(module, path_parts[1])
             # retrieve delta parameters from the response

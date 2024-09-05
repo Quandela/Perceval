@@ -202,9 +202,8 @@ class PythonLogger(ALogger):
         if not config.python_logger_is_enabled():
             warnings.warn(UserWarning(
                 "Cannot change type of logger from logger.apply_config, use perceval.utils.apply_config instead"))
-        # TODO: is this working
         self._level = {
-            channel["name"]: self._get_levelno(channel["level"]) for channel in config[_CHANNELS]
+            name: self._get_levelno(channel["level"]) for name, channel in config[_CHANNELS].items()
         }
 
     def _message_has_to_be_logged(self, record) -> bool:

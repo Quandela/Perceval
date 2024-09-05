@@ -37,7 +37,7 @@ from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
-from perceval.utils.logging import logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel, deprecated
 
 
 class SamplesProvider:
@@ -56,7 +56,7 @@ class SamplesProvider:
             for bs in noisy_s.separate_state(keep_annotations=False):
                 self._weights.add(bs, ns)
 
-        logger.debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
+        get_logger().debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
                      channel.general)
         for input_state, count in self._weights.items():
             if input_state.n == 0:
@@ -78,7 +78,7 @@ class SamplesProvider:
             self._weights[fock_state] = self._min_samples
 
         n_samples = self._weights[fock_state]
-        logger.debug(f"Simulate {n_samples} more {fock_state.n}-photon samples", channel.general)
+        get_logger().debug(f"Simulate {n_samples} more {fock_state.n}-photon samples", channel.general)
         self._backend.set_input_state(fock_state)
         self._pools[fock_state] += self._backend.samples(n_samples)
         self._weights[fock_state] = max(int(self._weights[fock_state] * self._sample_coeff), 16)
@@ -136,7 +136,7 @@ class NoisySamplingSimulator:
                         on mode 6.
         """
         if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            logger.warn(
+            get_logger().warn(
                 'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
             min_detected_photons_filter = min_detected_photon_filter
         if min_detected_photons_filter is not None:
@@ -308,7 +308,7 @@ class NoisySamplingSimulator:
             elif p >= p_threshold:
                 new_input[sv[0]] = p
         new_input.normalize()
-        logger.debug(f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
+        get_logger().debug(f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
                      channel.general)
         return new_input, physical_perf
 
@@ -343,7 +343,7 @@ class NoisySamplingSimulator:
         if not self._heralds and not self._postselect.has_condition and len(svd) == 1:
             only_input = next(iter(svd))[0]
             if not only_input.has_annotations:
-                logger.debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call", channel.general)
+                get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call", channel.general)
                 return self._perfect_samples_no_selection(only_input, prepare_samples, progress_callback)
 
         new_input, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
@@ -387,4 +387,4 @@ class NoisySamplingSimulator:
         }
         if extra_parameters:
             my_dict.update(extra_parameters)
-        logger.log_resources(my_dict)
+        get_logger().log_resources(my_dict)

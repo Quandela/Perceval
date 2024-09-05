@@ -32,7 +32,7 @@ from math import sqrt
 from perceval.components import Circuit, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem, AsType
 from perceval.utils import Encoding
-from perceval.utils.logging import logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel, deprecated
 
 _WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
                        "better in every aspect (see 'heralded cnot' in the catalog)"
@@ -87,7 +87,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                 .add(1, PERM([4, 3, 0, 2, 1])))
 
     def build_processor(self, **kwargs):
-        logger.warn(_WARNING_NOT_OPTIMAL, channel.user)
+        get_logger().warn(_WARNING_NOT_OPTIMAL, channel.user)
         p = self._init_processor(**kwargs)
         return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \

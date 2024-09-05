@@ -28,7 +28,7 @@
 # SOFTWARE.
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import RemoteProcessor
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from .scaleway_rpc_handler import RPCHandler
 
 import requests
@@ -83,7 +83,7 @@ class Session(ISession):
         }
 
         self._rpc_handler = self.__build_rpc_handler()
-        logger.info(f"Create Scaleway Session to {self._url}", channel.general)
+        get_logger().info(f"Create Scaleway Session to {self._url}", channel.general)
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
@@ -108,13 +108,13 @@ class Session(ISession):
 
             self._session_id = request_dict["id"]
             self._rpc_handler.set_session_id(self._session_id)
-            logger.info("Start Scaleway Session", channel.general)
+            get_logger().info("Start Scaleway Session", channel.general)
         except Exception:
             raise HTTPError(request.json())
 
     def stop(self) -> None:
         self.delete()
-        logger.info("Stop Scaleway Session", channel.general)
+        get_logger().info("Stop Scaleway Session", channel.general)
 
     def delete(self) -> None:
         endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"

@@ -31,7 +31,7 @@ from typing import Union
 import numpy as np
 import perceval.components.unitary_components as comp
 from perceval.components.linear_circuit import ACircuit, Circuit
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 
 def simplify(circuit: Union[list, ACircuit], m: int=None, display: bool = False) -> Union[list, Circuit]:
@@ -289,7 +289,7 @@ def _simplify_perm(components, m :int = None, display :bool = False):
     # Check several permutations
     found_other_perm = False
 
-    logger.debug(f"Enter PERM simplification for component {c.perm_vector}", channel.general)
+    get_logger().debug(f"Enter PERM simplification for component {c.perm_vector}", channel.general)
 
     for i in range(len(components) - 1, -1, -1):
 
@@ -314,14 +314,14 @@ def _simplify_perm(components, m :int = None, display :bool = False):
         new_r, new_c_perm = perm_compose(left_r, left_perm, r, perm)
         new_r, new_c_perm = reduce_perm(new_r, new_c_perm)
 
-        logger.debug(f" Simplifying {perm} with a successive PERM component of perm vector "
+        get_logger().debug(f" Simplifying {perm} with a successive PERM component of perm vector "
                      f"= {left_perm}", channel.general)
 
         if len(new_r):
             end_components.append([new_r, comp.PERM(new_c_perm)])
 
     elif found_other_perm and len(adjacent_modes) > 1:  # Non-successive permutations and things to do
-        logger.debug(f" Simplifying with non-successive permutation components", channel.general)
+        get_logger().debug(f" Simplifying with non-successive permutation components", channel.general)
 
         # Simulates an unraveling on a smaller circuit with only the permutations
         # First, we extend our permutations to the entire circuit
@@ -374,7 +374,7 @@ def _simplify_PS(components, m :int = None, display :bool = False):
 
     if not phi.is_variable:
         # encountered a PS with numeric value of phase - simplifying
-        logger.debug(f"Enter simplification of a PS component with parameter {phi}", channel.general)
+        get_logger().debug(f"Enter simplification of a PS component with parameter {phi}", channel.general)
 
         [r, c] = components.pop()
         r0 = r[0]
@@ -386,7 +386,7 @@ def _simplify_PS(components, m :int = None, display :bool = False):
 
                 previous_phi = previous_c.param("phi")
                 if not previous_phi.is_variable:
-                    logger.debug(" Simplify as two consecutive PS with numerical phase values found",
+                    get_logger().debug(" Simplify as two consecutive PS with numerical phase values found",
                                  channel.general)
                     PS_found_n_simplified = True
                     # previous PS does not have a variable phi -> simplify both together
@@ -409,7 +409,7 @@ def _simplify_PS(components, m :int = None, display :bool = False):
                 break
 
         if not PS_found_n_simplified and (float(phi) % (2 * np.pi) or display):
-            logger.debug(" Re-including the non-simplified PS if it either doesn't have a phase equal to "
+            get_logger().debug(" Re-including the non-simplified PS if it either doesn't have a phase equal to "
                          "multiple of 2*pi or needs to be displayed", channel.general)
 
             components.append([r, c])

@@ -187,7 +187,7 @@ def test_genunitary():
     assert M.is_unitary()
 
 
-@patch.object(pcvl.logger, "warn")
+@patch.object(pcvl.utils.logging._logger, "warn")
 def test_param_unitary(mock_warn):
     with LogChecker(mock_warn):
         M = pcvl.Matrix.random_unitary(2, np.arange(8))
