@@ -29,7 +29,7 @@
 """module test remote job"""
 
 import pytest
-from unittest. mock import patch
+from unittest.mock import patch
 from time import sleep
 
 import perceval as pcvl
