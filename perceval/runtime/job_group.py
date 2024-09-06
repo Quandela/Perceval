@@ -29,9 +29,11 @@
 
 from perceval.runtime import RemoteJob, RunningStatus
 from perceval.utils import PersistentData, FileFormat
-import os
+from os import path, listdir
 import json
 import datetime
+
+FILE_EXT_JGRP = 'jgrp'
 
 class JobGroup:
     """
@@ -42,30 +44,26 @@ class JobGroup:
     - Rerunning failed jobs within the group.
     """
     def __init__(self, name: str, load_from_file: bool=False):
-        if load_from_file:
-            self._name = name
-        else:
-            if JobGroup._job_group_exists(name):
-                raise FileExistsError("A job group with this name exists")
-            else:
-                self._name = name
-
+        self._file_name = None
+        self._name = name
         self.job_records = []
         # list of information (status/id/payload/metadata) for each job in the group
-
-        self._job_info = {}
-        self._file_name = None
-        self._create_job_group()  # creates and saves a persistent job group
+        # todo: rework init - not a good solution
+        if not load_from_file:
+            if JobGroup._job_group_exists(name):
+                raise FileExistsError()
+            else:
+                self._create_job_group(name)  # creates and saves a job group on disk
 
 
     @property
     def name(self):
         return self._name
 
-    def _generate_file_name(self):
+    def _generate_file_name(self, name):
         # creates file name for the job group with creation date-time stamp added
         current_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self._file_name = f"{self._name}-{current_timestamp}.jobgroup"
+        self._file_name = f"{name}-{current_timestamp}.{FILE_EXT_JGRP}"
 
     @staticmethod
     def _get_name_from_filename(filename: str):
@@ -74,11 +72,11 @@ class JobGroup:
         jg_name = name_no_ext.split('-')  # splits name into 'filename' + 'datetime stamp'
         return jg_name[0]
 
-    def _create_job_group(self):
+    def _create_job_group(self, name):
         # Saves a job group file on disk, using pcvl.PersistentData(), when a new
         # job group object is instantiated
         if self._file_name is None:
-            self._generate_file_name()
+            self._generate_file_name(name)
         ps = PersistentData()
         ps.write_file(self._file_name, json.dumps(self.job_records), FileFormat.TEXT)
 
@@ -88,8 +86,8 @@ class JobGroup:
         Returns a list of filenames of all JobGroups saved to disk
         """
         saved_jg_files = []
-        for filenames in os.listdir(PersistentData().directory):
-            if filenames.endswith('jobgroup'):
+        for filenames in listdir(PersistentData().directory):
+            if filenames.endswith(FILE_EXT_JGRP):
                 saved_jg_files.append(filenames)
         return saved_jg_files
 
@@ -114,17 +112,19 @@ class JobGroup:
         :param filename: Filename of the existing JobGroup to be resumed
         :return: JobGroup object with information of the saved Jobs
         """
-        group_data = json.loads(PersistentData().read_file(filename, FileFormat.TEXT))
         jg_name = JobGroup._get_name_from_filename(filename)
-
-        # initiates an instance of job group from the filename
-        # and repopulate it with the data
+        # initiates an instance of job group using name from the file
         resumed_group = cls(jg_name, load_from_file=True)
-        resumed_group.job_records = group_data  # add job info
+        resumed_group._file_name = filename
+
+        # load job records from file and populate the re-created job group with it
+        group_data = json.loads(PersistentData().read_file(filename, FileFormat.TEXT))
+        resumed_group.job_records = group_data
         return resumed_group
 
     def _add_job_record(self, job_info: dict):
-        # reads from file and modifies the job_record whenever a new job is added
+        # reads existing job records for the current Job Group
+        # and modifies it whenever a new job is added
         pd = PersistentData()
         data = json.loads(pd.read_file(self._file_name,
                                        FileFormat.TEXT))
@@ -139,12 +139,13 @@ class JobGroup:
         if not isinstance(job_to_add, RemoteJob):
             raise TypeError('Only a RemoteJob can be added to the group')
 
-        job_info = {}
+        job_info = dict()
+        job_info['id'] = job_to_add.id
+
         if job_to_add.id is None:
-            # status and Id remain None for Jobs not sent to the cloud yet
+            # set status to None for Jobs not sent to cloud
             job_info['status'] = None
-            job_info['id'] = job_to_add.id
-            job_info['body'] = job_to_add._request_data  # job manager stores body until job is sent to cloud
+            job_info['body'] = job_to_add._request_data
             job_info['metadata'] = {'headers': job_to_add._rpc_handler.headers,
                                     'platform': job_to_add._rpc_handler.name,
                                     'url': job_to_add._rpc_handler.url}
@@ -153,11 +154,10 @@ class JobGroup:
             max_samples = kwargs.get('max_samples', 10000)
             job_info['args'] = {"max_samples": max_samples}
             # todo: do we need to have something else?
-
         else:
-            job_info['status'] = job_to_add.status
-            job_info['id'] = job_to_add.id
-            if not job_to_add.status == RunningStatus.SUCCESS:
+            job_info['status'] = job_to_add.status()
+            if not job_to_add.status() == 'SUCCESS':
+                # if a job is added that is sent to cloud immediately - this will still be waiting todo - find if we want to change
                 job_info['metadata'] = {'headers': job_to_add._rpc_handler.headers,
                                         'platform': job_to_add._rpc_handler.name,
                                         'url': job_to_add._rpc_handler.url}
@@ -165,6 +165,32 @@ class JobGroup:
 
         self.job_records.append(job_info)
         self._add_job_record(job_info)
+        # todo: maybe this can be now replaced with the modify record method i added used by progress
+
+    def _modify_job_record(self, updated_record):
+        # called from progress if any job record needs updating
+        pd = PersistentData()
+        pd.write_file(self._file_name, json.dumps(updated_record), FileFormat.TEXT)
+
+    def progress(self):
+        """
+        Lists through all jobs in the group and returns a list of status
+        If a status is changed from existing in file, job record is updated
+        """
+        new_job_record = self.job_records
+        status_all_jobs = []
+
+        for index, each_job in enumerate(self.job_records):
+            # todo : implement something like the following to update status/info
+            # if not each_job['status'] in ['SUCCESS', None]:
+            #     new_job = RemoteJob().from_id(each_job['id'], rpc_handler='')
+            #     new_job_record[index] = info_to_save_from_new_job(new_job)
+
+            status_all_jobs.append(each_job['status'])
+
+        self._modify_job_record(new_job_record)
+        self.job_records = new_job_record
+        return status_all_jobs
 
     def run_parallel(self, **kwargs):
         pass
@@ -176,28 +202,25 @@ class JobGroup:
             # run each after delay
         pass
 
-    def progress(self):
-        pass
-        # todo : refine and implement
-        # to refine - need load_jog_group -> iterate over to get status of each
-        # should also modify job_records and saved data if job status changes
-        # and return progress
-
     def rerun_failed(self):
         pass
         # todo: implement
         # will be based on the API from Cloud side
 
     @staticmethod
-    def erase_all_job_groups():
-        # erase by filename
-        # todo : implement
+    def delete_all_job_groups():
+        """
+        To delete all existing Job groups on disk
+        """
         # warning ; there is an erase method in PersistentData() -> that can
-        # erase all -> add jobgroup to exclude it?
-        pass
+        # todo : add "jgrp" extension to exclude it
+        list_groups = JobGroup.list_saved_job_groups()
+        ps = PersistentData()
+        for each_file in list_groups:
+            ps.delete_file(each_file)
 
     @staticmethod
-    def erase_job_group(filename: str):
+    def delete_job_group(filename: str):
         """
         Delete a single JobGroup file by its name
         :param filename: a JobGroup filename with its extenstion to delete
@@ -205,7 +228,7 @@ class JobGroup:
         ps = PersistentData()
         ps.delete_file(filename)
 
-    def erase_job_groups_date(self, date: str):
+    def delete_job_groups_date(self, date: str):
         # erase all files with date before given date
         # todo : implement
         # warning ; there is an erase method in PersistentData() -> that can
