@@ -153,9 +153,12 @@ class Source:
         if self.partially_distinguishable:
             self._add(dist, ["_:0", "_:%s" % second_photon], (1 - distinguishability) * p2to2)
             self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
-            self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
-            self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
-            self._add(dist, ["_:%s" % second_photon], p2to1)
+            if self._multiphoton_model == DISTINGUISHABLE_KEY:
+                self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1) + p2to1)
+                self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
+            else:
+                self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
+                self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1) + p2to1)
         else:
             # Just avoids annotations
             self._add(dist, 2, p2to2)
