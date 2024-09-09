@@ -65,7 +65,7 @@ def test_samples_to_sample_count():
     assert len(samples_to_sample_count(BSSamples())) == 0
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_sample_count_to_probs(mock_warn):
     sample_count = BSCount({
         b0: 280,

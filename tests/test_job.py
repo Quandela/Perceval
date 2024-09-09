@@ -55,7 +55,7 @@ def test_run_sync_0():
     assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])(5) == [0, 1, 4, 9, 16])
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_run_sync_1(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     n = 5
@@ -92,7 +92,7 @@ def test_run_async():
     assert job.status.status == RunningStatus.SUCCESS
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_run_async_fail(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     assert job.execute_async(5, 0.01) is job

@@ -187,20 +187,19 @@ def test_genunitary():
     assert M.is_unitary()
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_param_unitary(mock_warn):
     with LogChecker(mock_warn):
-        M = pcvl.Matrix.random_unitary(2, np.arange(8))
+        m = pcvl.Matrix.random_unitary(2, np.arange(8))
 
-    # output Matrix
-    assert isinstance(M, pcvl.Matrix)
-    assert M.shape == (2, 2)
-    assert M.is_unitary()
+    assert isinstance(m, pcvl.Matrix)
+    assert m.shape == (2, 2)
+    assert m.is_unitary()
 
     # Testing the use of new method - parametrized_unitary()
 
-    PM = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
+    pm = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
 
-    assert isinstance(PM, pcvl.Matrix)
-    assert PM.shape == (2, 2)
-    assert PM.is_unitary()
+    assert isinstance(pm, pcvl.Matrix)
+    assert pm.shape == (2, 2)
+    assert pm.is_unitary()

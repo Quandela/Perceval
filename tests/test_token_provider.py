@@ -101,7 +101,7 @@ def test_token_provider_from_file():
     assert token_provider.get_token() is None
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
 def test_token_file_access(mock_warn):
     token_provider = TokenProviderForTest()

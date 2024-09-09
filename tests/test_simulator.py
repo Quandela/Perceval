@@ -150,7 +150,7 @@ def test_simulator_probs_distinguishable():
     assert res[BasicState("|0,3>")] == pytest.approx(0.288)
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_simulator_probs_postselection(mock_warn):
     input_state = BasicState([1, 1, 1])
     ps = PostSelect("[2] < 2")  # At most 1 photon on mode #2

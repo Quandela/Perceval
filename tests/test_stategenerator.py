@@ -195,7 +195,7 @@ def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.En
         assert a == pytest.approx(amp)
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.parametrize("encoding", [pcvl.Encoding.RAW, pcvl.Encoding.POLARIZATION, pcvl.Encoding.DUAL_RAIL])
 def test_dicke_state(mock_warn, encoding):
     n = 2

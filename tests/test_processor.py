@@ -40,7 +40,7 @@ from perceval.backends import Clifford2017Backend
 from _test_utils import assert_svd_close, LogChecker
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_processor_input_fock_state(mock_warn):
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     with LogChecker(mock_warn, expected_log_number=0):
@@ -60,7 +60,7 @@ def test_processor_input_fock_state_with_loss():
     assert pytest.approx(p.source_distribution) == expected
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
     source = Source(emission_probability=0.2,
                     multiphoton_component=0.1, multiphoton_model="indistinguishable",
@@ -126,7 +126,7 @@ def test_processor_source_vs_noise_model():
     assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
-@patch.object(pcvl.utils.logging._logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_processor_probs(mock_warn):
     source = Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
     qpu = Processor("Naive", BS(), source)

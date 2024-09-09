@@ -31,6 +31,7 @@ import json
 from unittest.mock import patch
 
 import perceval as pcvl
+from perceval.utils.logging import ExqaliburLogger, PythonLogger, level, channel
 
 from _mock_persistent_data import LoggerConfigForTest
 from _mock_rpc_handler import get_rpc_handler
@@ -39,7 +40,7 @@ DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
                   'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
 
 
-@patch.object(pcvl.utils.logging._logger, "apply_config")
+@patch.object(ExqaliburLogger, "apply_config")
 def test_logger_config(mock_apply_config):
     logger_config = LoggerConfigForTest()
     logger_config.reset()
@@ -52,9 +53,9 @@ def test_logger_config(mock_apply_config):
     assert dict(mock_apply_config.call_args[0][0]) == DEFAULT_CONFIG
 
     logger_config.enable_file()
-    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.general)
-    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.resources)
-    logger_config.set_level(pcvl.logging.level.warn, pcvl.logging.channel.user)
+    logger_config.set_level(level.warn, channel.general)
+    logger_config.set_level(level.warn, channel.resources)
+    logger_config.set_level(level.warn, channel.user)
     logger_config.save()
 
     config = logger_config._persistent_data.load_config()
@@ -72,12 +73,13 @@ def test_logger_config(mock_apply_config):
 
 
 def test_change_logger():
-    pcvl.utils.use_perceval_logger()
-    assert isinstance(pcvl.logging.get_logger(), pcvl.logging.loggers.ExqaliburLogger)
-    pcvl.utils.use_python_logger()
-    assert isinstance(pcvl.logging.get_logger(), pcvl.logging.loggers.PythonLogger)
-    pcvl.utils.use_perceval_logger()
-    assert isinstance(pcvl.logging.get_logger(), pcvl.logging.loggers.ExqaliburLogger)
+    pcvl.use_perceval_logger()
+    assert isinstance(pcvl.get_logger(), ExqaliburLogger)
+    pcvl.use_python_logger()
+    assert isinstance(pcvl.get_logger(), PythonLogger)
+    pcvl.use_perceval_logger()
+    assert isinstance(pcvl.get_logger(), ExqaliburLogger)
+    # This test NEEDS to finish on a use_perceval_logger for all other mocked tests to work
 
 
 def _get_last_dict_logged(mock_info_args):
@@ -93,9 +95,9 @@ BACKEND = 'backend'
 METHOD = 'method'
 
 
-@patch.object(pcvl.utils.logging._logger, "info")
+@patch.object(ExqaliburLogger, "info")
 def test_log_resources(mock_info, requests_mock):
-    pcvl.utils.logging._logger.set_level(pcvl.logging.level.info, pcvl.logging.channel.resources)
+    pcvl.utils.logging._logger.set_level(level.info, channel.resources)
 
     # prepare test parameters
     input_state = pcvl.BasicState("|1,1,0,0>")
@@ -150,9 +152,9 @@ def test_log_resources(mock_info, requests_mock):
     proc_clicli.samples(max_samples)
 
 
-@patch.object(pcvl.utils.logging._logger, "info")
+@patch.object(ExqaliburLogger, "info")
 def test_log_resources_simulator(mock_info, requests_mock):
-    pcvl.utils.logging._logger.set_level(pcvl.logging.level.info, pcvl.logging.channel.resources)
+    pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
     input_state = pcvl.BasicState("|1,1,0,0>")
@@ -187,9 +189,9 @@ def test_log_resources_simulator(mock_info, requests_mock):
     assert my_dict[METHOD] == 'probs_svd'
 
 
-@patch.object(pcvl.utils.logging._logger, "info")
+@patch.object(ExqaliburLogger, "info")
 def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
-    pcvl.utils.logging._logger.set_level(pcvl.logging.level.info, pcvl.logging.channel.resources)
+    pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
     input_state = pcvl.BasicState("|1,1,0,0>")
