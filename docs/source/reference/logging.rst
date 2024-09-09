@@ -32,30 +32,34 @@ In order to use it you'll just need to import it:
 
 .. code-block:: python
 
-    from perceval.utils import logger
+    from perceval.utils import get_logger
 
-To log message, you can use it the same way as the python logger:
+To log a message, you can use it the same way as the python logger:
 
 .. code-block:: python
 
     from perceval.utils import logger
-    logger.info('I log something as info')
+    get_logger().info('I log something as info')
+    # or
+    logger = get_logger()
+    logger.info('1st message')
+    logger.info('2nd message')
 
 
-Saving log in file
+Saving log to file
 ^^^^^^^^^^^^^^^^^^
 
 By default the log are not saved in a file.
 
-If order to activate / deactivate the logging in a file you can use the following methods:
+If order to enable / disable the writing of logs in a file, use the following methods:
 
 .. code-block:: python
 
-    from perceval.utils import logger
-    logger.enable_file()
-    logger.disable_file()
+    from perceval.utils import get_logger
+    get_logger().enable_file()
+    get_logger().disable_file()
 
-If this feature is activated, the log file will be in the perceval persistent data folder and the path of the file will be printed at the beginning of your perceval script.
+When this feature is enabled, log files are written to Perceval persistent data folder and the path of the file will be printed when your script starts writing inside it.
 
 Levels
 ------
@@ -75,10 +79,10 @@ The level are listed by ascending order of importance in the following table.
      - Usage
    * - DEBUG
      - ``level.debug``
-     - Detailed information, typically of interest only when diagnosing problems.
+     - Detailed technical information, typically of interest only when diagnosing problems.
    * - INFO
      - ``level.info``
-     - Confirmation that things are working as expected.
+     - Confirmation of things working as expected.
    * - WARNING
      - ``level.warn``
      - An indication that something unexpected happened, or indicative of some problem in the near future. The software is still working as expected.
@@ -94,16 +98,16 @@ Example
 
 .. code-block:: python
 
-    from perceval.utils import logger
-    logger.info('I log something as info')
-    logger.critical('I log something as critical')
+    from perceval.utils import get_logger
+    get_logger().info('I log something as info')
+    get_logger().critical('I log something as critical')
 
 Channels
 --------
 
 You can also log in a specific channel. A channel is like a category.
 Each channel can have its own configuration, which means each channel can have a different level.
-If the channel is not specified, the message will be log in the ``user`` channel.
+If the channel is not specified, the message is logged in the ``user`` channel.
 
 .. note:: If you are a Perceval user, you should only write log in the channel ``user``.
 
@@ -131,23 +135,23 @@ Example
 
 .. code-block:: python
 
-    from perceval.utils.logging import logger, channel
-    logger.info('I log something as info in channel user', channel.user)
+    from perceval.utils.logging import get_logger, channel
+    get_logger().info('I log something as info in channel user', channel.user)
 
 To set a level for a channel, use the following method:
 
 .. code-block:: python
 
-    from perceval.utils import logger
-    logger.set_level(level, channel)
+    from perceval.utils import get_logger
+    get_logger().set_level(level, channel)
 
 Example
 ^^^^^^^
 
 .. code-block:: python
 
-    from perceval.utils import logger, logging
-    logger.set_level(logging.level.info, logging.channel.general)
+    from perceval.utils.logging import get_logger, level, channel
+    get_logger().set_level(level.info, channel.general)
 
 Logger configuration
 --------------------
@@ -162,7 +166,8 @@ Example
 
 .. code-block:: python
 
-    from perceval.utils.logging import logger, channel, level
+    from perceval.utils.logging import get_logger(), channel, level
+    logger = get_logger()
     logger.enable_file()
     logger.set_level(level.info, channel.resources)
     logger.set_level(level.err, channel.general)
@@ -178,11 +183,11 @@ After configuring your LoggerConfig, you can apply it to the current logger:
 
 .. code-block:: python
 
-    from perceval.utils import logger, logging
-    logger_config = logging.LoggerConfig()
+    from perceval.utils.logging import get_logger, LoggerConfig, level, channel
+    logger_config = LoggerConfig()
     logger_config.enable_file()
-    logger_config.set_level(logging.level.info, logging.channel.user)
-    logger.apply_config(logger_config)
+    logger_config.set_level(level.info, channel.user)
+    get_logger().apply_config(logger_config)
 
 Log format
 ----------
@@ -197,4 +202,6 @@ In the file, the log will be save to the format:
 
 Log exceptions
 --------------
-If the general channel level is at least on critical and save in file is enable, uncaught exception will be logged
+
+If the general channel level is at least on critical and save in file is enable, uncaught exception will be logged and
+saved on disk with their callstack.
