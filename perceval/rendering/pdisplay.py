@@ -178,7 +178,7 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
             return value.__repr__()
 
     if output_format != Format.TEXT:
-        marker = output_format == "$" if Format.HTML else ""
+        marker = "$" if output_format == Format.HTML else ""
         if isinstance(matrix, sp.Matrix):
             return marker + sp.latex(matrix) + marker
         rows = []
