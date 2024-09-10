@@ -30,7 +30,7 @@
 import math
 
 from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from typing import Dict, List, Union
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -203,7 +203,7 @@ class Source:
         """
         dist = SVDistribution()
         prob_threshold = max(prob_threshold, global_params['min_p'])
-        logger.info(f"Apply 'Source' noise model to {expected_input}", channel.general)
+        get_logger().info(f"Apply 'Source' noise model to {expected_input}", channel.general)
         for photon_count in expected_input:
             dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
         dist.normalize()

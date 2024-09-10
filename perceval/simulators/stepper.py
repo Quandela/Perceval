@@ -31,7 +31,7 @@ from typing import List, Union, Callable, Dict
 import copy
 
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
-from perceval.utils.logging import deprecated, logger
+from perceval.utils.logging import deprecated, get_logger
 from perceval.components import ACircuit
 from perceval.backends import AProbAmpliBackend, BACKEND_LIST
 from .simulator_interface import ISimulator

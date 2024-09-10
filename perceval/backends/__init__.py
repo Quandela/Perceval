@@ -51,8 +51,8 @@ class BackendFactory:
         if name in BACKEND_LIST:
             return BACKEND_LIST[name](**kwargs)
         # Do not import from top level or you'll expose what's imported
-        from perceval.utils.logging import logger, channel
-        logger.warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
+        from perceval.utils.logging import get_logger, channel
+        get_logger().warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
         return BACKEND_LIST['SLOS'](**kwargs)
 
     @staticmethod

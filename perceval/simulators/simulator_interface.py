@@ -33,7 +33,7 @@ from typing import Callable, Dict
 from perceval.components import ACircuit
 from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
     post_select_statevector
-from perceval.utils.logging import deprecated, logger
+from perceval.utils.logging import deprecated, get_logger
 
 
 class ISimulator(ABC):
@@ -78,7 +78,7 @@ class ASimulatorDecorator(ISimulator, ABC):
                       heralds: dict = None,
                       min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
         if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            logger.warn(
+            get_logger().warn(
                 'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
             min_detected_photons_filter = min_detected_photon_filter
         if min_detected_photons_filter is not None:

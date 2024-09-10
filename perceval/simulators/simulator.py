@@ -40,7 +40,7 @@ from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.utils.density_matrix_utils import extract_upper_triangle
-from perceval.utils.logging import logger, deprecated
+from perceval.utils.logging import get_logger, deprecated
 
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
 from .simulator_interface import ISimulator
@@ -118,7 +118,7 @@ class Simulator(ISimulator):
                         on mode 6.
         """
         if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            logger.warn(
+            get_logger().warn(
                 'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
             min_detected_photons_filter = min_detected_photon_filter
         if min_detected_photons_filter is not None:
@@ -612,4 +612,4 @@ class Simulator(ISimulator):
         }
         if extra_parameters:
             my_dict.update(extra_parameters)
-        logger.log_resources(my_dict)
+        get_logger().log_resources(my_dict)

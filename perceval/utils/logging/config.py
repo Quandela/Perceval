@@ -38,7 +38,11 @@ _ENABLE_FILE = "enable_file"
 _USE_PYTHON_LOGGER = "use_python_logger"
 _CHANNEL_NAMES = ["user", "general", "resources"]
 
+
 class LoggerConfig(dict):
+    """This class represent the logger configuration as a dictionary and can be used to save it into persistent data.
+    On class initialization, the configuration will be loaded from persistent data.
+    """
     def __init__(self):
         super().__init__()
         self.reset()
@@ -50,6 +54,11 @@ class LoggerConfig(dict):
         self[_CHANNELS][channel.name]["level"] = level.name
 
     def reset(self):
+        """Reset the logger configuration to its default value, which is:
+            - Disable file
+            - Channel user at level warning
+            - Channels general & resources off
+        """
         self[_USE_PYTHON_LOGGER] = False
         self[_ENABLE_FILE] = False
         self[_CHANNELS] = {}
@@ -74,13 +83,48 @@ class LoggerConfig(dict):
             warnings.warn(UserWarning(f"Incorrect logger config, try to reset and save it. {e}"))
 
     def set_level(self, level: exqalibur_logging.level, channel: exqalibur_logging.channel):
+        """Set the level of a channel in the configuration
+
+        Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
+
+
+        :param level: _description_
+        :param channel: _description_
+        """
         self[_CHANNELS][channel.name]["level"] = level.name
 
+    def use_python_logger(self):
+        """Set the config to use the python logger
+
+        Warning: this will not change the current logger level but only the level of the channel in the current LoggerConfig instance
+        """
+        self[_USE_PYTHON_LOGGER] = True
+
+    def use_perceval_logger(self):
+        """Set the config to use the perceval logger
+
+        Warning: this will not change the current logger level, but only the level of the channel in the current LoggerConfig instance
+        """
+        self[_USE_PYTHON_LOGGER] = False
+
+    def python_logger_is_enabled(self):
+        return self[_USE_PYTHON_LOGGER]
+
     def enable_file(self):
+        """Enable to save the log into a file in the configuration
+
+        Warning: this will not change the current logger file saving, but only the file saving of the current LoggerConfig instance
+        """
         self[_ENABLE_FILE] = True
 
     def disable_file(self):
+        """Disable to save the log into a file in the configuration
+
+        Warning: this will not change the current logger file saving, but only the file saving of the current LoggerConfig instance
+        """
         self[_ENABLE_FILE] = False
 
     def save(self):
+        """Save the current logger configuration in the persistent data
+        """
         self._persistent_data.save_config({_LOGGING: dict(self)})

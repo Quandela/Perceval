@@ -32,7 +32,7 @@ from numbers import Number
 from .abstract_algorithm import AAlgorithm
 from perceval.utils import samples_to_sample_count, samples_to_probs, sample_count_to_samples,\
                            sample_count_to_probs, probs_to_samples, probs_to_sample_count
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from perceval.components.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
 from perceval.utils import BasicState
@@ -117,11 +117,12 @@ class Sampler(AAlgorithm):
             job = RemoteJob(payload, self._processor.get_rpc_handler(), job_name,
                              command_param_names=command_param_names,
                              delta_parameters=delta_parameters, job_context=job_context)
-            logger.info(f"Prepare remote job (command: {primitive} on {payload['platform_name']})", channel.general)
+            get_logger().info(
+                f"Prepare remote job (command: {primitive} on {payload['platform_name']})", channel.general)
             return job
         else:
             func_name = f"_{primitive}_iterate_locally" if self._iterator else f"_{primitive}_wrapper"
-            logger.info(f"Prepare local job (command: Sampler.{func_name})", channel.general)
+            get_logger().info(f"Prepare local job (command: Sampler.{func_name})", channel.general)
             return LocalJob(getattr(self, func_name),
                             result_mapping_function=converter,
                             command_param_names=command_param_names,
@@ -173,17 +174,17 @@ class Sampler(AAlgorithm):
     def add_iteration(self, circuit_params: Dict = None,
                        input_state: BasicState = None,
                        min_detected_photons: int = None):
-        logger.info("Add 1 iteration to Sampler", channel.general)
+        get_logger().info("Add 1 iteration to Sampler", channel.general)
         self._add_iteration(circuit_params, input_state, min_detected_photons)
 
     def add_iteration_list(self, iterations: List[Dict]):
-        logger.info(f"Add {len(iterations)} iterations to Sampler", channel.general)
+        get_logger().info(f"Add {len(iterations)} iterations to Sampler", channel.general)
         for iter_params in iterations:
             self._add_iteration(**iter_params)
 
     def clear_iterations(self):
         # In case, the user wants to use the same sampler instance, but with a new iterator
-        logger.info(f"Clear all iterations in Sampler", channel.general)
+        get_logger().info(f"Clear all iterations in Sampler", channel.general)
         self._iterator = []
 
     @property

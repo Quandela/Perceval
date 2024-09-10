@@ -35,7 +35,7 @@ from typing import Dict, Callable, Union, List
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
-from perceval.utils.logging import logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel, deprecated
 
 from .abstract_processor import AProcessor, ProcessorType
 from .linear_circuit import ACircuit, Circuit
@@ -251,7 +251,7 @@ class Processor(AProcessor):
         if not self._phase_quantization:
             return circuit
         # Apply phase quantization noise on all phase parameters in the circuit
-        logger.debug(f"Inject phase imprecision noise ({self._phase_quantization} in the circuit")
+        get_logger().debug(f"Inject phase imprecision noise ({self._phase_quantization} in the circuit")
         circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
         for _, component in circuit:
             if "phi" in component.params:
@@ -270,9 +270,10 @@ class Processor(AProcessor):
         sampling_simulator.set_threshold_detector(self.is_threshold)
         sampling_simulator.keep_heralds(False)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
-        logger.info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
+        get_logger().info(
+            f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
         res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
-        logger.info("Local sampling complete!", channel.general)
+        get_logger().info("Local sampling complete!", channel.general)
         return res
 
     def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
@@ -285,10 +286,10 @@ class Processor(AProcessor):
 
         if precision is not None:
             self._simulator.set_precision(precision)
-        logger.info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
+        get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                     channel.general)
         res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
-        logger.info("Local strong simulation complete!", channel.general)
+        get_logger().info("Local strong simulation complete!", channel.general)
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
@@ -333,11 +334,11 @@ class Processor(AProcessor):
         elif isinstance(self._input_state, SVDistribution):
             my_dict['n'] = self._input_state.n_max
         else:
-            logger.info(f"Cannot get n for type {type(self._input_state)}", channel.resource)
+            get_logger().info(f"Cannot get n for type {type(self._input_state)}", channel.resource)
         if extra_parameters:
             my_dict.update(extra_parameters)
         if self.noise:  # TODO: PCVL-782
             my_dict['noise'] = self.noise.__dict__()
         elif self.source:
             my_dict['source'] = self.source.__dict__()
-        logger.log_resources(my_dict)
+        get_logger().log_resources(my_dict)
