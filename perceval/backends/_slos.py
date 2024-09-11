@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 from ._abstract_backends import AProbAmpliBackend
-from perceval.utils import allstate_iterator, Matrix, BasicState, BSDistribution, StateVector
+from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
+from perceval.utils.logging import get_logger, channel
 
 import exqalibur as xq
 import math
@@ -138,6 +139,7 @@ class SLOSBackend(AProbAmpliBackend):
         self._umat = circuit.compute_unitary(use_symbolic=self._symb)
         if self._path_roots and previous_circuit.m == circuit.m:
             # Use the previously deployed paths to store the new circuit's coefs
+            get_logger().debug("SLOS: compute coefficients keeping the previous path", channel.general)
             self._compute_path(self._umat)
         else:
             self._reset()
@@ -178,6 +180,7 @@ class SLOSBackend(AProbAmpliBackend):
         if not found_new:
             return False
 
+        get_logger().debug("SLOS: deploy a new path and compute coefficients", channel.general)
         self._deploy(input_list)  # build the necessary fsa/fsms
         new_path = _Path(0, self._circuit.m, input_list, None, self)
         new_path.compute(self._umat)

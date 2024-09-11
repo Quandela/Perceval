@@ -29,13 +29,16 @@
 
 import math
 import pytest
+from unittest.mock import patch
 
+import perceval as pcvl
 from perceval import catalog
 from perceval.backends import AProbAmpliBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
-from _test_utils import assert_sv_close, assert_svd_close
+
+from _test_utils import assert_sv_close, assert_svd_close, LogChecker
 
 
 class MockBackend(AProbAmpliBackend):
@@ -147,14 +150,15 @@ def test_simulator_probs_distinguishable():
     assert res[BasicState("|0,3>")] == pytest.approx(0.288)
 
 
-def test_simulator_probs_postselection():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_simulator_probs_postselection(mock_warn):
     input_state = BasicState([1, 1, 1])
     ps = PostSelect("[2] < 2")  # At most 1 photon on mode #2
     simulator = Simulator(MockBackend())
     simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
 
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn):
         output_dist = simulator.probs(input_state)
 
     assert len(output_dist) == 0

@@ -1,0 +1,12 @@
+// This program prepares the state
+// (|000> + |001> + |010> + |011> + |100>) / sqrt(5)
+version 3
+qubit[3] q
+Ry(0.7048 * pi) q[0]
+Ry(0.25 * pi) q[2]
+CNOT q[0], q[2]
+Ry(-0.25 * pi) q[2]
+Ry(0.25 * pi) q[1]
+CNOT q[0], q[1]
+Ry(-0.25 * pi) q[1]
+X q[0]

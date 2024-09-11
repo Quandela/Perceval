@@ -29,15 +29,14 @@
 
 
 import math
-from warnings import warn
-
-from perceval.components import ACircuit, Circuit, Port, Unitary, Processor
-from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.utils import Encoding, PostSelect, Matrix
 
 import numpy as np
 import cmath as cm
 from scipy.linalg import block_diag
+
+from perceval.components import Circuit, Port, Unitary
+from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.utils import Encoding, PostSelect, Matrix
 
 
 def build_control_gate_unitary(n: int, alpha: float) -> Matrix:

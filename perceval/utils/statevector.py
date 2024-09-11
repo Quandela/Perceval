@@ -30,16 +30,18 @@
 from __future__ import annotations
 
 import random
-import warnings
+
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
 from typing import Dict, List, Union, Optional
 
+import exqalibur as xq
+from perceval.utils.logging import get_logger, channel
+
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
-import exqalibur as xq
 
 BasicState = xq.FockState
 StateVector = xq.StateVector
@@ -95,7 +97,7 @@ class ProbabilityDistribution(defaultdict, ABC):
     def normalize(self):
         sum_probs = sum(list(self.values()))
         if sum_probs == 0:
-            warnings.warn("Unable to normalize a distribution with only null probabilities")
+            get_logger().warn("Unable to normalize a distribution with only null probabilities", channel.user)
             return
         for sv in self.keys():
             self[sv] /= sum_probs
@@ -258,7 +260,7 @@ def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
 
 
 class BSDistribution(ProbabilityDistribution):
-    r"""Time-Independant probabilistic distribution of Basic States
+    r"""Time-Independent probabilistic distribution of Basic States
     """
     def __init__(self, d: Optional[BasicState, Dict] = None):
         super().__init__()

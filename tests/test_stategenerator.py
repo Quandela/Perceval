@@ -26,11 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+import math
 import pytest
+from unittest.mock import patch
 
 import perceval as pcvl
 import networkx as nx
-import math
+
+from _test_utils import LogChecker
 
 
 def test_logical_state_raw():
@@ -191,8 +195,9 @@ def check_dicke_state(state: pcvl.StateVector, n: int, k: int, encoding: pcvl.En
         assert a == pytest.approx(amp)
 
 
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.parametrize("encoding", [pcvl.Encoding.RAW, pcvl.Encoding.POLARIZATION, pcvl.Encoding.DUAL_RAIL])
-def test_dicke_state(encoding):
+def test_dicke_state(mock_warn, encoding):
     n = 2
     k = 2*n
     ds = pcvl.StateGenerator(encoding).dicke_state(n)
@@ -208,5 +213,5 @@ def test_dicke_state(encoding):
     with pytest.raises(ValueError):
         pcvl.StateGenerator(encoding).dicke_state(-1)
 
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn):
         assert pcvl.StateGenerator(encoding).dicke_state(4, 2) == pcvl.StateVector()

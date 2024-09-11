@@ -84,7 +84,7 @@ class APort(AComponent):
 
 class Port(APort):
     def __init__(self, encoding, name):
-        assert encoding != Encoding.QUDIT, "Qudit encoded ports must be created by instanciating QuditPort"
+        assert encoding != Encoding.QUDIT, "Qudit encoded ports must be created by instantiating QuditPort"
         super().__init__(_port_size(encoding), name)
         self._encoding = encoding
 

@@ -10,7 +10,7 @@ complex coefficients being probability amplitudes.
 
 * **Constructor** :code:`__init__(bs: BasicState or List[int] or str = None)`
 
-Initialize a StateVector from a BasicState or data to create a BasicState (list of integers, string reprsentation)
+Initialize a StateVector from a BasicState or data to create a BasicState (list of integers, string representation)
 
 >>> empty_sv = StateVector()  # creates an empty state vector
 >>> bs = BasicState("|1,0,1,0>")

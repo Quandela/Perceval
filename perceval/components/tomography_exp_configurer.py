@@ -67,11 +67,11 @@ def processor_circuit_configurator(processor, prep_state_indices: list, meas_pau
 
     if not all(isinstance(p_index, PauliEigenStateType) for p_index in prep_state_indices):
         raise TypeError(
-            f"Indices for the preparation circuits should be a PauliEigenStateType")
+            "Indices for the preparation circuits should be a PauliEigenStateType")
 
     if not all(isinstance(m_index, PauliType) for m_index in meas_pauli_basis_indices):
         raise TypeError(
-            f"Indices for the measurement circuits should be a PauliType")
+            "Indices for the measurement circuits should be a PauliType")
 
     p = processor.copy()
     p.clear_input_and_circuit(processor.m)  # Clear processor content but keep its size

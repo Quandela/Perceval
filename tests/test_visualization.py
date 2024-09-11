@@ -27,6 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
+
 import sys
 import sympy as sp
 
@@ -186,7 +188,7 @@ def test_svg_dump_grover(tmp_path, save_figs):
     def oracle(mark):
         """Values 0, 1, 2 and 3 for parameter 'mark' respectively mark the elements "00", "01", "10" and "11" of the list."""
         oracle_circuit = pcvl.Circuit(m=2, name='Oracle')
-        # The following dictionnary translates n into the corresponding component settings
+        # The following dictionary translates n into the corresponding component settings
         oracle_dict = {0: (1, 0), 1: (0, 1), 2: (1, 1), 3: (0, 0)}
         PC_state, LC_state = oracle_dict[mark]
         # Mode b
@@ -321,3 +323,59 @@ def test_svg_dump_barrier_phys(tmp_path, save_figs):
 def test_svg_dump_barrier_symb(tmp_path, save_figs):
     c = pcvl.Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, skin_type=SymbSkin)
+
+
+@pytest.mark.parametrize("merge_pre_MZI", [False, True])
+@pytest.mark.parametrize("merge_upper_MZI", [False, True])
+@pytest.mark.parametrize("merge_lower_MZI", [False, True])
+def test_svg_dump_circuit_box_bell_state(tmp_path, save_figs,
+    merge_pre_MZI,
+    merge_upper_MZI,
+    merge_lower_MZI):
+
+    pre_MZI = (pcvl.Circuit(4, name="Bell State Prep")
+           .add(0, BS())
+           .add(2, BS())
+           .add(1, PERM([1, 0])))
+
+    upper_MZI = (pcvl.Circuit(2, name="upper MZI")
+             .add(0, PS(phi=pcvl.P('phi_0')))
+             .add(0, BS())
+             .add(0, PS(phi=pcvl.P('phi_2')))
+             .add(0, BS()))
+
+    lower_MZI = (pcvl.Circuit(2, name="lower MZI")
+             .add(0, PS(phi=pcvl.P('phi_1')))
+             .add(0, BS())
+             .add(0, PS(phi=pcvl.P('phi_3')))
+             .add(0, BS()))
+
+    chip = (pcvl.Circuit(4)
+              .add(0, pre_MZI, merge=merge_pre_MZI)
+              .add(0, upper_MZI, merge=merge_upper_MZI)
+              .add(2, lower_MZI, merge=merge_lower_MZI))
+
+    processor = pcvl.Processor('SLOS', chip)
+
+    fig_name = sys._getframe().f_code.co_name
+
+    if merge_pre_MZI:
+        fig_name = f"{fig_name}T"
+    else:
+        fig_name = f"{fig_name}F"
+
+    if merge_upper_MZI:
+        fig_name = f"{fig_name}T"
+    else:
+        fig_name = f"{fig_name}F"
+
+    if merge_lower_MZI:
+        fig_name = f"{fig_name}T"
+    else:
+        fig_name = f"{fig_name}F"
+
+    _save_or_check(c=processor,
+        tmp_path=tmp_path,
+        circuit_name=fig_name,
+        save_figs=save_figs,
+        recursive=True)

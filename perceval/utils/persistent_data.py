@@ -88,7 +88,7 @@ class PersistentData:
         return os.access(self._directory, os.R_OK)
 
     def _create_directory(self) -> None:
-        """Create the directory if if doesn't exists
+        """Create the persistent data root directory if it doesn't exist
         """
         if not os.path.exists(self._directory):
             os.makedirs(self._directory)
@@ -110,7 +110,7 @@ class PersistentData:
         return os.path.join(self._directory, element_name)
 
     def has_file(self, filename: str) -> bool:
-        """Find if persistant data has file
+        """Find if persistent data has file
 
         :param filename: name of the file to find (with extension)
         :return: True is the file exists, else False
@@ -130,7 +130,7 @@ class PersistentData:
         try:
             os.remove(file_path)
         except OSError:
-           warnings.warn(UserWarning(f"Cannot delete persistant file {file_path}"))
+            warnings.warn(UserWarning("Cannot delete persistent file {file_path}"))
 
     def write_file(self, filename: str, data: Union[bytes, str], file_format: FileFormat):
         """Write data into a file in persistent data directory

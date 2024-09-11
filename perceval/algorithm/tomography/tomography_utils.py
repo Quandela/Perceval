@@ -32,7 +32,7 @@ import math
 from itertools import product, combinations
 from perceval.components import (PauliType, PauliEigenStateType, get_pauli_gate, get_pauli_eigen_state_prep_circ,
                                  processor_circuit_configurator)
-from perceval.algorithm import Sampler
+from ..sampler import Sampler
 from perceval.utils import BasicState
 
 

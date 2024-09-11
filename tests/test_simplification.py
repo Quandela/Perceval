@@ -31,6 +31,7 @@ import math
 
 import perceval as pcvl
 from perceval import Circuit
+from perceval.utils import Parameter
 from perceval.utils.algorithms.simplification import simplify
 from perceval.components import unitary_components as comp
 
@@ -118,8 +119,38 @@ def test_perm_simp():
          .add(2, comp.BS(theta=2))
          .add(0, comp.PERM([3, 2, 1, 0])))
 
-    expected1 = [(0, [1, 0, 3, 2]), (2, 1), (0, 1), (0, [1, 0, 3, 2])]
+    expected1 = [(0, [1, 0, 3, 2]), (2, 1), (0, 2), (0, [1, 0, 3, 2])]
     expected2 = [(0, [1, 0, 3, 2]), (0, 2), (2, 1), (0, [1, 0, 3, 2])]
     real = PERM_testing(c, True)
 
     assert real == expected1 or real == expected2, "PERM simplification moves components wrongly"
+
+def test_PS_simp_variable_param():
+    # There should not be a simplification for PS with variable Parameter
+    phi = math.pi / 2
+    phase = Parameter("phase")
+    phase.set_value(phi)
+
+    c = Circuit(2).add(0, comp.PS(phase)).add(0, comp.PS(math.pi))
+    c_simp = simplify(c)
+
+    assert c_simp.ncomponents() == 2
+
+    # info on Parameter not lost after simplication
+    param = c_simp.get_parameters()[0]
+    assert param == phase
+
+
+def test_PS_simp_remove_null_phase():
+    phi = math.pi / 2
+    phase = Parameter("phase")
+    phase.set_value(phi)
+
+    c = Circuit(2).add(0, comp.PS(phase)).add(0, comp.PS(0))
+    c_simp = simplify(c)
+
+    assert c_simp.ncomponents() == 1
+
+    # info on Parameter not lost after simplification
+    param = c_simp.get_parameters()[0]
+    assert param == phase

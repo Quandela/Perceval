@@ -26,15 +26,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import warnings
 
 import numpy as np
 from math import comb
 from scipy.optimize import curve_fit
 from typing import Union
-from ..utils.statevector import BSCount, BSDistribution, BasicState
+from perceval.utils import BSCount, BSDistribution, BasicState
+from perceval.utils.logging import get_logger, channel
 from ._loss_mitigation_utils import _gen_lossy_dists, _get_avg_exp_from_uni_dist, _generate_one_photon_per_mode_mapping
 
+
+def _validate_noisy_input(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int):
+    if not isinstance(noisy_input, (BSCount, BSDistribution)):
+        # check if the input type is correct
+        raise TypeError('Noisy input should be of type BSCount or BSDistribution')
+
+    if all([states.n == ideal_photon_count for states in noisy_input.keys()]):
+        # Check if a perfect loss-less distribution was passed to mitigate
+        raise ValueError("All input states have ideal photon count, no loss to mitigate.")
+
+    target_photon_loss = {ideal_photon_count-1, ideal_photon_count-2}
+    obtained_photon_counts = {states.n for states in noisy_input.keys()}
+    if not target_photon_loss.issubset(obtained_photon_counts):
+        # check if noisy input meets current implementation's statistics criteria
+        raise ValueError("Noisy input invalid or incorrect ideal photon count, "
+                         "implementation requires states with n-1, n-2 photons for expected n-photon mitigation")
 
 
 def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_count: int) -> BSDistribution:
@@ -46,11 +62,10 @@ def photon_recycling(noisy_input: Union[BSCount, BSDistribution], ideal_photon_c
     :param ideal_photon_count: expected photon count for a loss-less system
     :return photon loss mitigated distribution
     """
-    if not any([states.n == ideal_photon_count for states in noisy_input.keys()]):
-        warnings.warn("Ideal photon count value lower than ideal", UserWarning)
-
-    if not isinstance(noisy_input, (BSCount, BSDistribution)):
-        raise TypeError(f'Noisy input should be of type BSCount or BSDistribution')
+    get_logger().info(f"Running Photon Recycling on a {len(noisy_input)} states distribution targetting {ideal_photon_count} ideal photons",
+                channel.general)
+    # run checks on noisy input before recycling
+    _validate_noisy_input(noisy_input, ideal_photon_count)
 
     m = next(iter(noisy_input)).m  # number of modes
     pattern_map = _generate_one_photon_per_mode_mapping(m, ideal_photon_count)

@@ -28,6 +28,7 @@
 # SOFTWARE.
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import RemoteProcessor
+from perceval.utils.logging import get_logger, channel
 from .scaleway_rpc_handler import RPCHandler
 
 import requests
@@ -45,7 +46,7 @@ class Session(ISession):
 
     :param token: authentication token required to access the Scaleway API
 
-    :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session amongs multiple users
+    :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session among multiple users
 
     :param max_idle_duration_s: optional value, duration in seconds that can elapsed without activity before the session terminates
 
@@ -82,6 +83,7 @@ class Session(ISession):
         }
 
         self._rpc_handler = self.__build_rpc_handler()
+        get_logger().info(f"Create Scaleway Session to {self._url}", channel.general)
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
@@ -106,14 +108,13 @@ class Session(ISession):
 
             self._session_id = request_dict["id"]
             self._rpc_handler.set_session_id(self._session_id)
+            get_logger().info("Start Scaleway Session", channel.general)
         except Exception:
             raise HTTPError(request.json())
 
     def stop(self) -> None:
-        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
-        request = requests.delete(endpoint, headers=self._headers)
-
-        request.raise_for_status()
+        self.delete()
+        get_logger().info("Stop Scaleway Session", channel.general)
 
     def delete(self) -> None:
         endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"

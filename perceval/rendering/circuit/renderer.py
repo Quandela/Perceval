@@ -104,7 +104,7 @@ class ICircuitRenderer(ABC):
                     if c.is_composite() and c._components:
                         if recursive:
                             self._current_subblock_info = self._subblock_info.setdefault(c, {})
-                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=True), c._color)
+                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=False), c._color)
                             self.render_circuit(
                                 c,
                                 shift=shiftr[0],
@@ -771,8 +771,8 @@ def create_renderer(
     n: int,  # number of modes
     output_format: Format = Format.TEXT,  # rendering method
     skin: ASkin = None,  # skin (unused in text rendering)
-    **opts
-) -> ICircuitRenderer:
+    **opts,
+) -> Tuple[ICircuitRenderer, ICircuitRenderer]:
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
     A skin object is needed for circuit graphic rendering.

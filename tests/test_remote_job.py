@@ -26,23 +26,33 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from time import sleep
+"""module test remote job"""
+
 import pytest
+from unittest. mock import patch
+from time import sleep
 
 import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 
-from _test_utils import assert_bsd_close_enough, assert_bsd_close, assert_bsc_close_enough
-from _mock_rpc_handler import MockRPCHandler, REMOTE_JOB_DURATION, REMOTE_JOB_RESULTS, REMOTE_JOB_CREATION_TIMESTAMP, \
-    REMOTE_JOB_START_TIMESTAMP, REMOTE_JOB_NAME
+from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough, LogChecker
+from _mock_rpc_handler import (
+    get_rpc_handler,
+    REMOTE_JOB_DURATION,
+    REMOTE_JOB_RESULTS,
+    REMOTE_JOB_CREATION_TIMESTAMP,
+    REMOTE_JOB_START_TIMESTAMP,
+    REMOTE_JOB_NAME,
+)
 
 
-
-def test_remote_job():
-    _FIRST_JOB_NAME = "job name"
-    _SECOND_JOB_NAME = "another name"
-    rj = RemoteJob({}, MockRPCHandler(), _FIRST_JOB_NAME)
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_remote_job(mock_warn, requests_mock):
+    """test remote job"""
+    _FIRST_JOB_NAME = 'job name'
+    _SECOND_JOB_NAME = 'another name'
+    rj = RemoteJob({}, get_rpc_handler(requests_mock), _FIRST_JOB_NAME)
     assert rj.name == _FIRST_JOB_NAME
     rj.name = _SECOND_JOB_NAME
     assert rj.name == _SECOND_JOB_NAME
@@ -55,11 +65,11 @@ def test_remote_job():
     assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn):
         assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     _TEST_JOB_ID = "any"
-    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, MockRPCHandler())
+    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, get_rpc_handler(requests_mock))
     assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
     assert rj.is_complete == job_status.completed
@@ -69,14 +79,17 @@ def test_remote_job():
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
-def test_mock_remote_with_gates(catalog_item):
+def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
+    """test mock remote with gates"""
     noise = pcvl.NoiseModel(
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
-        p, rpc_handler=MockRPCHandler())
+        p, rpc_handler=get_rpc_handler(requests_mock)
+    )
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
@@ -85,9 +98,9 @@ def test_mock_remote_with_gates(catalog_item):
 
     for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
         if i == 0:
-            with pytest.warns():
+            with LogChecker(mock_warn) as warn_log_checker:
                 p.with_input(input_state)
-            with pytest.warns():
+            with warn_log_checker:
                 rp.with_input(input_state)
         else:
             p.with_input(input_state)
@@ -104,8 +117,7 @@ def test_remote_with_gates_probs(catalog_item):
     p = pcvl.catalog[catalog_item].build_processor()
     p.min_detected_photons_filter(2 + list(p.heralds.values()).count(1))
     p.noise = noise
-    rp = pcvl.RemoteProcessor.from_local_processor(
-        p, "sim:altair", url='https://api.cloud.quandela.com')
+    rp = pcvl.RemoteProcessor.from_local_processor(p, 'sim:altair', url='https://api.cloud.quandela.com')
 
     # platform parameters
     p.thresholded_output(True)

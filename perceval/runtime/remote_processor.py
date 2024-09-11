@@ -29,12 +29,13 @@
 import uuid
 from typing import Dict, List, Any
 from multipledispatch import dispatch
-from warnings import warn
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, Source, AComponent
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
+from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
+
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from ._token_management import TokenProvider
@@ -63,7 +64,7 @@ class RemoteProcessor(AProcessor):
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
-        rp.min_detected_photons_filter(processor._min_detected_photons)
+        rp.min_detected_photons_filter(processor._min_detected_photons_filter)
         return rp
 
     def __init__(self,
@@ -89,7 +90,8 @@ class RemoteProcessor(AProcessor):
             self._rpc_handler = rpc_handler
             self.name = rpc_handler.name
             if name is not None and name != self.name:
-                warn(f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})")
+                get_logger().warn(
+                    f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
         else:
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
@@ -106,6 +108,7 @@ class RemoteProcessor(AProcessor):
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
+        get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
         if m is not None:
             self._n_moi = m
 
@@ -116,8 +119,8 @@ class RemoteProcessor(AProcessor):
     def noise(self, nm):
         super(RemoteProcessor, type(self)).noise.fset(self, nm)
         if nm and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
-            warn(f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
-                 UserWarning)
+            get_logger().warn(
+                f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored", channel.user)
 
     @property
     def is_remote(self) -> bool:
@@ -162,8 +165,8 @@ class RemoteProcessor(AProcessor):
     def set_parameter(self, key: str, value: Any):
         super().set_parameter(key, value)
         if key in DEPRECATED_NOISE_PARAMS:
-            warn(f"'{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead.",
-                 DeprecationWarning)
+            get_logger().warn(
+                f"DeprecationWarning: '{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead. version=0.11", channel.user)
 
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
@@ -239,13 +242,14 @@ class RemoteProcessor(AProcessor):
             if isinstance(self._postselect, PostSelect):
                 payload['postselect'] = serialize(self._postselect)
             else:
-                warn(f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect",
-                     RuntimeWarning)
+                get_logger().warn(
+                    f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect", channel.user)
         if self.heralds:
             payload['heralds'] = self.heralds
         if self._noise is not None:
             payload['noise'] = serialize(self._noise)
         j['payload'] = payload
+        self.log_resources(command, self._parameters)
         return j
 
     def resume_job(self, job_id: str) -> RemoteJob:
@@ -272,12 +276,13 @@ class RemoteProcessor(AProcessor):
             transmittance = self._perfs[TRANSMITTANCE_KEY] / 100
         else:
             transmittance = DEFAULT_TRANSMITTANCE
-            warn(f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}")
+            get_logger().warn(
+                f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
         losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n
-        if self._min_detected_photons is not None:
-            photon_filter = self._min_detected_photons
+        if self._min_detected_photons_filter is not None:
+            photon_filter = self._min_detected_photons_filter
             if photon_filter > n:
                 return 0
         if photon_filter < 2:
@@ -326,3 +331,24 @@ class RemoteProcessor(AProcessor):
         """
         p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
         return round(nshots * p_interest)
+
+    def log_resources(self, command: str, extra_parameters: Dict):
+        """Log resources of the remote processor
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'RemoteProcessor',
+            'platform': self.name,
+            'm': self.circuit_size,
+            'command': command
+        }
+        if self._input_state:
+            my_dict['n'] = self._input_state.n
+        if self.noise:
+            my_dict['noise'] = self.noise.__dict__()
+        if extra_parameters:
+            my_dict.update(extra_parameters)
+        get_logger().log_resources(my_dict)

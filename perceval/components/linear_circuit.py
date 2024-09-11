@@ -28,10 +28,11 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import copy
-from deprecated import deprecated
 import random
+
+from abc import ABC, abstractmethod
 from typing import Callable, Optional, Union, Tuple, Type, List
 
 import numpy as np
@@ -40,8 +41,8 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
-import perceval.utils.algorithms.decomposition as decomposition
-from perceval.utils.algorithms.match import Match
+from perceval.utils.logging import get_logger, channel, deprecated
+from perceval.utils.algorithms import decomposition, Match
 from perceval.utils.algorithms.solve import solve
 
 
@@ -254,16 +255,16 @@ class ACircuit(AParametrizedComponent, ABC):
         r"""transfer parameters from a Circuit to another - should be the same circuit"""
         assert type(self) == type(c), "component has not the same shape"
         for p in c.params:
-            assert p in self._params, "missing parameter %s when transfering component" % p
+            assert p in self._params, "missing parameter %s when transferring component" % p
             param = c.param(p)
             if param.defined:
                 try:
                     self._params[p].set_value(float(param), force=force)
                 except RuntimeError:  # Error in case force = False and param is fixed
-                    assert abs(float(param) - float(self._params[p])) < global_params["min_complex_component"],\
-                        f"components don't have the same fixed value for parameter {p}"
-                except Exception:
-                    pass
+                    if abs(float(param) - float(self._params[p])) >= global_params["min_complex_component"]:
+                        raise ValueError(f"components don't have the same fixed value for parameter {p}")
+                except Exception as e:
+                    get_logger().error(f"Unexpected error in tranfer_from: {e}", channel.general)
 
     def depths(self):
         return [1]*self.m

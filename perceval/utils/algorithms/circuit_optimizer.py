@@ -32,6 +32,7 @@ from typing import Callable, Tuple, Union
 import exqalibur as xq
 from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
 from perceval.utils import Matrix, P
+from perceval.utils.logging import get_logger, channel
 from perceval.serialization import serialize_binary, deserialize_circuit
 
 
@@ -140,13 +141,18 @@ class CircuitOptimizer:
             return PS(P(f"phL_{i}"))
 
         if template_component_generator_func is None:
-            template_component_generator_func = catalog["mzi phase first"].generate
+            mzi_name = "mzi phase first"
+            get_logger().debug(f"Using default MZI ({mzi_name}) for rectangular optimization", channel.general)
+            template_component_generator_func = catalog[mzi_name].generate
         template = GenericInterferometer(
             target.shape[0],
             template_component_generator_func,
             phase_shifter_fun_gen=_gen_ps,
             phase_at_output=phase_at_output)
         result_circuit, fidelity = self.optimize(target, template)
-        if not allow_error and fidelity < 1 - self._threshold:
-            raise RuntimeError(f"Optimization did not convergence to expected threshold ({self._threshold})")
+        if fidelity < 1 - self._threshold:
+            if allow_error:
+                get_logger().warn(f"Optimization converged with poor fidelity ({fidelity})", channel.general)
+            else:
+                raise RuntimeError(f"Optimization did not convergence to expected threshold ({self._threshold})")
         return result_circuit

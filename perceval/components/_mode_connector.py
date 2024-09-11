@@ -26,9 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from typing import Dict, List, Union
-import warnings
+
+from perceval.utils.logging import get_logger, channel
 
 from .abstract_component import AComponent
 from .unitary_components import PERM
@@ -72,7 +72,7 @@ class ModeConnector:
         self._n_modes_to_connect = right_obj.m
 
     def _mapping_type_checks(self):
-        assert isinstance(self._map, dict), f"Mapping should be a Python dictionnary, got {type(self._map)}"
+        assert isinstance(self._map, dict), f"Mapping should be a Python dictionary, got {type(self._map)}"
         for k, v in self._map.items():
             assert isinstance(k, int) or isinstance(k, str), f"Mapping keys supported types are str and int, found {k}"
             if self._r_is_component:
@@ -97,11 +97,11 @@ class ModeConnector:
 
         :return: the resolved mapping containing mode indexes
 
-        self._map can be an integer, a list or a dictionnary.
+        self._map can be an integer, a list or a dictionary.
          Case int:
-            Creates a dictionnary { mapping: 0, mapping+1: 1, ..., mapping+n: n }
+            Creates a dictionary { mapping: 0, mapping+1: 1, ..., mapping+n: n }
          Case list:
-            Creates a dictionnary { mapping[0]: 0, mapping[1]: 1, ..., mapping[n]: n}
+            Creates a dictionary { mapping[0]: 0, mapping[1]: 1, ..., mapping[n]: n}
          Case dict:
             keys and values can either be integers or strings. If strings, it expects port names of the same size.
 
@@ -115,6 +115,7 @@ class ModeConnector:
         """
         # Handle int input case
         if isinstance(self._map, int):
+            get_logger().debug(f"Resolve mode mapping from int {self._map}", channel.general)
             map_begin = self._map
             self._map = {}
             r_list = self._get_ordered_rmodes()
@@ -125,6 +126,7 @@ class ModeConnector:
 
         # Handle list input case
         if isinstance(self._map, list) or isinstance(self._map, tuple):
+            get_logger().debug("Resolve mode mapping from a list", channel.general)
             map_keys = self._map
             map_values = self._get_ordered_rmodes()
             if len(map_keys) != len(map_values):
@@ -214,14 +216,14 @@ class ModeConnector:
         Add heralded mode mapping to an existing mapping
         """
         if self._r_is_component:
-            warnings.warn("Right object is not a processor, thus doesn't contain heralded modes")
+            get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
             return 0
         other_herald_pos = list(self._ro.heralds.keys())
         new_mode_index = self._lp.circuit_size
         for pos in other_herald_pos:
             mapping[new_mode_index] = pos
             new_mode_index += 1
-        return new_mode_index-self._lp.circuit_size
+        return new_mode_index - self._lp.circuit_size
 
     @staticmethod
     def generate_permutation(mode_mapping: Dict[int, int]):

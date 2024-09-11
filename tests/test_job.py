@@ -26,12 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+import pytest
+import time
+from unittest.mock import patch
+
 import perceval as pcvl
 from perceval.runtime.job_status import RunningStatus
 from perceval.algorithm import Sampler
 
-import pytest
-import time
+from _test_utils import LogChecker
 
 
 PERIOD = 0.1
@@ -51,7 +55,8 @@ def test_run_sync_0():
     assert (pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])(5) == [0, 1, 4, 9, 16])
 
 
-def test_run_sync_1():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_run_sync_1(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     n = 5
     assert job.execute_sync(n) == [0, 1, 4, 9, 16]
@@ -63,7 +68,7 @@ def test_run_sync_1():
     assert job.status.status == RunningStatus.SUCCESS
 
     job.status.status = RunningStatus.UNKNOWN
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn):
         assert job.get_results() == [0, 1, 4, 9, 16]
 
 
@@ -87,21 +92,22 @@ def test_run_async():
     assert job.status.status == RunningStatus.SUCCESS
 
 
-def test_run_async_fail():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_run_async_fail(mock_warn):
     job = pcvl.LocalJob(quadratic_count_down, command_param_names=['n', 'period'])
     assert job.execute_async(5, 0.01) is job
 
-    with pytest.warns(UserWarning):
+    with LogChecker(mock_warn) as warn_log_checker:
         while not job.is_complete:
             time.sleep(1)
     assert not job.status.success
-    assert job.status.progress == 0.8
+    assert job.status.progress == pytest.approx(0.8)
     assert job.status.status == RunningStatus.ERROR
     assert "AssertionError" in job.status.stop_message
     assert job.status.running_time < 0.5
 
     job.status.status = RunningStatus.UNKNOWN
-    with pytest.warns(UserWarning):
+    with warn_log_checker:
         assert job.get_results() == None
 
 

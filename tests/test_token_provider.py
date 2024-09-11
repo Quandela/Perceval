@@ -26,12 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import os
 import pytest
 import platform
 
-from perceval.runtime._token_management import TokenProvider, save_token, _TOKEN_FILE_NAME
-from perceval import PersistentData
+from unittest.mock import patch
+
+import perceval as pcvl
+from perceval.runtime._token_management import _TOKEN_FILE_NAME
+
+from _mock_persistent_data import TokenProviderForTest
+from _test_utils import LogChecker
 
 
 
@@ -44,11 +50,11 @@ os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variab
 
 
 def test_token_provider_env_var_vs_cache():
-    provider = TokenProvider(env_var=MISSING_KEY)
+    provider = TokenProviderForTest(env_var=MISSING_KEY)
     assert provider._from_environment_variable() is None
     assert provider.cache is None
 
-    provider = TokenProvider(env_var=ENV_VAR_KEY)
+    provider = TokenProviderForTest(env_var=ENV_VAR_KEY)
     assert provider.get_token() == TOKEN_FROM_ENV
     assert provider.cache == TOKEN_FROM_ENV
 
@@ -65,60 +71,66 @@ def test_token_provider_env_var_vs_cache():
 
 
 def test_token_provider_from_file():
-    persistent_data = PersistentData()
+    token_provider = TokenProviderForTest()
+    persistent_data = token_provider._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
     persistent_data.clear_all_data()
 
-    provider = TokenProvider()
-    assert provider.get_token() is None
-    save_token(TOKEN_FROM_FILE)
-    assert provider.get_token() == TOKEN_FROM_FILE
+    assert token_provider.get_token() is None
+    token_provider.force_token(TOKEN_FROM_FILE)
+    token_provider.save_token()
+    assert token_provider.get_token() == TOKEN_FROM_FILE
 
-    provider.clear_cache()
+    token_provider.clear_cache()
     persistent_data.clear_all_data()
 
-    assert provider.get_token() is None
+    assert token_provider.get_token() is None
 
-    save_token(TOKEN_FROM_FILE)
-    assert provider.get_token() == TOKEN_FROM_FILE
+    token_provider.force_token(TOKEN_FROM_FILE)
+    token_provider.save_token()
+    assert token_provider.get_token() == TOKEN_FROM_FILE
 
-    save_token(TOKEN_FROM_FILE)
-    assert provider.get_token() == TOKEN_FROM_FILE
+    token_provider.force_token(TOKEN_FROM_FILE)
+    token_provider.save_token()
+    assert token_provider.get_token() == TOKEN_FROM_FILE
 
-    provider.clear_cache()
+    token_provider.clear_cache()
     persistent_data.clear_all_data()
 
-    assert provider.get_token() is None
+    assert token_provider.get_token() is None
 
 
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access():
-    persistent_data = PersistentData()
+def test_token_file_access(mock_warn):
+    token_provider = TokenProviderForTest()
+    persistent_data = token_provider._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)
 
-    with pytest.warns(UserWarning):
-        save_token(TOKEN_FROM_FILE)
-
-    with pytest.warns(UserWarning):
-        provider = TokenProvider()
-        assert provider.get_token() is None
+    with LogChecker(mock_warn) as warn_log_checker:
+        token_provider.force_token(TOKEN_FROM_FILE)
+        token_provider.save_token()
 
     os.chmod(directory, 0o777)
 
-    token_file = os.path.join(directory,_TOKEN_FILE_NAME)
-    save_token(TOKEN_FROM_FILE)
-    provider = TokenProvider()
-    assert provider.get_token() == TOKEN_FROM_FILE
+    token_file = os.path.join(directory, _TOKEN_FILE_NAME)
+    token_provider.force_token(TOKEN_FROM_FILE)
+    token_provider.save_token()
+
+    token_provider.clear_cache()
+    assert token_provider.get_token() == TOKEN_FROM_FILE
 
     os.chmod(token_file, 0o000)
 
-    with pytest.warns(UserWarning):
-        assert provider.get_token() is None
+    with warn_log_checker:
+        temp_token_provider = TokenProviderForTest()
+        temp_token_provider._persistent_data = persistent_data
+        assert temp_token_provider.get_token() is None
 
     os.chmod(token_file, 0o777)
 

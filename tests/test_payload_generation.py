@@ -26,24 +26,39 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import pytest
+"""module test payload generation"""
 
-from _mock_rpc_handler import MockRPCHandler
-from perceval import RemoteProcessor, Circuit, BasicState, PostSelect, catalog
-from perceval.serialization._constants import ZIP_PREFIX, BS_TAG, SEP, PCVL_PREFIX, POSTSELECT_TAG
+from unittest.mock import patch
+
+import perceval as pcvl
+
+from perceval import RemoteProcessor, BasicState, PostSelect, catalog
+from perceval.serialization._constants import (
+    ZIP_PREFIX,
+    BS_TAG,
+    SEP,
+    PCVL_PREFIX,
+    POSTSELECT_TAG,
+)
 from perceval.serialization import deserialize
+
+from _mock_rpc_handler import get_rpc_handler
+from _test_utils import LogChecker
 
 
 COMMAND_NAME = 'my_command'
 
-def _get_remote_processor(m: int = 8):
-    return RemoteProcessor(rpc_handler=MockRPCHandler(), m=m)
+
+def _get_remote_processor(requests_mock, m: int = 8):
+    return RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=m)
 
 
-def test_payload_basics():
-    rp = _get_remote_processor()
+def test_payload_basics(requests_mock):
+    """test payload basics infos"""
+    rp = _get_remote_processor(requests_mock)
     data = rp.prepare_job_payload(COMMAND_NAME)
-    assert 'platform_name' in data and data['platform_name'] == MockRPCHandler.name
+    name = get_rpc_handler(requests_mock).name
+    assert 'platform_name' in data and data['platform_name'] == name
     assert 'pcvl_version' in data
     assert 'process_id' in data
     assert 'payload' in data
@@ -53,20 +68,25 @@ def test_payload_basics():
     assert 'circuit' in payload and payload['circuit'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
     assert 'input_state' not in payload  # No input state was passed
 
-    input_state = BasicState([1, 0]*4)
+    input_state = BasicState([1, 0] * 4)
     rp.with_input(input_state)
     new_payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert ('input_state' in new_payload and
-        new_payload['input_state'] == f"{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}")
+    assert (
+        'input_state' in new_payload and new_payload['input_state'] == f'{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}'
+    )
 
 
-def test_payload_parameters():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_payload_parameters(mock_warn, requests_mock):
+    """test parameters of payload"""
     n_params = 5
-    rp = _get_remote_processor()
+    rp = _get_remote_processor(requests_mock)
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
-    with pytest.warns(DeprecationWarning):
+
+    with LogChecker(mock_warn):
         rp.set_parameter('g2', 0.05)
+
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' in payload
     for i in range(n_params):
@@ -74,8 +94,9 @@ def test_payload_parameters():
         assert payload['parameters'][f'param{i}'] == f'value{i}'
 
 
-def test_payload_heralds():
-    rp = _get_remote_processor()
+def test_payload_heralds(requests_mock):
+    """test payload with heralds"""
+    rp = _get_remote_processor(requests_mock)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'heralds' not in payload
 
@@ -87,19 +108,22 @@ def test_payload_heralds():
     assert payload['heralds'][4] == 0
 
 
-def test_payload_postselect():
-    rp = _get_remote_processor()
+def test_payload_postselect(requests_mock):
+    """test payload with postselect"""
+    rp = _get_remote_processor(requests_mock)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'postselect' not in payload
 
     rp.set_postselection(PostSelect('[3]==1 & [4]==0'))
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'postselect' in payload
-    assert payload['postselect'].startswith(f"{PCVL_PREFIX}{POSTSELECT_TAG}{SEP}")
+    str_start = f'{PCVL_PREFIX}{POSTSELECT_TAG}{SEP}'
+    assert payload['postselect'].startswith(str_start)
 
 
-def test_payload_min_detected_photons():
-    rp = _get_remote_processor()
+def test_payload_min_detected_photons(requests_mock):
+    """test payload with min_detected_photons"""
+    rp = _get_remote_processor(requests_mock)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' not in payload
 
@@ -109,8 +133,9 @@ def test_payload_min_detected_photons():
     assert payload['parameters']['min_detected_photons'] == 2
 
 
-def test_payload_cnot():
-    rp = _get_remote_processor()
+def test_payload_cnot(requests_mock):
+    """test payload with cnot"""
+    rp = _get_remote_processor(requests_mock)
     heralded_cnot = catalog['heralded cnot'].build_processor()
     pp_cnot = catalog['postprocessed cnot'].build_processor()
     rp.add(0, heralded_cnot)
@@ -119,12 +144,13 @@ def test_payload_cnot():
     assert rp.m == 8
     assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
 
-    input_state = BasicState([1, 0]*4)
+    input_state = BasicState([1, 0] * 4)
     rp.with_input(input_state)
 
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'input_state' in payload
-    assert payload['input_state'] == f"{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state*BasicState('|1,1,0,0,0,0>'))}"
+    state = str(input_state * BasicState('|1,1,0,0,0,0>'))
+    assert payload['input_state'] == f'{PCVL_PREFIX}{BS_TAG}{SEP}{state}'
 
     # Heralds come from the 3 CNOT gates
     assert 'heralds' in payload and len(payload['heralds']) == 6
@@ -137,4 +163,4 @@ def test_payload_cnot():
     # ... but a post-selection function was added
     assert 'postselect' in payload
     ps = deserialize(payload['postselect'])
-    assert ps == PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1 & [6,7]==1")
+    assert ps == PostSelect('[0,1]==1 & [2,3]==1 & [4,5]==1 & [6,7]==1')

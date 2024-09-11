@@ -52,11 +52,11 @@ class SimulatorFactory:
               **kwargs) -> ISimulator:
         """
         :param circuit: The optical circuit to build the simulation layers around.
-            The circuit can be a unitary circuit (Circuit object), a list containing positionned unitary components + LC
+            The circuit can be a unitary circuit (Circuit object), a list containing positioned unitary components + LC
             + TD, or a Processor object.
         :param backend: (Optional) Any probampli capable backend instance or name. If no backend is passed, then the
             processor backend name is used if the first parameter's type is Processor. Ultimately, the fallback is a
-            SLOS backend instanciated without any configuration (i.e. no mask)
+            SLOS backend instantiated without any configuration (i.e. no mask)
         :return: A simulator object with the input circuit set
         """
         sim_polarization = False
@@ -114,7 +114,8 @@ class SimulatorFactory:
             simulator = DelaySimulator(simulator)
         if sim_losses:
             simulator = LossSimulator(simulator)
-        simulator.set_selection(min_detected_photons, post_select, heralds)
+        simulator.set_selection(min_detected_photons_filter=min_detected_photons,
+                                postselect=post_select, heralds=heralds)
 
         if convert_to_circuit:
             circuit = _unitary_components_to_circuit(circuit, m)

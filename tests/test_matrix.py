@@ -28,13 +28,14 @@
 # SOFTWARE.
 
 from pathlib import Path
+from unittest.mock import patch
 import numpy as np
 import sympy as sp
-import warnings
 
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
 
+from _test_utils import LogChecker
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
@@ -186,24 +187,19 @@ def test_genunitary():
     assert M.is_unitary()
 
 
-def test_param_unitary():
-    with warnings.catch_warnings(record=True) as caught_warnings:
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_param_unitary(mock_warn):
+    with LogChecker(mock_warn):
+        m = pcvl.Matrix.random_unitary(2, np.arange(8))
 
-        M = pcvl.Matrix.random_unitary(2, np.arange(8))
-
-        # Check if the expected warning was issued
-        assert len(caught_warnings) == 1
-        assert issubclass(caught_warnings[0].category, DeprecationWarning)
-
-        # output Matrix
-        assert isinstance(M, pcvl.Matrix)
-        assert M.shape == (2, 2)
-        assert M.is_unitary()
+    assert isinstance(m, pcvl.Matrix)
+    assert m.shape == (2, 2)
+    assert m.is_unitary()
 
     # Testing the use of new method - parametrized_unitary()
 
-    PM = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
+    pm = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
 
-    assert isinstance(PM, pcvl.Matrix)
-    assert PM.shape == (2, 2)
-    assert PM.is_unitary()
+    assert isinstance(pm, pcvl.Matrix)
+    assert pm.shape == (2, 2)
+    assert pm.is_unitary()
