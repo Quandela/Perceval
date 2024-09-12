@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import pytest
+import time
 from unittest.mock import patch
 from perceval.runtime import JobGroup, RemoteJob
 from perceval.components import catalog
@@ -38,14 +39,14 @@ from _mock_rpc_handler import get_rpc_handler
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
 def test_job_group_creation():
-    # check JobGroup does not exist
-    jg_list = JobGroup.list_saved_job_groups()
-    assert all(TEST_JG_NAME not in file for file in jg_list)
-
     # create a new job group
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
-    assert len(jgroup.job_records) == 0
+    assert len(jgroup.jobs_record) == 0
+
+    datetime_created = jgroup._group_info['created_date']
+    datetime_modified = jgroup._group_info['modified_date']
+    assert datetime_created == datetime_modified
 
     # check file now exists
     jg_list = JobGroup.list_saved_job_groups()
@@ -54,21 +55,26 @@ def test_job_group_creation():
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
 
-def test_no_duplicate_job_creation():
-    # check JobGroup does not exist
-    jg_list = JobGroup.list_saved_job_groups()
-    assert all(TEST_JG_NAME not in file for file in jg_list)
+def test_job_group_load_existing():
 
     # create a new job group
     jgroup = JobGroup(TEST_JG_NAME)
+    datetime_created = jgroup._group_info['created_date']
+    datetime_modified = jgroup._group_info['modified_date']
+
+    assert datetime_created == datetime_modified
 
     # check the jo group exists
     jg_list = JobGroup.list_saved_job_groups()
     assert any(TEST_JG_NAME in file for file in jg_list)
 
-    with pytest.raises(FileExistsError):
-        # Test that a job group with duplicate name cannot be created
-        new_jg = JobGroup(TEST_JG_NAME)
+    # set a delay
+    time.sleep(1)
+    jgroup = JobGroup(TEST_JG_NAME)  # load existing
+
+    datetime_created = jgroup._group_info['created_date']
+    datetime_modified = jgroup._group_info['modified_date']
+    assert datetime_created < datetime_modified
 
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
@@ -96,7 +102,7 @@ def test_add_remote_to_group(mock_warn, requests_mock):
     for _ in range(10):
         jgroup.add(remote_job)
 
-    assert len(jgroup.job_records) == 10
+    assert len(jgroup.jobs_record) == 10
 
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
