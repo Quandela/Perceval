@@ -74,7 +74,7 @@ def test_noisy_sampling():
     assert sampling['logical_perf'] == 1
     assert len(sampling['results']) == 100
 
-    sim.set_min_detected_photon_filter(2)
+    sim.set_min_detected_photons_filter(2)
     sampling = sim.samples(input_state, 100)
     assert sampling['physical_perf'] < 1
     assert sampling['logical_perf'] == 1
@@ -92,7 +92,7 @@ def test_noisy_sampling_with_heralds():
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
 
-    sim.set_min_detected_photon_filter(2)
+    sim.set_min_detected_photons_filter(2)
     sim.set_selection(heralds={0: 0})
     sampling = sim.samples(input_state, 100)
     assert sampling['physical_perf'] < 1

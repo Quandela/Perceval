@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Callable
 
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 from .job_status import JobStatus
 
@@ -128,10 +128,10 @@ class Job(ABC):
             raise RuntimeError('The job is still running, results are not available yet.')
 
         if job_status.canceled:
-            logger.warn("Job has been canceled, trying to get partial result.", channel.user)
+            get_logger().warn("Job has been canceled, trying to get partial result.", channel.user)
 
         if job_status.unknown:
-            logger.warn("Unknown job status, trying to get result anyway.", channel.user)
+            get_logger().warn("Unknown job status, trying to get result anyway.", channel.user)
 
         try:
             return self._get_results()

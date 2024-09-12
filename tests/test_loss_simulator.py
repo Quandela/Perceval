@@ -48,7 +48,7 @@ def test_lc_minimal():
     expected_svd[BasicState([2])] = (1 - loss) ** 2
     simu = LossSimulator(Simulator(SLOSBackend()))
     simu.set_circuit(components)
-    simu.set_min_detected_photon_filter(0)
+    simu.set_min_detected_photons_filter(0)
     res = simu.probs(BasicState([2]))
     assert pytest.approx(res) == expected_svd
 
@@ -65,7 +65,7 @@ def test_lc_commutative():
 
     simu = LossSimulator(Simulator(SLOSBackend()))
     simu.set_circuit(components_1)
-    simu.set_min_detected_photon_filter(0)
+    simu.set_min_detected_photons_filter(0)
     res_1 = simu.probs(input_state)
     simu.set_circuit(components_2)
     res_2 = simu.probs(input_state)
@@ -84,7 +84,7 @@ def test_lc_source_losses_equivalence():
                     ((1,), LC(loss))]
     simu = LossSimulator(Simulator(SLOSBackend()))
     simu.set_circuit(components_1)
-    simu.set_min_detected_photon_filter(0)
+    simu.set_min_detected_photons_filter(0)
     res_1 = simu.probs(input_state)
 
     sampler = Sampler(p)

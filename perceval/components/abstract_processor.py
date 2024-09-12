@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent
@@ -58,7 +58,7 @@ class AProcessor(ABC):
         self._noise: Union[NoiseModel, None] = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons: Union[int, None] = None
+        self._min_detected_photons_filter: Union[int, None] = None
 
         self._reset_circuit()
 
@@ -107,7 +107,7 @@ class AProcessor(ABC):
         self._parameters = {}
 
     def clear_input_and_circuit(self, new_m=None):
-        logger.debug(f"Clear input and circuit in processor {self.name}", channel.general)
+        get_logger().debug(f"Clear input and circuit in processor {self.name}", channel.general)
         self._reset_circuit()
         self._input_state = None
         self._circuit_changed()
@@ -128,7 +128,7 @@ class AProcessor(ABC):
         This post-selection has an impact on the output physical performance
         """
         self.set_parameter('min_detected_photons', n)
-        self._min_detected_photons = n
+        self._min_detected_photons_filter = n
 
     @property
     def input_state(self):
@@ -191,7 +191,7 @@ class AProcessor(ABC):
         return True
 
     def copy(self, subs: Union[dict, list] = None):
-        logger.debug(f"Copy processor {self.name}", channel.general)
+        get_logger().debug(f"Copy processor {self.name}", channel.general)
         new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
@@ -240,7 +240,7 @@ class AProcessor(ABC):
         """
         if self._n_moi is None:
             self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
-            logger.debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
+            get_logger().debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
                          channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
@@ -261,17 +261,17 @@ class AProcessor(ABC):
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
     def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
-        logger.debug(f"Compose processor {self.name} with {processor.name}", channel.general)
+        get_logger().debug(f"Compose processor {self.name} with {processor.name}", channel.general)
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         if processor.heralds and not processor.parameters:
             # adding the same processor component again renders incorrect heralds if not copied
             # This concerns our gate based processors from catalog which has no input params
-            logger.debug("  Force copy during processor compose", channel.general)
+            get_logger().debug("  Force copy during processor compose", channel.general)
             processor = processor.copy()
 
         mode_mapping = connector.resolve()
-        logger.debug(f"  Resolved mode mapping to {mode_mapping} during processor compose", channel.general)
+        get_logger().debug(f"  Resolved mode mapping to {mode_mapping} during processor compose", channel.general)
 
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
@@ -289,7 +289,8 @@ class AProcessor(ABC):
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
         if perm_component is not None:
-            logger.debug(f"  Add {perm_component.perm_vector} permutation before processor compose", channel.general)
+            get_logger().debug(
+                f"  Add {perm_component.perm_vector} permutation before processor compose", channel.general)
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
                 # Simplify composition by merging two consecutive PERM components
                 l_perm_r = self._components[-1][0]
@@ -305,7 +306,7 @@ class AProcessor(ABC):
         if perm_component is not None:
             perm_inv = perm_component.copy()
             perm_inv.inverse(h=True)
-            logger.debug(f"  Add {perm_inv.perm_vector} permutation after processor compose", channel.general)
+            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after processor compose", channel.general)
             new_components.append((perm_modes, perm_inv))
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
@@ -569,11 +570,11 @@ class AProcessor(ABC):
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
 
     def _deduce_min_detected_photons(self, expected_photons: int) -> None:
-        logger.warn(
+        get_logger().warn(
             "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
             " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
             f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
-        self._min_detected_photons = expected_photons
+        self._min_detected_photons_filter = expected_photons
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
@@ -593,7 +594,7 @@ class AProcessor(ABC):
 
         self._input_state = BasicState(input_list)
 
-        if self._min_detected_photons is None:
+        if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
     def flatten(self) -> List:

@@ -47,7 +47,7 @@ from _mock_rpc_handler import (
 )
 
 
-@patch.object(pcvl.logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_remote_job(mock_warn, requests_mock):
     """test remote job"""
     _FIRST_JOB_NAME = 'job name'
@@ -79,7 +79,7 @@ def test_remote_job(mock_warn, requests_mock):
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
-@patch.object(pcvl.logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
 def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
     """test mock remote with gates"""
