@@ -32,7 +32,7 @@ import networkx as nx
 from .statevector import BasicState, StateVector
 from .qmath import distinct_permutations
 from ._enums import Encoding
-from .logging import logger, channel
+from .logging import get_logger, channel
 
 
 class StateGenerator:
@@ -185,7 +185,7 @@ class StateGenerator:
             if not isinstance(k, int):
                 raise TypeError(f"k parameter should be an int and not {type(k)}")
             if k < n:
-                logger.warn(f"Generating an empty state since {k} is smaller than {n}", channel.user)
+                get_logger().warn(f"Generating an empty state since {k} is smaller than {n}", channel.user)
                 return StateVector()
 
         dicke_state = StateVector()

@@ -37,7 +37,7 @@ from copy import copy
 from multipledispatch import dispatch
 
 import exqalibur as xq
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
@@ -96,7 +96,7 @@ class ProbabilityDistribution(defaultdict, ABC):
     def normalize(self):
         sum_probs = sum(list(self.values()))
         if sum_probs == 0:
-            logger.warn("Unable to normalize a distribution with only null probabilities", channel.user)
+            get_logger().warn("Unable to normalize a distribution with only null probabilities", channel.user)
             return
         for sv in self.keys():
             self[sv] /= sum_probs

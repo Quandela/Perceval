@@ -32,6 +32,7 @@ from abc import ABC, abstractmethod
 from perceval.components import ACircuit
 from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
     post_select_statevector
+from perceval.utils.logging import deprecated, get_logger
 
 
 class ISimulator(ABC):
@@ -51,8 +52,13 @@ class ISimulator(ABC):
     def evolve(self, input_state) -> StateVector:
         pass
 
+    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     @abstractmethod
     def set_min_detected_photon_filter(self, value: int):
+        pass
+
+    @abstractmethod
+    def set_min_detected_photons_filter(self, value: int):
         pass
 
     def set_precision(self, precision: float):
@@ -65,11 +71,17 @@ class ASimulatorDecorator(ISimulator, ABC):
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
 
-    def set_selection(self, min_detected_photon_filter: int = None,
+    def set_selection(self,
+                      min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None):
-        if min_detected_photon_filter is not None:
-            self.set_min_detected_photon_filter(min_detected_photon_filter)
+                      heralds: dict = None,
+                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
+        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
+            get_logger().warn(
+                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
+            min_detected_photons_filter = min_detected_photon_filter
+        if min_detected_photons_filter is not None:
+            self._min_detected_photons_filter = min_detected_photons_filter
         if postselect is not None:
             self._postselect = postselect
         if heralds is not None:
@@ -122,8 +134,13 @@ class ASimulatorDecorator(ISimulator, ABC):
         results = self._simulator.evolve(self._prepare_input(input_state))
         return self._postprocess_sv(results)
 
+    # TODO: remove for PCVL-786
+    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     def set_min_detected_photon_filter(self, value: int):
-        self._simulator.set_min_detected_photon_filter(value)
+        self.set_min_detected_photons_filter(value)
+
+    def set_min_detected_photons_filter(self, value: int):
+        self._simulator.set_min_detected_photons_filter(value)
 
     def set_precision(self, precision: float):
         self._simulator.set_precision(precision)

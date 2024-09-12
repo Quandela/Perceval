@@ -112,7 +112,8 @@ class SimulatorFactory:
             simulator = DelaySimulator(simulator)
         if sim_losses:
             simulator = LossSimulator(simulator)
-        simulator.set_selection(min_detected_photons, post_select, heralds)
+        simulator.set_selection(min_detected_photons_filter=min_detected_photons,
+                                postselect=post_select, heralds=heralds)
 
         if convert_to_circuit:
             circuit = _unitary_components_to_circuit(circuit, m)

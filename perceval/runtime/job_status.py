@@ -30,7 +30,7 @@
 from enum import Enum
 from time import time, sleep
 
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 
 class RunningStatus(Enum):
@@ -51,7 +51,7 @@ class RunningStatus(Enum):
             try:
                 return RunningStatus[res.upper()]
             except KeyError:
-                logger.warn(f"Unknown job running status: {res}", channel.user)
+                get_logger().warn(f"Unknown job running status: {res}", channel.user)
                 return RunningStatus.UNKNOWN
 
 class JobStatus:

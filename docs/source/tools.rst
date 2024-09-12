@@ -70,6 +70,13 @@ Perceval offers a high level function, ``pcvl.pdisplay()``, to display circuits 
 
 See :ref:`pdisplay`
 
+Logging messages
+----------------
+
+Perceval offers a log management package, ``pcvl.utils.logger``, to log messages.
+
+See :ref:`Logging`
+
 
 Matrices
 ^^^^^^^^

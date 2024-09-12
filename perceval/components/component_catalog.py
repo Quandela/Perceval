@@ -33,7 +33,7 @@ from enum import Enum
 
 from perceval.utils import Parameter
 from perceval.components import Processor, Circuit
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 
 class AsType(Enum):
@@ -150,7 +150,7 @@ class Catalog:
             sub_catalog = getattr(module, 'catalog_items')
             self._add_sub_catalog(sub_catalog)
         else:
-            logger.warn(f"No sub catalog found at path {path}", channel.user)
+            get_logger().warn(f"No sub catalog found at path {path}", channel.user)
 
     def _add_sub_catalog(self, catalog):
         for cls in catalog:

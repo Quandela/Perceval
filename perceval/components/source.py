@@ -30,8 +30,10 @@
 import math
 
 from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
+DISTINGUISHABLE_KEY = 'distinguishable'
+INDISTINGUISHABLE_KEY = 'indistinguishable'
 
 class Source:
     r"""Definition of a source
@@ -54,7 +56,7 @@ class Source:
                  multiphoton_component: float = 0,
                  indistinguishability: float = 1,
                  losses: float = 0,
-                 multiphoton_model: str = "distinguishable",  # Literal["distinguishable", "indistinguishable"]
+                 multiphoton_model: str = DISTINGUISHABLE_KEY,  # Literal[DISTINGUISHABLE_KEY, INDISTINGUISHABLE_KEY]
                  context: dict = None) -> None:
 
         assert 0 < emission_probability <= 1, "emission_probability must be in ]0;1]"
@@ -62,7 +64,7 @@ class Source:
         assert 0 <= multiphoton_component <= 1, "multiphoton_component must be in [0;1]"
         assert emission_probability * multiphoton_component <= 0.5,\
             "emission_probability * g2 higher than 0.5 can not be computed for now"
-        assert multiphoton_model in ["distinguishable", "indistinguishable"], \
+        assert multiphoton_model in [DISTINGUISHABLE_KEY, INDISTINGUISHABLE_KEY], \
             "invalid value for multiphoton_model"
 
         self._emission_probability = emission_probability
@@ -85,7 +87,7 @@ class Source:
                       multiphoton_component=noise.g2,
                       indistinguishability=noise.indistinguishability,
                       losses=1 - noise.transmittance,
-                      multiphoton_model="distinguishable" if noise.g2_distinguishable else "indistinguishable")
+                      multiphoton_model=DISTINGUISHABLE_KEY if noise.g2_distinguishable else INDISTINGUISHABLE_KEY)
 
     def get_tag(self, tag, add=False):
         if add:
@@ -140,7 +142,7 @@ class Source:
         # Approximation distinguishable photons are pure
         distinguishable_photon = self.get_tag("discernability_tag", add=True)
         second_photon = self.get_tag("discernability_tag", add=True) \
-            if self._multiphoton_model == "distinguishable" else 0  # Noise photon or signal
+            if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
 
         (p1to1, p2to1, p2to2) = self._get_probs()
         p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)  # 2 * p2to1 because of symmetry
@@ -150,9 +152,12 @@ class Source:
         if self.partially_distinguishable:
             self._add(dist, ["_:0", "_:%s" % second_photon], (1 - distinguishability) * p2to2)
             self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
-            self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
-            self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
-            self._add(dist, ["_:%s" % second_photon], p2to1)
+            if self._multiphoton_model == DISTINGUISHABLE_KEY:
+                self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1) + p2to1)
+                self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
+            else:
+                self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
+                self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1) + p2to1)
         else:
             # Just avoids annotations
             self._add(dist, 2, p2to2)
@@ -162,7 +167,7 @@ class Source:
     @property
     def partially_distinguishable(self):
         return self._indistinguishability != 1 \
-            or (self._multiphoton_model == "distinguishable" and self._multiphoton_component)
+            or (self._multiphoton_model == DISTINGUISHABLE_KEY and self._multiphoton_component)
 
     def probability_distribution(self, nphotons: int = 1) -> SVDistribution:
         r"""returns SVDistribution on 1 mode associated to the source
@@ -197,7 +202,7 @@ class Source:
         """
         dist = SVDistribution()
         prob_threshold = max(prob_threshold, global_params['min_p'])
-        logger.info(f"Apply 'Source' noise model to {expected_input}", channel.general)
+        get_logger().info(f"Apply 'Source' noise model to {expected_input}", channel.general)
         for photon_count in expected_input:
             dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
         dist.normalize()
@@ -221,3 +226,10 @@ class Source:
             self._indistinguishability == value._indistinguishability and \
             self._context == value._context and \
             self.simplify_distribution == value.simplify_distribution
+
+    def __dict__(self) -> dict:
+        return {'g2': self._multiphoton_component,
+                'transmittance': 1 - self._losses,
+                'brightness': self._emission_probability,
+                'indistinguishability': self._indistinguishability,
+                'g2_distinguishable': self._multiphoton_model == DISTINGUISHABLE_KEY}

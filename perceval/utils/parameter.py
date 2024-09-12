@@ -80,6 +80,12 @@ class Parameter:
         else:
             return self._symbol
 
+    @property
+    def is_variable(self) -> bool:
+        r""""Returns True for a non-fixed parameter"""
+        return self._symbol is not None
+
+
     def __float__(self):
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """

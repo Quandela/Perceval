@@ -70,6 +70,5 @@ def register_plugin(name, silent=False):
     return True
 
 
-use_perceval_logger()
-logger.info(f"=== Starting Perceval session - process ID: {remote_processor.__process_id__} ===",
+get_logger().info(f"=== Starting Perceval session - process ID: {remote_processor.__process_id__} ===",
             logging.channel.general)

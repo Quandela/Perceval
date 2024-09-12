@@ -33,7 +33,7 @@ from collections.abc import Callable
 from .linear_circuit import ACircuit, Circuit
 
 from perceval.utils import InterferometerShape
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 
 class GenericInterferometer(Circuit):
@@ -174,7 +174,7 @@ class GenericInterferometer(Circuit):
         if lin < 0 or lin+m >= self.m:
             raise ValueError(f"Invalid param list height, expected interval in [0,{self.m}], got [{lin},{lin+m}]")
         if self._shape != InterferometerShape.RECTANGLE:
-            logger.warn("set_param_list was designed for rectangular interferometer", channel.user)
+            get_logger().warn("set_param_list was designed for rectangular interferometer", channel.user)
         even_mode_count = self.m % 2 == 0
         even_col_size = self.m - (self.m % 2)
         odd_col_size = even_col_size - 2 if even_mode_count else even_col_size
