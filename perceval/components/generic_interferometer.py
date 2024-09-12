@@ -31,6 +31,8 @@ import math
 from typing import Callable, List, Optional, Tuple
 
 from .linear_circuit import ACircuit, Circuit
+from .unitary_components import Barrier
+
 
 from perceval.utils import InterferometerShape
 from perceval.utils.logging import get_logger, channel
@@ -58,7 +60,9 @@ class GenericInterferometer(Circuit):
                  shape: InterferometerShape = InterferometerShape.RECTANGLE,
                  depth: int = None,
                  phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
-                 phase_at_output: bool = False):
+                 phase_at_output: bool = False,
+                 upper_component_gen: ACircuit = None,
+                 lower_component_gen: ACircuit = None):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
@@ -67,6 +71,8 @@ class GenericInterferometer(Circuit):
         self._depth_per_mode = [0] * m
         self._pattern_generator = fun_gen
         self._has_input_phase_layer = False
+        self._upper_component_gen = upper_component_gen
+        self._lower_component_gen = lower_component_gen
         if phase_shifter_fun_gen and not phase_at_output:
             self._has_input_phase_layer = True
             for i in range(0, m):
@@ -109,15 +115,26 @@ class GenericInterferometer(Circuit):
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
         idx = 0
+        idx_up = 0
+        idx_lo = 0
         for i in range(0, max_depth):
+            if self._upper_component_gen and i % 2 == 1:
+                self.add(0, self._upper_component_gen(idx_up))
+                idx_up += 1
+            if self._lower_component_gen:
+                if i % 2 == 1 and self.m % 2 == 0 or i % 2 == 0 and self.m % 2 == 1:
+                    self.add(self.m-1, self._lower_component_gen(idx_lo))
+                    idx_lo += 1
             for j in range(0+i%2, self.m-1, 2):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):
                     continue
-                self.add((j, j+1), self._pattern_generator(idx), merge=True, x_grid=i)
+                self.add((j, j+1), self._pattern_generator(idx), merge=True)
                 self._depth_per_mode[j] += 1
                 self._depth_per_mode[j+1] += 1
                 idx += 1
+
+            self.add(0, Barrier(self.m, visible=False))
 
     def _build_triangle(self):
         idx = 0
