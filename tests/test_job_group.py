@@ -33,7 +33,7 @@ from unittest.mock import patch
 from perceval.runtime import JobGroup, RemoteJob
 from perceval.components import catalog
 from perceval.algorithm import Sampler
-from perceval.utils import BasicState, logger
+from perceval.utils import BasicState, get_logger
 from _mock_rpc_handler import get_rpc_handler
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
@@ -94,7 +94,7 @@ def test_reject_non_remote_job():
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
 
-@patch.object(logger, "warn")
+@patch.object(get_logger(), "warn")
 def test_add_remote_to_group(mock_warn, requests_mock):
     remote_job = RemoteJob({}, get_rpc_handler(requests_mock), 'a_remote_job')
 

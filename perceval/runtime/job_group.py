@@ -31,7 +31,7 @@ import warnings
 from perceval.runtime import RemoteJob
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 import os
 import json
 import datetime
@@ -52,7 +52,7 @@ class JobGroup:
         self._file_name = f"{self._name}.{FILE_EXT_JGRP}"
 
         if self._job_group_exists(name):
-            logger.info(f'Job Group with name {name} exists, loading from disk', channel.general)
+            get_logger().info(f'Job Group with name {name} exists, loading from disk', channel.general)
             self._load_job_group()
         else:
             self._create_job_group()
