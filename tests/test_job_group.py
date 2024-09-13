@@ -42,7 +42,7 @@ def test_job_group_creation():
     # create a new job group
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
-    assert len(jgroup.jobs_record) == 0
+    assert len(jgroup.job_group_data) == 0
 
     datetime_created = jgroup._group_info['created_date']
     datetime_modified = jgroup._group_info['modified_date']
@@ -102,7 +102,7 @@ def test_add_remote_to_group(mock_warn, requests_mock):
     for _ in range(10):
         jgroup.add(remote_job)
 
-    assert len(jgroup.jobs_record) == 10
+    assert len(jgroup.job_group_data) == 10
 
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
