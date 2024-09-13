@@ -94,6 +94,7 @@ def test_reject_non_remote_job():
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
 
+
 @patch.object(get_logger(), "warn")
 def test_add_remote_to_group(mock_warn, requests_mock):
     remote_job = RemoteJob({}, get_rpc_handler(requests_mock), 'a_remote_job')
