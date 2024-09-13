@@ -238,8 +238,6 @@ class JobGroup:
         """
         To delete all existing Job groups on disk
         """
-        # warning ; there is an erase method in PersistentData() -> that can
-        # todo : add "jgrp" extension to exclude it
         jgrp_dir_path = JobGroup._get_jgrp_dir()
         list_groups = JobGroup.list_saved_job_groups()
         ps = PersistentData()
@@ -252,13 +250,29 @@ class JobGroup:
         Delete a single JobGroup file by its name
         :param filename: a JobGroup filename with its extenstion to delete
         """
-        jgrp_dir_path = JobGroup._get_jgrp_dir()
+        jgrp_dir_path = JobGroup._get_job_group_dir()
 
         PersistentData().delete_file(os.path.join(jgrp_dir_path, filename))
 
-    def delete_job_groups_date(self, date: str):
-        # erase all files with date before given date
-        # todo : implement
-        # warning ; there is an erase method in PersistentData() -> that can
-        # erase all -> add jobgroup to exclude it?
-        pass
+    @staticmethod
+    def delete_job_groups_date(del_before_date: int):
+        """
+        Delete all saved Job Groups created before a date (not included).
+        :param del_before_date: integer (form - YYYYMMDD) files created before this date deleted
+        """
+        existing_groups = JobGroup.list_saved_job_groups()
+        files_to_del = []  # list of files before date to delete
+        for file in existing_groups:
+            jg_name = file.split('.')[0]  # remove extension
+            jg = JobGroup(jg_name)
+            jg_datetime = jg._group_info['created_date']
+            jg_date = int(jg_datetime.split('_')[0])
+            if jg_date < del_before_date:
+                files_to_del.append(file)
+
+        if not files_to_del:
+            warnings.warn(UserWarning, f'No files found to delete before{del_before_date}')
+
+        # delete files
+        for f in files_to_del:
+            JobGroup.delete_job_group(f)
