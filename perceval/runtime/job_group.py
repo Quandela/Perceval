@@ -66,22 +66,22 @@ class JobGroup:
         return self._name
 
     @property
-    def jobs_record(self):
+    def job_group_data(self):
         """
         List of necessary information (id,status,metadata) for each job within the group
         """
-        return self._group_info['jobs_record']
+        return self._group_info['job_group_data']
 
     @staticmethod
     def _get_current_datetime():
         return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
     @staticmethod
-    def _get_jgrp_dir():
+    def _get_job_group_dir():
         return os.path.join(PersistentData().directory, "job_group")
 
     @staticmethod
-    def _setup_jgrp_dir(dir_path):
+    def _setup_job_group_dir(dir_path):
         # creates a sub folder in persistent data directory if non-existent
         try:
             if not os.path.exists(dir_path):
@@ -94,19 +94,19 @@ class JobGroup:
             warnings.warn(UserWarning(f"Cannot read or write in {dir_path}"))
 
     def _create_job_group(self):
-        # Saves the records of a new job group on disk using PersistentData(),
-        jgrp_dir_path = JobGroup._get_jgrp_dir()
-        JobGroup._setup_jgrp_dir(jgrp_dir_path)  # create directory and validat permissions
+        # Saves information for a new job group on disk using PersistentData(),
+        jgrp_dir_path = JobGroup._get_job_group_dir()
+        JobGroup._setup_job_group_dir(jgrp_dir_path)  # create directory and validat permissions
 
         self._group_info['created_date'] = JobGroup._get_current_datetime()
         self._group_info['modified_date'] = JobGroup._get_current_datetime()
-        self._group_info['jobs_record'] = []
+        self._group_info['job_group_data'] = []
         # write to disk
         self._write_job_group_to_disk()
 
     def _read_job_group_from_disk(self) -> dict:
         # returns the Job group data stored on disk
-        jgrp_dir = JobGroup._get_jgrp_dir()
+        jgrp_dir = JobGroup._get_job_group_dir()
         ps = PersistentData()
         group_data = json.loads(ps.read_file(os.path.join(jgrp_dir, self._file_name),
                                              FileFormat.TEXT))
@@ -114,7 +114,7 @@ class JobGroup:
 
     def _write_job_group_to_disk(self):
         # writes job group data to disk
-        jgrp_dir = JobGroup._get_jgrp_dir()
+        jgrp_dir = JobGroup._get_job_group_dir()
         PersistentData().write_file(os.path.join(jgrp_dir, self._file_name),
                                     json.dumps(self._group_info), FileFormat.TEXT)
 
@@ -124,7 +124,7 @@ class JobGroup:
 
         self._group_info['created_date'] = group_data['created_date']
         self._group_info['modified_date'] = JobGroup._get_current_datetime()
-        self._group_info['jobs_record'] = group_data['jobs_record']
+        self._group_info['job_group_data'] = group_data['job_group_data']
         # Write to disk (necessary to update modification time)
         self._write_job_group_to_disk()
 
@@ -133,7 +133,7 @@ class JobGroup:
         """
         Returns a list of filenames of all JobGroups saved to disk
         """
-        jgrp_path = JobGroup._get_jgrp_dir()
+        jgrp_path = JobGroup._get_job_group_dir()
         files = [f for f in os.listdir(jgrp_path) if f.endswith(FILE_EXT_JGRP)]
         return files
 
@@ -146,7 +146,7 @@ class JobGroup:
     def add(self, job_to_add: RemoteJob, **kwargs):
         """
         Adds information of the new RemoteJob to an existing Group.
-        Saves the data in a choronological order in the group record (each entry is
+        Saves the data in a chronological order in the group (each entry is
         a dictionary of necessary information - status, id, body, metadata)
         """
         if not isinstance(job_to_add, RemoteJob):
@@ -170,46 +170,53 @@ class JobGroup:
             job_info['metadata'] = {'headers': job_to_add._rpc_handler.headers,
                                     'platform': job_to_add._rpc_handler.name,
                                     'url': job_to_add._rpc_handler.url}
-        # include the added job's info to job records
-        self._modify_job_record(job_info)
 
-    def _modify_job_record(self, updated_record: dict):
+        # include the added job's info to dataset in the group
+        self._modify_job_dataset(job_info)
+
+    def _modify_job_dataset(self, updated_info: dict):
         # modifies the recorded information when a new job is added
         group_data = self._read_job_group_from_disk()
 
-        saved_job_record = group_data['jobs_record']
-        saved_job_record.append(updated_record)
-        self._group_info['jobs_record'] = saved_job_record
-        # save changes to disk
-        self._write_job_group_to_disk()
+        saved_job_info = group_data['job_group_data']
+        saved_job_info.append(updated_info)
+
+        self._group_info['job_group_data'] = saved_job_info  # save changes in object
+        self._write_job_group_to_disk()  # save changes to disk
 
     def progress(self):
         """
         Lists through all jobs in the group and returns a list of status
-        If a status is changed from existing in file, job record is updated
+        If a status is changed from existing in file, that entry is
+        updated with new information
         """
-        new_job_record = self._group_info['jobs_record']
-        status_all_jobs = []
+        status_jobs_in_group = []
 
-        for index, each_job in enumerate(self._group_info['jobs_record']):
-            # todo : implement something like the following to update status/info
-            # if not each_job['status'] in ['SUCCESS', None]:
-            #     new_job = RemoteJob().from_id(each_job['id'], rpc_handler='')
-            #     new_job_record[index] = info_to_save_from_new_job(new_job)
-            if not each_job['status'] in ['SUCCESS', None]:
-                rj = self._recreate_remote_job_from_record(each_job)
-            status_all_jobs.append(each_job['status'])
+        for job_entry in self._group_info['job_group_data']:
+            if not job_entry['status'] in ['SUCCESS', None]:
+                rj = self._recreate_remote_job_from_stored_data(job_entry)
+                rj_status = rj.status()
+                if rj_status == 'SUCCESS':
+                    # remove metadata information if job ran successfully
+                    del job_entry['metadata']
+                job_entry['status'] = rj_status  # update current status
 
-        self._modify_job_record(new_job_record)
-        self._job_records = new_job_record
-        return status_all_jobs
+            status_jobs_in_group.append(job_entry['status'])
 
-    def _recreate_remote_job_from_record(self, each_job):
-        platform_metadata = each_job['metadata']
-        _token = platform_metadata['headers']['Authorization'].split(' ')[1]
-        rpc_handler = RPCHandler(platform_metadata['platform'], platform_metadata['url'], _token)
-        rj_again = RemoteJob().from_id(each_job['id'], rpc_handler)
-        return rj_again
+        self._write_job_group_to_disk()  # rewrites the group information on disk
+
+        # replace None with 'Not_sent' - more readable
+        status_list = [status if status is not None else "Not_sent" for status in status_jobs_in_group]
+        return status_list
+
+    def _recreate_remote_job_from_stored_data(self, job_entry) -> RemoteJob:
+        # returs a RemoteJob object recreated using its id and platform metadata
+        platform_metadata = job_entry['metadata']
+        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
+        rpc_handler = RPCHandler(platform_metadata['platform'],
+                                 platform_metadata['url'], user_token)
+        rj_recreated = RemoteJob.from_id(job_entry['id'], rpc_handler)
+        return rj_recreated
 
     def run_parallel(self, **kwargs):
         # todo: refine and implement
