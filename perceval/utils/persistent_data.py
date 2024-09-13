@@ -210,7 +210,8 @@ class PersistentData:
         """Delete all persistent data except for log
         """
         for file in os.listdir(self._directory):
-            if "log" not in file:
+            if all(keyword not in file for keyword in ['logs', 'job_group']):
+            # if "log" not in file and "jgrp" not in file:
                 self.delete_file(file)
 
     @property
