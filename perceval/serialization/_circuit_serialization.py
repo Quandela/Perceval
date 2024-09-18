@@ -30,7 +30,7 @@
 from multipledispatch import dispatch
 
 from perceval.serialization import _schema_circuit_pb2 as pb
-from perceval.components import ACircuit, Circuit, Barrier
+from perceval.components import ACircuit, Circuit
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
 from perceval.serialization._matrix_serialization import serialize_matrix
@@ -140,7 +140,5 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     pb_circuit.n_mode = circuit.m
     comp_serializer = ComponentSerializer()
     for r, c in circuit._components:
-        if isinstance(c, Barrier):
-            continue
         pb_circuit.components.extend([comp_serializer.serialize(r[0], c)])
     return pb_circuit

@@ -31,7 +31,6 @@ import math
 from typing import Callable, List, Optional, Tuple
 
 from .linear_circuit import ACircuit, Circuit
-from .unitary_components import Barrier
 
 
 from perceval.utils import InterferometerShape
@@ -61,8 +60,8 @@ class GenericInterferometer(Circuit):
                  depth: int = None,
                  phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
                  phase_at_output: bool = False,
-                 upper_component_gen: ACircuit = None,
-                 lower_component_gen: ACircuit = None):
+                 upper_component_gen: Callable[[int], ACircuit] = None,
+                 lower_component_gen: Callable[[int], ACircuit] = None):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
@@ -81,6 +80,8 @@ class GenericInterferometer(Circuit):
         if shape == InterferometerShape.RECTANGLE:
             self._build_rectangle()
         elif shape == InterferometerShape.TRIANGLE:
+            if upper_component_gen or lower_component_gen:
+                get_logger().warn(f"upper_component_gen or lower_component_gen cannot be applied for shape {shape}")
             self._build_triangle()
         else:
             raise NotImplementedError(f"Shape {shape} not supported")
@@ -112,19 +113,32 @@ class GenericInterferometer(Circuit):
         for p in self.get_parameters():
             p.set_value(math.pi)
 
+    def _add_component(self, mode: int, component: ACircuit) -> None:
+        assert component.m == 1, f"Component should always be a one mode circuit, instead it's a {component.m} modes circuit"
+        self.add(mode, component)
+
+    def _add_upper_component(self, i_depth: int, idx_up: int) -> bool:
+        if self._upper_component_gen and i_depth % 2 == 1:
+            self._add_component(0, self._upper_component_gen(idx_up))
+            return True
+        return False
+
+    def _add_lower_component(self, i_depth: int, idx_lo: int) -> bool:
+        if i_depth % 2 == 1 and self.m % 2 == 0 or i_depth % 2 == 0 and self.m % 2 == 1:
+            self._add_component(self.m-1, self._lower_component_gen(idx_lo))
+            return True
+        return False
+
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
         idx = 0
         idx_up = 0
         idx_lo = 0
         for i in range(0, max_depth):
-            if self._upper_component_gen and i % 2 == 1:
-                self.add(0, self._upper_component_gen(idx_up))
+            if self._add_upper_component(i, idx_up):
                 idx_up += 1
-            if self._lower_component_gen:
-                if i % 2 == 1 and self.m % 2 == 0 or i % 2 == 0 and self.m % 2 == 1:
-                    self.add(self.m-1, self._lower_component_gen(idx_lo))
-                    idx_lo += 1
+            if self._add_lower_component(i, idx_lo):
+                idx_lo += 1
             for j in range(0+i%2, self.m-1, 2):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):
@@ -133,8 +147,6 @@ class GenericInterferometer(Circuit):
                 self._depth_per_mode[j] += 1
                 self._depth_per_mode[j+1] += 1
                 idx += 1
-
-            self.add(0, Barrier(self.m, visible=False))
 
     def _build_triangle(self):
         idx = 0

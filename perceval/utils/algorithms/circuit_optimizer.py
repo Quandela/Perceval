@@ -30,7 +30,7 @@
 from typing import Callable, Tuple, Union
 
 import exqalibur as xq
-from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog, Barrier
+from perceval.components import ACircuit, Circuit, GenericInterferometer, BS, PS, catalog
 from perceval.utils import Matrix, P
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import serialize_binary, deserialize_circuit
@@ -150,9 +150,6 @@ class CircuitOptimizer:
             phase_shifter_fun_gen=_gen_ps,
             phase_at_output=phase_at_output)
         barrier_free_template = Circuit(template.m)
-        for r, c in template:
-            if not isinstance(c, Barrier):  # PCVL-783
-                barrier_free_template.add(r, c)
         result_circuit, fidelity = self.optimize(target, template)
         if fidelity < 1 - self._threshold:
             if allow_error:
