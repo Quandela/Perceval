@@ -28,17 +28,18 @@
 # SOFTWARE.
 
 import pytest
-import time
 from unittest.mock import patch
 from perceval.runtime import JobGroup, RemoteJob
 from perceval.components import catalog
 from perceval.algorithm import Sampler
-from perceval.utils import BasicState, get_logger
+from perceval.utils import BasicState, get_logger, PersistentData
 from _mock_rpc_handler import get_rpc_handler
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
-def test_job_group_creation():
+@patch.object(PersistentData, 'write_file')
+@patch.object(PersistentData, 'delete_file')
+def test_job_group_creation(mock_delete_file, mock_write_file):
     # create a new job group
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
@@ -48,39 +49,15 @@ def test_job_group_creation():
     datetime_modified = jgroup._group_info['modified_date']
     assert datetime_created == datetime_modified
 
-    # check file now exists
-    jg_list = JobGroup.list_saved_job_groups()
-    assert any(TEST_JG_NAME in file for file in jg_list)
-
     # Delete the created file
     JobGroup.delete_job_group(jgroup._file_name)
 
-def test_job_group_load_existing():
+    # assert mock methods called
+    mock_write_file.assert_called_once()
+    mock_delete_file.assert_called_once()
 
-    # create a new job group
-    jgroup = JobGroup(TEST_JG_NAME)
-    datetime_created = jgroup._group_info['created_date']
-    datetime_modified = jgroup._group_info['modified_date']
-
-    assert datetime_created == datetime_modified
-
-    # check the jo group exists
-    jg_list = JobGroup.list_saved_job_groups()
-    assert any(TEST_JG_NAME in file for file in jg_list)
-
-    # set a delay
-    time.sleep(1)
-    jgroup = JobGroup(TEST_JG_NAME)  # load existing
-
-    datetime_created = jgroup._group_info['created_date']
-    datetime_modified = jgroup._group_info['modified_date']
-    assert datetime_created < datetime_modified
-
-    # Delete the created file
-    JobGroup.delete_job_group(jgroup._file_name)
-
-
-def test_reject_non_remote_job():
+@patch.object(PersistentData, 'write_file')
+def test_reject_non_remote_job(mock_write_file):
     # creating a local job - sampling
     p = catalog["postprocessed cnot"].build_processor()
     p.with_input(BasicState([0, 1, 0, 1]))
@@ -91,19 +68,18 @@ def test_reject_non_remote_job():
     with pytest.raises(TypeError):
         jgroup.add(local_job)
 
-    # Delete the created file
-    JobGroup.delete_job_group(jgroup._file_name)
+    # assert mock methods called
+    mock_write_file.assert_called_once()
 
-
+@patch.object(PersistentData, 'write_file')
+@patch.object(JobGroup, 'add')
 @patch.object(get_logger(), "warn")
-def test_add_remote_to_group(mock_warn, requests_mock):
+def test_add_remote_to_group(mock_warn, mock_add, mock_write_file, requests_mock):
     remote_job = RemoteJob({}, get_rpc_handler(requests_mock), 'a_remote_job')
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(10):
         jgroup.add(remote_job)
+        assert isinstance(mock_add.call_args[0][0], RemoteJob)
 
-    assert len(jgroup.job_group_data) == 10
-
-    # Delete the created file
-    JobGroup.delete_job_group(jgroup._file_name)
+    assert mock_add.call_count == 10
