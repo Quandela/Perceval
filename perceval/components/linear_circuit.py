@@ -33,6 +33,7 @@ import copy
 import random
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 
 import numpy as np
 import sympy as sp
@@ -580,10 +581,10 @@ class Circuit(ACircuit):
     @staticmethod
     @deprecated(version="0.10.0", reason="Construct a GenericInterferometer object instead")
     def generic_interferometer(m: int,
-                               fun_gen: callable[[int], ACircuit],
+                               fun_gen: Callable[[int], ACircuit],
                                shape: str | InterferometerShape = InterferometerShape.RECTANGLE,
                                depth: int = None,
-                               phase_shifter_fun_gen: callable[[int], ACircuit] | None = None,
+                               phase_shifter_fun_gen: Callable[[int], ACircuit] | None = None,
                                phase_at_output: bool = False) -> Circuit:
         from .generic_interferometer import GenericInterferometer  # Import in method to avoir circular dependency
         if isinstance(shape, str):
@@ -604,7 +605,7 @@ class Circuit(ACircuit):
     @staticmethod
     def decomposition(U: MatrixN,
                       component: ACircuit,
-                      phase_shifter_fn: callable[[int], ACircuit] = None,
+                      phase_shifter_fn: Callable[[int], ACircuit] = None,
                       shape: str | InterferometerShape = InterferometerShape.TRIANGLE,
                       permutation: type[ACircuit] = None,
                       inverse_v: bool = False,
