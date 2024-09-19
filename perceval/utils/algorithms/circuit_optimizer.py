@@ -149,7 +149,6 @@ class CircuitOptimizer:
             template_component_generator_func,
             phase_shifter_fun_gen=_gen_ps,
             phase_at_output=phase_at_output)
-        barrier_free_template = Circuit(template.m)
         result_circuit, fidelity = self.optimize(target, template)
         if fidelity < 1 - self._threshold:
             if allow_error:

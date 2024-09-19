@@ -62,7 +62,7 @@ def test_set_param_list():
 
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 0), m=2)
-    # With m=2, online one row of phase shifters get impacted (on mode 1, given the mzi we used)
+    # With m=2, only one row of phase shifters get impacted (on mode 1, given the mzi we used)
     # The 10 first phase shifter of this row get phi=values[idx]
     indexes = [1, 3, 7, 9, 13, 15, 19, 21, 25, 27]
     for idx, phase_shifter_pos in enumerate(indexes):
@@ -94,7 +94,6 @@ def test_set_param_list():
     interferometer.set_param_list(values, (0, 0), m=4)
     for idx, (x, y) in enumerate([(1, 1), (1, 3), (3, 1), (3, 3), (2, 3), (2, 5), (1, 7), (1, 9), (3, 7), (3, 9)]):
         assert float(interferometer[x, y].get_parameters()[0]) == pytest.approx(values[idx])
-
 
 
 def test_set_params_from_other():

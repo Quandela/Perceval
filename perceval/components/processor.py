@@ -334,7 +334,7 @@ class Processor(AProcessor):
         elif isinstance(self._input_state, SVDistribution):
             my_dict['n'] = self._input_state.n_max
         else:
-            get_logger().info(f"Cannot get n for type {type(self._input_state)}", channel.resource)
+            get_logger().error(f"Cannot get n for type {type(self._input_state)}", channel.general)
         if extra_parameters:
             my_dict.update(extra_parameters)
         if self.noise:  # TODO: PCVL-782

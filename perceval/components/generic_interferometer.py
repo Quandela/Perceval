@@ -43,13 +43,19 @@ class GenericInterferometer(Circuit):
     :param m: number of modes
     :param fun_gen: generator function for the building components, index is an integer allowing to generate
                     named parameters - for instance:
-                    :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P(f"phi_{idx}")))`
+                    :code:`fun_gen=lambda idx: pcvl.BS()//(0, pcvl.PS(pcvl.P(f"phi_{idx}")))`
     :param shape: The output interferometer shape (InterferometerShape.RECTANGLE or InterferometerShape.TRIANGLE)
     :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                   Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
     :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
     :param phase_at_output: if True creates a layer of phase shifters at the output of the generated interferometer
                             else creates it in the input (default: False)
+    :param upper_component_gen fun_gen: generator function for the building the upper component, index is an integer allowing to generate
+                    named parameters - for instance:
+                    :code:`fun_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_upper_{idx}"))`
+    :param lower_component_gen: generator function for the building the lower component, index is an integer allowing to generate
+                    named parameters - for instance:
+                    :code:`fun_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_lower_{idx}"))`
 
     See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
     """
@@ -114,20 +120,30 @@ class GenericInterferometer(Circuit):
             p.set_value(math.pi)
 
     def _add_component(self, mode: int, component: ACircuit) -> None:
+        """Add a component to the circuit, check if it's a one mode circuit
+
+        :param mode: mode to add the component
+        :param component: component to add
+        """
         assert component.m == 1, f"Component should always be a one mode circuit, instead it's a {component.m} modes circuit"
         self.add(mode, component)
 
-    def _add_upper_component(self, i_depth: int) -> bool:
+    def _add_upper_component(self, i_depth: int) -> None:
+        """Add a component with upper_component_gen between the interferometer on the first mode
+
+        :param i_depth: depth index of the interferometer
+        """
         if self._upper_component_gen and i_depth % 2 == 1:
             self._add_component(0, self._upper_component_gen(int(i_depth/2)))
-            return True
-        return False
 
-    def _add_lower_component(self, i_depth: int) -> bool:
+    def _add_lower_component(self, i_depth: int) -> None:
+        """Add a component with lower_component_gen between the interferometer on the last mode
+
+        :param i_depth: depth index of the interferometer
+        """
+        # If m is even, the component is added at even depth index, else it's added in at odd depth index
         if self._lower_component_gen and (i_depth % 2 == 1 and self.m % 2 == 0 or i_depth % 2 == 0 and self.m % 2 == 1):
             self._add_component(self.m-1, self._lower_component_gen(int(i_depth/2)))
-            return True
-        return False
 
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
