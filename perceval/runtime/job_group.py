@@ -37,6 +37,7 @@ import json
 import datetime
 
 FILE_EXT_JGRP = 'jgrp'
+MAX_SAMPLE_DEF_GROUP = 10000
 
 class JobGroup:
     """
@@ -160,17 +161,18 @@ class JobGroup:
             job_info['status'] = None
             # Save information inside body (circuit, payload, etc.) to send job later
             job_info['body'] = job_to_add._request_data
-            max_samples = kwargs.get('max_samples', 10000)
+            max_samples = kwargs.get('max_samples', MAX_SAMPLE_DEF_GROUP)
             job_info['args'] = {"max_samples": max_samples}
         else:
             job_info['status'] = job_to_add.status()
 
         if not job_info['status'] == 'SUCCESS':
-            # save metadata for any job that did not run succesfully
+            # save metadata for any job that did not run successfully or was not sent
             job_info['metadata'] = {'headers': job_to_add._rpc_handler.headers,
                                     'platform': job_to_add._rpc_handler.name,
                                     'url': job_to_add._rpc_handler.url}
 
+        self._group_info['job_group_data'].append(job_info)  # save changes in object
         # include the added job's info to dataset in the group
         self._modify_job_dataset(job_info)
 
@@ -181,7 +183,7 @@ class JobGroup:
         saved_job_info = group_data['job_group_data']
         saved_job_info.append(updated_info)
 
-        self._group_info['job_group_data'] = saved_job_info  # save changes in object
+        # self._group_info['job_group_data'] = saved_job_info  # save changes in object
         self._write_job_group_to_disk()  # save changes to disk
 
     def progress(self):
@@ -210,13 +212,14 @@ class JobGroup:
         return status_list
 
     def _recreate_remote_job_from_stored_data(self, job_entry) -> RemoteJob:
-        # returs a RemoteJob object recreated using its id and platform metadata
+        # returns a RemoteJob object recreated using its id and platform metadata
         platform_metadata = job_entry['metadata']
         user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
+
         rpc_handler = RPCHandler(platform_metadata['platform'],
                                  platform_metadata['url'], user_token)
-        rj_recreated = RemoteJob.from_id(job_entry['id'], rpc_handler)
-        return rj_recreated
+
+        return RemoteJob.from_id(job_entry['id'], rpc_handler)
 
     def run_parallel(self, **kwargs):
         # todo: refine and implement
@@ -238,7 +241,7 @@ class JobGroup:
         """
         To delete all existing Job groups on disk
         """
-        jgrp_dir_path = JobGroup._get_jgrp_dir()
+        jgrp_dir_path = JobGroup._get_job_group_dir()
         list_groups = JobGroup.list_saved_job_groups()
         ps = PersistentData()
         for each_file in list_groups:
@@ -248,7 +251,7 @@ class JobGroup:
     def delete_job_group(filename: str):
         """
         Delete a single JobGroup file by its name
-        :param filename: a JobGroup filename with its extenstion to delete
+        :param filename: a JobGroup filename with its extension to delete
         """
         jgrp_dir_path = JobGroup._get_job_group_dir()
 
@@ -271,7 +274,7 @@ class JobGroup:
                 files_to_del.append(file)
 
         if not files_to_del:
-            warnings.warn(UserWarning, f'No files found to delete before{del_before_date}')
+            warnings.warn(UserWarning(f'No files found to delete before{del_before_date}'))
 
         # delete files
         for f in files_to_del:

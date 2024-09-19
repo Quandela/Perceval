@@ -37,27 +37,22 @@ from _mock_rpc_handler import get_rpc_handler
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
+@patch.object(JobGroup, 'list_saved_job_groups')
 @patch.object(JobGroup, '_write_job_group_to_disk')
-@patch.object(JobGroup, 'delete_job_group')
-def test_job_group_creation(mock_delete_file, mock_write_file):
-    # create a new job group
+def test_job_group_creation(mock_write_file, mock_list):
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
-    assert len(jgroup.job_group_data) == 0
+    assert len(jgroup.job_group_data) == 0  # empty job group
 
-    datetime_created = jgroup._group_info['created_date']
-    datetime_modified = jgroup._group_info['modified_date']
-    assert datetime_created == datetime_modified
-
-    # Delete the created file
-    JobGroup.delete_job_group(jgroup._file_name)
+    assert jgroup._group_info['created_date'] == jgroup._group_info['modified_date']
 
     # assert mock methods called
     mock_write_file.assert_called_once()
-    mock_delete_file.assert_called_once()
+    mock_list.assert_called_once()
 
+@patch.object(JobGroup, 'list_saved_job_groups')
 @patch.object(JobGroup, '_write_job_group_to_disk')
-def test_reject_non_remote_job(mock_write_file):
+def test_reject_non_remote_job(mock_write_file, mock_list):
     # creating a local job - sampling
     p = catalog["postprocessed cnot"].build_processor()
     p.with_input(BasicState([0, 1, 0, 1]))
@@ -70,16 +65,56 @@ def test_reject_non_remote_job(mock_write_file):
 
     # assert mock methods called
     mock_write_file.assert_called_once()
+    mock_list.assert_called_once()
 
+@patch.object(JobGroup, 'list_saved_job_groups')
+@patch.object(JobGroup, '_read_job_group_from_disk')
 @patch.object(JobGroup, '_write_job_group_to_disk')
-@patch.object(JobGroup, '_load_job_group')
 @patch.object(get_logger(), "warn")
-def test_add_remote_to_group(mock_warn, mock_add, mock_write_file, requests_mock):
-    remote_job = RemoteJob({}, get_rpc_handler(requests_mock), 'a_remote_job')
+def test_add_remote_to_group(mock_warn, mock_write_file,
+                             mock_read, mock_list, requests_mock):
+    mock_rpc = get_rpc_handler(requests_mock)
+    remote_job = RemoteJob({}, mock_rpc, 'a_remote_job')
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(10):
         jgroup.add(remote_job)
-        # assert isinstance(mock_add.call_args[0][0], RemoteJob)
 
-    # assert mock_add.call_count == 10
+    assert len(jgroup.job_group_data) == 10
+
+    for each_job in jgroup.job_group_data:
+        assert each_job['id'] is None
+        assert each_job['status'] is None
+        assert not each_job['body']  # empty mock remote job added - no body
+
+        # check correct metadata stored
+        assert each_job['metadata']['headers'] == mock_rpc.headers
+        assert each_job['metadata']['platform'] == mock_rpc.fetch_platform_details()['name']
+        assert each_job['metadata']['url'] == mock_rpc.url
+
+    # assert mock method calls
+    assert mock_write_file.call_count == 11 # 1 creation + 10 add/modify
+    assert mock_read.call_count == 10
+
+
+@patch.object(JobGroup, 'list_saved_job_groups')
+@patch.object(JobGroup, '_read_job_group_from_disk')
+@patch.object(JobGroup, '_write_job_group_to_disk')
+@patch.object(get_logger(), "warn")
+def test_check_progress_group(mock_warn, mock_write_file,
+                             mock_read, mock_list, requests_mock):
+    mock_rpc = get_rpc_handler(requests_mock)
+    remote_job = RemoteJob({}, mock_rpc, 'a_remote_job')
+
+    num_rj_add = 10
+    target_status_list = ['Not_sent']*num_rj_add
+
+    jgroup = JobGroup(TEST_JG_NAME)
+    for _ in range(num_rj_add):
+        jgroup.add(remote_job)
+
+    assert len(jgroup.job_group_data) == 10
+
+    group_status_list = jgroup.progress()
+
+    assert group_status_list == target_status_list
