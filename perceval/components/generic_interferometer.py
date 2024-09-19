@@ -117,28 +117,24 @@ class GenericInterferometer(Circuit):
         assert component.m == 1, f"Component should always be a one mode circuit, instead it's a {component.m} modes circuit"
         self.add(mode, component)
 
-    def _add_upper_component(self, i_depth: int, idx_up: int) -> bool:
+    def _add_upper_component(self, i_depth: int) -> bool:
         if self._upper_component_gen and i_depth % 2 == 1:
-            self._add_component(0, self._upper_component_gen(idx_up))
+            self._add_component(0, self._upper_component_gen(int(i_depth/2)))
             return True
         return False
 
-    def _add_lower_component(self, i_depth: int, idx_lo: int) -> bool:
-        if i_depth % 2 == 1 and self.m % 2 == 0 or i_depth % 2 == 0 and self.m % 2 == 1:
-            self._add_component(self.m-1, self._lower_component_gen(idx_lo))
+    def _add_lower_component(self, i_depth: int) -> bool:
+        if self._lower_component_gen and (i_depth % 2 == 1 and self.m % 2 == 0 or i_depth % 2 == 0 and self.m % 2 == 1):
+            self._add_component(self.m-1, self._lower_component_gen(int(i_depth/2)))
             return True
         return False
 
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
         idx = 0
-        idx_up = 0
-        idx_lo = 0
         for i in range(0, max_depth):
-            if self._add_upper_component(i, idx_up):
-                idx_up += 1
-            if self._add_lower_component(i, idx_lo):
-                idx_lo += 1
+            self._add_upper_component(i)
+            self._add_lower_component(i)
             for j in range(0+i%2, self.m-1, 2):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):

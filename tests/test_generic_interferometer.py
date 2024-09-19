@@ -56,44 +56,33 @@ def test_set_identity(interferometer):
     assert slos.probability(output_state=input_state) == pytest.approx(1)  # Detect one photon per mode
 
 
-def get_phase_shifter_indexes(m: int, long: bool):
-
-    # With m=2, online one row of phase shifters get impacted (on mode 1, given the mzi we used)
-    # The 10 first phase shifter of this row get phi=values[idx]a = []
-    indexes = []
-    start = 1 if long else 3
-    for i in range(2*((m-1)//2)):
-        indexes.append(start+6*i)
-        indexes.append(start+2+6*i)
-    indexes_with_barrier = [phase_shifter_pos +
-                            int(idx/2)*2 for idx, phase_shifter_pos in enumerate(indexes)]
-    return indexes_with_barrier
-
 def test_set_param_list():
     size = 12
     values = [.0, .1, .2, .3, .4, .5, .6, .7, .8, .9]
 
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 0), m=2)
-    indexes = get_phase_shifter_indexes(12, True)
-    for idx, phase_shifter_pos in enumerate(indexes[:len(values)]):
+    # With m=2, online one row of phase shifters get impacted (on mode 1, given the mzi we used)
+    # The 10 first phase shifter of this row get phi=values[idx]
+    indexes = [1, 3, 7, 9, 13, 15, 19, 21, 25, 27]
+    for idx, phase_shifter_pos in enumerate(indexes):
         assert float(interferometer[1, phase_shifter_pos].get_parameters()[0]) == pytest.approx(values[idx])
     # next phase shifters still have a variable phi:
-    assert interferometer[1, indexes[len(values)]].get_parameters()[0].defined == False
+    assert interferometer[1, 31].get_parameters()[0].defined == False
     params_with_numerical_value = [p for p in interferometer.get_parameters() if p.defined]
     assert len(params_with_numerical_value) == len(values)
 
     # Moving 2 MZI down, means 4 modes down
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 2), m=2)
-    for idx, phase_shifter_pos in enumerate(indexes[:len(values)]):
+    for idx, phase_shifter_pos in enumerate(indexes):
         assert float(interferometer[5, phase_shifter_pos].get_parameters()[0]) == pytest.approx(values[idx])
 
     # Moving 1 MZI right, means 6 components right
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (1, 0), m=2)
-    for idx, phase_shifter_pos in enumerate(indexes[:len(values)]):
-        assert float(interferometer[1, phase_shifter_pos+8].get_parameters()[0]) == pytest.approx(values[idx])
+    for idx, phase_shifter_pos in enumerate(indexes):
+        assert float(interferometer[1, phase_shifter_pos+6].get_parameters()[0]) == pytest.approx(values[idx])
 
     # Starting too right, can get out of the interferometer
     interferometer = GenericInterferometer(size, mzi_generator_func)
@@ -103,10 +92,7 @@ def test_set_param_list():
     # Reshaping by giving a higher m value, will impact more modes on insertion
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 0), m=4)
-    even_indexes = indexes[:4]
-    odd_indexes = get_phase_shifter_indexes(12, False)[:2]
-    idx = 0
-    for idx, (x, y) in enumerate([(1, 1), (1, 3), (3, 1), (3, 3), (2, 4), (2, 6), (1, 9), (1, 11), (3, 9), (3, 11)]):
+    for idx, (x, y) in enumerate([(1, 1), (1, 3), (3, 1), (3, 3), (2, 3), (2, 5), (1, 7), (1, 9), (3, 7), (3, 9)]):
         assert float(interferometer[x, y].get_parameters()[0]) == pytest.approx(values[idx])
 
 
@@ -120,7 +106,7 @@ def test_set_params_from_other():
     big_interferometer.set_params_from_other(small_interferometer, (0, 0))
     big_interferometer.remove_phase_layer()
 
-    for (x, y) in [(1, 1), (1, 3), (3, 1), (3, 3), (2, 4), (2, 6), (1, 9), (1, 11), (3, 9), (3, 11)]:
+    for (x, y) in [(1, 1), (1, 3), (3, 1), (3, 3), (2, 3), (2, 5), (1, 7), (1, 9), (3, 7), (3, 9)]:
         assert float(big_interferometer[x, y].get_parameters()[0]) == pytest.approx(math.pi)
     params_with_numerical_value = [p for p in big_interferometer.get_parameters() if p.defined]
     assert len(params_with_numerical_value) == len(small_interferometer.get_parameters())
