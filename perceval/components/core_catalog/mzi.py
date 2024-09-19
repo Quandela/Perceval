@@ -79,7 +79,7 @@ class MZIPhaseFirst(AMZI):
 
     def build_circuit(self, **kwargs) -> Circuit:
         phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
-        return (Circuit(2, name=_NAME_MZI_PHASE_FIRST)
+        return (Circuit(2, name="MZI")
                // (0, PS(phi=phi_a)) // BS(theta=theta_a) // (0, PS(phi=phi_b)) // BS(theta=theta_b))
 
 
@@ -96,7 +96,7 @@ class MZIPhaseLast(AMZI):
 
     def build_circuit(self, **kwargs) -> Circuit:
         phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
-        return (Circuit(2, name=_NAME_MZI_PHASE_LAST)
+        return (Circuit(2, name="MZI")
                 // BS(theta=theta_a) // (1, PS(phi=phi_a)) // BS(theta=theta_b) // (1, PS(phi=phi_b)))
 
 
@@ -114,5 +114,5 @@ class SymmetricMZI(AMZI):
 
     def build_circuit(self, **kwargs) -> Circuit:
         phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
-        return (Circuit(2, name=_NAME_SYMMETRIC_MZI)
+        return (Circuit(2, name="MZI")
                 // BS(theta=theta_a) // (0, PS(phi=phi_a)) // (1, PS(phi=phi_b))) // BS(theta=theta_b)
