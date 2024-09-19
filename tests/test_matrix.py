@@ -187,10 +187,8 @@ def test_genunitary():
     assert M.is_unitary()
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_param_unitary(mock_warn):
-    with LogChecker(mock_warn):
-        m = pcvl.Matrix.random_unitary(2, np.arange(8))
+def test_param_unitary():
+    m = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
 
     assert isinstance(m, pcvl.Matrix)
     assert m.shape == (2, 2)
