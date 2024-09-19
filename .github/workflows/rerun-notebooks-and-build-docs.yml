@@ -73,12 +73,12 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install .
+        python -m pip install .[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
         python -m pip install -r docs/requirements.txt -r docs/source/notebooks/requirements.txt
 
     - name: Rerun notebooks

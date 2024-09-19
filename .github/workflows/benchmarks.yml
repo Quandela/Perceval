@@ -58,10 +58,10 @@ jobs:
              echo "os=macos-latest" >> $GITHUB_OUTPUT
           fi
           echo "commit_ref=${{ github.event.inputs.commit_ref || '' }}" >> $GITHUB_OUTPUT
-          echo "python_v=${{ github.event.inputs.python_v || '3.9' }}"  >> $GITHUB_OUTPUT
-          echo "python_v_cp=cp$( echo '${{github.event.inputs.python_v || '3.9'}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_OUTPUT
-          echo "folder_env=${{ github.event.inputs.os || 'MiniMac_arm64' }}-CPython-${{ github.event.inputs.python_v || '3.9' }}" >> $GITHUB_OUTPUT
-          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os || 'MiniMac_arm64' }}-CPython-${{ github.event.inputs.python_v || '3.9' }}/log/${{ github.run_number }}_$( git describe --tags )_${{ github.sha }}.json"  >> $GITHUB_OUTPUT
+          echo "python_v=${{ github.event.inputs.python_v || '3.11' }}"  >> $GITHUB_OUTPUT
+          echo "python_v_cp=cp$( echo '${{github.event.inputs.python_v || '3.11'}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_OUTPUT
+          echo "folder_env=${{ github.event.inputs.os || 'MiniMac_arm64' }}-CPython-${{ github.event.inputs.python_v || '3.11' }}" >> $GITHUB_OUTPUT
+          echo "folder_file_json=.benchmarks/${{ github.event.inputs.os || 'MiniMac_arm64' }}-CPython-${{ github.event.inputs.python_v || '3.11' }}/log/${{ github.run_number }}_$( git describe --tags )_${{ github.sha }}.json"  >> $GITHUB_OUTPUT
           echo "gh_branch=${{ github.event.inputs.gh_branch || 'main' }}" >> $GITHUB_OUTPUT
 
 
@@ -92,9 +92,8 @@ jobs:
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            python -m pip install -r requirements.txt
+            python -m pip install .[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
             python -m pip install -r tests/requirements.txt
-            python -m pip install .
 
       - name: Run benchmark
         run: |
