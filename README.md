@@ -71,7 +71,7 @@ pip install -e .
 ```
 Or to use converters:
 ```bash
-pip install .[qiskit_bridge, qutip_bridge, myqlm_bridge]
+pip install .[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
 ```
 
 # Running tests and benchmarks

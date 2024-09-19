@@ -1,4 +1,3 @@
-.[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
 pytest
 pytest-cov
 pytest-benchmark
