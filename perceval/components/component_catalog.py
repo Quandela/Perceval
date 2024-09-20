@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import importlib
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -132,7 +130,7 @@ class CatalogItem(ABC):
         """Build the component as processor
 
         kwargs:
-            * backend(ABackend | str): Name or instance of a simulation backend. Default "SLOS"
+            * backend(ABackend or str): Name or instance of a simulation backend. Default "SLOS"
 
         :return: A Perceval processor
         """

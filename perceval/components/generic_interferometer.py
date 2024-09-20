@@ -26,8 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from __future__ import annotations
-
 import math
 from collections.abc import Callable
 
@@ -58,7 +56,7 @@ class GenericInterferometer(Circuit):
                  fun_gen: Callable[[int], ACircuit],
                  shape: InterferometerShape = InterferometerShape.RECTANGLE,
                  depth: int = None,
-                 phase_shifter_fun_gen: Callable[[int], ACircuit] | None = None,
+                 phase_shifter_fun_gen: Callable[[int], ACircuit] = None,
                  phase_at_output: bool = False):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
