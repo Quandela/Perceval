@@ -70,7 +70,7 @@ def build_control_gate_unitary(n: int, alpha: float) -> Matrix:
     return U
 
 
-class PostProcessedControledRotationsItem(CatalogItem):
+class PostProcessedControlledRotationsItem(CatalogItem):
     article_ref = "https://arxiv.org/abs/2405.01395"
     description = r"""n-qubit controlled rotation gate C...CZ(alpha) with 2*n ancillary modes and a post-selection function"""
     params_doc = {
