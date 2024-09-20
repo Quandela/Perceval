@@ -119,7 +119,7 @@ class GenericInterferometer(Circuit):
         for p in self.get_parameters():
             p.set_value(math.pi)
 
-    def _add_component(self, mode: int, component: ACircuit) -> None:
+    def _add_single_mode_component(self, mode: int, component: ACircuit) -> None:
         """Add a component to the circuit, check if it's a one mode circuit
 
         :param mode: mode to add the component
@@ -134,7 +134,7 @@ class GenericInterferometer(Circuit):
         :param i_depth: depth index of the interferometer
         """
         if self._upper_component_gen and i_depth % 2 == 1:
-            self._add_component(0, self._upper_component_gen(int(i_depth/2)))
+            self._add_single_mode_component(0, self._upper_component_gen(i_depth // 2))
 
     def _add_lower_component(self, i_depth: int) -> None:
         """Add a component with lower_component_gen between the interferometer on the last mode
@@ -142,8 +142,9 @@ class GenericInterferometer(Circuit):
         :param i_depth: depth index of the interferometer
         """
         # If m is even, the component is added at even depth index, else it's added in at odd depth index
-        if self._lower_component_gen and (i_depth % 2 == 1 and self.m % 2 == 0 or i_depth % 2 == 0 and self.m % 2 == 1):
-            self._add_component(self.m-1, self._lower_component_gen(int(i_depth/2)))
+        if (self._lower_component_gen and
+                ((i_depth % 2 == 1 and self.m % 2 == 0) or (i_depth % 2 == 0 and self.m % 2 == 1))):
+            self._add_single_mode_component(self.m - 1, self._lower_component_gen(i_depth // 2))
 
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
