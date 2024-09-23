@@ -264,6 +264,7 @@ class Processor(AProcessor):
         from perceval.simulators import NoisySamplingSimulator
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
+        sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
         sampling_simulator.set_selection(
             min_detected_photons_filter=self._min_detected_photons_filter, postselect=self.post_select_fn, heralds=self.heralds)
