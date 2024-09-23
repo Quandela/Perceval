@@ -54,5 +54,7 @@ class DebugSkin(PhysSkin):
         if canvas.background_color is None:
             canvas.add_rect((10, 10), 30, 50 * m - 20, fill="whitesmoke", stroke="whitesmoke")
         for i in range(m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[ModeStyle.PHOTONIC])
+            style = self.style[mode_style[i]]
+            if style["stroke"]:
+                canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **style)
         canvas.add_rect((24, 10), 2, 50 * m - 20, fill="dimgrey", stroke="dimgrey")

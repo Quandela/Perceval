@@ -235,7 +235,9 @@ class SymbSkin(ASkin):
         m = barrier.m
         canvas.add_mline((24, 10, 24, 50 * m - 16), stroke_width=1, stroke="lightgray")
         for i in range(m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[mode_style[i]])
+            style = self.style[mode_style[i]]
+            if style["stroke"]:
+                canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **style)
 
     def perm_shape(self, circuit, canvas, mode_style):
         for an_input, an_output in enumerate(circuit.perm_vector):

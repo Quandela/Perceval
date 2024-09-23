@@ -59,7 +59,6 @@ class ASkin(ABC):
         self._compact = compact_display
         self.style = {ModeStyle.PHOTONIC: stroke_style,
                       ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
-                      # ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}  # Use this for debug
                       }
         self.style_subcircuit = style_subcircuit
         self.precision: float = 1e-6

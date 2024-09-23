@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import PERM, AProcessor
+from perceval.components import PERM, AProcessor, Barrier
 
 
 class ComponentHeraldInfo:
@@ -82,6 +82,8 @@ def collect_herald_info(processor: AProcessor, recursive: bool):
                         mode = component.perm_vector[mode - m0] + m0
                     else:
                         mode = component.perm_vector.index(mode - m0) + m0
+                elif isinstance(component, Barrier):
+                    pass  # Heralds can go through barriers too
                 else:
                     h_info = herald_info.setdefault(
                         component, ComponentHeraldInfo())
