@@ -26,19 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
-from typing import Callable, Optional
 import threading
 
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from .job import Job
 from .job_status import JobStatus, RunningStatus
 
 
 class LocalJob(Job):
     def __init__(self,
-                 fn: Callable,
-                 result_mapping_function: Callable = None,
+                 fn: callable,
+                 result_mapping_function: callable = None,
                  delta_parameters: dict = None,
                  command_param_names: list = None):
         """
@@ -58,7 +58,7 @@ class LocalJob(Job):
         self._user_cb = None
         self._cancel_requested = False
 
-    def set_progress_callback(self, callback: Callable):  # Signature must be (float, Optional[str])
+    def set_progress_callback(self, callback: callable):  # Signature must be (float, str | None)
         self._user_cb = callback
 
     @property
@@ -68,7 +68,7 @@ class LocalJob(Job):
             self._status.stop_run()
         return self._status
 
-    def _progress_cb(self, progress: float, phase: Optional[str] = None):
+    def _progress_cb(self, progress: float, phase: str | None = None):
         self._status.update_progress(progress, phase)
         if self._cancel_requested:
             return {'cancel_requested': True}
@@ -99,7 +99,7 @@ class LocalJob(Job):
             else:
                 self._status.stop_run()
         except Exception as e:
-            logger.warn(f"An exception was raised during job execution.\n{type(e)}: {e}", channel.user)
+            get_logger().warn(f"An exception was raised during job execution.\n{type(e)}: {e}", channel.user)
             self._status.stop_run(RunningStatus.ERROR, str(type(e))+": "+str(e))
 
     def execute_async(self, *args, **kwargs) -> Job:
@@ -119,7 +119,8 @@ class LocalJob(Job):
 
     def _get_results(self):
         if self._result_mapping_function:
-            logger.info(f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)
+            get_logger().info(
+                f"Converting local job results with {self._result_mapping_function.__name__}", channel.general)
             if 'results' in self._results:
                 self._results['results'] = self._result_mapping_function(self._results['results'],
                                                                          **self._delta_parameters['mapping'])

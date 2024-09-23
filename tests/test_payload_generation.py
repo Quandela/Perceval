@@ -76,7 +76,7 @@ def test_payload_basics(requests_mock):
     )
 
 
-@patch.object(pcvl.logger, "warn")
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_payload_parameters(mock_warn, requests_mock):
     """test parameters of payload"""
     n_params = 5

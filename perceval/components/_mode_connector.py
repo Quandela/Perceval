@@ -26,16 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Dict, List, Union
+from __future__ import annotations
 
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 from .abstract_component import AComponent
 from .unitary_components import PERM
 
 
 class UnavailableModeException(Exception):
-    def __init__(self, mode: Union[int, List[int]], reason: str = None):
+    def __init__(self, mode: int | list[int], reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'
@@ -43,7 +43,7 @@ class UnavailableModeException(Exception):
 
 
 class InvalidMappingException(Exception):
-    def __init__(self, mapping: Union[Dict, List], reason: str = None):
+    def __init__(self, mapping: dict | list, reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'
@@ -91,7 +91,7 @@ class ModeConnector:
         r_list = list(range(self._ro.circuit_size))
         return [x for x in r_list if x not in self._ro.heralds.keys()]
 
-    def resolve(self) -> Dict[int, int]:
+    def resolve(self) -> dict[int, int]:
         """
         Resolves mode mapping (self._map) and checks if it is consistent.
 
@@ -115,7 +115,7 @@ class ModeConnector:
         """
         # Handle int input case
         if isinstance(self._map, int):
-            logger.debug(f"Resolve mode mapping from int {self._map}", channel.general)
+            get_logger().debug(f"Resolve mode mapping from int {self._map}", channel.general)
             map_begin = self._map
             self._map = {}
             r_list = self._get_ordered_rmodes()
@@ -126,7 +126,7 @@ class ModeConnector:
 
         # Handle list input case
         if isinstance(self._map, list) or isinstance(self._map, tuple):
-            logger.debug("Resolve mode mapping from a list", channel.general)
+            get_logger().debug("Resolve mode mapping from a list", channel.general)
             map_keys = self._map
             map_values = self._get_ordered_rmodes()
             if len(map_keys) != len(map_values):
@@ -216,7 +216,7 @@ class ModeConnector:
         Add heralded mode mapping to an existing mapping
         """
         if self._r_is_component:
-            logger.warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
+            get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
             return 0
         other_herald_pos = list(self._ro.heralds.keys())
         new_mode_index = self._lp.circuit_size
@@ -226,7 +226,7 @@ class ModeConnector:
         return new_mode_index - self._lp.circuit_size
 
     @staticmethod
-    def generate_permutation(mode_mapping: Dict[int, int]):
+    def generate_permutation(mode_mapping: dict[int, int]):
         """
         Generate a PERM component given an already resolved mode mapping
         Returns a tuple containing:

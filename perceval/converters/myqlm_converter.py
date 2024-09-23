@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from perceval.components import Circuit, Processor, Source, BS, PS
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 
 
@@ -59,7 +59,7 @@ class MyQLMConverter(AGateConverter):
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        logger.info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits) to processor", channel.general)
+        get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits) to processor", channel.general)
         n_cnot = qlmc.count("CNOT")  # count the number of CNOT gates in circuit - needed to find the num. heralds
         self._configure_processor(qlmc)    # empty processor with ports initialized
 

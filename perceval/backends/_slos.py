@@ -29,12 +29,11 @@
 
 from ._abstract_backends import AProbAmpliBackend
 from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 import exqalibur as xq
 import math
 import numpy as np
-from typing import Dict, List
 
 
 class _Path:
@@ -121,9 +120,9 @@ class SLOSBackend(AProbAmpliBackend):
     def _reset(self):
         self._fsms = [[]]  # xq.FSMask
         self._fsas = {}  # xq.FSArray
-        self._mk_l: List[int] = [1]
-        self._path_roots: List[_Path] = []
-        self._state_mapping: Dict[BasicState, _Path] = {}
+        self._mk_l: list[int] = [1]
+        self._path_roots: list[_Path] = []
+        self._state_mapping: dict[BasicState, _Path] = {}
         self._mask = None  # xq.FSMAsk
         self.clear_iterator_cache()
 
@@ -139,7 +138,7 @@ class SLOSBackend(AProbAmpliBackend):
         self._umat = circuit.compute_unitary(use_symbolic=self._symb)
         if self._path_roots and previous_circuit.m == circuit.m:
             # Use the previously deployed paths to store the new circuit's coefs
-            logger.debug("SLOS: compute coefficients keeping the previous path", channel.general)
+            get_logger().debug("SLOS: compute coefficients keeping the previous path", channel.general)
             self._compute_path(self._umat)
         else:
             self._reset()
@@ -151,7 +150,7 @@ class SLOSBackend(AProbAmpliBackend):
         self.preprocess([input_state])
         super().set_input_state(input_state)
 
-    def _deploy(self, input_list: List[BasicState]):
+    def _deploy(self, input_list: list[BasicState]):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
         # after calculation, we only need to keep fsa for input_state n
         # during calculation we need to keep current fsa and previous fsa
@@ -170,7 +169,7 @@ class SLOSBackend(AProbAmpliBackend):
             if n not in self._fsas:
                 self._fsas[n] = current_fsa
 
-    def preprocess(self, input_list: List[BasicState]) -> bool:
+    def preprocess(self, input_list: list[BasicState]) -> bool:
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:
@@ -180,7 +179,7 @@ class SLOSBackend(AProbAmpliBackend):
         if not found_new:
             return False
 
-        logger.debug("SLOS: deploy a new path and compute coefficients", channel.general)
+        get_logger().debug("SLOS: deploy a new path and compute coefficients", channel.general)
         self._deploy(input_list)  # build the necessary fsa/fsms
         new_path = _Path(0, self._circuit.m, input_list, None, self)
         new_path.compute(self._umat)

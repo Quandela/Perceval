@@ -80,7 +80,7 @@ class CanvasRenderer(ICircuitRenderer):
                     "l",
                     CanvasRenderer.AFFIX_PORT_SIZE, 0], **mode_style)
 
-    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
+    def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> tuple[int, int]:
         return self._skin.get_size(circuit, recursive)
 
     def add_mode_index(self):
@@ -134,7 +134,7 @@ class CanvasRenderer(ICircuitRenderer):
             CanvasRenderer.SCALE)
         self._canvas.add_shape(self._skin.get_shape(port, PortLocation.INPUT), port, None)
 
-    def open_subblock(self, lines, name, size, color=None):
+    def open_subblock(self, lines: tuple[int, ...], name: str, size: tuple[int, int], color=None):
         # Get recommended margins for this block
         margins = self._current_subblock_info.get('margins', (0, 0))
 
@@ -169,7 +169,7 @@ class CanvasRenderer(ICircuitRenderer):
         if margins[0]:
             self.extend_pos(start, end, self.max_pos(start, end) + margins[0])
 
-    def close_subblock(self, lines):
+    def close_subblock(self, lines: tuple[int, ...]):
         start = lines[0]
         end = lines[-1]
         subblock_end = self.max_pos(start, end)

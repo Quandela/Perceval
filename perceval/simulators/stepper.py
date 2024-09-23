@@ -26,11 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 from collections import defaultdict
-from typing import List, Union, Callable, Dict
 import copy
 
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
+from perceval.utils.logging import deprecated, get_logger
 from perceval.components import ACircuit
 from perceval.backends import AProbAmpliBackend, BACKEND_LIST
 from .simulator_interface import ISimulator
@@ -47,7 +49,7 @@ class Stepper(ISimulator):
         self._backend = backend
         if backend is None:
             self._backend = BACKEND_LIST['SLOS']()
-        self._min_detected_photons = 0
+        self._min_detected_photons_filter = 0
         self._clear_cache()
         self._C = None
 
@@ -59,10 +61,15 @@ class Stepper(ISimulator):
         self._C = circuit
         self._clear_cache()
 
+    #TODO: remove for PCVL-786
+    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     def set_min_detected_photon_filter(self, value: int):
-        self._min_detected_photons = value
+        self._min_detected_photons_filter = value
 
-    def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
+    def set_min_detected_photons_filter(self, value: int):
+        self._min_detected_photons_filter = value
+
+    def apply(self, sv: StateVector, r: list[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position
@@ -76,7 +83,7 @@ class Stepper(ISimulator):
         sub_input_state = {sliced_state for state in sv.keys()
                            for sliced_state in (state[min_r:max_r],)
                            if sliced_state not in self._result_dict[key]['_set']
-                           and state[:self._C.m].n >= self._min_detected_photons}
+                           and state[:self._C.m].n >= self._min_detected_photons_filter}
         # get circuit probability for these input_states
         if sub_input_state:
             self._backend.set_circuit(c)
@@ -91,7 +98,7 @@ class Stepper(ISimulator):
         nsv = StateVector()
         # May be faster in c++ (impossible to use comprehension here due to successive additions)
         for state, sv_pa in sv:
-            if state[:self._C.m].n >= self._min_detected_photons:  # Useless to compute if the mode will not be selected
+            if state[:self._C.m].n >= self._min_detected_photons_filter:  # Useless to compute if the mode will not be selected
                 for output_state, prob_ampli in self._result_dict[key][state[min_r:max_r]].items():
                     nsv += state.set_slice(slice(min_r, max_r), output_state) * (prob_ampli * sv_pa)
             else:
@@ -101,7 +108,7 @@ class Stepper(ISimulator):
     def probs(self, input_state) -> BSDistribution:
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)
@@ -114,7 +121,7 @@ class Stepper(ISimulator):
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out
 
-    def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
+    def compile(self, input_states: BasicState | StateVector) -> bool:
         if isinstance(input_states, BasicState):
             sv = StateVector(input_states)
         else:

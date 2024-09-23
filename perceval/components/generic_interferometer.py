@@ -26,14 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import math
-from typing import Callable, List, Optional, Tuple
+from collections.abc import Callable
 
 from .linear_circuit import ACircuit, Circuit
 
 from perceval.utils import InterferometerShape
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 
 class GenericInterferometer(Circuit):
@@ -57,7 +56,7 @@ class GenericInterferometer(Circuit):
                  fun_gen: Callable[[int], ACircuit],
                  shape: InterferometerShape = InterferometerShape.RECTANGLE,
                  depth: int = None,
-                 phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
+                 phase_shifter_fun_gen: Callable[[int], ACircuit] = None,
                  phase_at_output: bool = False):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
@@ -89,7 +88,7 @@ class GenericInterferometer(Circuit):
         return f"Generic interferometer ({self.m} modes, {str(self._shape.name)}, {self.ncomponents()} components)"
 
     @property
-    def mzi_depths(self) -> List[int]:
+    def mzi_depths(self) -> list[int]:
         """Return a list of MZI depth, per mode"""
         return self._depth_per_mode
 
@@ -156,7 +155,7 @@ class GenericInterferometer(Circuit):
             cc += 1
         return depth
 
-    def set_param_list(self, param_list: List[float], top_left_pos: Tuple[int, int], m: int):
+    def set_param_list(self, param_list: list[float], top_left_pos: tuple[int, int], m: int):
         """Insert parameters value starting from a given position in the interferometer.
 
         This method is designed to work on rectangular interferometers
@@ -174,7 +173,7 @@ class GenericInterferometer(Circuit):
         if lin < 0 or lin+m >= self.m:
             raise ValueError(f"Invalid param list height, expected interval in [0,{self.m}], got [{lin},{lin+m}]")
         if self._shape != InterferometerShape.RECTANGLE:
-            logger.warn("set_param_list was designed for rectangular interferometer", channel.user)
+            get_logger().warn("set_param_list was designed for rectangular interferometer", channel.user)
         even_mode_count = self.m % 2 == 0
         even_col_size = self.m - (self.m % 2)
         odd_col_size = even_col_size - 2 if even_mode_count else even_col_size
@@ -191,7 +190,7 @@ class GenericInterferometer(Circuit):
                     break
             cc += 1
 
-    def set_params_from_other(self, other: Circuit, top_left_pos: Tuple[int, int]):
+    def set_params_from_other(self, other: Circuit, top_left_pos: tuple[int, int]):
         """Retrieve parameter value from another interferometer
 
         :param other: Another interferometer

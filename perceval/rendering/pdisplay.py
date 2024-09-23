@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import copy
 import math
@@ -44,14 +45,13 @@ from multipledispatch import dispatch
 import networkx as nx
 import sympy as sp
 from tabulate import tabulate
-from typing import Union
 
 from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
 from .circuit import DisplayConfig, create_renderer, ModeStyle, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
 from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 
 from .format import Format
@@ -66,7 +66,7 @@ def in_ide():
     for key in os.environ:
         if 'PYCHARM' in key or 'SPY_PYTHONPATH' in key or 'VSCODE' in key:
             ide_detected = True
-    logger.debug(f"IDE detected: {ide_detected}", channel.general)
+    get_logger().debug(f"IDE detected: {ide_detected}", channel.general)
     return ide_detected
 
 
@@ -179,7 +179,7 @@ def pdisplay_matrix(matrix: Matrix, precision: float = 1e-6, output_format: Form
             return value.__repr__()
 
     if output_format != Format.TEXT:
-        marker = output_format == "$" if Format.HTML else ""
+        marker = "$" if output_format == Format.HTML else ""
         if isinstance(matrix, sp.Matrix):
             return marker + sp.latex(matrix) + marker
         rows = []
@@ -223,7 +223,7 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCount],
+def pdisplay_state_distrib(sv: StateVector | ProbabilityDistribution | BSCount,
                            output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
     :meta private:
@@ -521,7 +521,7 @@ def pdisplay(o, output_format: Format = None, **opts):
     """
     if output_format is None:
         output_format = _default_output_format(o)
-        logger.debug(f"Output format defaulted to {output_format.name}", channel.general)
+        get_logger().debug(f"Output format defaulted to {output_format.name}", channel.general)
     res = _pdisplay(o, output_format=output_format, **opts)
 
     if res is None:
@@ -564,12 +564,12 @@ def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
                 res.save_svg(path)
             return
         except Exception as e:
-            logger.error(f"{e}", channel.general)
+            get_logger().error(f"{e}", channel.general)
 
     if output_format == Format.LATEX:
         with open(path, 'w', encoding='utf-8') as f_out:
             f_out.write(res)
         return
 
-    logger.warn(
+    get_logger().warn(
         f"No output file could be created for {type(o)} object (format = {output_format.name}) at path {path}", channel.user)

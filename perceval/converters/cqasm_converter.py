@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.components import Processor, Source, Circuit, BS, PS, PERM
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 
 import numpy as np
@@ -108,14 +108,14 @@ class CQASMConverter(AGateConverter):
         for variable in ast.variables:
             if type(variable.typ) is self._cqasm.types.QubitArray:
                 for i in range(variable.typ.size):
-                    self._qubit_list.append((_cs(variable.name), i))
+                    self._qubit_list.append((variable.name, i))
             elif type(variable.typ) is self._cqasm.types.Qubit:
-                self._qubit_list.append((_cs(variable.name), -1))
+                self._qubit_list.append((variable.name, -1))
             else:
                 raise ConversionUnsupportedFeatureError(f"Classical variable { variable.name } not supported")
 
     def _operand_to_qubit_indices(self, operand):
-        name = _cs(operand.variable.name)
+        name = operand.variable.name
         if type(operand) is self._cqasm.values.VariableRef:
             return [self._qubit_list.index((name, -1))]
         elif type(operand) is self._cqasm.values.IndexRef:
@@ -125,7 +125,7 @@ class CQASMConverter(AGateConverter):
             raise ConversionUnsupportedFeatureError(f"Cannot map variable { name } to a declared qubit")
 
     def _convert_statement(self, statement):
-        gate_name = _cs(statement.name)
+        gate_name = statement.name
         num_operands = len(statement.operands)
 
         # For now, assume the statement pattern is OP q
@@ -190,11 +190,11 @@ class CQASMConverter(AGateConverter):
         if isinstance(ast, str):
             return self._convert_from_string(ast, use_postselection)
 
-        logger.info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
+        get_logger().info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
                     channel.general)
         self._collect_qubit_list(ast)
         self._num_cnots = sum(
-            (_cs(s.name) == "CNOT") + 2 * (_cs(s.name) in ["CR", "CRk"])
+            (s.name == "CNOT") + 2 * (s.name in ["CR", "CRk"])
             for s in ast.block.statements)
         self._use_postselection = use_postselection
 
@@ -238,7 +238,7 @@ class CQASMConverter(AGateConverter):
         # The string contains a single line, it might be a path
         if not "\n" in source:
             try:
-                logger.debug(f"Reading cQASM file content at {source}", channel.general)
+                get_logger().debug(f"Reading cQASM file content at {source}", channel.general)
                 with open(source) as source_file:
                     source_string = source_file.read()
             except IOError:
@@ -248,11 +248,11 @@ class CQASMConverter(AGateConverter):
 
         major, minor = CQASMConverter.check_version(source_string)
         if major == 3:
-            logger.debug("Parsing cQASM v3 description", channel.general)
+            get_logger().debug("Parsing cQASM v3 description", channel.general)
             ast = self._cqasm.Analyzer().analyze_string(
                 source_string)
         elif major == 1:
-            logger.debug("Converting cQASM v1 to v3", channel.general)
+            get_logger().debug("Converting cQASM v1 to v3", channel.general)
             ast = self._v3_ast_from_v1_source(source_string.split('\n'))
         else:
             raise ConversionBadVersionError(f"Unsupported version {major}.{minor}")
@@ -305,7 +305,7 @@ class CQASMConverter(AGateConverter):
                                 "Qubit number is not an integer.")
                     typ = cqasm.types.QubitArray(size=int(instruction[1]))
                     ast.variables.append(
-                        cqasm.semantic.Variable(name="b'q'", typ=typ))
+                        cqasm.semantic.Variable(name='q', typ=typ))
                     continue
 
                 # Ignore anything with only one keyword:
@@ -353,10 +353,10 @@ class CQASMConverter(AGateConverter):
                             f"Unsupported 2-qubit gate { instruction[0] }")
 
                 statement = cqasm.semantic.Instruction()
-                statement.name = f"b'{ instruction[0] }'"
+                statement.name = f'{ instruction[0] }'
                 for qubit_index in ins_qubits:
                     index = cqasm.values.IndexRef(
-                        variable=cqasm.semantic.Variable(name = "b'q'"))
+                        variable=cqasm.semantic.Variable(name = 'q'))
                     index.indices = cqasm.values.MultiConstInt()
                     index.indices.append(cqasm.values.ConstInt(qubit_index))
                     statement.operands.append(index)

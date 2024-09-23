@@ -26,16 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 from multipledispatch import dispatch
-from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent
@@ -53,26 +53,26 @@ class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict[str, Any] = {}
+        self._parameters: dict[str, any] = {}
 
-        self._noise: Union[NoiseModel, None] = None
+        self._noise: NoiseModel | None = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons: Union[int, None] = None
+        self._min_detected_photons_filter: int | None = None
 
         self._reset_circuit()
 
     def _reset_circuit(self):
-        self._in_ports: Dict = {}
-        self._out_ports: Dict = {}
-        self._postselect: Union[PostSelect, None] = None
+        self._in_ports: dict = {}
+        self._out_ports: dict = {}
+        self._postselect: PostSelect | None = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: List[Tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
+        self._components: list[tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
 
         self._n_moi = None  # Number of modes of interest (moi)
 
@@ -90,11 +90,11 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict[str, Any]):
+    def set_parameters(self, params: dict[str, any]):
         for key, value in params.items():
             self.set_parameter(key, value)
 
-    def set_parameter(self, key: str, value: Any):
+    def set_parameter(self, key: str, value: any):
         if not isinstance(key, str):
             raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
@@ -107,7 +107,7 @@ class AProcessor(ABC):
         self._parameters = {}
 
     def clear_input_and_circuit(self, new_m=None):
-        logger.debug(f"Clear input and circuit in processor {self.name}", channel.general)
+        get_logger().debug(f"Clear input and circuit in processor {self.name}", channel.general)
         self._reset_circuit()
         self._input_state = None
         self._circuit_changed()
@@ -128,7 +128,7 @@ class AProcessor(ABC):
         This post-selection has an impact on the output physical performance
         """
         self.set_parameter('min_detected_photons', n)
-        self._min_detected_photons = n
+        self._min_detected_photons_filter = n
 
     @property
     def input_state(self):
@@ -147,7 +147,7 @@ class AProcessor(ABC):
 
     @property
     @abstractmethod
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         pass
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
@@ -190,8 +190,8 @@ class AProcessor(ABC):
             return self._postselect(state)
         return True
 
-    def copy(self, subs: Union[dict, list] = None):
-        logger.debug(f"Copy processor {self.name}", channel.general)
+    def copy(self, subs: dict | list = None):
+        get_logger().debug(f"Copy processor {self.name}", channel.general)
         new_proc = copy.copy(self)
         new_proc._components = []
         for r, c in self._components:
@@ -240,7 +240,7 @@ class AProcessor(ABC):
         """
         if self._n_moi is None:
             self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
-            logger.debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
+            get_logger().debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
                          channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
@@ -253,7 +253,7 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
-    def _validate_postselect_composition(self, mode_mapping: Dict):
+    def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
             impacted_modes = list(mode_mapping.keys())
             # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
@@ -261,17 +261,17 @@ class AProcessor(ABC):
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
     def _compose_processor(self, connector: ModeConnector, processor, keep_port: bool):
-        logger.debug(f"Compose processor {self.name} with {processor.name}", channel.general)
+        get_logger().debug(f"Compose processor {self.name} with {processor.name}", channel.general)
         self._is_unitary = self._is_unitary and processor._is_unitary
         self._has_td = self._has_td or processor._has_td
         if processor.heralds and not processor.parameters:
             # adding the same processor component again renders incorrect heralds if not copied
             # This concerns our gate based processors from catalog which has no input params
-            logger.debug("  Force copy during processor compose", channel.general)
+            get_logger().debug("  Force copy during processor compose", channel.general)
             processor = processor.copy()
 
         mode_mapping = connector.resolve()
-        logger.debug(f"  Resolved mode mapping to {mode_mapping} during processor compose", channel.general)
+        get_logger().debug(f"  Resolved mode mapping to {mode_mapping} during processor compose", channel.general)
 
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
@@ -289,7 +289,8 @@ class AProcessor(ABC):
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
         if perm_component is not None:
-            logger.debug(f"  Add {perm_component.perm_vector} permutation before processor compose", channel.general)
+            get_logger().debug(
+                f"  Add {perm_component.perm_vector} permutation before processor compose", channel.general)
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
                 # Simplify composition by merging two consecutive PERM components
                 l_perm_r = self._components[-1][0]
@@ -305,7 +306,7 @@ class AProcessor(ABC):
         if perm_component is not None:
             perm_inv = perm_component.copy()
             perm_inv.inverse(h=True)
-            logger.debug(f"  Add {perm_inv.perm_vector} permutation after processor compose", channel.general)
+            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after processor compose", channel.general)
             new_components.append((perm_modes, perm_inv))
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
@@ -403,7 +404,7 @@ class AProcessor(ABC):
             circuit.add(pos_m, component, merge=flatten)
         return circuit
 
-    def non_unitary_circuit(self, flatten: bool = False) -> List:
+    def non_unitary_circuit(self, flatten: bool = False) -> list:
         if self._has_td:  # Inherited from the parent processor in this case
             return self.components
 
@@ -436,7 +437,7 @@ class AProcessor(ABC):
 
         return new_comp
 
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
+    def get_circuit_parameters(self) -> dict[str, Parameter]:
         return {p.name: p for _, c in self._components for p in c.get_parameters()}
 
     @property
@@ -569,11 +570,11 @@ class AProcessor(ABC):
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
 
     def _deduce_min_detected_photons(self, expected_photons: int) -> None:
-        logger.warn(
+        get_logger().warn(
             "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
             " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
             f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
-        self._min_detected_photons = expected_photons
+        self._min_detected_photons_filter = expected_photons
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
@@ -593,17 +594,17 @@ class AProcessor(ABC):
 
         self._input_state = BasicState(input_list)
 
-        if self._min_detected_photons is None:
+        if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
-    def flatten(self) -> List:
+    def flatten(self) -> list:
         """
         :return: a component list where recursive circuits have been flattened
         """
         return _flatten(self)
 
 
-def _flatten(composite, starting_mode=0) -> List:
+def _flatten(composite, starting_mode=0) -> list:
     component_list = []
     for m_range, comp in composite._components:
         if isinstance(comp, Circuit):

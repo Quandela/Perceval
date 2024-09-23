@@ -31,7 +31,6 @@ from .statevector import BasicState, BSDistribution, StateVector
 
 import json
 import re
-from typing import Callable, List, Tuple
 
 
 class PostSelect:
@@ -110,7 +109,7 @@ class PostSelect:
         self._add_condition(indexes, int.__le__, value)
         return self
 
-    def _add_condition(self, indexes, operator: Callable, value: int):
+    def _add_condition(self, indexes, operator: callable, value: int):
         indexes = (indexes,) if isinstance(indexes, int) else tuple(indexes)
         if operator not in self._conditions:
             self._conditions[operator] = []
@@ -149,7 +148,7 @@ class PostSelect:
         """Clear all existing conditions"""
         self._conditions.clear()
 
-    def apply_permutation(self, perm_vector: List[int], first_mode: int = 0):
+    def apply_permutation(self, perm_vector: list[int], first_mode: int = 0):
         """
         Apply a given permutation on the conditions.
 
@@ -182,7 +181,7 @@ class PostSelect:
                 new_indexes = tuple(i + shift for i in indexes)
                 cond[c] = (new_indexes, value)
 
-    def can_compose_with(self, modes: List[int]) -> bool:
+    def can_compose_with(self, modes: list[int]) -> bool:
         """
         Check if all conditions are compatible with a composition on given modes
 
@@ -226,7 +225,7 @@ def post_select_distribution(
         bsd: BSDistribution,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True) -> Tuple[BSDistribution, float]:
+        keep_heralds: bool = True) -> tuple[BSDistribution, float]:
     if not (postselect.has_condition or heralds):
         bsd.normalize()
         return bsd, 1
@@ -254,7 +253,7 @@ def post_select_statevector(
         sv: StateVector,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True) -> Tuple[StateVector, float]:
+        keep_heralds: bool = True) -> tuple[StateVector, float]:
     if not (postselect.has_condition or heralds):
         sv.normalize()
         return sv, 1

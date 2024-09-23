@@ -28,15 +28,14 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from typing import Dict, Callable
 
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel
 
 from .job_status import JobStatus
 
 
 class Job(ABC):
-    def __init__(self, result_mapping_function: Callable = None, delta_parameters=None, command_param_names=None):
+    def __init__(self, result_mapping_function: callable = None, delta_parameters=None, command_param_names=None):
         self._results = None
         self._result_mapping_function = result_mapping_function
         self._delta_parameters = delta_parameters or {"command": {}, "mapping": {}}
@@ -77,7 +76,7 @@ class Job(ABC):
         if kwargs:
             raise RuntimeError(f"Unused parameters in user call ({list(kwargs.keys())})")
 
-    def __call__(self, *args, **kwargs) -> Dict:
+    def __call__(self, *args, **kwargs) -> dict:
         return self.execute_sync(*args, **kwargs)
 
     @property
@@ -106,7 +105,7 @@ class Job(ABC):
         return self.status.running
 
     @abstractmethod
-    def execute_sync(self, *args, **kwargs) -> Dict:
+    def execute_sync(self, *args, **kwargs) -> dict:
         pass
 
     @abstractmethod
@@ -121,17 +120,17 @@ class Job(ABC):
     def _get_results(self):
         pass
 
-    def get_results(self) -> Dict:
+    def get_results(self) -> dict:
         job_status = self.status
 
         if not job_status.maybe_completed:
             raise RuntimeError('The job is still running, results are not available yet.')
 
         if job_status.canceled:
-            logger.warn("Job has been canceled, trying to get partial result.", channel.user)
+            get_logger().warn("Job has been canceled, trying to get partial result.", channel.user)
 
         if job_status.unknown:
-            logger.warn("Unknown job status, trying to get result anyway.", channel.user)
+            get_logger().warn("Unknown job status, trying to get result anyway.", channel.user)
 
         try:
             return self._get_results()

@@ -26,9 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Union
 from enum import Enum
 
 from perceval.utils import BasicState, Encoding, LogicalState
@@ -96,7 +96,7 @@ class Herald(APort):
         return self._value
 
 
-def get_basic_state_from_ports(ports: List[APort], state: LogicalState, add_herald_and_ancillary: bool = False) -> BasicState:
+def get_basic_state_from_ports(ports: list[APort], state: LogicalState, add_herald_and_ancillary: bool = False) -> BasicState:
     """Convert a LogicalState to a BasicState by taking in account a port list
 
     :param ports: port list.
@@ -114,7 +114,7 @@ def get_basic_state_from_ports(ports: List[APort], state: LogicalState, add_hera
     return get_basic_state_from_encoding(encodings, state)
 
 
-def _to_fock(encoding: Encoding, qubit_state: List[int]) -> List[int]:
+def _to_fock(encoding: Encoding, qubit_state: list[int]) -> list[int]:
     """Return the equivalent BasicState from the qubit state, as a list of integers
 
     :param encoding: a qubit encoding
@@ -140,7 +140,7 @@ def _to_fock(encoding: Encoding, qubit_state: List[int]) -> List[int]:
         raise NotImplementedError
 
 
-def get_basic_state_from_encoding(encoding: List[Union[Encoding, int]], logical: LogicalState) -> BasicState:
+def get_basic_state_from_encoding(encoding: list[Encoding | int], logical: LogicalState) -> BasicState:
     fock = []
     i = 0
     for e in encoding:

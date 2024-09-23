@@ -26,8 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from typing import Tuple, Union
+from __future__ import annotations
 
 from .renderer_interface import ICircuitRenderer
 from .abstract_skin import ASkin
@@ -49,7 +48,7 @@ def create_renderer(
     output_format: Format = Format.TEXT,  # rendering method
     skin: ASkin = None,  # skin (unused in text rendering)
     **opts,
-) -> Tuple[ICircuitRenderer, Union[ICircuitRenderer, None]]:
+) -> tuple[ICircuitRenderer, ICircuitRenderer | None]:
     """
     Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
     A skin object is needed for circuit graphic rendering.

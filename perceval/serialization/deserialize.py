@@ -26,9 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 from base64 import b64decode
 from os import path
-from typing import Union
 import json
 from zlib import decompress
 
@@ -59,7 +60,7 @@ def deserialize_float(floatstring):
     return float(floatstring)
 
 
-def deserialize_matrix(pb_mat: Union[str, pb.Matrix]) -> Matrix:
+def deserialize_matrix(pb_mat: str | pb.Matrix) -> Matrix:
     if not isinstance(pb_mat, pb.Matrix):
         pb_binary_repr = pb_mat
         pb_mat = pb.Matrix()
@@ -80,7 +81,7 @@ def matrix_from_file(filepath: str) -> Matrix:
         return deserialize_matrix(f.read())
 
 
-def deserialize_circuit(pb_circ: Union[str, bytes, pb.Circuit]) -> Circuit:
+def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
     if not isinstance(pb_circ, pb.Circuit):
         pb_binary_repr = pb_circ
         pb_circ = pb.Circuit()

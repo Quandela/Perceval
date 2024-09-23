@@ -26,16 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import sys
-from typing import Union
 
 import numpy as np
 from scipy.sparse import csr_array
-if sys.version.startswith('3.8.'):
-    from scipy.sparse import spmatrix as sparray
-else:
-    from scipy.sparse import sparray
+from scipy.sparse import sparray
 
 from perceval.utils.statevector import StateVector
 
@@ -86,7 +83,7 @@ def statevector_to_array(sv: StateVector, index: dict):
     return vector
 
 
-def array_to_statevector(vector: Union[np.ndarray, sparray], reverse_index: list):
+def array_to_statevector(vector: np.ndarray | sparray, reverse_index: list):
     """
     translate an array in a StateVector
     :param vector: an array
@@ -102,7 +99,7 @@ def array_to_statevector(vector: Union[np.ndarray, sparray], reverse_index: list
     return sv
 
 
-def is_hermitian(matrix: Union[sparray, np.ndarray]) -> bool:
+def is_hermitian(matrix: sparray | np.ndarray) -> bool:
 
     n, m = matrix.shape
 

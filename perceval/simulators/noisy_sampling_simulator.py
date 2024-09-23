@@ -26,15 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import math
 import time
-from typing import Callable, Dict, Tuple
+import sys
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
-from perceval.utils.logging import logger, channel
+from perceval.utils.logging import get_logger, channel, deprecated
 
 
 class SamplesProvider:
@@ -47,13 +48,13 @@ class SamplesProvider:
         self._min_samples = 100  # to be sampled at once
         self._max_samples = 2000  # to be sampled at once
 
-    def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: Callable = None):
+    def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: callable = None):
         for noisy_s, prob in noisy_input.items():
             ns = min(math.ceil(prob * n_samples), self._max_samples)
             for bs in noisy_s.separate_state(keep_annotations=False):
                 self._weights.add(bs, ns)
 
-        logger.debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
+        get_logger().debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
                      channel.general)
         for input_state, count in self._weights.items():
             if input_state.n == 0:
@@ -75,7 +76,7 @@ class SamplesProvider:
             self._weights[fock_state] = self._min_samples
 
         n_samples = self._weights[fock_state]
-        logger.debug(f"Simulate {n_samples} more {fock_state.n}-photon samples", channel.general)
+        get_logger().debug(f"Simulate {n_samples} more {fock_state.n}-photon samples", channel.general)
         self._backend.set_input_state(fock_state)
         self._pools[fock_state] += self._backend.samples(n_samples)
         self._weights[fock_state] = max(int(self._weights[fock_state] * self._sample_coeff), 16)
@@ -97,7 +98,7 @@ class NoisySamplingSimulator:
 
     def __init__(self, sampling_backend: ASamplingBackend):
         self._backend = sampling_backend
-        self._min_detected_photon_filter = 0
+        self._min_detected_photons_filter = 0
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._threshold_detector = False
@@ -119,19 +120,25 @@ class NoisySamplingSimulator:
         """
         self._keep_heralds = value
 
-    def set_selection(self, min_detected_photon_filter: int = None,
+    def set_selection(self,
+                      min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None):
+                      heralds: dict = None,
+                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
         """Set multiple selection filters at once to remove unwanted states from computed output distribution
 
-        :param min_detected_photon_filter: minimum number of detected photons in the output distribution
+        :param min_detected_photons_filter: minimum number of detected photons in the output distribution
         :param postselect: a post-selection function
         :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
                         out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
                         on mode 6.
         """
-        if min_detected_photon_filter is not None:
-            self._min_detected_photon_filter = min_detected_photon_filter
+        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
+            get_logger().warn(
+                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
+            min_detected_photons_filter = min_detected_photon_filter
+        if min_detected_photons_filter is not None:
+            self._min_detected_photons_filter = min_detected_photons_filter
         if postselect is not None:
             self._postselect = postselect
         if heralds is not None:
@@ -156,19 +163,29 @@ class NoisySamplingSimulator:
         """
         self._backend.set_circuit(circuit)
 
+    # TODO: remove for PCVL-786
+    @ deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     def set_min_detected_photon_filter(self, value: int):
         """
         Set the physical detection filter. Any output state with less than this threshold gets discarded.
 
         :param value: Minimal photon count in output states of interest.
         """
-        self._min_detected_photon_filter = value
+        self._min_detected_photons_filter = value
+
+    def set_min_detected_photons_filter(self, value: int):
+        """
+        Set the physical detection filter. Any output state with less than this threshold gets discarded.
+
+        :param value: Minimal photon count in output states of interest.
+        """
+        self._min_detected_photons_filter = value
 
     def _perfect_samples_no_selection(
             self,
             input_state: BasicState,
             n_samples: int,
-            progress_callback: Callable = None) -> Dict:
+            progress_callback: callable = None) -> dict:
         self._backend.set_input_state(input_state)
         samples_acquired = 0
         results = BSSamples()
@@ -197,7 +214,7 @@ class NoisySamplingSimulator:
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
-            progress_callback: Callable = None) -> Dict:
+            progress_callback: callable = None) -> dict:
 
         output = BSSamples()
         idx = 0
@@ -229,7 +246,7 @@ class NoisySamplingSimulator:
 
             # Post-processing
             shots += 1
-            if sampled_state.n < self._min_detected_photon_filter:
+            if sampled_state.n < self._min_detected_photons_filter:
                 not_selected_physical += 1
                 continue
             if self._state_selected(sampled_state):
@@ -254,7 +271,7 @@ class NoisySamplingSimulator:
             logical_perf = selected / (selected + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def _check_input_svd(self, svd: SVDistribution) -> Tuple[float, float]:
+    def _check_input_svd(self, svd: SVDistribution) -> tuple[float, float]:
         """
         Check the mixed input state for its validity in the sampling case (no superposed states allowed) and compute
         both Zero Photon Probability (zpp) and MAX Probability of input states containing enough photons (max_p).
@@ -270,12 +287,12 @@ class NoisySamplingSimulator:
             n_photons = next(iter(sv.n))  # Number of photons in the (non superposed) state vector
             if n_photons == 0:
                 zpp += p
-            if n_photons >= self._min_detected_photon_filter:
+            if n_photons >= self._min_detected_photons_filter:
                 max_p = max(max_p, p)
         return zpp, max_p
 
     def _preprocess_input_state(self, svd: SVDistribution, max_p: float, n_threshold: int
-                                ) -> Tuple[BSDistribution, float]:
+                                ) -> tuple[BSDistribution, float]:
         """
         Rework the input distribution to get rid of improbable states. Compute a first value for physical performance
         """
@@ -284,12 +301,12 @@ class NoisySamplingSimulator:
         physical_perf = 1
         for sv, p in svd.items():
             n_photons = next(iter(sv.n))
-            if n_photons < self._min_detected_photon_filter:
+            if n_photons < self._min_detected_photons_filter:
                 physical_perf -= p
             elif p >= p_threshold:
                 new_input[sv[0]] = p
         new_input.normalize()
-        logger.debug(f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
+        get_logger().debug(f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
                      channel.general)
         return new_input, physical_perf
 
@@ -297,7 +314,7 @@ class NoisySamplingSimulator:
                 svd: SVDistribution,
                 max_samples: int,
                 max_shots: int = None,
-                progress_callback: Callable = None) -> Dict:
+                progress_callback: callable = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
@@ -324,7 +341,7 @@ class NoisySamplingSimulator:
         if not self._heralds and not self._postselect.has_condition and len(svd) == 1:
             only_input = next(iter(svd))[0]
             if not only_input.has_annotations:
-                logger.debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call", channel.general)
+                get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call", channel.general)
                 return self._perfect_samples_no_selection(only_input, prepare_samples, progress_callback)
 
         new_input, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
@@ -335,13 +352,37 @@ class NoisySamplingSimulator:
 
         res = self._noisy_sampling(new_input, provider, max_samples, max_shots, progress_callback)
         res['physical_perf'] *= pre_physical_perf
+        self.log_resources(sys._getframe().f_code.co_name, {
+            'n': svd.n_max, 'max_samples': max_samples, 'max_shots': max_shots})
         return res
 
     def sample_count(self,
                      svd: SVDistribution,
                      max_samples: int,
                      max_shots: int = None,
-                     progress_callback: Callable = None) -> Dict:
+                     progress_callback: callable = None) -> dict:
         sampling = self.samples(svd, max_samples, max_shots, progress_callback)
         sampling['results'] = samples_to_sample_count(sampling['results'])
         return sampling
+
+    def log_resources(self, method: str, extra_parameters: dict):
+        """Log resources of the noisy sampling simulator
+
+        :param method: name of the method used
+        :param extra_parameters: extra parameters to log
+
+            Extra parameter can be:
+
+                - max_samples
+                - max_shots
+        """
+        extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}
+        my_dict = {
+            'layer': 'NoisySamplingSimulator',
+            'backend': self._backend.name,
+            'm': self._backend._circuit.m,
+            'method': method
+        }
+        if extra_parameters:
+            my_dict.update(extra_parameters)
+        get_logger().log_resources(my_dict)
