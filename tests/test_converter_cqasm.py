@@ -29,17 +29,21 @@
 
 import pytest
 
+try:
+    import cqasm
+except ModuleNotFoundError as e:
+    assert e.name == "cqasm"
+    pytest.skip("need `cqasm` module", allow_module_level=True)
+
+import numpy as np
 from pathlib import Path
 
-from perceval import StateVector, pdisplay
+from perceval import StateVector
 from perceval.converters import CQASMConverter, ConversionSyntaxError, ConversionUnsupportedFeatureError, ConversionBadVersionError
 import perceval.components.unitary_components as components
 from perceval.components import catalog
-from perceval.rendering.format import Format
 from perceval.utils import BasicState
-from _test_utils import assert_sv_close
 
-import numpy as np
 
 
 def test_converter_version_check():

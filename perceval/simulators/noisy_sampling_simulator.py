@@ -49,6 +49,7 @@ class SamplesProvider:
         self._sample_coeff = 1.1
         self._min_samples = 100  # to be sampled at once
         self._max_samples = 2000  # to be sampled at once
+        self.sleep_between_batches = 0.2
 
     def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: Callable = None):
         for noisy_s, prob in noisy_input.items():
@@ -68,7 +69,7 @@ class SamplesProvider:
 
             if progress_callback:
                 cancel_request = progress_callback(0, 'prepare')
-                time.sleep(0.2)  # else callback method doesn't have time to be called
+                time.sleep(self.sleep_between_batches)  # else callback method doesn't have time to be called
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
@@ -105,6 +106,7 @@ class NoisySamplingSimulator:
         self._heralds: dict = {}
         self._threshold_detector = False
         self._keep_heralds = True
+        self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
 
     def set_threshold_detector(self, value: bool):
         """
@@ -200,7 +202,7 @@ class NoisySamplingSimulator:
 
             if progress_callback:
                 cancel_request = progress_callback(samples_acquired / n_samples, 'sampling')
-                time.sleep(0.2)  # else callback method doesn't have time to be called
+                time.sleep(self.sleep_between_batches)  # else callback method doesn't have time to be called
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
@@ -350,6 +352,7 @@ class NoisySamplingSimulator:
 
         # Prepare pools of pre-computed samples
         provider = SamplesProvider(self._backend)
+        provider.sleep_between_batches = self.sleep_between_batches
         provider.prepare(new_input, prepare_samples, progress_callback)
 
         res = self._noisy_sampling(new_input, provider, max_samples, max_shots, progress_callback)
