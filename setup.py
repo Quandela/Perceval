@@ -22,7 +22,6 @@ setuptools.setup(
         "Tracker": "https://github.com/Quandela/Perceval/issues"
     },
     classifiers=[
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
@@ -41,6 +40,6 @@ setuptools.setup(
         "cqasm_bridge": ["libqasm~=0.6.7"],
     },
     setup_requires=["scmver"],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     scmver=True
 )

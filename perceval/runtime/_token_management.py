@@ -26,9 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import os
-from typing import Union
 
 from perceval.utils.logging import get_logger, channel
 
@@ -56,13 +56,13 @@ class TokenProvider:
         self._env_var = env_var
         self._persistent_data = PersistentData()
 
-    def _from_environment_variable(self) -> Union[str, None]:
+    def _from_environment_variable(self) -> str | None:
         if not self._env_var:
             return None
         TokenProvider._CACHED_TOKEN = os.getenv(self._env_var)
         return TokenProvider._CACHED_TOKEN
 
-    def _from_file(self) -> Union[str, None]:
+    def _from_file(self) -> str | None:
         token = None
         if self._persistent_data.has_file(_TOKEN_FILE_NAME):
             try:
@@ -71,7 +71,7 @@ class TokenProvider:
                 get_logger().warn("Cannot read token persistent file", channel.user)
         return token
 
-    def get_token(self) -> Union[str, None]:
+    def get_token(self) -> str | None:
         """Search for a token to provide
 
         :return: A token, or None if no token was found
@@ -92,7 +92,7 @@ class TokenProvider:
         TokenProvider._CACHED_TOKEN = None
 
     @property
-    def cache(self) -> Union[str, None]:
+    def cache(self) -> str | None:
         return TokenProvider._CACHED_TOKEN
 
     @staticmethod

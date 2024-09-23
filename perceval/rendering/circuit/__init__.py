@@ -27,8 +27,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Type
-
 from .abstract_skin import ASkin, ModeStyle
 from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
@@ -40,7 +38,7 @@ class DisplayConfig:
     _selected_skin = PhysSkin  # Default skin is PhysSkin
 
     @staticmethod
-    def select_skin(skin: Type[ASkin]) -> None:
+    def select_skin(skin: type[ASkin]) -> None:
         DisplayConfig._selected_skin = skin
 
     @staticmethod

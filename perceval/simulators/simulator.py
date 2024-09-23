@@ -26,14 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import sys
 
 from copy import copy
 from multipledispatch import dispatch
 from numbers import Number
+from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
-from typing import Callable, Set, Union, Optional, List, Dict
 
 from perceval.backends import AProbAmpliBackend
 from perceval.components import ACircuit
@@ -228,7 +229,7 @@ class Simulator(ISimulator):
         self.DEBUG_evolve_count = 0
         self.DEBUG_merge_count = 0
 
-    def _evolve_cache(self, input_list: Set[BasicState]):
+    def _evolve_cache(self, input_list: set[BasicState]):
         for state in input_list:
             if state not in self._evolve:
                 self._backend.set_input_state(state)
@@ -262,7 +263,7 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return _to_bsd(self.evolve(input_state))
 
-    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
+    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Callable | None = None):
         decomposed_input = []
         """decomposed input:
         From a SVD = {
@@ -327,7 +328,7 @@ class Simulator(ISimulator):
         res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Optional[Callable] = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable | None = None):
         decomposed_input = []
         """decomposed input:
            From a SVD = {
@@ -394,7 +395,7 @@ class Simulator(ISimulator):
         res.normalize()
         return res
 
-    def probs_svd(self, input_dist: SVDistribution, progress_callback: Optional[Callable] = None):
+    def probs_svd(self, input_dist: SVDistribution, progress_callback: Callable | None = None):
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
@@ -459,7 +460,7 @@ class Simulator(ISimulator):
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf * logical_perf_coeff}
 
-    def evolve(self, input_state: Union[BasicState, StateVector]) -> StateVector:
+    def evolve(self, input_state: BasicState | StateVector) -> StateVector:
         """
         Evolve a state through the circuit
 
@@ -499,8 +500,8 @@ class Simulator(ISimulator):
         return result_sv
 
     def evolve_svd(self,
-                   svd: Union[SVDistribution, StateVector, BasicState],
-                   progress_callback: Optional[Callable] = None) -> dict:
+                   svd: SVDistribution | StateVector | BasicState,
+                   progress_callback: Callable | None = None) -> dict:
         """
         Compute the SVDistribution evolved through a Linear Optical circuit
 
@@ -556,7 +557,7 @@ class Simulator(ISimulator):
 
         return DensityMatrix(out_matrix, index=dm.index, check_hermitian=False)
 
-    def _construct_evolve_operator(self, input_list: List[BasicState], dm: DensityMatrix) -> csc_array:
+    def _construct_evolve_operator(self, input_list: list[BasicState], dm: DensityMatrix) -> csc_array:
         """
             construct the evolution operator needed to perform evolve_density_matrix.
             Stores it in a csc sparse_matrix
@@ -593,7 +594,7 @@ class Simulator(ISimulator):
                 input_list.append(dm.inverse_index[k])
         return input_list
 
-    def log_resources(self, method: str, extra_parameters: Dict):
+    def log_resources(self, method: str, extra_parameters: dict):
         """Log resources of the simulator
 
         :param method: name of the method used

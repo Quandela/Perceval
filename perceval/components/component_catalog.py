@@ -26,11 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import importlib
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List
 
 from perceval.utils import Parameter
 from perceval.components import Processor, Circuit
@@ -132,7 +130,7 @@ class CatalogItem(ABC):
         """Build the component as processor
 
         kwargs:
-            * backend(Union[ABackend, str]): Name or instance of a simulation backend. Default "SLOS"
+            * backend(ABackend or str): Name or instance of a simulation backend. Default "SLOS"
 
         :return: A Perceval processor
         """
@@ -159,7 +157,7 @@ class Catalog:
             if isinstance(obj, CatalogItem):
                 self._items[obj.name] = obj
 
-    def list(self) -> List[str]:
+    def list(self) -> list[str]:
         return list(self._items.keys())
 
     def __contains__(self, item: str) -> bool:

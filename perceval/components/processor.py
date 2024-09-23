@@ -26,12 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import sys
 
 from multipledispatch import dispatch
 from numpy import inf
-from typing import Dict, Callable, Union, List
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
@@ -61,14 +61,14 @@ class Processor(AProcessor):
                   Note: source and noise are mutually exclusive
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = None,
+    def __init__(self, backend: ABackend | str, m_circuit: int | ACircuit = None, source: Source = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
         super().__init__()
         self._init_backend(backend)
         self._init_circuit(m_circuit)
         self._init_noise(noise, source)
         self.name = name
-        self._inputs_map: Union[SVDistribution, None] = None
+        self._inputs_map: SVDistribution | None = None
         self._simulator = None
 
     def _init_noise(self, noise: NoiseModel, source: Source):
@@ -98,7 +98,7 @@ class Processor(AProcessor):
             self._generate_noisy_input()
 
     @property
-    def source_distribution(self) -> Union[SVDistribution, None]:
+    def source_distribution(self) -> SVDistribution | None:
         r"""
         Retrieve the computed input distribution.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
@@ -260,7 +260,7 @@ class Processor(AProcessor):
                                     force=True)
         return circuit
 
-    def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> Dict:
+    def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         from perceval.simulators import NoisySamplingSimulator
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
@@ -276,7 +276,7 @@ class Processor(AProcessor):
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
-    def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
+    def probs(self, precision: float = None, progress_callback: callable = None) -> dict:
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
@@ -305,10 +305,10 @@ class Processor(AProcessor):
         return res
 
     @property
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
 
-    def log_resources(self, method: str, extra_parameters: Dict):
+    def log_resources(self, method: str, extra_parameters: dict):
         """Log resources of the processor
 
         :param method: name of the method used

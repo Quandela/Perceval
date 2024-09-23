@@ -26,12 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 from multipledispatch import dispatch
-from typing import Any, Dict, List, Union, Tuple
 
 from perceval.components.linear_circuit import Circuit, ACircuit
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
@@ -53,26 +53,26 @@ class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict[str, Any] = {}
+        self._parameters: dict[str, any] = {}
 
-        self._noise: Union[NoiseModel, None] = None
+        self._noise: NoiseModel | None = None
 
         self._thresholded_output: bool = False
-        self._min_detected_photons_filter: Union[int, None] = None
+        self._min_detected_photons_filter: int | None = None
 
         self._reset_circuit()
 
     def _reset_circuit(self):
-        self._in_ports: Dict = {}
-        self._out_ports: Dict = {}
-        self._postselect: Union[PostSelect, None] = None
+        self._in_ports: dict = {}
+        self._out_ports: dict = {}
+        self._postselect: PostSelect | None = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: List[Tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
+        self._components: list[tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
 
         self._n_moi = None  # Number of modes of interest (moi)
 
@@ -90,11 +90,11 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict[str, Any]):
+    def set_parameters(self, params: dict[str, any]):
         for key, value in params.items():
             self.set_parameter(key, value)
 
-    def set_parameter(self, key: str, value: Any):
+    def set_parameter(self, key: str, value: any):
         if not isinstance(key, str):
             raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
@@ -147,7 +147,7 @@ class AProcessor(ABC):
 
     @property
     @abstractmethod
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         pass
 
     def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
@@ -190,7 +190,7 @@ class AProcessor(ABC):
             return self._postselect(state)
         return True
 
-    def copy(self, subs: Union[dict, list] = None):
+    def copy(self, subs: dict | list = None):
         get_logger().debug(f"Copy processor {self.name}", channel.general)
         new_proc = copy.copy(self)
         new_proc._components = []
@@ -253,7 +253,7 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
-    def _validate_postselect_composition(self, mode_mapping: Dict):
+    def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
             impacted_modes = list(mode_mapping.keys())
             # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
@@ -404,7 +404,7 @@ class AProcessor(ABC):
             circuit.add(pos_m, component, merge=flatten)
         return circuit
 
-    def non_unitary_circuit(self, flatten: bool = False) -> List:
+    def non_unitary_circuit(self, flatten: bool = False) -> list:
         if self._has_td:  # Inherited from the parent processor in this case
             return self.components
 
@@ -437,7 +437,7 @@ class AProcessor(ABC):
 
         return new_comp
 
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
+    def get_circuit_parameters(self) -> dict[str, Parameter]:
         return {p.name: p for _, c in self._components for p in c.get_parameters()}
 
     @property
@@ -597,14 +597,14 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
-    def flatten(self) -> List:
+    def flatten(self) -> list:
         """
         :return: a component list where recursive circuits have been flattened
         """
         return _flatten(self)
 
 
-def _flatten(composite, starting_mode=0) -> List:
+def _flatten(composite, starting_mode=0) -> list:
     component_list = []
     for m_range, comp in composite._components:
         if isinstance(comp, Circuit):

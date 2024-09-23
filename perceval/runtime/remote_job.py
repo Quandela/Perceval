@@ -29,7 +29,6 @@
 
 import json
 import time
-from typing import Any
 from requests.exceptions import HTTPError, ConnectionError
 
 from .job import Job
@@ -155,7 +154,7 @@ class RemoteJob(Job):
 
         return self._job_status
 
-    def execute_sync(self, *args, **kwargs) -> Any:
+    def execute_sync(self, *args, **kwargs) -> any:
         job = self.execute_async(*args, **kwargs)
         while not job.is_complete:
             time.sleep(self._refresh_progress_delay)
