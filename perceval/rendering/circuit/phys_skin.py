@@ -236,15 +236,15 @@ class PhysSkin(ASkin):
         canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="gold")
         canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name)
 
-    def barrier_shape(self, circuit, canvas, mode_style):
-        if not circuit.visible:
+    def barrier_shape(self, barrier, canvas, mode_style):
+        if not barrier.visible:
             return
 
-        m = circuit.m
+        m = barrier.m
         if canvas.background_color is None:
             canvas.add_rect((10, 10), 30, 50 * m - 20, fill="whitesmoke", stroke="whitesmoke")
         for i in range(m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[ModeStyle.PHOTONIC])
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[mode_style[i]])
         canvas.add_rect((24, 10), 2, 50 * m - 20, fill="dimgrey", stroke="dimgrey")
 
     def perm_shape(self, circuit, canvas, mode_style):

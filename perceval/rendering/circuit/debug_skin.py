@@ -26,23 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-import math
-from multipledispatch import dispatch
-
-from perceval.components import AComponent, Circuit, Port, Herald, PortLocation,\
-    unitary_components as cp,\
-    non_unitary_components as nu
+from perceval.components import unitary_components as cp
 from .abstract_skin import ModeStyle
 from .phys_skin import PhysSkin
-from .skin_common import bs_convention_color
 
 
 class DebugSkin(PhysSkin):
     def __init__(self, compact_display: bool = False):
         super().__init__(compact_display)
         self.style[ModeStyle.PHOTONIC]["stroke_width"] = 8
-        self.style[ModeStyle.HERALD] = {"stroke": "yellow", "stroke_width": 1}  # Display ancillary modes in yellow
+        self.style[ModeStyle.HERALD] = {"stroke": "orange", "stroke_width": 3}  # Display ancillary modes in yellow
 
     def ps_shape(self, circuit: cp.PS, canvas, mode_style):
         canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])

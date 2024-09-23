@@ -228,15 +228,14 @@ class SymbSkin(ASkin):
             **self.style[ModeStyle.PHOTONIC], fill="lightyellow")
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
 
-    def barrier_shape(self, circuit, canvas, mode_style):
-        if not circuit.visible:
+    def barrier_shape(self, barrier: cp.Barrier, canvas, mode_style):
+        if not barrier.visible:
             return
-        m = circuit.m
+
+        m = barrier.m
         canvas.add_mline((24, 10, 24, 50 * m - 16), stroke_width=1, stroke="lightgray")
         for i in range(m):
-            canvas.add_mpath(
-                ["M", 0, 25 + i*50, "l", 50, 0],
-                **self.style[ModeStyle.PHOTONIC])
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50, 0], **self.style[mode_style[i]])
 
     def perm_shape(self, circuit, canvas, mode_style):
         for an_input, an_output in enumerate(circuit.perm_vector):
