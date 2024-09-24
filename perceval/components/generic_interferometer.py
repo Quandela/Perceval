@@ -31,6 +31,7 @@ from collections.abc import Callable
 
 from .linear_circuit import ACircuit, Circuit
 
+
 from perceval.utils import InterferometerShape
 from perceval.utils.logging import get_logger, channel
 
@@ -41,13 +42,19 @@ class GenericInterferometer(Circuit):
     :param m: number of modes
     :param fun_gen: generator function for the building components, index is an integer allowing to generate
                     named parameters - for instance:
-                    :code:`fun_gen=lambda idx: phys.BS()//(0, phys.PS(pcvl.P(f"phi_{idx}")))`
+                    :code:`fun_gen=lambda idx: pcvl.BS()//(0, pcvl.PS(pcvl.P(f"phi_{idx}")))`
     :param shape: The output interferometer shape (InterferometerShape.RECTANGLE or InterferometerShape.TRIANGLE)
     :param depth: if None, maximal depth is :math:`m-1` for rectangular shape, :math:`m` for triangular shape.
                   Can be used with :math:`2*m` to reproduce :cite:`fldzhyan2020optimal`.
     :param phase_shifter_fun_gen: a function generating a phase_shifter circuit.
     :param phase_at_output: if True creates a layer of phase shifters at the output of the generated interferometer
                             else creates it in the input (default: False)
+    :param upper_component_gen fun_gen: generator function for the building the upper component, index is an integer allowing to generate
+                    named parameters - for instance:
+                    :code:`fun_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_upper_{idx}"))`
+    :param lower_component_gen: generator function for the building the lower component, index is an integer allowing to generate
+                    named parameters - for instance:
+                    :code:`fun_gen=lambda idx: pcvl.PS(pcvl.P(f"phi_lower_{idx}"))`
 
     See :cite:`fldzhyan2020optimal`, :cite:`clements2016optimal` and :cite:`reck1994experimental`
     """
@@ -57,7 +64,9 @@ class GenericInterferometer(Circuit):
                  shape: InterferometerShape = InterferometerShape.RECTANGLE,
                  depth: int = None,
                  phase_shifter_fun_gen: Callable[[int], ACircuit] = None,
-                 phase_at_output: bool = False):
+                 phase_at_output: bool = False,
+                 upper_component_gen: Callable[[int], ACircuit] = None,
+                 lower_component_gen: Callable[[int], ACircuit] = None):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
@@ -66,6 +75,8 @@ class GenericInterferometer(Circuit):
         self._depth_per_mode = [0] * m
         self._pattern_generator = fun_gen
         self._has_input_phase_layer = False
+        self._upper_component_gen = upper_component_gen
+        self._lower_component_gen = lower_component_gen
         if phase_shifter_fun_gen and not phase_at_output:
             self._has_input_phase_layer = True
             for i in range(0, m):
@@ -74,6 +85,8 @@ class GenericInterferometer(Circuit):
         if shape == InterferometerShape.RECTANGLE:
             self._build_rectangle()
         elif shape == InterferometerShape.TRIANGLE:
+            if upper_component_gen or lower_component_gen:
+                get_logger().warn(f"upper_component_gen or lower_component_gen cannot be applied for shape {shape}")
             self._build_triangle()
         else:
             raise NotImplementedError(f"Shape {shape} not supported")
@@ -105,15 +118,44 @@ class GenericInterferometer(Circuit):
         for p in self.get_parameters():
             p.set_value(math.pi)
 
+    def _add_single_mode_component(self, mode: int, component: ACircuit) -> None:
+        """Add a component to the circuit, check if it's a one mode circuit
+
+        :param mode: mode to add the component
+        :param component: component to add
+        """
+        assert component.m == 1, f"Component should always be a one mode circuit, instead it's a {component.m} modes circuit"
+        self.add(mode, component)
+
+    def _add_upper_component(self, i_depth: int) -> None:
+        """Add a component with upper_component_gen between the interferometer on the first mode
+
+        :param i_depth: depth index of the interferometer
+        """
+        if self._upper_component_gen and i_depth % 2 == 1:
+            self._add_single_mode_component(0, self._upper_component_gen(i_depth // 2))
+
+    def _add_lower_component(self, i_depth: int) -> None:
+        """Add a component with lower_component_gen between the interferometer on the last mode
+
+        :param i_depth: depth index of the interferometer
+        """
+        # If m is even, the component is added at even depth index, else it's added in at odd depth index
+        if (self._lower_component_gen and
+                ((i_depth % 2 == 1 and self.m % 2 == 0) or (i_depth % 2 == 0 and self.m % 2 == 1))):
+            self._add_single_mode_component(self.m - 1, self._lower_component_gen(i_depth // 2))
+
     def _build_rectangle(self):
         max_depth = self.m if self._depth is None else self._depth
         idx = 0
         for i in range(0, max_depth):
+            self._add_upper_component(i)
+            self._add_lower_component(i)
             for j in range(0+i%2, self.m-1, 2):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):
                     continue
-                self.add((j, j+1), self._pattern_generator(idx), merge=True, x_grid=i)
+                self.add((j, j+1), self._pattern_generator(idx), merge=True)
                 self._depth_per_mode[j] += 1
                 self._depth_per_mode[j+1] += 1
                 idx += 1

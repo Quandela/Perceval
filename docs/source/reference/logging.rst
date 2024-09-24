@@ -38,7 +38,7 @@ To log a message, you can use it the same way as the python logger:
 
 .. code-block:: python
 
-    from perceval.utils import logger
+    from perceval.utils import get_logger
     get_logger().info('I log something as info')
     # or
     logger = get_logger()
@@ -166,7 +166,7 @@ Example
 
 .. code-block:: python
 
-    from perceval.utils.logging import get_logger(), channel, level
+    from perceval.utils.logging import get_logger, channel, level
     logger = get_logger()
     logger.enable_file()
     logger.set_level(level.info, channel.resources)
