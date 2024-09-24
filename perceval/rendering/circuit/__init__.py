@@ -31,7 +31,7 @@ from .abstract_skin import ASkin, ModeStyle
 from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
 from .debug_skin import DebugSkin
-from .renderer import create_renderer
+from .create_renderer import create_renderer
 
 
 class DisplayConfig:

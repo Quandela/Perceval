@@ -31,9 +31,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, AProcessor, PERM
-from perceval.components.abstract_component import AComponent
-from perceval.components.non_unitary_components import TD
+from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD
+from perceval.utils import format_parameters
 
 
 class ModeStyle(Enum):
@@ -60,9 +59,10 @@ class ASkin(ABC):
         self._compact = compact_display
         self.style = {ModeStyle.PHOTONIC: stroke_style,
                       ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
-                      # ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}  # Use this for debug
                       }
         self.style_subcircuit = style_subcircuit
+        self.precision: float = 1e-6
+        self.nsimplify: bool = True
 
     @dispatch((ACircuit, TD), bool)
     def get_size(self, c: ACircuit, recursive: bool = False) -> tuple[int, int]:
@@ -119,3 +119,6 @@ class ASkin(ABC):
     @abstractmethod
     def get_shape(self, c) -> callable:
         """Returns the shape function of component c"""
+
+    def _get_display_content(self, circuit: ACircuit) -> str:
+        return format_parameters(circuit.get_variables(), self.precision, self.nsimplify)
