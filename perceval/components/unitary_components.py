@@ -447,10 +447,10 @@ class Barrier(ACircuit):
     """Behaves like an identity unitary, visually represented as a barrier."""
     DEFAULT_NAME = "I"
 
-    def __init__(self, num_modes: int, visible: bool = True):
-        assert isinstance(num_modes, int), "Barrier"
+    def __init__(self, m: int, visible: bool = True):
+        assert isinstance(m, int), "Barrier() first parameter has to be an integer (mode count)"
         self._visible = bool(visible)
-        super().__init__(num_modes)
+        super().__init__(m)
 
     @property
     def visible(self):

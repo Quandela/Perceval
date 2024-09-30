@@ -124,6 +124,12 @@ class ComponentSerializer:
         pb_pr.delta.CopyFrom(serialize_parameter(pr._delta))
         self._pb.polarization_rotator.CopyFrom(pb_pr)
 
+    @dispatch(comp.Barrier)
+    def _serialize(self, barrier: comp.Barrier):
+        pb_barrier = pb.Barrier()
+        pb_barrier.visible = barrier.visible
+        self._pb.barrier.CopyFrom(pb_barrier)
+
     @dispatch(Circuit)
     def _serialize(self, circuit: Circuit):
         pb_circ = serialize_circuit(circuit)
