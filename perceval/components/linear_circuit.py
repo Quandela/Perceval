@@ -52,7 +52,6 @@ class ACircuit(AParametrizedComponent, ABC):
     Parameters can be fixed (value) or variables.
     """
     _supports_polarization = False
-    _x_grid = None
 
     def __init__(self, m: int, name: str = None):
         super().__init__(m, name)
@@ -362,67 +361,6 @@ class Circuit(ACircuit):
         """
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
-    def _check_x_grid_consistency(self):
-        r"""Check that components with x_grid value have consistent x_grid values - ie it is not possible to have
-            right components with lower x_grid than left components
-
-        :raise: ``ValueError``: if x_grid values are not consistent
-        """
-        x_grids = [None for _ in range(self._m)]
-        for port_range, component in self._components:
-            if component._x_grid is not None:
-                for port in port_range:
-                    if x_grids[port] is not None and x_grids[port] >= component._x_grid:
-                        raise ValueError("x_grid values are not consistent")
-                    x_grids[port] = component._x_grid
-
-    def group_components_by_xgrid(self) -> list[list[tuple[int], ACircuit]]:
-        r"""Group the components according to their x_grid to facilitate rendering
-
-        Grouping rule is simple: components without x_grid are singleton, components with similar x_grid are grouped
-        together at the position of the first one, moving of the components force recursively parents components to move
-        This reordering works if x_grid values are consistent which is guaranteed by construction"""
-
-        # list all the x_grid values
-        x_grid_groups = set()
-        for idx, (range, component) in enumerate(self._components):
-            if component._x_grid is not None:
-                x_grid_groups.add(component._x_grid)
-
-        # we will need to display all the x_grid values in order, so we sort them
-        sorted_x_grid = sorted(x_grid_groups)
-
-        displayed_components = [False] * len(self._components)
-        grouped_components = []
-
-        for x_grid in sorted_x_grid:
-            x_grid_group = []
-            block = [False] * self.m
-            for idx, (range, component) in enumerate(self._components):
-                # do not display twice same component and do not pass through a blocked port
-                if displayed_components[idx] or any([block[port] for port in range]):
-                    continue
-                if component._x_grid is not None:
-                    for port in range:
-                        block[port] = True
-                    if component._x_grid == x_grid:
-                        x_grid_group.append((range, component))
-                    else:
-                        # do not mark displayed a component with another x_grid
-                        continue
-                else:
-                    grouped_components.append([(range, component),])
-                displayed_components[idx] = True
-            grouped_components.append(x_grid_group)
-
-        # now add all non displayed components
-        for idx, (range, component) in enumerate(self._components):
-            if displayed_components[idx]:
-                continue
-            grouped_components.append([(range, component),])
-
-        return grouped_components
-
     def barrier(self):
         r"""Add a barrier to a circuit
 
@@ -457,17 +395,14 @@ class Circuit(ACircuit):
         return c
 
     def add(self, port_range: int | tuple[int, ...],
-            component: ACircuit, merge: bool = False, x_grid: int = None) -> Circuit:
+            component: ACircuit, merge: bool = False) -> Circuit:
         r"""Add a component in a circuit
 
         :param port_range: the port range as a tuple of consecutive ports, or the initial port where to add the
                            component
         :param component: the component to add, must be a linear component or circuit
         :param merge: when the component is a complex circuit, if True, flatten the added circuit.
-                      Otherwise keep the nested structure (default False)
-        :x_grid: if not None, the component is aligned based on this x_grid value according to the following rule:
-                 - any other component with the same x_grid will be vertically aligned
-                 - components with lower x_grids will be on the left
+                      Otherwise, keep the nested structure (default False)
         :return: the circuit itself, allowing to add multiple components in a same line
         :raise: ``AssertionError`` if parameters are not valid
         """
@@ -493,26 +428,11 @@ class Circuit(ACircuit):
                 self._params[p.name] = p
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
-            first = True
-            for idx, (sprange, sc) in enumerate(component._components):
-                if x_grid is not None:
-                    if first:
-                        x_grid_first = sc._x_grid
-                        sc._x_grid = x_grid
-                        first = False
-                    elif sc._x_grid is not None:
-                        if x_grid_first is None:
-                            x_grid_first = sc._x_grid-1
-                        sc._x_grid = x_grid + (sc._x_grid - x_grid_first)/100
-                    else:
-                        sc._x_grid = x_grid + idx/10000
+            for sprange, sc in component._components:
                 nprange = tuple(r + port_range[0] for r in sprange)
                 self._components.append((nprange, sc))
         else:
-            component._x_grid = x_grid
             self._components.append((port_range, component))
-        if x_grid is not None:
-            self._check_x_grid_consistency()
         return self
 
     def _compute_unitary(self,

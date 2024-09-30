@@ -30,7 +30,7 @@ import math
 from collections.abc import Callable
 
 from .linear_circuit import ACircuit, Circuit
-
+from .unitary_components import Barrier
 
 from perceval.utils import InterferometerShape
 from perceval.utils.logging import get_logger, channel
@@ -150,7 +150,6 @@ class GenericInterferometer(Circuit):
         idx = 0
         for i in range(0, max_depth):
             self._add_upper_component(i)
-            self._add_lower_component(i)
             for j in range(0+i%2, self.m-1, 2):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):
@@ -159,22 +158,20 @@ class GenericInterferometer(Circuit):
                 self._depth_per_mode[j] += 1
                 self._depth_per_mode[j+1] += 1
                 idx += 1
+            self._add_lower_component(i)
+            self.add(0, Barrier(self.m, visible=False))
 
     def _build_triangle(self):
         idx = 0
-        # record the physical position of each block for aligning purpose
-        pos_mode = [0] * self.m
         for i in range(1, self.m):
             for j in range(i, 0, -1):
                 if self._depth is not None and (self._depth_per_mode[j-1] == self._depth
                                                 or self._depth_per_mode[j] == self._depth):
                     continue
-                pos_component = max(pos_mode[j-1], pos_mode[j])
-                self.add((j-1, j), self._pattern_generator(idx), merge=True, x_grid=pos_component)
+                self.add((j-1, j), self._pattern_generator(idx), merge=True)
+                self.add((j-1, j), Barrier(2, visible=False))
                 self._depth_per_mode[j-1] += 1
                 self._depth_per_mode[j] += 1
-                pos_mode[j-1] = pos_component+1
-                pos_mode[j] = pos_component+1
                 idx += 1
 
     def _find_param_index(self, col: int, lin: int, even_col_size: int, odd_col_size: int) -> int:
