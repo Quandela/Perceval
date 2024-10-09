@@ -101,7 +101,7 @@ ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
 
         :return: Circuit implementing the post-selected n-qubit controlled gate.
         """
-        if not "n" in kwargs:
+        if "n" not in kwargs:
             raise KeyError("Missing input n")
         n = kwargs["n"]
         if not isinstance(n, int):
