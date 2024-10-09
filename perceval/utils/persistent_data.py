@@ -37,7 +37,7 @@ from .metadata import PMetadata
 from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"
-
+SUB_DIRECTORIES = ['logs', 'job_group']
 
 def _removesuffix(data, suffix):
     """Replace the python 3.9 method removesuffix
@@ -210,7 +210,7 @@ class PersistentData:
         """Delete all persistent data except for log
         """
         for file in os.listdir(self._directory):
-            if all(keyword not in file for keyword in ['logs', 'job_group']):
+            if all(keyword not in file for keyword in SUB_DIRECTORIES):
                 self.delete_file(file)
 
     @property
@@ -220,3 +220,29 @@ class PersistentData:
         :return: persistent data directory
         """
         return self._directory
+
+    def create_sub_directory(self, relative_path):
+        """
+        Creates a sub folder in persistent data directory if non-existent
+        """
+        dir_path = os.path.join(self.directory, relative_path)
+
+        try:
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+        except OSError as exc:
+            warnings.warn(UserWarning(f"{exc}"))
+
+        if not PersistentData._is_subdir_writable(dir_path):
+            raise PermissionError(f"Write permission denied for sub-directory {relative_path}")
+
+        if not PersistentData._is_subdir_readable(dir_path):
+            raise PermissionError(f"Read permission denied for sub-directory {relative_path}")
+
+    @staticmethod
+    def _is_subdir_writable(path_sub_dir):
+        return os.access(path_sub_dir, os.W_OK)
+
+    @staticmethod
+    def _is_subdir_readable(path_sub_dir):
+        return os.access(path_sub_dir, os.R_OK)

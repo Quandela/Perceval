@@ -32,17 +32,17 @@ from unittest.mock import patch
 from perceval.runtime import JobGroup, RemoteJob
 from perceval.components import catalog
 from perceval.algorithm import Sampler
-from perceval.utils import BasicState, get_logger, PersistentData
+from perceval.utils import BasicState, get_logger
 from _mock_rpc_handler import get_rpc_handler
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
-@patch.object(JobGroup, 'list_saved_job_groups')
+@patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_write_job_group_to_disk')
 def test_job_group_creation(mock_write_file, mock_list):
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
-    assert len(jgroup.job_group_data) == 0  # empty job group
+    assert len(jgroup.list_remote_jobs) == 0  # empty job group
 
     assert jgroup._group_info['created_date'] == jgroup._group_info['modified_date']
 
@@ -50,7 +50,7 @@ def test_job_group_creation(mock_write_file, mock_list):
     mock_write_file.assert_called_once()
     mock_list.assert_called_once()
 
-@patch.object(JobGroup, 'list_saved_job_groups')
+@patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_write_job_group_to_disk')
 def test_reject_non_remote_job(mock_write_file, mock_list):
     # creating a local job - sampling
@@ -67,7 +67,7 @@ def test_reject_non_remote_job(mock_write_file, mock_list):
     mock_write_file.assert_called_once()
     mock_list.assert_called_once()
 
-@patch.object(JobGroup, 'list_saved_job_groups')
+@patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_read_job_group_from_disk')
 @patch.object(JobGroup, '_write_job_group_to_disk')
 @patch.object(get_logger(), "warn")
@@ -80,9 +80,9 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
     for _ in range(10):
         jgroup.add(remote_job)
 
-    assert len(jgroup.job_group_data) == 10
+    assert len(jgroup.list_remote_jobs) == 10
 
-    for each_job in jgroup.job_group_data:
+    for each_job in jgroup._group_info['job_group_data']:
         assert each_job['id'] is None
         assert each_job['status'] is None
         assert not each_job['body']  # empty mock remote job added - no body
@@ -97,7 +97,7 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
     assert mock_read.call_count == 10
 
 
-@patch.object(JobGroup, 'list_saved_job_groups')
+@patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_read_job_group_from_disk')
 @patch.object(JobGroup, '_write_job_group_to_disk')
 @patch.object(get_logger(), "warn")
@@ -107,13 +107,13 @@ def test_check_progress_group(mock_warn, mock_write_file,
     remote_job = RemoteJob({}, mock_rpc, 'a_remote_job')
 
     num_rj_add = 10
-    target_status_list = ['Not_sent']*num_rj_add
+    target_status_list = ['not_sent']*num_rj_add
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(num_rj_add):
         jgroup.add(remote_job)
 
-    assert len(jgroup.job_group_data) == 10
+    assert len(jgroup.list_remote_jobs) == 10
 
     group_status_list = jgroup.progress()
 
