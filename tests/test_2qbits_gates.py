@@ -159,9 +159,6 @@ def test_inverted_cnot(cnot_gate):
     processor = Processor("SLOS", 4)
     processor.add([0, 1], BS.H())
     processor.add([2, 3], BS.H())
-    # Commented lines are use to compare with a26b0bd (0.8.1 before cnot fix)
-    # processor.add([2, 3, 0, 1], catalog["postprocessed cnot"].as_processor().build()) # < 0.9.0
-    # processor.clear_postprocess() # < 0.9.0
     processor.add(
         [2, 3, 0, 1], catalog[cnot_gate].build_processor())  # >= 0.9.0
     processor.add([0, 1], BS.H())

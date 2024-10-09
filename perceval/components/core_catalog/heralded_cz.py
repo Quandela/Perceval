@@ -29,11 +29,9 @@
 
 import math
 
-from perceval.components import Processor
-from perceval.components.unitary_components import Circuit, PERM, BS, PS
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components import Processor, Circuit, PERM, BS, PS
+from perceval.components.component_catalog import CatalogItem
 from perceval.components.port import Port, Encoding
-from perceval.utils.logging import deprecated
 
 
 class HeraldedCzItem(CatalogItem):
@@ -52,14 +50,6 @@ data (dual rail) ─────┤     ├───── data (dual rail)
 
     def __init__(self):
         super().__init__("heralded cz")
-        self._default_opts['type'] = AsType.PROCESSOR
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        if self._opt('type') == AsType.CIRCUIT:
-            return self.build_circuit()
-        elif self._opt('type') == AsType.PROCESSOR:
-            return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs) -> Circuit:
         # the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).

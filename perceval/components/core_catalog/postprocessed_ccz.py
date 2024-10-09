@@ -30,7 +30,7 @@
 from math import pi
 
 from perceval.components import Circuit, Port, Unitary
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog import controlled_rotation_gates
 from perceval.utils import Encoding, PostSelect, Matrix
 
@@ -51,7 +51,6 @@ data (dual rail)  ─────┤     ├───── data (dual rail)
 
     def __init__(self):
         super().__init__("postprocessed ccz")
-        self._default_opts['type'] = AsType.PROCESSOR
 
     def build_circuit(self, **kwargs):
         m = Matrix(controlled_rotation_gates.build_control_gate_unitary(3, pi))

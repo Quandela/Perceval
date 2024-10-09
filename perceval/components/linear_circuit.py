@@ -41,7 +41,7 @@ import scipy.optimize as so
 
 from perceval.components.abstract_component import AParametrizedComponent
 from perceval.utils import Parameter, Matrix, MatrixN, matrix_double, global_params, InterferometerShape
-from perceval.utils.logging import get_logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms import decomposition, Match
 from perceval.utils.algorithms.solve import solve
 
@@ -577,22 +577,6 @@ class Circuit(ACircuit):
         if u is None:
             u = Matrix.eye(self._m, use_symbolic=use_symbolic)
         return u
-
-    @staticmethod
-    @deprecated(version="0.10.0", reason="Construct a GenericInterferometer object instead")
-    def generic_interferometer(m: int,
-                               fun_gen: Callable[[int], ACircuit],
-                               shape: str | InterferometerShape = InterferometerShape.RECTANGLE,
-                               depth: int = None,
-                               phase_shifter_fun_gen: Callable[[int], ACircuit] | None = None,
-                               phase_at_output: bool = False) -> Circuit:
-        from .generic_interferometer import GenericInterferometer  # Import in method to avoir circular dependency
-        if isinstance(shape, str):
-            try:
-                shape = InterferometerShape[shape.upper()]
-            except:
-                raise ValueError(f"Unknown interferometer shape: {shape}")
-        return GenericInterferometer(m, fun_gen, shape, depth, phase_shifter_fun_gen, phase_at_output)
 
     def copy(self, subs: dict | list = None):
         nc = copy.deepcopy(self)
