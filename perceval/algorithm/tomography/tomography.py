@@ -109,7 +109,7 @@ class StateTomography(AAlgorithm):
         :param prep_state_indices: list of length of number of qubits to index the corresponding preparation circuit
         :return: density matrix for a given input state preparation. size_hilbert x size_hilbert array.
         """
-        density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype='complex_')
+        density_matrix = np.zeros((self._size_hilbert, self._size_hilbert), dtype=np.cdouble)
 
         pauli_meas_indices = _generate_pauli_index(self._nqubit)  # generates indices for measurement
 
@@ -161,7 +161,7 @@ class ProcessTomography(AProcessTomography):
             density_matrices.append(self._qst.perform_state_tomography(prep_state_indices))
         # this creates the fixed basis for the Pauli states prepared 0, 1, + and i
 
-        lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
+        lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype=np.cdouble)
 
         for j in range(self._size_hilbert ** 2):
             rhoj = _get_canonical_basis_ops(j, self._size_hilbert)
@@ -227,7 +227,7 @@ class ProcessTomography(AProcessTomography):
         :param operator: Gate (or operator) matrix
         :return: error process matrix
         """
-        V = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
+        V = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype=np.cdouble)
         for m in range(self._size_hilbert ** 2):
             for n in range(self._size_hilbert ** 2):
                 Emdag = np.transpose(np.conjugate(_get_fixed_basis_ops(m, self._nqubit)))
