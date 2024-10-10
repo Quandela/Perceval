@@ -40,7 +40,7 @@ TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 def test_new_np():
     u = sp.eye(3)
     M = pcvl.Matrix(u)
-    assert np.array_equal(M, np.eye(3, dtype=np.cdouble))
+    assert u.equals(M)
     assert not M.is_symbolic()
 
 
