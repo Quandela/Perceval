@@ -143,14 +143,12 @@ class StatevectorConverter:
     def from_qutip_to_perceval(self, q_sv):
         r"""Converts a Statevector from qutip to a StateVector from Perceval
         """
-        q_sv = q_sv.data.to_array().reshape(-1)
-        return self._to_perceval(q_sv)
+        return self._to_perceval(q_sv.data.to_array().reshape(-1))
 
     def from_qiskit_to_perceval(self, q_sv):
         r"""Converts a Statevector from qiskit to a StateVector from Perceval
         """
-        q_sv = np.array(q_sv).reshape(-1)
-        return self._to_perceval(q_sv)
+        return self._to_perceval(np.array(q_sv).reshape(-1))
 
     def _to_perceval(self, q_sv: np.ndarray):
         r"""Converts a Statevector from qiskit or qutip to a StateVector from Perceval
