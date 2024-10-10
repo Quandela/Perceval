@@ -27,20 +27,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 from unittest.mock import patch
 
 from perceval.utils import PersistentData
 from perceval.rendering.circuit import DisplayConfig, PhysSkin, DebugSkin
-
+from perceval.rendering.circuit.display_config import _get_default_skin
 
 @patch.object(PersistentData, "load_config")
 @patch.object(PersistentData, "save_config")
-def test_default_display_config(mock_save_config, mock_load_config):
-    # This test only works if there is no user config for display config
+def test_display_config(mock_save_config, mock_load_config):
     mock_load_config.return_value = {}
+    DisplayConfig.select_skin(_get_default_skin())  # Force the default skin to use the mock return value
     assert DisplayConfig._selected_skin == PhysSkin
     DisplayConfig.select_skin(DebugSkin)
     assert DisplayConfig._selected_skin == DebugSkin
     DisplayConfig.save_select_skin()
-    assert mock_save_config.call_count == 1
     assert mock_save_config.call_args.args[0] == {'pdisplay': {'skin': 'DebugSkin'}}
+
+    mock_load_config.return_value = {'pdisplay': {'skin': 'DebugSkin'}}
+    DisplayConfig.select_skin(_get_default_skin())  # Force the default skin to use the mock return value
+    assert DisplayConfig._selected_skin == DebugSkin
