@@ -16,7 +16,7 @@ Alternatively, if you are interested in contributing to the project - you can cl
 
    (venv) $ git clone https://github.com/quandela/Perceval
    (venv) $ cd Perceval
-   (venv) $ pip install . # or pip install -e . for developers or pip install .[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge] to install bridges
+   (venv) $ pip install . # or pip install -e . for developers or pip install .[all] to install bridges
 
 Tutorial
 --------

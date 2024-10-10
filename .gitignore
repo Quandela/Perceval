@@ -5,7 +5,8 @@ build
 .eggs/
 dist/
 .idea/
-venv*/
+venv*
 *.whl
 .ipynb_checkpoints/
 .coverage
+.vscode*

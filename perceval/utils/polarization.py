@@ -37,6 +37,15 @@ from .statevector import BasicState
 from .matrix import Matrix
 
 
+POLARIZATION_MAPPING = {
+    "H": (sp.S(0), sp.S(0)),
+    "V": (sp.pi, sp.S(0)),
+    "D": (sp.pi/2, sp.S(0)),
+    "A": (sp.pi/2, sp.pi),
+    "R": (sp.pi/2, 3*sp.pi/2),
+    "L": (sp.pi/2, sp.pi/2),
+}
+
 class Polarization:
     r"""Polarization class
 
@@ -49,20 +58,9 @@ class Polarization:
     def __init__(self,
                  v: str | any | tuple[any, any]):
         if isinstance(v, str):
-            if v == "H":
-                self.theta_phi = (0, 0)
-            elif v == "V":
-                self.theta_phi = (sp.pi, 0)
-            elif v == "D":
-                self.theta_phi = (sp.pi/2, 0)
-            elif v == "A":
-                self.theta_phi = (sp.pi/2, sp.pi)
-            elif v == "R":
-                self.theta_phi = (sp.pi/2, 3*sp.pi/2)
-            elif v == "L":
-                self.theta_phi = (sp.pi/2, sp.pi/2)
-            else:
-                raise ValueError("undefined value '%s' for polarization" %v)
+            if v not in POLARIZATION_MAPPING:
+                raise ValueError("undefined value '%s' for polarization" % v)
+            self.theta_phi = POLARIZATION_MAPPING[v]
         elif isinstance(v, tuple):
             if len(v) != 2:
                 raise ValueError("Polarization is defined by 2 angles")
@@ -74,7 +72,7 @@ class Polarization:
                     raise ValueError("incorrect definition for polarization angle: %s" % str(vs))
             if v[0] < sp.S("0") or v[0] > sp.S("pi"):
                 raise ValueError("theta should be in [0,pi]")
-            if v[0] < sp.S("0") or v[0] >= sp.S("2*pi"):
+            if v[1] < sp.S("0") or v[1] >= sp.S("2*pi"):
                 raise ValueError("theta should be in [0,2*pi[")
             self.theta_phi = v
         elif isinstance(v, complex):
@@ -144,19 +142,9 @@ class Polarization:
                     * np.sin(float(self.theta_phi[0])/2))
 
     def __str__(self):
-        if self.theta_phi[0] == sp.S(0) and self.theta_phi[1] == sp.S(0):
-            return "H"
-        if self.theta_phi[0] == sp.pi and self.theta_phi[1] == sp.S(0):
-            return "V"
-        if self.theta_phi[0] == sp.pi/2:
-            if self.theta_phi[1] == sp.S(0):
-                return "D"
-            if self.theta_phi[1] == sp.pi:
-                return "A"
-            if self.theta_phi[1] == 3*sp.pi/2:
-                return "R"
-            if self.theta_phi[1] == sp.pi/2:
-                return "L"
+        for key, (theta_phi_0, theta_phi_1) in POLARIZATION_MAPPING.items():
+            if theta_phi_0.equals(self.theta_phi[0]) and theta_phi_1.equals(self.theta_phi[1]):
+                return key
         if self.theta_phi[1] == 0:
             return str(self.theta_phi[0])
         return "(%s,%s)" % (str(self.theta_phi[0]), str(self.theta_phi[1]))

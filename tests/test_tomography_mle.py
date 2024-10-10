@@ -37,7 +37,7 @@ from perceval.algorithm import ProcessTomographyMLE, StateTomographyMLE
 from perceval.algorithm.tomography.tomography_utils import process_fidelity, is_physical
 
 
-CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
+CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=np.cdouble)
 
 GHZ_TARGET = np.zeros((8, 8))
 GHZ_TARGET[0, 0], GHZ_TARGET[0, -1], GHZ_TARGET[-1, 0], GHZ_TARGET[-1, -1] = 1, 1, 1, 1

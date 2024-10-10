@@ -89,7 +89,7 @@ def _matrix_basis(nqubit: int, d: int) -> list:
     """
     B = []
     pauli_indices = _generate_pauli_prep_index(nqubit, prep_basis_size=4)
-    v = np.zeros((d, 1), dtype='complex_')
+    v = np.zeros((d, 1), dtype=np.cdouble)
     v[0] = 1
 
     for elem in pauli_indices:
@@ -177,7 +177,7 @@ def _get_canonical_basis_ops(j: int, d: int) -> np.ndarray:
     """
     quotient, remainder = divmod(j, d)
     canonical_op = [[1 if i == quotient and j == remainder else 0 for j in range(d)] for i in range(d)]
-    return np.array(canonical_op, dtype='complex_')
+    return np.array(canonical_op, dtype=np.cdouble)
 
 
 def _krauss_repr_ops(m: int, rhoj: np.ndarray, n: int, nqubit: int) -> np.ndarray:

@@ -49,12 +49,13 @@ pip install --upgrade pip
 pip install perceval-quandela
 ```
 
-If you are looking to use our qiskit, qutip or myqlm bridges you can specify it:
+If you are looking to use our qiskit, qutip, cqasm or myqlm bridges you can specify it:
 ```bash
 pip install perceval-quandela[qiskit_bridge] #install qiskit and seaborn
 pip install perceval-quandela[qutip_bridge] #install qutip
 pip install perceval-quandela[myqlm_bridge] #install myqlm
-pip install perceval-quandela[qiskit_bridge, qutip_bridge, myqlm_bridge] #install all above
+pip install perceval-quandela[cqasm_bridge] #install cqasm
+pip install perceval-quandela[all] #install all above
 ```
 
 ## GitHub
@@ -71,7 +72,7 @@ pip install -e .
 ```
 Or to use converters:
 ```bash
-pip install .[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
+pip install .[all]
 ```
 
 # Running tests and benchmarks

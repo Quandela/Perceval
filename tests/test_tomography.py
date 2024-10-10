@@ -44,7 +44,7 @@ from perceval.algorithm.tomography.tomography_utils import (is_physical, _genera
                                                             _matrix_to_vector, _matrix_basis, _coef_linear_decomp,
                                                             process_fidelity)
 
-CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype='complex_')
+CNOT_TARGET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=np.cdouble)
 
 
 @pytest.mark.parametrize("pauli_gate", [PauliEigenStateType.Zm, PauliEigenStateType.Zp, PauliEigenStateType.Xp,
@@ -181,7 +181,7 @@ def test_avg_fidelity_postprocessed_ccz_gate():
                        [0, 0, 0, 0, 1, 0, 0, 0],
                        [0, 0, 0, 0, 0, 1, 0, 0],
                        [0, 0, 0, 0, 0, 0, 1, 0],
-                       [0, 0, 0, 0, 0, 0, 0, -1]], dtype='complex_')
+                       [0, 0, 0, 0, 0, 0, 0, -1]], dtype=np.cdouble)
 
     qpt = ProcessTomography(operator_processor=ccz_p)
     ccz_avg_f = qpt.average_fidelity(op_CCZ)

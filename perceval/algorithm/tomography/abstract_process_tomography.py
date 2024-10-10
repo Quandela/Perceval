@@ -70,7 +70,7 @@ class AProcessTomography(AAlgorithm):
         :return: Beta Matrix for Chi computation
         """
         num_meas = self._size_hilbert ** 4  # Total number of measurements needed for process tomography
-        beta_matrix = np.zeros((num_meas, num_meas), dtype='complex_')
+        beta_matrix = np.zeros((num_meas, num_meas), dtype=np.cdouble)
         for a in range(num_meas):
             j, k = divmod(a, self._size_hilbert ** 2)  # returns quotient, remainder
             for b in range(num_meas):
@@ -85,7 +85,7 @@ class AProcessTomography(AAlgorithm):
         :param operator: Target operator matrix
         :return: lambda vector to compute chi for the target operator
         """
-        lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype='complex_')
+        lambda_matrix = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype=np.cdouble)
         for j in range(self._size_hilbert ** 2):
             rhoj = _get_canonical_basis_ops(j, self._size_hilbert)
             eps_rhoj = np.linalg.multi_dot([operator, rhoj, np.conjugate(np.transpose(operator))])
@@ -93,7 +93,7 @@ class AProcessTomography(AAlgorithm):
                 quotient, remainder = divmod(k, self._size_hilbert)
                 lambda_matrix[j, k] = eps_rhoj[quotient, remainder]
 
-        L1 = np.zeros((self._size_hilbert ** 4, 1), dtype='complex_')
+        L1 = np.zeros((self._size_hilbert ** 4, 1), dtype=np.cdouble)
         for i in range(self._size_hilbert ** 4):
             quotient, remainder = divmod(i, self._size_hilbert ** 2)
             L1[i] = lambda_matrix[quotient, remainder]

@@ -115,7 +115,7 @@ class TomographyMLE(AAlgorithm):
             #
             pauli_list = _index_num_to_basis(pauli_index, self._nqubit, 3)
 
-            X = [np.array([1], dtype='complex_')] * d  # neutral elements for tensor products
+            X = [np.array([1], dtype=np.cdouble)] * d  # neutral elements for tensor products
 
             for qubit_index in range(self._nqubit):
                 for eigenvector_index in range(d):  # iterates over the eigenvectors of the pauli operator
@@ -304,7 +304,7 @@ class ProcessTomographyMLE(TomographyMLE, AProcessTomography):
         AProcessTomography.__init__(self, processor=operator_processor, **kwargs)
 
         self._povm_data()
-        self._guess_choi_seed = np.eye((2 ** self._nqubit), dtype='complex_')
+        self._guess_choi_seed = np.eye((2 ** self._nqubit), dtype=np.cdouble)
         self._guess_choi_matrix = np.kron(self._guess_choi_seed, self._guess_choi_seed) / 16
 
     def _povm_data(self):
@@ -369,7 +369,7 @@ class ProcessTomographyMLE(TomographyMLE, AProcessTomography):
         :return: chi matrix
         """
         choi = self._perform_mle_tomography(self._guess_choi_matrix)
-        X = np.zeros((len(choi), len(choi)), dtype='complex_')
+        X = np.zeros((len(choi), len(choi)), dtype=np.cdouble)
 
         for m in range(len(choi)):
             P_m = np.conjugate(np.transpose(_matrix_to_vector(np.transpose(_get_fixed_basis_ops(m, self._nqubit)))))
