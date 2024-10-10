@@ -27,9 +27,52 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_skin import ASkin, ModeStyle
+from .abstract_skin import ASkin
 from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
 from .debug_skin import DebugSkin
-from .create_renderer import create_renderer
-from .display_config import DisplayConfig
+
+from ...utils.persistent_data import PersistentData
+from ...utils import get_logger
+
+PDISPLAY_KEY = "pdisplay"
+SKIN_KEY = "skin"
+
+SKIN_MAPPING = {
+    "PhysSkin": PhysSkin,
+    "SymbSkin": SymbSkin,
+    "DebugSkin": DebugSkin
+}
+
+
+def _get_default_skin():
+    # Default skin is PhysSkin
+    config = PersistentData().load_config()
+    skin = "PhysSkin"
+    if PDISPLAY_KEY in config:
+        skin = config[PDISPLAY_KEY].get(SKIN_KEY, "PhysSkin")
+        if skin not in SKIN_MAPPING:
+            get_logger().error(f"Invalid skin in persistent configuration {skin}")
+            skin = "PhysSkin"
+    return SKIN_MAPPING[skin]
+
+
+class DisplayConfig:
+    _selected_skin = _get_default_skin()
+
+    @staticmethod
+    def select_skin(skin: type[ASkin]) -> None:
+        DisplayConfig._selected_skin = skin
+
+    @staticmethod
+    def get_selected_skin(**kwargs) -> ASkin:
+        return DisplayConfig._selected_skin(**kwargs)
+
+    @staticmethod
+    def save_select_skin() -> type:
+        persistent_data = PersistentData()
+        config = persistent_data.load_config()
+        if PDISPLAY_KEY not in config:
+            config[PDISPLAY_KEY] = {}
+        config[PDISPLAY_KEY][SKIN_KEY] = DisplayConfig._selected_skin.__name__
+        persistent_data.save_config(config)
