@@ -28,14 +28,11 @@
 # SOFTWARE.
 
 from pathlib import Path
-from unittest.mock import patch
 import numpy as np
 import sympy as sp
 
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
-
-from _test_utils import LogChecker
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
@@ -43,7 +40,7 @@ TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 def test_new_np():
     u = sp.eye(3)
     M = pcvl.Matrix(u)
-    assert np.array_equal(M, u)
+    assert np.array_equal(M, np.eye(3, dtype=np.cdouble))
     assert not M.is_symbolic()
 
 
