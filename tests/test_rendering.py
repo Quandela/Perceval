@@ -27,9 +27,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .abstract_skin import ASkin, ModeStyle
-from .phys_skin import PhysSkin
-from .symb_skin import SymbSkin
-from .debug_skin import DebugSkin
-from .create_renderer import create_renderer
-from .display_config import DisplayConfig
+from unittest.mock import patch
+
+from perceval.utils import PersistentData
+from perceval.rendering.circuit import DisplayConfig, PhysSkin, DebugSkin
+
+
+@patch.object(PersistentData, "load_config")
+@patch.object(PersistentData, "save_config")
+def test_default_display_config(mock_save_config, mock_load_config):
+    # This test only works if there is no user config for display config
+    mock_load_config.return_value = {}
+    assert DisplayConfig._selected_skin == PhysSkin
+    DisplayConfig.select_skin(DebugSkin)
+    assert DisplayConfig._selected_skin == DebugSkin
+    DisplayConfig.save_select_skin()
+    assert mock_save_config.call_count == 1
+    assert mock_save_config.call_args.args[0] == {'pdisplay': {'skin': 'DebugSkin'}}
