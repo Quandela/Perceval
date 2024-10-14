@@ -28,9 +28,8 @@
 # SOFTWARE.
 
 from perceval.components import Circuit, PERM, BS, Port
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect
-from perceval.utils.logging import deprecated
 
 
 class PostProcessedCnotItem(CatalogItem):
@@ -47,14 +46,6 @@ data (dual rail) ─────┤     ├───── data (dual rail)
 
     def __init__(self):
         super().__init__("postprocessed cnot")
-        self._default_opts['type'] = AsType.PROCESSOR
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        if self._opt('type') == AsType.CIRCUIT:
-            return self.build_circuit()
-        elif self._opt('type') == AsType.PROCESSOR:
-            return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
         theta_13 = BS.r_to_theta(1 / 3)
