@@ -39,7 +39,7 @@ practitioners.
 
 Perceval requires:
 
-* Above Python 3.8 and below Python 3.12
+* Above Python 3.9 and below Python 3.12
 
 ## PIP
 We recommend installing it with `pip`:
@@ -71,7 +71,7 @@ pip install -e .
 ```
 Or to use converters:
 ```bash
-pip install .[qiskit_bridge, qutip_bridge, myqlm_bridge]
+pip install .[qiskit_bridge,qutip_bridge,myqlm_bridge,cqasm_bridge]
 ```
 
 # Running tests and benchmarks

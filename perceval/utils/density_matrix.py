@@ -26,11 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import random
 from copy import copy
 from math import comb, sqrt
-from typing import Union, Optional, List, Tuple
 
 import numpy as np
 from numpy import conj
@@ -116,10 +116,10 @@ class DensityMatrix:
     :param n_max: optional maximum number of photon if index is not given
     """
     def __init__(self,
-                 mixed_state: Union[np.array, sparray],
-                 index: Optional[FockBasis] = None,
-                 m: Optional[int] = None,
-                 n_max: Optional[int] = None,
+                 mixed_state: np.ndarray | sparray,
+                 index: FockBasis | None = None,
+                 m: int | None = None,
+                 n_max: int | None = None,
                  check_hermitian: bool = True,
                  precision: bool = 1e-6):
         """
@@ -155,7 +155,7 @@ class DensityMatrix:
         self.set_index(index)  # index construction
 
     @staticmethod
-    def from_svd(svd: Union[SVDistribution, StateVector, BasicState], index: Optional[FockBasis] = None):
+    def from_svd(svd: SVDistribution | StateVector | BasicState, index: FockBasis | None = None):
         """
         Construct a Density matrix from a SVDistribution.
 
@@ -207,7 +207,7 @@ class DensityMatrix:
             else:
                 raise ValueError("the index size does not match the matrix size")
 
-    def __getitem__(self, key: Tuple[BasicState, BasicState]):
+    def __getitem__(self, key: tuple[BasicState, BasicState]):
         """key must be a BasicState tuple"""
         key1, key2 = key
         if not isinstance(key1, BasicState) or not isinstance(key2, BasicState):
@@ -279,7 +279,7 @@ class DensityMatrix:
                 continue
         return SVDistribution(dic)
 
-    def to_svd(self, threshold: Optional[float] = None, batch_size: int = 1):
+    def to_svd(self, threshold: float | None = None, batch_size: int = 1):
         """
             Gives back an SVDistribution from the density_matrix
 
@@ -361,7 +361,7 @@ class DensityMatrix:
         else:
             return density_matrix_tensor_product(other, self)
 
-    def remove_low_amplitude(self, threshold: Optional[float] = None):
+    def remove_low_amplitude(self, threshold: float | None = None):
         """
         Remove the lines and column where the amplitude is below a certain threshold
         """
@@ -400,7 +400,7 @@ class DensityMatrix:
             output.append(state)
         return output
 
-    def measure(self, modes: Union[List[int], int]):
+    def measure(self, modes: list[int] | int):
         """
         Makes a measure on a list of modes.
         :param modes: a list of integer for the modes you want to measure
@@ -422,7 +422,7 @@ class DensityMatrix:
                 res[key_fs] = (prob, resulting_dm)
         return res
 
-    def _construct_projector_one_sample(self, modes, fock_state) -> Tuple[FockBasis, dok_array]:
+    def _construct_projector_one_sample(self, modes, fock_state) -> tuple[FockBasis, dok_array]:
         """
         Construct the projection operator onto the subspace of some number photons on some mode
         """
@@ -439,7 +439,7 @@ class DensityMatrix:
 
         return basis, projector
 
-    def _construct_all_projectors(self, modes: List[int]) -> dict:
+    def _construct_all_projectors(self, modes: list[int]) -> dict:
         """
         construct all the projectors associated with some modes
         :return: a dictionary with for each measured state a list [fock_basis, projector, probability]
@@ -513,7 +513,7 @@ class DensityMatrix:
                                                                       p**n_photon_loss)
         return operators
 
-    def apply_loss(self, modes: Union[int, list], prob: float):
+    def apply_loss(self, modes: int | list, prob: float):
         """
         Apply a loss on some mode according to some probability of losing a photon
         Everything works like if the mode was connected to some virtual mode with a beam splitter of reflectivity prob

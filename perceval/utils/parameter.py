@@ -30,8 +30,6 @@
 import random
 import sympy as sp
 
-from typing import Tuple
-
 
 class Parameter:
     r"""A Parameter is a used as a variable in a circuit definition
@@ -179,7 +177,7 @@ class Parameter:
                                                        self._max is not None and ", max_v="+str(self._max) or "")
 
     @property
-    def bounds(self) -> Tuple[float, float]:
+    def bounds(self) -> tuple[float, float]:
         r"""Minimal and maximal values for the parameter
         """
         return self._min, self._max

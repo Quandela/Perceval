@@ -29,7 +29,6 @@
 
 from __future__ import annotations
 from abc import ABC
-from typing import List, Union, Tuple
 
 
 class Canvas(ABC):
@@ -49,7 +48,7 @@ class Canvas(ABC):
         self._inverse_Y = -1 if inverse_Y else 1
         self._background_color = None
 
-    def set_offset(self, v: Tuple[float, float], width: float, height: float):
+    def set_offset(self, v: tuple[float, float], width: float, height: float):
         self._offset_x = v[0]
         self._offset_y = v[1]
         self.position = (0, 0)
@@ -83,7 +82,7 @@ class Canvas(ABC):
         return self._maxx - self._minx
 
     def add_mline(self,
-                  points: List[float],
+                  points: list[float],
                   stroke: str = "black",
                   stroke_width: float = 1,
                   stroke_linejoin: str = "miter",
@@ -103,7 +102,7 @@ class Canvas(ABC):
         return norm_points
 
     def add_polygon(self,
-                    points: List[float],
+                    points: list[float],
                     stroke: str = "black",
                     stroke_width: float = 1,
                     fill: str = None,
@@ -126,7 +125,7 @@ class Canvas(ABC):
         return norm_points
 
     def add_rect(self,
-                 points: Tuple[float, float],
+                 points: tuple[float, float],
                  width: float,
                  height: float,
                  **args):
@@ -137,19 +136,13 @@ class Canvas(ABC):
                          **args)
 
     def add_mpath(self,
-                  points: List[Union[float, str]],
+                  points: list[float | str],
                   stroke: str = "black",
                   stroke_width: float = 1,
                   fill: str = None,
                   stroke_linejoin: str = "miter",
                   stroke_dasharray=None):
         """Draw a path
-
-        :param fill:
-        :param points:
-        :param stroke:
-        :param stroke_width:
-        :return:
         """
         assert not self._drawn, "calling add_mpath on drawn canvas"
         norm_points = []
@@ -228,7 +221,7 @@ class Canvas(ABC):
         return norm_points
 
     def add_circle(self,
-                   points: Tuple[float, float],
+                   points: tuple[float, float],
                    r: float,
                    stroke: str = "black",
                    stroke_width: float = 1,
@@ -237,9 +230,9 @@ class Canvas(ABC):
         self.position = (points[0] + r, points[1] + r)
         self.position = (points[0] - r, points[1] - r)
         self.position = points
-        return (self.position[0], self._inverse_Y * self.position[1])
+        return self.position[0], self._inverse_Y * self.position[1]
 
-    def add_text(self, points: Tuple[float, float],
+    def add_text(self, points: tuple[float, float],
                  text: str, size: float,
                  ta: str = "left",  # Literal["left", "middle", "right"]
                  fontstyle: str = "normal"  # Literal["normal", "bold", "italic"]
@@ -253,10 +246,10 @@ class Canvas(ABC):
         else:
             self.position = (points[0]-size*len(text)/2, points[1]+size)
             self.position = (points[0]+size*len(text)/2, points[1]+size)
-        return (f_points[0], self._inverse_Y * f_points[1])
+        return f_points[0], self._inverse_Y * f_points[1]
 
-    def add_shape(self, shape_fn, circuit, content, mode_style, **opt):
-        shape_fn(circuit, self, content, mode_style, **opt)
+    def add_shape(self, shape_fn, circuit, mode_style):
+        shape_fn(circuit, self, mode_style)
 
     def set_background_color(self, background_color):
         """

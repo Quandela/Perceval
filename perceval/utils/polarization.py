@@ -32,7 +32,6 @@ from __future__ import annotations
 import numpy as np
 import re
 import sympy as sp
-from typing import Union, Tuple, Any
 
 from .statevector import BasicState
 from .matrix import Matrix
@@ -48,7 +47,7 @@ class Polarization:
     :raise: `ValueError` if the parameters are out of range, or invalid
     """
     def __init__(self,
-                 v: Union[str, Any, Tuple[Any, Any]]):
+                 v: str | any | tuple[any, any]):
         if isinstance(v, str):
             if v == "H":
                 self.theta_phi = (0, 0)
@@ -132,7 +131,7 @@ class Polarization:
                     raise ValueError("incorrect format - angle value should not contain variable in %s" % s)
         return Polarization((v, 0))
 
-    def project_eh_ev(self, use_symbolic=False) -> Tuple[Any, Any]:
+    def project_eh_ev(self, use_symbolic=False) -> tuple[any, any]:
         r"""Build Jones vector corresponding to the current instance
 
         :return: a pair of numeric or symbolic expressions
@@ -188,7 +187,7 @@ def _is_orthogonal(v1, v2, use_symbolic):
 
 def convert_polarized_state(state: BasicState,
                             use_symbolic: bool = False,
-                            inverse: bool = False) -> Tuple[BasicState, Matrix]:
+                            inverse: bool = False) -> tuple[BasicState, Matrix]:
     r"""Convert a polarized BasicState into an expanded BasicState vector
 
     :param inverse:

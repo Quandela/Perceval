@@ -29,12 +29,10 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, Tuple
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, AProcessor, PERM
-from perceval.components.abstract_component import AComponent
-from perceval.components.non_unitary_components import TD
+from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD
+from perceval.utils import format_parameters
 
 
 class ModeStyle(Enum):
@@ -61,12 +59,13 @@ class ASkin(ABC):
         self._compact = compact_display
         self.style = {ModeStyle.PHOTONIC: stroke_style,
                       ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
-                      # ModeStyle.HERALD: {"stroke": "yellow", "stroke_width": 1}  # Use this for debug
                       }
         self.style_subcircuit = style_subcircuit
+        self.precision: float = 1e-6
+        self.nsimplify: bool = True
 
     @dispatch((ACircuit, TD), bool)
-    def get_size(self, c: ACircuit, recursive: bool = False) -> Tuple[int, int]:
+    def get_size(self, c: ACircuit, recursive: bool = False) -> tuple[int, int]:
         """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():
             return self.measure(c)
@@ -86,7 +85,7 @@ class ASkin(ABC):
         return max(w), c.m
 
     @dispatch(AProcessor, bool)
-    def get_size(self, p: AProcessor, recursive: bool = False) -> Tuple[int, int]:
+    def get_size(self, p: AProcessor, recursive: bool = False) -> tuple[int, int]:
         height = p.m
         # w represents the graph of the circuit.
         # Each value being the output of the rightmost component on the corresponding mode
@@ -105,7 +104,7 @@ class ASkin(ABC):
             w[r] = [end_w] * comp.m
         return max(w), min(p.circuit_size, height+2)
 
-    def measure(self, c: AComponent) -> Tuple[int, int]:
+    def measure(self, c: AComponent) -> tuple[int, int]:
         """
         Returns the measure (in arbitrary unit (AU) where the space between two modes = 1 AU)
         of a single component treated as a block (meaning that a composite circuit will not be
@@ -118,5 +117,8 @@ class ASkin(ABC):
         """Returns the width of component c"""
 
     @abstractmethod
-    def get_shape(self, c) -> Callable:
+    def get_shape(self, c) -> callable:
         """Returns the shape function of component c"""
+
+    def _get_display_content(self, circuit: ACircuit) -> str:
+        return format_parameters(circuit.get_variables(), self.precision, self.nsimplify)

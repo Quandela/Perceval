@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 import math
-from typing import List, Tuple
 
 import exqalibur as xq
 from . import NaiveBackend
@@ -49,14 +48,14 @@ class NaiveApproxBackend(NaiveBackend):
         permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
         return permanent_with_error[0]
 
-    def prob_amplitude_with_error(self, output_state: BasicState) -> Tuple[complex, float]:
+    def prob_amplitude_with_error(self, output_state: BasicState) -> tuple[complex, float]:
         M = self._compute_submatrix(output_state)
         permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
         normalization_coeff = math.sqrt(output_state.prodnfact() * self._input_state.prodnfact())
         return (permanent_with_error[0]/normalization_coeff, permanent_with_error[1]/normalization_coeff) \
             if M.size > 1 else (M[0, 0], 0)
 
-    def probability_confidence_interval(self, output_state: BasicState) -> List[float]:
+    def probability_confidence_interval(self, output_state: BasicState) -> list[float]:
         mean, err = self.prob_amplitude_with_error(output_state)
         min_prob = max((abs(mean) - err) ** 2, 0)
         max_prob = min((abs(mean) + err) ** 2, 1)

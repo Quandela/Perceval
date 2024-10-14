@@ -2,16 +2,29 @@ Legacy
 ======
 
 Perceval has evolved quickly from the initial release, some evolution are introducing breaking changes for existing code.
-While we are trying hard to avoid unnecessary API changes, some of necessary to bring new features and keep a consistent
-code base.
+While we are trying hard to avoid unnecessary API changes, we may break some in order to bring new features and keep a
+consistent code base.
 
 This section lists the major breaking changes introduced.
+
+Breaking changes in Perceval 0.12
+---------------------------------
+
+Circuit.generic_interferometer method was removed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`Circuit.generic_interferometer` method has been deprecated since Perceval 0.10.0 and was removed from the
+code base (in order to avoid a circular import).
+
+Please use the :code:`GenericInterferometer` class (from `perceval.components`) directly. See :ref:`Generic Interferometer`
+and you can find a usage example in the :ref:`Circuit Optimizer` code reference.
 
 Breaking changes in Perceval 0.11
 ---------------------------------
 
 postprocess
 ^^^^^^^^^^^
+
 :code:`set_postprocess` and :code:`clear_postprocess` have been deprecated since Perceval 0.9.0 and are no more available.
 
 See :ref:`Simulation rework: processor`

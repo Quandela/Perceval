@@ -26,21 +26,40 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
-from .abstract_component import AComponent
-from .abstract_processor import AProcessor
-from .linear_circuit import Circuit, ACircuit
-from .generic_interferometer import GenericInterferometer
-from .processor import Processor
-from .source import Source
-from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ,
-                     get_pauli_basis_measurement_circuit, get_pauli_gate, get_pauli_eigenvector_matrix,
-                     get_pauli_eigenvectors)
-from .tomography_exp_configurer import processor_circuit_configurator
-from .comp_utils import decompose_perms
-from .port import APort, Port, Herald, PortLocation, get_basic_state_from_ports
-from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, Barrier
-from .non_unitary_components import TD, LC
-from .component_catalog import Catalog
-from ._mode_connector import ModeConnector, UnavailableModeException
-catalog = Catalog('perceval.components.core_catalog')
+from .renderer_interface import ICircuitRenderer
+from .abstract_skin import ASkin
+from .canvas_renderer import CanvasRenderer, PreRenderer
+from .text_renderer import TextRenderer
+from ..canvas import LatexCanvas, MplotCanvas, SvgCanvas
+from ..format import Format
+
+
+_CANVAS = {
+    Format.HTML: SvgCanvas,
+    Format.MPLOT: MplotCanvas,
+    Format.LATEX: LatexCanvas
+}
+
+
+def create_renderer(
+    m: int,  # number of modes
+    output_format: Format = Format.TEXT,  # rendering method
+    skin: ASkin = None,  # skin (unused in text rendering)
+    **opts,
+) -> tuple[ICircuitRenderer, ICircuitRenderer | None]:
+    """
+    Creates a renderer given the selected format. Dispatches parameters to generated canvas objects
+    A skin object is needed for circuit graphic rendering.
+
+    This returns a (renderer, pre_renderer) tuple. It is recommended to
+    invoke the pre-renderer on the circuit to correctly pre-compute
+    additional position information that cannot be guessed in a single pass.
+    """
+    if output_format == Format.TEXT:
+        return TextRenderer(m), None
+
+    assert skin is not None, "A skin must be selected for circuit rendering"
+    canvas = _CANVAS[output_format](**opts)
+    return CanvasRenderer(m, canvas, skin), PreRenderer(m, skin)

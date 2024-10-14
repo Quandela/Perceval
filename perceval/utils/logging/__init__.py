@@ -70,7 +70,7 @@ def use_python_logger():
     if isinstance(_logger, PythonLogger):
         return
     if _logger is not None:
-        _logger.info("Changing to Python _logger", channel.general)
+        _logger.info("Changing to Python logger", channel.general)
     _logger = PythonLogger()
     sys.excepthook = _my_excepthook
 
@@ -80,7 +80,7 @@ def use_perceval_logger():
     if isinstance(_logger, ExqaliburLogger):
         return
     if _logger is not None:
-        _logger.info("Changing to exqalibur _logger", channel.general)
+        _logger.info("Changing to exqalibur logger", channel.general)
     _logger = ExqaliburLogger()
     _logger.initialize()
     sys.excepthook = _my_excepthook

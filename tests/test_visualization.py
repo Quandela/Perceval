@@ -307,8 +307,7 @@ def test_svg_processor_with_heralds_perm_following_phys(tmp_path, save_figs):
 
 
 def test_svg_processor_with_heralds_and_barriers_phys(tmp_path, save_figs):
-    c = pcvl.Circuit(4) @ (1, PERM([1, 0])) // (1, BS()) // (0, PERM([1, 0])) // BS() // (1, PERM([1, 0]))
-    c.barrier()
+    c = pcvl.Circuit(4) // (1, PERM([1, 0])) @ (1, BS()) // (0, PERM([1, 0])) // BS() @ (1, PERM([1, 0]))
     pc = pcvl.Processor('SLOS', c)
     pc.add_herald(0, 0)
     pc.add_herald(2, 1)

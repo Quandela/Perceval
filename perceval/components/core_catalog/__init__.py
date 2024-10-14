@@ -32,11 +32,11 @@ from .postprocessed_cnot import PostProcessedCnotItem
 from .heralded_cnot import HeraldedCnotItem
 from .heralded_cz import HeraldedCzItem
 from .generic_2mode import Generic2ModeItem
-from .mzi import MZIPhaseFirst, MZIPhaseLast
+from .mzi import MZIPhaseFirst, MZIPhaseLast, SymmetricMZI
 from .postprocessed_ccz import PostProcessedCCZItem
 from .toffoli import ToffoliItem
-from .controlled_rotation_gates  import PostProcessedControledRotationsItem
+from .controlled_rotation_gates import PostProcessedControlledRotationsItem
 
 catalog_items = [KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
-                 MZIPhaseLast, PostProcessedCCZItem, ToffoliItem, PostProcessedControledRotationsItem
+                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem
 ]

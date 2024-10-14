@@ -35,7 +35,7 @@ import cmath as cm
 from scipy.linalg import block_diag
 
 from perceval.components import Circuit, Port, Unitary
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect, Matrix
 
 
@@ -70,7 +70,7 @@ def build_control_gate_unitary(n: int, alpha: float) -> Matrix:
     return U
 
 
-class PostProcessedControledRotationsItem(CatalogItem):
+class PostProcessedControlledRotationsItem(CatalogItem):
     article_ref = "https://arxiv.org/abs/2405.01395"
     description = r"""n-qubit controlled rotation gate C...CZ(alpha) with 2*n ancillary modes and a post-selection function"""
     params_doc = {
@@ -92,7 +92,6 @@ ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
 
     def __init__(self):
         super().__init__("postprocessed controlled gate")
-        self._default_opts['type'] = AsType.PROCESSOR
 
     def build_circuit(self, **kwargs):
         """
@@ -102,7 +101,7 @@ ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
 
         :return: Circuit implementing the post-selected n-qubit controlled gate.
         """
-        if not "n" in kwargs:
+        if "n" not in kwargs:
             raise KeyError("Missing input n")
         n = kwargs["n"]
         if not isinstance(n, int):

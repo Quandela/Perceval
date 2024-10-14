@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 import urllib
 import time
 import requests
@@ -33,7 +35,6 @@ import json
 
 from datetime import datetime, timedelta
 from requests import HTTPError
-from typing import Union
 from enum import Enum
 
 _PROVIDER_NAME = "quandela"
@@ -189,7 +190,7 @@ class RPCHandler:
     def __build_endpoint(self, endpoint) -> str:
         return f"{self._url}{endpoint}"
 
-    def __to_date(self, date: Union[str, None]) -> Union[float, None]:
+    def __to_date(self, date: str | None) -> float | None:
         if not date or date == "":
             return None
 
@@ -199,7 +200,7 @@ class RPCHandler:
 
         return datetime.fromisoformat(date).timestamp()
 
-    def __get_duration(self, start_time: Union[float, None]) -> Union[int, None]:
+    def __get_duration(self, start_time: float | None) -> int | None:
         return (
             timedelta(seconds=time.time() - start_time).seconds if start_time else None
         )

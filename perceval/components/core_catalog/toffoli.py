@@ -50,8 +50,7 @@ data (dual rail)  ─────┤ H ├───┤          ├───┤ 
     def build_circuit(self, **kwargs):
         c = Circuit(12, name="Toffoli")
         c.add(4, BS.H())
-        postprocessed_ccz = PostProcessedCCZItem()
-        c.add(0, postprocessed_ccz.build_circuit(), merge=True)
+        c.add(0, PostProcessedCCZItem().build_circuit(), merge=True)
         c.add(4, BS.H())
         return c
 

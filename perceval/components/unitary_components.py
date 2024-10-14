@@ -368,9 +368,6 @@ class PERM(Unitary):
             u[v, i] = 1
         super().__init__(U=u)
 
-    def get_variables(self):
-        return {'PERM': ''}
-
     def describe(self):
         return f"PERM({self.perm_vector})"
 
