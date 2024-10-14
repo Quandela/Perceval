@@ -33,7 +33,7 @@ from os import path
 import json
 from zlib import decompress
 
-from perceval.components import Circuit, Barrier
+from perceval.components import Circuit
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.serialization import _matrix_serialization, deserialize_state
 from ._constants import (
