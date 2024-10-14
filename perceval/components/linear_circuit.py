@@ -317,6 +317,8 @@ class Circuit(ACircuit):
         for r, c in self._components:
             if only_parameterized and c.defined:
                 continue
+            if hasattr(c, "visible") and not c.visible:
+                continue
             if i in r:
                 if j == 0:
                     return c
