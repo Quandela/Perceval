@@ -31,7 +31,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy<1.13', 'numpy<2', 'scipy<2', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.5.1',
+    install_requires=['sympy<1.13', 'numpy<2', 'scipy<2', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.6.0',
                       'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'Deprecated~=1.2.14', 'requests<3',
                       'networkx~=3.1', 'latexcodec<4', 'platformdirs<5'],
     extras_require={
