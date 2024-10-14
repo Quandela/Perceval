@@ -87,3 +87,7 @@ def deserialize_pr(serial_pr) -> comp.PR:
 
 def deserialize_pbs(_) -> comp.PBS:
     return comp.PBS()
+
+
+def deserialize_barrier(m: int, serial_barrier) -> comp.Barrier:
+    return comp.Barrier(m, serial_barrier.visible)

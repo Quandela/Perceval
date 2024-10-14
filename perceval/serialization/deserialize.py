@@ -233,6 +233,8 @@ class CircuitBuilder:
         if t in CircuitBuilder.deserialize_fn:
             func = CircuitBuilder.deserialize_fn[t]
             component = func(serial_sub_comp)
+        elif t == "barrier":
+            component = _cd.deserialize_barrier(serial_comp.n_mode, serial_sub_comp)  # Special case: need an additional info
 
         if component is None:
             raise NotImplementedError(f'Component could not be deserialized (type = {t})')
