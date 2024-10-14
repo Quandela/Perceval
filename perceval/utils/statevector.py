@@ -171,8 +171,12 @@ class SVDistribution(ProbabilityDistribution):
         :param other: State / distribution to multiply with
         :return: The result of the tensor product
         """
-        if isinstance(other, (BasicState, StateVector)):
+        if isinstance(other, SVDistribution):
+            pass
+        elif isinstance(other, (BasicState, StateVector)):
             other = SVDistribution(other)
+        else:
+            return NotImplemented
         if len(self) == 0:
             return other
         new_svd = SVDistribution()
@@ -180,6 +184,15 @@ class SVDistribution(ProbabilityDistribution):
             for sv2, proba2 in other.items():
                 new_svd[sv1*sv2] = proba1 * proba2
         return new_svd
+
+    def __rmul__(self, other):
+        if isinstance(other, SVDistribution):
+            pass
+        elif isinstance(other, (BasicState, StateVector)):
+            other = SVDistribution(other)
+        else:
+            return NotImplemented
+        return other * self
 
     def normalize(self):
         sum_probs = sum(list(self.values()))
@@ -302,10 +315,25 @@ class BSDistribution(ProbabilityDistribution):
         return random.choices(states, k=count, weights=probs)
 
     def __mul__(self, other):
+        if isinstance(other, BSDistribution):
+            pass
+        elif isinstance(other, BasicState):
+            other = BSDistribution(other)
+        else:
+            return NotImplemented
         return BSDistribution.tensor_product(self, other)
 
+    def __rmul__(self, other):
+        if isinstance(other, BSDistribution):
+            pass
+        elif isinstance(other, BasicState):
+            other = BSDistribution(other)
+        else:
+            return NotImplemented
+        return BSDistribution.tensor_product(other, self)
+
     @staticmethod
-    def tensor_product(bsd1, bsd2, merge_modes: bool = False, prob_threshold: float = 0):
+    def tensor_product(bsd1: BSDistribution, bsd2: BSDistribution, merge_modes: bool = False, prob_threshold: float = 0):
         """
         Compute the tensor product of two BasicState Distribution
         """
