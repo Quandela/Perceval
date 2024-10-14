@@ -386,27 +386,3 @@ def test_describe():
     assert comp.BS.H(theta=param).describe() == "BS.H(theta=1.097)"
     assert comp.PS(0).describe() == "PS(phi=0)"
     assert comp.PERM([1, 2, 3, 0]).describe() == "PERM([1, 2, 3, 0])"
-
-
-def test_x_grid_1_setting_values():
-    c = Circuit(4)
-    c.add(0, comp.BS(), x_grid=1)
-    c.add(2, comp.BS(), x_grid=1)
-    with pytest.raises(ValueError):
-        c.add(1, comp.BS(), x_grid=1)
-    # reinitialize the circuit...
-    c = Circuit(4)
-    c.add(0, comp.BS(), x_grid=1)
-    c.add(2, comp.BS(), x_grid=1)
-    c.add(1, comp.BS(), x_grid=2)
-    c.add(0, comp.BS())
-    with pytest.raises(ValueError):
-        c.add(2, comp.BS(), x_grid=1)
-    # reinitialize again the circuit...
-    c = Circuit(4)
-    c.add(0, comp.BS(), x_grid=1)
-    c.add(2, comp.BS(), x_grid=1)
-    c.add(1, comp.BS(), x_grid=2)
-    c.add(0, comp.BS())
-    c.add(0, comp.BS(), x_grid=3)
-    c.add(2, comp.BS(), x_grid=3)

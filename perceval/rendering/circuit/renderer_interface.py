@@ -67,31 +67,22 @@ class ICircuitRenderer(ABC):
             self.append_circuit(tuple(p + shift for p in range(circuit.m)), circuit)
 
         if circuit.is_composite() and circuit.ncomponents() > 0:
-            grouped_components = circuit.group_components_by_xgrid()
-            for group in grouped_components:
-                # each component of the group is to be rendered at the same horizontal position, use built-in
-                # extend_pos method for that
-                pos = None
-                if len(group) > 1:
-                    pos = -1
-                    for r, _ in group:
-                        pos = max(pos, self.max_pos(r[0], r[-1]))
-                for r, c in group:
-                    shiftr = tuple(p + shift for p in r)
-                    if c.is_composite() and c._components:
-                        if recursive:
-                            self._current_subblock_info = self._subblock_info.setdefault(c, {})
-                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=False), c._color)
-                            self.render_circuit(
-                                c,
-                                shift=shiftr[0],
-                                precision=precision,
-                                nsimplify=nsimplify)
-                            self.close_subblock(shiftr)
-                        else:
-                            self.append_subcircuit(shiftr, c)
+            for r, c in circuit._components:
+                shiftr = tuple(p + shift for p in r)
+                if c.is_composite() and c._components:
+                    if recursive:
+                        self._current_subblock_info = self._subblock_info.setdefault(c, {})
+                        self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=False), c._color)
+                        self.render_circuit(
+                            c,
+                            shift=shiftr[0],
+                            precision=precision,
+                            nsimplify=nsimplify)
+                        self.close_subblock(shiftr)
                     else:
-                        self.append_circuit(shiftr, c, pos=pos)
+                        self.append_subcircuit(shiftr, c)
+                else:
+                    self.append_circuit(shiftr, c)
         self.extend_pos(0, circuit.m - 1)
 
     @abstractmethod
@@ -107,7 +98,7 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def extend_pos(self, start: int, end: int) -> None:
+    def extend_pos(self, start: int, end: int, margin: int = 0) -> None:
         """
         Extends horizontal position on the circuit graph, from modes 'start' to 'end'
         """
@@ -151,7 +142,7 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def append_circuit(self, lines: tuple[int, ...], circuit: ACircuit, pos=None) -> None:
+    def append_circuit(self, lines: tuple[int, ...], circuit: ACircuit) -> None:
         """
         Add a component (or a circuit treated as a single component) to the rendering, on modes 'lines'
         """

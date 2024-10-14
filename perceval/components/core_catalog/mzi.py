@@ -51,8 +51,8 @@ class AMZI(CatalogItem, ABC):
             kwargs["phi_b"] = f"phi_b{kwargs['i']}"
         return CatalogItem._handle_param(kwargs.get("phi_a", "phi_a")), \
             CatalogItem._handle_param(kwargs.get("phi_b", "phi_b")), \
-            kwargs.get("theta_a", math.pi/2), \
-            kwargs.get("theta_b", math.pi/2)
+            CatalogItem._handle_param(kwargs.get("theta_a", math.pi/2)), \
+            CatalogItem._handle_param(kwargs.get("theta_b", math.pi/2))
 
     def build_processor(self, **kwargs) -> Processor:
         return self._init_processor(**kwargs)
