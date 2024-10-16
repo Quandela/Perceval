@@ -42,7 +42,7 @@ def test_display_config(mock_save_config, mock_load_config):
     assert DisplayConfig._selected_skin == PhysSkin
     DisplayConfig.select_skin(DebugSkin)
     assert DisplayConfig._selected_skin == DebugSkin
-    DisplayConfig.save_select_skin()
+    DisplayConfig.save()
     assert mock_save_config.call_args.args[0] == {'pdisplay': {'skin': 'DebugSkin'}}
 
     mock_load_config.return_value = {'pdisplay': {'skin': 'DebugSkin'}}

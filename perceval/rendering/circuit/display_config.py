@@ -32,8 +32,8 @@ from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
 from .debug_skin import DebugSkin
 
-from ...utils.persistent_data import PersistentData
-from ...utils import get_logger
+from perceval.utils.persistent_data import PersistentData
+from perceval.utils import get_logger
 
 PDISPLAY_KEY = "pdisplay"
 SKIN_KEY = "skin"
@@ -58,18 +58,32 @@ def _get_default_skin():
 
 
 class DisplayConfig:
+    """Handle the display configuration such as:
+
+        - Skin use for pdisplay. Default skin is the one in the persistent data or, if no config is find, PhysSkin.
+    """
     _selected_skin = _get_default_skin()
 
     @staticmethod
     def select_skin(skin: type[ASkin]) -> None:
+        """Select the skin pdisplay uses
+
+        :param skin: Skin to use for pdisplay
+        """
         DisplayConfig._selected_skin = skin
 
     @staticmethod
     def get_selected_skin(**kwargs) -> ASkin:
+        """Get the current selected skin
+
+        :return: Current selected skin
+        """
         return DisplayConfig._selected_skin(**kwargs)
 
     @staticmethod
-    def save_select_skin() -> type:
+    def save() -> None:
+        """Save the current Display config in the persistent data
+        """
         persistent_data = PersistentData()
         config = persistent_data.load_config()
         if PDISPLAY_KEY not in config:
