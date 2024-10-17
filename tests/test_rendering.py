@@ -31,7 +31,7 @@
 from unittest.mock import patch
 
 from perceval.utils import PersistentData
-from perceval.rendering.circuit import DisplayConfig, PhysSkin, DebugSkin
+from perceval.rendering import DisplayConfig, PhysSkin, DebugSkin
 from perceval.rendering.circuit.display_config import _get_default_skin
 
 @patch.object(PersistentData, "load_config")

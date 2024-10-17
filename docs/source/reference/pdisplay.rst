@@ -78,11 +78,11 @@ Indeed, a boolean can be set to obtain a more compact display (if the circuit is
 
 By default the skin will be ``PhysSkin``, if you want to use another skin by default, you can save your configuration into your Perceval persistent configuration.
 
-In order to do that you need to use the object ``DisplayConfig`` like that:
+To save configuration for your choice of skin by default, you require the ``DisplayConfig`` object. Usage example:
 
 .. code-block::
 
-  from perceval.rendering.circuit import DisplayConfig, SymbSkin
+  from perceval.rendering import DisplayConfig, SymbSkin
   DisplayConfig.select_skin(SymbSkin) # SymbSkin will be used by default by pdisplay if no other skin is defined.
   DisplayConfig.save() # Will save the current DisplayConfig into your Perceval persistent configuration.
 
@@ -92,6 +92,6 @@ Code reference
 .. automodule:: perceval.rendering.pdisplay
    :members:
 
-.. autoclass:: perceval.rendering.circuit.DisplayConfig
+.. autoclass:: perceval.rendering.DisplayConfig
    :members:
    :inherited-members:

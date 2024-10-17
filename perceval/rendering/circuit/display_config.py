@@ -60,13 +60,13 @@ def _get_default_skin():
 class DisplayConfig:
     """Handle the display configuration such as:
 
-        - Skin use for pdisplay. Default skin is the one in the persistent data or, if no config is find, PhysSkin.
+        - Skin use for pdisplay. Default skin is the one in the persistent data or, if no config is found, PhysSkin.
     """
     _selected_skin = _get_default_skin()
 
     @staticmethod
     def select_skin(skin: type[ASkin]) -> None:
-        """Select the skin pdisplay uses
+        """Select the skin used by pdisplay
 
         :param skin: Skin to use for pdisplay
         """
