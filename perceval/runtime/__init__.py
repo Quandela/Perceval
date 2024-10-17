@@ -34,3 +34,4 @@ from .remote_job import RemoteJob
 from .remote_processor import RemoteProcessor
 from .session import ISession
 from ._token_management import save_token
+from .job_group import JobGroup
