@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import pytest
+import numpy as np
 
 try:
     import qiskit
@@ -206,3 +207,34 @@ def test_cnot_herald():
     assert bsd_out[BasicState("|1,0,0,1>")] + bsd_out[BasicState("|0,1,1,0>")] < 2e-5
     assert bsd_out[BasicState("|1,0,1,0>")] + bsd_out[BasicState("|0,1,0,1>")] > 0.99
     assert len(bsd_out) == 4
+
+def qiskit_circ_multiple_cnots():
+    # Gate Circuit
+    params = np.random.random(8)
+    circ = qiskit.QuantumCircuit(4)
+
+    circ.rx(params[0], 0)
+    circ.ry(params[1], 1)
+    circ.rx(params[2], 2)
+    circ.rx(params[3], 3)
+
+    circ.cx(1, 2)
+
+    circ.rx(params[4], 0)
+    circ.ry(params[5], 1)
+    circ.rx(params[6], 2)
+    circ.rx(params[7], 3)
+
+    circ.cx(0, 1)
+    circ.cx(0, 1)
+    circ.cx(2, 3)
+    circ.cx(2, 3)
+    return circ
+
+def test_cnot_ralph_vs_knill():
+    qisk_circ = qiskit_circ_multiple_cnots()
+    converter = QiskitConverter()
+    pc = converter.convert(qisk_circ)
+    import perceval as pcvl
+    pcvl.pdisplay(pc)
+    # todo : add assertions

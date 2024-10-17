@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 
 from perceval.components import Port, Circuit, Processor, Source, catalog
-from perceval.utils import P, BasicState, Encoding, global_params
+from perceval.utils import P, BasicState, Encoding, global_params, PostSelect
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
@@ -131,14 +131,37 @@ class AGateConverter(ABC):
         CRz - Heralded and post-processed (uses two CNOTs)
         SWAP
         """
+
+        # save the current post-selection information from the converted
+        # processor before adding the next gate
+        if self._converted_processor._postselect is not None:
+            post_select_curr = self._converted_processor._postselect
+        else:
+            post_select_curr = PostSelect()  # save empty if I need to merge incoming PostSelect to it
+
+        self._converted_processor.clear_postselection()  # clear current post-selection
+
         gate_name = gate_name.upper()
-        if gate_name in ["CNOT", "CX"]:
+        if gate_name in ["CNOT", "CX", "CX:RALPH", "CX:KNILL"]:
             self._cnot_idx += 1
-            if use_postselection and self._cnot_idx == n_cnot:
+            # if use_postselection and self._cnot_idx == n_cnot:
+            #     cnot_processor = self.create_ppcnot_processor()
+            # else:
+            #     cnot_processor = self.create_hcnot_processor()
+            if use_postselection and gate_name == "CX:RALPH":
                 cnot_processor = self.create_ppcnot_processor()
+                cnot_ps = cnot_processor._postselect
+
+                cnot_processor.clear_postselection()  # clear after saving post select information
+                post_select_curr.merge(cnot_ps)  # merge the incoming gate post-selection with the current
+            #elif gate_name == "CX:KNILL":
             else:
                 cnot_processor = self.create_hcnot_processor()
+            # else:
+            #     raise ValueError(f'Invalid CNOT type gate {gate_name}')
+
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
+
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self.create_hcz_processor()
@@ -157,4 +180,6 @@ class AGateConverter(ABC):
         else:
             raise UnknownGateError(f"Gate not yet supported: {gate_name}")
 
+        # re-apply the cleared post-selection
+        self._converted_processor.set_postselection(post_select_curr)
         return self._converted_processor
