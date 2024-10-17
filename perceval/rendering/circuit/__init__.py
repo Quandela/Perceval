@@ -32,15 +32,4 @@ from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
 from .debug_skin import DebugSkin
 from .create_renderer import create_renderer
-
-
-class DisplayConfig:
-    _selected_skin = PhysSkin  # Default skin is PhysSkin
-
-    @staticmethod
-    def select_skin(skin: type[ASkin]) -> None:
-        DisplayConfig._selected_skin = skin
-
-    @staticmethod
-    def get_selected_skin(**kwargs) -> ASkin:
-        return DisplayConfig._selected_skin(**kwargs)
+from .display_config import DisplayConfig
