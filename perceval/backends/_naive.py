@@ -67,5 +67,5 @@ class NaiveBackend(AStrongSimulationBackend):
                 colidx += 1
         return u_st
 
-    def _compute_permanent(self, M):
-        return xq.permanent_cx(M, n_threads=1)
+    def _compute_permanent(self, m):
+        return xq.permanent_cx(m)

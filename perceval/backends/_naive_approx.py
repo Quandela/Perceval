@@ -45,12 +45,12 @@ class NaiveApproxBackend(NaiveBackend):
         return "NaiveApprox"
 
     def _compute_permanent(self, M):
-        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations)
         return permanent_with_error[0]
 
     def prob_amplitude_with_error(self, output_state: BasicState) -> tuple[complex, float]:
-        M = self._compute_submatrix(output_state)
-        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations, 0)
+        m = self._compute_submatrix(output_state)
+        permanent_with_error = xq.estimate_permanent_cx(m, self._gurvits_iterations)
         normalization_coeff = math.sqrt(output_state.prodnfact() * self._input_state.prodnfact())
         return (permanent_with_error[0]/normalization_coeff, permanent_with_error[1]/normalization_coeff) \
             if M.size > 1 else (M[0, 0], 0)
