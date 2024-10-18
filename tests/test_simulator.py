@@ -33,7 +33,7 @@ from unittest.mock import patch
 
 import perceval as pcvl
 from perceval import catalog
-from perceval.backends import AProbAmpliBackend, SLOSBackend
+from perceval.backends import AStrongSimulationBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
@@ -41,7 +41,7 @@ from perceval.utils import BasicState, BSDistribution, StateVector, SVDistributi
 from _test_utils import assert_sv_close, assert_svd_close, LogChecker
 
 
-class MockBackend(AProbAmpliBackend):
+class MockBackend(AStrongSimulationBackend):
 
     @property
     def name(self) -> str:

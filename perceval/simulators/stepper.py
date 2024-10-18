@@ -34,7 +34,7 @@ import copy
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
 from perceval.utils.logging import deprecated, get_logger
 from perceval.components import ACircuit
-from perceval.backends import AProbAmpliBackend, BACKEND_LIST
+from perceval.backends import AStrongSimulationBackend, BACKEND_LIST
 from .simulator_interface import ISimulator
 from ._simulator_utils import _to_bsd
 
@@ -44,7 +44,7 @@ class Stepper(ISimulator):
     Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
     on a list of components [(r, comp)].
     """
-    def __init__(self, backend: AProbAmpliBackend = None):
+    def __init__(self, backend: AStrongSimulationBackend = None):
         self._out = None
         self._backend = backend
         if backend is None:

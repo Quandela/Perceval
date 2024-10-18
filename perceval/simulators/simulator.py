@@ -36,7 +36,7 @@ from numbers import Number
 from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
-from perceval.backends import AProbAmpliBackend
+from perceval.backends import AStrongSimulationBackend
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector
@@ -56,7 +56,7 @@ class Simulator(ISimulator):
     :param backend: A probability amplitude capable backend object
     """
 
-    def __init__(self, backend: AProbAmpliBackend):
+    def __init__(self, backend: AStrongSimulationBackend):
         self._backend = backend
         self._invalidate_cache()
         self._min_detected_photons_filter: int = 0
