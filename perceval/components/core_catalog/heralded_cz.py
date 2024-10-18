@@ -29,7 +29,7 @@
 
 import math
 
-from perceval.components import Processor, Circuit, PERM, BS, PS
+from perceval.components import Processor, Circuit, PERM, BS, PS, Barrier
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.port import Port, Encoding
 
@@ -54,11 +54,14 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def build_circuit(self, **kwargs) -> Circuit:
         # the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
         last_modes_cz = (Circuit(4)
-                         .add(0, PS(math.pi), x_grid=1)
-                         .add(3, PS(math.pi), x_grid=1)
-                         .add((1, 2), PERM([1, 0]), x_grid=1)
-                         .add((0, 1), BS.H(theta=self.theta1), x_grid=2)
-                         .add((2, 3), BS.H(theta=self.theta1), x_grid=2)
+                         .add((1, 2), PERM([1, 0]))
+                         .add(0, Barrier(4, visible=False))  # Align components
+                         .add(0, PS(math.pi))
+                         .add(3, PS(math.pi))
+                         .add(0, Barrier(4, visible=False))  # Align components
+                         .add((0, 1), BS.H(theta=self.theta1))
+                         .add((2, 3), BS.H(theta=self.theta1))
+                         .add(0, Barrier(4, visible=False))  # Align components
                          .add((1, 2), PERM([1, 0]))
                          .add((0, 1), BS.H(theta=-self.theta1))
                          .add((2, 3), BS.H(theta=self.theta2)))

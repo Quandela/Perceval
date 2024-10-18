@@ -41,10 +41,11 @@ class TextRenderer(ICircuitRenderer):
         super().__init__(nsize)
         self._hc = hc
         self._h = [''] * (hc * nsize + 2)
-        self.extend_pos(0, self._nsize - 1)
         self._depth = [0] * nsize
         self._offset = 0
         self.min_box_size = min_box_size
+        self._ext_char = " "
+        self.extend_pos(0, self._nsize - 1)
 
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False):
         return None  # Don't need circuit size for text rendering
@@ -65,11 +66,9 @@ class TextRenderer(ICircuitRenderer):
                 maxpos = len(self._h[nl])
         return maxpos
 
-    def extend_pos(self, start, end, internal=False, header=False, char=" ", pos=None):
-        if pos is None:
-            maxpos = self.max_pos(start, end, header)
-        else:
-            maxpos = pos
+    def extend_pos(self, start, end, internal=False, header=False):
+        char = self._ext_char
+        maxpos = self.max_pos(start, end, header)
         for i in range(start * self._hc + (not header and 1 or 0), end * self._hc + 4 + ((header and not internal) and 1 or 0)):
             if internal:
                 self._h[i] += char * (maxpos - len(self._h[i]))
@@ -104,22 +103,25 @@ class TextRenderer(ICircuitRenderer):
 
     def append_subcircuit(self, lines, circuit):
         self.open_subblock(lines, circuit.name, None)
-        self.extend_pos(lines[0], lines[-1], header=True, internal=True, char="░")
+        self._ext_char = "░"
+        self.extend_pos(lines[0], lines[-1], header=True, internal=True)
+        self._ext_char = " "
         self.close_subblock(lines)
 
-    def append_circuit(self, lines, circuit, pos=None):
+    def append_circuit(self, lines, circuit):
         # opening the box
         start = lines[0]
         end = lines[-1]
-        self.extend_pos(start, end, pos=pos)
+        self.extend_pos(start, end)
 
         if isinstance(circuit, Barrier):
-            for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
-                if k % self._hc == 2:
-                    self._h[k] += "──║──"
-                else:
-                    self._h[k] += "  ║  "
-            self.extend_pos(start, end, pos=pos)
+            if circuit.visible:
+                for k in range(start * self._hc + 1, (end + 1) * self._hc + 1):
+                    if k % self._hc == 2:
+                        self._h[k] += "──║──"
+                    else:
+                        self._h[k] += "  ║  "
+                self.extend_pos(start, end)
             return
 
         # put variables on the right number of lines
@@ -172,7 +174,7 @@ class TextRenderer(ICircuitRenderer):
             for j, l in enumerate(lcontents):
                 if i < len(l):
                     self._h[self._hc * start + 2 + j] += l[i]
-        self.extend_pos(start, end, True)
+        self.extend_pos(start, end, internal=True)
         # closing the box
         for k in range(start * self._hc + 1, end * self._hc + 3):
             if k == start * self._hc + 1:
