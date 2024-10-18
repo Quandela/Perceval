@@ -148,8 +148,7 @@ class JobGroup:
         """
         Returns True if a JobGroup with an identical name is already saved on disk
         """
-        saved_job_groups = JobGroup.list_existing()
-        return any([jg_name == name for jg_name in saved_job_groups])
+        return JobGroup._JGRP_PERSISTENT_DATA.has_file(os.path.join(JobGroup._JGRP_DIR_PATH, name + '.' + FILE_EXT_JGRP))
 
     def add(self, job_to_add: RemoteJob, **kwargs):
         """
@@ -247,17 +246,17 @@ class JobGroup:
         jgrp_dir_path = JobGroup._JGRP_DIR_PATH
         list_groups = JobGroup.list_existing()
         for each_file in list_groups:
-            JobGroup._JGRP_PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, each_file))
+            JobGroup._JGRP_PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, each_file + '.' + FILE_EXT_JGRP))
 
     @staticmethod
-    def delete_job_group(filename: str):
+    def delete_job_group(group_name: str):
         """
         Delete a single JobGroup file by its name
-        :param filename: a JobGroup name to delete
+        :param group_name: a JobGroup name to delete
         """
         jgrp_dir_path = JobGroup._JGRP_DIR_PATH
 
-        JobGroup._JGRP_PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, filename + FILE_EXT_JGRP))
+        JobGroup._JGRP_PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, group_name + '.' + FILE_EXT_JGRP))
 
     @staticmethod
     def delete_job_groups_date(del_before_date: datetime):

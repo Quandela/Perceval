@@ -37,9 +37,8 @@ from _mock_rpc_handler import get_rpc_handler
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
-@patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_write_job_group_to_disk')
-def test_job_group_creation(mock_write_file, mock_list):
+def test_job_group_creation(mock_write_file):
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
     assert len(jgroup.list_remote_jobs) == 0  # empty job group
@@ -48,11 +47,9 @@ def test_job_group_creation(mock_write_file, mock_list):
 
     # assert mock methods called
     mock_write_file.assert_called_once()
-    mock_list.assert_called_once()
 
-@patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_write_job_group_to_disk')
-def test_reject_non_remote_job(mock_write_file, mock_list):
+def test_reject_non_remote_job(mock_write_file):
     # creating a local job - sampling
     p = catalog["postprocessed cnot"].build_processor()
     p.with_input(BasicState([0, 1, 0, 1]))
@@ -65,7 +62,6 @@ def test_reject_non_remote_job(mock_write_file, mock_list):
 
     # assert mock methods called
     mock_write_file.assert_called_once()
-    mock_list.assert_called_once()
 
 @patch.object(JobGroup, 'list_existing')
 @patch.object(JobGroup, '_read_job_group_from_disk')
