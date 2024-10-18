@@ -133,6 +133,10 @@ class Simulator(ISimulator):
     def logical_perf(self):
         return self._logical_perf
 
+    def _reset_perf(self):
+        self._logical_perf = 1
+        self._physical_perf = 1
+
     def set_postselection(self, postselect: PostSelect):
         """Set a post-selection function
 
@@ -381,6 +385,7 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution to the global distribution"""
             if probs_in_s:
+                self._logical_perf -= (1 - sum(probs_in_s.values())) * prob0
                 for bs, p in probs_in_s.items():
                     if bs.n >= self._min_detected_photons_filter:
                         res[bs] += p * prob0
@@ -392,6 +397,8 @@ class Simulator(ISimulator):
                 exec_request = progress_callback(progress, 'recombine distributions')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
+        if self._logical_perf > 0:
+            self._logical_perf = 1 - (1 - self._logical_perf) / self._physical_perf
         res.normalize()
         return res
 
@@ -408,27 +415,44 @@ class Simulator(ISimulator):
             * physical_perf is the performance computed from the detected photon filter
             * logical_perf is the performance computed from the post-selection
         """
+        self._reset_perf()
+        min_detected_photons = self._min_detected_photons_filter
+        if self._heralds:
+            self._setup_mask_from_heralds()
+            min_detected_photons = max(min_detected_photons, sum(self._heralds.values()))
 
         """Trim input SVD given _rel_precision threshold"""
         max_p = 0
         has_superposed_states = False
         for sv, p in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
+            if max(sv.n) >= min_detected_photons:
                 max_p = max(p, max_p)
             if len(sv) > 1:
                 has_superposed_states = True
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
         svd = SVDistribution({state: pr for state, pr in input_dist.items() if pr > p_threshold})
+
         if has_superposed_states:
             res = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
             res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
-        res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
+        res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
+        self._logical_perf *= logical_perf_contrib
         self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
         return {'results': res,
                 'physical_perf': self._physical_perf,
                 'logical_perf': self._logical_perf}
+
+    def _setup_mask_from_heralds(self):
+        # Set up a mask corresponding to heralds:
+        mask_str = ""
+        for i in range(self._backend._circuit.m):
+            if i in self._heralds:
+                mask_str += f"{self._heralds[i]}"
+            else:
+                mask_str += " "
+        self._backend.set_mask(mask_str)
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
@@ -516,11 +540,17 @@ class Simulator(ISimulator):
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
 
+        self._reset_perf()
+        min_detected_photons = self._min_detected_photons_filter
+        if self._heralds:
+            self._setup_mask_from_heralds()
+            min_detected_photons = max(min_detected_photons, sum(self._heralds.values()))
+
         # If it's actually an SVD
         intermediary_logical_perf = 1
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
-            if min(sv.n) >= self._min_detected_photons_filter:
+            if min(sv.n) >= min_detected_photons:
                 new_sv = self.evolve(sv)
                 intermediary_logical_perf -= p*self._logical_perf
                 if new_sv.m != 0:

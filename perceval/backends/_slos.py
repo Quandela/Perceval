@@ -149,6 +149,10 @@ class SLOSBackend(AStrongSimulationBackend):
         super().set_input_state(input_state)
         self.preprocess([input_state])
 
+    def clear_mask(self):
+        super().clear_mask()
+        self._reset()
+
     def _deploy(self, input_list: list[BasicState]):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
         # after calculation, we only need to keep fsa for input_state n
