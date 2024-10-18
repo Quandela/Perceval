@@ -72,12 +72,6 @@ class QiskitConverter(AGateConverter):
 
         gate_sequence = _get_gate_sequence(qc)
         optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
-        print('optimised cnot gate info list', optimized_gate_sequence)
-
-        n_cnot = 0  # count the number of CNOT gates in circuit - needed to find the num. heralds
-        for instruction in qc.data:
-            if instruction[0].name == "cx":
-                n_cnot += 1
 
         qubit_names = qc.qregs[0].name
         self._configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
@@ -100,12 +94,7 @@ class QiskitConverter(AGateConverter):
                     raise NotImplementedError("2+ Qubit gates not implemented")
                 c_idx = qc.find_bit(instruction[1][0])[0] * 2
                 c_data = qc.find_bit(instruction[1][1])[0] * 2
-                self._create_2_qubit_gates_from_catalog(
-                    # instruction[0].name,
-                    optimized_gate_sequence[gate_index],
-                    n_cnot,
-                    c_idx,
-                    c_data,
-                    use_postselection)
+                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], c_idx, c_data,
+                                                        use_postselection)
         self.apply_input_state()
         return self._converted_processor

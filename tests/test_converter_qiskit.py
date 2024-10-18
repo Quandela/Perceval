@@ -38,6 +38,8 @@ except ModuleNotFoundError as e:
 
 from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
+from perceval.converters.qiskit_converter import _get_gate_sequence
+from perceval.utils.converters import _label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
 
 
@@ -235,6 +237,20 @@ def test_cnot_ralph_vs_knill():
     qisk_circ = qiskit_circ_multiple_cnots()
     converter = QiskitConverter()
     pc = converter.convert(qisk_circ)
-    import perceval as pcvl
-    pcvl.pdisplay(pc)
-    # todo : add assertions
+
+    gate_sequence_converted = []
+    for _, c in pc.components:
+        gate_sequence_converted.append(c.name)
+
+    # gate list from qiskit
+    gate_sequence = _get_gate_sequence(qisk_circ)
+    optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
+    num_ralph_expt = len([elem for elem in optimized_gate_sequence if elem == 'CX:RALPH'])
+    cnot_order = [elem for elem in optimized_gate_sequence if elem.startswith('CX:')]
+    print(cnot_order)
+    cnot_order_pc = [elem for elem in gate_sequence_converted if elem.endswith('CNOT')]
+    print(cnot_order_pc)
+
+    num_ralph_pc = len([elem for elem in gate_sequence_converted if elem == 'PostProcessed CNOT'])
+    assert num_ralph_pc == num_ralph_expt
+    # todo : hard code results of qiskit simulation
