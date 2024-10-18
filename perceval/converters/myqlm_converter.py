@@ -29,7 +29,17 @@
 
 from perceval.components import Circuit, Processor, Source, BS, PS
 from perceval.utils.logging import get_logger, channel
+from perceval.utils.converters import _label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
+
+
+def _get_gate_sequence(myqlm_circ) -> list:
+    # returns a nested list of gate names with corresponding qubit positions from a myqlm circuit
+    gate_info = []
+    for gate_instruction in myqlm_circ.iterate_simple():
+        gate_info.append([gate_instruction[0], gate_instruction[2]])
+
+    return gate_info
 
 
 class MyQLMConverter(AGateConverter):
@@ -60,6 +70,10 @@ class MyQLMConverter(AGateConverter):
         # this nested import fixes automatic class reference generation
 
         get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits) to processor", channel.general)
+
+        gate_sequence = _get_gate_sequence(qlmc)
+        optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
+
         n_cnot = qlmc.count("CNOT")  # count the number of CNOT gates in circuit - needed to find the num. heralds
         self._configure_processor(qlmc)    # empty processor with ports initialized
 
@@ -94,12 +108,7 @@ class MyQLMConverter(AGateConverter):
                     raise ValueError(f"Gates with number of Qbits higher than 2 not implemented")
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
-                self._create_2_qubit_gates_from_catalog(
-                    instruction_name,
-                    n_cnot,
-                    c_idx,
-                    c_data,
-                    use_postselection)
+                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[i], c_idx, c_data, use_postselection)
 
         self.apply_input_state()
         return self._converted_processor

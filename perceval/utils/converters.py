@@ -29,6 +29,7 @@
 
 from itertools import combinations
 
+CNOT_NAMES = ['CX', 'CNOT']
 
 def _is_cyclic_util(v: int, visited: list, parent: int, adj_list: list) -> bool:
     visited[v] = True
@@ -87,7 +88,7 @@ def _gate_list_optimized_cnots(gate_info: list) -> list:
     :return: list of labelled CNOTs in sequential order
     """
 
-    cnot_list_in_order = [elem for elem in gate_info if elem[0] == 'cx']  # extracts CNOTs in sequence from gate list
+    cnot_list_in_order = [elem for elem in gate_info if elem[0].upper() in CNOT_NAMES]  # extracts CNOTs in sequence from gate list
     cnot_pos_pairs = [elem[1] for elem in cnot_list_in_order]  # list of CNOT qubit pos pairs in order of appearance
 
     ralph_pairs_list = _find_max_ralph_pairs(cnot_pos_pairs[::-1])
@@ -98,10 +99,10 @@ def _gate_list_optimized_cnots(gate_info: list) -> list:
     # This for loop generates the list for cnot_types - Knill or Ralph
     for pair in cnot_pos_pairs[::-1]:
         if pair in ralph_pairs_list:
-            cnot_type_list.append('cx:Ralph')
+            cnot_type_list.append('CX:RALPH')
             ralph_pairs_list.remove(pair)
         else:
-            cnot_type_list.append('cx:Knill')
+            cnot_type_list.append('CX:KNILL')
 
     cnot_type_list.reverse()  # required as it was created by going through CNOTs in reverse
 
@@ -125,7 +126,7 @@ def _label_cnots_in_gate_sequence(gate_info: list) -> list:
     # generate gate info with CNOT names
     cnot_counter = 0
     for i, elem in enumerate(gate_info):
-        if elem[0] == 'cx':
+        if elem[0].upper() in CNOT_NAMES:
             gate_info[i] = cnot_order_named[cnot_counter]
             cnot_counter += 1
 
