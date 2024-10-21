@@ -11,7 +11,7 @@ package_list = [dirname(p).replace('\\', '.') for p in glob('perceval/**/__init_
 QISKIT_BRIDGE_PKGS = ["qiskit~=0.46.3", "seaborn~=0.13"]
 QUTIP_BRIDGE_PKGS = ["qutip~=5.0.4"]
 MYQLM_BRIDGE_PKGS = ["myqlm~=1.10.4"]
-CQASM_BRIDGE_PKGS = ["libqasm==0.6.7"]
+CQASM_BRIDGE_PKGS = ["libqasm==0.6.7"]  # libqasm is not stable enough to put ~=
 
 setuptools.setup(
     name="perceval-quandela",
@@ -35,7 +35,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy>=1.12', 'numpy>=1.26', 'scipy', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.6.0',
+    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.14', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.6.0',
                       'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'requests<3',
                       'networkx~=3.1', 'latexcodec<4', 'platformdirs<5'],
     extras_require={
