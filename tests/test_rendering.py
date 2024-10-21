@@ -27,11 +27,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .remote_processor import RemoteProcessor
-from .session import ISession
-from ._token_management import save_token
-from .job_group import JobGroup
+
+from unittest.mock import patch
+
+from perceval.utils import PersistentData
+from perceval.rendering import DisplayConfig, PhysSkin, DebugSkin
+from perceval.rendering.circuit.display_config import _get_default_skin
+
+@patch.object(PersistentData, "load_config")
+@patch.object(PersistentData, "save_config")
+def test_display_config(mock_save_config, mock_load_config):
+    mock_load_config.return_value = {}
+    DisplayConfig.select_skin(_get_default_skin())  # Force the default skin to use the mock return value
+    assert DisplayConfig._selected_skin == PhysSkin
+    DisplayConfig.select_skin(DebugSkin)
+    assert DisplayConfig._selected_skin == DebugSkin
+    DisplayConfig.save()
+    assert mock_save_config.call_args.args[0] == {'pdisplay': {'skin': 'DebugSkin'}}
+
+    mock_load_config.return_value = {'pdisplay': {'skin': 'DebugSkin'}}
+    DisplayConfig.select_skin(_get_default_skin())  # Force the default skin to use the mock return value
+    assert DisplayConfig._selected_skin == DebugSkin

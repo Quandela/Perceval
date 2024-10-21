@@ -411,3 +411,19 @@ def test_allstate_iterator():
     in_sv = StateVector([0]+[0]*5) + StateVector([1]+[0]*5) + StateVector([2]+[0]*5)
     iteration_result = list(allstate_iterator(in_sv))
     assert len(iteration_result) == 28  # (C2,7 + C1,6 + C0,6 = 21 + 6 + 1)
+
+def test_mult():
+    fs1 = pcvl.BasicState("|2,0>")
+    fs2 = pcvl.BasicState("|3,5>")
+    state_basic = pcvl.BasicState([4, 1])
+
+    svd = pcvl.SVDistribution({fs1: .6, fs2: .4})
+    toto = svd * state_basic
+    tata = {fs1 * state_basic: .6, fs2 * state_basic: .4}
+    assert svd * state_basic == pcvl.SVDistribution({fs1 * state_basic: .6, fs2 * state_basic: .4})
+    assert state_basic * svd == pcvl.SVDistribution({state_basic * fs1: .6, state_basic * fs2: .4})
+
+    bsd = pcvl.BSDistribution({fs1: .6, fs2: .4})
+    print(bsd * state_basic)
+    assert bsd * state_basic == pcvl.BSDistribution({fs1 * state_basic: .6, fs2 * state_basic: .4})
+    assert state_basic * bsd == pcvl.BSDistribution({state_basic * fs1: .6, state_basic * fs2: .4})

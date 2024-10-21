@@ -167,24 +167,20 @@ class CanvasRenderer(ICircuitRenderer):
             name.upper(), 8)
         # Extend lines on the left side
         if margins[0]:
-            self.extend_pos(start, end, self.max_pos(start, end) + margins[0])
+            self.extend_pos(start, end, margins[0])
 
     def close_subblock(self, lines: tuple[int, ...]):
         start = lines[0]
         end = lines[-1]
-        subblock_end = self.max_pos(start, end)
-        # Extend lines on the right side
         right_margins = self._current_subblock_info.get('margins', (0, 0))[1]
-        self.extend_pos(start, end, subblock_end + right_margins)
+        # Extend lines on the right side
+        self.extend_pos(start, end, right_margins)
 
     def max_pos(self, start, end, _=None):
         return max(self._chart[start:end + 1])
 
-    def extend_pos(self, start, end, pos=None):
-        if pos is None:
-            maxpos = self.max_pos(start, end)
-        else:
-            maxpos = pos
+    def extend_pos(self, start, end, margin: int = 0):
+        maxpos = self.max_pos(start, end) + margin
         for p in range(start, end + 1):
             if self._chart[p] != maxpos:
                 self._canvas.set_offset(
@@ -206,12 +202,12 @@ class CanvasRenderer(ICircuitRenderer):
                         **style)
             self._chart[p] = maxpos
 
-    def _add_shape(self, lines, circuit, w, shape_fn=None, pos=None):
+    def _add_shape(self, lines, circuit, w, shape_fn=None):
         if shape_fn is None:
             shape_fn = self._skin.get_shape(circuit)
         start = lines[0]
         end = lines[-1]
-        self.extend_pos(start, end, pos=pos)
+        self.extend_pos(start, end)
         max_pos = self.max_pos(start, end)
         self._canvas.set_offset(
             (
@@ -257,9 +253,9 @@ class CanvasRenderer(ICircuitRenderer):
                 out_modes[m_output + lines[0]] = self._mode_style[m_input + m0]
             self._mode_style = out_modes
 
-    def append_circuit(self, lines, circuit, pos=None):
+    def append_circuit(self, lines, circuit):
         w = self._skin.get_width(circuit)
-        self._add_shape(lines, circuit, w, pos=pos)
+        self._add_shape(lines, circuit, w)
         self._update_mode_style(lines, circuit, w)
         for i in range(lines[0], lines[-1] + 1):
             self._chart[i] += w
@@ -354,16 +350,13 @@ class PreRenderer(ICircuitRenderer):
     def max_pos(self, start, end, _=None):
         return max(self._chart[start:end + 1])
 
-    def extend_pos(self, start, end, pos=None):
-        if pos is None:
-            maxpos = self.max_pos(start, end)
-        else:
-            maxpos = pos
+    def extend_pos(self, start: int, end: int, margin: int = 0):
+        maxpos = self.max_pos(start, end) + margin
         for p in range(start, end + 1):
             self._chart[p] = maxpos
 
-    def _add_shape(self, lines, circuit, w, shape_fn=None, pos=None):
-        self.extend_pos(lines[0], lines[-1], pos=pos)
+    def _add_shape(self, lines, circuit, w, shape_fn=None):
+        self.extend_pos(lines[0], lines[-1])
 
     def _update_mode_style(self, lines, circuit, w: int):
         if not isinstance(circuit, PERM):
@@ -383,10 +376,10 @@ class PreRenderer(ICircuitRenderer):
                     self._herald_range[0],
                     self._chart[lines[0] + in_mode])
 
-    def append_circuit(self, lines, circuit, pos=None):
+    def append_circuit(self, lines, circuit):
         w = self._skin.get_width(circuit)
         if w:
-            self._add_shape(lines, circuit, w, pos=pos)
+            self._add_shape(lines, circuit, w)
             self._update_mode_style(lines, circuit, w)
             for i in range(lines[0], lines[-1] + 1):
                 self._chart[i] += w
