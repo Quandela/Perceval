@@ -58,11 +58,11 @@ def test_convert_sv_dual_rail():
         assert qiskit_sv_out == Qiskit_sv([-0.70710678, 0., 0., 0., 0., 0., 0., 0.70710678], dims=(2, 2, 2))
 
         qiskit_sv = Qiskit_sv([.1, 0, 0, -.1, 0, 0, -.1, -.1])
-        assert converter.from_qiskit_to_perceval(qiskit_sv) == expected_sv
+        assert converter.to_perceval(qiskit_sv) == expected_sv
 
     if has_qutip:
         qutip_sv = (ket('000') - ket('011') - ket('110') - ket('111')).unit()
-        assert converter.from_qutip_to_perceval(qutip_sv) == expected_sv
+        assert converter.to_perceval(qutip_sv) == expected_sv
 
 
 @pytest.mark.skipif(not has_qiskit and not has_qutip, reason="Requires either qiskit or QuTip")
@@ -79,11 +79,11 @@ def test_convert_sv_raw():
         assert qiskit_sv_out == Qiskit_sv([-0.70710678, 0., 0., 0., 0., 0., 0., 0.70710678], dims=(2, 2, 2))
 
         qiskit_sv = Qiskit_sv([.1, 0, 0, -.1, 0, 0, -.1, -.1])
-        assert converter.from_qiskit_to_perceval(qiskit_sv) == expected_sv
+        assert converter.to_perceval(qiskit_sv) == expected_sv
 
     if has_qutip:
         qutip_sv = (ket('000') - ket('011') - ket('110') - ket('111')).unit()
-        assert converter.from_qutip_to_perceval(qutip_sv) == expected_sv
+        assert converter.to_perceval(qutip_sv) == expected_sv
 
 
 @pytest.mark.skipif(not has_qiskit and not has_qutip, reason="Requires either qiskit or QuTip")
@@ -100,11 +100,11 @@ def test_convert_sv_polarization():
         assert qiskit_sv_out == Qiskit_sv([-0.70710678, 0., 0., 0., 0., 0., 0., 0.70710678], dims=(2, 2, 2))
 
         qiskit_sv = Qiskit_sv([.1, 0, 0, -.1, 0, 0, -.1, -.1])
-        assert converter.from_qiskit_to_perceval(qiskit_sv) == expected_sv
+        assert converter.to_perceval(qiskit_sv) == expected_sv
 
     if has_qutip:
         qutip_sv = (ket('000') - ket('011') - ket('110') - ket('111')).unit()
-        assert converter.from_qutip_to_perceval(qutip_sv) == expected_sv
+        assert converter.to_perceval(qutip_sv) == expected_sv
 
 
 @pytest.mark.skipif(not has_qiskit, reason="Requires qiskit")
@@ -114,8 +114,12 @@ def test_statevector_converter_failures():
     p_sv = StateVector('|{P:V},{P:V},{P:V}>') - StateVector('|{P:H},{P:V},{P:V}>')  # Encoding mismatch
     p_sv2 = StateVector('|0,1,0,1,0>')  # Missing a mode to be dual rail
 
-    with pytest.raises(ValueError):
-        converter.from_qiskit_to_perceval(p_sv)
-
-    with pytest.raises(ValueError):
-        converter.from_qiskit_to_perceval(p_sv2)
+    for sv in [p_sv, p_sv2]:
+        with pytest.raises(TypeError):
+            converter.to_perceval(p_sv)
+        if has_qiskit:
+            with pytest.raises(ValueError):
+                converter.to_qiskit(sv)
+        if has_qutip:
+            with pytest.raises(ValueError):
+                converter.to_qutip(sv)

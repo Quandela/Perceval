@@ -140,19 +140,25 @@ class StatevectorConverter:
         dims = [[2] * n, [1] * n]
         return Qobj(qutip_ampli, dims)
 
-    def from_qutip_to_perceval(self, q_sv):
-        r"""Converts a Statevector from qutip to a StateVector from Perceval
-        """
-        return self._to_perceval(q_sv.data.to_array().reshape(-1))
+    def _convert_foreign_sv_to_ndarray(self, q_sv) -> np.ndarray:
+        try:
+            from qiskit.quantum_info import Statevector as Qiskit_sv
+            if isinstance(q_sv, Qiskit_sv):
+                return np.array(q_sv).reshape(-1)
+        except ModuleNotFoundError:
+            pass
+        try:
+            from qutip.core.qobj import Qobj
+            if isinstance(q_sv, Qobj):
+                return q_sv.data.to_array().reshape(-1)
+        except ModuleNotFoundError:
+            pass
+        raise TypeError(f"Unsupported type of State Vector for conversion: {type(q_sv)}")
 
-    def from_qiskit_to_perceval(self, q_sv):
-        r"""Converts a Statevector from qiskit to a StateVector from Perceval
-        """
-        return self._to_perceval(np.array(q_sv).reshape(-1))
-
-    def _to_perceval(self, q_sv: np.ndarray):
+    def to_perceval(self, q_sv):
         r"""Converts a Statevector from qiskit or qutip to a StateVector from Perceval
         """
+        q_sv = self._convert_foreign_sv_to_ndarray(q_sv)
         l_sv = len(q_sv)
         zero, one = self._zero_state, self._one_state
         n = np.log2(l_sv)
