@@ -31,7 +31,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-from qiskit import QuantumCircuit
 from perceval.utils.qmath import kmeans
 
 
@@ -60,7 +59,7 @@ class CircuitToGraphConverter:
     the weight of its edges depends on the type of gate.
     """
 
-    def __init__(self, qiskit_circuit: QuantumCircuit = None, gates=None, qubits=None):
+    def __init__(self, qiskit_circuit=None, gates=None, qubits=None):
         """
         :param qiskit_circuit: Quantum circuit to convert.
         :type gates: list of strings

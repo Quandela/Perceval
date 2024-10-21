@@ -29,9 +29,17 @@
 
 import pytest
 import numpy as np
+
+has_qiskit = True
+try:
+    from qiskit.circuit.random import random_circuit
+except ModuleNotFoundError as e:
+    assert e.name == "qiskit"
+    pytest.skip("need `qiskit` module", allow_module_level=True)
+
+
 from perceval.converters import CircuitToGraphConverter
 from perceval.converters import ResourcesEstimator
-from qiskit.circuit.random import random_circuit
 from perceval.utils.qmath import kmeans
 from perceval import pdisplay
 import matplotlib.pyplot as plt
