@@ -37,9 +37,6 @@ try:
 except ModuleNotFoundError as e:
     assert e.name == "qat"
     pytest.skip("need `myqlm` module", allow_module_level=True)
-except AttributeError as e:
-    assert "numpy" in e.args[0]
-    pytest.skip("need `myqlm` module to support Numpy 2.0", allow_module_level=True)
 
 from perceval import BasicState, StateVector
 from perceval.converters import MyQLMConverter
