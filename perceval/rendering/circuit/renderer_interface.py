@@ -28,7 +28,7 @@
 # SOFTWARE.
 from abc import ABC, abstractmethod
 
-from .abstract_skin import ModeStyle
+from perceval.utils import ModeType
 from perceval.components import ACircuit, Circuit, APort
 
 
@@ -42,7 +42,7 @@ class ICircuitRenderer(ABC):
 
     def __init__(self, nsize):
         self._nsize = nsize  # number of modes
-        self._mode_style = [ModeStyle.PHOTONIC] * nsize
+        self._mode_style = [ModeType.PHOTONIC] * nsize
 
         # A dictionary mapping a subblock to information pertaining to its
         # rendering. This is written by the pre-rendering pass, and read by
@@ -151,6 +151,12 @@ class ICircuitRenderer(ABC):
     def add_mode_index(self) -> None:
         """
         Render mode indexes on the right and left side of a previously rendered circuit
+        """
+
+    @abstractmethod
+    def display_input_photons(self, input_pos) -> None:
+        """
+        Display photons on input modes
         """
 
     @abstractmethod

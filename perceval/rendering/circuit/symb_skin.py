@@ -32,7 +32,7 @@ from multipledispatch import dispatch
 from perceval.components import AComponent, Circuit, Port, PortLocation, Herald,\
     unitary_components as cp,\
     non_unitary_components as nu
-from .abstract_skin import ASkin, ModeStyle
+from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
 
 
@@ -158,7 +158,7 @@ class SymbSkin(ASkin):
                          "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
                          13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
                          49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056]
-        canvas.add_mpath(path_data, **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mpath(path_data, **self.style[ModeType.PHOTONIC])
         content = self._get_display_content(bs).replace('phi', 'Φ').replace('theta=', 'Θ=')
         canvas.add_text((25 if self._compact else 50, 38), content, 7, "middle")
         # Add BS convention badge
@@ -166,7 +166,7 @@ class SymbSkin(ASkin):
         canvas.add_text((40 if self._compact else 77, 60), bs.convention.name, size=6, ta="middle")
 
     def ps_shape(self, circuit, canvas, mode_style):
-        canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(["M", 15, 35, "h", 20, "v", -20, "h", -20, "z"],
                          stroke="black", stroke_width=1, fill="lightgray")
         content = self._get_display_content(circuit).replace("phi=", "Φ=")
@@ -174,7 +174,7 @@ class SymbSkin(ASkin):
 
     def lc_shape(self, circuit, canvas, mode_style):
         style = {'stroke': 'black', 'stroke_width': 1}
-        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         canvas.add_mline([25, 25, 25, 32], **style)
         canvas.add_mline([15, 32, 35, 32], **style)
         canvas.add_mline([18, 34, 32, 34], **style)
@@ -201,12 +201,12 @@ class SymbSkin(ASkin):
             path_data2 = ["M", 59, 50, "l", -9.4807, -10.5087, "l", -9.4807, 10.5087, "l", 9.4807, 10.5087, "l",
                           9.4807,
                           -10.5087, "z", "m", 0.35, 0, "h", -19.2, "z"]
-        canvas.add_mpath(path_data1, **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mpath(path_data1, **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(path_data2, stroke_width=1, fill="#fff")
         canvas.add_text((25 if self._compact else 50, 86), text=self._get_display_content(circuit), size=7, ta="middle")
 
     def td_shape(self, circuit, canvas, mode_style):
-        stroke = self.style[ModeStyle.PHOTONIC]['stroke']
+        stroke = self.style[ModeType.PHOTONIC]['stroke']
         for h_shift in [0, 9, 18]:
             canvas.add_circle((34 - h_shift, 14), 11, stroke="white", stroke_width=3)
             canvas.add_circle((34 - h_shift, 14), 11, stroke=stroke, stroke_width=2)
@@ -219,13 +219,13 @@ class SymbSkin(ASkin):
     def unitary_shape(self, circuit, canvas, mode_style):
         w = circuit.m
         for i in range(circuit.m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[ModeStyle.PHOTONIC])
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[ModeType.PHOTONIC])
         radius = 6.25 * w  # Radius of the rounded corners
         canvas.add_mpath(
             ["M", 0, radius, "c", 0, 0, 0, -radius, radius, -radius, "l", 6 * radius, 0, "c", radius, 0, radius, radius,
              radius, radius, "l", 0, 6 * radius, "c", 0, 0, 0, radius, -radius, radius, "l", -6 * radius, 0, "c",
              -radius, 0, -radius, -radius, -radius, -radius, "l", 0, -6 * radius],
-            **self.style[ModeStyle.PHOTONIC], fill="lightyellow")
+            **self.style[ModeType.PHOTONIC], fill="lightyellow")
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
 
     def barrier_shape(self, barrier: cp.Barrier, canvas, mode_style):
@@ -252,7 +252,7 @@ class SymbSkin(ASkin):
 
     def wp_shape(self, circuit, canvas, mode_style):
         params = self._get_display_content(circuit).replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        style = self.style[ModeStyle.PHOTONIC]
+        style = self.style[ModeType.PHOTONIC]
         canvas.add_mpath(["M", 0, 25, "h", 15, "m", 21, 0, "h", 15], **style)
         canvas.add_mpath(["M", 15, 45, "h", 21, "v", -40, "h", -21, "z"], **style)
         canvas.add_text((25, 55), text=params[0], size=7, ta="middle")
@@ -260,19 +260,19 @@ class SymbSkin(ASkin):
 
     def hwp_shape(self, circuit, canvas, mode_style):
         params = self._get_display_content(circuit).replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(["M", 20, 0, "v", 50], stroke="black", stroke_width=2)
         canvas.add_mpath(["M", 30, 0, "v", 50], stroke="black", stroke_width=2)
         canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
 
     def qwp_shape(self, circuit, canvas, mode_style):
         params = self._get_display_content(circuit).replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mpath(["M", 0, 25, "v", 0, "h", 0, "h", 50], **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(["M", 25, 0, "v", 50], stroke="black", stroke_width=2)
         canvas.add_text((25, 60), text=params[0], size=7, ta="middle")
 
     def pr_shape(self, circuit, canvas, mode_style):
-        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(["M", 15, 36, "h", 22, "v", -22, "h", -22, "z"], stroke="black", stroke_width=1)
         canvas.add_mpath(["M", 19, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
                           "l", 2.305, -2.821, "c", 0.107, -0.131, 0.057, -0.237, -0.112, -0.237,
@@ -294,7 +294,7 @@ class SymbSkin(ASkin):
     def subcircuit_shape(self, circuit, canvas, mode_style):
         w = self.style_subcircuit['width']
         for idx in range(circuit.m):
-            canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.style[ModeStyle.PHOTONIC])
+            canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((2.5, 2.5), w*50 - 5, 50*circuit.m - 5,
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
         title = circuit.name.upper().split(" ")

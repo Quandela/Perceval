@@ -29,10 +29,10 @@
 
 from copy import copy
 
-from .abstract_skin import ModeStyle
 from .renderer_interface import ICircuitRenderer
 from ..canvas import Canvas
 from perceval.components import ACircuit, APort, PortLocation, PERM
+from perceval.utils import ModeType
 
 
 class _PortPos:
@@ -83,16 +83,24 @@ class CanvasRenderer(ICircuitRenderer):
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> tuple[int, int]:
         return self._skin.get_size(circuit, recursive)
 
+    def display_input_photons(self, input_pos) -> None:
+        for k in range(input_pos.m):
+            if input_pos[k] > 0 and self._mode_style[k] != ModeType.HERALD:
+                self._canvas.set_offset(
+                    (CanvasRenderer.AFFIX_ALL_SIZE*3/4, CanvasRenderer.AFFIX_ALL_SIZE * (2*k + 1)),
+                    0,
+                    0)
+                self._canvas.add_mpath(("M", -3, -3, "L", 0, 0, "L", -3, 3), **self._skin.style[ModeType.PHOTONIC])
+
     def add_mode_index(self):
         self._canvas.set_offset(
             (CanvasRenderer.AFFIX_ALL_SIZE + max(self._chart) * CanvasRenderer.SCALE, 0),
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
-            if self._mode_style[k] != ModeStyle.HERALD:
+            if self._mode_style[k] != ModeType.HERALD:
                 self._canvas.add_text(
-                    (CanvasRenderer.AFFIX_ALL_SIZE,
-                     CanvasRenderer.SCALE / 2 + 3 + CanvasRenderer.SCALE * k),
+                    (CanvasRenderer.AFFIX_ALL_SIZE, CanvasRenderer.SCALE * (k + 0.5) + 3),
                     str(k),
                     self._n_font_size,
                     ta="right")
@@ -102,7 +110,7 @@ class CanvasRenderer(ICircuitRenderer):
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
-            if self._mode_style[k] != ModeStyle.HERALD:
+            if self._mode_style[k] != ModeType.HERALD:
                 self._canvas.add_text(
                     (
                         0,
@@ -235,16 +243,14 @@ class CanvasRenderer(ICircuitRenderer):
             # Position input and output heralds
             for in_mode, herald_in_mode in input_heralds.items():
                 self._in_port_pos[herald_in_mode].y = lines[0] + in_mode
-                self._in_port_pos[herald_in_mode].x = \
-                    self._chart[lines[0] + in_mode]
+                self._in_port_pos[herald_in_mode].x = self._chart[lines[0] + in_mode]
                 # Start drawing this mode in "photonic" style
-                self._mode_style[lines[0] + in_mode] = ModeStyle.PHOTONIC
+                self._mode_style[lines[0] + in_mode] = ModeType.PHOTONIC
             for out_mode, herald_out_mode in output_heralds.items():
                 self._out_port_pos[herald_out_mode].y = lines[0] + out_mode
-                self._out_port_pos[herald_out_mode].x = \
-                    self._chart[lines[0] + out_mode] + w
+                self._out_port_pos[herald_out_mode].x = self._chart[lines[0] + out_mode] + w
                 # Stop drawing this mode (set it in "herald" style)
-                self._mode_style[lines[0] + out_mode] = ModeStyle.HERALD
+                self._mode_style[lines[0] + out_mode] = ModeType.HERALD
 
         else:  # Permutation case
             m0 = lines[0]
@@ -315,6 +321,9 @@ class PreRenderer(ICircuitRenderer):
         pass
 
     def close(self):
+        pass
+
+    def display_input_photons(self, input_pos) -> None:
         pass
 
     def add_mode_index(self) -> None:

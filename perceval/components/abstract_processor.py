@@ -33,12 +33,13 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from multipledispatch import dispatch
 
-from perceval.components.linear_circuit import Circuit, ACircuit
-from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
+from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel, ModeType
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
-from .abstract_component import AComponent
+from .abstract_component import AComponent, AParametrizedComponent
+from .detector import Detector
+from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
 from .unitary_components import PERM, Unitary
@@ -73,6 +74,7 @@ class AProcessor(ABC):
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
         self._components: list[tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
+        self._detectors: list[Detector] = []
 
         self._n_moi = None  # Number of modes of interest (moi)
 
@@ -115,7 +117,7 @@ class AProcessor(ABC):
             self._n_moi = new_m
 
     def _circuit_changed(self):
-        # Can be used by child class
+        # Can be used by child class to react to a circuit change
         pass
 
     def min_detected_photons_filter(self, n: int):
@@ -246,12 +248,25 @@ class AProcessor(ABC):
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):
             self._compose_processor(connector, component, keep_port)
+        elif isinstance(component, Detector):
+            self._add_detector(mode_mapping, component)
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
         self._circuit_changed()
         return self
+
+    def _add_detector(self, mode: int, detector: Detector):
+        if not isinstance(mode, int):
+            raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
+
+        if len(self._detectors) < self.circuit_size:
+            self._detectors += [None] * (self.circuit_size - len(self._detectors))
+
+        if not self.is_mode_connectible(mode):
+            raise ValueError(f"Mode {mode} is not photonic, cannot plug a detector.")
+        self._detectors[mode] = detector
 
     def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
@@ -438,7 +453,8 @@ class AProcessor(ABC):
         return new_comp
 
     def get_circuit_parameters(self) -> dict[str, Parameter]:
-        return {p.name: p for _, c in self._components for p in c.get_parameters()}
+        return {p.name: p for _, c in self._components if isinstance(c, AParametrizedComponent)
+                for p in c.get_parameters()}
 
     @property
     def out_port_names(self):
@@ -478,7 +494,7 @@ class AProcessor(ABC):
         return self
 
     @staticmethod
-    def _find_and_remove_port_from_list(m, port_list):
+    def _find_and_remove_port_from_list(m, port_list) -> bool:
         for current_port, current_port_range in port_list.items():
             if m in current_port_range:
                 del port_list[current_port]
@@ -496,12 +512,16 @@ class AProcessor(ABC):
         return self
 
     @property
-    def _closed_photonic_modes(self):
-        output = [False] * self.circuit_size
+    def _mode_type(self) -> list[ModeType]:
+        output = [ModeType.PHOTONIC] * self.circuit_size
         for port, m_range in self._out_ports.items():
-            if port.is_output_photonic_mode_closed():
-                for i in m_range:
-                    output[i] = True
+            mode_type = port.output_mode_type()
+            for i in m_range:
+                output[i] = mode_type
+        for i, det in enumerate(self._detectors):
+            if output[i] == ModeType.PHOTONIC:
+                if det is not None:
+                    output[i] = ModeType.CLASSICAL
         return output
 
     def is_mode_connectible(self, mode: int) -> bool:
@@ -509,7 +529,7 @@ class AProcessor(ABC):
             return False
         if mode >= self.circuit_size:
             return False
-        return not self._closed_photonic_modes[mode]
+        return self._mode_type[mode] == ModeType.PHOTONIC
 
     def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
         """

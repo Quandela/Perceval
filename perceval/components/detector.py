@@ -26,9 +26,33 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from .abstract_component import AComponent
 
-class Detector():
-    def __init__(self):
-        """
-            definition of a detector
-        """
+
+class Detector(AComponent):
+    def __init__(self, bs_layers: int = None):
+        super().__init__(1)
+        self._layers = bs_layers
+
+    @staticmethod
+    def threshold():
+        d = Detector(0)
+        d.name = "Thresh"
+        return d
+
+    @staticmethod
+    def pnr():
+        d = Detector()
+        d.name = "PNR"
+        return d
+
+    @staticmethod
+    def ppnr(layer: int = 1):
+        d = Detector(layer)
+        d.name = f"PPNR{layer if layer > 1 else ''}"
+        return d
+
+    def max_possible_detections(self) -> int or None:
+        if self._layers is None:
+            return None
+        return 2 ** self._layers

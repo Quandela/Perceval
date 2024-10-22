@@ -33,7 +33,7 @@ from multipledispatch import dispatch
 from perceval.components import AComponent, Circuit, Port, Herald, PortLocation,\
     unitary_components as cp,\
     non_unitary_components as nu
-from .abstract_skin import ASkin, ModeStyle
+from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
 
 
@@ -169,7 +169,7 @@ class PhysSkin(ASkin):
                                if not s.startswith("R=") and not s.startswith("theta=")]
         bottom_nline = len(bottom_content_list)
         bottom_size = 7 if bottom_nline < 3 else 6
-        mode_style = self.style[ModeStyle.PHOTONIC]
+        mode_style = self.style[ModeType.PHOTONIC]
         canvas.add_mline([0, 25, 28, 25, 47, 44], stroke_linejoin="round", **mode_style)
         canvas.add_mline([53, 44, 72, 25, 100, 25], stroke_linejoin="round", **mode_style)
         canvas.add_mline([0, 75, 28, 75, 47, 56], stroke_linejoin="round", **mode_style)
@@ -190,7 +190,7 @@ class PhysSkin(ASkin):
         canvas.add_text((73, 57), bs.convention.name, size=6, ta="middle")
 
     def ps_shape(self, circuit, canvas, mode_style):
-        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
                            stroke="black", fill="gray", stroke_width=1, stroke_linejoin="miter")
         content = self._get_display_content(circuit).replace("phi=", "Φ=")
@@ -198,7 +198,7 @@ class PhysSkin(ASkin):
 
     def lc_shape(self, circuit, canvas, mode_style):
         style = {'stroke': 'black', 'stroke_width': 1}
-        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         canvas.add_mline([25, 25, 25, 32], **style)
         canvas.add_mline([15, 32, 35, 32], **style)
         canvas.add_mline([18, 34, 32, 34], **style)
@@ -208,7 +208,7 @@ class PhysSkin(ASkin):
         canvas.add_text((6, 20), text=self._get_display_content(circuit), size=7, ta="left")
 
     def pbs_shape(self, circuit, canvas, mode_style):
-        style = self.style[ModeStyle.PHOTONIC]
+        style = self.style[ModeType.PHOTONIC]
         canvas.add_mline([0, 25, 28, 25, 37.5, 37.5], **style, stroke_linejoin="round")
         canvas.add_mline([62.5, 37.5, 72, 25, 100, 25], **style, stroke_linejoin="round")
         canvas.add_mline([0, 75, 28, 75, 37.5, 62.5], **style, stroke_linejoin="round")
@@ -219,7 +219,7 @@ class PhysSkin(ASkin):
         canvas.add_text((50, 86), text=self._get_display_content(circuit), size=7, ta="middle")
 
     def td_shape(self, circuit, canvas, mode_style):
-        style = self.style[ModeStyle.PHOTONIC]
+        style = self.style[ModeType.PHOTONIC]
         for h_shift in [0, 9, 18]:
             canvas.add_circle((34 - h_shift, 14), 11, stroke_width=5, fill=None, stroke="white")
             canvas.add_circle((34 - h_shift, 14), 11, fill=None, **style)
@@ -232,7 +232,7 @@ class PhysSkin(ASkin):
     def unitary_shape(self, circuit, canvas, mode_style):
         m = circuit.m
         for i in range(m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.style[ModeStyle.PHOTONIC])
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="gold")
         canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name)
 
@@ -260,7 +260,7 @@ class PhysSkin(ASkin):
 
     def wp_shape(self, circuit, canvas, mode_style):
         params = self._get_display_content(circuit).replace("xsi=", "ξ=").replace("delta=", "δ=").split("\n")
-        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((13, 7), width=14, height=36, fill="gray",
                         stroke_width=1, stroke="black", stroke_linejoin="miter")
         canvas.add_mline([20, 7, 20, 43], stroke="black", stroke_width=1)
@@ -268,8 +268,8 @@ class PhysSkin(ASkin):
         canvas.add_text((28.5, 45), text=params[1], size=7, ta="left")
 
     def pr_shape(self, circuit, canvas, mode_style):
-        canvas.add_mline([0, 25, 15, 25], **self.style[ModeStyle.PHOTONIC])
-        canvas.add_mline([35, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([0, 25, 15, 25], **self.style[ModeType.PHOTONIC])
+        canvas.add_mline([35, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((14, 14), width=22, height=22, stroke="black", fill="lightgray",
                         stroke_width=1, stroke_linejoin="miter")
         canvas.add_mpath(["M", 18, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
@@ -292,7 +292,7 @@ class PhysSkin(ASkin):
     def subcircuit_shape(self, circuit, canvas, mode_style):
         w = self.style_subcircuit['width']
         for idx in range(circuit.m):
-            canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.style[ModeStyle.PHOTONIC])
+            canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((2.5, 2.5), w*50 - 5, 50*circuit.m - 5,
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
         title = circuit.name.upper().split(" ")

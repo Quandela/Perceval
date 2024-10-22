@@ -48,9 +48,9 @@ from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
-from .circuit import DisplayConfig, create_renderer, ModeStyle, ASkin
+from .circuit import DisplayConfig, create_renderer, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
-from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr
+from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
 
@@ -134,7 +134,7 @@ def pdisplay_processor(processor: AProcessor,
     herald_info = {}
     if len(processor.heralds):
         for k in processor.heralds.keys():
-            renderer.set_mode_style(k, ModeStyle.HERALD)
+            renderer.set_mode_style(k, ModeType.HERALD)
         herald_info = collect_herald_info(processor, recursive)
 
     for rendering_pass in [pre_renderer, renderer]:
@@ -159,6 +159,9 @@ def pdisplay_processor(processor: AProcessor,
 
     for port, port_range in processor._in_ports.items():
         renderer.add_in_port(port_range[0], port)
+
+    if isinstance(processor._input_state, BasicState):
+        renderer.display_input_photons(processor._input_state)
 
     for port, port_range in processor._out_ports.items():
         renderer.add_out_port(port_range[0], port)

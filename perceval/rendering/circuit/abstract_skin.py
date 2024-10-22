@@ -28,17 +28,10 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from enum import Enum
 from multipledispatch import dispatch
 
 from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD
-from perceval.utils import format_parameters
-
-
-class ModeStyle(Enum):
-    PHOTONIC = 0
-    HERALD = 1
-    DIGITAL = 2
+from perceval.utils import format_parameters, ModeType
 
 
 class ASkin(ABC):
@@ -57,8 +50,8 @@ class ASkin(ABC):
 
     def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
         self._compact = compact_display
-        self.style = {ModeStyle.PHOTONIC: stroke_style,
-                      ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
+        self.style = {ModeType.PHOTONIC: stroke_style,
+                      ModeType.HERALD: {"stroke": None, "stroke_width": 1}
                       }
         self.style_subcircuit = style_subcircuit
         self.precision: float = 1e-6
