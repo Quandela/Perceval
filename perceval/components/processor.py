@@ -124,12 +124,12 @@ class Processor(AProcessor):
         self._source = source
         self._inputs_map = None
 
-    def _init_circuit(self, m_circuit):
+    def _init_circuit(self, m_circuit: ACircuit or int):
         if isinstance(m_circuit, ACircuit):
-            self._n_moi = m_circuit.m
+            self.m = m_circuit.m
             self.add(0, m_circuit)
-        else:
-            self._n_moi = m_circuit  # number of modes of interest (MOI)
+        elif m_circuit is not None:
+            self.m = m_circuit  # number of modes of interest
 
     def _init_backend(self, backend):
         if isinstance(backend, str):

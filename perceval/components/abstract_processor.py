@@ -75,8 +75,9 @@ class AProcessor(ABC):
         self._anon_herald_num: int = 0  # This is not a herald count!
         self._components: list[tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
         self._detectors: list[Detector] = []
+        self._mode_type: list[ModeType] = []
 
-        self._n_moi = None  # Number of modes of interest (moi)
+        self._n_moi: int = 0  # Number of modes of interest (moi)
 
     @property
     @abstractmethod
@@ -114,7 +115,7 @@ class AProcessor(ABC):
         self._input_state = None
         self._circuit_changed()
         if new_m is not None:
-            self._n_moi = new_m
+            self.m = new_m
 
     def _circuit_changed(self):
         # Can be used by child class to react to a circuit change
@@ -205,8 +206,8 @@ class AProcessor(ABC):
         Removes all components and replace them by the given circuit's components.
         :return: self. Allows to directly chain this with .add
         """
-        if self._n_moi is None:
-            self._n_moi = circuit.m
+        if self._n_moi == 0:
+            self.m = circuit.m
         assert circuit.m == self.circuit_size, "Circuit doesn't have the right number of modes"
         self._components = []
         for r, c in circuit:
@@ -240,8 +241,8 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._n_moi is None:
-            self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
+        if self._n_moi == 0:
+            self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
             get_logger().debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
                          channel.general)
 
@@ -299,6 +300,8 @@ class AProcessor(ABC):
         # Compute new herald positions
         n_new_heralds = connector.add_heralded_modes(mode_mapping)
         self._n_heralds += n_new_heralds
+        self._mode_type += [ModeType.HERALD] * n_new_heralds
+        self._detectors += [None] * n_new_heralds
 
         # Add PERM, component, PERM^-1
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
@@ -371,6 +374,7 @@ class AProcessor(ABC):
             self._anon_herald_num += 1
         self._in_ports[Herald(expected, name)] = [mode]
         self._out_ports[Herald(expected, name)] = [mode]
+        self._mode_type[mode] = ModeType.HERALD
         self._circuit_changed()
 
     def add_herald(self, mode: int, expected: int, name: str = None):
@@ -398,13 +402,21 @@ class AProcessor(ABC):
         """
         return self._n_moi
 
+    @m.setter
+    def m(self, value: int):
+        if self._n_moi != 0:
+            raise RuntimeError(f"The number of modes of this processor was already set (to {self._n_moi})")
+        if not isinstance(value, int) or value < 1:
+            raise ValueError(f"The number of modes should be a strictly positive integer")
+        self._n_moi = value
+        self._detectors = [None] * value
+        self._mode_type = [ModeType.PHOTONIC] * value
+
     @property
     def circuit_size(self) -> int:
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
-        if self._n_moi is None:
-            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -511,19 +523,6 @@ class AProcessor(ABC):
                 raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
         return self
 
-    @property
-    def _mode_type(self) -> list[ModeType]:
-        output = [ModeType.PHOTONIC] * self.circuit_size
-        for port, m_range in self._out_ports.items():
-            mode_type = port.output_mode_type()
-            for i in m_range:
-                output[i] = mode_type
-        for i, det in enumerate(self._detectors):
-            if output[i] == ModeType.PHOTONIC:
-                if det is not None:
-                    output[i] = ModeType.CLASSICAL
-        return output
-
     def is_mode_connectible(self, mode: int) -> bool:
         if mode < 0:
             return False
@@ -617,14 +616,14 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
-    def flatten(self) -> list:
+    def flatten(self) -> list[tuple]:
         """
         :return: a component list where recursive circuits have been flattened
         """
         return _flatten(self)
 
 
-def _flatten(composite, starting_mode=0) -> list:
+def _flatten(composite, starting_mode=0) -> list[tuple]:
     component_list = []
     for m_range, comp in composite._components:
         if isinstance(comp, Circuit):
