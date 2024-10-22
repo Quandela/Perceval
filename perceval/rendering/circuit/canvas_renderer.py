@@ -142,6 +142,21 @@ class CanvasRenderer(ICircuitRenderer):
             CanvasRenderer.SCALE)
         self._canvas.add_shape(self._skin.get_shape(port, PortLocation.INPUT), port, None)
 
+    def add_detectors(self, detector_list: list) -> None:
+        max_pos = max(self._chart[0:self._nsize])
+        for i, det in enumerate(detector_list):
+            if det is None:
+                continue
+            self._canvas.set_offset(
+                (
+                    CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * (max_pos + 1),
+                    CanvasRenderer.SCALE * i
+                ),
+                CanvasRenderer.AFFIX_ALL_SIZE,
+                CanvasRenderer.SCALE)
+            from perceval.components import Herald
+            self._canvas.add_shape(self._skin.get_shape(det), det, None)
+
     def open_subblock(self, lines: tuple[int, ...], name: str, size: tuple[int, int], color=None):
         # Get recommended margins for this block
         margins = self._current_subblock_info.get('margins', (0, 0))
@@ -333,6 +348,9 @@ class PreRenderer(ICircuitRenderer):
         pass
 
     def add_in_port(self, m: int, content: str) -> None:
+        pass
+
+    def add_detectors(self, detector_list: list) -> None:
         pass
 
     def set_herald_info(self, info):

@@ -95,7 +95,7 @@ class ASkin(ABC):
                 comp_width = self.get_width(comp)
             end_w = start_w + comp_width
             w[r] = [end_w] * comp.m
-        return max(w), min(p.circuit_size, height+2)
+        return max(w) + 1, min(p.circuit_size, height+2)
 
     def measure(self, c: AComponent) -> tuple[int, int]:
         """

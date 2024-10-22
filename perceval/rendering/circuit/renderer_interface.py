@@ -171,6 +171,12 @@ class ICircuitRenderer(ABC):
         Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
         """
 
+    @abstractmethod
+    def add_detectors(self, detector_list: list) -> None:
+        """
+        Render detectors when they exist
+        """
+
     def set_herald_info(self, info):
         """
         Provides the renderer with a pre-computed dict mapping a component to

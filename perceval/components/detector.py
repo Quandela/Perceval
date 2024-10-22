@@ -56,3 +56,15 @@ class Detector(AComponent):
         if self._layers is None:
             return None
         return 2 ** self._layers
+
+    @property
+    def is_pnr(self) -> bool:
+        return self._layers is None
+
+    @property
+    def is_threshold(self) -> bool:
+        return self._layers == 0
+
+    @property
+    def is_ppnr(self) -> bool:
+        return not (self.is_pnr or self.is_threshold)

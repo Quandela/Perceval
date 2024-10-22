@@ -163,6 +163,7 @@ def pdisplay_processor(processor: AProcessor,
     if isinstance(processor._input_state, BasicState):
         renderer.display_input_photons(processor._input_state)
 
+    renderer.add_detectors(processor._detectors)
     for port, port_range in processor._out_ports.items():
         renderer.add_out_port(port_range[0], port)
     renderer.add_mode_index()

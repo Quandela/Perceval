@@ -229,3 +229,6 @@ class TextRenderer(ICircuitRenderer):
             self._h[self._hc * (n_mode + i) + 3] = name + ' ' * \
                 (self._offset - name_size) + \
                 self._h[self._hc * (n_mode + i) + 3][self._offset:]
+
+    def add_detectors(self, detector_list: list) -> None:
+        pass  # Don't display detectors in text mode
