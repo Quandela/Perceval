@@ -33,7 +33,7 @@ from unittest.mock import patch
 
 import perceval as pcvl
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
-    PS, PERM
+    PS, PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
@@ -334,3 +334,12 @@ def test_processor_composition_mismatch_modes():
     assert r_list[0] == [4, 5, 6] # checks PERM added here to move extra mode out of the way
     assert r_list[1][0] == 0  # BS added at mode 0
     assert r_list[3][0] == 1  # checks PS at mode 1
+
+
+def test_processor_add_detector():
+    p = Processor("SLOS", 4)
+    p.add(0, Detector.pnr())
+    with pytest.raises(UnavailableModeException):
+        p.add(0, PS(phi=0))  # Cannot add an optical component after a detector
+    with pytest.raises(UnavailableModeException):
+        p.add(0, Detector.pnr())  # Cannot add a detector after a detector
