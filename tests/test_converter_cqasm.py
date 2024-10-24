@@ -178,6 +178,7 @@ version 3
 qubit[3] q
 CNOT q[0], q[1:2]
 """
+    # Todo: verify this conversion and fix test
     pc = CQASMConverter().convert(cqasm_program, use_postselection=False)
     # Two heralded CNOTs sandwiched between PERMs
     assert len(pc.components) == 5

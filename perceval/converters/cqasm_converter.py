@@ -202,7 +202,12 @@ class CQASMConverter(AGateConverter):
         gate_sequence = []
         for statement in ast.block.statements:
             gate_name, controls, targets, parameter = self._get_gate_inf(statement)
-            gate_sequence.append([gate_name, controls + targets])
+            if len(targets) > 1 and gate_name == 'CNOT':
+                get_logger().debug(f"Converting a multi-target CNOT {targets} to multiple Heralded CNOTs", channel.general)
+                for i in range(len(targets)):
+                    gate_sequence.append([gate_name, controls+[targets[i]]])
+            else:
+                gate_sequence.append([gate_name, controls + targets])
 
         optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
 
