@@ -29,7 +29,19 @@
 
 from perceval.components import Processor, Source
 from perceval.utils.logging import get_logger, channel
+from perceval.utils.converters import _label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
+from .circuit_to_graph_converter import gates_and_qubits
+
+def _get_gate_sequence(qisk_circ) -> list:
+    # returns a nested list of gate names with corresponding qubit positions
+    gate_names, qubit_pos = gates_and_qubits(qisk_circ)  # from qiskit circuit
+
+    gate_info = []
+    for index, elem in enumerate(gate_names):
+        gate_info.append([gate_names[index], qubit_pos[index]])
+
+    return gate_info
 
 
 class QiskitConverter(AGateConverter):
@@ -58,15 +70,13 @@ class QiskitConverter(AGateConverter):
         get_logger().info(f"Convert qiskit.QuantumCircuit ({qc.num_qubits} qubits, {len(qc.data)} operations) to processor",
                     channel.general)
 
-        n_cnot = 0  # count the number of CNOT gates in circuit - needed to find the num. heralds
-        for instruction in qc.data:
-            if instruction[0].name == "cx":
-                n_cnot += 1
+        gate_sequence = _get_gate_sequence(qc)
+        optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
 
         qubit_names = qc.qregs[0].name
         self._configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
 
-        for instruction in qc.data:
+        for gate_index, instruction in enumerate(qc.data):
             # barrier has no effect
             if isinstance(instruction[0], qiskit.circuit.barrier.Barrier):
                 continue
@@ -84,11 +94,7 @@ class QiskitConverter(AGateConverter):
                     raise NotImplementedError("2+ Qubit gates not implemented")
                 c_idx = qc.find_bit(instruction[1][0])[0] * 2
                 c_data = qc.find_bit(instruction[1][1])[0] * 2
-                self._create_2_qubit_gates_from_catalog(
-                    instruction[0].name,
-                    n_cnot,
-                    c_idx,
-                    c_data,
-                    use_postselection)
+                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], c_idx, c_data,
+                                                        use_postselection)
         self.apply_input_state()
         return self._converted_processor

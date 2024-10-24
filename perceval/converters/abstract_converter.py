@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 
 from perceval.components import Port, Circuit, Processor, Source, catalog
-from perceval.utils import P, BasicState, Encoding, global_params
+from perceval.utils import P, BasicState, Encoding, global_params, PostSelect, NoiseModel
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
@@ -52,8 +52,7 @@ class AGateConverter(ABC):
     def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
         self._converted_processor = None
         self._input_list = None  # input state in list
-        self._cnot_idx = 0  # counter for CNOTS in circuit
-        self._source = source
+        self._noise_model = NoiseModel()
         self._backend_name = backend_name
 
         # Define function handler to create complex components
@@ -82,7 +81,7 @@ class AGateConverter(ABC):
 
         n_moi = n_qbits * 2  # In dual rail, number of modes of interest = 2 * number of qbits
         self._input_list = [0] * n_moi
-        self._converted_processor = Processor(self._backend_name, n_moi, self._source)
+        self._converted_processor = Processor(self._backend_name, n_moi, noise=self._noise_model)
         for i in range(n_qbits):
             self._converted_processor.add_port(i * 2, Port(Encoding.DUAL_RAIL, qubit_names[i]))
             self._input_list[i * 2] = 1
@@ -116,14 +115,7 @@ class AGateConverter(ABC):
             optimize(ins, u, frobenius, sign=-1)
         return ins
 
-    def _create_2_qubit_gates_from_catalog(
-            self,
-            gate_name: str,
-            n_cnot,
-            c_idx,
-            c_data,
-            use_postselection,
-            parameter=None):
+    def _create_2_qubit_gates_from_catalog(self, gate_name: str, c_idx: int, c_data: int, use_postselection: bool):
         r"""
         List of Gates implemented:
         CNOT - Heralded and post-processed
@@ -131,14 +123,26 @@ class AGateConverter(ABC):
         CRz - Heralded and post-processed (uses two CNOTs)
         SWAP
         """
+        # Save and clear current post-selection data from the converted processor before adding the next gate
+        if self._converted_processor._postselect is not None:
+            post_select_curr = self._converted_processor._postselect
+        else:
+            post_select_curr = PostSelect()  # save empty if I need to merge incoming PostSelect to it
+        self._converted_processor.clear_postselection()  # clear current post-selection
+
         gate_name = gate_name.upper()
-        if gate_name in ["CNOT", "CX"]:
-            self._cnot_idx += 1
-            if use_postselection and self._cnot_idx == n_cnot:
+        if gate_name in ["CX:RALPH", "CX:KNILL"]:
+            if use_postselection and gate_name == "CX:RALPH":
                 cnot_processor = self.create_ppcnot_processor()
+                cnot_ps = cnot_processor._postselect
+
+                cnot_processor.clear_postselection()  # clear after saving post select information
+                post_select_curr.merge(cnot_ps)  # merge the incoming gate post-selection with the current
             else:
                 cnot_processor = self.create_hcnot_processor()
+
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
+
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
             cz_processor = self.create_hcz_processor()
@@ -157,4 +161,6 @@ class AGateConverter(ABC):
         else:
             raise UnknownGateError(f"Gate not yet supported: {gate_name}")
 
+        # re-apply the cleared post-selection
+        self._converted_processor.set_postselection(post_select_curr)
         return self._converted_processor
