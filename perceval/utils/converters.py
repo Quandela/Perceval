@@ -57,14 +57,15 @@ def _find_max_ralph_pairs(pairs) -> list:
         nodes.update(pair)
 
     node_map = {node: idx for idx, node in enumerate(nodes)}
-    cnot_node_count = len(nodes)
+    cnot_node_count = len(nodes)  # num of cnots
 
     max_subset = []  # list of pairs of acyclic combinations of modes
 
     # Check all possible subsets of the pairs list
     for r in range(1, len(pairs) + 1):
-        for subset in combinations(pairs, r):
-            # Build adjacency list for this subset
+        for subset in combinations(pairs, r):  # creating subsets of pairs taking r at a time
+            # Build adjacency list for each subset - each element of this list corresponds to
+            # each node (or vertex) and has a list of its adjacent nodes (neighbors)
             adj_list = [[] for _ in range(cnot_node_count)]
             for u, v in subset:
                 adj_list[node_map[u]].append(node_map[v])
