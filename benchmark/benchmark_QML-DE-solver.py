@@ -89,8 +89,8 @@ def computation(params):
     coefs = lambda_random  # coefficients of the M observable
     # initial condition with the two universal interferometers and the phase shift in the middle
 
-    U_1 = pcvl.Matrix.random_unitary(N, params[:2 * N2])
-    U_2 = pcvl.Matrix.random_unitary(N, params[2 * N2:4 * N2])
+    U_1 = pcvl.Matrix.parametrized_unitary(N, params[:2 * N2])
+    U_2 = pcvl.Matrix.parametrized_unitary(N, params[2 * N2:4 * N2])
 
     # Circuit creation
     px = pcvl.P("px")

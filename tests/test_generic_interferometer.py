@@ -74,9 +74,10 @@ def test_set_param_list():
 
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 0), m=2)
-    # With m=2, online one row of phase shifters get impacted (on mode 1, given the mzi we used)
+    # With m=2, only one row of phase shifters get impacted (on mode 1, given the mzi we used)
     # The 10 first phase shifter of this row get phi=values[idx]
-    for idx, phase_shifter_pos in enumerate([1, 3, 7, 9, 13, 15, 19, 21, 25, 27]):
+    indexes = [1, 3, 7, 9, 13, 15, 19, 21, 25, 27]
+    for idx, phase_shifter_pos in enumerate(indexes):
         assert float(interferometer[1, phase_shifter_pos].get_parameters()[0]) == pytest.approx(values[idx])
     # next phase shifters still have a variable phi:
     assert interferometer[1, 31].get_parameters()[0].defined == False
@@ -86,13 +87,13 @@ def test_set_param_list():
     # Moving 2 MZI down, means 4 modes down
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 2), m=2)
-    for idx, phase_shifter_pos in enumerate([1, 3, 7, 9, 13, 15, 19, 21, 25, 27]):
+    for idx, phase_shifter_pos in enumerate(indexes):
         assert float(interferometer[5, phase_shifter_pos].get_parameters()[0]) == pytest.approx(values[idx])
 
     # Moving 1 MZI right, means 6 components right
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (1, 0), m=2)
-    for idx, phase_shifter_pos in enumerate([1, 3, 7, 9, 13, 15, 19, 21, 25, 27]):
+    for idx, phase_shifter_pos in enumerate(indexes):
         assert float(interferometer[1, phase_shifter_pos+6].get_parameters()[0]) == pytest.approx(values[idx])
 
     # Starting too right, can get out of the interferometer
@@ -103,7 +104,7 @@ def test_set_param_list():
     # Reshaping by giving a higher m value, will impact more modes on insertion
     interferometer = GenericInterferometer(size, mzi_generator_func)
     interferometer.set_param_list(values, (0, 0), m=4)
-    for idx, (x, y) in enumerate([(1,1), (1,3), (3,1), (3,3), (2,3), (2,5), (1,7), (1,9), (3,7), (3,9)]):
+    for idx, (x, y) in enumerate([(1, 1), (1, 3), (3, 1), (3, 3), (2, 3), (2, 5), (1, 7), (1, 9), (3, 7), (3, 9)]):
         assert float(interferometer[x, y].get_parameters()[0]) == pytest.approx(values[idx])
 
 
@@ -116,7 +117,7 @@ def test_set_params_from_other():
     big_interferometer.set_params_from_other(small_interferometer, (0, 0))
     big_interferometer.remove_phase_layer()
 
-    for (x, y) in [(1,1), (1,3), (3,1), (3,3), (2,3), (2,5), (1,7), (1,9), (3,7), (3,9)]:
+    for (x, y) in [(1, 1), (1, 3), (3, 1), (3, 3), (2, 3), (2, 5), (1, 7), (1, 9), (3, 7), (3, 9)]:
         assert float(big_interferometer[x, y].get_parameters()[0]) == pytest.approx(math.pi)
     params_with_numerical_value = [p for p in big_interferometer.get_parameters() if p.defined]
     assert len(params_with_numerical_value) == len(small_interferometer.get_parameters())

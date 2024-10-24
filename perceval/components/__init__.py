@@ -38,7 +38,7 @@ from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_
                      get_pauli_eigenvectors)
 from .tomography_exp_configurer import processor_circuit_configurator
 from .comp_utils import decompose_perms
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
+from .port import APort, Port, Herald, PortLocation, get_basic_state_from_ports
 from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, Barrier
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog

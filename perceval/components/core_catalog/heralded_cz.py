@@ -29,11 +29,9 @@
 
 import math
 
-from perceval.components import Processor
-from perceval.components.unitary_components import Circuit, PERM, BS, PS
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components import Processor, Circuit, PERM, BS, PS, Barrier
+from perceval.components.component_catalog import CatalogItem
 from perceval.components.port import Port, Encoding
-from perceval.utils.logging import deprecated
 
 
 class HeraldedCzItem(CatalogItem):
@@ -52,23 +50,18 @@ data (dual rail) ─────┤     ├───── data (dual rail)
 
     def __init__(self):
         super().__init__("heralded cz")
-        self._default_opts['type'] = AsType.PROCESSOR
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        if self._opt('type') == AsType.CIRCUIT:
-            return self.build_circuit()
-        elif self._opt('type') == AsType.PROCESSOR:
-            return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs) -> Circuit:
         # the matrix of this first circuit is the same as the one presented in the reference paper, the difference in the second phase shift - placed on mode 3 instead of mode 1 - is due to a different convention for the beam-splitters (signs inverted in second column).
         last_modes_cz = (Circuit(4)
-                         .add(0, PS(math.pi), x_grid=1)
-                         .add(3, PS(math.pi), x_grid=1)
-                         .add((1, 2), PERM([1, 0]), x_grid=1)
-                         .add((0, 1), BS.H(theta=self.theta1), x_grid=2)
-                         .add((2, 3), BS.H(theta=self.theta1), x_grid=2)
+                         .add((1, 2), PERM([1, 0]))
+                         .add(0, Barrier(4, visible=False))  # Align components
+                         .add(0, PS(math.pi))
+                         .add(3, PS(math.pi))
+                         .add(0, Barrier(4, visible=False))  # Align components
+                         .add((0, 1), BS.H(theta=self.theta1))
+                         .add((2, 3), BS.H(theta=self.theta1))
+                         .add(0, Barrier(4, visible=False))  # Align components
                          .add((1, 2), PERM([1, 0]))
                          .add((0, 1), BS.H(theta=-self.theta1))
                          .add((2, 3), BS.H(theta=self.theta2)))

@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Callable, List, Dict
 from numbers import Number
 
 from .abstract_algorithm import AAlgorithm
@@ -141,7 +140,7 @@ class Sampler(AAlgorithm):
         return self._create_job("probs")
 
     # Iterator construction methods
-    def _add_iteration(self, circuit_params: Dict = None,
+    def _add_iteration(self, circuit_params: dict = None,
                       input_state: BasicState = None,
                       min_detected_photons: int = None):
         it = {}
@@ -171,13 +170,13 @@ class Sampler(AAlgorithm):
                 f"Iteration: input state and processor size mismatch (processor size is {self._processor.m})"
             self._processor.check_input(iter_params['input_state'])
 
-    def add_iteration(self, circuit_params: Dict = None,
+    def add_iteration(self, circuit_params: dict = None,
                        input_state: BasicState = None,
                        min_detected_photons: int = None):
         get_logger().info("Add 1 iteration to Sampler", channel.general)
         self._add_iteration(circuit_params, input_state, min_detected_photons)
 
-    def add_iteration_list(self, iterations: List[Dict]):
+    def add_iteration_list(self, iterations: list[dict]):
         get_logger().info(f"Add {len(iterations)} iterations to Sampler", channel.general)
         for iter_params in iterations:
             self._add_iteration(**iter_params)
@@ -191,13 +190,13 @@ class Sampler(AAlgorithm):
     def n_iterations(self):
         return len(self._iterator)
 
-    def _probs_wrapper(self, progress_callback: Callable = None):
+    def _probs_wrapper(self, progress_callback: callable = None):
         # max_shots is used as the invert of the precision set in the probs computation
         # Rationale: mimic the fact that the more shots, the more accurate probability distributions are.
         precision = None if self._max_shots is None else min(1e-6, 1/self._max_shots)
         return self._processor.probs(precision, progress_callback)
 
-    def _samples_wrapper(self, max_samples: int = None, progress_callback: Callable = None):
+    def _samples_wrapper(self, max_samples: int = None, progress_callback: callable = None):
         if max_samples is None and self._max_shots is None:
             raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
         if max_samples is None:
@@ -206,7 +205,7 @@ class Sampler(AAlgorithm):
 
 
     # Local iteration methods mimic remote iterations for interchangeability purpose
-    def _probs_iterate_locally(self, max_shots: int = None, progress_callback: Callable = None):
+    def _probs_iterate_locally(self, max_shots: int = None, progress_callback: callable = None):
         precision = None if max_shots is None else min(1e-6, 1 / max_shots)
         results = {'results_list':[]}
         for idx, it in enumerate(self._iterator):
@@ -217,7 +216,7 @@ class Sampler(AAlgorithm):
                 progress_callback((idx+1)/len(self._iterator))
         return results
 
-    def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None, progress_callback: Callable = None):
+    def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None, progress_callback: callable = None):
         if max_samples is None and max_shots is None:
             raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
         if max_samples is None:

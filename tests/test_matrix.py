@@ -28,14 +28,11 @@
 # SOFTWARE.
 
 from pathlib import Path
-from unittest.mock import patch
 import numpy as np
 import sympy as sp
 
 import perceval as pcvl
 from perceval.rendering.pdisplay import pdisplay_matrix
-
-from _test_utils import LogChecker
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
@@ -43,7 +40,7 @@ TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 def test_new_np():
     u = sp.eye(3)
     M = pcvl.Matrix(u)
-    assert np.array_equal(M, u)
+    assert u.equals(M)
     assert not M.is_symbolic()
 
 
@@ -187,10 +184,8 @@ def test_genunitary():
     assert M.is_unitary()
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_param_unitary(mock_warn):
-    with LogChecker(mock_warn):
-        m = pcvl.Matrix.random_unitary(2, np.arange(8))
+def test_param_unitary():
+    m = pcvl.Matrix.parametrized_unitary(2, np.arange(8))
 
     assert isinstance(m, pcvl.Matrix)
     assert m.shape == (2, 2)

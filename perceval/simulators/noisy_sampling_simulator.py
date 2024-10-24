@@ -31,8 +31,6 @@ import math
 import time
 import sys
 
-from typing import Callable, Dict, Tuple
-
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
@@ -49,8 +47,9 @@ class SamplesProvider:
         self._sample_coeff = 1.1
         self._min_samples = 100  # to be sampled at once
         self._max_samples = 2000  # to be sampled at once
+        self.sleep_between_batches = 0.2
 
-    def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: Callable = None):
+    def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: callable = None):
         for noisy_s, prob in noisy_input.items():
             ns = min(math.ceil(prob * n_samples), self._max_samples)
             for bs in noisy_s.separate_state(keep_annotations=False):
@@ -68,7 +67,7 @@ class SamplesProvider:
 
             if progress_callback:
                 cancel_request = progress_callback(0, 'prepare')
-                time.sleep(0.2)  # else callback method doesn't have time to be called
+                time.sleep(self.sleep_between_batches)  # else callback method doesn't have time to be called
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
@@ -105,6 +104,7 @@ class NoisySamplingSimulator:
         self._heralds: dict = {}
         self._threshold_detector = False
         self._keep_heralds = True
+        self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
 
     def set_threshold_detector(self, value: bool):
         """
@@ -187,7 +187,7 @@ class NoisySamplingSimulator:
             self,
             input_state: BasicState,
             n_samples: int,
-            progress_callback: Callable = None) -> Dict:
+            progress_callback: callable = None) -> dict:
         self._backend.set_input_state(input_state)
         samples_acquired = 0
         results = BSSamples()
@@ -200,7 +200,7 @@ class NoisySamplingSimulator:
 
             if progress_callback:
                 cancel_request = progress_callback(samples_acquired / n_samples, 'sampling')
-                time.sleep(0.2)  # else callback method doesn't have time to be called
+                time.sleep(self.sleep_between_batches)  # else callback method doesn't have time to be called
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
@@ -216,7 +216,7 @@ class NoisySamplingSimulator:
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
-            progress_callback: Callable = None) -> Dict:
+            progress_callback: callable = None) -> dict:
 
         output = BSSamples()
         idx = 0
@@ -273,7 +273,7 @@ class NoisySamplingSimulator:
             logical_perf = selected / (selected + not_selected)
         return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
 
-    def _check_input_svd(self, svd: SVDistribution) -> Tuple[float, float]:
+    def _check_input_svd(self, svd: SVDistribution) -> tuple[float, float]:
         """
         Check the mixed input state for its validity in the sampling case (no superposed states allowed) and compute
         both Zero Photon Probability (zpp) and MAX Probability of input states containing enough photons (max_p).
@@ -294,7 +294,7 @@ class NoisySamplingSimulator:
         return zpp, max_p
 
     def _preprocess_input_state(self, svd: SVDistribution, max_p: float, n_threshold: int
-                                ) -> Tuple[BSDistribution, float]:
+                                ) -> tuple[BSDistribution, float]:
         """
         Rework the input distribution to get rid of improbable states. Compute a first value for physical performance
         """
@@ -316,7 +316,7 @@ class NoisySamplingSimulator:
                 svd: SVDistribution,
                 max_samples: int,
                 max_shots: int = None,
-                progress_callback: Callable = None) -> Dict:
+                progress_callback: callable = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
@@ -350,6 +350,7 @@ class NoisySamplingSimulator:
 
         # Prepare pools of pre-computed samples
         provider = SamplesProvider(self._backend)
+        provider.sleep_between_batches = self.sleep_between_batches
         provider.prepare(new_input, prepare_samples, progress_callback)
 
         res = self._noisy_sampling(new_input, provider, max_samples, max_shots, progress_callback)
@@ -362,12 +363,12 @@ class NoisySamplingSimulator:
                      svd: SVDistribution,
                      max_samples: int,
                      max_shots: int = None,
-                     progress_callback: Callable = None) -> Dict:
+                     progress_callback: callable = None) -> dict:
         sampling = self.samples(svd, max_samples, max_shots, progress_callback)
         sampling['results'] = samples_to_sample_count(sampling['results'])
         return sampling
 
-    def log_resources(self, method: str, extra_parameters: Dict):
+    def log_resources(self, method: str, extra_parameters: dict):
         """Log resources of the noisy sampling simulator
 
         :param method: name of the method used

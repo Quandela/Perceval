@@ -51,8 +51,8 @@ class AMZI(CatalogItem, ABC):
             kwargs["phi_b"] = f"phi_b{kwargs['i']}"
         return CatalogItem._handle_param(kwargs.get("phi_a", "phi_a")), \
             CatalogItem._handle_param(kwargs.get("phi_b", "phi_b")), \
-            kwargs.get("theta_a", math.pi/2), \
-            kwargs.get("theta_b", math.pi/2)
+            CatalogItem._handle_param(kwargs.get("theta_a", math.pi/2)), \
+            CatalogItem._handle_param(kwargs.get("theta_b", math.pi/2))
 
     def build_processor(self, **kwargs) -> Processor:
         return self._init_processor(**kwargs)
@@ -63,6 +63,7 @@ class AMZI(CatalogItem, ABC):
 
 _NAME_MZI_PHASE_FIRST = "mzi phase first"
 _NAME_MZI_PHASE_LAST = "mzi phase last"
+_NAME_SYMMETRIC_MZI = "symmetric mzi"
 
 
 class MZIPhaseFirst(AMZI):
@@ -97,3 +98,21 @@ class MZIPhaseLast(AMZI):
         phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
         return (Circuit(2, name="MZI")
                 // BS(theta=theta_a) // (1, PS(phi=phi_a)) // BS(theta=theta_b) // (1, PS(phi=phi_b)))
+
+
+class SymmetricMZI(AMZI):
+    str_repr = r"""    ╭─────╮╭─────╮╭─────╮
+0:──┤BS.Rx├┤phi_a├┤BS.Rx├──:0
+    │     │╰─────╯│     │
+    │     │╭─────╮│     │
+1:──┤     ├┤phi_b├┤     ├──:1
+    ╰─────╯╰─────╯╰─────╯ """
+    see_also = _NAME_MZI_PHASE_FIRST
+
+    def __init__(self):
+        super().__init__(_NAME_SYMMETRIC_MZI)
+
+    def build_circuit(self, **kwargs) -> Circuit:
+        phi_a, phi_b, theta_a, theta_b = self._handle_params(**kwargs)
+        return (Circuit(2, name="MZI")
+                // BS(theta=theta_a) // (0, PS(phi=phi_a)) // (1, PS(phi=phi_b))) // BS(theta=theta_b)

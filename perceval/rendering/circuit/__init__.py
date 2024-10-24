@@ -27,22 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Type
-
 from .abstract_skin import ASkin, ModeStyle
 from .phys_skin import PhysSkin
 from .symb_skin import SymbSkin
 from .debug_skin import DebugSkin
-from .renderer import create_renderer
-
-
-class DisplayConfig:
-    _selected_skin = PhysSkin  # Default skin is PhysSkin
-
-    @staticmethod
-    def select_skin(skin: Type[ASkin]) -> None:
-        DisplayConfig._selected_skin = skin
-
-    @staticmethod
-    def get_selected_skin(**kwargs) -> ASkin:
-        return DisplayConfig._selected_skin(**kwargs)
+from .create_renderer import create_renderer
+from .display_config import DisplayConfig

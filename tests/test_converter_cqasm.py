@@ -26,14 +26,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import numpy as np
 import pytest
+
+try:
+    import cqasm
+except ModuleNotFoundError as e:
+    assert e.name == "cqasm"
+    pytest.skip("need `cqasm` module", allow_module_level=True)
+
+import numpy as np
 from pathlib import Path
 
-from perceval import StateVector
+from perceval.components import BS
 from perceval.converters import CQASMConverter, ConversionSyntaxError, ConversionUnsupportedFeatureError, ConversionBadVersionError
-import perceval.components.unitary_components as components
-from perceval.utils import BasicState
+from perceval.utils import BasicState, StateVector
 
 
 def test_converter_version_check():
@@ -154,7 +160,7 @@ CNOT q[0], q[1]
 H q[0]
 """
     pc = CQASMConverter().convert(cqasm_program, use_postselection=True)
-    assert isinstance(pc._components[-1][1]._components[0][1], components.BS)
+    assert isinstance(pc._components[-1][1]._components[0][1], BS)
 
 
 def test_converter_qubit_names():

@@ -27,10 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Processor, Circuit, BS
-from perceval.components.component_catalog import CatalogItem, AsType
-from perceval.utils.parameter import P
-from perceval.utils.logging import deprecated
+from perceval.components import Circuit, BS
+from perceval.components.component_catalog import CatalogItem
 
 
 class Generic2ModeItem(CatalogItem):
@@ -50,16 +48,6 @@ class Generic2ModeItem(CatalogItem):
 
     def __init__(self):
         super().__init__("generic 2 mode circuit")
-        self._default_opts['type'] = AsType.CIRCUIT
-        self._reset_opts()
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        c = BS.H(theta=P("theta"), phi_tl=P("phi_tl"), phi_bl=P("phi_bl"), phi_tr=P("phi_tr"))
-        if self._opt('type') == AsType.CIRCUIT:
-            return c
-        elif self._opt('type') == AsType.PROCESSOR:
-            return Processor(self._opt('backend'), c)
 
     def build_circuit(self, **kwargs):
         return Circuit(2, name=kwargs.get("name", "U2")) \

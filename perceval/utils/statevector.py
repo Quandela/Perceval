@@ -35,7 +35,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
-from typing import Dict, List, Union, Optional
 
 import exqalibur as xq
 from perceval.utils.logging import get_logger, channel
@@ -47,7 +46,7 @@ BasicState = xq.FockState
 StateVector = xq.StateVector
 
 
-def allstate_iterator(input_state: Union[BasicState, StateVector], mask=None) -> BasicState:
+def allstate_iterator(input_state: BasicState | StateVector, mask=None) -> BasicState:
     """Iterator on all possible output states compatible with mask generating StateVector
 
     :param input_state: a given input state vector
@@ -80,7 +79,7 @@ def max_photon_state_iterator(m: int, n_max: int):
             yield output_state
 
 
-def tensorproduct(states: List[Union[StateVector, BasicState]]):
+def tensorproduct(states: list[StateVector | BasicState]):
     r""" Computes states[0] * states[1] * ...
     """
     if len(states) == 1:
@@ -128,7 +127,7 @@ class ProbabilityDistribution(defaultdict, ABC):
 class SVDistribution(ProbabilityDistribution):
     r"""Time-Independent Probabilistic distribution of StateVectors
     """
-    def __init__(self, sv: Optional[BasicState, StateVector, Dict] = None):
+    def __init__(self, sv: BasicState | StateVector | dict | None = None):
         super().__init__()
         self._n_max = 0
         self._m = None
@@ -172,8 +171,12 @@ class SVDistribution(ProbabilityDistribution):
         :param other: State / distribution to multiply with
         :return: The result of the tensor product
         """
-        if isinstance(other, (BasicState, StateVector)):
+        if isinstance(other, SVDistribution):
+            pass
+        elif isinstance(other, (BasicState, StateVector)):
             other = SVDistribution(other)
+        else:
+            return NotImplemented
         if len(self) == 0:
             return other
         new_svd = SVDistribution()
@@ -182,12 +185,21 @@ class SVDistribution(ProbabilityDistribution):
                 new_svd[sv1*sv2] = proba1 * proba2
         return new_svd
 
+    def __rmul__(self, other):
+        if isinstance(other, SVDistribution):
+            pass
+        elif isinstance(other, (BasicState, StateVector)):
+            other = SVDistribution(other)
+        else:
+            return NotImplemented
+        return other * self
+
     def normalize(self):
         sum_probs = sum(list(self.values()))
         for sv in self.keys():
             self[sv] /= sum_probs
 
-    def sample(self, count: int, non_null: bool = True) -> List[StateVector]:
+    def sample(self, count: int, non_null: bool = True) -> list[StateVector]:
         r""" Generate a sample StateVector from the `SVDistribution`
 
         :param non_null: excludes null states from the sample generation
@@ -262,7 +274,7 @@ def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
 class BSDistribution(ProbabilityDistribution):
     r"""Time-Independent probabilistic distribution of Basic States
     """
-    def __init__(self, d: Optional[BasicState, Dict] = None):
+    def __init__(self, d: BasicState | dict | None = None):
         super().__init__()
         self._m = None
         if d is not None:
@@ -303,10 +315,25 @@ class BSDistribution(ProbabilityDistribution):
         return random.choices(states, k=count, weights=probs)
 
     def __mul__(self, other):
+        if isinstance(other, BSDistribution):
+            pass
+        elif isinstance(other, BasicState):
+            other = BSDistribution(other)
+        else:
+            return NotImplemented
         return BSDistribution.tensor_product(self, other)
 
+    def __rmul__(self, other):
+        if isinstance(other, BSDistribution):
+            pass
+        elif isinstance(other, BasicState):
+            other = BSDistribution(other)
+        else:
+            return NotImplemented
+        return BSDistribution.tensor_product(other, self)
+
     @staticmethod
-    def tensor_product(bsd1, bsd2, merge_modes: bool = False, prob_threshold: float = 0):
+    def tensor_product(bsd1: BSDistribution, bsd2: BSDistribution, merge_modes: bool = False, prob_threshold: float = 0):
         """
         Compute the tensor product of two BasicState Distribution
         """
@@ -333,7 +360,7 @@ class BSDistribution(ProbabilityDistribution):
 class BSCount(defaultdict):
     r"""Container that counts basic state events
     """
-    def __init__(self, d: Optional[Dict] = None):
+    def __init__(self, d: dict | None = None):
         super().__init__(int)
         if d is not None:
             for k, v in d.items():

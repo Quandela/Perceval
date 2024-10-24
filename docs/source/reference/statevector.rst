@@ -8,7 +8,7 @@ StateVector class reference
 superposed state represented as a (complex) linear combination of :code:`BasicState` objects (its components), the
 complex coefficients being probability amplitudes.
 
-* **Constructor** :code:`__init__(bs: BasicState or List[int] or str = None)`
+* **Constructor** :code:`__init__(bs: BasicState or list[int] or str = None)`
 
 Initialize a StateVector from a BasicState or data to create a BasicState (list of integers, string representation)
 
@@ -105,7 +105,7 @@ components and amplitudes.
 >>> print(sv.samples(10))
 [|1,0>, |1,0>, |1,0>, |1,0>, |1,0>, |1,0>, |2,2>, |1,0>, |1,0>, |2,2>]
 
-* **Method** :code:`measure(modes: List[int])`
+* **Method** :code:`measure(modes: list[int])`
 
 Perform a measure on one or multiple modes and collapse the remaining :code:`StateVector`. The resulting
 states are not normalised by default.
