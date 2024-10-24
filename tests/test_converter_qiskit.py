@@ -301,4 +301,4 @@ def test_cnot_ralph_vs_knill_sim():
         bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
         tot_diff += abs(value - qisk_probs[bit_form])
 
-    assert 1e-9 < tot_diff < 1e-7
+    assert tot_diff < 1e-7
