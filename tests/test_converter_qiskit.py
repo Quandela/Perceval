@@ -44,7 +44,7 @@ from perceval.converters.qiskit_converter import _get_gate_sequence
 from perceval.utils.converters import _label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
 from perceval.components.port import get_basic_state_from_encoding
-from perceval.utils import BSCount, Encoding, generate_all_logical_states, sample_count_to_probs
+from perceval.utils import BSDistribution, Encoding, generate_all_logical_states
 from perceval.algorithm import Sampler
 
 TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
@@ -279,8 +279,7 @@ def test_cnot_ralph_vs_knill_sim():
         qisk_probs = json.load(f)  # prob distribution - bits already reversed in Qiskit output
 
     # computing samples in Perceval
-    pc_sampler = Sampler(pc)
-    sampling_res = pc_sampler.sample_count(1e50)['results']
+    probs_pc = pc.probs()['results']
 
     # convert the probs to valid logical states
     num_qubits = 4
@@ -291,15 +290,14 @@ def test_cnot_ralph_vs_knill_sim():
         basic_states.append(get_basic_state_from_encoding(enc_list, each_ls))
 
     # extracting logically valid samples from perceval output
-    valid_bs_samples = BSCount()
+    valid_bsd = BSDistribution()
     for each_bs in basic_states:
-        if each_bs in list(sampling_res.keys()):
-            valid_bs_samples.add(each_bs, sampling_res[each_bs])
-
-    final_bsd = sample_count_to_probs(valid_bs_samples)
+        if each_bs in list(probs_pc.keys()):
+            valid_bsd.add(each_bs, probs_pc[each_bs])
+    valid_bsd.normalize()
 
     tot_diff = 0  # sum of absolute difference between the probs of the two computations
-    for index, (key, value) in enumerate(final_bsd.items()):
+    for index, (key, value) in enumerate(valid_bsd.items()):
         bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
         tot_diff += abs(value - qisk_probs[bit_form])
 
