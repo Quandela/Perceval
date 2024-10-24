@@ -28,7 +28,9 @@
 # SOFTWARE.
 
 import pytest
+import json
 import numpy as np
+from pathlib import Path
 
 try:
     import qiskit
@@ -41,6 +43,11 @@ from perceval.converters import QiskitConverter
 from perceval.converters.qiskit_converter import _get_gate_sequence
 from perceval.utils.converters import _label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
+from perceval.components.port import get_basic_state_from_encoding
+from perceval.utils import BSCount, Encoding, generate_all_logical_states, sample_count_to_probs
+from perceval.algorithm import Sampler
+
+TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
 
 
 def test_basic_circuit_h():
@@ -212,7 +219,9 @@ def test_cnot_herald():
 
 def qiskit_circ_multiple_cnots():
     # Gate Circuit
-    params = np.random.random(8)
+    params = [0.55254396, 0.97997692, 0.17090731,
+              0.33458378, 0.94711577, 0.39304346, 0.98720513, 0.94564894]
+
     circ = qiskit.QuantumCircuit(4)
 
     circ.rx(params[0], 0)
@@ -235,22 +244,63 @@ def qiskit_circ_multiple_cnots():
 
 def test_cnot_ralph_vs_knill():
     qisk_circ = qiskit_circ_multiple_cnots()
+
     converter = QiskitConverter()
-    pc = converter.convert(qisk_circ)
+    pc = converter.convert(qisk_circ, use_postselection=True)  # converted
 
-    gate_sequence_converted = []
+    # Verify correct number and position of post-processed CNOTs in conversion
+    gate_seq_converted = []
     for _, c in pc.components:
-        gate_sequence_converted.append(c.name)
+        gate_seq_converted.append(c.name)
 
-    # gate list from qiskit
-    gate_sequence = _get_gate_sequence(qisk_circ)
-    optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
+    gate_seq_qisk = _get_gate_sequence(qisk_circ) # gate list from qiskit
+    optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_seq_qisk)
+
     num_ralph_expt = len([elem for elem in optimized_gate_sequence if elem == 'CX:RALPH'])
-    cnot_order = [elem for elem in optimized_gate_sequence if elem.startswith('CX:')]
-    print(cnot_order)
-    cnot_order_pc = [elem for elem in gate_sequence_converted if elem.endswith('CNOT')]
-    print(cnot_order_pc)
+    cnot_order_expct = [elem for elem in optimized_gate_sequence if elem.startswith('CX:')]
+    # replace CX:KNILL -> heralded CNOT, and CX:Ralph with 'PostProcessed CNOT
+    cnot_order_expct = ['Heralded CNOT' if elem =='CX:KNILL' else elem for elem in cnot_order_expct]
+    cnot_order_expct = ['PostProcessed CNOT' if elem == 'CX:RALPH' else elem for elem in cnot_order_expct]
 
-    num_ralph_pc = len([elem for elem in gate_sequence_converted if elem == 'PostProcessed CNOT'])
-    assert num_ralph_pc == num_ralph_expt
-    # todo : hard code results of qiskit simulation
+    cnot_order_converted = [elem for elem in gate_seq_converted if elem.endswith('CNOT')]
+    num_ralph_pc = len([elem for elem in gate_seq_converted if elem == 'PostProcessed CNOT'])
+
+    assert cnot_order_converted == cnot_order_expct
+    assert num_ralph_pc == num_ralph_expt  # compare number of Ralphs
+
+def test_cnot_ralph_vs_knill_sim():
+    qisk_circ = qiskit_circ_multiple_cnots()
+
+    converter = QiskitConverter()
+    pc = converter.convert(qisk_circ, use_postselection=True)  # converted
+
+    # Reading from saved (pre-computed) Qiskit output
+    with open(TEST_DATA_DIR / 'sv_qisk', "r") as f:
+        qisk_probs = json.load(f)  # prob distribution - bits already reversed in Qiskit output
+
+    # computing samples in Perceval
+    pc_sampler = Sampler(pc)
+    sampling_res = pc_sampler.sample_count(1e50)['results']
+
+    # convert the probs to valid logical states
+    num_qubits = 4
+    enc_list = [Encoding.DUAL_RAIL]*4
+    logical_states = generate_all_logical_states(num_qubits)
+    basic_states = []
+    for each_ls in logical_states:
+        basic_states.append(get_basic_state_from_encoding(enc_list, each_ls))
+
+    # extracting logically valid samples from perceval output
+    valid_bs_samples = BSCount()
+    for each_bs in basic_states:
+        if each_bs in list(sampling_res.keys()):
+            valid_bs_samples.add(each_bs, sampling_res[each_bs])
+
+    final_bsd = sample_count_to_probs(valid_bs_samples)
+
+    tot_diff = 0  # sum of absolute difference between the probs of the two computations
+    for index, (key, value) in enumerate(final_bsd.items()):
+        bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
+        tot_diff += abs(value - qisk_probs[bit_form])
+
+    assert 1e-9 < tot_diff < 1e-7
