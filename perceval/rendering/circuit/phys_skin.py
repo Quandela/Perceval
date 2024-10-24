@@ -146,25 +146,25 @@ class PhysSkin(ASkin):
         canvas.add_mpath(["M", 8, 35, "h", -8, "v", -2 * r, "h", 8,
                           "c", 0, 0, r, 0, r, r,
                           "c", 0, r, -r, r, -r, r, "z"],
-                         stroke="black", stroke_width=1, fill="yellow")
+                         stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
-            canvas.add_text((0, 11), text=detector.name, size=6, ta="left", fontstyle="italic")
+            canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
 
     def threshold_detector_shape(self, detector, canvas, mode_style):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
         r = 10  # Radius of the half-circle
         canvas.add_mpath(["M", 0, 25+r, "L", 18, 25, "L", 0, 25-r, "z"],
-                         stroke="black", stroke_width=1, fill="yellow")
+                         stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
-            canvas.add_text((0, 11), text=detector.name, size=6, ta="left", fontstyle="italic")
+            canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
 
     def ppnr_detector_shape(self, detector, canvas, mode_style):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
         r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 0, 25+r, "L", 10, 25+r*.8, "L", 18, 25, "L", 10, 25-r*.8, "L", 0, 25-r, "z"],
-                         stroke="black", stroke_width=1, fill="yellow")
+        canvas.add_mpath(["M", 0, 25+r, "L", 10, 25+r*.85, "L", 18, 25, "L", 10, 25-r*.85, "L", 0, 25-r, "z"],
+                         stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
-            canvas.add_text((0, 11), text=detector.name, size=6, ta="left", fontstyle="italic")
+            canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
 
     def default_shape(self, circuit, canvas, mode_style):
         """

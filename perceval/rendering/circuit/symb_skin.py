@@ -29,7 +29,7 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import AComponent, Circuit, Port, PortLocation, Herald,\
+from perceval.components import AComponent, Circuit, Port, PortLocation, Herald, Detector,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeType
@@ -133,6 +133,10 @@ class SymbSkin(ASkin):
         if location == PortLocation.INPUT:
             return self.herald_shape_in
         return self.herald_shape_out
+
+    @dispatch(Detector)
+    def get_shape(self, detector):
+        return self.detector_shape
 
     def default_shape(self, circuit, canvas, mode_style):
         """
@@ -329,3 +333,13 @@ class SymbSkin(ASkin):
         canvas.add_rect((15, 15), 12, 50*port.m - 30, fill="white")
         if port.name:
             canvas.add_text((27, 50*port.m - 9), text='[' + port.name + ']', size=6, ta="right", fontstyle="italic")
+
+    def detector_shape(self, detector, canvas, mode_style):
+        canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
+        r = 10  # Radius of the half-circle
+        canvas.add_mpath(["M", 8, 35, "h", -8, "v", -2 * r, "h", 8,
+                          "c", 0, 0, r, 0, r, r,
+                          "c", 0, r, -r, r, -r, r, "z"],
+                         stroke="black", stroke_width=1, fill="white")
+        if detector.name:
+            canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
