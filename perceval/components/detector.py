@@ -26,18 +26,107 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from abc import ABC, abstractmethod
+from enum import Enum
+
 from .abstract_component import AComponent
+from .linear_circuit import Circuit
+from .unitary_components import BS, PERM
+from perceval.utils import BasicState, BSDistribution
+from perceval.utils.logging import get_logger, channel
 
 
-class Detector(AComponent):
-    def __init__(self, bs_layers: int = None):
+class DetectorType(Enum):
+    PNR = 0
+    Threshold = 1
+    PPNR = 2
+
+
+class IDetector(AComponent, ABC):
+
+    def __init__(self):
         super().__init__(1)
+
+    @property
+    @abstractmethod
+    def type(self) -> DetectorType:
+        """
+        Returns the detector type
+        """
+
+    @abstractmethod
+    def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
+        """
+        Returns a one mode Fock state distribution out of a theoretical photon count coming in the detector
+        """
+
+
+class BSLayeredPPNR(IDetector):
+    """
+    BSLayeredPPNR implements Pseudo Photon Number Resolving detection using layers of beam splitter plugged on
+    2**(number of layers) threshold detectors.
+
+    :param bs_layers: Number of beam splitter layers. Adding more layers enabled to detect
+    """
+
+    def __init__(self, bs_layers: int, reflectivity: float = 0.5):
+        assert isinstance(bs_layers, int) and bs_layers > 0,\
+            "Beam-splitter layers have to be a stricly positive integer"
+        assert 0 <= reflectivity <= 1, f"Reflectivity must be between 0 and 1 (got {reflectivity})"
+        super().__init__()
+        self.name = f"BS-PPNR{bs_layers}"
         self._layers = bs_layers
+        self._r = reflectivity
+
+    @property
+    def type(self) -> DetectorType:
+        return DetectorType.PPNR
+
+    def create_circuit(self) -> Circuit:
+        """
+        Creates the circuit to simulate PPNR with threshold detectors
+        """
+        ppnr_circuit = Circuit(2 ** self._layers)
+        for l in range(self._layers):
+            perm_vector = list(range(0, 2**(l+1)-1, 2)) + list(range(1, 2**(l+1)-1, 2))
+            if len(perm_vector) > 1:
+                ppnr_circuit.add(0, PERM(perm_vector))
+            for m in range(0, 2**(l+1), 2):
+                ppnr_circuit.add(m, BS(BS.r_to_theta(self._r)))
+        return ppnr_circuit
+
+    def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
+        if theoretical_photons < 2:
+            return BasicState([theoretical_photons])
+
+        from perceval.backends import SLOSBackend
+        ppnr_circuit = self.create_circuit()
+        slos = SLOSBackend()
+        slos.set_circuit(ppnr_circuit)
+        slos.set_input_state(BasicState([theoretical_photons] + [0]*(ppnr_circuit.m - 1)))
+        dist = slos.prob_distribution()
+
+        output = BSDistribution()
+        for state, prob in dist.items():
+            state = state.threshold_detection()
+            output[BasicState([state.n])] += prob
+        return output
+
+
+class Detector(IDetector):
+    def __init__(self, p_multiphoton_detection: float = 1):
+        super().__init__()
+        assert 0 <= p_multiphoton_detection <= 1,\
+            f"A probability must be within 0 and 1 (got {p_multiphoton_detection})"
+        self._pmd = p_multiphoton_detection
+        if self.type == DetectorType.PPNR:
+            get_logger().error("Generic PPNR was not implemented yet and will behave like a threshold detector for now",
+                               channel.user)
 
     @staticmethod
     def threshold():
         d = Detector(0)
-        d.name = "Thresh"
+        d.name = "Threshold"
         return d
 
     @staticmethod
@@ -47,24 +136,21 @@ class Detector(AComponent):
         return d
 
     @staticmethod
-    def ppnr(layer: int = 1):
-        d = Detector(layer)
-        d.name = f"PPNR{layer if layer > 1 else ''}"
+    def ppnr(p: float):
+        d = Detector(p)
+        d.name = f"PPNR"
         return d
 
-    def max_possible_detections(self) -> int or None:
-        if self._layers is None:
-            return None
-        return 2 ** self._layers
-
     @property
-    def is_pnr(self) -> bool:
-        return self._layers is None
+    def type(self) -> DetectorType:
+        if self._pmd == 0:
+            return DetectorType.Threshold
+        elif self._pmd == 1:
+            return DetectorType.PNR
+        return DetectorType.PPNR
 
-    @property
-    def is_threshold(self) -> bool:
-        return self._layers == 0
-
-    @property
-    def is_ppnr(self) -> bool:
-        return not (self.is_pnr or self.is_threshold)
+    def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
+        if theoretical_photons < 2 or self.type == DetectorType.PNR:
+            return BasicState([theoretical_photons])
+        # Adjust the model to treat the PPNR case here
+        return BasicState([1])

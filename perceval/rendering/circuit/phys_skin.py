@@ -30,7 +30,7 @@
 import math
 from multipledispatch import dispatch
 
-from perceval.components import AComponent, Circuit, Port, Herald, PortLocation, Detector,\
+from perceval.components import AComponent, Circuit, Port, Herald, PortLocation, IDetector, DetectorType,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeType
@@ -122,13 +122,13 @@ class PhysSkin(ASkin):
             return self.herald_shape_in
         return self.herald_shape_out
 
-    @dispatch(Detector)
+    @dispatch(IDetector)
     def get_shape(self, detector):
-        if detector.is_pnr:
-            return self.pnr_detector_shape
-        elif detector.is_threshold:
+        if detector.type == DetectorType.PPNR:
+            return self.ppnr_detector_shape
+        elif detector.type == DetectorType.Threshold:
             return self.threshold_detector_shape
-        return self.ppnr_detector_shape
+        return self.pnr_detector_shape
 
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")

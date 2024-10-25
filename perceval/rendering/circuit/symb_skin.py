@@ -29,7 +29,7 @@
 
 from multipledispatch import dispatch
 
-from perceval.components import AComponent, Circuit, Port, PortLocation, Herald, Detector,\
+from perceval.components import AComponent, Circuit, Port, PortLocation, Herald, IDetector,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeType
@@ -134,7 +134,7 @@ class SymbSkin(ASkin):
             return self.herald_shape_in
         return self.herald_shape_out
 
-    @dispatch(Detector)
+    @dispatch(IDetector)
     def get_shape(self, detector):
         return self.detector_shape
 

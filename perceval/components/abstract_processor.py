@@ -38,7 +38,7 @@ from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
-from .detector import Detector
+from .detector import IDetector
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
@@ -74,7 +74,7 @@ class AProcessor(ABC):
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
         self._components: list[tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
-        self._detectors: list[Detector] = []
+        self._detectors: list[IDetector] = []
         self._mode_type: list[ModeType] = []
 
         self._n_moi: int = 0  # Number of modes of interest (moi)
@@ -249,7 +249,7 @@ class AProcessor(ABC):
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):
             self._compose_processor(connector, component, keep_port)
-        elif isinstance(component, Detector):
+        elif isinstance(component, IDetector):
             self._add_detector(mode_mapping, component)
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component)
@@ -258,7 +258,7 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
-    def _add_detector(self, mode: int, detector: Detector):
+    def _add_detector(self, mode: int, detector: IDetector):
         if not isinstance(mode, int):
             raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
 
