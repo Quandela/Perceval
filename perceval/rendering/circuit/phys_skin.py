@@ -124,11 +124,13 @@ class PhysSkin(ASkin):
 
     @dispatch(IDetector)
     def get_shape(self, detector):
-        if detector.type == DetectorType.PPNR:
-            return self.ppnr_detector_shape
+        if detector.type == DetectorType.PNR:
+            return self.pnr_detector_shape
         elif detector.type == DetectorType.Threshold:
             return self.threshold_detector_shape
-        return self.pnr_detector_shape
+        elif detector.type == DetectorType.PPNR:
+            return self.ppnr_detector_shape
+        raise TypeError(f"Unknown detector type: {detector.type}")
 
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
