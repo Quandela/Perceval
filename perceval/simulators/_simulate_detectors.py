@@ -1,0 +1,72 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from perceval.components import IDetector, DetectorType
+from perceval.utils import BasicState, BSDistribution
+
+
+def _detection_type(detectors: list[IDetector]) -> DetectorType:
+    """
+    Computes a global detection type from a given list of detectors.
+
+    :return: PNR if all detectors are PNR or not set
+             Threshold if all detectors are threshold
+             else PPNR
+    """
+    result = None
+    for det in detectors:
+        current = DetectorType.PNR if det is None else det.type  # Default is PNR
+        if current == DetectorType.PPNR:
+            return current
+
+        if result is None:
+            result = current
+        elif result != current:
+            return DetectorType.PPNR
+    return result
+
+
+def simulate_detectors(dist: BSDistribution, detectors: list[IDetector]) -> BSDistribution:
+    detection = _detection_type(detectors)
+    if detection == DetectorType.PNR:
+        return dist
+
+    result = BSDistribution()
+    if detection == DetectorType.Threshold:
+        for s, p in dist.items():
+            result[s.threshold_detection()] += p
+        return result
+
+    for s, p in dist.items():
+        state_distrib = BSDistribution()
+        for photons_in_mode, detector in zip(s, detectors):
+            state_distrib *= detector.detect(photons_in_mode)
+        for s_out, p_out in state_distrib.items():
+            result.add(s_out, p * p_out)
+    return result
