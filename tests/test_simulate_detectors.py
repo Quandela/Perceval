@@ -26,27 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import pytest
-from perceval.simulators._simulate_detectors import simulate_detectors, _detection_type
-from perceval.components import Detector, DetectorType, BSLayeredPPNR
+
+from perceval.simulators._simulate_detectors import simulate_detectors
+from perceval.components import Detector, BSLayeredPPNR
 from perceval.utils import BSDistribution, BasicState
 
 
-pnr_detector_list = [Detector.pnr()] * 3  # Only PNR detectors
-thr_detector_list = [Detector.threshold()] * 3  # Only threshold detectors
-mixed_detector_list = [BSLayeredPPNR(1), Detector.pnr(), Detector.threshold()]
-
-
-def test_detection_type():
-    assert _detection_type(pnr_detector_list) == DetectorType.PNR
-    assert _detection_type(thr_detector_list) == DetectorType.Threshold
-    # PPNR means mixed detectors in this context
-    assert _detection_type(pnr_detector_list + thr_detector_list) == DetectorType.PPNR
-    assert _detection_type(mixed_detector_list) == DetectorType.PPNR
-
-
 def test_simulate_detectors():
+    pnr_detector_list = [Detector.pnr()] * 3  # Only PNR detectors
+    thr_detector_list = [Detector.threshold()] * 3  # Only threshold detectors
+    mixed_detector_list = [BSLayeredPPNR(1), Detector.pnr(), Detector.threshold()]
+
     bsd = BSDistribution({
         BasicState([1, 1, 1]): 0.2,
         BasicState([2, 0, 1]): 0.3,

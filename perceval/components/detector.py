@@ -40,6 +40,7 @@ class DetectorType(Enum):
     PNR = 0
     Threshold = 1
     PPNR = 2
+    Mixed = 3
 
 
 class IDetector(AComponent, ABC):
@@ -154,3 +155,21 @@ class Detector(IDetector):
             return BasicState([theoretical_photons])
         # Adjust the model to treat the PPNR case here
         return BasicState([1])
+
+
+def detection_type(detectors: list[IDetector]) -> DetectorType:
+    """
+    Computes a global detection type from a given list of detectors.
+
+    :return: PNR if all detectors are PNR or not set
+             Threshold if all detectors are threshold
+             else PPNR
+    """
+    result = None
+    for det in detectors:
+        current = DetectorType.PNR if det is None else det.type  # Default is PNR
+        if result is None:
+            result = current
+        elif result != current:
+            return DetectorType.Mixed
+    return result

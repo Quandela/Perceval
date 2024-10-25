@@ -34,11 +34,11 @@ from enum import Enum
 from multipledispatch import dispatch
 
 from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel, ModeType
-from perceval.utils.logging import get_logger, channel
+from perceval.utils.logging import get_logger, channel, deprecated
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
-from .detector import IDetector
+from .detector import IDetector, Detector, DetectorType, detection_type
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
@@ -554,6 +554,7 @@ class AProcessor(ABC):
                 return port
         return None
 
+    @deprecated(version=0.12, reason="Add detectors as components")
     def thresholded_output(self, value: bool):
         r"""
         Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
@@ -562,10 +563,16 @@ class AProcessor(ABC):
         :param value: enables threshold detection when True, otherwise disables it.
         """
         self._thresholded_output = value
+        self._detectors = [Detector.threshold() if self._thresholded_output else None] * len(self._detectors)
 
     @property
+    @deprecated(version=0.12, reason="Use `detection_type` property instead")
     def is_threshold(self) -> bool:
         return self._thresholded_output
+
+    @property
+    def detection_type(self) -> DetectorType:
+        return detection_type(self._detectors)
 
     @property
     def heralds(self):

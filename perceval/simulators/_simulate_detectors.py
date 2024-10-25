@@ -27,33 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import IDetector, DetectorType
-from perceval.utils import BasicState, BSDistribution
-
-
-def _detection_type(detectors: list[IDetector]) -> DetectorType:
-    """
-    Computes a global detection type from a given list of detectors.
-
-    :return: PNR if all detectors are PNR or not set
-             Threshold if all detectors are threshold
-             else PPNR
-    """
-    result = None
-    for det in detectors:
-        current = DetectorType.PNR if det is None else det.type  # Default is PNR
-        if current == DetectorType.PPNR:
-            return current
-
-        if result is None:
-            result = current
-        elif result != current:
-            return DetectorType.PPNR
-    return result
+from perceval.components.detector import IDetector, DetectorType, detection_type
+from perceval.utils import BSDistribution
 
 
 def simulate_detectors(dist: BSDistribution, detectors: list[IDetector]) -> BSDistribution:
-    detection = _detection_type(detectors)
+    detection = detection_type(detectors)
     if detection == DetectorType.PNR:
         return dist
 

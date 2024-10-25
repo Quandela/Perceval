@@ -26,10 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import pytest
 
-from perceval.components import Detector, BS, PERM, DetectorType, BSLayeredPPNR
+from perceval.components import BS, PERM
+from perceval.components.detector import detection_type, Detector, DetectorType, BSLayeredPPNR
 from perceval.utils import BasicState
 
 
@@ -95,3 +95,15 @@ def test_bs_layered_ppnr_bad_usage():
 
     with pytest.raises(AssertionError):
         BSLayeredPPNR(1, 1.1)
+
+
+def test_detection_type():
+    pnr_detector_list = [Detector.pnr()] * 3  # Only PNR detectors
+    thr_detector_list = [Detector.threshold()] * 3  # Only threshold detectors
+    mixed_detector_list = [BSLayeredPPNR(1), Detector.pnr(), Detector.threshold()]
+
+    assert detection_type(pnr_detector_list) == DetectorType.PNR
+    assert detection_type(thr_detector_list) == DetectorType.Threshold
+    # PPNR means mixed detectors in this context
+    assert detection_type(pnr_detector_list + thr_detector_list) == DetectorType.PPNR
+    assert detection_type(mixed_detector_list) == DetectorType.PPNR
