@@ -114,8 +114,12 @@ def test_statevector_converter_failures():
     p_sv = StateVector('|{P:V},{P:V},{P:V}>') - StateVector('|{P:H},{P:V},{P:V}>')  # Encoding mismatch
     p_sv2 = StateVector('|0,1,0,1,0>')  # Missing a mode to be dual rail
 
-    with pytest.raises(ValueError):
-        converter.to_qiskit(p_sv)
-
-    with pytest.raises(ValueError):
-        converter.to_qiskit(p_sv2)
+    for sv in [p_sv, p_sv2]:
+        with pytest.raises(TypeError):
+            converter.to_perceval(p_sv)
+        if has_qiskit:
+            with pytest.raises(ValueError):
+                converter.to_qiskit(sv)
+        if has_qutip:
+            with pytest.raises(ValueError):
+                converter.to_qutip(sv)
