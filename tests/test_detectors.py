@@ -29,19 +29,19 @@
 import pytest
 
 from perceval.components import BS, PERM
-from perceval.components.detector import detection_type, Detector, DetectorType, BSLayeredPPNR
+from perceval.components.detector import detection_type, Detector, DetectionType, BSLayeredPPNR
 from perceval.utils import BasicState
 
 
 def test_detector():
     pnr_detector = Detector.pnr()
-    assert pnr_detector.type == DetectorType.PNR
+    assert pnr_detector.type == DetectionType.PNR
 
     for i in range(10):
         assert pnr_detector.detect(i) == BasicState([i])
 
     th_detector = Detector.threshold()
-    assert th_detector.type == DetectorType.Threshold
+    assert th_detector.type == DetectionType.Threshold
 
     for i in range(10):
         assert th_detector.detect(i) == BasicState([i if i < 2 else 1])
@@ -49,7 +49,7 @@ def test_detector():
 
 def test_bs_layered_ppnr():
     detector = BSLayeredPPNR(1)
-    assert detector.type == DetectorType.PPNR
+    assert detector.type == DetectionType.PPNR
 
     s0 = BasicState([0])
     s1 = BasicState([1])
@@ -102,8 +102,8 @@ def test_detection_type():
     thr_detector_list = [Detector.threshold()] * 3  # Only threshold detectors
     mixed_detector_list = [BSLayeredPPNR(1), Detector.pnr(), Detector.threshold()]
 
-    assert detection_type(pnr_detector_list) == DetectorType.PNR
-    assert detection_type(thr_detector_list) == DetectorType.Threshold
+    assert detection_type(pnr_detector_list) == DetectionType.PNR
+    assert detection_type(thr_detector_list) == DetectionType.Threshold
     # PPNR means mixed detectors in this context
-    assert detection_type(pnr_detector_list + thr_detector_list) == DetectorType.PPNR
-    assert detection_type(mixed_detector_list) == DetectorType.PPNR
+    assert detection_type(pnr_detector_list + thr_detector_list) == DetectionType.Mixed
+    assert detection_type(mixed_detector_list) == DetectionType.Mixed

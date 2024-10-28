@@ -38,7 +38,7 @@ from perceval.utils.logging import get_logger, channel, deprecated
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
-from .detector import IDetector, Detector, DetectorType, detection_type
+from .detector import IDetector, Detector, DetectionType, detection_type
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
@@ -571,7 +571,7 @@ class AProcessor(ABC):
         return self._thresholded_output
 
     @property
-    def detection_type(self) -> DetectorType:
+    def detection_type(self) -> DetectionType:
         return detection_type(self._detectors)
 
     @property

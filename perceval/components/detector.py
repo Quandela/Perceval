@@ -36,7 +36,7 @@ from perceval.utils import BasicState, BSDistribution
 from perceval.utils.logging import get_logger, channel
 
 
-class DetectorType(Enum):
+class DetectionType(Enum):
     PNR = 0
     Threshold = 1
     PPNR = 2
@@ -50,7 +50,7 @@ class IDetector(AComponent, ABC):
 
     @property
     @abstractmethod
-    def type(self) -> DetectorType:
+    def type(self) -> DetectionType:
         """
         Returns the detector type
         """
@@ -80,8 +80,8 @@ class BSLayeredPPNR(IDetector):
         self._r = reflectivity
 
     @property
-    def type(self) -> DetectorType:
-        return DetectorType.PPNR
+    def type(self) -> DetectionType:
+        return DetectionType.PPNR
 
     def create_circuit(self) -> Circuit:
         """
@@ -120,7 +120,7 @@ class Detector(IDetector):
         assert 0 <= p_multiphoton_detection <= 1,\
             f"A probability must be within 0 and 1 (got {p_multiphoton_detection})"
         self._pmd = p_multiphoton_detection
-        if self.type == DetectorType.PPNR:
+        if self.type == DetectionType.PPNR:
             get_logger().error("Generic PPNR was not implemented yet and will behave like a threshold detector for now",
                                channel.user)
 
@@ -143,21 +143,21 @@ class Detector(IDetector):
         return d
 
     @property
-    def type(self) -> DetectorType:
+    def type(self) -> DetectionType:
         if self._pmd == 0:
-            return DetectorType.Threshold
+            return DetectionType.Threshold
         elif self._pmd == 1:
-            return DetectorType.PNR
-        return DetectorType.PPNR
+            return DetectionType.PNR
+        return DetectionType.PPNR
 
     def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
-        if theoretical_photons < 2 or self.type == DetectorType.PNR:
+        if theoretical_photons < 2 or self.type == DetectionType.PNR:
             return BasicState([theoretical_photons])
         # Adjust the model to treat the PPNR case here
         return BasicState([1])
 
 
-def detection_type(detectors: list[IDetector]) -> DetectorType:
+def detection_type(detectors: list[IDetector]) -> DetectionType:
     """
     Computes a global detection type from a given list of detectors.
 
@@ -167,9 +167,9 @@ def detection_type(detectors: list[IDetector]) -> DetectorType:
     """
     result = None
     for det in detectors:
-        current = DetectorType.PNR if det is None else det.type  # Default is PNR
+        current = DetectionType.PNR if det is None else det.type  # Default is PNR
         if result is None:
             result = current
         elif result != current:
-            return DetectorType.Mixed
+            return DetectionType.Mixed
     return result

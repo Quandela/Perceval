@@ -27,17 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components.detector import IDetector, DetectorType, detection_type
+from perceval.components.detector import IDetector, DetectionType, detection_type
 from perceval.utils import BSDistribution
 
 
 def simulate_detectors(dist: BSDistribution, detectors: list[IDetector]) -> BSDistribution:
     detection = detection_type(detectors)
-    if detection == DetectorType.PNR:
+    if detection == DetectionType.PNR:
         return dist
 
     result = BSDistribution()
-    if detection == DetectorType.Threshold:
+    if detection == DetectionType.Threshold:
         for s, p in dist.items():
             result[s.threshold_detection()] += p
         return result

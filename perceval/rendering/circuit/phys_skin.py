@@ -30,7 +30,7 @@
 import math
 from multipledispatch import dispatch
 
-from perceval.components import AComponent, Circuit, Port, Herald, PortLocation, IDetector, DetectorType,\
+from perceval.components import AComponent, Circuit, Port, Herald, PortLocation, IDetector, DetectionType,\
     unitary_components as cp,\
     non_unitary_components as nu
 from .abstract_skin import ASkin, ModeType
@@ -124,11 +124,11 @@ class PhysSkin(ASkin):
 
     @dispatch(IDetector)
     def get_shape(self, detector):
-        if detector.type == DetectorType.PNR:
+        if detector.type == DetectionType.PNR:
             return self.pnr_detector_shape
-        elif detector.type == DetectorType.Threshold:
+        elif detector.type == DetectionType.Threshold:
             return self.threshold_detector_shape
-        elif detector.type == DetectorType.PPNR:
+        elif detector.type == DetectionType.PPNR:
             return self.ppnr_detector_shape
         raise TypeError(f"Unknown detector type: {detector.type}")
 
