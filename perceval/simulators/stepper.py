@@ -108,7 +108,7 @@ class Stepper(ISimulator):
     def probs(self, input_state) -> BSDistribution:
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None, detectors = None) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)

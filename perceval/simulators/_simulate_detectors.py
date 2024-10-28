@@ -31,21 +31,40 @@ from perceval.components.detector import IDetector, DetectionType, detection_typ
 from perceval.utils import BSDistribution
 
 
-def simulate_detectors(dist: BSDistribution, detectors: list[IDetector]) -> BSDistribution:
-    detection = detection_type(detectors)
-    if detection == DetectionType.PNR:
-        return dist
+def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None
+                       ) -> tuple[BSDistribution, float]:
+    """
+    Simulates the effect of imperfect detectors on a theoretical distribution.
 
+    :param dist: A theoretical distribution of detections, as would Photon Number Resolving (PNR) detectors detect.
+    :param detectors: A List of detectors
+    :param min_photons: Minimum detected photons filter value (when None, does not apply this physical filter)
+
+    :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
+    """
+    assert len(detectors) == dist.m, "Mismatch between the number of detectors and the number of modes!"
+    detection = detection_type(detectors)
+    if not dist or detection == DetectionType.PNR:
+        return dist, 1
+
+    phys_perf = 1
     result = BSDistribution()
     if detection == DetectionType.Threshold:
         for s, p in dist.items():
-            result[s.threshold_detection()] += p
-        return result
+            s = s.threshold_detection()
+            if min_photons is not None and s.n < min_photons:
+                phys_perf -= p
+            else:
+                result[s] += p
+        return result, phys_perf
 
     for s, p in dist.items():
         state_distrib = BSDistribution()
         for photons_in_mode, detector in zip(s, detectors):
             state_distrib *= detector.detect(photons_in_mode)
         for s_out, p_out in state_distrib.items():
-            result.add(s_out, p * p_out)
-    return result
+            if min_photons is not None and s_out.n < min_photons:
+                phys_perf -= p * p_out
+            else:
+                result.add(s_out, p * p_out)
+    return result, phys_perf

@@ -126,15 +126,12 @@ def test_processor_source_vs_noise_model():
     assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_processor_probs(mock_warn):
-    source = Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
-    qpu = Processor("Naive", BS(), source)
+def test_processor_probs():
+    qpu = Processor("Naive", BS())
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
     qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
-
-    with LogChecker(mock_warn):
-        probs = qpu.probs()
+    qpu.min_detected_photons_filter(2)
+    probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0

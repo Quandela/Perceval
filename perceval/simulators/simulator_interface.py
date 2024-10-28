@@ -45,7 +45,7 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None, detectors = None) -> dict:
         pass
 
     @abstractmethod
@@ -67,7 +67,7 @@ class ISimulator(ABC):
 
 class ASimulatorDecorator(ISimulator, ABC):
     def __init__(self, simulator: ISimulator):
-        self._simulator = simulator
+        self._simulator: ISimulator = simulator
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
 
@@ -124,7 +124,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         results, _ = self._postprocess_bsd(results)
         return results
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None, detectors = None) -> dict:
         probs = self._simulator.probs_svd(self._prepare_input(svd), progress_callback)
         probs['results'], logical_perf_coeff = self._postprocess_bsd(probs['results'])
         probs['logical_perf'] *= logical_perf_coeff

@@ -229,13 +229,7 @@ class Processor(AProcessor):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
-    def _state_preselected_physical(self, input_state: StateVector) -> bool:
-        return max(input_state.n) >= self._min_detected_photons_filter
-
     def _state_selected_physical(self, output_state: BasicState) -> bool:
-        if self.is_threshold:
-            modes_with_photons = len([n for n in output_state if n > 0])
-            return modes_with_photons >= self._min_detected_photons_filter
         return output_state.n >= self._min_detected_photons_filter
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -288,14 +282,14 @@ class Processor(AProcessor):
         if precision is not None:
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
-                    channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
+                          channel.general)
+        res = self._simulator.probs_svd(self._inputs_map, progress_callback, self._detectors)
         get_logger().info("Local strong simulation complete!", channel.general)
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
             if self._state_selected_physical(state):
-                postprocessed_res[self.postprocess_output(state)] += prob
+                postprocessed_res[self.remove_heralded_modes(state)] += prob
             else:
                 pperf -= prob
 

@@ -153,11 +153,9 @@ class AProcessor(ABC):
     def available_commands(self) -> list[str]:
         pass
 
-    def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
+    def remove_heralded_modes(self, s: BasicState, keep_herald: bool = False) -> BasicState:
         if not keep_herald and self.heralds:
             s = s.remove_modes(list(self.heralds.keys()))
-        if self._thresholded_output:
-            s = s.threshold_detection()
         return s
 
     @property
@@ -244,7 +242,7 @@ class AProcessor(ABC):
         if self._n_moi == 0:
             self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
             get_logger().debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
-                         channel.general)
+                               channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):

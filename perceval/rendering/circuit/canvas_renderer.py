@@ -145,7 +145,7 @@ class CanvasRenderer(ICircuitRenderer):
     def add_detectors(self, detector_list: list) -> None:
         max_pos = max(self._chart[0:self._nsize])
         for i, det in enumerate(detector_list):
-            if det is None:
+            if det is None or self._mode_style[i] != ModeType.PHOTONIC:
                 continue
             self._canvas.set_offset(
                 (
@@ -154,7 +154,6 @@ class CanvasRenderer(ICircuitRenderer):
                 ),
                 CanvasRenderer.AFFIX_ALL_SIZE,
                 CanvasRenderer.SCALE)
-            from perceval.components import Herald
             self._canvas.add_shape(self._skin.get_shape(det), det, None)
 
     def open_subblock(self, lines: tuple[int, ...], name: str, size: tuple[int, int], color=None):
