@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD
+from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD, LC
 from perceval.utils import format_parameters, ModeType
 
 
@@ -57,7 +57,7 @@ class ASkin(ABC):
         self.precision: float = 1e-6
         self.nsimplify: bool = True
 
-    @dispatch((ACircuit, TD), bool)
+    @dispatch((ACircuit, TD, LC), bool)
     def get_size(self, c: ACircuit, recursive: bool = False) -> tuple[int, int]:
         """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():

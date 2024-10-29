@@ -57,7 +57,7 @@ L 101.504132 507.520661
    </g>
    <g id="text_1">
     <!-- 0 -->
-    <g transform="translate(22.826446 212.479339)scale(0.18 -0.18)">
+    <g transform="translate(109.721054 218.380165) scale(0.18 -0.18)">
      <defs>
       <path id="DejaVuSans-30" d="M 2034 4250
 Q 1547 4250 1301 3770
@@ -86,7 +86,7 @@ z
    </g>
    <g id="text_2">
     <!-- 1 -->
-    <g transform="translate(22.826446 310.826446)scale(0.18 -0.18)">
+    <g transform="translate(109.721054 316.727273) scale(0.18 -0.18)">
      <defs>
       <path id="DejaVuSans-31" d="M 794 531
 L 1825 531
@@ -108,7 +108,7 @@ z
    </g>
    <g id="text_3">
     <!-- 2 -->
-    <g transform="translate(22.826446 409.173554)scale(0.18 -0.18)">
+    <g transform="translate(109.721054 415.07438) scale(0.18 -0.18)">
      <defs>
       <path id="DejaVuSans-32" d="M 1228 531
 L 3431 531
@@ -140,7 +140,7 @@ z
    </g>
    <g id="text_4">
     <!-- 3 -->
-    <g transform="translate(22.826446 507.520661)scale(0.18 -0.18)">
+    <g transform="translate(109.721054 513.421488) scale(0.18 -0.18)">
      <defs>
       <path id="DejaVuSans-33" d="M 2597 2516
 Q 3050 2419 3304 2112
@@ -180,25 +180,25 @@ z
    </g>
    <g id="text_5">
     <!-- 0 -->
-    <g transform="translate(109.721054 212.479339)scale(0.18 -0.18)">
+    <g transform="translate(22.826446 218.380165) scale(0.18 -0.18)">
      <use xlink:href="#DejaVuSans-30"/>
     </g>
    </g>
    <g id="text_6">
     <!-- 1 -->
-    <g transform="translate(109.721054 310.826446)scale(0.18 -0.18)">
+    <g transform="translate(22.826446 316.727273) scale(0.18 -0.18)">
      <use xlink:href="#DejaVuSans-31"/>
     </g>
    </g>
    <g id="text_7">
     <!-- 2 -->
-    <g transform="translate(109.721054 409.173554)scale(0.18 -0.18)">
+    <g transform="translate(22.826446 415.07438) scale(0.18 -0.18)">
      <use xlink:href="#DejaVuSans-32"/>
     </g>
    </g>
    <g id="text_8">
     <!-- 3 -->
-    <g transform="translate(109.721054 507.520661)scale(0.18 -0.18)">
+    <g transform="translate(22.826446 513.421488) scale(0.18 -0.18)">
      <use xlink:href="#DejaVuSans-33"/>
     </g>
    </g>

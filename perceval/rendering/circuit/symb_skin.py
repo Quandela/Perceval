@@ -300,4 +300,4 @@ class SymbSkin(ASkin):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(ShapeFactory.half_circle_port_out(10), stroke="black", stroke_width=1, fill="white")
         if detector.name:
-            canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
+            canvas.add_text((0, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
