@@ -260,10 +260,11 @@ class AProcessor(ABC):
         if not isinstance(mode, int):
             raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
 
-        if not self.is_mode_connectible(mode):
+        if self._mode_type[mode] == ModeType.CLASSICAL:
             raise UnavailableModeException(mode, "Mode is not photonic, cannot plug a detector.")
         self._detectors[mode] = detector
-        self._mode_type[mode] = ModeType.CLASSICAL
+        if self._mode_type[mode] == ModeType.PHOTONIC:
+            self._mode_type[mode] = ModeType.CLASSICAL
 
     def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):

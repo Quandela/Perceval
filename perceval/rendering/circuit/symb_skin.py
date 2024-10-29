@@ -32,6 +32,7 @@ from multipledispatch import dispatch
 from perceval.components import AComponent, Circuit, Port, PortLocation, Herald, IDetector,\
     unitary_components as cp,\
     non_unitary_components as nu
+from ._canvas_shapes import ShapeFactory
 from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
 
@@ -150,19 +151,7 @@ class SymbSkin(ASkin):
         canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
 
     def bs_shape(self, bs, canvas, mode_style):
-        if self._compact:
-            path_data = ["M", 6.4721, 25.0002, "c", 6.8548, 0, 6.8241, 24.9998, 13.6789, 24.9998, "m", 0.0009, 0, "c",
-                         -6.8558, 0, -6.825, 24.9998, -13.6799, 24.9998, "m", 13.6799, -24.9998, "h", 10.9423, "m", 0,
-                         0, "c", 6.8558, 0, 6.825, -24.9998, 13.6799, -24.9998, "m", -13.6799, 24.9998, "c", 6.8558, 0,
-                         6.825, 24.9998, 13.6799, 24.9998, "m", -44.7741, -49.9998, "h", 6.5, "m", 0.0009, 49.9998, "h",
-                         -6.5009, "m", 43.8227, 0, "h", 6.1773, "m", -6.4028, -50, "h", 6.4028]
-        else:
-            path_data = ["M", 12.9442, 25.0002, "c", 13.7096, 0, 13.6481, 24.9998, 27.3577, 24.9998, "m", 0.0019, 0,
-                         "c", -13.7116, 0, -13.65, 24.9998, -27.3597, 24.9998, "m", 27.3597, -24.9998, "h", 21.8846,
-                         "m", 0, 0, "c", 13.7116, 0, 13.65, -24.9998, 27.3597, -24.9998, "m", -27.3597, 24.9998, "c",
-                         13.7116, 0, 13.65, 24.9998, 27.3597, 24.9998, "m", -89.5481, -49.9998, "h", 13, "m", 0.0019,
-                         49.9998, "h", -13.0019, "m", 87.6453, 0, "h", 12.3547, "m", -12.8056, -50, "h", 12.8056]
-        canvas.add_mpath(path_data, **self.style[ModeType.PHOTONIC])
+        canvas.add_mpath(ShapeFactory.bs_symbolic_mpath(self._compact), **self.style[ModeType.PHOTONIC])
         content = self._get_display_content(bs).replace('phi', 'Φ').replace('theta=', 'Θ=')
         canvas.add_text((25 if self._compact else 50, 38), content, 7, "middle")
         # Add BS convention badge
@@ -171,8 +160,7 @@ class SymbSkin(ASkin):
 
     def ps_shape(self, circuit, canvas, mode_style):
         canvas.add_mpath(["M", 0, 25, "h", 20, "m", 10, 0, "h", 20], **self.style[ModeType.PHOTONIC])
-        canvas.add_mpath(["M", 15, 35, "h", 20, "v", -20, "h", -20, "z"],
-                         stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_rect((15, 15), 20, 20, stroke="black", stroke_width=1, fill="lightgray")
         content = self._get_display_content(circuit).replace("phi=", "Φ=")
         canvas.add_text((25, 44), text=content, size=7, ta="middle")
 
@@ -222,14 +210,10 @@ class SymbSkin(ASkin):
 
     def unitary_shape(self, circuit, canvas, mode_style):
         w = circuit.m
-        for i in range(circuit.m):
+        for i in range(w):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[ModeType.PHOTONIC])
-        radius = 6.25 * w  # Radius of the rounded corners
-        canvas.add_mpath(
-            ["M", 0, radius, "c", 0, 0, 0, -radius, radius, -radius, "l", 6 * radius, 0, "c", radius, 0, radius, radius,
-             radius, radius, "l", 0, 6 * radius, "c", 0, 0, 0, radius, -radius, radius, "l", -6 * radius, 0, "c",
-             -radius, 0, -radius, -radius, -radius, -radius, "l", 0, -6 * radius],
-            **self.style[ModeType.PHOTONIC], fill="lightyellow")
+        shape = ShapeFactory.rounded_corner_square(6.25*w, 6)
+        canvas.add_mpath(shape, **self.style[ModeType.PHOTONIC], fill="lightyellow")
         canvas.add_text((25*w, 25*w), size=10, ta="middle", text=circuit.name)
 
     def barrier_shape(self, barrier: cp.Barrier, canvas, mode_style):
@@ -278,21 +262,7 @@ class SymbSkin(ASkin):
     def pr_shape(self, circuit, canvas, mode_style):
         canvas.add_mpath(["M", 0, 25, "h", 15, "m", 22, 0, "h", 15], **self.style[ModeType.PHOTONIC])
         canvas.add_mpath(["M", 15, 36, "h", 22, "v", -22, "h", -22, "z"], stroke="black", stroke_width=1)
-        canvas.add_mpath(["M", 19, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
-                          "l", 2.305, -2.821, "c", 0.107, -0.131, 0.057, -0.237, -0.112, -0.237,
-                          "h", -1.22, "c", -0.169, 0, -0.284, -0.135, -0.247, -0.300,
-                          "c", 0.629, -2.866, 3.187, -5.018, 6.240, -5.018,
-                          "c", 3.524, 0, 6.39, 2.867, 6.390, 6.3902,
-                          "c", 0, 3.523, -2.866, 6.39, -6.390, 6.390,
-                          "c", -0.422, 0, -0.765, 0.342, -0.765, 0.765,
-                          "s", 0.342, 0.765, 0.765, 0.765,
-                          "c", 4.367, 0, 7.92, -3.552, 7.920, -7.920,
-                          "c", 0, -4.367, -3.552, -7.920, -7.920, -7.920,
-                          "c", -3.898, 0, -7.146, 2.832, -7.799, 6.546,
-                          "c", -0.029, 0.166, -0.184, 0.302, -0.353, 0.302,
-                          "H", 17, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
-                          "z"
-                          ], fill="black", stroke_width=0.1)
+        canvas.add_mpath(ShapeFactory.pr_mpath, fill="black", stroke_width=0.1)
         canvas.add_text((27, 50), text=self._get_display_content(circuit).replace("delta=", "δ="), size=7, ta="middle")
 
     def subcircuit_shape(self, circuit, canvas, mode_style):
@@ -305,21 +275,13 @@ class SymbSkin(ASkin):
         canvas.add_text((10, 8 + 8 * len(title)), "\n".join(title), 8, fontstyle="bold")
 
     def herald_shape_in(self, herald, canvas, mode_style):
-        r = 10
-        canvas.add_mpath(["M", 7, 25, "c", 0, 0, 0, -r, r, -r,
-                          "h", 8, "v", 2 * r, "h", -8,
-                          "c", -r, 0, -r, -r, -r, -r, "z"],
-                         stroke="black", stroke_width=1, fill="white")
+        canvas.add_mpath(ShapeFactory.half_circle_port_in(10), stroke="black", stroke_width=1, fill="white")
         if herald.name:
             canvas.add_text((13, 41), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
         canvas.add_text((17, 28), text=str(herald.expected), size=7, ta="middle")
 
     def herald_shape_out(self, herald, canvas, mode_style):
-        r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 8, 35, "h", -8, "v", -2 * r, "h", 8,
-                          "c", 0, 0, r, 0, r, r,
-                          "c", 0, r, -r, r, -r, r, "z"],
-                         stroke="black", stroke_width=1, fill="white")
+        canvas.add_mpath(ShapeFactory.half_circle_port_out(10), stroke="black", stroke_width=1, fill="white")
         if herald.name:
             canvas.add_text((13, 11), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
         canvas.add_text((8, 28), text=str(herald.expected), size=7, ta="middle")
@@ -336,10 +298,6 @@ class SymbSkin(ASkin):
 
     def detector_shape(self, detector, canvas, mode_style):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 8, 35, "h", -8, "v", -2 * r, "h", 8,
-                          "c", 0, 0, r, 0, r, r,
-                          "c", 0, r, -r, r, -r, r, "z"],
-                         stroke="black", stroke_width=1, fill="white")
+        canvas.add_mpath(ShapeFactory.half_circle_port_out(10), stroke="black", stroke_width=1, fill="white")
         if detector.name:
             canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")

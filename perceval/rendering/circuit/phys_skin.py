@@ -33,6 +33,7 @@ from multipledispatch import dispatch
 from perceval.components import AComponent, Circuit, Port, Herald, PortLocation, IDetector, DetectionType,\
     unitary_components as cp,\
     non_unitary_components as nu
+from ._canvas_shapes import ShapeFactory
 from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
 
@@ -144,27 +145,19 @@ class PhysSkin(ASkin):
 
     def pnr_detector_shape(self, detector, canvas, mode_style):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 8, 35, "h", -8, "v", -2 * r, "h", 8,
-                          "c", 0, 0, r, 0, r, r,
-                          "c", 0, r, -r, r, -r, r, "z"],
-                         stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_mpath(ShapeFactory.half_circle_port_out(10), stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
             canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
 
     def threshold_detector_shape(self, detector, canvas, mode_style):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 0, 25+r, "L", 18, 25, "L", 0, 25-r, "z"],
-                         stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_mpath(ShapeFactory.triangle_port_out(10), stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
             canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
 
     def ppnr_detector_shape(self, detector, canvas, mode_style):
         canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 0, 25+r, "L", 10, 25+r*.85, "L", 18, 25, "L", 10, 25-r*.85, "L", 0, 25-r, "z"],
-                         stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_mpath(ShapeFactory.polygon_port_out(10), stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
             canvas.add_text((0, 12), text=detector.name, size=6, ta="left", fontstyle="italic")
 
@@ -308,21 +301,7 @@ class PhysSkin(ASkin):
         canvas.add_mline([35, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((14, 14), width=22, height=22, stroke="black", fill="lightgray",
                         stroke_width=1, stroke_linejoin="miter")
-        canvas.add_mpath(["M", 18, 27, "c", 0.107, 0.131, 0.280, 0.131, 0.387, 0,
-                          "l", 2.305, -2.821, "c", 0.107, -0.131, 0.057, -0.237, -0.112, -0.237,
-                          "h", -1.22, "c", -0.169, 0, -0.284, -0.135, -0.247, -0.300,
-                          "c", 0.629, -2.866, 3.187, -5.018, 6.240, -5.018,
-                          "c", 3.524, 0, 6.39, 2.867, 6.390, 6.3902,
-                          "c", 0, 3.523, -2.866, 6.39, -6.390, 6.390,
-                          "c", -0.422, 0, -0.765, 0.342, -0.765, 0.765,
-                          "s", 0.342, 0.765, 0.765, 0.765,
-                          "c", 4.367, 0, 7.92, -3.552, 7.920, -7.920,
-                          "c", 0, -4.367, -3.552, -7.920, -7.920, -7.920,
-                          "c", -3.898, 0, -7.146, 2.832, -7.799, 6.546,
-                          "c", -0.029, 0.166, -0.184, 0.302, -0.353, 0.302,
-                          "h", -1.201, "c", -0.169, 0, -0.219, 0.106, -0.112, 0.237,
-                          "z"
-                          ], fill="black")
+        canvas.add_mpath(ShapeFactory.pr_mpath, fill="black")
         canvas.add_text((25, 45), text=self._get_display_content(circuit).replace("delta=", "δ="), size=7, ta="middle")
 
     def subcircuit_shape(self, circuit, canvas, mode_style):
@@ -335,21 +314,21 @@ class PhysSkin(ASkin):
         canvas.add_text((10, 8+8*len(title)), "\n".join(title), 8, fontstyle="bold")
 
     def herald_shape_in(self, herald, canvas, mode_style):
-        r = 10
-        canvas.add_mpath(["M", 7, 25, "c", 0, 0, 0, -r, r, -r,
-                          "h", 8, "v", 2 * r, "h", -8,
-                          "c", -r, 0, -r, -r, -r, -r, "z"],
-                         stroke="black", stroke_width=1, fill="white")
+        canvas.add_mpath(ShapeFactory.half_circle_port_in(10), stroke="black", stroke_width=1, fill="white")
         if herald.name:
             canvas.add_text((13, 41), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
         canvas.add_text((17, 28), text=str(herald.expected), size=7, ta="middle")
 
     def herald_shape_out(self, herald, canvas, mode_style):
-        r = 10  # Radius of the half-circle
-        canvas.add_mpath(["M", 8, 35, "h", -8, "v", -2 * r, "h", 8,
-                          "c", 0, 0, r, 0, r, r,
-                          "c", 0, r, -r, r, -r, r, "z"],
-                         stroke="black", stroke_width=1, fill="white")
+        if herald.detector_type is None or herald.detector_type == DetectionType.PNR:
+            shape = ShapeFactory.half_circle_port_out(10)
+        elif herald.detector_type == DetectionType.PPNR:
+            shape = ShapeFactory.polygon_port_out(10)
+        elif herald.detector_type == DetectionType.Threshold:
+            shape = ShapeFactory.triangle_port_out(10)
+        else:
+            raise TypeError(f"Unknown detector type: {herald.detector_type}")
+        canvas.add_mpath(shape, stroke="black", stroke_width=1, fill="white")
         if herald.name:
             canvas.add_text((13, 11), text='[' + herald.name + ']', size=6, ta="middle", fontstyle="italic")
         canvas.add_text((8, 28), text=str(herald.expected), size=7, ta="middle")

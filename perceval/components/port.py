@@ -80,6 +80,7 @@ class Herald(APort):
             name = f'herald{name}'
         super().__init__(1, name)
         self._value = value
+        self.detector_type = None
 
     def output_mode_type(self) -> ModeType:
         return ModeType.HERALD

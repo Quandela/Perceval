@@ -47,7 +47,7 @@ import sympy as sp
 from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
-from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
+from perceval.components import ACircuit, Circuit, AProcessor, Herald, non_unitary_components as nl
 from .circuit import DisplayConfig, create_renderer, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType
@@ -165,6 +165,10 @@ def pdisplay_processor(processor: AProcessor,
 
     renderer.add_detectors(processor._detectors)
     for port, port_range in processor._out_ports.items():
+        if isinstance(port, Herald):
+            det = processor._detectors[port_range[0]]
+            if det is not None:
+                port.detector_type = det.type
         renderer.add_out_port(port_range[0], port)
     renderer.add_mode_index()
     return renderer.draw()
