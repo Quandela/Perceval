@@ -78,10 +78,14 @@ class BSLayeredPPNR(IDetector):
         self.name = f"BS-PPNR{bs_layers}"
         self._layers = bs_layers
         self._r = reflectivity
+        self._cache = {}  # This cache records simulations for a given photon count to speed up computations
 
     @property
     def type(self) -> DetectionType:
         return DetectionType.PPNR
+
+    def clear_cache(self):
+        self._cache = {}
 
     def create_circuit(self) -> Circuit:
         """
@@ -100,6 +104,9 @@ class BSLayeredPPNR(IDetector):
         if theoretical_photons < 2:
             return BasicState([theoretical_photons])
 
+        if theoretical_photons in self._cache:
+            return self._cache[theoretical_photons]
+
         from perceval.backends import SLOSBackend
         ppnr_circuit = self.create_circuit()
         slos = SLOSBackend()
@@ -111,6 +118,7 @@ class BSLayeredPPNR(IDetector):
         for state, prob in dist.items():
             state = state.threshold_detection()
             output[BasicState([state.n])] += prob
+        self._cache[theoretical_photons] = output
         return output
 
 
