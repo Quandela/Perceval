@@ -27,9 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.components import Processor, Source, Circuit, BS, PS, PERM
-from perceval.utils.converters import _label_cnots_in_gate_sequence
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
+from .converter_utils import label_cnots_in_gate_sequence
 
 import numpy as np
 import re
@@ -204,7 +204,7 @@ class CQASMConverter(AGateConverter):
             else:
                 gate_sequence.append([gate_name, controls + targets])
 
-        optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
+        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
 
         for gate_index, statement in enumerate(ast.block.statements):
             self._convert_statement(statement, gate_index, optimized_gate_sequence)

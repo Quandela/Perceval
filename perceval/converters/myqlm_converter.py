@@ -29,7 +29,7 @@
 
 from perceval.components import Circuit, Processor, Source, BS, PS
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.converters import _label_cnots_in_gate_sequence
+from .converter_utils import label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
 
 
@@ -72,7 +72,7 @@ class MyQLMConverter(AGateConverter):
         get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits) to processor", channel.general)
 
         gate_sequence = _get_gate_sequence(qlmc)
-        optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
+        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
 
         self._configure_processor(qlmc)    # empty processor with ports initialized
 

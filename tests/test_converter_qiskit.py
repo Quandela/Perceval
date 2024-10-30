@@ -41,7 +41,7 @@ except ModuleNotFoundError as e:
 from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
 from perceval.converters.qiskit_converter import _get_gate_sequence
-from perceval.utils.converters import _label_cnots_in_gate_sequence
+from perceval.converters.converter_utils import label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
 from perceval.components.port import get_basic_state_from_encoding
 from perceval.utils import BSDistribution, Encoding, generate_all_logical_states
@@ -242,7 +242,7 @@ def qiskit_circ_multiple_cnots():
     circ.cx(2, 3)
     return circ
 
-def test_cnot_ralph_vs_knill():
+def test_cnot_ppcnot_vs_hcnot():
     qisk_circ = qiskit_circ_multiple_cnots()
 
     converter = QiskitConverter()
@@ -254,21 +254,18 @@ def test_cnot_ralph_vs_knill():
         gate_seq_converted.append(c.name)
 
     gate_seq_qisk = _get_gate_sequence(qisk_circ) # gate list from qiskit
-    optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_seq_qisk)
+    optimized_gate_sequence = label_cnots_in_gate_sequence(gate_seq_qisk)
 
-    num_ralph_expt = len([elem for elem in optimized_gate_sequence if elem == 'CX:RALPH'])
-    cnot_order_expct = [elem for elem in optimized_gate_sequence if elem.startswith('CX:')]
-    # replace CX:KNILL -> heralded CNOT, and CX:Ralph with 'PostProcessed CNOT
-    cnot_order_expct = ['Heralded CNOT' if elem =='CX:KNILL' else elem for elem in cnot_order_expct]
-    cnot_order_expct = ['PostProcessed CNOT' if elem == 'CX:RALPH' else elem for elem in cnot_order_expct]
+    num_ppcnot_expt = len([elem for elem in optimized_gate_sequence if elem == 'postprocessed cnot'])
+    cnot_order_expct = [elem.lower() for elem in optimized_gate_sequence if elem.endswith('cnot')]
 
-    cnot_order_converted = [elem for elem in gate_seq_converted if elem.endswith('CNOT')]
-    num_ralph_pc = len([elem for elem in gate_seq_converted if elem == 'PostProcessed CNOT'])
+    cnot_order_converted = [elem.lower() for elem in gate_seq_converted if elem.endswith('CNOT')]
+    num_ppcnot_pc = len([elem for elem in gate_seq_converted if elem == 'PostProcessed CNOT'])
 
     assert cnot_order_converted == cnot_order_expct
-    assert num_ralph_pc == num_ralph_expt  # compare number of Ralphs
+    assert num_ppcnot_pc == num_ppcnot_expt  # compare number of Ralphs
 
-def test_cnot_ralph_vs_knill_sim():
+def test_cnot_ppcnot_vs_hcnot_sim():
     qisk_circ = qiskit_circ_multiple_cnots()
 
     converter = QiskitConverter()
@@ -301,4 +298,4 @@ def test_cnot_ralph_vs_knill_sim():
         bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
         tot_diff += abs(value - qisk_probs[bit_form])
 
-    assert tot_diff < 1e-7
+    assert tot_diff == pytest.approx(0, abs=1e-7)

@@ -86,7 +86,7 @@ def _gate_list_optimized_cnots(gate_info: list) -> list:
     to insert Ralph or Knill CNOTs
 
     :param gate_info: list of gate sequences with corresponding gate names and positions
-    :return: list of labelled CNOTs in sequential order
+    :return: list of labelled CNOTs (postprocessed or heralded) in sequential order
     """
 
     cnot_list_in_order = [elem for elem in gate_info if elem[0].upper() in CNOT_NAMES]  # extracts CNOTs in sequence from gate list
@@ -100,10 +100,10 @@ def _gate_list_optimized_cnots(gate_info: list) -> list:
     # This for loop generates the list for cnot_types - Knill or Ralph
     for pair in cnot_pos_pairs[::-1]:
         if pair in ralph_pairs_list:
-            cnot_type_list.append('CX:RALPH')
+            cnot_type_list.append('postprocessed cnot')
             ralph_pairs_list.remove(pair)
         else:
-            cnot_type_list.append('CX:KNILL')
+            cnot_type_list.append('heralded cnot')
 
     cnot_type_list.reverse()  # required as it was created by going through CNOTs in reverse
 
@@ -114,7 +114,7 @@ def _gate_list_optimized_cnots(gate_info: list) -> list:
     return cnot_order_named
 
 
-def _label_cnots_in_gate_sequence(gate_info: list) -> list:
+def label_cnots_in_gate_sequence(gate_info: list) -> list:
     """
     Processes a list of gate sequence to return an optimized list of gate names.
     During the conversion from a gate-based circuit to a linear optical circuit,

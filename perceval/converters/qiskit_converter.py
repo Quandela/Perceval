@@ -29,8 +29,8 @@
 
 from perceval.components import Processor, Source
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.converters import _label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
+from .converter_utils import label_cnots_in_gate_sequence
 from .circuit_to_graph_converter import gates_and_qubits
 
 def _get_gate_sequence(qisk_circ) -> list:
@@ -61,8 +61,8 @@ class QiskitConverter(AGateConverter):
 
         :param qc: quantum-based qiskit circuit
         :type qc: qiskit.QuantumCircuit
-        :param use_postselection: when True, uses a `postprocessed CNOT` as the last gate. Otherwise, uses only
-            `heralded CNOT`
+        :param use_postselection: when True (default), uses optimized number of `postprocessed CNOT` and
+        'Heralded CNOT' gates. Otherwise, uses only `heralded CNOT`.
         :return: the converted processor
         """
         import qiskit  # this nested import fixes automatic class reference generation
@@ -71,7 +71,7 @@ class QiskitConverter(AGateConverter):
                     channel.general)
 
         gate_sequence = _get_gate_sequence(qc)
-        optimized_gate_sequence = _label_cnots_in_gate_sequence(gate_sequence)
+        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
 
         qubit_names = qc.qregs[0].name
         self._configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized

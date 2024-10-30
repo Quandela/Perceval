@@ -131,8 +131,8 @@ class AGateConverter(ABC):
         self._converted_processor.clear_postselection()  # clear current post-selection
 
         gate_name = gate_name.upper()
-        if gate_name in ["CX:RALPH", "CX:KNILL"]:
-            if use_postselection and gate_name == "CX:RALPH":
+        if gate_name in ["POSTPROCESSED CNOT", "HERALDED CNOT"]:
+            if use_postselection and gate_name == "POSTPROCESSED CNOT":
                 cnot_processor = self.create_ppcnot_processor()
                 cnot_ps = cnot_processor._postselect
 
