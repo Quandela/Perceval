@@ -262,12 +262,11 @@ class Processor(AProcessor):
         sampling_simulator.set_circuit(self.linear_circuit())
         sampling_simulator.set_selection(
             min_detected_photons_filter=self._min_detected_photons_filter, postselect=self.post_select_fn, heralds=self.heralds)
-        sampling_simulator.set_threshold_detector(self.is_threshold)
         sampling_simulator.keep_heralds(False)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
+        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, self._detectors, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 

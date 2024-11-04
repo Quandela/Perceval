@@ -58,7 +58,7 @@ class AProcessor(ABC):
 
         self._noise: NoiseModel | None = None
 
-        self._thresholded_output: bool = False
+        self._thresholded_output: bool = False  # Deprecated, avoid using this field
         self._min_detected_photons_filter: int | None = None
 
         self._reset_circuit()
@@ -73,7 +73,7 @@ class AProcessor(ABC):
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: list[tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
+        self._components: list[tuple[tuple, AComponent]] = []  # Any type of components, not only unitary ones
         self._detectors: list[IDetector] = []
         self._mode_type: list[ModeType] = []
 
@@ -428,7 +428,7 @@ class AProcessor(ABC):
             circuit.add(pos_m, component, merge=flatten)
         return circuit
 
-    def non_unitary_circuit(self, flatten: bool = False) -> list:
+    def non_unitary_circuit(self, flatten: bool = False) -> list[tuple[tuple, AComponent]]:
         if self._has_td:  # Inherited from the parent processor in this case
             return self.components
 
@@ -458,7 +458,6 @@ class AProcessor(ABC):
         if unitary_circuit.ncomponents():
             new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
                              Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
-
         return new_comp
 
     def get_circuit_parameters(self) -> dict[str, Parameter]:

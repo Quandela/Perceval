@@ -414,7 +414,7 @@ class Simulator(ISimulator):
     def probs_svd(self,
                   input_dist: SVDistribution,
                   progress_callback: Callable = None,
-                  detectors: list[IDetector] = None):
+                  detectors: list[IDetector] = None) -> dict[str, any]:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
