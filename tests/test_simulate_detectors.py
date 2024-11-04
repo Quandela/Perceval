@@ -28,7 +28,7 @@
 # SOFTWARE.
 import pytest
 
-from perceval.simulators._simulate_detectors import simulate_detectors, simulate_detectors_sampling
+from perceval.simulators._simulate_detectors import simulate_detectors, simulate_detectors_sample
 from perceval.components import Detector, BSLayeredPPNR
 from perceval.utils import BSDistribution, BasicState, BSSamples, samples_to_sample_count
 
@@ -63,38 +63,29 @@ def test_simulate_detectors():
     assert res[BasicState([0, 0, 1])] == 0.15
 
 
-def test_simulate_detectors_sampling():
+def test_simulate_detectors_sample():
     bss_in = BSSamples([BasicState([2, 2, 2]),
                         BasicState([2, 0, 3]),
                         BasicState([1, 1, 1]),
                         BasicState([0, 0, 0])])
-    bss_out, physical_perf = simulate_detectors_sampling(
-        bss_in,
-        [Detector.pnr(), Detector.threshold(), Detector.threshold()])
+    pnr = Detector.pnr()
+    thr = Detector.threshold()
     expected = [BasicState([2, 1, 1]),
                 BasicState([2, 0, 1]),
                 BasicState([1, 1, 1]),
                 BasicState([0, 0, 0])]
-    assert physical_perf == 1
-    assert bss_out == expected
-
-    # With a physical filter
-    bss_out, physical_perf = simulate_detectors_sampling(
-        bss_in,
-        [Detector.pnr(), Detector.threshold(), Detector.threshold()],
-        3)
-    expected = [BasicState([2, 1, 1]),
-                BasicState([2, 0, 1]),
-                BasicState([1, 1, 1])]
-    assert physical_perf == 0.75
-    assert bss_out == expected
+    for s_in, s_expected in zip(bss_in, expected):
+        s_out = simulate_detectors_sample(s_in, [pnr, thr, thr])
+        assert s_out == s_expected
 
 
-def test_simulate_detectors_sampling_ppnr():
+def test_simulate_detectors_sample_ppnr():
     # PPNR creates multiple possibilities the detector simulation algo needs to sample from
-    bss_in = BSSamples([BasicState([2, 2])] * 1000)
+    bs_in = BasicState([2, 2])
     ppnr_detector = BSLayeredPPNR(1)
-    bss_out, physical_perf = simulate_detectors_sampling(bss_in, [ppnr_detector, ppnr_detector])
+    bss_out = BSSamples()
+    for i in range(1000):
+        bss_out.append(simulate_detectors_sample(bs_in, [ppnr_detector]*2))
     bsc_out = samples_to_sample_count(bss_out)
     assert len(bsc_out) == 4
     assert BasicState([2, 2]) in bsc_out

@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from perceval.components.detector import IDetector, DetectionType, detection_type
-from perceval.utils import BSDistribution, BSSamples
+from perceval.utils import BSDistribution, BasicState
 
 
 def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None
@@ -70,30 +70,18 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     return result, phys_perf
 
 
-def simulate_detectors_sampling(samples: BSSamples, detectors: list[IDetector], min_photons: int = None
-                                ) -> tuple[BSSamples, float]:
-    detection = detection_type(detectors)
-    if not samples or detection == DetectionType.PNR:
-        return samples, 1
+def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None
+                              ) -> BasicState:
+    if detection is None:
+        detection = detection_type(detectors)
+    if detection == DetectionType.PNR:
+        return sample
 
-    result = BSSamples()
     if detection == DetectionType.Threshold:
-        for state in samples:
-            state = state.threshold_detection()
-            if min_photons is None or state.n >= min_photons:
-                result.append(state)
-        return result, len(result) / len(samples)
+        return sample.threshold_detection()
 
-    cache = {}
-    for state in samples:
-        if state in cache:
-            state_distrib = cache[state]
-        else:
-            state_distrib = BSDistribution()
-            for photons_in_mode, detector in zip(state, detectors):
-                state_distrib *= detector.detect(photons_in_mode)
-            cache[state] = state_distrib
-        state = state_distrib.sample(1, non_null=False)[0]
-        if min_photons is None or state.n >= min_photons:
-            result.append(state)
-    return result, len(result) / len(samples)
+    state_distrib = BSDistribution()
+    for photons_in_mode, detector in zip(sample, detectors):
+        state_distrib *= detector.detect(photons_in_mode)
+    out_state = state_distrib.sample(1, non_null=False)[0]
+    return out_state

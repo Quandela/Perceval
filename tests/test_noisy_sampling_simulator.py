@@ -119,15 +119,14 @@ def test_noisy_sampling_with_detectors():
     assert sampling["logical_perf"] == 1
     assert all([state == BasicState([2, 0]) or state == BasicState([0, 2]) for state in sampling['results']])
 
-    # Perfect sampling with at least one noisy detector
+    # Go to "generic" algo with at least one noisy detector
     sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100,
                                  detectors=[Detector.pnr(), Detector.threshold()])
     assert sampling["physical_perf"] == 1
     assert sampling["logical_perf"] == 1
     assert all([state == BasicState([2, 0]) or state == BasicState([0, 1]) for state in sampling['results']])
 
-    # Go through the "generic" algorithm with a meaningless post selection condition (won't change the results)
-    simulator.set_selection(min_detected_photons_filter=2, postselect=PostSelect("[0,1]>1"))
+    simulator.set_selection(min_detected_photons_filter=2)
     sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100,
                                  detectors=[Detector.pnr(), Detector.threshold()])
     assert sampling["physical_perf"] < 1

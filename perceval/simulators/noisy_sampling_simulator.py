@@ -32,11 +32,11 @@ import time
 import sys
 
 from perceval.backends import ASamplingBackend
-from perceval.components import ACircuit, IDetector
+from perceval.components import ACircuit, IDetector, detection_type, DetectionType
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel, deprecated
-from ._simulate_detectors import simulate_detectors_sampling
+from ._simulate_detectors import simulate_detectors_sample
 
 
 class SamplesProvider:
@@ -175,11 +175,10 @@ class NoisySamplingSimulator:
         """
         self._min_detected_photons_filter = value
 
-    def _perfect_samples_no_selection(
+    def _perfect_sampling_no_selection(
             self,
             input_state: BasicState,
             n_samples: int,
-            detectors: list[IDetector],
             progress_callback: callable = None) -> dict:
         self._backend.set_input_state(input_state)
         samples_acquired = 0
@@ -187,11 +186,7 @@ class NoisySamplingSimulator:
         while samples_acquired < n_samples:
             loop_sample_count = min(1000, n_samples - samples_acquired)
 
-            loop_results = self._backend.samples(loop_sample_count)
-            if detectors:
-                loop_results, _ = simulate_detectors_sampling(loop_results, detectors, self._min_detected_photons_filter)
-
-            results += loop_results
+            results += self._backend.samples(loop_sample_count)
             samples_acquired += loop_sample_count
 
             if progress_callback:
@@ -213,6 +208,7 @@ class NoisySamplingSimulator:
             max_samples: int,
             max_shots: int,
             detectors: list[IDetector],
+            detection_type: DetectionType,
             progress_callback: callable = None) -> dict:
 
         output = BSSamples()
@@ -241,10 +237,7 @@ class NoisySamplingSimulator:
                 sampled_state = provider.sample_from(selected_bs)
 
             if detectors:
-                bss = BSSamples()
-                bss.append(sampled_state)
-                sampled_state = simulate_detectors_sampling(bss, detectors)[0][0]  # 1st [0] is ignoring physical perf
-                # 2nd [0] is retrieving the only sample in the BSSample
+                sampled_state = simulate_detectors_sample(sampled_state, detectors)
 
             # Post-processing
             shots += 1
@@ -342,12 +335,13 @@ class NoisySamplingSimulator:
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
 
         # The best case scenario is a perfect sampling => use the "highway" code
-        if not self._heralds and not self._postselect.has_condition and len(svd) == 1:
+        det_type = detection_type(detectors)
+        if not self._heralds and not self._postselect.has_condition and len(svd) == 1 and det_type == DetectionType.PNR:
             only_input = next(iter(svd))[0]
             if not only_input.has_annotations:
                 get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call",
                                    channel.general)
-                return self._perfect_samples_no_selection(only_input, prepare_samples, detectors, progress_callback)
+                return self._perfect_sampling_no_selection(only_input, prepare_samples, progress_callback)
 
         new_input, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
 
@@ -356,7 +350,7 @@ class NoisySamplingSimulator:
         provider.sleep_between_batches = self.sleep_between_batches
         provider.prepare(new_input, prepare_samples, progress_callback)
 
-        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, detectors, progress_callback)
+        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, detectors, det_type, progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': svd.n_max, 'max_samples': max_samples, 'max_shots': max_shots})

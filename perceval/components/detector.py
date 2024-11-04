@@ -173,6 +173,8 @@ def detection_type(detectors: list[IDetector]) -> DetectionType:
              Threshold if all detectors are threshold
              else PPNR
     """
+    if not detectors:
+        return DetectionType.PNR
     result = None
     for det in detectors:
         current = DetectionType.PNR if det is None else det.type  # Default is PNR
