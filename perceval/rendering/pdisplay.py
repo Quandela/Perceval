@@ -414,12 +414,12 @@ def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
 
 def pdisplay_job_group(jg: JobGroup,  output_format: Format = Format.TEXT):
     progress = jg.progress()
-    # todo create d (data from progress)
-    # todo : pdisplay(jobgroup) to use this to display status in tabular form
-    # print(tabulate(progress_data, headers=['JOB TYPE', 'Count'], tablefmt='grid'))
-    d = list(progress)
-    return tabulate(d, headers=['JOB TYPE', 'Count'],
-                    # showindex=[analyzer._mapping.get(i, str(i)) for i in analyzer.input_states_list],
+
+    for key, value in progress.items():
+        if isinstance(value, int):
+            progress[key] = [value]
+
+    return tabulate(progress.values(), headers=['Job Category', 'Count', 'Details'], showindex=progress.keys(),
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
