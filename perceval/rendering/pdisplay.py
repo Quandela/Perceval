@@ -53,6 +53,7 @@ from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_tick
 from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
+from perceval.runtime import JobGroup
 
 from .format import Format
 from ._processor_utils import collect_herald_info
@@ -411,6 +412,17 @@ def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
     plt.show()
 
 
+def pdisplay_job_group(jg: JobGroup,  output_format: Format = Format.TEXT):
+    progress = jg.progress()
+    # todo create d (data from progress)
+    # todo : pdisplay(jobgroup) to use this to display status in tabular form
+    # print(tabulate(progress_data, headers=['JOB TYPE', 'Count'], tablefmt='grid'))
+    d = list(progress)
+    return tabulate(d, headers=['JOB TYPE', 'Count'],
+                    # showindex=[analyzer._mapping.get(i, str(i)) for i in analyzer.input_states_list],
+                    tablefmt=_TABULATE_FMT_MAPPING[output_format])
+
+
 @dispatch(object)
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
@@ -422,6 +434,11 @@ def _pdisplay(dm, **kwargs):
 @dispatch(AProcessTomography)
 def _pdisplay(qpt, **kwargs):
     return pdisplay_tomography_chi(qpt, **kwargs)
+
+
+@dispatch(JobGroup)
+def _pdisplay(jg, **kwargs):
+    return pdisplay_job_group(jg, **kwargs)
 
 
 @dispatch((ACircuit, nl.TD))

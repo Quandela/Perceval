@@ -97,13 +97,13 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
 @patch.object(JobGroup, '_read_job_group_from_disk')
 @patch.object(JobGroup, '_write_job_group_to_disk')
 @patch.object(get_logger(), "warn")
-def test_check_progress_group(mock_warn, mock_write_file,
+def test_check_group_progress(mock_warn, mock_write_file,
                              mock_read, mock_list, requests_mock):
     mock_rpc = get_rpc_handler(requests_mock)
     remote_job = RemoteJob({}, mock_rpc, 'a_remote_job')
 
     num_rj_add = 10
-    target_status_list = ['not_sent']*num_rj_add
+    target_status_list = [None]*num_rj_add
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(num_rj_add):
@@ -111,6 +111,6 @@ def test_check_progress_group(mock_warn, mock_write_file,
 
     assert len(jgroup.list_remote_jobs) == 10
 
-    group_status_list = jgroup.progress()
+    group_status_list = jgroup._collect_job_statuses()
 
     assert group_status_list == target_status_list
