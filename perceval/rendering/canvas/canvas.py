@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 from abc import ABC
 
 
@@ -39,10 +40,7 @@ class Canvas(ABC):
         self._drawn = False
         self._offset_x = 0
         self._offset_y = 0
-        if opts is None:
-            self._opts = {}
-        else:
-            self._opts = opts
+        self._opts = opts
         self._inverse_Y = -1 if inverse_Y else 1
         self._background_color = None
 
@@ -135,13 +133,20 @@ class Canvas(ABC):
                          **args)
 
     def add_mpath(self,
-                  points: list or tuple,
+                  points: list[float | str] | tuple[float | str, ...],
                   stroke: str = "black",
                   stroke_width: float = 1,
                   fill: str = None,
                   stroke_linejoin: str = "miter",
                   stroke_dasharray=None):
         """Draw a path
+
+        :param points: list of point 2D coordinates
+        :param stroke: Stroke color
+        :param stroke_width: Width of the drawn multi-line
+        :param fill: Fill color
+        :param stroke_linejoin: Shape to join two segments of the multi-line
+        :param stroke_dasharray: Dash pattern of the multi-line
         """
         assert not self._drawn, "calling add_mpath on drawn canvas"
         norm_points = []
@@ -226,6 +231,16 @@ class Canvas(ABC):
                    stroke_width: float = 1,
                    fill: str = None,
                    stroke_dasharray = None):
+        """
+        Draw a circle
+
+        :param r: Radius
+        :param points: list of point 2D coordinates
+        :param stroke: Stroke color
+        :param stroke_width: Width of the drawn circle
+        :param fill: Fill color
+        :param stroke_dasharray: Dash pattern of the circle
+        """
         self.position = (points[0] + r, points[1] + r)
         self.position = (points[0] - r, points[1] - r)
         self.position = points

@@ -108,27 +108,27 @@ def test_noisy_sampling_with_heralds():
     for output_state in sampling['results']:
         assert len(output_state) == 5  # The ancillary mode was removed from all output states
 
+
 def test_noisy_sampling_with_detectors():
     simulator = NoisySamplingSimulator(Clifford2017Backend())
     simulator.set_circuit(BS())
+    simulator.set_detectors([Detector.pnr(), Detector.pnr()])
 
     # Perfect sampling with perfect detectors
-    sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100,
-                                 detectors=[Detector.pnr(), Detector.pnr()])
+    sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100)
     assert sampling["physical_perf"] == 1
     assert sampling["logical_perf"] == 1
     assert all([state == BasicState([2, 0]) or state == BasicState([0, 2]) for state in sampling['results']])
 
     # Go to "generic" algo with at least one noisy detector
-    sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100,
-                                 detectors=[Detector.pnr(), Detector.threshold()])
+    simulator.set_detectors([Detector.pnr(), Detector.threshold()])
+    sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100)
     assert sampling["physical_perf"] == 1
     assert sampling["logical_perf"] == 1
     assert all([state == BasicState([2, 0]) or state == BasicState([0, 1]) for state in sampling['results']])
 
     simulator.set_selection(min_detected_photons_filter=2)
-    sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100,
-                                 detectors=[Detector.pnr(), Detector.threshold()])
+    sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100)
     assert sampling["physical_perf"] < 1
     assert sampling["logical_perf"] == 1
     assert all([state == BasicState([2, 0]) for state in sampling['results']])

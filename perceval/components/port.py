@@ -51,7 +51,7 @@ class APort(AComponent, ABC):
     @abstractmethod
     def output_mode_type(self) -> ModeType:
         """
-        Returns True if the photonic mode is closed by the port
+        Return the mode type induced by the port
         """
 
     @property

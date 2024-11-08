@@ -32,7 +32,7 @@ import time
 import sys
 
 from perceval.backends import ASamplingBackend
-from perceval.components import ACircuit, IDetector, detection_type, DetectionType
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel, deprecated
@@ -105,6 +105,11 @@ class NoisySamplingSimulator:
         self._heralds: dict = {}
         self._keep_heralds = True
         self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
+        self._detectors = None
+
+    def set_detectors(self, detector_list: list[IDetector]):
+        """:param detector_list: A list of detectors to simulate"""
+        self._detectors = detector_list
 
     def keep_heralds(self, value: bool):
         """
@@ -197,7 +202,7 @@ class NoisySamplingSimulator:
 
         return {
             "results": results,
-            "physical_perf": len(results) / n_samples,
+            "physical_perf": 1,
             "logical_perf": 1
         }
 
@@ -207,7 +212,6 @@ class NoisySamplingSimulator:
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
-            detectors: list[IDetector],
             detection_type: DetectionType,
             progress_callback: callable = None) -> dict:
 
@@ -236,8 +240,8 @@ class NoisySamplingSimulator:
             else:
                 sampled_state = provider.sample_from(selected_bs)
 
-            if detectors:
-                sampled_state = simulate_detectors_sample(sampled_state, detectors)
+            if self._detectors:
+                sampled_state = simulate_detectors_sample(sampled_state, self._detectors, detection_type)
 
             # Post-processing
             shots += 1
@@ -273,6 +277,9 @@ class NoisySamplingSimulator:
         zpp is used to compute samples/shots ratio.
         max_p is used to compute a threshold to ignore non-probable input states.
         """
+        if self._detectors:
+            assert len(self._detectors) == svd.m,\
+                f"State length ({svd.m}) and detector count ({len(self._detectors)}) do not match"
         zpp = 0
         max_p = 0
         for sv, p in svd.items():
@@ -301,16 +308,16 @@ class NoisySamplingSimulator:
             elif p >= p_threshold:
                 new_input[sv[0]] = p
         new_input.normalize()
-        get_logger().debug(f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
-                     channel.general)
+        get_logger().debug(
+            f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
+            channel.general)
         return new_input, physical_perf
 
     def samples(self,
                 svd: SVDistribution,
                 max_samples: int,
                 max_shots: int = None,
-                progress_callback: callable = None,
-                detectors: list[IDetector] = None) -> dict:
+                progress_callback: callable = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
@@ -318,7 +325,6 @@ class NoisySamplingSimulator:
         :param max_samples: Max expected samples of interest in the results
         :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
         :param progress_callback: A progress callback
-        :param detectors: A list of detectors to simulate
         :return: A dictionary of the form { "results": BSSamples, "physical_perf": float, "logical_perf": float }
         * results is the post-selected output state distribution
         * physical_perf is the performance computed from the detected photon filter
@@ -335,7 +341,7 @@ class NoisySamplingSimulator:
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
 
         # The best case scenario is a perfect sampling => use the "highway" code
-        det_type = detection_type(detectors)
+        det_type = get_detection_type(self._detectors)
         if not self._heralds and not self._postselect.has_condition and len(svd) == 1 and det_type == DetectionType.PNR:
             only_input = next(iter(svd))[0]
             if not only_input.has_annotations:
@@ -350,7 +356,7 @@ class NoisySamplingSimulator:
         provider.sleep_between_batches = self.sleep_between_batches
         provider.prepare(new_input, prepare_samples, progress_callback)
 
-        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, detectors, det_type, progress_callback)
+        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, det_type, progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': svd.n_max, 'max_samples': max_samples, 'max_shots': max_shots})

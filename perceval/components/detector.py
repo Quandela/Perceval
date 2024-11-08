@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -56,9 +57,12 @@ class IDetector(AComponent, ABC):
         """
 
     @abstractmethod
-    def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
+    def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
         """
-        Returns a one mode Fock state distribution out of a theoretical photon count coming in the detector
+        Returns a one mode Fock state or distribution out of a theoretical photon count coming in the detector.
+
+        :param theoretical_photons: Number of photons coming at once into the detector
+        :return: The resulting measured state or distribution of all possible measurements
         """
 
 
@@ -68,11 +72,12 @@ class BSLayeredPPNR(IDetector):
     2**(number of layers) threshold detectors.
 
     :param bs_layers: Number of beam splitter layers. Adding more layers enabled to detect
+    :param reflectivity: Reflectivity of the beam splitters used to split photons
     """
 
     def __init__(self, bs_layers: int, reflectivity: float = 0.5):
         assert isinstance(bs_layers, int) and bs_layers > 0,\
-            "Beam-splitter layers have to be a stricly positive integer"
+            f"Beam-splitter layers have to be a stricly positive integer (got {bs_layers})"
         assert 0 <= reflectivity <= 1, f"Reflectivity must be between 0 and 1 (got {reflectivity})"
         super().__init__()
         self.name = f"BS-PPNR{bs_layers}"
@@ -85,11 +90,15 @@ class BSLayeredPPNR(IDetector):
         return DetectionType.PPNR
 
     def clear_cache(self):
+        """
+        Detector simulation results are cached in each instance and may consume memory.
+        Call this method to empty the cache.
+        """
         self._cache = {}
 
     def create_circuit(self) -> Circuit:
         """
-        Creates the circuit to simulate PPNR with threshold detectors
+        Creates the beam splitter layered circuit to simulate PPNR with threshold detectors
         """
         ppnr_circuit = Circuit(2 ** self._layers)
         for l in range(self._layers):
@@ -100,7 +109,7 @@ class BSLayeredPPNR(IDetector):
                 ppnr_circuit.add(m, BS(BS.r_to_theta(self._r)))
         return ppnr_circuit
 
-    def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
+    def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
         if theoretical_photons < 2:
             return BasicState([theoretical_photons])
 
@@ -134,12 +143,14 @@ class Detector(IDetector):
 
     @staticmethod
     def threshold():
+        """Builds a threshold detector"""
         d = Detector(0)
         d.name = "Threshold"
         return d
 
     @staticmethod
     def pnr():
+        """Builds a perfect detector"""
         d = Detector()
         d.name = "PNR"
         return d
@@ -158,23 +169,25 @@ class Detector(IDetector):
             return DetectionType.PNR
         return DetectionType.PPNR
 
-    def detect(self, theoretical_photons: int) -> BSDistribution or BasicState:
+    def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
         if theoretical_photons < 2 or self.type == DetectionType.PNR:
             return BasicState([theoretical_photons])
         # Adjust the model to treat the PPNR case here
         return BasicState([1])
 
 
-def detection_type(detectors: list[IDetector]) -> DetectionType:
+def get_detection_type(detectors: list[IDetector]) -> DetectionType:
     """
     Computes a global detection type from a given list of detectors.
 
+    :param detectors: List of detectors (None is treated as PNR)
     :return: PNR if all detectors are PNR or not set
              Threshold if all detectors are threshold
-             else PPNR
+             PPNR if all detectors are PPNR
+             else Mixed
     """
     if not detectors:
-        return DetectionType.PNR
+        return DetectionType.PNR  # To keep previous behavior where not setting any detector would mean PNR
     result = None
     for det in detectors:
         current = DetectionType.PNR if det is None else det.type  # Default is PNR

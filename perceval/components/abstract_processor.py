@@ -38,7 +38,7 @@ from perceval.utils.logging import get_logger, channel, deprecated
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
-from .detector import IDetector, Detector, DetectionType, detection_type
+from .detector import IDetector, Detector, DetectionType, get_detection_type
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
@@ -153,8 +153,8 @@ class AProcessor(ABC):
     def available_commands(self) -> list[str]:
         pass
 
-    def remove_heralded_modes(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if not keep_herald and self.heralds:
+    def remove_heralded_modes(self, s: BasicState) -> BasicState:
+        if self.heralds:
             s = s.remove_modes(list(self.heralds.keys()))
         return s
 
@@ -199,10 +199,12 @@ class AProcessor(ABC):
             new_proc._components.append((r, c.copy(subs=subs)))
         return new_proc
 
-    def set_circuit(self, circuit: ACircuit):
+    def set_circuit(self, circuit: ACircuit) -> AProcessor:
         r"""
-        Removes all components and replace them by the given circuit's components.
-        :return: self. Allows to directly chain this with .add
+        Removes all components and replace them by the given circuit.
+
+        :param circuit: The circuit to start the processor with
+        :return: Self to allow direct chain this with .add()
         """
         if self._n_moi == 0:
             self.m = circuit.m
@@ -212,7 +214,7 @@ class AProcessor(ABC):
             self._components.append((r, c))
         return self
 
-    def add(self, mode_mapping, component, keep_port=True):
+    def add(self, mode_mapping, component, keep_port: bool = True) -> AProcessor:
         """
         Add a component to the processor (unitary or non-unitary).
 
@@ -226,6 +228,7 @@ class AProcessor(ABC):
          * A unitary circuit
          * A non-unitary component
          * A processor
+         * A detector
 
         :param keep_port: if True, saves `self`'s output ports on modes impacted by the new component, otherwise removes them.
 
@@ -239,9 +242,9 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._n_moi == 0:
+        if self.m == 0:
             self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
-            get_logger().debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
+            get_logger().debug(f"Number of modes of interest defaulted to {self.m} in processor {self.name}",
                                channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
@@ -250,7 +253,7 @@ class AProcessor(ABC):
         elif isinstance(component, IDetector):
             self._add_detector(mode_mapping, component)
         elif isinstance(component, AComponent):
-            self._add_component(connector.resolve(), component)
+            self._add_component(connector.resolve(), component, keep_port)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
         self._circuit_changed()
@@ -298,7 +301,8 @@ class AProcessor(ABC):
         n_new_heralds = connector.add_heralded_modes(mode_mapping)
         self._n_heralds += n_new_heralds
         self._mode_type += [ModeType.HERALD] * n_new_heralds
-        self._detectors += [None] * n_new_heralds
+        for m_herald in processor.heralds:
+            self._detectors += [processor._detectors[m_herald]]
 
         # Add PERM, component, PERM^-1
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
@@ -349,8 +353,15 @@ class AProcessor(ABC):
             self._postselect = self._postselect or PostSelect()
             self._postselect.merge(other_postselect)
 
-    def _add_component(self, mode_mapping, component):
+    def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
+        if not keep_port:
+            # Remove output ports used to connect the new processor
+            for i in mode_mapping:
+                port = self.get_output_port(i)
+                if port is not None:
+                    del self._out_ports[port]
+
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
@@ -374,7 +385,7 @@ class AProcessor(ABC):
         self._mode_type[mode] = ModeType.HERALD
         self._circuit_changed()
 
-    def add_herald(self, mode: int, expected: int, name: str = None):
+    def add_herald(self, mode: int, expected: int, name: str = None) -> AProcessor:
         r"""
         Add a heralded mode
 
@@ -394,7 +405,7 @@ class AProcessor(ABC):
 
     @property
     def m(self) -> int:
-        r"""
+        """
         :return: Number of modes of interest (MOI) defined in the processor
         """
         return self._n_moi
@@ -404,7 +415,7 @@ class AProcessor(ABC):
         if self._n_moi != 0:
             raise RuntimeError(f"The number of modes of this processor was already set (to {self._n_moi})")
         if not isinstance(value, int) or value < 1:
-            raise ValueError(f"The number of modes should be a strictly positive integer")
+            raise ValueError(f"The number of modes should be a strictly positive integer (got {value})")
         self._n_moi = value
         self._detectors = [None] * value
         self._mode_type = [ModeType.PHOTONIC] * value
@@ -570,7 +581,7 @@ class AProcessor(ABC):
 
     @property
     def detection_type(self) -> DetectionType:
-        return detection_type(self._detectors)
+        return get_detection_type(self._detectors)
 
     @property
     def heralds(self):

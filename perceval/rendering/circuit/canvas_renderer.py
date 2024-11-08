@@ -84,6 +84,9 @@ class CanvasRenderer(ICircuitRenderer):
         return self._skin.get_size(circuit, recursive)
 
     def display_input_photons(self, input_pos) -> None:
+        """
+        Display small arrows at the beginning of any mode where input photons are expected
+        """
         for k in range(input_pos.m):
             if input_pos[k] > 0 and self._mode_style[k] != ModeType.HERALD:
                 self._canvas.set_offset(

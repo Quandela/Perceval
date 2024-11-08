@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components.detector import IDetector, DetectionType, detection_type
+from perceval.components.detector import IDetector, DetectionType, get_detection_type
 from perceval.utils import BSDistribution, BasicState
 
 
@@ -43,7 +43,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
     """
     assert len(detectors) == dist.m, "Mismatch between the number of detectors and the number of modes!"
-    detection = detection_type(detectors)
+    detection = get_detection_type(detectors)
     if not dist or detection == DetectionType.PNR:
         return dist, 1
 
@@ -72,8 +72,17 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
 
 def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None
                               ) -> BasicState:
+    """
+    Simulate detectors effect on one output sample. If multiple possible outcome exist, one is randomly chosen
+
+    :param sample: The sample to simulate detectors on
+    :param detectors: A list of detectors (with the same length as the sample)
+    :param detection: An optional detection type. Can be recomputed from the detectors list, but it's faster to compute
+                      it once and pass it for a list a samples to process
+    :return: The output sample where the detector imperfection were applied
+    """
     if detection is None:
-        detection = detection_type(detectors)
+        detection = get_detection_type(detectors)
     if detection == DetectionType.PNR:
         return sample
 

@@ -124,7 +124,7 @@ class Processor(AProcessor):
         self._source = source
         self._inputs_map = None
 
-    def _init_circuit(self, m_circuit: ACircuit or int):
+    def _init_circuit(self, m_circuit: ACircuit | int):
         if isinstance(m_circuit, ACircuit):
             self.m = m_circuit.m
             self.add(0, m_circuit)
@@ -261,12 +261,15 @@ class Processor(AProcessor):
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
         sampling_simulator.set_selection(
-            min_detected_photons_filter=self._min_detected_photons_filter, postselect=self.post_select_fn, heralds=self.heralds)
+            min_detected_photons_filter=self._min_detected_photons_filter,
+            postselect=self.post_select_fn,
+            heralds=self.heralds)
         sampling_simulator.keep_heralds(False)
+        sampling_simulator.set_detectors(self._detectors)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback, self._detectors)
+        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
@@ -282,7 +285,7 @@ class Processor(AProcessor):
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, progress_callback, self._detectors)
+        res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
         pperf = 1
         postprocessed_res = BSDistribution()

@@ -413,14 +413,14 @@ class Simulator(ISimulator):
 
     def probs_svd(self,
                   input_dist: SVDistribution,
-                  progress_callback: Callable = None,
-                  detectors: list[IDetector] = None) -> dict[str, any]:
+                  detectors: list[IDetector] = None,
+                  progress_callback: Callable = None) -> dict[str, any]:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
         :param input_dist: A state vector distribution describing the input to simulate
-        :param progress_callback: A function with the signature `func(progress: float, message: str)`
         :param detectors: An optional list of detectors
+        :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
         :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
 
