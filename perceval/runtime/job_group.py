@@ -35,7 +35,6 @@ import os
 import json
 from datetime import datetime
 from enum import Enum
-from tabulate import tabulate
 from tqdm import tqdm
 
 
@@ -46,10 +45,10 @@ DATE_TIME_FORMAT = "%Y%m%d_%H%M%S"
 DEFAULT_MAX_SAMPLES = 10000
 
 class JobCategories(Enum):
-    FINISHED_SUCCESS = 0  # Finished and Successful
-    FINISHED_OTHER = 1  # Finished but Unsuccessful
-    UNFINISHED_SENT = 2  # Unfinished but Sent
-    UNFINISHED_NOT_SENT = 3  # Unfinished and Not Sent
+    FIN_SUCCESS = 0  # successfully finished jobs
+    FIN_OTHER = 1  # jobs that are not in any active state on cloud nor successful
+    UNFIN_SENT = 2  # jobs sent to run on cloud
+    UNFIN_NOT_SENT = 3  # jobs never sent to cloud
 
 
 class JobGroup:
@@ -76,7 +75,6 @@ class JobGroup:
             self._load_job_group()
         else:
             self._create_job_group()
-
 
     @property
     def name(self) -> str:
@@ -236,28 +234,25 @@ class JobGroup:
         return status_jobs_in_group
 
     @staticmethod
-    def _categorize_jos(status_entry: str) -> JobCategories:
-        # categorize RunningStatus
-        finished_success = [RunningStatus.SUCCESS]
-        finished_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED,
-                              RunningStatus.UNKNOWN]
-
-        unfinished_sent = [RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.CANCEL_REQUESTED]
+    def _map_job_status_category(status_entry: str) -> JobCategories:
+        # status categories
+        status_success = [RunningStatus.SUCCESS]
+        status_sent = [RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.CANCEL_REQUESTED]
+        status_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED, RunningStatus.UNKNOWN]
 
         if status_entry is None:
-            return JobCategories.UNFINISHED_NOT_SENT
-            # unfinished_not_sent += 1
-        elif RunningStatus[status_entry] in unfinished_sent:
-            return JobCategories.UNFINISHED_SENT
-            # unfinished_sent += 1
-        elif RunningStatus[status_entry] in finished_success:
-            return JobCategories.FINISHED_SUCCESS
-            # finished_success += 1
-        elif RunningStatus[status_entry] in finished_other:
-            return JobCategories.FINISHED_OTHER
-            # finished_other += 1
+            return JobCategories.UNFIN_NOT_SENT
+
+        elif RunningStatus[status_entry] in status_sent:
+            return JobCategories.UNFIN_SENT
+
+        elif RunningStatus[status_entry] in status_success:
+            return JobCategories.FIN_SUCCESS
+
+        elif RunningStatus[status_entry] in status_other:
+            return JobCategories.FIN_OTHER
         else:
-            raise ValueError(f"Unspecified status of job in group with value {status_entry}")
+            raise ValueError(f"Unspecified status of job in group with value {status_entry}. Cannot categorize")
 
     def progress(self) -> dict:
         """
@@ -271,59 +266,73 @@ class JobGroup:
                 -- sent {'WAITING', 'RUNNING', 'CANCEL_REQUESTED'}
                 -- not sent {None}
         """
-
-        finished_success = 0
-        finished_other = 0
-        unfinished_sent = 0
-        unfinished_not_sent = 0
+        success_job_cnt = 0
+        other_job_cnt = 0
+        sent_job_cnt = 0
+        unsent_job_cnt = 0
 
         job_statuses = self._collect_job_statuses()
+
         for status_entry in job_statuses:
-            category = JobGroup._categorize_jos(status_entry)
-            if category == JobCategories.UNFINISHED_NOT_SENT:
-                unfinished_not_sent += 1
-            elif category == JobCategories.UNFINISHED_SENT:
-                unfinished_sent += 1
-            elif category == JobCategories.FINISHED_SUCCESS:
-                finished_success += 1
-            elif category == JobCategories.FINISHED_OTHER:
-                finished_other += 1
+            job_category = JobGroup._map_job_status_category(status_entry)
+            if job_category == JobCategories.UNFIN_NOT_SENT:
+                unsent_job_cnt += 1
+            elif job_category == JobCategories.UNFIN_SENT:
+                sent_job_cnt += 1
+            elif job_category == JobCategories.FIN_SUCCESS:
+                success_job_cnt += 1
+            elif job_category == JobCategories.FIN_OTHER:
+                other_job_cnt += 1
 
-        finished_info = dict()  # details of finished jobs
-        finished_info['successful'] = finished_success
-        finished_info['unsuccessful'] = finished_other
-
-        unfininished_info = dict()  # details of unfinished jobs
-        unfininished_info['sent'] = unfinished_sent
-        unfininished_info['not sent'] = unfinished_not_sent
+        fin_job_prog = {'successful': success_job_cnt, 'unsuccessful': other_job_cnt}
+        unfin_job_prog = {'sent': sent_job_cnt, 'not sent': unsent_job_cnt}
 
         progress = dict()
         progress['Total'] = len(self._group_info['job_group_data'])
-        progress['Finished'] = [finished_other + finished_success, finished_info]
-        progress['Unfinished'] = [unfinished_sent + unfinished_not_sent, unfininished_info]
+        progress['Finished'] = [other_job_cnt + success_job_cnt, fin_job_prog]
+        progress['Unfinished'] = [sent_job_cnt + unsent_job_cnt, unfin_job_prog]
 
         return progress
 
     def track_progress(self):
+        """
+        Displays the status and progress of each job in the group using `tqdm` progress bars.
+        Jobs are categorized into "Successful," "Running/Active on Cloud," and
+        "Inactive/Unsuccessful." The method iterates over the list of jobs, continuously
+        refreshing their statuses and updating the progress bars to provide real-time feedback
+        until no "Running/Waiting" jobs remain on the Cloud.
+        """
         tot_jobs = len(self._group_info['job_group_data'])
 
-        success_bar = tqdm(total=tot_jobs, desc="Success Jobs", position=0)
-        active_bar = tqdm(total=tot_jobs, desc="Active Jobs", position=1)
-        inactive_bar = tqdm(total=tot_jobs, desc="Inactive Jobs", position=2)
+        # define tqdm bars
+        bar_format = '{desc}{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}'
+        success_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Successful Jobs", position=0, leave=True)
+        active_bar = tqdm(total=tot_jobs, bar_format=bar_format,desc ="Running/Waiting Jobs", position=1, leave=True)
+        inactive_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Inactive/Unsuccessful Jobs", position=2, leave=True)
 
-        for job_index in range(tot_jobs):
-            job_info = self._group_info['job_group_data'][job_index]
-            job_status = job_info['status']
-            st = False # get status for this job
-            if st == 'inactive':
-                inactive_bar.update()
-            elif st == 'successful':
-                success_bar.update()
-            elif st == 'active':
-                active_bar.update()
-        # Todo: question - run time vs estimated time?
-        # TODO : need time and check method - i need a system to wait->recheck->update bars
+        while True:
+            status_list = self._collect_job_statuses()  # list of statuses for jobs
+            group_categories = []
 
+            for job_index in range(tot_jobs):
+                job_category = JobGroup._map_job_status_category(status_list[job_index])
+                group_categories.append(job_category)
+
+                if job_category == JobCategories.FIN_SUCCESS:
+                    success_bar.update(1)
+                elif job_category == JobCategories.UNFIN_SENT:
+                    active_bar.update(1)
+                elif job_category in [JobCategories.FIN_OTHER, JobCategories.UNFIN_NOT_SENT]:
+                        inactive_bar.update(1)
+
+            # category list from status
+            if not any(category == JobCategories.UNFIN_SENT for category in group_categories):
+                # exit if no jobs running/waiting on cloud
+                break
+
+        success_bar.close()
+        active_bar.close()
+        inactive_bar.close()
 
     def _recreate_remote_job_from_stored_data(self, job_entry) -> RemoteJob:
         """
