@@ -108,7 +108,9 @@ class NoisySamplingSimulator:
         self._detectors = None
 
     def set_detectors(self, detector_list: list[IDetector]):
-        """:param detector_list: A list of detectors to simulate"""
+        """
+        :param detector_list: A list of detectors to simulate
+        """
         self._detectors = detector_list
 
     def keep_heralds(self, value: bool):
