@@ -27,11 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from perceval.utils import BasicState, Encoding, LogicalState
+from perceval.utils import BasicState, Encoding, LogicalState, ModeType
 from .abstract_component import AComponent
 
 
@@ -41,7 +40,7 @@ class PortLocation(Enum):
     IN_OUT = 2
 
 
-class APort(AComponent):
+class APort(AComponent, ABC):
     def __init__(self, size, name):
         super().__init__(size, name)
 
@@ -50,9 +49,9 @@ class APort(AComponent):
         return True
 
     @abstractmethod
-    def is_output_photonic_mode_closed(self):
+    def output_mode_type(self) -> ModeType:
         """
-        Returns True if the photonic mode is closed by the port
+        Return the mode type induced by the port
         """
 
     @property
@@ -69,8 +68,8 @@ class Port(APort):
     def encoding(self):
         return self._encoding
 
-    def is_output_photonic_mode_closed(self):
-        return False
+    def output_mode_type(self) -> ModeType:
+        return ModeType.PHOTONIC
 
 
 class Herald(APort):
@@ -81,9 +80,10 @@ class Herald(APort):
             name = f'herald{name}'
         super().__init__(1, name)
         self._value = value
+        self.detector_type = None
 
-    def is_output_photonic_mode_closed(self):
-        return True
+    def output_mode_type(self) -> ModeType:
+        return ModeType.HERALD
 
     @property
     def user_given_name(self):

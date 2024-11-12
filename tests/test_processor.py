@@ -33,7 +33,7 @@ from unittest.mock import patch
 
 import perceval as pcvl
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
-    PS, PERM
+    PS, PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
@@ -126,15 +126,12 @@ def test_processor_source_vs_noise_model():
     assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_processor_probs(mock_warn):
-    source = Source(emission_probability=1, multiphoton_component=0, indistinguishability=1)
-    qpu = Processor("Naive", BS(), source)
+def test_processor_probs():
+    qpu = Processor("Naive", BS())
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
     qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
-
-    with LogChecker(mock_warn):
-        probs = qpu.probs()
+    qpu.min_detected_photons_filter(2)
+    probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
@@ -334,3 +331,12 @@ def test_processor_composition_mismatch_modes():
     assert r_list[0] == [4, 5, 6] # checks PERM added here to move extra mode out of the way
     assert r_list[1][0] == 0  # BS added at mode 0
     assert r_list[3][0] == 1  # checks PS at mode 1
+
+
+def test_processor_add_detector():
+    p = Processor("SLOS", 4)
+    p.add(0, Detector.pnr())
+    with pytest.raises(UnavailableModeException):
+        p.add(0, PS(phi=0))  # Cannot add an optical component after a detector
+    with pytest.raises(UnavailableModeException):
+        p.add(0, Detector.pnr())  # Cannot add a detector after a detector

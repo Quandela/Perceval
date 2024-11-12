@@ -34,8 +34,7 @@ import sympy as sp
 
 import perceval as pcvl
 from perceval import catalog
-from perceval.components.unitary_components import BS, PS, PBS, WP, HWP, PERM, QWP, PR, Unitary
-from perceval.components.non_unitary_components import TD
+from perceval.components import BS, PS, PBS, WP, HWP, PERM, QWP, PR, Unitary, TD, Detector
 from perceval.rendering.circuit import SymbSkin
 
 from _test_utils import _save_or_check, save_figs
@@ -311,6 +310,9 @@ def test_svg_processor_with_heralds_and_barriers_phys(tmp_path, save_figs):
     pc = pcvl.Processor('SLOS', c)
     pc.add_herald(0, 0)
     pc.add_herald(2, 1)
+    pc.add(0, Detector.pnr())
+    pc.add(1, Detector.ppnr(0.5))
+    pc.add(2, Detector.threshold())
     _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
@@ -357,24 +359,7 @@ def test_svg_dump_circuit_box_bell_state(tmp_path, save_figs,
     processor = pcvl.Processor('SLOS', chip)
 
     fig_name = sys._getframe().f_code.co_name
-
-    if merge_pre_MZI:
-        fig_name = f"{fig_name}T"
-    else:
-        fig_name = f"{fig_name}F"
-
-    if merge_upper_MZI:
-        fig_name = f"{fig_name}T"
-    else:
-        fig_name = f"{fig_name}F"
-
-    if merge_lower_MZI:
-        fig_name = f"{fig_name}T"
-    else:
-        fig_name = f"{fig_name}F"
-
-    _save_or_check(c=processor,
-        tmp_path=tmp_path,
-        circuit_name=fig_name,
-        save_figs=save_figs,
-        recursive=True)
+    fig_name += "T" if merge_pre_MZI else "F"
+    fig_name += "T" if merge_upper_MZI else "F"
+    fig_name += "T" if merge_lower_MZI else "F"
+    _save_or_check(c=processor, tmp_path=tmp_path, circuit_name=fig_name, save_figs=save_figs, recursive=True)

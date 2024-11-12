@@ -73,3 +73,9 @@ class InterferometerShape(Enum):
 class FileFormat(Enum):
     BINARY = 0
     TEXT = 1
+
+
+class ModeType(Enum):
+    PHOTONIC = 0
+    HERALD = 1
+    CLASSICAL = 2

@@ -26,13 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from __future__ import annotations
 from abc import ABC
 
 
 class Canvas(ABC):
-    def __init__(self, inverse_Y=False, **opts):
+    def __init__(self, inverse_Y: bool = False, **opts):
         self._position = []
         self._minx = None
         self._miny = None
@@ -41,10 +40,7 @@ class Canvas(ABC):
         self._drawn = False
         self._offset_x = 0
         self._offset_y = 0
-        if opts is None:
-            self._opts = {}
-        else:
-            self._opts = opts
+        self._opts = opts
         self._inverse_Y = -1 if inverse_Y else 1
         self._background_color = None
 
@@ -89,10 +85,11 @@ class Canvas(ABC):
                   stroke_dasharray=None):
         """Draw a multi-line
 
-        :param points:
-        :param stroke:
-        :param stroke_width:
-        :return:
+        :param points: list of point 2D coordinates
+        :param stroke: Stroke color
+        :param stroke_width: Width of the drawn multi-line
+        :param stroke_linejoin: Shape to join two segments of the multi-line
+        :param stroke_dasharray: Dash pattern of the multi-line
         """
         assert not self._drawn, "calling add_mline on drawn canvas"
         norm_points = []
@@ -136,13 +133,20 @@ class Canvas(ABC):
                          **args)
 
     def add_mpath(self,
-                  points: list[float | str],
+                  points: list[float | str] | tuple[float | str, ...],
                   stroke: str = "black",
                   stroke_width: float = 1,
                   fill: str = None,
                   stroke_linejoin: str = "miter",
                   stroke_dasharray=None):
         """Draw a path
+
+        :param points: list of point 2D coordinates
+        :param stroke: Stroke color
+        :param stroke_width: Width of the drawn multi-line
+        :param fill: Fill color
+        :param stroke_linejoin: Shape to join two segments of the multi-line
+        :param stroke_dasharray: Dash pattern of the multi-line
         """
         assert not self._drawn, "calling add_mpath on drawn canvas"
         norm_points = []
@@ -217,7 +221,7 @@ class Canvas(ABC):
                 norm_points += ["L", self.position[0], self._inverse_Y * self.position[1]]
                 points = points[2:]
             else:
-                raise RuntimeError("Unsupported mpath operator: %s", points[0])
+                raise RuntimeError(f"Unsupported mpath operator: {points[0]}")
         return norm_points
 
     def add_circle(self,
@@ -227,6 +231,16 @@ class Canvas(ABC):
                    stroke_width: float = 1,
                    fill: str = None,
                    stroke_dasharray = None):
+        """
+        Draw a circle
+
+        :param r: Radius
+        :param points: list of point 2D coordinates
+        :param stroke: Stroke color
+        :param stroke_width: Width of the drawn circle
+        :param fill: Fill color
+        :param stroke_dasharray: Dash pattern of the circle
+        """
         self.position = (points[0] + r, points[1] + r)
         self.position = (points[0] - r, points[1] - r)
         self.position = points
