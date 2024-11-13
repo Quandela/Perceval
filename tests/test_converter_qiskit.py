@@ -45,9 +45,25 @@ from perceval.converters.converter_utils import label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
 from perceval.components.port import get_basic_state_from_encoding
 from perceval.utils import BSDistribution, Encoding, generate_all_logical_states
-from perceval.algorithm import Sampler
 
-TEST_DATA_DIR = Path(__file__).resolve().parent / 'data'
+
+EXPECTED_QISK_SIM_PROBS_DATA = {"0000": 0.18158257565856697,
+ "1000": 0.15748294604956967,
+ "0100": 0.02913976729404776,
+ "1100": 0.025272338956653793,
+ "0010": 0.07928849942312567,
+ "1010": 0.06876533407303459,
+ "0110": 0.05447209941994839,
+ "1110": 0.04724256533451039,
+ "0001": 0.10070839860443088,
+ "1001": 0.08734238539485045,
+ "0101": 0.01616134857238361,
+ "1101": 0.014016415264968182,
+ "0011": 0.04397458167828672,
+ "1011": 0.03813827757909818,
+ "0111": 0.030211036941779033,
+ "1111": 0.026201429754745716
+}
 
 
 def test_basic_circuit_h():
@@ -271,11 +287,6 @@ def test_cnot_ppcnot_vs_hcnot_sim():
     converter = QiskitConverter()
     pc = converter.convert(qisk_circ, use_postselection=True)  # converted
 
-    # Reading from saved (pre-computed) Qiskit output
-    with open(TEST_DATA_DIR / 'sv_qisk', "r") as f:
-        qisk_probs = json.load(f)  # prob distribution - bits already reversed in Qiskit output
-
-    # computing samples in Perceval
     probs_pc = pc.probs()['results']
 
     # convert the probs to valid logical states
@@ -296,6 +307,6 @@ def test_cnot_ppcnot_vs_hcnot_sim():
     tot_diff = 0  # sum of absolute difference between the probs of the two computations
     for index, (key, value) in enumerate(valid_bsd.items()):
         bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
-        tot_diff += abs(value - qisk_probs[bit_form])
+        tot_diff += abs(value - EXPECTED_QISK_SIM_PROBS_DATA[bit_form])
 
     assert tot_diff == pytest.approx(0, abs=1e-7)

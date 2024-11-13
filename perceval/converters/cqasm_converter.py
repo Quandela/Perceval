@@ -30,6 +30,7 @@ from perceval.components import Processor, Source, Circuit, BS, PS, PERM
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 from .converter_utils import label_cnots_in_gate_sequence
+from perceval.utils import NoiseModel
 
 import numpy as np
 import re
@@ -86,8 +87,8 @@ class CQASMConverter(AGateConverter):
     :param backend_name: backend name used in the converted processor (default SLOS)
     :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = Source(), noise_model: NoiseModel = NoiseModel()):
+        super().__init__(backend_name, source, noise_model)
         import cqasm.v3x as cqasm
 
         self._qubit_list = []

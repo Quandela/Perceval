@@ -34,7 +34,7 @@ from perceval.utils import P, BasicState, Encoding, global_params, PostSelect, N
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
-
+from perceval.utils.logging import get_logger
 
 def _create_mode_map(c_idx: int, c_data: int) -> dict:
     return {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
@@ -49,10 +49,14 @@ class AGateConverter(ABC):
     Converter class for gate based Circuits to perceval processor
     """
 
-    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
+    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = NoiseModel()):
         self._converted_processor = None
         self._input_list = None  # input state in list
-        self._noise_model = NoiseModel()
+        if source is not None:
+            get_logger().warn('DeprecationWarning: Call with deprecated argument "source", '
+                              'please use "noise_model=NoiseModel()" instead')
+            self._source = source
+        self._noise_model = noise_model
         self._backend_name = backend_name
 
         # Define function handler to create complex components

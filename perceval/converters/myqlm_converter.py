@@ -31,6 +31,7 @@ from perceval.components import Circuit, Processor, Source, BS, PS
 from perceval.utils.logging import get_logger, channel
 from .converter_utils import label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
+from perceval.utils import NoiseModel
 
 
 def _get_gate_sequence(myqlm_circ) -> list:
@@ -49,8 +50,8 @@ class MyQLMConverter(AGateConverter):
     :param backend_name: Backend to use in computation, defaults to SLOS
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = Source(), noise_model: NoiseModel = NoiseModel()):
+        super().__init__(backend_name, source, noise_model)
 
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
@@ -69,7 +70,8 @@ class MyQLMConverter(AGateConverter):
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits) to processor", channel.general)
+        get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
+            channel.general)
 
         gate_sequence = _get_gate_sequence(qlmc)
         optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
