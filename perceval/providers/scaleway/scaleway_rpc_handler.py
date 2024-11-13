@@ -112,6 +112,14 @@ class RPCHandler:
         request = requests.post(endpoint, headers=self._headers)
         request.raise_for_status()
 
+    def rerun_job(self, job_id: str) -> str:
+        """Rerun a job
+
+        :param job_id: job id to rerun
+        :return: new job id
+        """
+        raise NotImplementedError("rerun_job method is not implemented for Scaleway RPC Handler")
+
     def get_job_status(self, job_id: str) -> dict:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
