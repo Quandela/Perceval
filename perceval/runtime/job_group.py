@@ -44,12 +44,6 @@ JGRP_DIR_NAME = "job_group"
 DATE_TIME_FORMAT = "%Y%m%d_%H%M%S"
 DEFAULT_MAX_SAMPLES = 10000
 
-class JobCategories(Enum):
-    FIN_SUCCESS = 0  # successfully finished jobs
-    FIN_OTHER = 1  # jobs that are not in any active state on cloud nor successful
-    UNFIN_SENT = 2  # jobs sent to run on cloud
-    UNFIN_NOT_SENT = 3  # jobs never sent to cloud
-
 
 class JobGroup:
     """
@@ -234,23 +228,24 @@ class JobGroup:
         return status_jobs_in_group
 
     @staticmethod
-    def _map_job_status_category(status_entry: str) -> JobCategories:
+    def _map_job_status_category(status_entry: str):
         # status categories
         status_success = [RunningStatus.SUCCESS]
         status_sent = [RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.CANCEL_REQUESTED]
         status_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED, RunningStatus.UNKNOWN]
 
         if status_entry is None:
-            return JobCategories.UNFIN_NOT_SENT
-
+            # return JobCategories.UNFIN_NOT_SENT
+            return 'UNFIN_NOT_SENT'
         elif RunningStatus[status_entry] in status_sent:
-            return JobCategories.UNFIN_SENT
-
+            # return JobCategories.UNFIN_SENT
+            return 'UNFIN_SENT'
         elif RunningStatus[status_entry] in status_success:
-            return JobCategories.FIN_SUCCESS
-
+            # return JobCategories.FIN_SUCCESS
+            return 'FIN_SUCCESS'
         elif RunningStatus[status_entry] in status_other:
-            return JobCategories.FIN_OTHER
+            # return JobCategories.FIN_OTHER
+            return 'FIN_OTHER'
         else:
             raise ValueError(f"Unspecified status of job in group with value {status_entry}. Cannot categorize")
 
@@ -275,13 +270,13 @@ class JobGroup:
 
         for status_entry in job_statuses:
             job_category = JobGroup._map_job_status_category(status_entry)
-            if job_category == JobCategories.UNFIN_NOT_SENT:
+            if job_category == 'UNFIN_NOT_SENT':
                 unsent_job_cnt += 1
-            elif job_category == JobCategories.UNFIN_SENT:
+            elif job_category == 'UNFIN_SENT':
                 sent_job_cnt += 1
-            elif job_category == JobCategories.FIN_SUCCESS:
+            elif job_category == 'FIN_SUCCESS':
                 success_job_cnt += 1
-            elif job_category == JobCategories.FIN_OTHER:
+            elif job_category == 'FIN_OTHER':
                 other_job_cnt += 1
 
         fin_job_prog = {'successful': success_job_cnt, 'unsuccessful': other_job_cnt}
@@ -318,15 +313,15 @@ class JobGroup:
                 job_category = JobGroup._map_job_status_category(status_list[job_index])
                 group_categories.append(job_category)
 
-                if job_category == JobCategories.FIN_SUCCESS:
+                if job_category == 'FIN_SUCCESS':
                     success_bar.update(1)
-                elif job_category == JobCategories.UNFIN_SENT:
+                elif job_category == 'UNFIN_SENT':
                     active_bar.update(1)
-                elif job_category in [JobCategories.FIN_OTHER, JobCategories.UNFIN_NOT_SENT]:
+                elif job_category in ['FIN_OTHER', 'UNFIN_NOT_SENT']:
                         inactive_bar.update(1)
 
             # category list from status
-            if not any(category == JobCategories.UNFIN_SENT for category in group_categories):
+            if not any(category == 'UNFIN_SENT' for category in group_categories):
                 # exit if no jobs running/waiting on cloud
                 break
 
