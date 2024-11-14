@@ -41,27 +41,38 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def probs(self, input_state) -> BSDistribution:
+    def probs(self, input_state, normalize: bool = True) -> BSDistribution:
         pass
 
     @abstractmethod
     def probs_svd(self,
                   svd: SVDistribution,
                   detectors: list[IDetector] = None,
-                  progress_callback: callable = None) -> dict:
+                  progress_callback: callable = None,
+                  normalize: bool = True) -> dict:
         pass
 
     @abstractmethod
-    def evolve(self, input_state) -> StateVector:
+    def evolve(self, input_state, normalize: bool = True) -> StateVector:
         pass
 
     @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
     @abstractmethod
     def set_min_detected_photon_filter(self, value: int):
+        """
+        Set a minimum number of detected photons in the output distribution
+
+        :param value: The minimum photon count
+        """
         pass
 
     @abstractmethod
     def set_min_detected_photons_filter(self, value: int):
+        """
+        Set a minimum number of detected photons in the output distribution
+
+        :param value: The minimum photon count
+        """
         pass
 
     def set_precision(self, precision: float):
@@ -106,35 +117,38 @@ class ASimulatorDecorator(ISimulator, ABC):
     def _postprocess_sv_impl(self, sv: StateVector) -> StateVector:
         pass
 
-    def _postprocess_bsd(self, results: BSDistribution):
+    def _postprocess_bsd(self, results: BSDistribution, normalize: bool = True):
         results = self._postprocess_bsd_impl(results)
         logical_perf = 1
         if self._postselect is not None or self._heralds is not None:
-            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds)
+            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, normalize)
         return results, logical_perf
 
-    def _postprocess_sv(self, sv: StateVector) -> StateVector:
+    def _postprocess_sv(self, sv: StateVector, normalize: bool = True) -> StateVector:
         sv = self._postprocess_sv_impl(sv)
         if self._postselect is not None or self._heralds is not None:
-            sv, _ = post_select_statevector(sv, self._postselect, self._heralds)
+            sv, _ = post_select_statevector(sv, self._postselect, self._heralds, normalize)
         return sv
 
     def set_circuit(self, circuit):
         self._simulator.set_circuit(self._prepare_circuit(circuit))
 
-    def probs(self, input_state) -> BSDistribution:
-        results = self._simulator.probs(self._prepare_input(input_state))
-        results, _ = self._postprocess_bsd(results)
+    def probs(self, input_state, normalize: bool = True) -> BSDistribution:
+        results = self._simulator.probs(self._prepare_input(input_state), normalize)
+        results, _ = self._postprocess_bsd(results, normalize)
         return results
 
-    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
-        probs = self._simulator.probs_svd(self._prepare_input(svd), progress_callback)
-        probs['results'], logical_perf_coeff = self._postprocess_bsd(probs['results'])
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None,
+                  normalize: bool = True) -> dict:
+        probs = self._simulator.probs_svd(self._prepare_input(svd),
+                                          progress_callback=progress_callback,
+                                          normalize=normalize)
+        probs['results'], logical_perf_coeff = self._postprocess_bsd(probs['results'], normalize)
         probs['logical_perf'] *= logical_perf_coeff
         return probs
 
-    def evolve(self, input_state) -> StateVector:
-        results = self._simulator.evolve(self._prepare_input(input_state))
+    def evolve(self, input_state, normalize: bool = True) -> StateVector:
+        results = self._simulator.evolve(self._prepare_input(input_state), normalize)
         return self._postprocess_sv(results)
 
     # TODO: remove for PCVL-786

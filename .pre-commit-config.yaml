@@ -10,24 +10,29 @@ repos:
 -   repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.13
     hooks:
-    -   id: forbid-crlf
-        types: ["file", "python", "text"]
-    -   id: remove-crlf
-        types: ["file", "python", "text"]
-    -   id: forbid-tabs
-        types: ["file", "python", "text"]
-    -   id: remove-tabs
-        types: ["file", "python", "text"]
-    -   id: insert-license
-        types: ["file", "python", "text"]
-        args:
-        - --license-filepath
-        - LICENSE
+    - id: forbid-crlf
+      language_version: python3.11
+      types: ["file", "python", "text"]
+    - id: remove-crlf
+      language_version: python3.11
+      types: ["file", "python", "text"]
+    - id: forbid-tabs
+      language_version: python3.11
+      types: ["file", "python", "text"]
+    - id: remove-tabs
+      language_version: python3.11
+      types: ["file", "python", "text"]
+    - id: insert-license
+      language_version: python3.11
+      types: ["file", "python", "text"]
+      args:
+      - --license-filepath
+      - LICENSE
 -   repo: local
     hooks:
     -   id: jupyter-nb-clear-metadata
         name: jupyter-nb-clear-metadata
         files: \.ipynb$
-        stages: [commit]
+        stages: [pre-commit]
         language: python
         entry: jupyter nbconvert --ClearMetadataPreprocessor.enabled=True --inplace

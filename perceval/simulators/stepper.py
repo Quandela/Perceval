@@ -106,13 +106,14 @@ class Stepper(ISimulator):
                 nsv += state*sv_pa
         return nsv
 
-    def probs(self, input_state) -> BSDistribution:
+    def probs(self, input_state, normalize: bool = True) -> BSDistribution:
+        # TODO: add masking and possibility not to normalize here
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None, normalize: bool = True) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
-            res = self.probs(sv)
+            res = self.probs(sv, normalize)
             for bs, p_res in res.items():
                 res_bsd[bs] += p_res*p_sv
 
@@ -121,7 +122,7 @@ class Stepper(ISimulator):
 
         return {"results": res_bsd}
 
-    def evolve(self, input_state) -> StateVector:
+    def evolve(self, input_state, normalize: bool = True) -> StateVector:
         self.compile(input_state)
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out
