@@ -136,7 +136,7 @@ class MPSBackend(AStrongSimulationBackend):
         # exponentially with cutoff
         # this is the Schmidt's rank or bond dimension (chi in Thibaud's notes)
 
-        self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype='complex_')
+        self._gamma = np.zeros((self._input_state.m, self._cutoff, self._cutoff, self._d), dtype=np.cdouble)
         # Gamma matrices of the MPS - array shape (m, chi, chi, d)
         # Each Gamma matrix of MPS, in theory, have 3 indices.
         # The first index 'm' here is used to represent modes - all gammas of MPS stored in a single array
@@ -203,7 +203,7 @@ class MPSBackend(AStrongSimulationBackend):
         :returns big_u: np.ndarray of the corresponding transition matrix
         """
         d = self._d
-        big_u = np.zeros((d, d), dtype='complex_')
+        big_u = np.zeros((d, d), dtype=np.cdouble)
         for i in range(d):
             big_u[i, i] = u[0, 0] ** i
         return big_u
@@ -289,11 +289,11 @@ class MPSBackend(AStrongSimulationBackend):
         u11, u12, u21, u22 = u[0, 0], u[0, 1], u[1, 0], u[1, 1]
         d = self._d
         # matrix corresponding to action of BS on the 2 modes
-        big_u = np.zeros((d, d, d, d), dtype='complex_')
+        big_u = np.zeros((d, d, d, d), dtype=np.cdouble)
         for n1 in range(d):  # n1 -> number of photons in mode 1
             for n2 in range(d):  # n2 -> number of photons in mode 2
                 n_tot = n1 + n2
-                outputs = np.zeros((d, d), dtype='complex_')  # unitary of BS for a fixed n1 and n2 entering the modes
+                outputs = np.zeros((d, d), dtype=np.cdouble)  # unitary of BS for a fixed n1 and n2 entering the modes
                 if n_tot <= self._n:  # cannot exceed the total number of photons in the circuit
                     for k1 in range(n1+1):
                         for k2 in range(n2+1):

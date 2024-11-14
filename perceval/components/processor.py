@@ -124,12 +124,12 @@ class Processor(AProcessor):
         self._source = source
         self._inputs_map = None
 
-    def _init_circuit(self, m_circuit):
+    def _init_circuit(self, m_circuit: ACircuit | int):
         if isinstance(m_circuit, ACircuit):
-            self._n_moi = m_circuit.m
+            self.m = m_circuit.m
             self.add(0, m_circuit)
-        else:
-            self._n_moi = m_circuit  # number of modes of interest (MOI)
+        elif m_circuit is not None:
+            self.m = m_circuit  # number of modes of interest
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
@@ -229,13 +229,7 @@ class Processor(AProcessor):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
-    def _state_preselected_physical(self, input_state: StateVector) -> bool:
-        return max(input_state.n) >= self._min_detected_photons_filter
-
     def _state_selected_physical(self, output_state: BasicState) -> bool:
-        if self.is_threshold:
-            modes_with_photons = len([n for n in output_state if n > 0])
-            return modes_with_photons >= self._min_detected_photons_filter
         return output_state.n >= self._min_detected_photons_filter
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -267,9 +261,11 @@ class Processor(AProcessor):
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
         sampling_simulator.set_selection(
-            min_detected_photons_filter=self._min_detected_photons_filter, postselect=self.post_select_fn, heralds=self.heralds)
-        sampling_simulator.set_threshold_detector(self.is_threshold)
+            min_detected_photons_filter=self._min_detected_photons_filter,
+            postselect=self.post_select_fn,
+            heralds=self.heralds)
         sampling_simulator.keep_heralds(False)
+        sampling_simulator.set_detectors(self._detectors)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
@@ -288,14 +284,14 @@ class Processor(AProcessor):
         if precision is not None:
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
-                    channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
+                          channel.general)
+        res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
             if self._state_selected_physical(state):
-                postprocessed_res[self.postprocess_output(state)] += prob
+                postprocessed_res[self.remove_heralded_modes(state)] += prob
             else:
                 pperf -= prob
 

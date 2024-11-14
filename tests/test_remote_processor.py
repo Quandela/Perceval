@@ -26,12 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import perceval as pcvl
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .remote_processor import RemoteProcessor
-from .session import ISession
-from ._token_management import save_token
-from .job_group import JobGroup
+from _mock_rpc_handler import get_rpc_handler
+
+
+def test_remote_processor_creation(requests_mock):
+    rp = pcvl.RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=8)
+    rp.add(0, pcvl.BS())

@@ -32,11 +32,12 @@ from collections import defaultdict
 import copy
 
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
-from perceval.utils.logging import deprecated, get_logger
+from perceval.utils.logging import deprecated
 from perceval.components import ACircuit
 from perceval.backends import AStrongSimulationBackend, BACKEND_LIST
 from .simulator_interface import ISimulator
 from ._simulator_utils import _to_bsd
+from ._simulate_detectors import simulate_detectors
 
 
 class Stepper(ISimulator):
@@ -108,12 +109,16 @@ class Stepper(ISimulator):
     def probs(self, input_state) -> BSDistribution:
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)
             for bs, p_res in res.items():
                 res_bsd[bs] += p_res*p_sv
+
+        if detectors:
+            res_bsd, _ = simulate_detectors(res_bsd, detectors, self._min_detected_photons_filter)
+
         return {"results": res_bsd}
 
     def evolve(self, input_state) -> StateVector:

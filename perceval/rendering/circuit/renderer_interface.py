@@ -28,7 +28,7 @@
 # SOFTWARE.
 from abc import ABC, abstractmethod
 
-from .abstract_skin import ModeStyle
+from perceval.utils import ModeType
 from perceval.components import ACircuit, Circuit, APort
 
 
@@ -42,7 +42,7 @@ class ICircuitRenderer(ABC):
 
     def __init__(self, nsize):
         self._nsize = nsize  # number of modes
-        self._mode_style = [ModeStyle.PHOTONIC] * nsize
+        self._mode_style = [ModeType.PHOTONIC] * nsize
 
         # A dictionary mapping a subblock to information pertaining to its
         # rendering. This is written by the pre-rendering pass, and read by
@@ -154,6 +154,12 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
+    def display_input_photons(self, input_pos) -> None:
+        """
+        Display photons on input modes
+        """
+
+    @abstractmethod
     def add_out_port(self, m: int, port: APort) -> None:
         """
         Render a port on the right side (outputs) of a previously rendered circuit, located on mode 'm'
@@ -163,6 +169,12 @@ class ICircuitRenderer(ABC):
     def add_in_port(self, m: int, content: str) -> None:
         """
         Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
+        """
+
+    @abstractmethod
+    def add_detectors(self, detector_list: list) -> None:
+        """
+        Render detectors when they exist
         """
 
     def set_herald_info(self, info):

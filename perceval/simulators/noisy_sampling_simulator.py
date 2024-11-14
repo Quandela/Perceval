@@ -32,10 +32,11 @@ import time
 import sys
 
 from perceval.backends import ASamplingBackend
-from perceval.components import ACircuit
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel, deprecated
+from ._simulate_detectors import simulate_detectors_sample
 
 
 class SamplesProvider:
@@ -102,17 +103,15 @@ class NoisySamplingSimulator:
         self._min_detected_photons_filter = 0
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
-        self._threshold_detector = False
         self._keep_heralds = True
         self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
+        self._detectors = None
 
-    def set_threshold_detector(self, value: bool):
+    def set_detectors(self, detector_list: list[IDetector]):
         """
-        Change detectors from PNR to threshold
-
-        :param value: True for threshold detectors, False to get back to PNR ones (default is PNR).
+        :param detector_list: A list of detectors to simulate
         """
-        self._threshold_detector = value
+        self._detectors = detector_list
 
     def keep_heralds(self, value: bool):
         """
@@ -183,7 +182,7 @@ class NoisySamplingSimulator:
         """
         self._min_detected_photons_filter = value
 
-    def _perfect_samples_no_selection(
+    def _perfect_sampling_no_selection(
             self,
             input_state: BasicState,
             n_samples: int,
@@ -195,7 +194,6 @@ class NoisySamplingSimulator:
             loop_sample_count = min(1000, n_samples - samples_acquired)
 
             results += self._backend.samples(loop_sample_count)
-
             samples_acquired += loop_sample_count
 
             if progress_callback:
@@ -216,6 +214,7 @@ class NoisySamplingSimulator:
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
+            detection_type: DetectionType,
             progress_callback: callable = None) -> dict:
 
         output = BSSamples()
@@ -243,8 +242,8 @@ class NoisySamplingSimulator:
             else:
                 sampled_state = provider.sample_from(selected_bs)
 
-            if self._threshold_detector:
-                sampled_state = sampled_state.threshold_detection()
+            if self._detectors:
+                sampled_state = simulate_detectors_sample(sampled_state, self._detectors, detection_type)
 
             # Post-processing
             shots += 1
@@ -280,6 +279,9 @@ class NoisySamplingSimulator:
         zpp is used to compute samples/shots ratio.
         max_p is used to compute a threshold to ignore non-probable input states.
         """
+        if self._detectors:
+            assert len(self._detectors) == svd.m,\
+                f"State length ({svd.m}) and detector count ({len(self._detectors)}) do not match"
         zpp = 0
         max_p = 0
         for sv, p in svd.items():
@@ -308,8 +310,9 @@ class NoisySamplingSimulator:
             elif p >= p_threshold:
                 new_input[sv[0]] = p
         new_input.normalize()
-        get_logger().debug(f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
-                     channel.general)
+        get_logger().debug(
+            f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
+            channel.general)
         return new_input, physical_perf
 
     def samples(self,
@@ -340,11 +343,13 @@ class NoisySamplingSimulator:
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
 
         # The best case scenario is a perfect sampling => use the "highway" code
-        if not self._heralds and not self._postselect.has_condition and len(svd) == 1:
+        det_type = get_detection_type(self._detectors)
+        if not self._heralds and not self._postselect.has_condition and len(svd) == 1 and det_type == DetectionType.PNR:
             only_input = next(iter(svd))[0]
             if not only_input.has_annotations:
-                get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call", channel.general)
-                return self._perfect_samples_no_selection(only_input, prepare_samples, progress_callback)
+                get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call",
+                                   channel.general)
+                return self._perfect_sampling_no_selection(only_input, prepare_samples, progress_callback)
 
         new_input, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
 
@@ -353,7 +358,7 @@ class NoisySamplingSimulator:
         provider.sleep_between_batches = self.sleep_between_batches
         provider.prepare(new_input, prepare_samples, progress_callback)
 
-        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, progress_callback)
+        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, det_type, progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': svd.n_max, 'max_samples': max_samples, 'max_shots': max_shots})

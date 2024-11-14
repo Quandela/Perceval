@@ -10,14 +10,32 @@ This section lists the major breaking changes introduced.
 Breaking changes in Perceval 0.12
 ---------------------------------
 
+Simulator.probs_svd method signature changed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`detectors` parameter was introduced at 2nd position in the signature of :code:`Simulator.probs_svd`, between
+the :code:`SVDistribution` and the optional progress callback. If you were using such callbacks, please update your code
+from
+
+>>> results = simulator.probs_svd(svd, my_callback)  # Would work pre-0.12
+
+to either
+
+>>> results = simulator.probs_svd(svd, progress_callback=my_callback)
+
+or
+
+>>> results = simulator.probs_svd(svd, my_detector_list, my_callback)  # my_detector_list can be None
+
+
 Circuit.generic_interferometer method was removed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The :code:`Circuit.generic_interferometer` method has been deprecated since Perceval 0.10.0 and was removed from the
 code base (in order to avoid a circular import).
 
-Please use the :code:`GenericInterferometer` class (from `perceval.components`) directly. See :ref:`Generic Interferometer`
-and you can find a usage example in the :ref:`Circuit Optimizer` code reference.
+Please use the :code:`GenericInterferometer` class (from `perceval.components`) directly.
+See :ref:`Generic Interferometer` and you can find a usage example in the :ref:`Circuit Optimizer` code reference.
 
 Breaking changes in Perceval 0.11
 ---------------------------------
