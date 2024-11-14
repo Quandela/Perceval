@@ -28,6 +28,9 @@
 # SOFTWARE.
 
 import pytest
+import json
+import numpy as np
+from pathlib import Path
 
 try:
     import qiskit
@@ -37,7 +40,30 @@ except ModuleNotFoundError as e:
 
 from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
+from perceval.converters.qiskit_converter import _get_gate_sequence
+from perceval.converters.converter_utils import label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
+from perceval.components.port import get_basic_state_from_encoding
+from perceval.utils import BSDistribution, Encoding, generate_all_logical_states
+
+
+EXPECTED_QISK_SIM_PROBS_DATA = {"0000": 0.18158257565856697,
+ "1000": 0.15748294604956967,
+ "0100": 0.02913976729404776,
+ "1100": 0.025272338956653793,
+ "0010": 0.07928849942312567,
+ "1010": 0.06876533407303459,
+ "0110": 0.05447209941994839,
+ "1110": 0.04724256533451039,
+ "0001": 0.10070839860443088,
+ "1001": 0.08734238539485045,
+ "0101": 0.01616134857238361,
+ "1101": 0.014016415264968182,
+ "0011": 0.04397458167828672,
+ "1011": 0.03813827757909818,
+ "0111": 0.030211036941779033,
+ "1111": 0.026201429754745716
+}
 
 
 def test_basic_circuit_h():
@@ -206,3 +232,81 @@ def test_cnot_herald():
     assert bsd_out[BasicState("|1,0,0,1>")] + bsd_out[BasicState("|0,1,1,0>")] < 2e-5
     assert bsd_out[BasicState("|1,0,1,0>")] + bsd_out[BasicState("|0,1,0,1>")] > 0.99
     assert len(bsd_out) == 4
+
+def qiskit_circ_multiple_cnots():
+    # Gate Circuit
+    params = [0.55254396, 0.97997692, 0.17090731,
+              0.33458378, 0.94711577, 0.39304346, 0.98720513, 0.94564894]
+
+    circ = qiskit.QuantumCircuit(4)
+
+    circ.rx(params[0], 0)
+    circ.ry(params[1], 1)
+    circ.rx(params[2], 2)
+    circ.rx(params[3], 3)
+
+    circ.cx(1, 2)
+
+    circ.rx(params[4], 0)
+    circ.ry(params[5], 1)
+    circ.rx(params[6], 2)
+    circ.rx(params[7], 3)
+
+    circ.cx(0, 1)
+    circ.cx(0, 1)
+    circ.cx(2, 3)
+    circ.cx(2, 3)
+    return circ
+
+def test_cnot_ppcnot_vs_hcnot():
+    qisk_circ = qiskit_circ_multiple_cnots()
+
+    converter = QiskitConverter()
+    pc = converter.convert(qisk_circ, use_postselection=True)  # converted
+
+    # Verify correct number and position of post-processed CNOTs in conversion
+    gate_seq_converted = []
+    for _, c in pc.components:
+        gate_seq_converted.append(c.name)
+
+    gate_seq_qisk = _get_gate_sequence(qisk_circ) # gate list from qiskit
+    optimized_gate_sequence = label_cnots_in_gate_sequence(gate_seq_qisk)
+
+    num_ppcnot_expt = len([elem for elem in optimized_gate_sequence if elem == 'postprocessed cnot'])
+    cnot_order_expct = [elem.lower() for elem in optimized_gate_sequence if elem.endswith('cnot')]
+
+    cnot_order_converted = [elem.lower() for elem in gate_seq_converted if elem.endswith('CNOT')]
+    num_ppcnot_pc = len([elem for elem in gate_seq_converted if elem == 'PostProcessed CNOT'])
+
+    assert cnot_order_converted == cnot_order_expct
+    assert num_ppcnot_pc == num_ppcnot_expt  # compare number of Ralphs
+
+def test_cnot_ppcnot_vs_hcnot_sim():
+    qisk_circ = qiskit_circ_multiple_cnots()
+
+    converter = QiskitConverter()
+    pc = converter.convert(qisk_circ, use_postselection=True)  # converted
+
+    probs_pc = pc.probs()['results']
+
+    # convert the probs to valid logical states
+    num_qubits = 4
+    enc_list = [Encoding.DUAL_RAIL]*4
+    logical_states = generate_all_logical_states(num_qubits)
+    basic_states = []
+    for each_ls in logical_states:
+        basic_states.append(get_basic_state_from_encoding(enc_list, each_ls))
+
+    # extracting logically valid samples from perceval output
+    valid_bsd = BSDistribution()
+    for each_bs in basic_states:
+        if each_bs in list(probs_pc.keys()):
+            valid_bsd.add(each_bs, probs_pc[each_bs])
+    valid_bsd.normalize()
+
+    tot_diff = 0  # sum of absolute difference between the probs of the two computations
+    for index, (key, value) in enumerate(valid_bsd.items()):
+        bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
+        tot_diff += abs(value - EXPECTED_QISK_SIM_PROBS_DATA[bit_form])
+
+    assert tot_diff == pytest.approx(0, abs=1e-7)
