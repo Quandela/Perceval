@@ -235,16 +235,12 @@ class JobGroup:
         status_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED, RunningStatus.UNKNOWN]
 
         if status_entry is None:
-            # return JobCategories.UNFIN_NOT_SENT
             return 'UNFIN_NOT_SENT'
         elif RunningStatus[status_entry] in status_sent:
-            # return JobCategories.UNFIN_SENT
             return 'UNFIN_SENT'
         elif RunningStatus[status_entry] in status_success:
-            # return JobCategories.FIN_SUCCESS
             return 'FIN_SUCCESS'
         elif RunningStatus[status_entry] in status_other:
-            # return JobCategories.FIN_OTHER
             return 'FIN_OTHER'
         else:
             raise ValueError(f"Unspecified status of job in group with value {status_entry}. Cannot categorize")
