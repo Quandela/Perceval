@@ -201,9 +201,14 @@ class RemoteJob(Job):
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
     def rerun(self) -> RemoteJob:
+        """Rerun a job. Same job will be executed again as a new one.
+        Job must have failed, meaning job status must be either CANCELED or ERROR.
+
+        :raises RuntimeError: Job have not failed, therefore it cannot be rerun.
+        :return: The new remote job.
+        """
         if not self.status.failed:
-            get_logger().warn(f"Cannot rerun current job because status is: {self.status} (should be either canceled or error)", channel.user)
-            return self
+            raise RuntimeError(f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
         return RemoteJob.from_id(self._rpc_handler.rerun_job(self._id), self._rpc_handler)
 
 

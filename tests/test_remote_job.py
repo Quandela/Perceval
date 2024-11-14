@@ -62,7 +62,7 @@ def test_remote_job(mock_warn, requests_mock):
         rj.name = 28
     job_status = rj.status
     assert rj.is_complete == job_status.completed
-    with LogChecker(mock_warn):
+    with pytest.raises(RuntimeError):
         rj.rerun()
     assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
