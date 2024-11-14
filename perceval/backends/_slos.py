@@ -120,8 +120,8 @@ class SLOSBackend(AStrongSimulationBackend):
         return "SLOS"
 
     def _reset(self):
-        self._fsms: list = [[]]  # xq.FSMaps
-        self._fsas = {}  # xq.FSArrays
+        self._fsms: list[xq.FSMap] = [[]]
+        self._fsas: dict[int, xq.FSArray] = {}
         self._mk_l: list[int] = [1]
         self._path_roots: list[_Path] = []
         self._state_mapping: dict[BasicState, _Path] = {}

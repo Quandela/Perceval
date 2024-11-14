@@ -330,7 +330,7 @@ class Simulator(ISimulator):
         res.normalize()
         return res, physical_perf
 
-    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable | None = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
         physical_perf = 1
         decomposed_input = []
         """decomposed input:
@@ -382,21 +382,32 @@ class Simulator(ISimulator):
                     break
                 self.DEBUG_merge_count += 1
 
+            """
+            1st step of computing logical performance:
+            When using a mask, the sum of output probs sum(probs_in_s.values()) can be <1.
+            In this case remove the missing part, weighted by the probability (prob0)  of the input state to appear
+            in the mixed state (input_dist, reworked to decomposed_input).
+            """
+            self._logical_perf -= (1 - sum(probs_in_s.values())) * prob0
+
             """Then, add the resulting distribution to the global distribution"""
-            if probs_in_s:
-                self._logical_perf -= (1 - sum(probs_in_s.values())) * prob0
-                for bs, p in probs_in_s.items():
-                    if bs.n >= self._min_detected_photons_filter:
-                        res[bs] += p * prob0
-                    else:
-                        physical_perf -= p * prob0
+            for bs, p in probs_in_s.items():
+                res[bs] += p * prob0
 
             if progress_callback and idx % 20 == 0:
                 progress = (idx + 1) / len(decomposed_input) * 0.5 + 0.5  # From 0.5 to 1
                 exec_request = progress_callback(progress, 'recombine distributions')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
-        if self._logical_perf > 0:
+
+        """
+        2nd step of computing logical performance:
+        After the whole mixed state (input_dist) has been simulated, the missing part of the logical performance needs
+        to be normalized against the physical performance. Indeed, the physical performance is less than 1 for all input
+        states in the input distribution which did not contain enough photons.
+        The more input states were filtered by the physical filter, the heavier the missing part of the logical perf.
+        """
+        if self._logical_perf > 0 and physical_perf > 0:
             self._logical_perf = 1 - (1 - self._logical_perf) / physical_perf
         res.normalize()
         return res, physical_perf
@@ -432,10 +443,8 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         self._logical_perf = 1
-        min_detected_photons = self._min_detected_photons_filter
         if self._heralds:
-            self._setup_mask_from_heralds()
-            min_detected_photons = max(min_detected_photons, sum(self._heralds.values()))
+            self._setup_heralds()
 
         svd, p_threshold, has_superposed_states = self._preprocess_svd(input_dist)
 
@@ -455,7 +464,7 @@ class Simulator(ISimulator):
                 'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf}
 
-    def _setup_mask_from_heralds(self):
+    def _setup_heralds(self):
         # Set up a mask corresponding to heralds:
         mask_str = ""
         for i in range(self._backend._circuit.m):
@@ -464,6 +473,13 @@ class Simulator(ISimulator):
             else:
                 mask_str += " "
         self._backend.set_mask(mask_str)
+
+        # Check that heralds and physical filter are consistent
+        n_heralded_photons = sum(self._heralds.values())
+        if self._min_detected_photons_filter < n_heralded_photons:
+            get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
+                              f"to the number of heralded photons ({n_heralded_photons})")
+            self._min_detected_photons_filter = n_heralded_photons
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
@@ -537,7 +553,7 @@ class Simulator(ISimulator):
 
     def evolve_svd(self,
                    svd: SVDistribution | StateVector | BasicState,
-                   progress_callback: Callable | None = None) -> dict:
+                   progress_callback: Callable = None) -> dict:
         """
         Compute the SVDistribution evolved through a Linear Optical circuit
 
@@ -553,17 +569,14 @@ class Simulator(ISimulator):
             return SVDistribution(self.evolve(svd))
 
         self._logical_perf = 1
-        min_detected_photons = self._min_detected_photons_filter
         if self._heralds:
-            self._setup_mask_from_heralds()
-            min_detected_photons = max(min_detected_photons, sum(self._heralds.values()))
+            self._setup_heralds()
 
-        # If it's actually an SVD
         intermediary_logical_perf = 1
         physical_perf = 1
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
-            if min(sv.n) >= min_detected_photons:
+            if min(sv.n) >= self._min_detected_photons_filter:
                 new_sv = self.evolve(sv)
                 intermediary_logical_perf -= p*self._logical_perf
                 if new_sv.m != 0:

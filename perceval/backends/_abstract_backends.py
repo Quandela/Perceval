@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 from abc import ABC, abstractmethod
 import exqalibur as xq
 
@@ -77,10 +78,10 @@ class AStrongSimulationBackend(ABackend):
     def __init__(self):
         super().__init__()
         self._cache_iterator: dict = dict()
-        self._masks_str: str or None = None
-        self._mask: xq.FSMask or None = None
+        self._masks_str: list[str] | None = None
+        self._mask: xq.FSMask | None = None
 
-    def set_mask(self, masks: str or list[str]):
+    def set_mask(self, masks: str | list[str]):
         self.clear_mask()
         if isinstance(masks, str):
             masks = [masks]
@@ -105,7 +106,6 @@ class AStrongSimulationBackend(ABackend):
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
         self._init_mask()
-
 
     def _get_iterator(self, input_state: BasicState):
         n_photons = input_state.n
