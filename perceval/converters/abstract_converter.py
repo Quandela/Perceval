@@ -49,14 +49,18 @@ class AGateConverter(ABC):
     Converter class for gate based Circuits to perceval processor
     """
 
-    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = NoiseModel()):
+    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
         self._converted_processor = None
         self._input_list = None  # input state in list
+        self._noise_model = noise_model
         if source is not None:
             get_logger().warn('DeprecationWarning: Call with deprecated argument "source", '
                               'please use "noise_model=NoiseModel()" instead')
-            self._source = source
-        self._noise_model = noise_model
+            self._noise_model = NoiseModel(transmittance=1-source._losses,
+                                           brightness=source._emission_probability,
+                                           g2=source._multiphoton_component,
+                                           indistinguishability=source._indistinguishability,
+                                           g2_distinguishable=(source._multiphoton_model=='distinguishable'))
         self._backend_name = backend_name
 
         # Define function handler to create complex components

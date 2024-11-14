@@ -51,7 +51,7 @@ class QiskitConverter(AGateConverter):
     :param backend_name: backend name used in the converted processor (default SLOS)
     :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = Source(), noise_model: NoiseModel = NoiseModel()):
+    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
         super().__init__(backend_name, source, noise_model)
 
     def count_qubits(self, gate_circuit) -> int:
