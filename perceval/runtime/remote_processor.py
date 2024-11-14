@@ -254,10 +254,10 @@ class RemoteProcessor(AProcessor):
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
 
-    def _add_component(self, mode_mapping, component: AComponent):
+    def _add_component(self, mode_mapping, component: AComponent, keep_port: bool):
         if not isinstance(component, ACircuit):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
-        super()._add_component(mode_mapping, component)
+        super()._add_component(mode_mapping, component, keep_port)
 
     def _compose_processor(self, connector, processor: AProcessor, keep_port: bool):
         if not processor._is_unitary:

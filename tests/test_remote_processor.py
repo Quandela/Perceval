@@ -26,46 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""module test rpc handler"""
+import perceval as pcvl
 
 from _mock_rpc_handler import get_rpc_handler
 
 
-def test_build_endpoint(requests_mock):
-    """test build endpoint function"""
-    rpc = get_rpc_handler(requests_mock, url='https://example.org')
-
-    wanted = 'https://example.org/endpoint'
-    assert rpc.build_endpoint('/endpoint') == wanted
-
-    wanted = 'https://example.org/endpoint/id'
-    assert rpc.build_endpoint('/endpoint', 'id') == wanted
-
-    wanted = 'https://example.org/endpoint/path/id'
-    assert rpc.build_endpoint('/endpoint', 'path', 'id') == wanted
-
-    wanted = 'https://example.org/endpoint/with/trailing/slash'
-    assert rpc.build_endpoint('/endpoint/', 'with', 'trailing/slash') == wanted
-
-    wanted = 'https://example.org/endpoint/path/with/slash'
-    assert rpc.build_endpoint('/endpoint/', '/path/', 'with/', '/slash/') == wanted
-
-    wanted = 'https://example.org/endpoint/with/number/1/8/789'
-    assert rpc.build_endpoint('/endpoint/', '/with/number', 1, '/8/', 789) == wanted
-
-
-def test_rpc_handler(requests_mock):
-    """test rpc handler calls"""
-    rpc = get_rpc_handler(requests_mock, url='https://example.org')
-    resp_details = rpc.fetch_platform_details()
-    assert 'name' in resp_details
-    job_id = rpc.create_job({})
-    assert isinstance(job_id, str)
-    resp_status = rpc.get_job_status(job_id)
-    assert resp_status['msg'] == 'ok'
-    rpc.cancel_job(job_id)
-    resp_result = rpc.get_job_results(job_id)
-    assert 'results' in resp_result
-    new_job_id = rpc.rerun_job(job_id)
-    assert new_job_id is not None
-    assert new_job_id != job_id
+def test_remote_processor_creation(requests_mock):
+    rp = pcvl.RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=8)
+    rp.add(0, pcvl.BS())

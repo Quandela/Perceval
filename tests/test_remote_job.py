@@ -62,11 +62,17 @@ def test_remote_job(mock_warn, requests_mock):
         rj.name = 28
     job_status = rj.status
     assert rj.is_complete == job_status.completed
+    with pytest.raises(RuntimeError):
+        rj.rerun()
     assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
 
     rj.status.status = RunningStatus.UNKNOWN
     with LogChecker(mock_warn):
         assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
+
+    rj.status.status = RunningStatus.CANCELED
+    new_rj = rj.rerun()
+    assert new_rj.id != rj.id
 
     _TEST_JOB_ID = "any"
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, get_rpc_handler(requests_mock))

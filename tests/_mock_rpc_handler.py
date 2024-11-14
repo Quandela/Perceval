@@ -40,6 +40,8 @@ from perceval.runtime.rpc_handler import (
     _ENDPOINT_JOB_RESULT,
     _ENDPOINT_JOB_STATUS,
     _ENDPOINT_PLATFORM_DETAILS,
+    _ENDPOINT_JOB_RERUN,
+    _JOB_ID_KEY
 )
 
 REMOTE_JOB_NAME = 'a remote job'
@@ -121,7 +123,7 @@ class MockRPCHandler(RPCHandler):
         time.sleep(self._SLEEP_SEC)
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
         arbitrary_job_id = 'ebb1f8ec-0125-474f-9ffc-5178afef4d1a'
-        return_json = {'job_id': arbitrary_job_id}
+        return_json = {_JOB_ID_KEY: arbitrary_job_id}
         self.requests_mock.post(endpoint, json=return_json)
         return super().create_job(payload)
 
@@ -130,6 +132,14 @@ class MockRPCHandler(RPCHandler):
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
         self.requests_mock.post(endpoint, json={})
         return super().cancel_job(job_id)
+
+    def rerun_job(self, job_id: str):
+        time.sleep(self._SLEEP_SEC)
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
+        arbitrary_job_id = '32e74bda-afc5-41d3-88de-ab68f9805cc4'
+        return_json = {_JOB_ID_KEY: arbitrary_job_id}
+        self.requests_mock.post(endpoint, json=return_json)
+        return super().rerun_job(job_id)
 
     def get_job_status(self, job_id: str):
         time.sleep(self._SLEEP_SEC)
