@@ -47,7 +47,7 @@ def tvd_dist(dist1: BSDistribution, dist2: BSDistribution) -> float:
 
     if common_bs != set(dist1.keys()) or common_bs != set(dist2.keys()):
         get_logger().warn(f"Distributions have mismatched number of states. {len(common_bs)} common states found "
-                          f"and used to compute TVD", channel.user)
+                          f"and used to compute TVD. Metric maybe innacurate.", channel.user)
 
     tvd = 0.5 * sum(abs(dist1[basicstate]-dist2[basicstate]) for basicstate in common_bs)
 
@@ -70,7 +70,7 @@ def chi2_distance_dist(dist1: BSDistribution, dist2: BSDistribution) -> float:
 
     if common_bs != set(dist1.keys()) or common_bs != set(dist2.keys()):
         get_logger().warn(f"Distributions have mismatched number of states. {len(common_bs)} common states found "
-                          f"and used to compute Chi2 distance", channel.user)
+                          f"and used to compute Chi2 distance. Metric maybe innacurate.", channel.user)
 
     chi2_dist = 0.5 * sum([(dist1[basicstate] - dist2[basicstate])**2 / (dist1[basicstate] + dist2[basicstate])
                     for basicstate in common_bs])
