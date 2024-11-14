@@ -52,27 +52,3 @@ def tvd_dist(dist1: BSDistribution, dist2: BSDistribution) -> float:
     tvd = 0.5 * sum(abs(dist1[basicstate]-dist2[basicstate]) for basicstate in common_bs)
 
     return tvd
-
-
-def chi2_distance_dist(dist1: BSDistribution, dist2: BSDistribution) -> float:
-    """
-    Computes the Chi Squared Distance (TVD) between two input BSDistributions.
-
-    :param dist1: First BSDistribution
-    :param dist2: Second BSDistribution
-    :return : Chi squared distance between the two BSDistributions
-    """
-    common_bs = set(dist1.keys()).intersection(dist2.keys())
-
-    if not common_bs:
-        raise ValueError('There are no common BasicStates between the two input distributions. '
-                         'Cannot compute Chi2 distance')
-
-    if common_bs != set(dist1.keys()) or common_bs != set(dist2.keys()):
-        get_logger().warn(f"Distributions have mismatched number of states. {len(common_bs)} common states found "
-                          f"and used to compute Chi2 distance. Metric maybe innacurate.", channel.user)
-
-    chi2_dist = 0.5 * sum([(dist1[basicstate] - dist2[basicstate])**2 / (dist1[basicstate] + dist2[basicstate])
-                    for basicstate in common_bs])
-
-    return chi2_dist
