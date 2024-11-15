@@ -398,6 +398,16 @@ class JobGroup:
                 failed_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
         return failed_jobs
 
+    @staticmethod
+    def _recreate_unsent_remote_job(job_entry):
+        platform_metadata = job_entry['metadata']
+        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
+
+        rpc_handler = RPCHandler(platform_metadata['platform'],
+                                 platform_metadata['url'], user_token)
+        # todo: find a way to set the name of the job
+        # todo : also other params - we already have max samples, what else do we need to support?
+        return RemoteJob(job_entry['body'], rpc_handler, 'DEV_TESTING_SAMPLE_COUNT')
 
     def list_unsent_jobs(self) -> list:
         """
@@ -406,6 +416,5 @@ class JobGroup:
         unsent_jobs = []
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] is None:
-                unsent_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
-                # todo: a new method to recreate unsent one to a remotejob
+                unsent_jobs.append(self._recreate_unsent_remote_job(job_entry))
         return unsent_jobs
