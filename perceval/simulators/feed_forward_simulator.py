@@ -33,6 +33,7 @@ from perceval.backends import AProbAmpliBackend
 from perceval.utils.statevector import BasicState, BSDistribution, SVDistribution, StateVector
 from perceval.utils.postselect import PostSelect
 from perceval.utils.logging import deprecated, get_logger
+from perceval.utils.progress_cb import partial_progress_callable
 from perceval.components.feed_forward_configurator import AFFConfigurator
 
 from .simulator_interface import ISimulator
@@ -48,6 +49,10 @@ class FFSimulator(ISimulator):
 
         self._components = None
         self._backend = backend
+        self._postprocess = True
+
+    def do_postprocess(self, doit: bool):
+        self._postprocess = doit
 
     def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]]):
         if isinstance(circuit, Processor):
@@ -96,18 +101,29 @@ class FFSimulator(ISimulator):
             # Use only the first mode as circuits can have different sizes
             components[i] = (circ_r[0], config.default_circuit)
 
-        sim = self._init_simulator(input_state, components, detectors)
+        # We can't reject any state at this moment since we need all possible measured states
+        sim = self._init_simulator(input_state, components)
+
+        # TODO: find a way to estimate how much progress we should write after computing the default case
+        # i.e. estimate how many computations we need
+        intermediate_progress = .1
+        prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
         if is_svd:
-            default_res = sim.probs_svd(input_state, detectors, normalize=False)["results"]  # TODO: pass a partial progress cb
+            default_res = sim.probs_svd(input_state, detectors, progress_callback=prog_cb, normalize=False)["results"]
         else:
             default_res = sim.probs(input_state, normalize=False)
+
+        prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
 
         # 3: deduce all measurable states and launch one simulation for each of them
         res = BSDistribution()
         simulated_measures = set()
 
-        for state, prob in default_res.items():
+        phys_perf = 0  # = P(n >= filter)
+        log_perf = 0  # = P(mask and n >= filter) for now
+
+        for j, (state, prob) in enumerate(default_res.items()):
             sub_circuits = [config.configure(state[slice(self._components[i][0][0], self._components[i][0][-1] + 1)])
                             for i, config in considered_config]
 
@@ -116,14 +132,23 @@ class FFSimulator(ISimulator):
 
                 # There is a problem here: if the same circuit is instanced twice, the == operator returns False
                 # This can be a problem if we copy the default circuit or instantiate a new one
-                res[state] = prob
+                phys_selected, log_selected = self._post_process_state(state)
+
+                if phys_selected:
+                    phys_perf += prob
+
+                    if log_selected:
+                        res[state] = prob
+                        log_perf += prob
+
+                if prog_cb is not None:
+                    prog_cb((j + 1) / len(default_res))
                 continue
 
             measured_state = tuple(state[i] for i in measured_modes)
 
             if measured_state not in simulated_measures:
                 simulated_measures.add(measured_state)
-                # components = self._components.copy()
 
                 for sub_i, (i, config) in enumerate(considered_config):
                     r = self._components[i][0]
@@ -131,20 +156,36 @@ class FFSimulator(ISimulator):
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
                 new_heralds = {i: state[i] for i in measured_modes}
-                sim = self._init_simulator(input_state, components, detectors, new_heralds)
+                sim = self._init_simulator(input_state,
+                                           components,
+                                           filter_states=True,
+                                           new_heralds=new_heralds)
 
                 if is_svd:
-                    sub_res = sim.probs_svd(input_state, detectors, normalize=False)["results"]  # TODO: pass a partial progress cb
+                    new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
+                    sub_res = sim.probs_svd(input_state, detectors, new_prog_cb, normalize=False)
+                    pp = sub_res["physical_perf"]  # P(n >= filter | config)
+                    lp = sub_res["logical_perf"]  # P(mask | n >= filter and config)
+                    sub_res = sub_res["results"]
+
+                    # The remaining states are only the ones with n >= filter and mask
+                    log_perf += sum(list(sub_res.values()))
+                    phys_perf += pp * lp  # P(mask and n >= filter | config)
+
                 else:
                     # Don't normalize since we only compute the masked outputs
                     sub_res = sim.probs(input_state, normalize=False)
 
                 for st, p in sub_res.items():
+                    # No need for post_process here: results are already post-processed by the sub simulator
                     res[st] = p
 
-        # if normalize:
-        #     res.normalize()
-        return res  # If everything went well, res is already normalized
+        if phys_perf:
+            log_perf /= phys_perf
+
+        if normalize:
+            res.normalize()
+        return res, phys_perf, log_perf
 
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int]]:
         """
@@ -179,54 +220,76 @@ class FFSimulator(ISimulator):
 
     def _init_simulator(self, input_state,
                         components: list[tuple[tuple, AComponent | Processor]],
-                        detectors: list[IDetector] = None,
+                        filter_states: bool = False,
                         new_heralds: dict[int, int] = None):
         """Initiate a new simulator with the given components and heralds.
          Heralds that are already in this simulator are still considered.
 
          :param input_state: The input state used for the simulation
          :param components: A list of components that will be added in the simulation. Can themselves be processors.
+         :param filter_states: Whether the states should be filtered in the sub-simulation.
          :param new_heralds: The list of heralds that should be added, containing the position and the value"""
-        from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
         proc = Processor(self._backend, input_state.m)
 
         for r, c in components:
             proc.add(r, c)
 
-        if detectors is not None:  # TODO: This is probably useless, test without it
-            for i, d in enumerate(detectors):
-                if d is not None:
-                    proc.add(i, d)
+        if filter_states:
 
-        if new_heralds is not None:
-            for r, v in new_heralds.items():
-                proc.add_herald(r, v)
+            if new_heralds is not None:
+                for r, v in new_heralds.items():
+                    proc.add_herald(r, v)
 
-        if self._heralds is not None:
-            for r, v in self._heralds.items():
-                proc.add_herald(r, v)
+            if self._heralds is not None:
+                for r, v in self._heralds.items():
+                    proc.add_herald(r, v)
 
-        # TODO: see if transmitting the post-select works
-        if self._postselect is not None:
-            proc.set_postselection(self._postselect)
+            if self._postselect is not None:
+                proc.set_postselection(self._postselect)
 
-        proc.min_detected_photons_filter(self._min_detected_photons_filter)
+            proc.min_detected_photons_filter(self._min_detected_photons_filter)
+
+        from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
         sim = SimulatorFactory.build(proc)
         if self._precision is not None:
             sim.set_precision(self._precision)
+        if filter_states:
+            sim.do_postprocess(self._postprocess)
+        else:
+            sim.do_postprocess(False)
         return sim
 
+    def _post_process_state(self, bs: BasicState) -> tuple[bool, bool]:
+        """Returns two bools.
+         The first one is True only if the state has enough photons.
+         The second one is True only if the state also pass the PostSelect and heralds"""
+        if self._min_detected_photons_filter is not None and bs.n < self._min_detected_photons_filter:
+            return False, False
+
+        heralds = self._heralds or {}
+
+        for m, v in heralds.items():
+            if bs[m] != v:
+                return True, False
+        if self._postselect is None or self._postselect(bs):
+            return True, True
+
+        return True, False
+
     def probs(self, input_state, normalize: bool = True) -> BSDistribution:
-        return self._probs_or_svd(input_state, normalize=normalize)
+        return self._probs_or_svd(input_state, normalize=normalize)[0]
 
     def probs_svd(self,
                   svd: SVDistribution,
                   detectors: list[IDetector] = None,
                   progress_callback: callable = None,
                   normalize: bool = True):
-        return {'results': self._probs_or_svd(svd, detectors, progress_callback, is_svd=True, normalize=normalize)}
+        res = self._probs_or_svd(svd, detectors, progress_callback, is_svd=True, normalize=normalize)
+        return {'results': res[0],
+                'physical_perf': res[1],
+                'logical_perf': res[2]}
 
     def evolve(self, input_state, normalize: bool = True) -> StateVector:
         raise RuntimeError("Cannot perform state evolution with feed-forward")

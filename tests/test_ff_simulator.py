@@ -29,17 +29,18 @@
 
 import pytest
 
-from perceval import SLOSBackend, Circuit, PERM, BasicState, BS, BSDistribution
+from perceval import SLOSBackend, Circuit, PERM, BasicState, BS, BSDistribution, Processor, Detector, NoiseModel
+from perceval.algorithm import Sampler
 from perceval.components.feed_forward_configurator import CircuitMapFFConfig
 from perceval.simulators.feed_forward_simulator import FFSimulator
 
 backend = SLOSBackend()
 sim = FFSimulator(backend)
 
+cnot = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+
 
 def test_basic_circuit():
-
-    cnot = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 
     sim.set_circuit([((0, 1), cnot)])
 
@@ -51,7 +52,6 @@ def test_basic_circuit():
 
 def test_cascade():
     n = 3
-    cnot = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 
     circuit_list = [((0, 1), BS())]
     for i in range(n):
@@ -68,3 +68,71 @@ def test_cascade():
 
 def test_with_processor():
     # Same than test_basic_circuit, but using a Processor and a sampler to get the results
+    proc = Processor("SLOS", 4)
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([0, 1, 1, 0]))
+
+    proc.add(0, cnot)
+
+    sampler = Sampler(proc)
+
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 1])))
+
+
+def test_with_herald():
+    proc = Processor("SLOS", 5)
+
+    proc.add(0, BS())
+    proc.add(1, BS())
+    proc.add(1, cnot)
+
+    proc.add_herald(0, 0)
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([1, 0, 1, 0]))
+
+    sampler = Sampler(proc)
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 1, 0]): .5,
+        BasicState([0, 1, 0, 1]): .5,
+    }))
+
+
+def test_min_photons_filter():
+    config = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], BS())
+
+    proc = Processor(backend, 5)
+
+    proc.add(0, BS())
+    proc.add(1, BS())
+    proc.add(1, config)
+
+    proc.add_herald(0, 0)
+    proc.add(4, Detector.threshold())
+
+    proc.min_detected_photons_filter(1)
+    proc.with_input(BasicState([1, 0, 1, 2]))  # Equivalent to using a BS with two outputs and a post-selection
+
+    sampler = Sampler(proc)
+    assert len(sampler.probs()["results"]) == 5
+
+
+def test_physical_perf():
+    proc = Processor("SLOS", 4, noise=NoiseModel(.5))
+
+    proc.add(0, BS())
+    proc.add(0, cnot)
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([1, 0, 1, 0]))
+
+    sampler = Sampler(proc)
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 1, 0]): 0.5,
+        BasicState([0, 1, 0, 1]): 0.5
+    }))
+
+    assert res["physical_perf"] == pytest.approx(0.25)
+    assert res["logical_perf"] == pytest.approx(1.)

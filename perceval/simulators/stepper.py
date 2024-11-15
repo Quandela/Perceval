@@ -53,6 +53,10 @@ class Stepper(ISimulator):
         self._min_detected_photons_filter = 0
         self._clear_cache()
         self._C = None
+        self._postprocess = True
+
+    def do_postprocess(self, doit: bool):
+        self._postprocess = doit
 
     def _clear_cache(self):
         self._result_dict = defaultdict(lambda: {'_set': set()})

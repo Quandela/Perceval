@@ -66,6 +66,10 @@ class Simulator(ISimulator):
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
+        self._postprocess = True
+
+    def do_postprocess(self, doit: bool):
+        self._postprocess = doit
 
     @property
     def precision(self):
@@ -245,8 +249,9 @@ class Simulator(ISimulator):
         input_list = input_state.separate_state(keep_annotations=False)
         self._evolve_cache(set(input_list), normalize)
         result = self._merge_probability_dist(input_list)
-        result, self._logical_perf = post_select_distribution(
-            result, self._postselect, self._heralds, self._keep_heralds, normalize)
+        if self._postprocess:
+            result, self._logical_perf = post_select_distribution(
+                result, self._postselect, self._heralds, self._keep_heralds, normalize)
         return result
 
     @dispatch(StateVector)
@@ -311,7 +316,7 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                if bs.n >= self._min_detected_photons_filter:
+                if bs.n >= self._min_detected_photons_filter or not self._postprocess:
                     res[bs] += p * prob0
                 else:
                     physical_perf -= p * prob0
@@ -428,16 +433,18 @@ class Simulator(ISimulator):
         """
         svd, p_threshold, has_superposed_states = self._preprocess_svd(input_dist)
         if has_superposed_states:
-            res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
+            res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback, normalize)
         else:
-            res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
+            res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback, normalize)
 
         if detectors:
-            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter)
+            min_photons = self._min_detected_photons_filter if self._postprocess else 0
+            res, phys_perf = simulate_detectors(res, detectors, min_photons)
             physical_perf *= phys_perf
 
-        res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds,
-                                                           normalize)
+        if self._postprocess:
+            res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds,
+                                                               normalize)
         self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
         return {'results': res,
                 'physical_perf': physical_perf,

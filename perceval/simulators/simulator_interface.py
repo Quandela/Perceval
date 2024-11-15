@@ -36,6 +36,11 @@ from perceval.utils.logging import deprecated, get_logger
 
 
 class ISimulator(ABC):
+
+    @abstractmethod
+    def do_postprocess(self, doit: bool):
+        pass
+
     @abstractmethod
     def set_circuit(self, circuit):
         pass
@@ -81,6 +86,7 @@ class ISimulator(ABC):
 
 class ASimulatorDecorator(ISimulator, ABC):
     def __init__(self, simulator: ISimulator):
+        super().__init__()
         self._simulator: ISimulator = simulator
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
@@ -100,6 +106,9 @@ class ASimulatorDecorator(ISimulator, ABC):
             self._postselect = postselect
         if heralds is not None:
             self._heralds = heralds
+
+    def do_postprocess(self, doit: bool):
+        self._simulator.do_postprocess(doit)
 
     @abstractmethod
     def _prepare_input(self, input_state):

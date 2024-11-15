@@ -234,9 +234,11 @@ def post_select_distribution(
 
     if heralds is None:
         heralds = {}
-    logical_perf = 1
+    logical_perf = 0
+    perf_factor = 0
     result = BSDistribution()
     for state, prob in bsd.items():
+        perf_factor += prob
         heralds_ok = True
         for m, v in heralds.items():
             if state[m] != v:
@@ -245,10 +247,11 @@ def post_select_distribution(
             if not keep_heralds:
                 state = state.remove_modes(list(heralds.keys()))
             result[state] = prob
-        else:
-            logical_perf -= prob
+            logical_perf += prob
     if normalize:
         result.normalize()
+    else:
+        logical_perf /= perf_factor
     return result, logical_perf
 
 
