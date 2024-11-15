@@ -34,7 +34,6 @@ from perceval.utils.logging import get_logger, channel
 import os
 import json
 from datetime import datetime
-from enum import Enum
 from tqdm import tqdm
 
 
