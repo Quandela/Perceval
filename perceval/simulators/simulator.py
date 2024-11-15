@@ -37,13 +37,14 @@ from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AProbAmpliBackend
-from perceval.components import ACircuit
+from perceval.components import ACircuit, IDetector
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger, deprecated
 
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
+from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
 
 
@@ -63,7 +64,6 @@ class Simulator(ISimulator):
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._logical_perf: float = 1
-        self._physical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
 
@@ -195,6 +195,7 @@ class Simulator(ISimulator):
     @dispatch(BasicState, BasicState)
     def probability(self, input_state: BasicState, output_state: BasicState) -> float:
         """Compute the probability of an output fock state versus an input fock state, simulating a measure.
+        This call does not take heralding, post-selection or detector types into account
 
         :param input_state: A fock state with or without photon annotations
         :param output_state: A fock state, annotations are ignored
@@ -264,6 +265,7 @@ class Simulator(ISimulator):
         return _to_bsd(self.evolve(input_state))
 
     def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Callable | None = None):
+        physical_perf = 1
         decomposed_input = []
         """decomposed input:
         From a SVD = {
@@ -293,7 +295,7 @@ class Simulator(ISimulator):
             if max(sv.n) >= self._min_detected_photons_filter:
                 decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]))
             else:
-                self._physical_perf -= prob
+                physical_perf -= prob
         input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
         self._evolve_cache(input_set)
 
@@ -319,16 +321,17 @@ class Simulator(ISimulator):
                 if bs.n >= self._min_detected_photons_filter:
                     res[bs] += p * prob0
                 else:
-                    self._physical_perf -= p * prob0
+                    physical_perf -= p * prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         res.normalize()
-        return res
+        return res, physical_perf
 
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable | None = None):
+        physical_perf = 1
         decomposed_input = []
         """decomposed input:
            From a SVD = {
@@ -351,7 +354,7 @@ class Simulator(ISimulator):
                     (prob, sv[0].separate_state(keep_annotations=False))
                 )
             else:
-                self._physical_perf -= prob
+                physical_perf -= prob
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
@@ -385,7 +388,7 @@ class Simulator(ISimulator):
                     if bs.n >= self._min_detected_photons_filter:
                         res[bs] += p * prob0
                     else:
-                        self._physical_perf -= p * prob0
+                        physical_perf -= p * prob0
 
             if progress_callback and idx % 20 == 0:
                 progress = (idx + 1) / len(decomposed_input) * 0.5 + 0.5  # From 0.5 to 1
@@ -393,13 +396,30 @@ class Simulator(ISimulator):
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         res.normalize()
-        return res
+        return res, physical_perf
 
-    def probs_svd(self, input_dist: SVDistribution, progress_callback: Callable | None = None):
+    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool]:
+        """Trim input SVD given _rel_precision threshold and extract characteristics from it"""
+        max_p = 0
+        has_superposed_states = False
+        for sv, p in svd.items():
+            if max(sv.n) >= self._min_detected_photons_filter:
+                max_p = max(p, max_p)
+            if len(sv) > 1:
+                has_superposed_states = True
+        p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
+        trimmed_svd = SVDistribution({state: pr for state, pr in svd.items() if pr > p_threshold})
+        return trimmed_svd, p_threshold, has_superposed_states
+
+    def probs_svd(self,
+                  input_dist: SVDistribution,
+                  detectors: list[IDetector] = None,
+                  progress_callback: Callable = None) -> dict[str, any]:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
         :param input_dist: A state vector distribution describing the input to simulate
+        :param detectors: An optional list of detectors
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
         :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
@@ -408,26 +428,20 @@ class Simulator(ISimulator):
             * physical_perf is the performance computed from the detected photon filter
             * logical_perf is the performance computed from the post-selection
         """
-
-        """Trim input SVD given _rel_precision threshold"""
-        max_p = 0
-        has_superposed_states = False
-        for sv, p in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
-                max_p = max(p, max_p)
-            if len(sv) > 1:
-                has_superposed_states = True
-        p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
-        svd = SVDistribution({state: pr for state, pr in input_dist.items() if pr > p_threshold})
+        svd, p_threshold, has_superposed_states = self._preprocess_svd(input_dist)
         if has_superposed_states:
-            res = self._probs_svd_generic(svd, p_threshold, progress_callback)
+            res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
-            res = self._probs_svd_fast(svd, p_threshold, progress_callback)
+            res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
+
+        if detectors:
+            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter)
+            physical_perf *= phys_perf
 
         res, self._logical_perf = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
         self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
         return {'results': res,
-                'physical_perf': self._physical_perf,
+                'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf}
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
@@ -445,6 +459,7 @@ class Simulator(ISimulator):
         u_evolve_in_row = csr_array(u_evolve)
         res_bsd = BSDistribution()
 
+        physical_perf = 1
         for row_idx, fs in enumerate(dm.inverse_index):
 
             vec = u_evolve_in_row[[row_idx]]
@@ -452,12 +467,12 @@ class Simulator(ISimulator):
             if fs.n >= self._min_detected_photons_filter:
                 res_bsd[fs] += prob
             else:
-                self._physical_perf -= prob
+                physical_perf -= prob
 
         res_bsd, logical_perf_coeff = post_select_distribution(
             res_bsd, self._postselect, self._heralds, self._keep_heralds)
         return {'results': res_bsd,
-                'physical_perf': self._physical_perf,
+                'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf * logical_perf_coeff}
 
     def evolve(self, input_state: BasicState | StateVector) -> StateVector:
@@ -518,6 +533,7 @@ class Simulator(ISimulator):
 
         # If it's actually an SVD
         intermediary_logical_perf = 1
+        physical_perf = 1
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
             if min(sv.n) >= self._min_detected_photons_filter:
@@ -526,7 +542,7 @@ class Simulator(ISimulator):
                 if new_sv.m != 0:
                     new_svd[new_sv] += p
             else:
-                self._physical_perf -= p
+                physical_perf -= p
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
@@ -534,7 +550,7 @@ class Simulator(ISimulator):
         self._logical_perf = intermediary_logical_perf
         new_svd.normalize()
         return {'results': new_svd,
-                'physical_perf': self._physical_perf,
+                'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf}
 
     def evolve_density_matrix(self, dm: DensityMatrix) -> DensityMatrix:

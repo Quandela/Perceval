@@ -109,7 +109,7 @@ class RemoteProcessor(AProcessor):
         self.fetch_data()
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
         if m is not None:
-            self._n_moi = m
+            self.m = m
 
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
         self.noise = noise
@@ -254,16 +254,10 @@ class RemoteProcessor(AProcessor):
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
 
-    @property
-    def m(self) -> int:
-        if self._n_moi is None:
-            return 0
-        return self._n_moi
-
-    def _add_component(self, mode_mapping, component: AComponent):
+    def _add_component(self, mode_mapping, component: AComponent, keep_port: bool):
         if not isinstance(component, ACircuit):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
-        super()._add_component(mode_mapping, component)
+        super()._add_component(mode_mapping, component, keep_port)
 
     def _compose_processor(self, connector, processor: AProcessor, keep_port: bool):
         if not processor._is_unitary:

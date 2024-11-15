@@ -170,3 +170,6 @@ class JobStatus:
 
         assert self.completed
         return self._completed_time - self._running_time_start
+
+    def __str__(self) -> str:
+        return self._status.name

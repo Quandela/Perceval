@@ -35,6 +35,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
+from typing import TypeAlias
 
 import exqalibur as xq
 from perceval.utils.logging import get_logger, channel
@@ -42,8 +43,8 @@ from perceval.utils.logging import get_logger, channel
 from .globals import global_params
 from .qmath import exponentiation_by_squaring
 
-BasicState = xq.FockState
-StateVector = xq.StateVector
+BasicState: TypeAlias = xq.FockState
+StateVector: TypeAlias = xq.StateVector
 
 
 def allstate_iterator(input_state: BasicState | StateVector, mask=None) -> BasicState:

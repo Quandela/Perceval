@@ -203,6 +203,9 @@ class TextRenderer(ICircuitRenderer):
             self._h[self._hc * k + 2] = f'{k:{offset-1}d}:' + self._h[self._hc * k + 2][offset:]
             self._h[self._hc * k + 2] += ':' + str(k) + f" (depth {self._depth[k]})"
 
+    def display_input_photons(self, input_pos) -> None:
+        pass  # Don't display input photons in text mode
+
     def add_out_port(self, n_mode: int, port: APort):
         content = ''
         if isinstance(port, Herald):
@@ -226,3 +229,6 @@ class TextRenderer(ICircuitRenderer):
             self._h[self._hc * (n_mode + i) + 3] = name + ' ' * \
                 (self._offset - name_size) + \
                 self._h[self._hc * (n_mode + i) + 3][self._offset:]
+
+    def add_detectors(self, detector_list: list) -> None:
+        pass  # Don't display detectors in text mode

@@ -194,7 +194,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         assert ok, msg
 
 
-class LogChecker():
+class LogChecker:
     """Check if the logger as the log the expected number of log.
 
     The syntax to use this class is:

@@ -27,18 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from perceval.components import unitary_components as cp
-from .abstract_skin import ModeStyle
-from .phys_skin import PhysSkin
+from .phys_skin import PhysSkin, ModeType
 
 
 class DebugSkin(PhysSkin):
     def __init__(self, compact_display: bool = False):
         super().__init__(compact_display)
-        self.style[ModeStyle.PHOTONIC]["stroke_width"] = 8
-        self.style[ModeStyle.HERALD] = {"stroke": "orange", "stroke_width": 3}  # Display ancillary modes in yellow
+        self.style[ModeType.PHOTONIC]["stroke_width"] = 8
+        self.style[ModeType.HERALD] = {"stroke": "orange", "stroke_width": 3}  # Display ancillary modes in yellow
 
     def ps_shape(self, circuit: cp.PS, canvas, mode_style):
-        canvas.add_mline([0, 25, 50, 25], **self.style[ModeStyle.PHOTONIC])
+        canvas.add_mline([0, 25, 50, 25], **self.style[ModeType.PHOTONIC])
         fill_color = "gray" if circuit.defined else "red"
         canvas.add_polygon([5, 40, 14, 40, 28, 10, 19, 10, 5, 40, 14, 40],
                            stroke="black", fill=fill_color, stroke_width=1, stroke_linejoin="miter")

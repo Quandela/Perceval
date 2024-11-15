@@ -28,17 +28,10 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from enum import Enum
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD
-from perceval.utils import format_parameters
-
-
-class ModeStyle(Enum):
-    PHOTONIC = 0
-    HERALD = 1
-    DIGITAL = 2
+from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD, LC
+from perceval.utils import format_parameters, ModeType
 
 
 class ASkin(ABC):
@@ -57,14 +50,14 @@ class ASkin(ABC):
 
     def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
         self._compact = compact_display
-        self.style = {ModeStyle.PHOTONIC: stroke_style,
-                      ModeStyle.HERALD: {"stroke": None, "stroke_width": 1}
+        self.style = {ModeType.PHOTONIC: stroke_style,
+                      ModeType.HERALD: {"stroke": None, "stroke_width": 1}
                       }
         self.style_subcircuit = style_subcircuit
         self.precision: float = 1e-6
         self.nsimplify: bool = True
 
-    @dispatch((ACircuit, TD), bool)
+    @dispatch((ACircuit, TD, LC), bool)
     def get_size(self, c: ACircuit, recursive: bool = False) -> tuple[int, int]:
         """Gets the size of a circuit in arbitrary unit. If composite, it will take its components into account"""
         if not c.is_composite():
@@ -102,7 +95,7 @@ class ASkin(ABC):
                 comp_width = self.get_width(comp)
             end_w = start_w + comp_width
             w[r] = [end_w] * comp.m
-        return max(w), min(p.circuit_size, height+2)
+        return max(w) + 1, min(p.circuit_size, height+2)
 
     def measure(self, c: AComponent) -> tuple[int, int]:
         """
