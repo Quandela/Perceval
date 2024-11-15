@@ -44,4 +44,5 @@ from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary,
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException
+from .feed_forward_configurator import AFFConfigurator, CircuitMapFFConfig
 catalog = Catalog('perceval.components.core_catalog')

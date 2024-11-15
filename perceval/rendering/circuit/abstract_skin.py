@@ -48,10 +48,11 @@ class ASkin(ABC):
     - exposing style data (stroke style, colors, etc.)
     """
 
-    def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
+    def __init__(self, photonic_style: dict, style_subcircuit: dict, compact_display: bool = False):
         self._compact = compact_display
-        self.style = {ModeType.PHOTONIC: stroke_style,
-                      ModeType.HERALD: {"stroke": None, "stroke_width": 1}
+        self.style = {ModeType.PHOTONIC: photonic_style,
+                      ModeType.HERALD: {"stroke": None, "stroke_width": 1},
+                      ModeType.CLASSICAL: {"stroke": "blue", "stroke_width": 1}
                       }
         self.style_subcircuit = style_subcircuit
         self.precision: float = 1e-6

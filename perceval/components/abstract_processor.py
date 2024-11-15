@@ -39,10 +39,11 @@ from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
 from .detector import IDetector, Detector, DetectionType, get_detection_type
+from .feed_forward_configurator import AFFConfigurator
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
-from .unitary_components import PERM, Unitary
+from .unitary_components import Barrier, PERM, Unitary
 
 
 class ProcessorType(Enum):
@@ -252,12 +253,29 @@ class AProcessor(ABC):
             self._compose_processor(connector, component, keep_port)
         elif isinstance(component, IDetector):
             self._add_detector(mode_mapping, component)
+        elif isinstance(component, AFFConfigurator):
+            self._add_ffconfig(mode_mapping, component)
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component, keep_port)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
         self._circuit_changed()
         return self
+
+    def _add_ffconfig(self, modes, component):
+        if isinstance(modes, int):
+            modes = tuple(range(modes, modes + component.m))
+        if any([self._mode_type[i] != ModeType.CLASSICAL for i in modes]):
+            raise UnavailableModeException(modes, "Cannot add a classical component on non-classical modes")
+        if modes[0] > 0:  # Barrier above detectors
+            ports = tuple(range(0, modes[0]))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
+        for m in modes:
+            self._components.append(((m,), self._detectors[m]))
+        if modes[-1] < self.m - 1:  # Barrier below detectors
+            ports = tuple(range(modes[-1] + 1, self.m))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
+        self._components.append((modes, component))
 
     def _add_detector(self, mode: int, detector: IDetector):
         if not isinstance(mode, int):
@@ -366,7 +384,7 @@ class AProcessor(ABC):
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
+        sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)

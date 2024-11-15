@@ -31,7 +31,7 @@ from copy import copy
 
 from .renderer_interface import ICircuitRenderer
 from ..canvas import Canvas
-from perceval.components import ACircuit, APort, PortLocation, PERM
+from perceval.components import ACircuit, APort, PortLocation, PERM, IDetector
 from perceval.utils import ModeType
 
 
@@ -152,12 +152,12 @@ class CanvasRenderer(ICircuitRenderer):
                 continue
             self._canvas.set_offset(
                 (
-                    CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * (max_pos + 1),
+                    CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * (max_pos + .5),
                     CanvasRenderer.SCALE * i
                 ),
                 CanvasRenderer.AFFIX_ALL_SIZE,
                 CanvasRenderer.SCALE)
-            self._canvas.add_shape(self._skin.get_shape(det), det, None)
+            self._canvas.add_shape(self._skin.get_shape(det), det, [None])
 
     def open_subblock(self, lines: tuple[int, ...], name: str, size: tuple[int, int], color=None):
         # Get recommended margins for this block
@@ -248,7 +248,10 @@ class CanvasRenderer(ICircuitRenderer):
         self._herald_info = info
 
     def _update_mode_style(self, lines, circuit, w: int):
-        if not isinstance(circuit, PERM):
+        if isinstance(circuit, IDetector):
+            self._mode_style[lines[0]] = ModeType.CLASSICAL
+
+        elif not isinstance(circuit, PERM):
             input_heralds = {}
             output_heralds = {}
 

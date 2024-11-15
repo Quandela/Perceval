@@ -30,21 +30,25 @@
 import math
 from multipledispatch import dispatch
 
-from perceval.components import AComponent, Circuit, Port, Herald, PortLocation, IDetector, DetectionType,\
-    unitary_components as cp,\
-    non_unitary_components as nu
+from perceval.components import (AComponent, AFFConfigurator, Circuit,
+                                 Port, Herald, PortLocation, IDetector, DetectionType,
+                                 unitary_components as cp,
+                                 non_unitary_components as nu)
 from ._canvas_shapes import ShapeFactory
 from .abstract_skin import ASkin, ModeType
 from .skin_common import bs_convention_color
 
 
 class PhysSkin(ASkin):
+    _STROKE_WIDTH = 3
+
     def __init__(self, compact_display: bool = False):
-        super().__init__({"stroke": "darkred", "stroke_width": 3},
+        super().__init__({"stroke": "darkred", "stroke_width": PhysSkin._STROKE_WIDTH},
                          {"width": 2,
                           "fill": "lightpink",
                           "stroke_style": {"stroke": "darkred", "stroke_width": 1}},
                          compact_display)
+        self.style[ModeType.CLASSICAL] = {"stroke": "blue", "stroke_width": PhysSkin._STROKE_WIDTH}
 
     @dispatch(AComponent)
     def get_width(self, c) -> int:
@@ -56,6 +60,10 @@ class PhysSkin(ASkin):
         return c.m
 
     @dispatch((Circuit, cp.BS, cp.PBS))
+    def get_width(self, c) -> int:
+        return 2
+
+    @dispatch(AFFConfigurator)
     def get_width(self, c) -> int:
         return 2
 
@@ -111,6 +119,10 @@ class PhysSkin(ASkin):
     def get_shape(self, c):
         return self.lc_shape
 
+    @dispatch(AFFConfigurator)
+    def get_shape(self, c):
+        return self.ffconf_shape
+
     @dispatch(Port, PortLocation)
     def get_shape(self, port, location):
         if location == PortLocation.INPUT:
@@ -133,6 +145,12 @@ class PhysSkin(ASkin):
             return self.ppnr_detector_shape
         raise TypeError(f"Unknown detector type: {detector.type}")
 
+    def ffconf_shape(self, comp: AFFConfigurator, canvas, mode_style):
+        w = self.get_width(comp)
+        for i in range(comp.m):
+            canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * w, 0], **self.style[ModeType.CLASSICAL])
+        canvas.add_rect((5, 5), 50 * w - 10, 50 * comp.m - 10, fill="lightblue")
+
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
         if port.name:
@@ -144,22 +162,28 @@ class PhysSkin(ASkin):
             canvas.add_text((27, 50*port.m - 9), text='[' + port.name + ']', size=6, ta="right", fontstyle="italic")
 
     def pnr_detector_shape(self, detector, canvas, mode_style):
-        canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        canvas.add_mpath(ShapeFactory.half_circle_port_out(10), stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_mpath(["M", 0, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
+        if mode_style[0] is not None:
+            canvas.add_mpath(["M", 25, 25, "l", 25, 0], **self.style[ModeType.CLASSICAL])
+        canvas.add_mpath(ShapeFactory.half_circle_port_out(10, 20), stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
-            canvas.add_text((0, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
+            canvas.add_text((12, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
 
     def threshold_detector_shape(self, detector, canvas, mode_style):
-        canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        canvas.add_mpath(ShapeFactory.triangle_port_out(10), stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_mpath(["M", 0, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
+        if mode_style[0] is not None:
+            canvas.add_mpath(["M", 25, 25, "l", 25, 0], **self.style[ModeType.CLASSICAL])
+        canvas.add_mpath(ShapeFactory.triangle_port_out(10, 14), stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
-            canvas.add_text((0, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
+            canvas.add_text((12, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
 
     def ppnr_detector_shape(self, detector, canvas, mode_style):
-        canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        canvas.add_mpath(ShapeFactory.polygon_port_out(10), stroke="black", stroke_width=1, fill="lightgray")
+        canvas.add_mpath(["M", 0, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
+        if mode_style[0] is not None:
+            canvas.add_mpath(["M", 25, 25, "l", 25, 0], **self.style[ModeType.CLASSICAL])
+        canvas.add_mpath(ShapeFactory.polygon_port_out(10, 12), stroke="black", stroke_width=1, fill="lightgray")
         if detector.name:
-            canvas.add_text((0, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
+            canvas.add_text((12, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
 
     def default_shape(self, circuit, canvas, mode_style):
         """
