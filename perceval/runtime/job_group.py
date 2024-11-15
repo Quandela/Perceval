@@ -376,3 +376,36 @@ class JobGroup:
         # delete files
         for f in files_to_del:
             JobGroup.delete_job_group(f)
+
+    def list_id_successful_jobs(self) -> list:
+        """
+        Returns a list of Job ids for all the RemoteJobs in the group that have run
+        successfully on the cloud.
+        """
+        success_job_ids = []
+        for job_entry in self._group_info['job_group_data']:
+            if job_entry['status'] == 'SUCCESS':
+                success_job_ids.append(job_entry['id'])
+        return success_job_ids
+
+    def list_failed_jobs(self) -> list:
+        """
+        Returns a list of all the failed RemoteJobs in the group.
+        """
+        failed_jobs = []
+        for job_entry in self._group_info['job_group_data']:
+            if job_entry['status'] in ['ERROR', 'CANCELED']:
+                failed_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
+        return failed_jobs
+
+
+    def list_unsent_jobs(self) -> list:
+        """
+        Returns a list of all the RemoteJobs in the group that were not sent to the cloud.
+        """
+        unsent_jobs = []
+        for job_entry in self._group_info['job_group_data']:
+            if job_entry['status'] is None:
+                unsent_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
+                # todo: a new method to recreate unsent one to a remotejob
+        return unsent_jobs
