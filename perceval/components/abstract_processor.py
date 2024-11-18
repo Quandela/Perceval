@@ -262,11 +262,23 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
-    def _add_ffconfig(self, modes, component):
+    def _add_ffconfig(self, modes, component: AFFConfigurator):
         if isinstance(modes, int):
             modes = tuple(range(modes, modes + component.m))
+
+        # Check composition consistency
+        if min(modes) < 0 or max(modes) >= self.m:
+            raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {modes})")
         if any([self._mode_type[i] != ModeType.CLASSICAL for i in modes]):
             raise UnavailableModeException(modes, "Cannot add a classical component on non-classical modes")
+        photonic_start = modes[-1] + 1 + component.circuit_offset if component.circuit_offset >= 0 \
+            else modes[0] - component.default_circuit.m
+        photonic_modes = tuple(range(photonic_start, photonic_start + component.default_circuit.m))
+        if min(photonic_modes) < 0 or max(photonic_modes) >= self.m:
+            raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
+        if any([self._mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
+            raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
+
         if modes[0] > 0:  # Barrier above detectors
             ports = tuple(range(0, modes[0]))
             self._components.append((ports, Barrier(len(ports), visible=True)))

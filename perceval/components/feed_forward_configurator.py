@@ -59,7 +59,7 @@ class AFFConfigurator(AComponent, ABC):
         self._blocked_circuit_size = False
         self.controlled_circuit_name = None
 
-    def block_circuit_size(self):  # TODO: turn this to True when adding to a processor
+    def block_circuit_size(self):
         """Call this to prevent adding circuits bigger than the current maximum size"""
         self._blocked_circuit_size = True
 
