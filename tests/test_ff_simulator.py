@@ -29,7 +29,8 @@
 
 import pytest
 
-from perceval import SLOSBackend, Circuit, PERM, BasicState, BS, BSDistribution, Processor, Detector, NoiseModel
+from perceval import SLOSBackend, Circuit, PERM, BasicState, BS, BSDistribution, Processor, Detector, NoiseModel, \
+    PostSelect
 from perceval.algorithm import Sampler
 from perceval.components.feed_forward_configurator import CircuitMapFFConfig
 from perceval.simulators.feed_forward_simulator import FFSimulator
@@ -89,33 +90,62 @@ def test_with_herald():
 
     proc.add_herald(0, 0)
 
-    proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([1, 0, 1, 0]))
 
     sampler = Sampler(proc)
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
         BasicState([1, 0, 1, 0]): .5,
         BasicState([0, 1, 0, 1]): .5,
     }))
+
+    assert res["global_perf"] == pytest.approx(.5)
+
+
+def test_with_postselect():
+    # Same than with heralds
+    proc = Processor("SLOS", 5)
+
+    proc.add(0, BS())
+    proc.add(1, BS())
+    proc.add(1, cnot)
+
+    proc.with_input(BasicState([0, 1, 0, 1, 0]))
+    proc.set_postselection(PostSelect("[0] == 0"))
+
+    sampler = Sampler(proc)
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
+        BasicState([0, 1, 0, 1, 0]): .5,
+        BasicState([0, 0, 1, 0, 1]): .5,
+    }))
+
+    assert res["global_perf"] == pytest.approx(.5)
 
 
 def test_min_photons_filter():
     config = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], BS())
 
-    proc = Processor(backend, 5)
+    proc = Processor(backend, 4)
 
     proc.add(0, BS())
-    proc.add(1, BS())
-    proc.add(1, config)
+    proc.add(0, config)
 
-    proc.add_herald(0, 0)
-    proc.add(4, Detector.threshold())
+    proc.add(3, Detector.threshold())
 
-    proc.min_detected_photons_filter(1)
-    proc.with_input(BasicState([1, 0, 1, 2]))  # Equivalent to using a BS with two outputs and a post-selection
+    proc.min_detected_photons_filter(3)
+    input_state = BasicState([1, 0, 1, 1])
+    proc.with_input(input_state)  # Equivalent to using a BS with two outputs and a post-selection
 
     sampler = Sampler(proc)
-    assert len(sampler.probs()["results"]) == 5
+    expected_perf = .75
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
+        input_state: .5 / expected_perf,
+        BasicState([0, 1, 2, 0]): .25 / expected_perf
+    }))
+
+    assert res["global_perf"] == pytest.approx(expected_perf)
 
 
 def test_physical_perf():
@@ -135,8 +165,7 @@ def test_physical_perf():
         BasicState([0, 1, 0, 1]): 0.5
     }))
 
-    assert res["physical_perf"] == pytest.approx(0.25)
-    assert res["logical_perf"] == pytest.approx(1.)
+    assert res["global_perf"] == pytest.approx(0.25)
 
     # Here the perf is induced by the circuit and the detectors
     config = CircuitMapFFConfig(1, 0, BS()).add_configuration([1], Circuit(2))
@@ -155,9 +184,7 @@ def test_physical_perf():
     sampler = Sampler(proc)
     res = sampler.probs()
     assert res["results"] == pytest.approx(BSDistribution({
-        BasicState([1, 0, 1]): 0.5,
-        BasicState([1, 1, 0]): 0.5
+        BasicState([1, 0, 1]): 1.,
     }))
 
-    assert res["physical_perf"] == pytest.approx(0.5)
-    assert res["logical_perf"] == pytest.approx(1.)
+    assert res["global_perf"] == pytest.approx(0.5)

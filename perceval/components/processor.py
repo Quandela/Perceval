@@ -296,7 +296,8 @@ class Processor(AProcessor):
                 pperf -= prob
 
         postprocessed_res.normalize()
-        res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
+        perf_word = "global_perf" if "global_perf" in res else 'physical_perf'
+        res[perf_word] = res[perf_word]*pperf if perf_word in res else pperf
         res['results'] = postprocessed_res
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res

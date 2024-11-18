@@ -118,20 +118,13 @@ class FFSimulator(ISimulator):
 
         # 3: deduce all measurable states and launch one simulation for each of them
         res = BSDistribution()
-        simulated_measures = dict()  # Used as a cache of perf for already simulated configurations
+        simulated_measures = set()
 
-        phys_perf = 0  # = P(n >= filter), computed as Sum_{config} [P(n >= filter | config) * P(config)]
-        log_perf = 0  # = P(mask and n >= filter) for now, counted as sum prob of all selected states
-        prob_default = 1
-        phys_perf_default = 0
+        global_perf = 0  # = P(logic_filter and n >= photon_filter)
 
         for j, (state, prob) in enumerate(default_res.items()):
             sub_circuits = [config.configure(state[slice(self._components[i][0][0], self._components[i][0][-1] + 1)])
                             for i, config in considered_config]
-
-            phys_selected, log_selected = self._post_process_state(state)
-            if phys_selected:
-                phys_perf_default += prob
 
             if all(c1 == default_circuit for c1, default_circuit in zip(sub_circuits, default_circuits)):
                 # Default case, no need for further computation
@@ -139,15 +132,14 @@ class FFSimulator(ISimulator):
                 # There is a problem here: if the same circuit is instanced twice, the == operator returns False
                 # This can be a problem if we copy the default circuit or instantiate a new one
 
-                if phys_selected and log_selected:
+                if self._post_process_state(state):
                     res[state] = prob
-                    log_perf += prob
+                    global_perf += prob
 
                 if prog_cb is not None:
-                    prog_cb((j + 1) / len(default_res))
+                    prog_cb((j + 1) / len(default_res), "Computing feed-forwarded circuit")
                 continue
 
-            prob_default -= prob
             measured_state = tuple(state[i] for i in measured_modes)
 
             if measured_state not in simulated_measures:
@@ -165,37 +157,25 @@ class FFSimulator(ISimulator):
 
                 if is_svd:
                     new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
-                    sub_res = sim.probs_svd(input_state, detectors, new_prog_cb, normalize=False)
-                    pp = sub_res["physical_perf"]  # P(n >= filter | config)
-                    sub_res = sub_res["results"]
+                    sub_res = sim.probs_svd(input_state, detectors, new_prog_cb, normalize=False)["results"]
 
                     # The remaining states are only the ones with n >= filter and mask
-                    log_perf += sum(sub_res.values())
-                    phys_perf += pp * prob
+                    # TODO: This could be bypassed if the simulator is not on top of the simulator stack
+                    global_perf += sum(sub_res.values())
 
                 else:
                     # Don't normalize since we only compute the masked outputs
                     sub_res = sim.probs(input_state, normalize=False)
-                    pp = 1
 
                 for st, p in sub_res.items():
                     # No need for post_process here: results are already post-processed by the sub simulator
                     res[st] = p
 
-                simulated_measures[measured_state] = pp
-
-            else:
-                pp = simulated_measures[measured_state]
-                phys_perf += pp * prob
-
-        phys_perf += phys_perf_default * prob_default
-
-        if phys_perf:
-            log_perf /= phys_perf
+                simulated_measures.add(measured_state)
 
         if normalize:
             res.normalize()
-        return res, phys_perf, log_perf
+        return res, global_perf
 
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int]]:
         """
@@ -221,9 +201,17 @@ class FFSimulator(ISimulator):
                     continue
 
                 if isinstance(c, PERM):
-                    pass  # TODO: refinement here (no need to expand, swapping is enough)
+                    to_remove = []
+                    to_add = []
+                    perm_vector = c.perm_vector
+                    for new_mode in r:
+                        if new_mode in feed_forwarded_modes:
+                            to_remove.append(new_mode)
+                            to_add.append(perm_vector[new_mode - r[0]] + r[0])
+                    feed_forwarded_modes.difference_update(to_remove)
+                    feed_forwarded_modes.update(to_add)
 
-                if any(new_mode in feed_forwarded_modes for new_mode in r):
+                elif any(new_mode in feed_forwarded_modes for new_mode in r):
                     feed_forwarded_modes.update(r)
 
         return res, list(measured_modes)
@@ -271,22 +259,20 @@ class FFSimulator(ISimulator):
             sim.do_postprocess(False)
         return sim
 
-    def _post_process_state(self, bs: BasicState) -> tuple[bool, bool]:
-        """Returns two bools.
-         The first one is True only if the state has enough photons.
-         The second one is True only if the state also pass the PostSelect and heralds"""
+    def _post_process_state(self, bs: BasicState) -> bool:
+        """Returns True if the state checks all requirements of the simulator"""
         if self._min_detected_photons_filter is not None and bs.n < self._min_detected_photons_filter:
-            return False, False
+            return False
 
         heralds = self._heralds or {}
 
         for m, v in heralds.items():
             if bs[m] != v:
-                return True, False
+                return False
         if self._postselect is None or self._postselect(bs):
-            return True, True
+            return True
 
-        return True, False
+        return False
 
     def probs(self, input_state, normalize: bool = True) -> BSDistribution:
         return self._probs_or_svd(input_state, normalize=normalize)[0]
@@ -298,8 +284,7 @@ class FFSimulator(ISimulator):
                   normalize: bool = True):
         res = self._probs_or_svd(svd, detectors, progress_callback, is_svd=True, normalize=normalize)
         return {'results': res[0],
-                'physical_perf': res[1],
-                'logical_perf': res[2]}
+                'global_perf': res[1]}
 
     def evolve(self, input_state, normalize: bool = True) -> StateVector:
         raise RuntimeError("Cannot perform state evolution with feed-forward")

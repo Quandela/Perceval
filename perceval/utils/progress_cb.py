@@ -34,7 +34,7 @@ def partial_progress_callable(progress_cb: callable, min_val: float = 0., max_va
      and evaluating it at 1 evaluates the original one at max_val
     """
 
-    def partial_progress_cb(progress: float, message: str = ""):
+    def partial_progress_cb(progress: float, message: str):
         prog = max_val * progress + min_val * (1 - progress)
         return progress_cb(prog, message)
 
