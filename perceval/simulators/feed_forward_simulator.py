@@ -118,37 +118,39 @@ class FFSimulator(ISimulator):
 
         # 3: deduce all measurable states and launch one simulation for each of them
         res = BSDistribution()
-        simulated_measures = set()
+        simulated_measures = dict()  # Used as a cache of perf for already simulated configurations
 
-        phys_perf = 0  # = P(n >= filter)
-        log_perf = 0  # = P(mask and n >= filter) for now
+        phys_perf = 0  # = P(n >= filter), computed as Sum_{config} [P(n >= filter | config) * P(config)]
+        log_perf = 0  # = P(mask and n >= filter) for now, counted as sum prob of all selected states
+        prob_default = 1
+        phys_perf_default = 0
 
         for j, (state, prob) in enumerate(default_res.items()):
             sub_circuits = [config.configure(state[slice(self._components[i][0][0], self._components[i][0][-1] + 1)])
                             for i, config in considered_config]
+
+            phys_selected, log_selected = self._post_process_state(state)
+            if phys_selected:
+                phys_perf_default += prob
 
             if all(c1 == default_circuit for c1, default_circuit in zip(sub_circuits, default_circuits)):
                 # Default case, no need for further computation
 
                 # There is a problem here: if the same circuit is instanced twice, the == operator returns False
                 # This can be a problem if we copy the default circuit or instantiate a new one
-                phys_selected, log_selected = self._post_process_state(state)
 
-                if phys_selected:
-                    phys_perf += prob
-
-                    if log_selected:
-                        res[state] = prob
-                        log_perf += prob
+                if phys_selected and log_selected:
+                    res[state] = prob
+                    log_perf += prob
 
                 if prog_cb is not None:
                     prog_cb((j + 1) / len(default_res))
                 continue
 
+            prob_default -= prob
             measured_state = tuple(state[i] for i in measured_modes)
 
             if measured_state not in simulated_measures:
-                simulated_measures.add(measured_state)
 
                 for sub_i, (i, config) in enumerate(considered_config):
                     r = self._components[i][0]
@@ -165,20 +167,28 @@ class FFSimulator(ISimulator):
                     new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
                     sub_res = sim.probs_svd(input_state, detectors, new_prog_cb, normalize=False)
                     pp = sub_res["physical_perf"]  # P(n >= filter | config)
-                    lp = sub_res["logical_perf"]  # P(mask | n >= filter and config)
                     sub_res = sub_res["results"]
 
                     # The remaining states are only the ones with n >= filter and mask
-                    log_perf += sum(list(sub_res.values()))
-                    phys_perf += pp * lp  # P(mask and n >= filter | config)
+                    log_perf += sum(sub_res.values())
+                    phys_perf += pp * prob
 
                 else:
                     # Don't normalize since we only compute the masked outputs
                     sub_res = sim.probs(input_state, normalize=False)
+                    pp = 1
 
                 for st, p in sub_res.items():
                     # No need for post_process here: results are already post-processed by the sub simulator
                     res[st] = p
+
+                simulated_measures[measured_state] = pp
+
+            else:
+                pp = simulated_measures[measured_state]
+                phys_perf += pp * prob
+
+        phys_perf += phys_perf_default * prob_default
 
         if phys_perf:
             log_perf /= phys_perf
@@ -248,7 +258,7 @@ class FFSimulator(ISimulator):
             if self._postselect is not None:
                 proc.set_postselection(self._postselect)
 
-            proc.min_detected_photons_filter(self._min_detected_photons_filter)
+        proc.min_detected_photons_filter(self._min_detected_photons_filter)
 
         from .simulator_factory import SimulatorFactory  # Avoids a circular import
 

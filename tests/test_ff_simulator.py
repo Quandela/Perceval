@@ -119,6 +119,7 @@ def test_min_photons_filter():
 
 
 def test_physical_perf():
+    # Here the perf is induced by the noise
     proc = Processor("SLOS", 4, noise=NoiseModel(.5))
 
     proc.add(0, BS())
@@ -135,4 +136,28 @@ def test_physical_perf():
     }))
 
     assert res["physical_perf"] == pytest.approx(0.25)
+    assert res["logical_perf"] == pytest.approx(1.)
+
+    # Here the perf is induced by the circuit and the detectors
+    config = CircuitMapFFConfig(1, 0, BS()).add_configuration([1], Circuit(2))
+
+    proc = Processor("SLOS", 3)
+
+    proc.add(0, BS())
+    proc.add(0, config)
+
+    for i in range(3):
+        proc.add(i, Detector.threshold())
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([1, 0, 1]))
+
+    sampler = Sampler(proc)
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 1]): 0.5,
+        BasicState([1, 1, 0]): 0.5
+    }))
+
+    assert res["physical_perf"] == pytest.approx(0.5)
     assert res["logical_perf"] == pytest.approx(1.)
