@@ -47,7 +47,8 @@ import sympy as sp
 from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
-from perceval.components import ACircuit, Circuit, AProcessor, Port, Herald, non_unitary_components as nl
+from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator,
+                                 non_unitary_components as nl)
 from .circuit import DisplayConfig, create_renderer, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
@@ -152,6 +153,11 @@ def pdisplay_processor(processor: AProcessor,
                 precision=precision,
                 nsimplify=nsimplify,
                 shift=shift)
+            if isinstance(c, AFFConfigurator):
+                rendering_pass.render_circuit(
+                    c.circuit_template(), shift=c.config_modes(r)[0]
+                )
+
         rendering_pass.close()
         if pre_renderer:
             # Pass pre-computed subblock info to the main rendering pass.

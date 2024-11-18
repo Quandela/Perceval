@@ -65,7 +65,7 @@ class PhysSkin(ASkin):
 
     @dispatch(AFFConfigurator)
     def get_width(self, c) -> int:
-        return 2
+        return self.get_width(c.circuit_template())
 
     @dispatch((cp.PS, nu.TD, cp.PERM, cp.WP, cp.PR, nu.LC))
     def get_width(self, c) -> int:
@@ -149,7 +149,15 @@ class PhysSkin(ASkin):
         w = self.get_width(comp)
         for i in range(comp.m):
             canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * w, 0], **self.style[ModeType.CLASSICAL])
-        canvas.add_rect((5, 5), 50 * w - 10, 50 * comp.m - 10, fill="lightblue")
+        canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="lightblue")
+        canvas.add_text((w * 25, 30), size=10, ta="middle", text=comp.name)
+        mode_offset = comp.circuit_offset
+
+        # y_orig =
+        origin = (w * 25, 40 if mode_offset >= 0 else 10)
+        destination = (w * 25, 55 + 50*mode_offset if mode_offset >= 0 else 25 + 50*mode_offset)
+
+        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL])
 
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
