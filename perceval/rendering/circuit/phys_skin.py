@@ -48,7 +48,7 @@ class PhysSkin(ASkin):
                           "fill": "lightpink",
                           "stroke_style": {"stroke": "darkred", "stroke_width": 1}},
                          compact_display)
-        self.style[ModeType.CLASSICAL] = {"stroke": "blue", "stroke_width": PhysSkin._STROKE_WIDTH}
+        self.style[ModeType.CLASSICAL] = {"stroke": "orange", "stroke_width": PhysSkin._STROKE_WIDTH}
 
     @dispatch(AComponent)
     def get_width(self, c) -> int:
@@ -149,15 +149,22 @@ class PhysSkin(ASkin):
         w = self.get_width(comp)
         for i in range(comp.m):
             canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * w, 0], **self.style[ModeType.CLASSICAL])
-        canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="lightblue")
-        canvas.add_text((w * 25, 30), size=10, ta="middle", text=comp.name)
-        mode_offset = comp.circuit_offset
 
-        # y_orig =
-        origin = (w * 25, 40 if mode_offset >= 0 else 10)
-        destination = (w * 25, 55 + 50*mode_offset if mode_offset >= 0 else 25 + 50*mode_offset)
-
+        # Control wire between the feed-forward configurator and the configured circuit
+        offset_sign = math.copysign(1, comp.circuit_offset)
+        origin = [w * 25, 25 + offset_sign*15]
+        destination = [w * 25, 40 + offset_sign*15 + 50 * comp.circuit_offset]
+        canvas.add_mline(origin + destination, stroke="white", stroke_width=PhysSkin._STROKE_WIDTH+2)
         canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL])
+        origin[1] += offset_sign * 8
+        arrow_size = 3
+        for side in [-1, 1]:
+            canvas.add_mline(origin + [origin[0] + side * arrow_size, origin[1] - offset_sign*arrow_size],
+                             **self.style[ModeType.CLASSICAL])
+
+        # The actual component
+        canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="lightgreen")
+        canvas.add_text((w * 25, 30), size=10, ta="middle", text=comp.name)
 
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
@@ -294,7 +301,7 @@ class PhysSkin(ASkin):
         m = circuit.m
         for i in range(m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.style[ModeType.PHOTONIC])
-        canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="gold")
+        canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="lightyellow")
         canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name)
 
     def barrier_shape(self, barrier, canvas, mode_style):

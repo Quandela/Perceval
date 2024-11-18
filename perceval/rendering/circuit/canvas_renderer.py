@@ -224,6 +224,15 @@ class CanvasRenderer(ICircuitRenderer):
                             (maxpos - self._chart[p]) * CanvasRenderer.SCALE,
                             CanvasRenderer.SCALE / 2
                         ],
+                        stroke="white", stroke_width=style['stroke_width']+4)
+
+                    self._canvas.add_mline(
+                        [
+                            0,
+                            CanvasRenderer.SCALE / 2,
+                            (maxpos - self._chart[p]) * CanvasRenderer.SCALE,
+                            CanvasRenderer.SCALE / 2
+                        ],
                         **style)
             self._chart[p] = maxpos
 
