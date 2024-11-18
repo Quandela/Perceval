@@ -71,6 +71,7 @@ class AProcessor(ABC):
 
         self._is_unitary: bool = True
         self._has_td: bool = False
+        self._has_feedforward = False
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
@@ -288,6 +289,7 @@ class AProcessor(ABC):
             ports = tuple(range(modes[-1] + 1, self.m))
             self._components.append((ports, Barrier(len(ports), visible=True)))
         self._components.append((modes, component))
+        self._has_feedforward = True
 
     def _add_detector(self, mode: int, detector: IDetector):
         if not isinstance(mode, int):
