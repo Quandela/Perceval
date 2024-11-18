@@ -32,26 +32,27 @@ from abc import ABC, abstractmethod
 from .unitary_components import Unitary
 from .abstract_component import AComponent
 # from .processor import Processor
-from .linear_circuit import ACircuit, Circuit
+from .linear_circuit import ACircuit
 from perceval.utils import BasicState, Matrix
 
 
 class AFFConfigurator(AComponent, ABC):
     DEFAULT_NAME = "FFC"
 
-    def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
-        """
-        A feed-forward configurator.
+    """
+    A feed-forward configurator.
 
-        :param m: The number of classical modes that are detected (after a detector)
-        :param offset: The distance between the configurator and the first mode of the implemented circuits.
-         For positive values, it is the number of empty modes between the configurator and the configured circuit below.
-         For negative values, it is the same but the circuit is located above the configurator
-         (the number of empty modes is abs(`offset`) - 1,
-         so an offset of -1 means that there is no empty modes between the configurator and the circuit).
-         All circuits are considered to have the size of the biggest possible circuit in this configurator.
-        :param default_circuit: The circuit to be used if the measured state does not befall into one of the declared cases
-        """
+    :param m: The number of classical modes that are detected (after a detector)
+    :param offset: The distance between the configurator and the first mode of the implemented circuits.
+     For positive values, it is the number of empty modes between the configurator and the configured circuit below.
+     For negative values, it is the same but the circuit is located above the configurator
+     (the number of empty modes is abs(`offset`) - 1,
+     so an offset of -1 means that there is no empty modes between the configurator and the circuit).
+     All circuits are considered to have the size of the biggest possible circuit in this configurator.
+    :param default_circuit: The circuit to be used if the measured state does not befall into one of the declared cases
+    """
+
+    def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
         super().__init__(m, name)
         self._offset = offset
         self.default_circuit = default_circuit
@@ -139,3 +140,47 @@ class CircuitMapFFConfig(AFFConfigurator):
 
     def circuit_template(self) -> ACircuit:
         return Unitary(Matrix.eye(self.default_circuit.m), self.controlled_circuit_name)
+
+
+class FFConfigurator(AFFConfigurator):
+
+    def __init__(self,
+                 m: int,
+                 offset: int,
+                 controlled_circuit: ACircuit,
+                 default_config: dict[str, float],
+                 name: str = None):
+        if not isinstance(controlled_circuit, ACircuit):
+            raise TypeError(f"controlled_circuit must be of type ACircuit")
+        default_circuit = controlled_circuit.copy()
+        default_circuit.assign(default_config)
+        super().__init__(m, offset, default_circuit, name)
+
+        self._controlled = controlled_circuit
+        self._linked_vars = self._controlled.vars
+        self._check_configuration(default_config)
+        self._configs = {
+            "default": default_config
+        }
+
+    def _check_configuration(self, config: dict[str, float]):
+        for param_name in config:
+            if param_name not in self._linked_vars:
+                raise NameError(f"Parameter {param_name} does not exist in the controlled circuit")
+
+    def add_configuration(self, detections: BasicState | tuple[int, ...], config: dict[str, float]) -> FFConfigurator:
+        detections = BasicState(detections)
+        if detections.m != self.m:
+            raise ValueError(f"Wrong size for detections; got {len(detections)}, expected the number of modes plugged-in, i.e. {self.m}")
+        self._check_configuration(config)
+        self._configs[detections] = config
+        return self
+
+    def configure(self, measured_state: BasicState) -> ACircuit:
+        circuit = self._controlled.copy()
+        selected_config = self._configs.get(measured_state, self._configs['default'])
+        circuit.assign(selected_config)
+        return circuit
+
+    def circuit_template(self) -> ACircuit:
+        return self._controlled
