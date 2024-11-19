@@ -113,7 +113,6 @@ class SimulatorFactory:
 
         # Building the simulator layers
         if sim_feed_forward:
-            assert not sim_losses, "Cannot simulate loss channels in a feed-forward simulation"
             assert not sim_delay, "Cannot simulate time delays in a feed-forward simulation"
             assert not sim_polarization, "Cannot simulate polarization in a feed-forward simulation"
             simulator = FFSimulator(backend)

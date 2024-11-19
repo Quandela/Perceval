@@ -257,8 +257,8 @@ class Simulator(ISimulator):
     @dispatch(StateVector)
     def probs(self, input_state: StateVector, normalize: bool = True) -> BSDistribution:
         if len(input_state) == 1:
-            return self.probs(input_state[0], normalize)
-        return _to_bsd(self.evolve(input_state, normalize))
+            return self.probs(input_state[0], normalize=normalize)
+        return _to_bsd(self.evolve(input_state, normalize=normalize))
 
     def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Callable | None = None,
                            normalize: bool = True):

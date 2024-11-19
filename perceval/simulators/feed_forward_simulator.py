@@ -104,9 +104,9 @@ class FFSimulator(ISimulator):
         # We can't reject any state at this moment since we need all possible measured states
         sim = self._init_simulator(input_state, components)
 
-        # TODO: find a way to estimate how much progress we should write after computing the default case
-        # i.e. estimate how many computations we need
-        intermediate_progress = .1
+        # Estimation of possible measures: n for each measured mode
+        n = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
+        intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
         if is_svd:
@@ -150,17 +150,13 @@ class FFSimulator(ISimulator):
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
                 new_heralds = {i: state[i] for i in measured_modes}
-                sim = self._init_simulator(input_state,
-                                           components,
-                                           filter_states=True,
-                                           new_heralds=new_heralds)
+                sim = self._init_simulator(input_state, components, filter_states=True, new_heralds=new_heralds)
 
                 if is_svd:
                     new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
                     sub_res = sim.probs_svd(input_state, detectors, new_prog_cb, normalize=False)["results"]
 
                     # The remaining states are only the ones with n >= filter and mask
-                    # TODO: This could be bypassed if the simulator is not on top of the simulator stack
                     global_perf += sum(sub_res.values())
 
                 else:
@@ -179,8 +175,8 @@ class FFSimulator(ISimulator):
 
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int]]:
         """
-        :return: The list containing the tuples with the position of the FFConfigurators and their instances,
-        and the set of the measured modes
+        :return: The list containing the tuples with the index in the component list
+        of the configuration independent FFConfigurators and their instances, and the list of the associated measured modes
         """
         # We can add a configurator as long as the measured mode don't come from a configurable circuit
         feed_forwarded_modes: set[int] = set()
@@ -196,23 +192,22 @@ class FFSimulator(ISimulator):
                 res.append((i, c))
                 measured_modes.update(r)
 
-            else:
-                if isinstance(c, Barrier):
-                    continue
+            elif isinstance(c, Barrier):
+                continue
 
-                if isinstance(c, PERM):
-                    to_remove = []
-                    to_add = []
-                    perm_vector = c.perm_vector
-                    for new_mode in r:
-                        if new_mode in feed_forwarded_modes:
-                            to_remove.append(new_mode)
-                            to_add.append(perm_vector[new_mode - r[0]] + r[0])
-                    feed_forwarded_modes.difference_update(to_remove)
-                    feed_forwarded_modes.update(to_add)
+            elif isinstance(c, PERM):
+                to_remove = []
+                to_add = []
+                perm_vector = c.perm_vector
+                for new_mode in r:
+                    if new_mode in feed_forwarded_modes:
+                        to_remove.append(new_mode)
+                        to_add.append(perm_vector[new_mode - r[0]] + r[0])
+                feed_forwarded_modes.difference_update(to_remove)
+                feed_forwarded_modes.update(to_add)
 
-                elif any(new_mode in feed_forwarded_modes for new_mode in r):
-                    feed_forwarded_modes.update(r)
+            elif any(new_mode in feed_forwarded_modes for new_mode in r):
+                feed_forwarded_modes.update(r)
 
         return res, list(measured_modes)
 

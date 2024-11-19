@@ -130,7 +130,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         results = self._postprocess_bsd_impl(results)
         logical_perf = 1
         if self._postselect is not None or self._heralds is not None:
-            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, normalize)
+            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, normalize=normalize)
         return results, logical_perf
 
     def _postprocess_sv(self, sv: StateVector, normalize: bool = True) -> StateVector:
@@ -143,7 +143,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         self._simulator.set_circuit(self._prepare_circuit(circuit))
 
     def probs(self, input_state, normalize: bool = True) -> BSDistribution:
-        results = self._simulator.probs(self._prepare_input(input_state), normalize)
+        results = self._simulator.probs(self._prepare_input(input_state), normalize=normalize)
         results, _ = self._postprocess_bsd(results, normalize)
         return results
 
