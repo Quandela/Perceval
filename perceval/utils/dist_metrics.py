@@ -31,24 +31,22 @@ from perceval.utils import BSDistribution
 from perceval.utils.logging import get_logger, channel
 
 
-def tvd_dist(dist1: BSDistribution, dist2: BSDistribution) -> float:
+def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
     """
     Computes the Total Variation Distance (TVD) between two input BSDistributions.
 
-    :param dist1: First BSDistribution
-    :param dist2: Second BSDistribution
+    :param dist_lh: First BSDistribution
+    :param dist_rh: Second BSDistribution
     :return : total variation distance between the two BSDistributions (value between 0 and 1)
     """
-    common_bs = set(dist1.keys()).intersection(dist2.keys())
+    only_dist_lh_states = set(dist_lh.keys()) - set(dist_rh.keys())
+    only_dist_rh_states = set(dist_rh.keys()) - set(dist_lh.keys())
 
-    if not common_bs:
-        raise ValueError('There are no common BasicStates between the two input distributions. '
-                         'Cannot compute TVD')
+    if only_dist_rh_states or only_dist_lh_states:
+        get_logger().warn("Some Basic states are missing in one or both of the two input distributions. "
+                          "Their values will be set to 0 before computing TVD.", channel.user)
 
-    if common_bs != set(dist1.keys()) or common_bs != set(dist2.keys()):
-        get_logger().warn(f"Distributions have mismatched number of states. {len(common_bs)} common states found "
-                          f"and used to compute TVD. Metric maybe innacurate.", channel.user)
-
-    tvd = 0.5 * sum(abs(dist1[basicstate]-dist2[basicstate]) for basicstate in common_bs)
+    all_states = set(dist_lh.keys()).union(dist_rh.keys())
+    tvd = 0.5 * sum(abs(dist_lh.get(basic_state, 0) - dist_rh.get(basic_state, 0)) for basic_state in all_states)
 
     return tvd

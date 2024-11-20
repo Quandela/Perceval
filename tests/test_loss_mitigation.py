@@ -138,21 +138,12 @@ def test_mitigation_over_postselect_tvd():
     # compute the mitigated distribution
     mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
 
-    # setting probs to 0 if state does not exist in mitigated distribution
-    for key, values in ideal_dist.items():
-        if key not in mitigated_dist.keys():
-            mitigated_dist[key] = 0.0
-
     # post-selected distribution
     post_select_dist = BSDistribution()
     for state, prob in lossy_dist.items():
         if state.n == ideal_photon_count:
             post_select_dist.add(state, prob)
     post_select_dist.normalize()
-    # setting probs to 0 if state does not exist in post selected distribution
-    for key, values in ideal_dist.items():
-        if key not in post_select_dist.keys():
-            post_select_dist[key] = 0.0
 
     # TVD Metric
     tvd_miti = tvd_dist(ideal_dist, mitigated_dist)
