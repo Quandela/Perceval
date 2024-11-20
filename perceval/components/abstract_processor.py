@@ -280,6 +280,7 @@ class AProcessor(ABC):
         if any([self._mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
             raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
 
+        self._components.append((tuple(range(self.m)), Barrier(self.m, visible=False)))
         if modes[0] > 0:  # Barrier above detectors
             ports = tuple(range(0, modes[0]))
             self._components.append((ports, Barrier(len(ports), visible=True)))

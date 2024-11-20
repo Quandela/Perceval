@@ -154,8 +154,11 @@ def pdisplay_processor(processor: AProcessor,
                 nsimplify=nsimplify,
                 shift=shift)
             if isinstance(c, AFFConfigurator):
+                controlled_circuit = c.circuit_template()
+                if isinstance(controlled_circuit, Circuit):
+                    controlled_circuit = Circuit(controlled_circuit.m).add(0, controlled_circuit)
                 rendering_pass.render_circuit(
-                    c.circuit_template(), shift=c.config_modes(r)[0]
+                    controlled_circuit, recursive=recursive, shift=c.config_modes(r)[0]
                 )
 
         rendering_pass.close()

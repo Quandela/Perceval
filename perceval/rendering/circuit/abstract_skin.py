@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD, LC
+from perceval.components import ACircuit, AFFConfigurator, AProcessor, PERM, AComponent, TD, LC
 from perceval.utils import format_parameters, ModeType
 
 
@@ -92,6 +92,8 @@ class ASkin(ABC):
             start_w = max(w[r])
             if comp.is_composite() and recursive:
                 comp_width, _ = self.get_size(comp, False)
+            elif isinstance(comp, AFFConfigurator) and recursive:
+                comp_width, _ = self.get_size(comp.circuit_template(), False)
             else:
                 comp_width = self.get_width(comp)
             end_w = start_w + comp_width
