@@ -38,7 +38,7 @@ from perceval.runtime import RemoteJob, RunningStatus
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.utils.conversion import sample_count_to_probs
 
-from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough, LogChecker
+from _test_utils import LogChecker
 from _mock_rpc_handler import (
     get_rpc_handler,
     REMOTE_JOB_DURATION,
