@@ -88,36 +88,6 @@ def assert_svd_close(lhsvd, rhsvd):
         assert found_in_rh, f"sv not found {lh_sv}"
 
 
-def assert_bsd_close(lhbsd, rhbsd):
-    assert len(lhbsd) == len(rhbsd), f"len are different, {len(lhbsd)} vs {len(rhbsd)}"
-
-    for lh_bs in lhbsd.keys():
-        if lh_bs not in rhbsd:
-            assert False, f"bs not found {lh_bs}"
-        assert pytest.approx(lhbsd[lh_bs]) == rhbsd[lh_bs], \
-            f"different probabilities for {lh_bs}, {lhbsd[lh_bs]} vs {rhbsd[lh_bs]}"
-
-
-def assert_bsd_close_enough(ref_bsd: pcvl.BSDistribution, bsd_to_check: pcvl.BSDistribution, threshold=0.8):
-    for lh_bs in ref_bsd.keys():
-        if ref_bsd[lh_bs] > threshold:
-            assert lh_bs in bsd_to_check
-            assert bsd_to_check[lh_bs] > threshold
-            return
-    assert False, f"No state has probability above {threshold} for bsd {ref_bsd}"
-
-
-def assert_bsc_close_enough(ref_bsc: pcvl.BSCount, bsc_to_check: pcvl.BSCount):
-    total = ref_bsc.total()
-    assert total == bsc_to_check.total()
-    threshold = math.sqrt(total)
-    for lh_bs in ref_bsc.keys():
-        if ref_bsc[lh_bs] < 5:
-            continue
-        assert lh_bs in bsc_to_check
-        assert ref_bsc[lh_bs] == pytest.approx(bsc_to_check[lh_bs], ref_bsc[lh_bs]/threshold)
-
-
 def  dict2svd(d: dict):
     return SVDistribution({StateVector(k): v for k, v in d.items()})
 
