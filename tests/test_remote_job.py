@@ -35,8 +35,10 @@ from time import sleep
 import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
+from perceval.utils.dist_metrics import tvd_dist
+from perceval.utils.conversion import sample_count_to_probs
 
-from _test_utils import assert_bsd_close_enough, assert_bsc_close_enough, LogChecker
+from _test_utils import LogChecker
 from _mock_rpc_handler import (
     get_rpc_handler,
     REMOTE_JOB_DURATION,
@@ -123,6 +125,7 @@ def test_remote_with_gates_probs(catalog_item):
     p = pcvl.catalog[catalog_item].build_processor()
     p.min_detected_photons_filter(2 + list(p.heralds.values()).count(1))
     p.noise = noise
+
     rp = pcvl.RemoteProcessor.from_local_processor(p, 'sim:altair', url='https://api.cloud.quandela.com')
 
     # platform parameters
@@ -153,7 +156,8 @@ def test_remote_with_gates_probs(catalog_item):
             delay += 1
             sleep(1)
 
-        assert_bsd_close_enough(probs['results'], job.get_results()['results'])  # will not work without fixed seed
+        tvd = tvd_dist(probs['results'], job.get_results()['results'])
+        assert tvd == pytest.approx(0.0, abs=0.2)  # total variation between two distributions is less than 0.2
 
 
 @pytest.mark.skip(reason="need a token and a worker available")
@@ -196,4 +200,8 @@ def test_remote_with_gates_samples(catalog_item):
             delay += 1
             sleep(1)
 
-        assert_bsc_close_enough(samples['results'], job.get_results()['results'])
+        local_sim_bsd = sample_count_to_probs(samples['results'])
+        remote_sim_bsd = sample_count_to_probs(job.get_results()['results'])
+        tvd = tvd_dist(local_sim_bsd, remote_sim_bsd)
+
+        assert tvd == pytest.approx(0.0, abs=0.2)  # total variation between two distributions is less than 0.2
