@@ -214,7 +214,9 @@ class RemoteJob(Job):
                 "mapping_delta_parameters", {})
             if "results_list" in self._results:
                 for res in self._results["results_list"]:
-                    res["results"] = result_mapping_function(res["results"], **self._delta_parameters)
+                    mapping_args = {key: res["iteration"].get(key, val) for key, val in self._delta_parameters.items()}
+
+                    res["results"] = result_mapping_function(res['results'], **mapping_args)
             else:
                 self._results["results"] = result_mapping_function(
                     self._results["results"], **self._delta_parameters)

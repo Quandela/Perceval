@@ -28,6 +28,7 @@
 # SOFTWARE.
 import pytest
 
+from perceval import NoiseModel
 from perceval.algorithm.sampler import Sampler
 import perceval as pcvl
 from perceval.components import BS, PS, Processor, Source, catalog
@@ -131,13 +132,18 @@ def test_sampler_clear_iterations():
 
 @pytest.mark.parametrize("backend_name", ["SLOS", "CliffordClifford2017"])
 def test_sampler_iterator(backend_name):
-    c = BS() // PS(phi=pcvl.P("phi1")) // BS()
-    p = pcvl.Processor(backend_name, c)
+    phi = pcvl.P("phi1")
+    c = BS() // PS(phi=phi) // BS()
+    phi.set_value(0)
+    p = pcvl.Processor(backend_name, c, noise=NoiseModel(.5))
+    p.min_detected_photons_filter(2)
+    p.with_input(pcvl.BasicState([1, 1]))
     sampler = Sampler(p)
     iteration_list = [
         {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
-        {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
-        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1}
+        {"circuit_params": {"phi1": 0.9}, "input_state": pcvl.BasicState([1, 1]), "max_samples": 20},
+        {"circuit_params": {"phi1": 1.57}, "input_state": pcvl.BasicState([1, 0]), "min_detected_photons": 1, "max_shots": 30},
+        {}  # Test default parameters
     ]
     sampler.add_iteration_list(iteration_list)
     rl = sampler.probs()['results_list']
@@ -148,13 +154,22 @@ def test_sampler_iterator(backend_name):
         assert rl[i]["iteration"] == iteration_list[i]
     # Test that the results changes given the iteration parameters (avoid Clifford as sampling adds randomness)
     if backend_name == "SLOS":
-        assert rl[0]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.7701511529340699)
+        assert len(rl[0]["results"]) == 5  # |0, 1>, |1, 0>, |2, 0>, |1, 1> and |0, 2>
         assert rl[1]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0.38639895265345636)
-        assert rl[2]["results"][pcvl.BasicState([1, 1])] == pytest.approx(0)
+        assert len(rl[2]["results"]) == 2  # |0, 1> and |1, 0>
+    assert rl[3]["results"][pcvl.BasicState([1, 1])] == pytest.approx(1.)
     res = sampler.samples(max_samples=10)
     assert len(res['results_list']) == len(iteration_list)
+    assert len(res['results_list'][0]["results"]) == 10
+    assert len(res['results_list'][1]["results"]) == 20
+    assert len(res['results_list'][2]["results"]) == 10
+    assert len(res['results_list'][3]["results"]) == 10
     res = sampler.sample_count(max_samples=100)
     assert len(res['results_list']) == len(iteration_list)
+    assert sum(res['results_list'][0]["results"].values()) == 100
+    assert sum(res['results_list'][1]["results"].values()) == 20
+    assert sum(res['results_list'][2]["results"].values()) == 30
+    assert sum(res['results_list'][3]["results"].values()) == 100
 
 
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "CliffordClifford2017"])
