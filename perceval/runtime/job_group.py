@@ -177,9 +177,11 @@ class JobGroup:
             # set status to None for Jobs not sent to cloud
             job_info['status'] = None
             # Save information inside body (circuit, payload, etc.) to send job later
-            job_info['body'] = job_to_add._request_data
-            max_samples = kwargs.get('max_samples', DEFAULT_MAX_SAMPLES)
-            job_info['args'] = {"max_samples": max_samples}
+            try:
+                # TODO: find if some kwargs could create issues here - I do not even know if it would ever occur
+                job_info['body'] = job_to_add._create_payload_data(**kwargs)
+            except TypeError as e:
+                raise e
         else:
             job_info['status'] = job_to_add.status()
 
@@ -214,11 +216,7 @@ class JobGroup:
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] not in ['SUCCESS', None]:
                 rj = self._recreate_remote_job_from_stored_data(job_entry)
-                rj_status = rj.status()
-                if rj_status == 'SUCCESS':
-                    # remove metadata information if job ran successfully
-                    del job_entry['metadata']
-                job_entry['status'] = rj_status  # update current status
+                job_entry['status'] = rj.status()  # update with current status
 
             status_jobs_in_group.append(job_entry['status'])
 
@@ -377,20 +375,31 @@ class JobGroup:
         for f in files_to_del:
             JobGroup.delete_job_group(f)
 
-    def list_id_successful_jobs(self) -> list:
+    def list_successful_jobs(self) -> list[RemoteJob]:
         """
-        Returns a list of Job ids for all the RemoteJobs in the group that have run
-        successfully on the cloud.
+        Returns a list of all RemoteJobs in the group that have run successfully on the cloud.
         """
         success_job_ids = []
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] == 'SUCCESS':
-                success_job_ids.append(job_entry['id'])
+                success_job_ids.append(self._recreate_remote_job_from_stored_data(job_entry))
         return success_job_ids
 
-    def list_failed_jobs(self) -> list:
+    def list_active_jobs(self) -> list[RemoteJob]:
         """
-        Returns a list of all the failed RemoteJobs in the group.
+        Returns a list of all RemoteJobs in the group that are currently active on the cloud - those
+        with RUNNINGSTATUS - RUNNING or WAITING.
+        """
+        active_job_ids = []
+        for job_entry in self._group_info['job_group_data']:
+            if job_entry['status'] in ['RUNNING', 'WAITING']:
+                active_job_ids.append(self._recreate_remote_job_from_stored_data(job_entry))
+        return active_job_ids
+
+    def list_failed_jobs(self) -> list[RemoteJob]:
+        """
+        Returns a list of all the failed RemoteJobs in the group - includes those with
+         RUNNINGSTATUS -> ERROR or CANCELED.
         """
         failed_jobs = []
         for job_entry in self._group_info['job_group_data']:
@@ -405,11 +414,10 @@ class JobGroup:
 
         rpc_handler = RPCHandler(platform_metadata['platform'],
                                  platform_metadata['url'], user_token)
-        # todo: find a way to set the name of the job
-        # todo : also other params - we already have max samples, what else do we need to support?
-        return RemoteJob(job_entry['body'], rpc_handler, 'DEV_TESTING_SAMPLE_COUNT')
+        return RemoteJob(request_data=job_entry['body'], rpc_handler=rpc_handler,
+                         job_name=job_entry['body']['job_name'])
 
-    def list_unsent_jobs(self) -> list:
+    def list_unsent_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all the RemoteJobs in the group that were not sent to the cloud.
         """
