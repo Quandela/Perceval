@@ -160,7 +160,8 @@ class Processor(AProcessor):
         self._inputs_map = self._source.generate_distribution(self._input_state)
 
     def generate_noisy_heralds(self) -> SVDistribution:
-        return self._source.generate_distribution(BasicState(list(self.heralds.values())))
+        heralds_perfect_state = BasicState([v for k, v in sorted(self.heralds.items())])
+        return self._source.generate_distribution(heralds_perfect_state)
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
