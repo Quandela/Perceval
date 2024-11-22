@@ -108,14 +108,14 @@ class FFSimulator(ISimulator):
             components[i] = (circ_r[0], config.default_circuit)
 
         # We can't reject any state at this moment since we need all possible measured states
-        default_sim, new_input_state, new_detectors = self._init_simulator(input_state, components, detectors)
+        sim, new_input_state, new_detectors, default_proc = self._init_simulator(input_state, components, detectors)
 
         # Estimation of possible measures: n for each measured mode
         n = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
         intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
-        default_res = default_sim.probs_svd(new_input_state, new_detectors, prog_cb, normalize=False)["results"]
+        default_res = sim.probs_svd(new_input_state, new_detectors, prog_cb, normalize=False)["results"]
 
         prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
 
@@ -135,7 +135,7 @@ class FFSimulator(ISimulator):
                 # There is a problem here: if the same circuit is instanced twice, the == operator returns False
                 # This can be a problem if we copy the default circuit or instantiate a new one
 
-                if self._post_process_state(state):
+                if self._post_process_state(state) and default_proc._state_selected(state):
                     res[state[:input_state.m]] = prob
                     global_perf += prob
 
@@ -153,7 +153,7 @@ class FFSimulator(ISimulator):
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
                 new_heralds = {i: state[i] for i in measured_modes}
-                sim, new_input_state, new_detectors = self._init_simulator(input_state, components, detectors,
+                sim, new_input_state, new_detectors, _ = self._init_simulator(input_state, components, detectors,
                                                                            filter_states=True,
                                                                            new_heralds=new_heralds)
 
@@ -215,7 +215,8 @@ class FFSimulator(ISimulator):
                         components: list[tuple[tuple, AComponent | Processor]],
                         detectors: list[IDetector],
                         filter_states: bool = False,
-                        new_heralds: dict[int, int] = None) -> tuple[ISimulator, SVDistribution, list[IDetector]]:
+                        new_heralds: dict[int, int] = None) \
+            -> tuple[ISimulator, SVDistribution, list[IDetector], Processor]:
         """Initialize a new simulator with the given components and heralds.
          Heralds that are already in this simulator are still considered.
 
@@ -225,6 +226,8 @@ class FFSimulator(ISimulator):
          :param new_heralds: The list of heralds that should be added, containing the position and the value"""
 
         m = input_state.m
+        if detectors is None:
+            detectors = m * [None]
         proc = Processor(self._backend, m)
         if self._noise_model is not None:
             proc.noise = self._noise_model
@@ -263,7 +266,7 @@ class FFSimulator(ISimulator):
             sim.do_postprocess(self._postprocess)
         else:
             sim.do_postprocess(False)
-        return sim, input_state, detectors + proc.detectors[m:]
+        return sim, input_state, detectors + proc.detectors[m:], proc
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""
