@@ -385,7 +385,7 @@ class Simulator(ISimulator):
             """
             1st step of computing logical performance:
             When using a mask, the sum of output probs sum(probs_in_s.values()) can be <1.
-            In this case remove the missing part, weighted by the probability (prob0)  of the input state to appear
+            In this case remove the missing part, weighted by the probability (prob0) of the input state to appear
             in the mixed state (input_dist, reworked to decomposed_input).
             """
             self._logical_perf -= (1 - sum(probs_in_s.values())) * prob0
@@ -467,15 +467,20 @@ class Simulator(ISimulator):
     def _setup_heralds(self):
         # Set up a mask corresponding to heralds:
         mask_str = ""
+        n_heralded_photons = 0
         for i in range(self._backend._circuit.m):
             if i in self._heralds:
-                mask_str += f"{self._heralds[i]}"
+                herald_expectation = self._heralds[i]
+                if herald_expectation > 32:  # FsMask limitation
+                    raise ValueError("Cannot simulate an herald expecting more than 32 detected photons")
+                # Encodes expected photon count from 0x30 to 0x4F ASCII characters
+                mask_str += f"{chr(0x30+herald_expectation)}"
+                n_heralded_photons += herald_expectation
             else:
                 mask_str += " "
         self._backend.set_mask(mask_str)
 
         # Check that heralds and physical filter are consistent
-        n_heralded_photons = sum(self._heralds.values())
         if self._min_detected_photons_filter < n_heralded_photons:
             get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
                               f"to the number of heralded photons ({n_heralded_photons})")

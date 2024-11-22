@@ -82,6 +82,16 @@ class AStrongSimulationBackend(ABackend):
         self._mask: xq.FSMask | None = None
 
     def set_mask(self, masks: str | list[str]):
+        """
+        Sets new masks, replacing the former ones if they exist.
+        Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
+        computation time.
+
+        :param masks: Can be a mask or a list of masks. Each mask is expressed as a string where each character is a
+            condition on one mode. Digits are fixing the number of photons whereas spaces or "*" are accepting any
+            number of detections. e.g. using "****00" as a mask limits the simulation to output states ending in two
+            empty modes.
+        """
         self.clear_mask()
         if isinstance(masks, str):
             masks = [masks]
@@ -99,11 +109,17 @@ class AStrongSimulationBackend(ABackend):
             self._mask = xq.FSMask(instate.m, instate.n, self._masks_str)
 
     def clear_mask(self):
+        """
+        Removes any pre-existing mask
+        """
         self._masks_str = None
         self._mask = None
         self.clear_iterator_cache()
 
     def set_input_state(self, input_state: BasicState):
+        """
+        Sets an input state for the simulation. This state has to be a Fock state without annotations.
+        """
         super().set_input_state(input_state)
         self._init_mask()
 
@@ -119,6 +135,10 @@ class AStrongSimulationBackend(ABackend):
         self._cache_iterator = dict()
 
     def set_circuit(self, circuit: ACircuit):
+        """
+        Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
+        instead, if required).
+        """
         if self._circuit and circuit.m != self._circuit:
             self.clear_iterator_cache()
         super().set_circuit(circuit)

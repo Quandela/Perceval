@@ -45,8 +45,8 @@ class NaiveApproxBackend(NaiveBackend):
     def name(self) -> str:
         return "NaiveApprox"
 
-    def _compute_permanent(self, M):
-        permanent_with_error = xq.estimate_permanent_cx(M, self._gurvits_iterations)
+    def _compute_permanent(self, m):
+        permanent_with_error = xq.estimate_permanent_cx(m, self._gurvits_iterations)
         return permanent_with_error[0]
 
     def prob_amplitude_with_error(self, output_state: BasicState) -> tuple[complex, float]:
