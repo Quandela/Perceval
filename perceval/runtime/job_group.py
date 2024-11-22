@@ -368,37 +368,40 @@ class JobGroup:
         for f in files_to_del:
             JobGroup.delete_job_group(f)
 
+    def _list_jobs_status_type(self, statuses: list[str] = None) -> list[RemoteJob]:
+        remote_jobs = []
+        if statuses is None:
+            # handles unsent jobs with given statuses
+            for job_entry in self._group_info['job_group_data']:
+                if job_entry['status'] is None:
+                    remote_jobs.append(self._recreate_unsent_remote_job(job_entry))
+            return remote_jobs
+        else:
+            # handles jobs sent to cloud
+            for job_entry in self._group_info['job_group_data']:
+                if job_entry['status'] in statuses:
+                    remote_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
+            return remote_jobs
+
     def list_successful_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have run successfully on the cloud.
         """
-        success_job_ids = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] == 'SUCCESS':
-                success_job_ids.append(self._recreate_remote_job_from_stored_data(job_entry))
-        return success_job_ids
+        return self._list_jobs_status_type(['SUCCESS'])
 
     def list_active_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that are currently active on the cloud - those
         with RUNNINGSTATUS - RUNNING or WAITING.
         """
-        active_job_ids = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] in ['RUNNING', 'WAITING']:
-                active_job_ids.append(self._recreate_remote_job_from_stored_data(job_entry))
-        return active_job_ids
+        return self._list_jobs_status_type(['RUNNING', 'WAITING'])
 
     def list_failed_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all the failed RemoteJobs in the group - includes those with
          RUNNINGSTATUS -> ERROR or CANCELED.
         """
-        failed_jobs = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] in ['ERROR', 'CANCELED']:
-                failed_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
-        return failed_jobs
+        return self._list_jobs_status_type(['ERROR', 'CANCELED'])
 
     @staticmethod
     def _recreate_unsent_remote_job(job_entry):
@@ -414,8 +417,4 @@ class JobGroup:
         """
         Returns a list of all the RemoteJobs in the group that were not sent to the cloud.
         """
-        unsent_jobs = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] is None:
-                unsent_jobs.append(self._recreate_unsent_remote_job(job_entry))
-        return unsent_jobs
+        return self._list_jobs_status_type()
