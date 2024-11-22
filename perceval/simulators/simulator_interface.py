@@ -62,14 +62,13 @@ class ISimulator(ABC):
         pass
 
     @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    @abstractmethod
     def set_min_detected_photon_filter(self, value: int):
         """
         Set a minimum number of detected photons in the output distribution
 
         :param value: The minimum photon count
         """
-        pass
+        self.set_min_detected_photons_filter(value)
 
     @abstractmethod
     def set_min_detected_photons_filter(self, value: int):
@@ -159,11 +158,6 @@ class ASimulatorDecorator(ISimulator, ABC):
     def evolve(self, input_state, normalize: bool = True) -> StateVector:
         results = self._simulator.evolve(self._prepare_input(input_state), normalize)
         return self._postprocess_sv(results)
-
-    # TODO: remove for PCVL-786
-    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        self.set_min_detected_photons_filter(value)
 
     def set_min_detected_photons_filter(self, value: int):
         self._simulator.set_min_detected_photons_filter(value)

@@ -28,12 +28,10 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from perceval.components import Processor, AComponent, Barrier, PERM, IDetector
+from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
 from perceval.backends import AProbAmpliBackend
-from perceval.utils.statevector import BasicState, BSDistribution, SVDistribution, StateVector
-from perceval.utils.postselect import PostSelect
-from perceval.utils.logging import deprecated, get_logger
-from perceval.utils.progress_cb import partial_progress_callable
+from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, PostSelect, get_logger, \
+    partial_progress_callable
 from perceval.components.feed_forward_configurator import AFFConfigurator
 
 from .simulator_interface import ISimulator
@@ -50,6 +48,9 @@ class FFSimulator(ISimulator):
         self._components = None
         self._backend = backend
         self._postprocess = True
+
+        self._noise_model = None
+        self._source = None
 
     def do_postprocess(self, doit: bool):
         self._postprocess = doit
@@ -80,12 +81,17 @@ class FFSimulator(ISimulator):
         if heralds is not None:
             self._heralds = heralds
 
-    def _probs_or_svd(self,
-                      input_state: SVDistribution | BasicState,
-                      detectors: list[IDetector] = None,
-                      progress_callback: callable = None,
-                      is_svd: bool = False,
-                      normalize: bool = True):
+    def set_noise(self, nm: NoiseModel):
+        self._noise_model = nm
+
+    def set_source(self, source: Source):
+        self._source = source
+
+    def _probs_svd(self,
+                   input_state: SVDistribution | BasicState,
+                   detectors: list[IDetector] = None,
+                   progress_callback: callable = None,
+                   normalize: bool = True) -> tuple[BSDistribution, float]:
 
         # 1: Find all the FFConfigurators that can be simulated without measuring more modes
         considered_config, measured_modes = self._find_next_simulation_layer()
@@ -102,17 +108,14 @@ class FFSimulator(ISimulator):
             components[i] = (circ_r[0], config.default_circuit)
 
         # We can't reject any state at this moment since we need all possible measured states
-        sim = self._init_simulator(input_state, components)
+        default_sim, new_input_state, new_detectors = self._init_simulator(input_state, components, detectors)
 
         # Estimation of possible measures: n for each measured mode
         n = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
         intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
-        if is_svd:
-            default_res = sim.probs_svd(input_state, detectors, progress_callback=prog_cb, normalize=False)["results"]
-        else:
-            default_res = sim.probs(input_state, normalize=False)
+        default_res = default_sim.probs_svd(new_input_state, new_detectors, prog_cb, normalize=False)["results"]
 
         prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
 
@@ -133,7 +136,7 @@ class FFSimulator(ISimulator):
                 # This can be a problem if we copy the default circuit or instantiate a new one
 
                 if self._post_process_state(state):
-                    res[state] = prob
+                    res[state[:input_state.m]] = prob
                     global_perf += prob
 
                 if prog_cb is not None:
@@ -150,22 +153,19 @@ class FFSimulator(ISimulator):
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
                 new_heralds = {i: state[i] for i in measured_modes}
-                sim = self._init_simulator(input_state, components, filter_states=True, new_heralds=new_heralds)
+                sim, new_input_state, new_detectors = self._init_simulator(input_state, components, detectors,
+                                                                           filter_states=True,
+                                                                           new_heralds=new_heralds)
 
-                if is_svd:
-                    new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
-                    sub_res = sim.probs_svd(input_state, detectors, new_prog_cb, normalize=False)["results"]
+                new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
+                sub_res = sim.probs_svd(new_input_state, new_detectors, new_prog_cb, normalize=False)["results"]
 
-                    # The remaining states are only the ones with n >= filter and mask
-                    global_perf += sum(sub_res.values())
-
-                else:
-                    # Don't normalize since we only compute the masked outputs
-                    sub_res = sim.probs(input_state, normalize=False)
+                # The remaining states are only the ones with n >= filter and mask
+                global_perf += sum(sub_res.values())
 
                 for st, p in sub_res.items():
                     # No need for post_process here: results are already post-processed by the sub simulator
-                    res[st] = p
+                    res[st[:input_state.m]] = p
 
                 simulated_measures.add(measured_state)
 
@@ -211,11 +211,12 @@ class FFSimulator(ISimulator):
 
         return res, list(measured_modes)
 
-    def _init_simulator(self, input_state,
+    def _init_simulator(self, input_state: SVDistribution,
                         components: list[tuple[tuple, AComponent | Processor]],
+                        detectors: list[IDetector],
                         filter_states: bool = False,
-                        new_heralds: dict[int, int] = None):
-        """Initiate a new simulator with the given components and heralds.
+                        new_heralds: dict[int, int] = None) -> tuple[ISimulator, SVDistribution, list[IDetector]]:
+        """Initialize a new simulator with the given components and heralds.
          Heralds that are already in this simulator are still considered.
 
          :param input_state: The input state used for the simulation
@@ -223,20 +224,30 @@ class FFSimulator(ISimulator):
          :param filter_states: Whether the states should be filtered in the sub-simulation.
          :param new_heralds: The list of heralds that should be added, containing the position and the value"""
 
-        proc = Processor(self._backend, input_state.m)
+        m = input_state.m
+        proc = Processor(self._backend, m)
+        if self._noise_model is not None:
+            proc.noise = self._noise_model
+        if self._source is not None:
+            proc._source = self._source  # Need to use the original source to avoid old/new modes annotation overlap
 
         for r, c in components:
             proc.add(r, c)
+
+        # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
+        heralded_dist = proc.generate_noisy_heralds()
+        if len(heralded_dist):
+            input_state *= heralded_dist
 
         if filter_states:
 
             if new_heralds is not None:
                 for r, v in new_heralds.items():
-                    proc.add_herald(r, v)
+                    proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
             if self._heralds is not None:
                 for r, v in self._heralds.items():
-                    proc.add_herald(r, v)
+                    proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
             if self._postselect is not None:
                 proc.set_postselection(self._postselect)
@@ -252,7 +263,7 @@ class FFSimulator(ISimulator):
             sim.do_postprocess(self._postprocess)
         else:
             sim.do_postprocess(False)
-        return sim
+        return sim, input_state, detectors + proc.detectors[m:]
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""
@@ -269,25 +280,41 @@ class FFSimulator(ISimulator):
 
         return False
 
-    def probs(self, input_state, normalize: bool = True) -> BSDistribution:
-        return self._probs_or_svd(input_state, normalize=normalize)[0]
+    def probs(self, input_state: BasicState, normalize: bool = True) -> BSDistribution:
+        """
+        Compute the probability distribution from a BasicState input
+
+        :param input_state: A basic state describing the input to simulate
+        :param normalize: If False, results are not normalized
+
+        :return: A BSDistribution
+        """
+        return self._probs_svd(SVDistribution(input_state), normalize=normalize)[0]
 
     def probs_svd(self,
-                  svd: SVDistribution,
+                  input_dist: SVDistribution,
                   detectors: list[IDetector] = None,
                   progress_callback: callable = None,
                   normalize: bool = True):
-        res = self._probs_or_svd(svd, detectors, progress_callback, is_svd=True, normalize=normalize)
+        """
+        Compute the probability distribution from a SVDistribution input and as well as performance scores
+
+        :param input_dist: A state vector distribution describing the input to simulate
+        :param detectors: An optional list of detectors
+        :param progress_callback: A function with the signature `func(progress: float, message: str)`
+        :param normalize: If False, results are not normalized
+
+        :return: A dictionary of the form { "results": BSDistribution, "global_perf": float }
+
+            * results is the post-selected output state distribution
+            * global_perf is the probability that a state is post-selected
+        """
+        res = self._probs_svd(input_dist, detectors, progress_callback, normalize=normalize)
         return {'results': res[0],
                 'global_perf': res[1]}
 
     def evolve(self, input_state, normalize: bool = True) -> StateVector:
         raise RuntimeError("Cannot perform state evolution with feed-forward")
-
-    # TODO: remove for PCVL-786
-    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        self.set_min_detected_photons_filter(value)
 
     def set_min_detected_photons_filter(self, value: int):
         self._min_detected_photons_filter = value

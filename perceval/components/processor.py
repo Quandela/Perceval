@@ -159,6 +159,9 @@ class Processor(AProcessor):
     def _generate_noisy_input(self):
         self._inputs_map = self._source.generate_distribution(self._input_state)
 
+    def generate_noisy_heralds(self) -> SVDistribution:
+        return self._source.generate_distribution(BasicState(list(self.heralds.values())))
+
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         """

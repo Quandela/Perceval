@@ -66,11 +66,6 @@ class Stepper(ISimulator):
         self._C = circuit
         self._clear_cache()
 
-    #TODO: remove for PCVL-786
-    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        self._min_detected_photons_filter = value
-
     def set_min_detected_photons_filter(self, value: int):
         self._min_detected_photons_filter = value
 

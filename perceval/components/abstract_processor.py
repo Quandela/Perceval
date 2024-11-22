@@ -269,6 +269,10 @@ class AProcessor(ABC):
         if self._mode_type[mode] == ModeType.PHOTONIC:
             self._mode_type[mode] = ModeType.CLASSICAL
 
+    @property
+    def detectors(self):
+        return self._detectors
+
     def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
             impacted_modes = list(mode_mapping.keys())

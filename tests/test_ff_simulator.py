@@ -30,7 +30,7 @@
 import pytest
 
 from perceval import SLOSBackend, Circuit, PERM, BasicState, BS, BSDistribution, Processor, Detector, NoiseModel, \
-    PostSelect
+    PostSelect, catalog
 from perceval.algorithm import Sampler
 from perceval.components.feed_forward_configurator import CircuitMapFFConfig
 from perceval.simulators.feed_forward_simulator import FFSimulator
@@ -188,3 +188,48 @@ def test_physical_perf():
     }))
 
     assert res["global_perf"] == pytest.approx(0.5)
+
+
+def test_with_proc():
+    proc = Processor("SLOS", 6)
+
+    cfg = CircuitMapFFConfig(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
+    cnot_perf = 1/9
+
+    proc.add(0, BS())
+    proc.add(0, cfg)
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([0, 1, 0, 1, 0, 1]))  # ending in logical 11
+
+    sampler = Sampler(proc)
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 0, 1, 0, 1]): .5 / (.5 + .5 * cnot_perf),
+        BasicState([0, 1, 0, 1, 1, 0]): .5 * cnot_perf / (.5 + .5 * cnot_perf),
+    }))
+
+    assert res["global_perf"] == pytest.approx(.5 * (1 + cnot_perf))
+
+    # Same with heralded processor as default circuit
+    proc = Processor("SLOS", 6)
+
+    cfg = CircuitMapFFConfig(2, 0, catalog['postprocessed cnot'].build_processor())
+    cfg.add_configuration((1, 0), Circuit(4))
+
+    cnot_perf = 1 / 9
+
+    proc.add(0, BS())
+    proc.add(0, cfg)
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([0, 1, 0, 1, 0, 1]))  # ending in logical 11
+
+    sampler = Sampler(proc)
+    res = sampler.probs()
+    assert res["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 0, 1, 0, 1]): .5 / (.5 + .5 * cnot_perf),
+        BasicState([0, 1, 0, 1, 1, 0]): .5 * cnot_perf / (.5 + .5 * cnot_perf),
+    }))
+
+    assert res["global_perf"] == pytest.approx(.5 * (1 + cnot_perf))
