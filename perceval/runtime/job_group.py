@@ -174,14 +174,8 @@ class JobGroup:
         job_info['id'] = job_to_add.id
 
         if job_to_add.id is None:
-            # set status to None for Jobs not sent to cloud
-            job_info['status'] = None
-            # Save information inside body (circuit, payload, etc.) to send job later
-            try:
-                # TODO: find if some kwargs could create issues here - I do not even know if it would ever occur
-                job_info['body'] = job_to_add._create_payload_data(**kwargs)
-            except TypeError as e:
-                raise e
+            job_info['status'] = None  # set status to None for Jobs not sent to cloud
+            job_info['body'] = job_to_add._create_payload_data(**kwargs)  # Save job payload to launch later on cloud
         else:
             job_info['status'] = job_to_add.status()
 
@@ -191,8 +185,7 @@ class JobGroup:
                                 'url': job_to_add._rpc_handler.url}
 
         self._group_info['job_group_data'].append(job_info)  # save changes in object
-        # include the added job's info to dataset in the group
-        self._modify_job_dataset(job_info)
+        self._modify_job_dataset(job_info)  # include the added job's info to dataset in the group
 
     def _modify_job_dataset(self, updated_info: dict):
         """

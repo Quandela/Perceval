@@ -178,7 +178,7 @@ class RemoteJob(Job):
     def execute_async(self, *args, **kwargs):
         assert self._job_status.waiting, "job has already been executed"
         try:
-            self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(args, kwargs)))
+            self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(*args, **kwargs)))
             get_logger().info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
 
         except Exception as e:
