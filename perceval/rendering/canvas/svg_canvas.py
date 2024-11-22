@@ -55,7 +55,7 @@ class SvgCanvas(Canvas):
                   stroke_dasharray=None):
         points = super().add_mline(points, stroke, stroke_width)
         self._draws.append(draw.Lines(*points, stroke=stroke, stroke_width=stroke_width,
-                                      fill="none", close=False))
+                                      fill="none", close=False, stroke_dasharray=stroke_dasharray))
 
     def add_polygon(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
                     stroke_dasharray=None):

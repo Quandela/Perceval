@@ -44,7 +44,7 @@ class SymbSkin(ASkin):
                           "fill": "white",
                           "stroke_style": {"stroke": "black", "stroke_width": 1}},
                          compact_display)
-        self.style[ModeType.CLASSICAL] = {"stroke": "gray", "stroke_width": 4}
+        self.style[ModeType.CLASSICAL] = {"stroke": "gray", "stroke_width": 3}
 
     @dispatch(AComponent)
     def get_width(self, c) -> int:
@@ -153,10 +153,10 @@ class SymbSkin(ASkin):
         offset_sign = math.copysign(1, comp.circuit_offset)
         origin = [w * 25, 25 + offset_sign * 15]
         destination = [w * 25, 40 + offset_sign * 15 + 50 * comp.circuit_offset]
-        canvas.add_mline(origin + destination, stroke="white", stroke_width=6)
-        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL])
+        canvas.add_mline(origin + destination, stroke="white", stroke_width=4.5)
+        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL], stroke_dasharray="9,5")
         origin[1] += offset_sign * 8
-        arrow_size = 3
+        arrow_size = 5
         for side in [-1, 1]:
             canvas.add_mline(origin + [origin[0] + side * arrow_size, origin[1] - offset_sign * arrow_size],
                              **self.style[ModeType.CLASSICAL])

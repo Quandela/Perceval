@@ -154,8 +154,11 @@ class PhysSkin(ASkin):
         offset_sign = math.copysign(1, comp.circuit_offset)
         origin = [w * 25, 25 + offset_sign*15]
         destination = [w * 25, 40 + offset_sign*15 + 50 * comp.circuit_offset]
+        if offset_sign > 0:
+            origin[1] += (comp.m - 1)*50
+            destination[1] += (comp.m - 1)*50
         canvas.add_mline(origin + destination, stroke="white", stroke_width=PhysSkin._STROKE_WIDTH+2)
-        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL])
+        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL], stroke_dasharray="4,4")
         origin[1] += offset_sign * 8
         arrow_size = 3
         for side in [-1, 1]:
@@ -164,7 +167,7 @@ class PhysSkin(ASkin):
 
         # The actual component
         canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="lightgreen")
-        canvas.add_text((w * 25, 30), size=10, ta="middle", text=comp.name)
+        canvas.add_text((w * 25, 30 + 50*(comp.m-1)/2), size=10, ta="middle", text=comp.name)
 
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
