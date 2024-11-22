@@ -34,8 +34,7 @@ from perceval.utils import samples_to_sample_count, samples_to_probs, sample_cou
 from perceval.utils.logging import get_logger, channel
 from perceval.components.abstract_processor import AProcessor
 from perceval.runtime import Job, RemoteJob, LocalJob
-from perceval.utils import BasicState
-from .. import ACircuit
+from perceval.utils import BasicState, NoiseModel
 
 
 class Sampler(AAlgorithm):
@@ -63,7 +62,7 @@ class Sampler(AAlgorithm):
                                              'min_detected_photons': int,
                                              'max_samples': int,
                                              'max_shots': int,
-                                             "circuit": ACircuit}
+                                             'noise': NoiseModel}
 
     def __init__(self, processor: AProcessor, **kwargs):
         super().__init__(processor, **kwargs)
@@ -188,6 +187,7 @@ class Sampler(AAlgorithm):
         - min_detected_photons: int
         - max_samples: int
         - max_shots: int
+        - noise: NoiseModel
         """
         get_logger().info("Add 1 iteration to Sampler", channel.general)
         self._add_iteration(kwargs)
@@ -253,7 +253,7 @@ class Sampler(AAlgorithm):
             results['results_list'][-1]['iteration'] = it
             if progress_callback is not None:
                 progress_callback((idx + 1) / len(self._iterator))
-            self._apply_iteration(default_it)
+        self._apply_iteration(default_it)  # restore default parameters
         return results
 
     def _apply_iteration(self, it):
@@ -284,11 +284,15 @@ class Sampler(AAlgorithm):
     def _set_max_shots(self, val: int):
         self._max_shots = val
 
+    def _set_noise(self, noise: NoiseModel):
+        self._processor.noise = noise
+
     def _it_default_parameters(self) -> dict:
         """Creates an iteration with default parameters"""
         return {"circuit_params": {k: v._value for k, v in self._processor.get_circuit_parameters().items()},
                 "input_state": self._processor.input_state,
                 "min_detected_photons": self._processor.parameters.get("min_detected_photons", None),
                 "max_samples": self._max_samples,
-                "max_shots": self._max_shots
+                "max_shots": self._max_shots,
+                "noise": self._processor.noise
                 }
