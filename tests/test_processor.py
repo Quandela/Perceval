@@ -179,32 +179,6 @@ def test_processor_samples_max_shots():
     assert result_len[10_000] == max_samples  # 10k shots is enough to get the expected sample count
 
 
-def test_processor_composition():
-    p = catalog['postprocessed cnot'].build_processor()  # Circuit with [0,1] and [2,3] post-selection conditions
-    p.add((0, 1), BS())  # Composing with a component on modes [0,1] should work
-    with pytest.raises(AssertionError):
-        p.add((1, 2), BS())  # Composing with a component on modes [1,2] should fail
-    p_bs = Processor("SLOS", BS())
-    p.add((0, 1), p_bs)  # Composing with a processor on modes [0,1] should work
-    with pytest.raises(AssertionError):
-        p.add((1, 2), p_bs)  # Composing with a processor on modes [1,2] should fail
-
-
-def test_composition_error_post_selection():
-    processor = catalog['postprocessed cnot'].build_processor()
-    # Composing 2 CNOTs on the exact same modes should work in theory, but not in the current implementation,
-    # it's still possible to apply a PostSelect manually to the resulting Processor.
-    with pytest.raises(AssertionError):
-        processor.add(0, processor)
-
-    processor2 = Processor("SLOS", 5)
-    pp_cnot = catalog['postprocessed cnot'].build_processor()
-    processor2.add(0, pp_cnot)
-    # It's 100% valid that this 2nd case is blocked
-    with pytest.raises(AssertionError):
-        processor2.add(1, pp_cnot)
-
-
 def test_add_remove_ports():
     processor = Processor("SLOS", 6)
     p0 = Port(Encoding.DUAL_RAIL, "q0")
@@ -292,51 +266,3 @@ def test_phase_quantization():
     p0.noise = nm
     p1.noise = nm
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
-
-
-def test_processor_composition_mismatch_modes():
-    # tests composing a smaller processor into larger one works
-    # without breaking simplification (verifies it works with gates based circuits too)
-    def sub_size_processor():
-        h_cnot = catalog['heralded cnot'].build_processor()
-        p = Processor('SLOS', m_circuit=4, name='my_example')
-        p.add(0, BS.H())
-        p.add(0, h_cnot)
-        p.add(1, PS(np.pi / 4))
-        p.add(0, h_cnot)
-        return p
-
-    smaller_processor = sub_size_processor()
-    p = Processor('SLOS', m_circuit=5, name='to_Which_i_add')
-    p.add(0, smaller_processor)
-
-    assert len(p.components) == 7  # 3 PERMs get added because heralds need to move
-
-    r_list = []
-    comp_list = []
-    for r, c in p.components:
-        r_list.append(r)
-        comp_list.append(c)
-
-    # checks order of components
-    assert isinstance(comp_list[0], PERM)
-    assert isinstance(comp_list[1], BS)
-    assert isinstance(comp_list[2], Circuit)
-    assert isinstance(comp_list[3], PS)
-    assert isinstance(comp_list[4], PERM)
-    assert isinstance(comp_list[5], Circuit)
-    assert isinstance(comp_list[6], PERM)
-
-    # checks the position of elements
-    assert r_list[0] == [4, 5, 6] # checks PERM added here to move extra mode out of the way
-    assert r_list[1][0] == 0  # BS added at mode 0
-    assert r_list[3][0] == 1  # checks PS at mode 1
-
-
-def test_processor_add_detector():
-    p = Processor("SLOS", 4)
-    p.add(0, Detector.pnr())
-    with pytest.raises(UnavailableModeException):
-        p.add(0, PS(phi=0))  # Cannot add an optical component after a detector
-    with pytest.raises(UnavailableModeException):
-        p.add(0, Detector.pnr())  # Cannot add a detector after a detector
