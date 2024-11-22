@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import math
 from multipledispatch import dispatch
 
 from perceval.components import AComponent, AFFConfigurator, Circuit, Port, PortLocation, Herald, IDetector,\
@@ -53,7 +53,7 @@ class SymbSkin(ASkin):
 
     @dispatch(AFFConfigurator)
     def get_width(self, c) -> int:
-        return 2
+        return self.get_width(c.circuit_template())
 
     @dispatch(cp.Unitary)
     def get_width(self, c) -> int:
@@ -145,9 +145,25 @@ class SymbSkin(ASkin):
         return self.herald_shape_out
 
     def ffconf_shape(self, comp: AFFConfigurator, canvas, mode_style):
+        w = self.get_width(comp)
         for i in range(comp.m):
-            canvas.add_mpath(["M", 0, 25 + i * 50, "l", 100, 0], **self.style[ModeType.CLASSICAL])
-        canvas.add_rect((5, 5), 90, 50 * comp.m - 10, fill="lightblue")
+            canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * w, 0], **self.style[ModeType.CLASSICAL])
+
+        # Control wire between the feed-forward configurator and the configured circuit
+        offset_sign = math.copysign(1, comp.circuit_offset)
+        origin = [w * 25, 25 + offset_sign * 15]
+        destination = [w * 25, 40 + offset_sign * 15 + 50 * comp.circuit_offset]
+        canvas.add_mline(origin + destination, stroke="white", stroke_width=6)
+        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL])
+        origin[1] += offset_sign * 8
+        arrow_size = 3
+        for side in [-1, 1]:
+            canvas.add_mline(origin + [origin[0] + side * arrow_size, origin[1] - offset_sign * arrow_size],
+                             **self.style[ModeType.CLASSICAL])
+
+        # The actual component
+        canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="honeydew")
+        canvas.add_text((w * 25, 30), size=10, ta="middle", text=comp.name)
 
     @dispatch(IDetector)
     def get_shape(self, detector):
