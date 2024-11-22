@@ -233,3 +233,30 @@ def test_with_proc():
     }))
 
     assert res["global_perf"] == pytest.approx(.5 * (1 + cnot_perf))
+
+
+def test_non_adjacent_config():
+    proc = Processor("SLOS", 6)
+
+    cnot = CircuitMapFFConfig(2, 2, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([0, 1, 0, 0, 1, 0]))
+
+    proc.add(0, cnot)
+
+    sampler = Sampler(proc)
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 0, 0, 1])))
+
+    # Negative offset
+    proc = Processor("SLOS", 4)
+
+    cnot = CircuitMapFFConfig(2, -1, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(BasicState([1, 0, 0, 1]))
+    proc.add(2, cnot)
+
+    sampler = Sampler(proc)
+
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 1])))
