@@ -75,7 +75,9 @@ class AFFConfigurator(AComponent, ABC):
 
     @abstractmethod
     def circuit_template(self) -> ACircuit:
-        pass
+        """
+        Return a fitting representation of the controlled circuit or processor.
+        """
 
     def config_modes(self, self_modes: tuple[int, ...]) -> tuple[int, ...]:
         """

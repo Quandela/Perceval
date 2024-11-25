@@ -272,9 +272,7 @@ class AProcessor(ABC):
             raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {modes})")
         if any([self._mode_type[i] != ModeType.CLASSICAL for i in modes]):
             raise UnavailableModeException(modes, "Cannot add a classical component on non-classical modes")
-        photonic_start = modes[-1] + 1 + component.circuit_offset if component.circuit_offset >= 0 \
-            else modes[0] - component.default_circuit.m
-        photonic_modes = tuple(range(photonic_start, photonic_start + component.default_circuit.m))
+        photonic_modes = component.config_modes(modes)
         if min(photonic_modes) < 0 or max(photonic_modes) >= self.m:
             raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
         if any([self._mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
