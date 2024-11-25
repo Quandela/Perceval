@@ -37,6 +37,12 @@ from perceval.utils.logging import deprecated, get_logger
 
 class ISimulator(ABC):
 
+    def __init__(self):
+        self._silent = False
+
+    def set_silent(self, silent: bool):
+        self._silent = silent
+
     @abstractmethod
     def do_postprocess(self, doit: bool):
         pass

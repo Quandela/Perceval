@@ -46,6 +46,7 @@ class Stepper(ISimulator):
     on a list of components [(r, comp)].
     """
     def __init__(self, backend: AStrongSimulationBackend = None):
+        super().__init__()
         self._out = None
         self._backend = backend
         if backend is None:

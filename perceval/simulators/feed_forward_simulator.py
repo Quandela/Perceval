@@ -40,6 +40,7 @@ from .simulator_interface import ISimulator
 class FFSimulator(ISimulator):
 
     def __init__(self, backend: AProbAmpliBackend):
+        super().__init__()
         self._precision = None
         self._heralds = None
         self._postselect = None
@@ -266,6 +267,7 @@ class FFSimulator(ISimulator):
             sim.do_postprocess(self._postprocess)
         else:
             sim.do_postprocess(False)
+        sim.set_silent(True)
         return sim, input_state, detectors + proc.detectors[m:], proc
 
     def _post_process_state(self, bs: BasicState) -> bool:

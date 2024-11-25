@@ -58,6 +58,7 @@ class Simulator(ISimulator):
     """
 
     def __init__(self, backend: AStrongSimulationBackend):
+        super().__init__()
         self._backend = backend
         self._invalidate_cache()
         self._min_detected_photons_filter: int = 0
@@ -442,6 +443,8 @@ class Simulator(ISimulator):
         self._logical_perf = 1
         if self._heralds:
             self._setup_heralds()
+        else:
+            self._backend.clear_mask()
 
         svd, p_threshold, has_superposed_states = self._preprocess_svd(input_dist)
 
@@ -482,8 +485,9 @@ class Simulator(ISimulator):
 
         # Check that heralds and physical filter are consistent
         if self._min_detected_photons_filter < n_heralded_photons:
-            get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
-                              f"to the number of heralded photons ({n_heralded_photons})")
+            if not self._silent:
+                get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
+                                  f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
