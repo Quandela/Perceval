@@ -153,6 +153,9 @@ class SymbSkin(ASkin):
         offset_sign = math.copysign(1, comp.circuit_offset)
         origin = [w * 25, 25 + offset_sign * 15]
         destination = [w * 25, 40 + offset_sign * 15 + 50 * comp.circuit_offset]
+        if offset_sign > 0:  # Move to the bottom of the ff configurator block if offset is "to the bottom"
+            origin[1] += (comp.m - 1)*50
+            destination[1] += (comp.m - 1)*50
         canvas.add_mline(origin + destination, stroke="white", stroke_width=4.5)
         canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL], stroke_dasharray="9,5")
         origin[1] += offset_sign * 8
