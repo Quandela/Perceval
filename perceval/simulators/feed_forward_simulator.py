@@ -29,17 +29,17 @@
 from __future__ import annotations
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
-from perceval.backends import AProbAmpliBackend
 from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, PostSelect, get_logger, \
     partial_progress_callable
 from perceval.components.feed_forward_configurator import AFFConfigurator
+from perceval.backends import AStrongSimulationBackend
 
 from .simulator_interface import ISimulator
 
 
 class FFSimulator(ISimulator):
 
-    def __init__(self, backend: AProbAmpliBackend):
+    def __init__(self, backend: AStrongSimulationBackend):
         super().__init__()
         self._precision = None
         self._heralds = None
