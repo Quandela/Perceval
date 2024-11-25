@@ -26,22 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-
 import copy
 import numpy as np
-from math import factorial
-from scipy.special import comb
+from math import factorial, comb
 from collections import defaultdict
 
-from ._abstract_backends import AProbAmpliBackend
+from ._abstract_backends import AStrongSimulationBackend
 from perceval.utils import BasicState
 from perceval.components import ACircuit
-from perceval.components.unitary_components import PERM
+from perceval.components.unitary_components import PERM, Barrier
 from perceval.components.comp_utils import decompose_perms
 
 
-class MPSBackend(AProbAmpliBackend):
+class MPSBackend(AStrongSimulationBackend):
     """
     The state of the system is written in form of an MPS and
     updated step-by-step by a circuit propagation algorithm.
@@ -51,10 +48,12 @@ class MPSBackend(AProbAmpliBackend):
     (Phase shifters and Beam Splitters already implemented)
     """
 
-    def __init__(self):
+    def __init__(self, cutoff : int = None):
         super().__init__()
         self._s_min = 1e-8  # minimum accepted value for singular values
         self._cutoff = None  # Bond dimension of MPS
+        if cutoff is not None:
+            self.set_cutoff(cutoff)
         self._compiled_input = None
         self._current_input = None
         self._res = defaultdict(lambda: defaultdict(lambda: np.array([0])))
@@ -81,7 +80,7 @@ class MPSBackend(AProbAmpliBackend):
         C = self._circuit
         decomp_perm = False
         for r, c in C:
-            assert isinstance(c, PERM) or c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
+            assert isinstance(c, PERM) or isinstance(c, Barrier) or c.compute_unitary(use_symbolic=False).shape[0] <= 2, \
                 "MPS backend can not be used with components of using more than 2 modes other than a PERM"
             if isinstance(c, PERM) and c.m > 2:
                 # sets the flag to True if n-mode PERM (n>2) is found in the circuit
@@ -119,8 +118,7 @@ class MPSBackend(AProbAmpliBackend):
         return np.linalg.multi_dot(mps_in_list)[0, 0]
 
     def _compile(self) -> bool:
-        C = self._circuit
-        var = [float(p) for p in C.get_parameters()]
+        var = [float(p) for p in self._circuit.get_parameters()]
         if self._compiled_input and self._compiled_input[0] == var and self._input_state in self._res:
             # checks if a given input state for a circuit is already computed
             return False
@@ -155,7 +153,7 @@ class MPSBackend(AProbAmpliBackend):
         # It is simply written based on this choice as the SVD of such a structure would exactly look like this
         # methods currently available in ITensors(Julia), Qiskit
 
-        for r, c in C:
+        for r, c in self._circuit:
             # r -> tuple -> lists the modes where the component c is connected
             self._apply(r, c)
 
@@ -175,10 +173,10 @@ class MPSBackend(AProbAmpliBackend):
         k_mode = r[0]  # k-th mode is where the upper mode(only) of the BS(PS) component is connected
         if len(u) == 2:
             # BS
-            self.update_state_2_mode(k_mode, u)  # --> quandelibc
+            self.update_state_2_mode(k_mode, u)
         elif len(u) == 1:
             # PS
-            self.update_state_1_mode(k_mode, u)  # --> quandelibc
+            self.update_state_1_mode(k_mode, u)
 
 ########################################################################################
 

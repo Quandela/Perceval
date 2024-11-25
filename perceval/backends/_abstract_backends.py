@@ -26,11 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from __future__ import annotations
 from abc import ABC, abstractmethod
+import exqalibur as xq
 
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
+from perceval.utils.logging import deprecated
 
 
 class ABackend(ABC):
@@ -51,13 +53,14 @@ class ABackend(ABC):
         self._input_state = input_state
 
     def _check_state(self, state: BasicState):
+        assert self._circuit is not None, 'Circuit must be set before the input state'
         assert self._circuit.m == state.m, f'Circuit({self._circuit.m}) and state({state.m}) size mismatch'
         assert not state.has_annotations, 'State should be composed of indistinguishable photons only'
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """Each backend has to expose its name as a string"""
+        """Returns the back-end name as a string"""
 
 
 class ASamplingBackend(ABackend):
@@ -70,17 +73,61 @@ class ASamplingBackend(ABackend):
         """Request samples from the circuit given an input state"""
 
 
-class AProbAmpliBackend(ABackend):
+class AStrongSimulationBackend(ABackend):
 
     def __init__(self):
         super().__init__()
-        self._cache_iterator = dict()
+        self._cache_iterator: dict = dict()
+        self._masks_str: list[str] | None = None
+        self._mask: xq.FSMask | None = None
 
-    def _get_iterator(self, input_state: BasicState, mask=None):
+    def set_mask(self, masks: str | list[str]):
+        """
+        Sets new masks, replacing the former ones if they exist.
+        Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
+        computation time.
+
+        :param masks: Can be a mask or a list of masks. Each mask is expressed as a string where each character is a
+            condition on one mode. Digits are fixing the number of photons whereas spaces or "*" are accepting any
+            number of detections. e.g. using "****00" as a mask limits the simulation to output states ending in two
+            empty modes.
+        """
+        self.clear_mask()
+        if isinstance(masks, str):
+            masks = [masks]
+        mask_length = len(masks[0])
+        for m in masks:
+            m = m.replace("*", " ")
+            assert len(m) == mask_length, "Inconsistent mask lengths"
+        self._masks_str = masks
+        self._init_mask()
+
+    def _init_mask(self):
+        if self._masks_str is not None and self._input_state is not None:
+            instate = self._input_state
+            assert len(self._masks_str[0]) == instate.m, "Mask and input state lengths have to be the same"
+            self._mask = xq.FSMask(instate.m, instate.n, self._masks_str)
+
+    def clear_mask(self):
+        """
+        Removes any pre-existing mask
+        """
+        self._masks_str = None
+        self._mask = None
+        self.clear_iterator_cache()
+
+    def set_input_state(self, input_state: BasicState):
+        """
+        Sets an input state for the simulation. This state has to be a Fock state without annotations.
+        """
+        super().set_input_state(input_state)
+        self._init_mask()
+
+    def _get_iterator(self, input_state: BasicState):
         n_photons = input_state.n
 
         if n_photons not in self._cache_iterator.keys():
-            self._cache_iterator[n_photons] = list(allstate_iterator(input_state, mask))
+            self._cache_iterator[n_photons] = tuple(allstate_iterator(input_state, self._mask))
 
         return self._cache_iterator[n_photons]
 
@@ -88,6 +135,10 @@ class AProbAmpliBackend(ABackend):
         self._cache_iterator = dict()
 
     def set_circuit(self, circuit: ACircuit):
+        """
+        Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
+        instead, if required).
+        """
         if self._circuit and circuit.m != self._circuit:
             self.clear_iterator_cache()
         super().set_circuit(circuit)
@@ -112,3 +163,11 @@ class AProbAmpliBackend(ABackend):
         if normalize:
             res.normalize()
         return res
+
+
+class AProbAmpliBackend(AStrongSimulationBackend, ABC):
+    """Deprecated: this class was renamed to AStrongSimulationBackend"""
+
+    @deprecated(version="0.12.0", reason="AProbAmpliBackend was renamed to AStrongSimulationBackend")
+    def __init__(self):
+        super().__init__()

@@ -33,7 +33,7 @@ from unittest.mock import patch
 
 import perceval as pcvl
 from perceval import catalog
-from perceval.backends import AProbAmpliBackend, SLOSBackend
+from perceval.backends import AStrongSimulationBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
@@ -41,7 +41,7 @@ from perceval.utils import BasicState, BSDistribution, StateVector, SVDistributi
 from _test_utils import assert_sv_close, assert_svd_close, LogChecker
 
 
-class MockBackend(AProbAmpliBackend):
+class MockBackend(AStrongSimulationBackend):
 
     @property
     def name(self) -> str:
@@ -332,7 +332,28 @@ def test_simulator_evolve_svd():
     assert output_svd_2[StateVector([1,0])] == pytest.approx(1)
 
 
-def test_heralds():
+def test_probs_svd_with_heralds():
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(Circuit(4) // BS() // (2, BS()))
+    heralds = {1: 0, 3: 0}
+    sim.set_selection(heralds=heralds)
+    results = sim.probs_svd(SVDistribution(BasicState([1]*4)))
+    assert results["logical_perf"] == pytest.approx(0.5 ** 2)
+    assert results["results"][BasicState([2, 0, 2, 0])] == 1
+
+    sim.set_min_detected_photons_filter(4)
+    results = sim.probs_svd(SVDistribution({
+        BasicState([1, 0, 0, 0]): 0.4,
+        BasicState([1, 1, 0, 0]): 0.3,
+        BasicState([1, 1, 1, 0]): 0.2,
+        BasicState([1, 1, 1, 1]): 0.1,
+    }))
+    assert results["physical_perf"] == pytest.approx(0.1)
+    assert results["logical_perf"] == pytest.approx(0.5 ** 2)
+    assert results["results"][BasicState([2, 0, 2, 0])] == 1
+
+
+def test_evolve_with_heralds():
     sim = Simulator(SLOSBackend())
     sim.set_circuit(catalog['heralded cnot'].build_circuit())
     heralds = {4: 1, 5: 1}
@@ -353,12 +374,13 @@ def test_heralds():
     svd = s.generate_distribution(input_state)
     sim.keep_heralds(True)
     keep_heralds_output = sim.evolve_svd(svd)
+    assert keep_heralds_output['results'].m == 6
     sim.keep_heralds(False)
     discard_heralds_output = sim.evolve_svd(svd)
+    assert discard_heralds_output['results'].m == 4
 
     for kh_state, dh_state in zip(keep_heralds_output['results'].keys(), discard_heralds_output['results'].keys()):
         assert_sv_close(kh_state, dh_state * StateVector([1, 1]))
-
 
 
 def get_comparison_setup():

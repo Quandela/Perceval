@@ -27,19 +27,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime import RemoteJob
+from perceval.runtime import RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
 import os
 import json
 from datetime import datetime
+from tqdm import tqdm
+
 
 FILE_EXT_JGRP = 'jgrp'
 JGRP_DIR_NAME = "job_group"
 
 DATE_TIME_FORMAT = "%Y%m%d_%H%M%S"
 DEFAULT_MAX_SAMPLES = 10000
+
 
 class JobGroup:
     """
@@ -65,7 +68,6 @@ class JobGroup:
             self._load_job_group()
         else:
             self._create_job_group()
-
 
     @property
     def name(self) -> str:
@@ -201,7 +203,7 @@ class JobGroup:
 
         self._write_job_group_to_disk()  # save changes to disk
 
-    def progress(self) -> list:
+    def _collect_job_statuses(self) -> list:
         """
         Lists through all jobs in the group and returns a list of status
         If a status is changed from existing in file, that entry is
@@ -222,9 +224,105 @@ class JobGroup:
 
         self._write_job_group_to_disk()  # rewrites the group information on disk
 
-        # replace None with 'not_sent' - more readable
-        status_list = [status if status is not None else "not_sent" for status in status_jobs_in_group]
-        return status_list
+        return status_jobs_in_group
+
+    @staticmethod
+    def _map_job_status_category(status_entry: str):
+        # status categories
+        status_success = [RunningStatus.SUCCESS]
+        status_sent = [RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.CANCEL_REQUESTED]
+        status_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED, RunningStatus.UNKNOWN]
+
+        if status_entry is None:
+            return 'UNFIN_NOT_SENT'
+        elif RunningStatus[status_entry] in status_sent:
+            return 'UNFIN_SENT'
+        elif RunningStatus[status_entry] in status_success:
+            return 'FIN_SUCCESS'
+        elif RunningStatus[status_entry] in status_other:
+            return 'FIN_OTHER'
+        else:
+            raise ValueError(f"Unspecified status of job in group with value {status_entry}. Cannot categorize")
+
+    def progress(self) -> dict:
+        """
+        Iterates over all jobs in the group to create a dictionary of display
+        the current status of jobs in a tabular form. Jobs in the group are
+        categorized as follows (depending on their RunningStatus on the Cloud)
+            - Finished
+                -- successful {'SUCCESS'}
+                -- unsuccessful {'CANCELED', 'ERROR', 'UNKNOWN', 'SUSPENDED'}
+            - Unfinished
+                -- sent {'WAITING', 'RUNNING', 'CANCEL_REQUESTED'}
+                -- not sent {None}
+        """
+        success_job_cnt = 0
+        other_job_cnt = 0
+        sent_job_cnt = 0
+        unsent_job_cnt = 0
+
+        job_statuses = self._collect_job_statuses()
+
+        for status_entry in job_statuses:
+            job_category = JobGroup._map_job_status_category(status_entry)
+            if job_category == 'UNFIN_NOT_SENT':
+                unsent_job_cnt += 1
+            elif job_category == 'UNFIN_SENT':
+                sent_job_cnt += 1
+            elif job_category == 'FIN_SUCCESS':
+                success_job_cnt += 1
+            elif job_category == 'FIN_OTHER':
+                other_job_cnt += 1
+
+        fin_job_prog = {'successful': success_job_cnt, 'unsuccessful': other_job_cnt}
+        unfin_job_prog = {'sent': sent_job_cnt, 'not sent': unsent_job_cnt}
+
+        progress = dict()
+        progress['Total'] = len(self._group_info['job_group_data'])
+        progress['Finished'] = [other_job_cnt + success_job_cnt, fin_job_prog]
+        progress['Unfinished'] = [sent_job_cnt + unsent_job_cnt, unfin_job_prog]
+
+        return progress
+
+    def track_progress(self):
+        """
+        Displays the status and progress of each job in the group using `tqdm` progress bars.
+        Jobs are categorized into "Successful," "Running/Active on Cloud," and
+        "Inactive/Unsuccessful." The method iterates over the list of jobs, continuously
+        refreshing their statuses and updating the progress bars to provide real-time feedback
+        until no "Running/Waiting" jobs remain on the Cloud.
+        """
+        tot_jobs = len(self._group_info['job_group_data'])
+
+        # define tqdm bars
+        bar_format = '{desc}{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}'
+        success_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Successful Jobs", position=0, leave=True)
+        active_bar = tqdm(total=tot_jobs, bar_format=bar_format,desc ="Running/Waiting Jobs", position=1, leave=True)
+        inactive_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Inactive/Unsuccessful Jobs", position=2, leave=True)
+
+        while True:
+            status_list = self._collect_job_statuses()  # list of statuses for jobs
+            group_categories = []
+
+            for job_index in range(tot_jobs):
+                job_category = JobGroup._map_job_status_category(status_list[job_index])
+                group_categories.append(job_category)
+
+                if job_category == 'FIN_SUCCESS':
+                    success_bar.update(1)
+                elif job_category == 'UNFIN_SENT':
+                    active_bar.update(1)
+                elif job_category in ['FIN_OTHER', 'UNFIN_NOT_SENT']:
+                        inactive_bar.update(1)
+
+            # category list from status
+            if not any(category == 'UNFIN_SENT' for category in group_categories):
+                # exit if no jobs running/waiting on cloud
+                break
+
+        success_bar.close()
+        active_bar.close()
+        inactive_bar.close()
 
     def _recreate_remote_job_from_stored_data(self, job_entry) -> RemoteJob:
         """

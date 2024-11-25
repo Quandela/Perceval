@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import json
 import time
@@ -110,7 +111,7 @@ class RemoteJob(Job):
         self._status_refresh_error += 1
         if self._status_refresh_error == self._MAX_ERROR:
             get_logger().error("Reached max number of HTTP errors in a row when updating job {self._id} status.",
-                         channel.general)
+                               channel.general)
             raise error
         if isinstance(error, HTTPError):
             error_code = error.response.status_code
@@ -198,6 +199,18 @@ class RemoteJob(Job):
             self._job_status.stop_run(RunningStatus.CANCEL_REQUESTED, 'Cancellation requested by user')
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
+
+    def rerun(self) -> RemoteJob:
+        """Rerun a job. Same job will be executed again as a new one.
+        Job must have failed, meaning job status must be either CANCELED or ERROR.
+
+        :raises RuntimeError: Job have not failed, therefore it cannot be rerun.
+        :return: The new remote job.
+        """
+        if not self.status.failed:
+            raise RuntimeError(f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
+        return RemoteJob.from_id(self._rpc_handler.rerun_job(self._id), self._rpc_handler)
+
 
     def _get_results(self) -> None:
         if self._results and self.status.completed:
