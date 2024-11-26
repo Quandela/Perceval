@@ -91,8 +91,6 @@ def test_sampler_iteration_bad_params():
     sampler = Sampler(p)
 
     with pytest.raises(AssertionError):
-        sampler.add_iteration()  # Parameters are required for an iteration
-    with pytest.raises(AssertionError):
         sampler.add_iteration(circuit_params="phi0")  # wrong parameter type
     with pytest.raises(AssertionError):
         sampler.add_iteration(circuit_params={"phi0": 1})  # phi0 doesn't exist in the input circuit

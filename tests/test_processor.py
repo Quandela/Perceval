@@ -167,16 +167,16 @@ def test_processor_samples_max_shots():
         samples = p.samples(max_samples, max_shots)
         assert len(samples['results']) == min(max_samples, max_shots)
 
-    p = Processor(Clifford2017Backend(), 4, Source(losses=.92))
+    p = Processor(Clifford2017Backend(), 4)
     p.add(0, catalog['postprocessed cnot'].build_processor())
     p.with_input(BasicState([0, 1, 0, 1]))
     max_samples = 100
     result_len = {}
-    for max_shots in [400, 2_000, 10_000]:
+    for max_shots in [100, 500, 2_000]:  # Success proba = 1/9  --> AVG 900 shots to get 100 samples
         result_len[max_shots] = len(p.samples(max_samples, max_shots)['results'])
-    assert result_len[400] < result_len[2_000]
-    assert result_len[2_000] < result_len[10_000]
-    assert result_len[10_000] == max_samples  # 10k shots is enough to get the expected sample count
+    assert result_len[100] < result_len[500]
+    assert result_len[500] < result_len[2_000]
+    assert result_len[2_000] == max_samples  # 10k shots is enough to get the expected sample count
 
 
 def test_processor_composition():
