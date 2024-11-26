@@ -198,7 +198,7 @@ def test_slos_cnot_with_mask():
     assert pytest.approx(non_post_selected_probability) == 0
 
 
-@pytest.mark.parametrize("backend_name", ["SLOSTree"])
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLOSTree"])
 def test_strong_sim_with_mask(backend_name):
     if backend_name == "MPS":
         # For MPS to be accurate enough, we need to increase the cutoff
