@@ -166,11 +166,18 @@ def pdisplay_processor(processor: AProcessor,
             # Pass pre-computed subblock info to the main rendering pass.
             renderer.subblock_info.update(pre_renderer.subblock_info)
 
+    in_ports_drawn_on_modes = []
     for port, port_range in processor._in_ports.items():
+        in_ports_drawn_on_modes += port_range
         renderer.add_in_port(port_range[0], port)
 
     if isinstance(processor._input_state, BasicState):
         renderer.display_input_photons(processor._input_state)
+        # In this case add mono-mode ports on all modes containing none
+        empty_raw_port = Port(Encoding.RAW, "")
+        for i in range(processor.circuit_size):
+            if i not in in_ports_drawn_on_modes:
+                renderer.add_in_port(i, empty_raw_port)
 
     renderer.add_detectors(processor._detectors)
     ports_drawn_on_modes = []
@@ -182,7 +189,8 @@ def pdisplay_processor(processor: AProcessor,
                 port.detector_type = det.type
         renderer.add_out_port(port_range[0], port)
     for i in range(processor.circuit_size):
-        if i not in ports_drawn_on_modes and processor._detectors[i] is not None:
+        if i not in ports_drawn_on_modes and \
+                i not in processor.detectors_injected and processor._detectors[i] is not None:
             renderer.add_out_port(i, Port(Encoding.RAW, ""))
 
     renderer.add_mode_index()
