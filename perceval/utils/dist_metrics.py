@@ -27,35 +27,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# AProbAmpliBackend name was deprecated in 0.12
-from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, AProbAmpliBackend
-from ._clifford2017 import Clifford2017Backend
-from ._naive import NaiveBackend
-from ._naive_approx import NaiveApproxBackend
-from ._slos import SLOSBackend
-from ._mps import MPSBackend
+from perceval.utils import BSDistribution
+from perceval.utils.logging import get_logger, channel
 
 
-BACKEND_LIST = {
-    "CliffordClifford2017": Clifford2017Backend,
-    "MPS": MPSBackend,
-    "Naive": NaiveBackend,
-    "NaiveApprox": NaiveApproxBackend,
-    "SLOS": SLOSBackend
-}
+def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
+    """
+    Computes the Total Variation Distance (TVD) between two input BSDistributions.
 
+    :param dist_lh: First BSDistribution
+    :param dist_rh: Second BSDistribution
+    :return : total variation distance between the two BSDistributions (value between 0 and 1)
+    """
+    only_dist_lh_states = set(dist_lh.keys()) - set(dist_rh.keys())
+    only_dist_rh_states = set(dist_rh.keys()) - set(dist_lh.keys())
 
-class BackendFactory:
-    @staticmethod
-    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name](**kwargs)
-        # Do not import from top level or you'll expose what's imported
-        from perceval.utils.logging import get_logger, channel
-        get_logger().warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
-        return BACKEND_LIST['SLOS'](**kwargs)
+    if only_dist_rh_states or only_dist_lh_states:
+        get_logger().warn("Some Basic states are missing in one or both of the two input distributions. "
+                          "Their values will be set to 0 before computing TVD.", channel.user)
 
-    @staticmethod
-    def list():
-        return list(BACKEND_LIST.keys())
+    all_states = set(dist_lh.keys()).union(dist_rh.keys())
+    tvd = 0.5 * sum(abs(dist_lh.get(basic_state, 0) - dist_rh.get(basic_state, 0)) for basic_state in all_states)
+
+    return tvd

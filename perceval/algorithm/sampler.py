@@ -198,7 +198,7 @@ class Sampler(AAlgorithm):
 
     def _samples_wrapper(self, max_samples: int = None, progress_callback: callable = None):
         if max_samples is None and self._max_shots is None:
-            raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
+            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         return self._processor.samples(max_samples, self._max_shots, progress_callback)
@@ -218,7 +218,7 @@ class Sampler(AAlgorithm):
 
     def _samples_iterate_locally(self, max_shots: int = None, max_samples: int = None, progress_callback: callable = None):
         if max_samples is None and max_shots is None:
-            raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
+            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         results = {'results_list':[]}

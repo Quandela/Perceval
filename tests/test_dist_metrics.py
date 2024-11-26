@@ -27,35 +27,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# AProbAmpliBackend name was deprecated in 0.12
-from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, AProbAmpliBackend
-from ._clifford2017 import Clifford2017Backend
-from ._naive import NaiveBackend
-from ._naive_approx import NaiveApproxBackend
-from ._slos import SLOSBackend
-from ._mps import MPSBackend
+from perceval.utils.dist_metrics import tvd_dist
+from perceval.utils import BSDistribution, BasicState
+from copy import copy
+
+bs1 = BasicState([0, 1, 0])
+bs2 = BasicState([0, 0, 0])
+bs3 = BasicState([0, 0, 1])
+bs4 = BasicState([1, 0, 0])
+
+def test_tvd_identical_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.5
+    target_bsd[bs2] = 0.5
+
+    bsd_to_comp = copy(target_bsd)
+
+    assert tvd_dist(target_bsd, bsd_to_comp) == 0
 
 
-BACKEND_LIST = {
-    "CliffordClifford2017": Clifford2017Backend,
-    "MPS": MPSBackend,
-    "Naive": NaiveBackend,
-    "NaiveApprox": NaiveApproxBackend,
-    "SLOS": SLOSBackend
-}
+def test_tvd_disjoint_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.5
+    target_bsd[bs2] = 0.5
+
+    bsd_to_comp = BSDistribution()
+    bsd_to_comp[bs3] = 1
+    bsd_to_comp[bs4] = 0
+
+    assert tvd_dist(target_bsd, bsd_to_comp) == 1.0
 
 
-class BackendFactory:
-    @staticmethod
-    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name](**kwargs)
-        # Do not import from top level or you'll expose what's imported
-        from perceval.utils.logging import get_logger, channel
-        get_logger().warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
-        return BACKEND_LIST['SLOS'](**kwargs)
+def test_tvd_one_empty_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.3
+    target_bsd[bs2] = 0.7
 
-    @staticmethod
-    def list():
-        return list(BACKEND_LIST.keys())
+    assert tvd_dist(target_bsd, BSDistribution()) == 0.5

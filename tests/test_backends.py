@@ -30,13 +30,13 @@
 import math
 import pytest
 
-from perceval.backends import Clifford2017Backend, AProbAmpliBackend, SLOSBackend, BackendFactory
+from perceval.backends import Clifford2017Backend, AStrongSimulationBackend, SLOSBackend, BackendFactory
 from perceval.components import BS, PS, PERM, Circuit, catalog
 from perceval.utils import BSCount, BasicState, Parameter, StateVector
 from _test_utils import assert_sv_close
 
 
-def _assert_cnot(backend: AProbAmpliBackend):
+def _assert_cnot(backend: AStrongSimulationBackend):
     s00 = BasicState([1, 0, 1, 0, 0, 0])
     s01 = BasicState([1, 0, 0, 1, 0, 0])
     s10 = BasicState([0, 1, 1, 0, 0, 0])
@@ -67,7 +67,7 @@ def test_clifford_bs():
     assert n_samples*0.475 < counts[BasicState("|1,0>")] < n_samples*0.525
 
 
-def check_output_distribution(backend: AProbAmpliBackend, input_state: BasicState, expected: dict):
+def check_output_distribution(backend: AStrongSimulationBackend, input_state: BasicState, expected: dict):
     backend.set_input_state(input_state)
     prob_list = []
     for (output_state, prob) in backend.prob_distribution().items():
@@ -90,13 +90,13 @@ def test_backend_factory_default():
 
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "NaiveApprox"])
 def test_backend_wiring(backend_name):
-    backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
+    backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(Circuit(1))  # Identity circuit, 2 modes
     check_output_distribution(backend, BasicState([1]), {BasicState("|1>"): 1})
 
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
 def test_backend_identity(backend_name):
-    backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
+    backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     backend.set_circuit(Circuit(2))  # Identity circuit, 2 modes
     check_output_distribution(backend, BasicState([0, 0]), {BasicState("|0,0>"): 1})
     check_output_distribution(backend, BasicState([0, 1]), {BasicState("|0,1>"): 1})
@@ -167,9 +167,13 @@ def test_slos_symbolic():
     assert str(slos.probability(BasicState([0, 1]))) == "1.0*sin(theta/2)**2"
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive"])  # MPS not working with >2-modes components
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
 def test_backend_cnot(backend_name):
-    backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
+    if backend_name == "MPS":
+        # For MPS to be accurate enough, we need to increase the cutoff
+        backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name, cutoff=4)
+    else:
+        backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     cnot = catalog["postprocessed cnot"].build_circuit()
     backend.set_circuit(cnot)
     _assert_cnot(backend)
@@ -182,7 +186,7 @@ def test_backend_cnot(backend_name):
 
 
 def test_slos_cnot_with_mask():
-    slos_cnot = SLOSBackend(n=2, mask=["    00"])  # Masking ancillary modes
+    slos_cnot = SLOSBackend(mask=["    00"])  # Masking ancillary modes
     cnot = catalog["postprocessed cnot"].build_circuit()
     slos_cnot.set_circuit(cnot)
     _assert_cnot(slos_cnot)
@@ -195,8 +199,25 @@ def test_slos_cnot_with_mask():
 
 
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
+def test_strong_sim_with_mask(backend_name):
+    if backend_name == "MPS":
+        # For MPS to be accurate enough, we need to increase the cutoff
+        backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name, cutoff=4)
+    else:
+        backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
+    backend.set_mask("****00")
+    cnot = catalog["postprocessed cnot"].build_circuit()
+    backend.set_circuit(cnot)
+    logical00 = BasicState([1, 0, 1, 0, 0, 0])
+    backend.set_input_state(logical00)
+    bsd = backend.prob_distribution()
+    assert len(bsd) == 2
+    assert bsd[logical00] == pytest.approx(1 / 9)
+    assert bsd[BasicState([1, 1, 0, 0, 0, 0])] == pytest.approx(1 / 9)
+
+@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])
 def test_probampli_backends(backend_name):
-    backend: AProbAmpliBackend = BackendFactory.get_backend(backend_name)
+    backend: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     circuit = Circuit(3) // BS.H() // (1, PS(math.pi/4)) // (1, BS.H())
     backend.set_circuit(circuit)
     check_output_distribution(

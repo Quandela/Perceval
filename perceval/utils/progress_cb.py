@@ -27,35 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# AProbAmpliBackend name was deprecated in 0.12
-from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, AProbAmpliBackend
-from ._clifford2017 import Clifford2017Backend
-from ._naive import NaiveBackend
-from ._naive_approx import NaiveApproxBackend
-from ._slos import SLOSBackend
-from ._mps import MPSBackend
+def partial_progress_callable(progress_cb: callable, min_val: float = 0., max_val: float = 1.):
+    """
+    Takes a progress cb and returns another progress_cb that calls the original one with linearly modified value,
+     so that evaluating it at 0 evaluates the original one at min_val,
+     and evaluating it at 1 evaluates the original one at max_val
+    """
 
+    def partial_progress_cb(progress: float, message: str):
+        prog = max_val * progress + min_val * (1 - progress)
+        return progress_cb(prog, message)
 
-BACKEND_LIST = {
-    "CliffordClifford2017": Clifford2017Backend,
-    "MPS": MPSBackend,
-    "Naive": NaiveBackend,
-    "NaiveApprox": NaiveApproxBackend,
-    "SLOS": SLOSBackend
-}
-
-
-class BackendFactory:
-    @staticmethod
-    def get_backend(backend_name: str = "SLOS", **kwargs) -> ABackend:
-        name = backend_name
-        if name in BACKEND_LIST:
-            return BACKEND_LIST[name](**kwargs)
-        # Do not import from top level or you'll expose what's imported
-        from perceval.utils.logging import get_logger, channel
-        get_logger().warn(f'Backend "{name}" not found. Falling back on SLOS', channel.user)
-        return BACKEND_LIST['SLOS'](**kwargs)
-
-    @staticmethod
-    def list():
-        return list(BACKEND_LIST.keys())
+    if progress_cb:
+        return partial_progress_cb
+    return None
