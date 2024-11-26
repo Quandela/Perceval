@@ -159,6 +159,10 @@ class Processor(AProcessor):
     def _generate_noisy_input(self):
         self._inputs_map = self._source.generate_distribution(self._input_state)
 
+    def generate_noisy_heralds(self) -> SVDistribution:
+        heralds_perfect_state = BasicState([v for k, v in sorted(self.heralds.items())])
+        return self._source.generate_distribution(heralds_perfect_state)
+
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         """
@@ -296,7 +300,8 @@ class Processor(AProcessor):
                 pperf -= prob
 
         postprocessed_res.normalize()
-        res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
+        perf_word = "global_perf" if "global_perf" in res else 'physical_perf'
+        res[perf_word] = res[perf_word]*pperf if perf_word in res else pperf
         res['results'] = postprocessed_res
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res

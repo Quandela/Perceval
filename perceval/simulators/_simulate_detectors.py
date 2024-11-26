@@ -61,7 +61,10 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     for s, p in dist.items():
         state_distrib = BSDistribution()
         for photons_in_mode, detector in zip(s, detectors):
-            state_distrib *= detector.detect(photons_in_mode)
+            if detector is not None:
+                state_distrib *= detector.detect(photons_in_mode)
+            else:
+                state_distrib *= BasicState([photons_in_mode])
         for s_out, p_out in state_distrib.items():
             if min_photons is not None and s_out.n < min_photons:
                 phys_perf -= p * p_out

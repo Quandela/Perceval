@@ -46,6 +46,7 @@ class Stepper(ISimulator):
     on a list of components [(r, comp)].
     """
     def __init__(self, backend: AStrongSimulationBackend = None):
+        super().__init__()
         self._out = None
         self._backend = backend
         if backend is None:
@@ -53,6 +54,10 @@ class Stepper(ISimulator):
         self._min_detected_photons_filter = 0
         self._clear_cache()
         self._C = None
+        self._postprocess = True
+
+    def do_postprocess(self, doit: bool):
+        self._postprocess = doit
 
     def _clear_cache(self):
         self._result_dict = defaultdict(lambda: {'_set': set()})
@@ -61,11 +66,6 @@ class Stepper(ISimulator):
     def set_circuit(self, circuit: ACircuit):
         self._C = circuit
         self._clear_cache()
-
-    #TODO: remove for PCVL-786
-    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        self._min_detected_photons_filter = value
 
     def set_min_detected_photons_filter(self, value: int):
         self._min_detected_photons_filter = value
@@ -106,13 +106,14 @@ class Stepper(ISimulator):
                 nsv += state*sv_pa
         return nsv
 
-    def probs(self, input_state) -> BSDistribution:
+    def probs(self, input_state, normalize: bool = True) -> BSDistribution:
+        # TODO: add masking and possibility not to normalize here
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None, normalize: bool = True) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
-            res = self.probs(sv)
+            res = self.probs(sv, normalize)
             for bs, p_res in res.items():
                 res_bsd[bs] += p_res*p_sv
 
@@ -121,7 +122,7 @@ class Stepper(ISimulator):
 
         return {"results": res_bsd}
 
-    def evolve(self, input_state) -> StateVector:
+    def evolve(self, input_state, normalize: bool = True) -> StateVector:
         self.compile(input_state)
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out

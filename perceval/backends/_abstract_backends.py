@@ -156,11 +156,12 @@ class AStrongSimulationBackend(ABackend):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
-    def evolve(self) -> StateVector:
+    def evolve(self, normalize: bool = True) -> StateVector:
         res = StateVector()
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
-        res.normalize()
+        if normalize:
+            res.normalize()
         return res
 
 

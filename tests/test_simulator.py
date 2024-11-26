@@ -57,7 +57,7 @@ class MockBackend(AStrongSimulationBackend):
         output_state[(n-1) % m] = n
         return BSDistribution(BasicState(output_state))
 
-    def evolve(self) -> StateVector:
+    def evolve(self, normalize: bool = True) -> StateVector:
         n = self._input_state.n
         m = self._input_state.m
         output_state = [0] * m
