@@ -393,3 +393,7 @@ def test_svg_dump_feed_forward_symb(tmp_path, save_figs):
 def test_svg_dump_feed_forward_phys(tmp_path, save_figs):
     p = create_processor_with_feed_forward()
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
+
+def test_svg_dump_feed_forward_phys_norec(tmp_path, save_figs):
+    p = create_processor_with_feed_forward()
+    _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)
