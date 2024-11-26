@@ -166,7 +166,7 @@ class SymbSkin(ASkin):
 
         # The actual component
         canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="honeydew")
-        canvas.add_text((w * 25, 30), size=10, ta="middle", text=comp.name)
+        canvas.add_text((w * 25, 30 + 50*(comp.m-1)/2), size=10, ta="middle", text=comp.name)
 
     @dispatch(IDetector)
     def get_shape(self, detector):

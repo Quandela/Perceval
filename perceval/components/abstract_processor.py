@@ -77,6 +77,7 @@ class AProcessor(ABC):
         self._anon_herald_num: int = 0  # This is not a herald count!
         self._components: list[tuple[tuple, AComponent]] = []  # Any type of components, not only unitary ones
         self._detectors: list[IDetector] = []
+        self.detectors_injected: list[int] = []  # List of modes where detectors are already in the circuit
         self._mode_type: list[ModeType] = []
 
         self._n_moi: int = 0  # Number of modes of interest (moi)
@@ -279,13 +280,15 @@ class AProcessor(ABC):
             raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
 
         self._components.append((tuple(range(self.m)), Barrier(self.m, visible=False)))
-        if modes[0] > 0:  # Barrier above detectors
-            ports = tuple(range(0, modes[0]))
+        modes_add_detectors = [m for m in modes if m not in self.detectors_injected]
+        if modes_add_detectors[0] > 0:  # Barrier above detectors
+            ports = tuple(range(0, modes_add_detectors[0]))
             self._components.append((ports, Barrier(len(ports), visible=True)))
-        for m in modes:
+        for m in modes_add_detectors:
+            self.detectors_injected.append(m)
             self._components.append(((m,), self._detectors[m]))
-        if modes[-1] < self.m - 1:  # Barrier below detectors
-            ports = tuple(range(modes[-1] + 1, self.m))
+        if modes_add_detectors[-1] < self.m - 1:  # Barrier below detectors
+            ports = tuple(range(modes_add_detectors[-1] + 1, self.m))
             self._components.append((ports, Barrier(len(ports), visible=True)))
         self._components.append((modes, component))
         self._has_feedforward = True
