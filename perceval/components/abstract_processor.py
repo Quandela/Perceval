@@ -257,6 +257,8 @@ class AProcessor(ABC):
             self._add_detector(mode_mapping, component)
         elif isinstance(component, AFFConfigurator):
             self._add_ffconfig(mode_mapping, component)
+        elif isinstance(component, Barrier):
+            self._components.append((mode_mapping, component))
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component, keep_port)
         else:
@@ -292,8 +294,12 @@ class AProcessor(ABC):
             self._components.append((ports, Barrier(len(ports), visible=True)))
         self._components.append((modes, component))
         self._has_feedforward = True
+        self._is_unitary = False
 
     def _add_detector(self, mode: int, detector: IDetector):
+        if isinstance(mode, (tuple, list)) and len(mode) == 1:
+            mode = mode[0]
+
         if not isinstance(mode, int):
             raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
 

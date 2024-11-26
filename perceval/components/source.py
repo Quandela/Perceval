@@ -203,7 +203,7 @@ class Source:
         """
         dist = SVDistribution()
         prob_threshold = max(prob_threshold, global_params['min_p'])
-        get_logger().info(f"Apply 'Source' noise model to {expected_input}", channel.general)
+        get_logger().debug(f"Apply 'Source' noise model to {expected_input}", channel.general)
         for photon_count in expected_input:
             dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
         dist.normalize()

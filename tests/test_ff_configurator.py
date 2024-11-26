@@ -32,10 +32,10 @@ import pytest
 from perceval import Circuit
 from perceval.components import BS
 from perceval.utils.statevector import BasicState
-from perceval.components.feed_forward_configurator import CircuitMapFFConfig
+from perceval.components.feed_forward_configurator import FFMapper
 
 
-@pytest.mark.parametrize("configurator_class", [CircuitMapFFConfig])
+@pytest.mark.parametrize("configurator_class", [FFMapper])
 def test_generic_configurator(configurator_class):
     default_circuit = BS()
     m = 3
@@ -62,7 +62,7 @@ def test_circuit_map_ff_config():
 
     tested_circuit = BS()
 
-    config = CircuitMapFFConfig(m, offset, default_circuit)
+    config = FFMapper(m, offset, default_circuit)
     config.add_configuration([1, 1, 0], tested_circuit)
 
     assert config.configure(BasicState(m * [0])) == default_circuit, "Incorrect output default circuit"
