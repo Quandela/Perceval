@@ -130,7 +130,7 @@ class ProbabilityDistribution(defaultdict, ABC):
 
 class SVDistribution(ProbabilityDistribution):
     r"""
-    Mixed state represented os a time-independent probabilistic distribution of StateVectors
+    Mixed state represented as a time-independent probabilistic distribution of StateVectors
     """
     def __init__(self, sv: BasicState | StateVector | dict | None = None):
         super().__init__()
