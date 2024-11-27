@@ -60,8 +60,8 @@ class ShapeFactory:
                 "z"]
 
     @staticmethod
-    def half_circle_port_out(radius: float):
-        return ["M", 8, 35,
+    def half_circle_port_out(radius: float, x_offset: float = 8):
+        return ["M", x_offset, 35,
                 "h", -8,
                 "v", -2 * radius,
                 "h", 8,
@@ -70,19 +70,19 @@ class ShapeFactory:
                 "z"]
 
     @staticmethod
-    def triangle_port_out(size: float):
-        return ["M", 0, 25 + size,
-                "L", 18, 25,
-                "L", 0, 25 - size,
+    def triangle_port_out(size: float, x_offset: float = 0):
+        return ["M", x_offset, 25 + size,
+                "L", 18 + x_offset, 25,
+                "L", x_offset, 25 - size,
                 "z"]
 
     @staticmethod
-    def polygon_port_out(size: float):
-        return ["M", 0, 25 + size,
-                "L", 10, 25 + size*.85,
-                "L", 18, 25,
-                "L", 10, 25-size*.85,
-                "L", 0, 25-size,
+    def polygon_port_out(size: float, x_offset: float = 0):
+        return ["M", x_offset, 25 + size,
+                "L", 10 + x_offset, 25 + size*.85,
+                "L", 18 + x_offset, 25,
+                "L", 10 + x_offset, 25-size*.85,
+                "L", x_offset, 25-size,
                 "z"]
 
     @staticmethod

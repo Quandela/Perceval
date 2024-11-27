@@ -47,7 +47,8 @@ import sympy as sp
 from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
-from perceval.components import ACircuit, Circuit, AProcessor, Port, Herald, non_unitary_components as nl
+from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator,
+                                 non_unitary_components as nl)
 from .circuit import DisplayConfig, create_renderer, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
@@ -153,16 +154,31 @@ def pdisplay_processor(processor: AProcessor,
                 precision=precision,
                 nsimplify=nsimplify,
                 shift=shift)
+            if isinstance(c, AFFConfigurator):
+                controlled_circuit = c.circuit_template()
+                if isinstance(controlled_circuit, Circuit):
+                    controlled_circuit = Circuit(controlled_circuit.m).add(0, controlled_circuit)
+                rendering_pass.render_circuit(
+                    controlled_circuit, recursive=recursive, shift=c.config_modes(r)[0]
+                )
+
         rendering_pass.close()
         if pre_renderer:
             # Pass pre-computed subblock info to the main rendering pass.
             renderer.subblock_info.update(pre_renderer.subblock_info)
 
+    in_ports_drawn_on_modes = []
     for port, port_range in processor._in_ports.items():
+        in_ports_drawn_on_modes += port_range
         renderer.add_in_port(port_range[0], port)
 
     if isinstance(processor._input_state, BasicState):
         renderer.display_input_photons(processor._input_state)
+        # In this case add mono-mode ports on all modes containing none
+        empty_raw_port = Port(Encoding.RAW, "")
+        for i in range(processor.circuit_size):
+            if i not in in_ports_drawn_on_modes:
+                renderer.add_in_port(i, empty_raw_port)
 
     renderer.add_detectors(processor._detectors)
     ports_drawn_on_modes = []
@@ -174,7 +190,8 @@ def pdisplay_processor(processor: AProcessor,
                 port.detector_type = det.type
         renderer.add_out_port(port_range[0], port)
     for i in range(processor.circuit_size):
-        if i not in ports_drawn_on_modes and processor._detectors[i] is not None:
+        if i not in ports_drawn_on_modes and \
+                i not in processor.detectors_injected and processor._detectors[i] is not None:
             renderer.add_out_port(i, Port(Encoding.RAW, ""))
 
     renderer.add_mode_index()

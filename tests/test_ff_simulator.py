@@ -29,16 +29,16 @@
 
 import pytest
 
-from perceval import SLOSBackend, Circuit, PERM, BasicState, BS, BSDistribution, Processor, Detector, NoiseModel, \
-    PostSelect, catalog
+from perceval import SLOSBackend, BasicState, BSDistribution, NoiseModel, PostSelect
 from perceval.algorithm import Sampler
-from perceval.components.feed_forward_configurator import CircuitMapFFConfig
-from perceval.simulators.feed_forward_simulator import FFSimulator
+from perceval.components import BS, Circuit, FFCircuitProvider, Detector, PERM, Processor, catalog
+from perceval.simulators import FFSimulator
 
 backend = SLOSBackend()
 sim = FFSimulator(backend)
 
-cnot = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+cnot = FFCircuitProvider(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+detector = Detector.pnr()
 
 
 def test_basic_circuit():
@@ -55,8 +55,12 @@ def test_cascade():
     n = 3
 
     circuit_list = [((0, 1), BS())]
+
     for i in range(n):
-        circuit_list += [((2 * i, 2 * i + 1), cnot)]
+        circuit_list += [
+            ((2 * i,), detector),
+            ((2 * i + 1,), detector),
+            ((2 * i, 2 * i + 1), cnot)]
 
     sim.set_circuit(circuit_list)
     input_state = BasicState((n + 1) * [1, 0])
@@ -74,6 +78,8 @@ def test_with_processor():
     proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([0, 1, 1, 0]))
 
+    proc.add(0, detector)
+    proc.add(1, detector)
     proc.add(0, cnot)
 
     sampler = Sampler(proc)
@@ -86,6 +92,8 @@ def test_with_herald():
 
     proc.add(0, BS())
     proc.add(1, BS())
+    proc.add(1, detector)
+    proc.add(2, detector)
     proc.add(1, cnot)
 
     proc.add_herald(0, 0)
@@ -108,6 +116,8 @@ def test_with_postselect():
 
     proc.add(0, BS())
     proc.add(1, BS())
+    proc.add(1, detector)
+    proc.add(2, detector)
     proc.add(1, cnot)
 
     proc.with_input(BasicState([0, 1, 0, 1, 0]))
@@ -124,11 +134,13 @@ def test_with_postselect():
 
 
 def test_min_photons_filter():
-    config = CircuitMapFFConfig(2, 0, Circuit(2)).add_configuration([0, 1], BS())
+    config = FFCircuitProvider(2, 0, Circuit(2)).add_configuration([0, 1], BS())
 
     proc = Processor(backend, 4)
 
     proc.add(0, BS())
+    proc.add(0, detector)
+    proc.add(1, detector)
     proc.add(0, config)
 
     proc.add(3, Detector.threshold())
@@ -153,6 +165,8 @@ def test_physical_perf():
     proc = Processor("SLOS", 4, noise=NoiseModel(.5))
 
     proc.add(0, BS())
+    proc.add(0, detector)
+    proc.add(1, detector)
     proc.add(0, cnot)
 
     proc.min_detected_photons_filter(2)
@@ -168,15 +182,16 @@ def test_physical_perf():
     assert res["global_perf"] == pytest.approx(0.25)
 
     # Here the perf is induced by the circuit and the detectors
-    config = CircuitMapFFConfig(1, 0, BS()).add_configuration([1], Circuit(2))
+    config = FFCircuitProvider(1, 0, BS()).add_configuration([1], Circuit(2))
 
     proc = Processor("SLOS", 3)
 
     proc.add(0, BS())
+    proc.add(0, Detector.threshold())
     proc.add(0, config)
 
-    for i in range(3):
-        proc.add(i, Detector.threshold())
+    proc.add(1, Detector.threshold())
+    proc.add(2, Detector.threshold())
 
     proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([1, 0, 1]))
@@ -193,10 +208,11 @@ def test_physical_perf():
 def test_with_proc():
     proc = Processor("SLOS", 6)
 
-    cfg = CircuitMapFFConfig(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
+    cfg = FFCircuitProvider(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
     cnot_perf = 1/9
-
     proc.add(0, BS())
+    proc.add(0, detector)
+    proc.add(1, detector)
     proc.add(0, cfg)
 
     proc.min_detected_photons_filter(2)
@@ -214,12 +230,14 @@ def test_with_proc():
     # Same with heralded processor as default circuit
     proc = Processor("SLOS", 6)
 
-    cfg = CircuitMapFFConfig(2, 0, catalog['postprocessed cnot'].build_processor())
+    cfg = FFCircuitProvider(2, 0, catalog['postprocessed cnot'].build_processor())
     cfg.add_configuration((1, 0), Circuit(4))
 
     cnot_perf = 1 / 9
 
     proc.add(0, BS())
+    proc.add(0, detector)
+    proc.add(1, detector)
     proc.add(0, cfg)
 
     proc.min_detected_photons_filter(2)
@@ -238,11 +256,13 @@ def test_with_proc():
 def test_non_adjacent_config():
     proc = Processor("SLOS", 6)
 
-    cnot = CircuitMapFFConfig(2, 2, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+    cnot = FFCircuitProvider(2, 2, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 
     proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([0, 1, 0, 0, 1, 0]))
 
+    proc.add(0, detector)
+    proc.add(1, detector)
     proc.add(0, cnot)
 
     sampler = Sampler(proc)
@@ -251,10 +271,12 @@ def test_non_adjacent_config():
     # Negative offset
     proc = Processor("SLOS", 4)
 
-    cnot = CircuitMapFFConfig(2, -1, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+    cnot = FFCircuitProvider(2, -1, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 
     proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([1, 0, 0, 1]))
+    proc.add(2, detector)
+    proc.add(3, detector)
     proc.add(2, cnot)
 
     sampler = Sampler(proc)

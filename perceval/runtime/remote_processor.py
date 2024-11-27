@@ -30,7 +30,7 @@ import uuid
 from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source, AComponent
+from perceval.components import ACircuit, Processor, Source, AComponent, AFFConfigurator
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
@@ -259,9 +259,14 @@ class RemoteProcessor(AProcessor):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
         super()._add_component(mode_mapping, component, keep_port)
 
+    def _add_ffconfig(self, modes, component: AFFConfigurator):
+        raise NotImplementedError("Feed-forward was not implemented for RemoteProcessors")
+
     def _compose_processor(self, connector, processor: AProcessor, keep_port: bool):
         if not processor._is_unitary:
             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        if processor._has_feedforward:
+            raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
         super()._compose_processor(connector, processor, keep_port)
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:

@@ -28,9 +28,7 @@
 # SOFTWARE.
 
 import pytest
-import json
 import numpy as np
-from pathlib import Path
 
 try:
     import qiskit
@@ -47,22 +45,23 @@ from perceval.components.port import get_basic_state_from_encoding
 from perceval.utils import BSDistribution, Encoding, generate_all_logical_states
 
 
-EXPECTED_QISK_SIM_PROBS_DATA = {"0000": 0.18158257565856697,
- "1000": 0.15748294604956967,
- "0100": 0.02913976729404776,
- "1100": 0.025272338956653793,
- "0010": 0.07928849942312567,
- "1010": 0.06876533407303459,
- "0110": 0.05447209941994839,
- "1110": 0.04724256533451039,
- "0001": 0.10070839860443088,
- "1001": 0.08734238539485045,
- "0101": 0.01616134857238361,
- "1101": 0.014016415264968182,
- "0011": 0.04397458167828672,
- "1011": 0.03813827757909818,
- "0111": 0.030211036941779033,
- "1111": 0.026201429754745716
+EXPECTED_QISK_SIM_PROBS_DATA = {
+    "0000": 0.18158257565856697,
+    "1000": 0.15748294604956967,
+    "0100": 0.02913976729404776,
+    "1100": 0.025272338956653793,
+    "0010": 0.07928849942312567,
+    "1010": 0.06876533407303459,
+    "0110": 0.05447209941994839,
+    "1110": 0.04724256533451039,
+    "0001": 0.10070839860443088,
+    "1001": 0.08734238539485045,
+    "0101": 0.01616134857238361,
+    "1101": 0.014016415264968182,
+    "0011": 0.04397458167828672,
+    "1011": 0.03813827757909818,
+    "0111": 0.030211036941779033,
+    "1111": 0.026201429754745716
 }
 
 
@@ -98,10 +97,10 @@ def test_basic_circuit_s():
     qc.s(0)
     pc = convertor.convert(qc)
     assert pc.source_distribution[StateVector('|1,0>')] == 1
-    assert len(pc._components) == 1
-    assert isinstance(pc._components[0][1], Circuit) and len(pc._components[0][1]._components) == 1
-    r0 = pc._components[0][1]._components[0][0]
-    c0 = pc._components[0][1]._components[0][1]
+    assert len(pc.components) == 1
+    assert isinstance(pc.components[0][1], Circuit) and len(pc.components[0][1]._components) == 1
+    r0 = pc.components[0][1]._components[0][0]
+    c0 = pc.components[0][1]._components[0][1]
     assert r0 == (1,)
     assert isinstance(c0, comp.PS)
 
@@ -112,9 +111,9 @@ def test_basic_circuit_swap_direct():
     qc.swap(0, 1)
     pc = convertor.convert(qc)
     assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
-    assert len(pc._components) == 1
-    r0, c0 = pc._components[0]
-    assert r0 == [0, 1, 2, 3]
+    assert len(pc.components) == 1
+    r0, c0 = pc.components[0]
+    assert r0 == (0, 1, 2, 3)
     assert isinstance(c0, comp.PERM)
     assert c0.perm_vector == [2, 3, 0, 1]
 
@@ -125,9 +124,9 @@ def test_basic_circuit_swap_indirect():
     qc.swap(1, 0)
     pc = convertor.convert(qc)
     assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
-    assert len(pc._components) == 1
-    r0, c0 = pc._components[0]
-    assert r0 == [0, 1, 2, 3]
+    assert len(pc.components) == 1
+    r0, c0 = pc.components[0]
+    assert r0 == (0, 1, 2, 3)
     assert isinstance(c0, comp.PERM)
     assert c0.perm_vector == [2, 3, 0, 1]
 
@@ -137,9 +136,9 @@ def test_basic_circuit_swap_with_gap():
     qc = qiskit.QuantumCircuit(5)
     qc.swap(1, 3)
     pc = convertor.convert(qc)
-    assert len(pc._components) == 1
-    r0, c0 = pc._components[0]
-    assert r0 == [2, 3, 4, 5, 6, 7]
+    assert len(pc.components) == 1
+    r0, c0 = pc.components[0]
+    assert r0 == (2, 3, 4, 5, 6, 7)
     assert isinstance(c0, comp.PERM)
     assert c0.perm_vector == [4, 5, 2, 3, 0, 1]
 
@@ -153,7 +152,7 @@ def test_cnot_1_heralded():
     assert pc.circuit_size == 6
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
-    assert len(pc._components) == 2  # should be BS.H//CNOT
+    assert len(pc.components) == 2  # should be BS.H//CNOT
 
 
 def test_cnot_1_inverse_heralded():
@@ -165,14 +164,14 @@ def test_cnot_1_inverse_heralded():
     assert pc.circuit_size == 6
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
-    assert len(pc._components) == 4
+    assert len(pc.components) == 4
     # should be BS//PERM//CNOT//PERM
-    perm1 = pc._components[1][1]
+    perm1 = pc.components[1][1]
     assert isinstance(perm1, comp.PERM)
-    perm2 = pc._components[3][1]
+    perm2 = pc.components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
-    assert perm1.perm_vector == [2, 3, 0 ,1]
+    assert perm1.perm_vector == [2, 3, 0, 1]
     assert perm2.perm_vector == [2, 3, 0, 1]
 
 
@@ -185,11 +184,11 @@ def test_cnot_2_heralded():
     assert pc.circuit_size == 8
     assert pc.m == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,1,0,1,1>')] == 1
-    assert len(pc._components) == 4
+    assert len(pc.components) == 4
     # should be BS//PERM//CNOT//PERM
-    perm1 = pc._components[1][1]
+    perm1 = pc.components[1][1]
     assert isinstance(perm1, comp.PERM)
-    perm2 = pc._components[3][1]
+    perm2 = pc.components[3][1]
     assert isinstance(perm2, comp.PERM)
     # check that ports are correctly connected
     assert perm1.perm_vector == [4, 5, 0, 1, 2, 3]
@@ -204,7 +203,7 @@ def test_cnot_1_postprocessed():
     pc = convertor.convert(qc, use_postselection=True)
     assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
-    assert len(pc._components) == 2  # No permutation needed, only H and CNOT components exist in the Processor
+    assert len(pc.components) == 2  # No permutation needed, only H and CNOT components exist in the Processor
     # should be BS//CNOT
 
 
@@ -219,7 +218,7 @@ def test_cnot_postprocess():
 
     qc.h(0)  # We should be able to continue the circuit with 1-qubit gates even with a post-selected CNOT
     pc = convertor.convert(qc, use_postselection=True)
-    assert isinstance(pc._components[-1][1]._components[0][1], comp.BS)
+    assert isinstance(pc.components[-1][1]._components[0][1], comp.BS)
 
 
 def test_cnot_herald():
@@ -280,6 +279,7 @@ def test_cnot_ppcnot_vs_hcnot():
 
     assert cnot_order_converted == cnot_order_expct
     assert num_ppcnot_pc == num_ppcnot_expt  # compare number of Ralphs
+
 
 def test_cnot_ppcnot_vs_hcnot_sim():
     qisk_circ = qiskit_circ_multiple_cnots()

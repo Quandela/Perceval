@@ -127,8 +127,10 @@ class TextRenderer(ICircuitRenderer):
         # put variables on the right number of lines
         if isinstance(circuit, PERM):
             content = self._PERM_DESC
-        else:
+        elif isinstance(circuit, ACircuit):
             content = format_parameters(circuit.get_variables(), 1e-3, False)
+        else:
+            content = ""
         content = circuit.name + (content and "\n" + content or "")
         lcontents = content.split("\n")
         if start == end:

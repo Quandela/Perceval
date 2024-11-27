@@ -34,3 +34,4 @@ from .simulator import Simulator
 from .simulator_factory import SimulatorFactory
 from .stepper import Stepper
 from .noisy_sampling_simulator import NoisySamplingSimulator
+from .feed_forward_simulator import FFSimulator

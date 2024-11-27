@@ -166,7 +166,7 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def add_in_port(self, m: int, content: str) -> None:
+    def add_in_port(self, m: int, port: APort) -> None:
         """
         Render a port on the left side (inputs) of a previously rendered circuit, located on mode 'm'
         """
