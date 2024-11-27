@@ -30,14 +30,14 @@ import pytest
 import numpy as np
 from perceval.components import Circuit, BS, PS
 from perceval.utils import BasicState, P
-from perceval.components.feed_forward_configurator import FFMapper, FFConfigurator
+from perceval.components.feed_forward_configurator import FFCircuitProvider, FFConfigurator
 
 
 def test_generic():
     default_circuit = BS()
     m = 3
     offset = 1
-    config = FFMapper(m, offset, default_circuit)
+    config = FFCircuitProvider(m, offset, default_circuit)
 
     assert config.default_circuit == default_circuit, "Incorrect default circuit"
 
@@ -52,14 +52,14 @@ def test_generic():
     assert config.config_modes(place) == (0, 1), "Incorrect place of configured circuit"
 
 
-def test_ffmapper():
+def test_ff_circuit_provider():
     default_circuit = Circuit(2)
     m = 3
     offset = 1
 
     tested_circuit = BS()
 
-    config = FFMapper(m, offset, default_circuit)
+    config = FFCircuitProvider(m, offset, default_circuit)
     config.add_configuration([1, 1, 0], tested_circuit)
 
     assert config.configure(BasicState(m * [0])) == default_circuit, "Incorrect output default circuit"

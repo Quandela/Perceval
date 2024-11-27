@@ -31,13 +31,13 @@ import pytest
 
 from perceval import SLOSBackend, BasicState, BSDistribution, NoiseModel, PostSelect
 from perceval.algorithm import Sampler
-from perceval.components import BS, Circuit, FFMapper, Detector, PERM, Processor, catalog
+from perceval.components import BS, Circuit, FFCircuitProvider, Detector, PERM, Processor, catalog
 from perceval.simulators import FFSimulator
 
 backend = SLOSBackend()
 sim = FFSimulator(backend)
 
-cnot = FFMapper(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+cnot = FFCircuitProvider(2, 0, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 detector = Detector.pnr()
 
 
@@ -134,7 +134,7 @@ def test_with_postselect():
 
 
 def test_min_photons_filter():
-    config = FFMapper(2, 0, Circuit(2)).add_configuration([0, 1], BS())
+    config = FFCircuitProvider(2, 0, Circuit(2)).add_configuration([0, 1], BS())
 
     proc = Processor(backend, 4)
 
@@ -182,7 +182,7 @@ def test_physical_perf():
     assert res["global_perf"] == pytest.approx(0.25)
 
     # Here the perf is induced by the circuit and the detectors
-    config = FFMapper(1, 0, BS()).add_configuration([1], Circuit(2))
+    config = FFCircuitProvider(1, 0, BS()).add_configuration([1], Circuit(2))
 
     proc = Processor("SLOS", 3)
 
@@ -208,7 +208,7 @@ def test_physical_perf():
 def test_with_proc():
     proc = Processor("SLOS", 6)
 
-    cfg = FFMapper(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
+    cfg = FFCircuitProvider(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
     cnot_perf = 1/9
     proc.add(0, BS())
     proc.add(0, detector)
@@ -230,7 +230,7 @@ def test_with_proc():
     # Same with heralded processor as default circuit
     proc = Processor("SLOS", 6)
 
-    cfg = FFMapper(2, 0, catalog['postprocessed cnot'].build_processor())
+    cfg = FFCircuitProvider(2, 0, catalog['postprocessed cnot'].build_processor())
     cfg.add_configuration((1, 0), Circuit(4))
 
     cnot_perf = 1 / 9
@@ -256,7 +256,7 @@ def test_with_proc():
 def test_non_adjacent_config():
     proc = Processor("SLOS", 6)
 
-    cnot = FFMapper(2, 2, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+    cnot = FFCircuitProvider(2, 2, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 
     proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([0, 1, 0, 0, 1, 0]))
@@ -271,7 +271,7 @@ def test_non_adjacent_config():
     # Negative offset
     proc = Processor("SLOS", 4)
 
-    cnot = FFMapper(2, -1, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
+    cnot = FFCircuitProvider(2, -1, Circuit(2)).add_configuration([0, 1], PERM([1, 0]))
 
     proc.min_detected_photons_filter(2)
     proc.with_input(BasicState([1, 0, 0, 1]))

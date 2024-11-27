@@ -103,9 +103,9 @@ class AFFConfigurator(AComponent, ABC):
         self._offset = offset
 
 
-class FFMapper(AFFConfigurator):
+class FFCircuitProvider(AFFConfigurator):
     """
-    For any measurement, FFMapper will return a circuit or a processor, picked from known mapping of configurations.
+    For any measurement, FFCircuitProvider will return a circuit or a processor, picked from known mapping of configurations.
     Each configuration links a measurement to a circuit or processor.
     If a measurement is received and was not set in the mapping, a mandatory default circuit or processor is returned.
     """
@@ -128,7 +128,7 @@ class FFMapper(AFFConfigurator):
         for state, circ in circuit_map.items():
             self.add_configuration(state, circ)
 
-    def add_configuration(self, state, circuit: ACircuit) -> FFMapper:
+    def add_configuration(self, state, circuit: ACircuit) -> FFCircuitProvider:
         state = BasicState(state)
         assert state.m == self.m, f"Incorrect number of modes for state {state} (expected {self.m})"
         if not self._blocked_circuit_size:

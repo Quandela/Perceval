@@ -30,7 +30,7 @@
 import math
 import pytest
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
-                                 FFConfigurator, FFMapper, Unitary, Barrier)
+                                 FFConfigurator, FFCircuitProvider, Unitary, Barrier)
 from perceval.utils import Matrix, P
 from perceval.runtime import RemoteProcessor
 from _mock_rpc_handler import get_rpc_handler
@@ -120,7 +120,7 @@ def test_processor_building_feed_forward():
     u = Unitary(Matrix.random_unitary(m), "U0")
     p = Processor("SLOS", u)
 
-    ffm = FFMapper(1, 0, Unitary(Matrix.random_unitary(1)), name="D2")
+    ffm = FFCircuitProvider(1, 0, Unitary(Matrix.random_unitary(1)), name="D2")
 
     for i in range(m):
         with pytest.raises(UnavailableModeException):

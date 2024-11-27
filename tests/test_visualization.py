@@ -34,7 +34,7 @@ import sympy as sp
 
 from perceval.utils import Matrix, BasicState, Parameter, InterferometerShape
 from perceval.components import (BS, PS, PBS, WP, HWP, PERM, QWP, PR, Unitary, TD, Detector, catalog, FFConfigurator,
-                                 FFMapper, Circuit, GenericInterferometer, Processor)
+                                 FFCircuitProvider, Circuit, GenericInterferometer, Processor)
 from perceval.rendering.circuit import SymbSkin
 
 from _test_utils import _save_or_check, save_figs
@@ -378,7 +378,7 @@ def create_processor_with_feed_forward():
     p.add(0, Detector.pnr())
     p.add(1, Detector.pnr())
 
-    ffc2 = FFMapper(2, 1, Unitary(Matrix.random_unitary(1)), name="D2")
+    ffc2 = FFCircuitProvider(2, 1, Unitary(Matrix.random_unitary(1)), name="D2")
     p.add(0, ffc2)
 
     p.with_input(BasicState([1, 0, 1, 0]))
