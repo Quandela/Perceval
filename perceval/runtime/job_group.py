@@ -174,12 +174,8 @@ class JobGroup:
         job_info['id'] = job_to_add.id
 
         if job_to_add.id is None:
-            # set status to None for Jobs not sent to cloud
-            job_info['status'] = None
-            # Save information inside body (circuit, payload, etc.) to send job later
-            job_info['body'] = job_to_add._request_data
-            max_samples = kwargs.get('max_samples', DEFAULT_MAX_SAMPLES)
-            job_info['args'] = {"max_samples": max_samples}
+            job_info['status'] = None  # set status to None for Jobs not sent to cloud
+            job_info['body'] = job_to_add._create_payload_data(**kwargs)  # Save job payload to launch later on cloud
         else:
             job_info['status'] = job_to_add.status()
 
@@ -189,8 +185,7 @@ class JobGroup:
                                 'url': job_to_add._rpc_handler.url}
 
         self._group_info['job_group_data'].append(job_info)  # save changes in object
-        # include the added job's info to dataset in the group
-        self._modify_job_dataset(job_info)
+        self._modify_job_dataset(job_info)  # include the added job's info to dataset in the group
 
     def _modify_job_dataset(self, updated_info: dict):
         """
@@ -214,11 +209,7 @@ class JobGroup:
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] not in ['SUCCESS', None]:
                 rj = self._recreate_remote_job_from_stored_data(job_entry)
-                rj_status = rj.status()
-                if rj_status == 'SUCCESS':
-                    # remove metadata information if job ran successfully
-                    del job_entry['metadata']
-                job_entry['status'] = rj_status  # update current status
+                job_entry['status'] = rj.status()  # update with current status
 
             status_jobs_in_group.append(job_entry['status'])
 
@@ -376,3 +367,54 @@ class JobGroup:
         # delete files
         for f in files_to_del:
             JobGroup.delete_job_group(f)
+
+    def _list_jobs_status_type(self, statuses: list[str] = None) -> list[RemoteJob]:
+        remote_jobs = []
+        if statuses is None:
+            # handles unsent jobs with given statuses
+            for job_entry in self._group_info['job_group_data']:
+                if job_entry['status'] is None:
+                    remote_jobs.append(self._recreate_unsent_remote_job(job_entry))
+            return remote_jobs
+        else:
+            # handles jobs sent to cloud
+            for job_entry in self._group_info['job_group_data']:
+                if job_entry['status'] in statuses:
+                    remote_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
+            return remote_jobs
+
+    def list_successful_jobs(self) -> list[RemoteJob]:
+        """
+        Returns a list of all RemoteJobs in the group that have run successfully on the cloud.
+        """
+        return self._list_jobs_status_type(['SUCCESS'])
+
+    def list_active_jobs(self) -> list[RemoteJob]:
+        """
+        Returns a list of all RemoteJobs in the group that are currently active on the cloud - those
+        with RUNNINGSTATUS - RUNNING or WAITING.
+        """
+        return self._list_jobs_status_type(['RUNNING', 'WAITING'])
+
+    def list_failed_jobs(self) -> list[RemoteJob]:
+        """
+        Returns a list of all the failed RemoteJobs in the group - includes those with
+         RUNNINGSTATUS -> ERROR or CANCELED.
+        """
+        return self._list_jobs_status_type(['ERROR', 'CANCELED'])
+
+    @staticmethod
+    def _recreate_unsent_remote_job(job_entry):
+        platform_metadata = job_entry['metadata']
+        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
+
+        rpc_handler = RPCHandler(platform_metadata['platform'],
+                                 platform_metadata['url'], user_token)
+        return RemoteJob(request_data=job_entry['body'], rpc_handler=rpc_handler,
+                         job_name=job_entry['body']['job_name'])
+
+    def list_unsent_jobs(self) -> list[RemoteJob]:
+        """
+        Returns a list of all the RemoteJobs in the group that were not sent to the cloud.
+        """
+        return self._list_jobs_status_type()

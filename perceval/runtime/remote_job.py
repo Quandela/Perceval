@@ -161,21 +161,24 @@ class RemoteJob(Job):
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
+    def _create_payload_data(self, *args, **kwargs):
+        self._handle_params(args, kwargs)
+        if self._delta_parameters['mapping']:
+            if self._job_context is None:
+                self._job_context = {}
+            self._job_context["mapping_delta_parameters"] = self._delta_parameters["mapping"]
+
+        kwargs = self._delta_parameters['command']
+        kwargs['job_context'] = self._job_context
+        self._request_data['job_name'] = self._name
+        self._request_data['payload'].update(kwargs)
+        self._check_max_shots_samples_validity()
+        return self._request_data
+
     def execute_async(self, *args, **kwargs):
         assert self._job_status.waiting, "job has already been executed"
         try:
-            self._handle_params(args, kwargs)
-            if self._delta_parameters['mapping']:
-                if self._job_context is None:
-                    self._job_context = {}
-                self._job_context["mapping_delta_parameters"] = self._delta_parameters["mapping"]
-
-            kwargs = self._delta_parameters['command']
-            kwargs['job_context'] = self._job_context
-            self._request_data['job_name'] = self._name
-            self._request_data['payload'].update(kwargs)
-            self._check_max_shots_samples_validity()
-            self._id = self._rpc_handler.create_job(serialize(self._request_data))
+            self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(*args, **kwargs)))
             get_logger().info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
 
         except Exception as e:
@@ -232,3 +235,10 @@ class RemoteJob(Job):
                 self._results["results"] = result_mapping_function(
                     self._results["results"], **self._delta_parameters)
         return self._results
+
+    def __str__(self):
+        if self._id is None:
+            # handles unsent jobs of a JobGroup
+            return f"RemoteJob with name:{self.name}, id:{self._id}, status:None"
+        else:
+            return f"RemoteJob with name:{self.name}, id:{self._id}, status:{self._job_status}"

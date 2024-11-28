@@ -70,7 +70,7 @@ def test_reject_non_remote_job(mock_write_file):
 def test_add_remote_to_group(mock_warn, mock_write_file,
                              mock_read, mock_list, requests_mock):
     mock_rpc = get_rpc_handler(requests_mock)
-    remote_job = RemoteJob({}, mock_rpc, 'a_remote_job')
+    remote_job = RemoteJob({'payload':{}}, mock_rpc, 'a_remote_job')
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(10):
@@ -81,7 +81,7 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
     for each_job in jgroup._group_info['job_group_data']:
         assert each_job['id'] is None
         assert each_job['status'] is None
-        assert not each_job['body']  # empty mock remote job added - no body
+        assert each_job['body'] ==  {'payload': {'job_context': None}, 'job_name': 'a_remote_job'}
 
         # check correct metadata stored
         assert each_job['metadata']['headers'] == mock_rpc.headers
@@ -100,7 +100,7 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
 def test_check_group_progress(mock_warn, mock_write_file,
                              mock_read, mock_list, requests_mock):
     mock_rpc = get_rpc_handler(requests_mock)
-    remote_job = RemoteJob({}, mock_rpc, 'a_remote_job')
+    remote_job = RemoteJob({'payload':{}}, mock_rpc, 'a_remote_job')
 
     num_rj_add = 10
 
@@ -117,3 +117,7 @@ def test_check_group_progress(mock_warn, mock_write_file,
 
     unfinished_job_details = group_progress['Unfinished'][1]
     assert unfinished_job_details['not sent'] == num_rj_add
+
+    unset_jobs = jgroup.list_unsent_jobs()
+    assert len(unset_jobs) == num_rj_add
+    assert all(isinstance(each_unsent, RemoteJob) for each_unsent in unset_jobs)
