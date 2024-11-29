@@ -164,7 +164,7 @@ class Sampler(AAlgorithm):
                     (f"Iteration: unexpected type for {key}, expected {correct_type.__name__},"
                      f" received {type(val).__name__}")
             else:
-                get_logger().warn(f"Iteration: received unknown key {key}")  # Raise an exception?
+                raise NotImplementedError(f"Iteration: received unknown key {key}")
 
             # Further checks
             if key == 'circuit_params':

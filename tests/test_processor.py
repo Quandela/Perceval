@@ -172,11 +172,11 @@ def test_processor_samples_max_shots():
     p.with_input(BasicState([0, 1, 0, 1]))
     max_samples = 100
     result_len = {}
-    for max_shots in [100, 500, 2_000]:  # Success proba = 1/9  --> AVG 900 shots to get 100 samples
+    for max_shots in [100, 500, 2_000]:  # Success prob = 1/9  --> AVG 900 shots to get 100 samples
         result_len[max_shots] = len(p.samples(max_samples, max_shots)['results'])
     assert result_len[100] < result_len[500]
     assert result_len[500] < result_len[2_000]
-    assert result_len[2_000] == max_samples  # 10k shots is enough to get the expected sample count
+    assert result_len[2_000] == max_samples  # 2k shots is enough to get the expected sample count
 
 
 def test_processor_composition():
