@@ -39,14 +39,20 @@ class SLOSTreeBackend(AStrongSimulationBackend):
     def __init__(self):
         super().__init__()
         self._stree = xq.SLOSTree()
+        self._fock_space = None
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._stree.set_unitary(self._umat)
 
+    def set_input_state(self, input_state: BasicState):
+        super().set_input_state(input_state)
+        if self._fock_space is None or self._fock_space.m != input_state.m or self._fock_space.n != input_state.n:
+            self._fock_space = xq.FSArray(input_state.m, input_state.n)
+
     def use_steiner(self, use_it: bool):
         """
-        Use Steiner walk into the tree rather than the naive walk.
+        Use Steiner walk into the tree rather than the naive walk (default is naive walk).
         Steiner's method is more efficient when the number of photons is close to the number of modes.
         """
         self._stree.set_steiner(use_it)
@@ -54,15 +60,14 @@ class SLOSTreeBackend(AStrongSimulationBackend):
     def prob_amplitude(self, output_state: BasicState) -> complex:
         istate = self._input_state
         all_pa = self._stree.all_prob_ampli(istate)
-        return all_pa[xq.FSArray(istate.m, istate.n).find(output_state)]
+        return all_pa[self._fock_space.find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
         istate = self._input_state
         all_probs = self._stree.all_prob(istate)
 
         if self._mask is not None:  # Utterly non-optimized. Mask management should be added in the computation
-            fsa = xq.FSArray(istate.m, istate.n)
-            all_probs = [p for p, fs in zip(all_probs, fsa) if self._mask.match(fs)]
+            all_probs = [p for p, fs in zip(all_probs, self._fock_space) if self._mask.match(fs)]
 
         bsd = BSDistribution()
         for output_state, probability in zip(self._get_iterator(istate), all_probs):
@@ -84,7 +89,7 @@ class SLOSTreeBackend(AStrongSimulationBackend):
         istate = self._input_state
         all_pa = self._stree.all_prob_ampli(istate)
         res = StateVector()
-        for output_state, pa in zip(xq.FSArray(istate.m, istate.n), all_pa):
+        for output_state, pa in zip(self._fock_space, all_pa):
             res += output_state * pa
         res.normalize()
         return res
