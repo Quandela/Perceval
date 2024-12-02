@@ -34,7 +34,6 @@ from .abstract_component import AComponent
 from .linear_circuit import Circuit
 from .unitary_components import BS, PERM
 from perceval.utils import BasicState, BSDistribution
-from perceval.utils.logging import get_logger, channel
 
 
 class DetectionType(Enum):
@@ -132,19 +131,21 @@ class BSLayeredPPNR(IDetector):
 
 
 class Detector(IDetector):
-    def __init__(self, p_multiphoton_detection: float = 1):
+    def __init__(self, n_wires: int = None, max_detections: int = None):
         super().__init__()
-        assert 0 <= p_multiphoton_detection <= 1,\
-            f"A probability must be within 0 and 1 (got {p_multiphoton_detection})"
-        self._pmd = p_multiphoton_detection
-        if self.type == DetectionType.PPNR:
-            get_logger().error("Generic PPNR was not implemented yet and will behave like a threshold detector for now",
-                               channel.user)
+        assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
+        assert max_detections is None or n_wires is None or max_detections <= n_wires,\
+            f"Max detections has to be lower than the number of wires (got {max_detections} > {n_wires} wires)"
+        self._wires = n_wires
+        if max_detections is None and self._wires is not None:
+            self._max = self._wires
+        else:
+            self._max = max_detections
 
     @staticmethod
     def threshold():
         """Builds a threshold detector"""
-        d = Detector(0)
+        d = Detector(1)
         d.name = "Threshold"
         return d
 
@@ -156,24 +157,38 @@ class Detector(IDetector):
         return d
 
     @staticmethod
-    def ppnr(p: float):
-        d = Detector(p)
+    def ppnr(n_wires: int, max_detections: int = None):
+        d = Detector(n_wires, max_detections)
         d.name = f"PPNR"
         return d
 
     @property
     def type(self) -> DetectionType:
-        if self._pmd == 0:
+        if self._wires == 1:
             return DetectionType.Threshold
-        elif self._pmd == 1:
+        elif self._wires is None and self._max is None:
             return DetectionType.PNR
         return DetectionType.PPNR
 
     def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
-        if theoretical_photons < 2 or self.type == DetectionType.PNR:
+        detector_type = self.type
+        if theoretical_photons < 2 or detector_type == DetectionType.PNR:
             return BasicState([theoretical_photons])
-        # Adjust the model to treat the PPNR case here
-        return BasicState([1])
+
+        if detector_type == DetectionType.Threshold:
+            return BasicState([1])
+
+        remaining_p = 1
+        result = BSDistribution()
+        max_detectable = min(self._max, theoretical_photons)
+        for i in range(1, max_detectable):
+            p_i = remaining_p * (i / self._wires) ** (theoretical_photons - i)
+            result.add(BasicState([i]), p_i)
+            remaining_p -= p_i
+        # The highest detectable photon count gains all the remaining probability
+        result.add(BasicState([max_detectable]), remaining_p)
+
+        return result
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:
