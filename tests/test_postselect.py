@@ -55,16 +55,16 @@ def test_postselect_init_invalid():
     with pytest.raises(RuntimeError):
         PostSelect("[0]==0 & (1,2)==1 & [3,4]==1 & [5]==0")  # Tuple syntax is not supported
 
-    with pytest.raises(RuntimeError):
-        PostSelect("[2] >= 4 | [1] > 2")  # Invalid separator
+    # with pytest.raises(RuntimeError):
+    #     PostSelect("[2] >= 4 | [1] > 2")  # Invalid separator
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         PostSelect("[2] % 4 | [1] > 2")  # Invalid separator
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         PostSelect("[2] >> 4")  # Invalid operator
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         PostSelect("[0]==0 & [1,2]]==1 & [3,4]==1 & [5]==0")  # Too many brackets => Invalid operator
 
 

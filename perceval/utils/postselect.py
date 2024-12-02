@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 from .statevector import BasicState, BSDistribution, StateVector
+from exqalibur import PostSelect as exqaliburPostSelect
 
 import json
 import re
@@ -65,6 +66,11 @@ class PostSelect:
     def __init__(self, str_repr: str = None):
         self._conditions = {}
         condition_count = 0
+        if str_repr is not None:
+            self._ps = exqaliburPostSelect(str_repr)
+        else:
+            self._ps = exqaliburPostSelect()
+        self.use_exqalibur = True
         if str_repr:
             try:
                 for match in self._PATTERN.finditer(str_repr):
@@ -119,14 +125,22 @@ class PostSelect:
         """PostSelect is callable, with a `post_select(BasicState) -> bool` signature.
         Returns `True` if the input state validates all conditions, returns `False` otherwise.
         """
-        for operator, cond in self._conditions.items():
-            for indexes, value in cond:
-                s = 0
-                for i in indexes:
-                    s += state[i]
-                if not operator(s, value):
-                    return False
-        return True
+
+    def __call__(self, state: BasicState) -> bool:
+        """PostSelect is callable, with a `post_select(BasicState) -> bool` signature.
+        Returns `True` if the input state validates all conditions, returns `False` otherwise.
+        """
+        if (not self.use_exqalibur):
+            for operator, cond in self._conditions.items():
+                for indexes, value in cond:
+                    s = 0
+                    for i in indexes:
+                        s += state[i]
+                    if not operator(s, value):
+                        return False
+            return True
+        else:
+            return self._ps(state)
 
     def __repr__(self):
         strlist = []
@@ -189,10 +203,13 @@ class PostSelect:
         :return: `True` if the composition is allowed without mixing conditions, `False` otherwise
         """
         m_set = set(modes)
+        m_size = len(m_set)
         for _, cond in self._conditions.items():
             for (indexes, _) in cond:
                 i_set = set(indexes)
-                if i_set.intersection(m_set) and not i_set.issuperset(m_set):
+                intersection = i_set.intersection(m_set)
+                l = len(intersection)
+                if l != 0 and l != m_size:
                     return False
         return True
 
