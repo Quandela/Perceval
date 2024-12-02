@@ -290,7 +290,7 @@ class Simulator(ISimulator):
             else:
                 physical_perf -= prob
         input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
-        self._evolve_cache(input_set)
+        self._evolve_cache(input_set, normalize)
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
@@ -452,6 +452,9 @@ class Simulator(ISimulator):
             res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback, normalize)
         else:
             res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback, normalize)
+
+        if not len(res):
+            return {'results': res, 'physical_perf': 1, 'logical_perf': 1}
 
         if detectors:
             min_photons = self._min_detected_photons_filter if self._postprocess else 0
