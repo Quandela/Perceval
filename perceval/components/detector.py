@@ -131,16 +131,29 @@ class BSLayeredPPNR(IDetector):
 
 
 class Detector(IDetector):
+    """
+    Interleaved detector class
+
+    Such a detector is made of one or multiple wires, each able to simultaneously detect a photon. The `detect` method
+    takes the number of wires into acocunt to simulate the detection probability for each case.
+    Having 1 wire makes the detector threshold, whereas having an infinity of them makes the detector perfectly PNR.
+
+    :param n_wires: Number of detecting wires in the interleaved detector (defaults to infinity)
+    :param max_detections: Max number of photons the user is willing to read. The |max_detection> state would then mean
+                           "max_detection or more photons were detected". (defaults to None)
+
+    See `pnr()`, `threshold()` and `ppnr(n_wires, max_detections)` static methods for easy detector initialization
+    """
+
     def __init__(self, n_wires: int = None, max_detections: int = None):
         super().__init__()
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
         assert max_detections is None or n_wires is None or max_detections <= n_wires,\
             f"Max detections has to be lower than the number of wires (got {max_detections} > {n_wires} wires)"
         self._wires = n_wires
-        if max_detections is None and self._wires is not None:
-            self._max = self._wires
-        else:
-            self._max = max_detections
+        self._max = None
+        if self._wires is not None:
+            self._max = self._wires if max_detections is None else min(max_detections, self._wires)
 
     @staticmethod
     def threshold():
@@ -151,13 +164,14 @@ class Detector(IDetector):
 
     @staticmethod
     def pnr():
-        """Builds a perfect detector"""
+        """Builds a perfect photon number resolving (PNR) detector"""
         d = Detector()
         d.name = "PNR"
         return d
 
     @staticmethod
     def ppnr(n_wires: int, max_detections: int = None):
+        """Builds an interleaved pseudo-PNR detector"""
         d = Detector(n_wires, max_detections)
         d.name = f"PPNR"
         return d
