@@ -214,7 +214,7 @@ class Sampler(AAlgorithm):
 
     def _samples_wrapper(self, max_samples: int = None, progress_callback: callable = None):
         if max_samples is None and self._max_shots is None:
-            raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
+            raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         return self._processor.samples(max_samples, self._max_shots, progress_callback)
@@ -239,7 +239,7 @@ class Sampler(AAlgorithm):
                                  progress_callback: callable = None):
         if max_samples is None and max_shots is None:
             if not self._check_sample_shot_iterator():
-                raise RuntimeError("Local sampling simumation requires max_samples and/or max_shots parameters")
+                raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         self._max_samples = max_samples
@@ -261,7 +261,7 @@ class Sampler(AAlgorithm):
             try:
                 self.__getattribute__(f"_set_{key}")(val)
             except AttributeError:
-                pass  # Raise NotImplementedError ?
+                pass
 
     def _set_circuit_params(self, params: dict):
         if params:

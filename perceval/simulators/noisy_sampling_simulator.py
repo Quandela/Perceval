@@ -337,7 +337,6 @@ class NoisySamplingSimulator:
         # Choose a consistent samples limit
         prepare_samples = max_samples
         if max_shots is not None:
-            # max_shots = round(max_shots * (1 - zpp))  # What does this line do?
             prepare_samples = min(max_samples, max_shots)
         if prepare_samples == 0:
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
