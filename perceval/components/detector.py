@@ -148,7 +148,7 @@ class Detector(IDetector):
     def __init__(self, n_wires: int = None, max_detections: int = None):
         super().__init__()
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
-        assert max_detections is None or n_wires is None or max_detections <= n_wires,\
+        assert max_detections is None or n_wires is None or max_detections <= n_wires, \
             f"Max detections has to be lower than the number of wires (got {max_detections} > {n_wires} wires)"
         self._wires = n_wires
         self._max = None
@@ -195,6 +195,12 @@ class Detector(IDetector):
         remaining_p = 1
         result = BSDistribution()
         max_detectable = min(self._max, theoretical_photons)
+        # Compute each p(i) being the probability of having exactly i detections
+        # Each iteration of the following loop is computing:
+        # The probability of having at least i detections (remaining_p)
+        # times
+        # The probability of having exactly i detections KNOWING that there are at least i (which is expressed as:
+        # remaining photons must hit a wire which was already hit by another one beforehand)
         for i in range(1, max_detectable):
             p_i = remaining_p * (i / self._wires) ** (theoretical_photons - i)
             result.add(BasicState([i]), p_i)
