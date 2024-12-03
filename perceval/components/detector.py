@@ -149,7 +149,7 @@ class Detector(IDetector):
         super().__init__()
         assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
         assert max_detections is None or n_wires is None or max_detections <= n_wires, \
-            f"Max detections has to be lower than the number of wires (got {max_detections} > {n_wires} wires)"
+            f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
         self._wires = n_wires
         self._max = None
         if self._wires is not None:
