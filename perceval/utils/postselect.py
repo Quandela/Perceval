@@ -26,20 +26,33 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from copy import copy
+from typing import TypeAlias, Self
 
 from .statevector import BasicState, BSDistribution, StateVector
-from exqalibur import PostSelect as exqaliburPostSelect
+from exqalibur import PostSelect as exqaliburPostSelect, PostSelect
+from exqalibur import LogicOperator
 
-import json
-import re
+from perceval.utils.logging import deprecated
+
+operands: TypeAlias = LogicOperator
 
 
-class PostSelect:
+class PostSelect(exqaliburPostSelect):
     """PostSelect is a callable post-selection intended to filter out unwanted output states. It is designed to be a
     user-friendly description of any post-selection logic.
 
-    :param str_repr: string representation of the selection logic. The format is: "cond_1 & cond_2 & ... & cond_n"
-        where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, > and <)
+    Init uses a string representation of the selection logic. The format is: "cond_1 OP cond_2 OP ... OP cond_n"
+    where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, >, <, >=, <=).
+
+    Logic operators between conditions can be
+        - "AND", "and", "&"
+        - "OR", "or", "|"
+        - "XOR", "xor"
+        - "NOT", "not", "!"
+
+    Different operators can be used using parentheses to separate them.
+    "and", "or" and "xor" operators can be chained without the need of added parentheses.
 
     Example:
 
@@ -51,118 +64,47 @@ class PostSelect:
     False
     """
 
-    _OPERATORS = {"==": int.__eq__,
-                  "<": int.__lt__,
-                  ">": int.__gt__,
-                  ">=": int.__ge__,
-                  "<=": int.__le__}
-
-    # Regexp explanations:
-    # first group: index(es) of modes between '[]' and separated with ','
-    # second group: operator (listed in _OPERATORS). We suppose there is no digit character in operators
-    # third group: number of photons
-    _PATTERN = re.compile(r"(\[[,0-9\s]+\]\s*)([^\d]*)\s*(\d+\b)")
-
-    def __init__(self, str_repr: str = None):
-        self._conditions = {}
-        condition_count = 0
-        if str_repr is not None:
-            self._ps = exqaliburPostSelect(str_repr)
-        else:
-            self._ps = exqaliburPostSelect()
-        self.use_exqalibur = True
-        if str_repr:
-            try:
-                for match in self._PATTERN.finditer(str_repr):
-                    indexes = tuple(json.loads(match.group(1)))
-
-                    operator = match.group(2).strip()
-                    if operator not in self._OPERATORS:
-                        raise KeyError(f"Unsupported operator: {operator}")
-
-                    self._add_condition(indexes=indexes,
-                                        operator=self._OPERATORS[operator],
-                                        value=int(match.group(3)))
-                    condition_count += 1
-
-            except json.decoder.JSONDecodeError as e:
-                raise RuntimeError(f"Could not interpret input string '{str_repr}': {e}")
-            if condition_count != str_repr.count("&") + 1:
-                raise RuntimeError(f"Could not interpret input string '{str_repr}': Invalid format")
-
-    def eq(self, indexes, value: int):
+    @deprecated(version="0.12.0", reason="Use merge instead")
+    def eq(self, indexes: int | list[int], value: int) -> Self:
         """Create a new "equals"     condition for the current PostSelect instance"""
-        self._add_condition(indexes, int.__eq__, value)
+        if isinstance(indexes, int):
+            indexes = [indexes]
+        self.merge(PostSelect(f"{list(indexes)} == {value}"))
         return self
 
-    def gt(self, indexes, value: int):
+    @deprecated(version="0.12.0", reason="Use merge instead")
+    def gt(self, indexes, value: int) -> Self:
         """Create a new "greater than" condition for the current PostSelect instance"""
-        self._add_condition(indexes, int.__gt__, value)
+        if isinstance(indexes, int):
+            indexes = [indexes]
+        self.merge(PostSelect(f"{list(indexes)} > {value}"))
         return self
 
-    def lt(self, indexes, value: int):
+    @deprecated(version="0.12.0", reason="Use merge instead")
+    def lt(self, indexes, value: int) -> Self:
         """Create a new "lower than" condition for the current PostSelect instance"""
-        self._add_condition(indexes, int.__lt__, value)
+        if isinstance(indexes, int):
+            indexes = [indexes]
+        self.merge(PostSelect(f"{list(indexes)} < {value}"))
         return self
 
-    def ge(self, indexes, value: int):
+    @deprecated(version="0.12.0", reason="Use merge instead")
+    def ge(self, indexes, value: int) -> Self:
         """Create a new "greater or equal than" condition for the current PostSelect instance"""
-        self._add_condition(indexes, int.__ge__, value)
+        if isinstance(indexes, int):
+            indexes = [indexes]
+        self.merge(PostSelect(f"{list(indexes)} >= {value}"))
         return self
 
-    def le(self, indexes, value: int):
+    @deprecated(version="0.12.0", reason="Use merge instead")
+    def le(self, indexes, value: int) -> Self:
         """Create a new "lower or equal than" condition for the current PostSelect instance"""
-        self._add_condition(indexes, int.__le__, value)
+        if isinstance(indexes, int):
+            indexes = [indexes]
+        self.merge(PostSelect(f"{list(indexes)} <= {value}"))
         return self
 
-    def _add_condition(self, indexes, operator: callable, value: int):
-        indexes = (indexes,) if isinstance(indexes, int) else tuple(indexes)
-        if operator not in self._conditions:
-            self._conditions[operator] = []
-        self._conditions[operator].append((indexes, value))
-
-    def __call__(self, state: BasicState) -> bool:
-        """PostSelect is callable, with a `post_select(BasicState) -> bool` signature.
-        Returns `True` if the input state validates all conditions, returns `False` otherwise.
-        """
-
-    def __call__(self, state: BasicState) -> bool:
-        """PostSelect is callable, with a `post_select(BasicState) -> bool` signature.
-        Returns `True` if the input state validates all conditions, returns `False` otherwise.
-        """
-        if (not self.use_exqalibur):
-            for operator, cond in self._conditions.items():
-                for indexes, value in cond:
-                    s = 0
-                    for i in indexes:
-                        s += state[i]
-                    if not operator(s, value):
-                        return False
-            return True
-        else:
-            return self._ps(state)
-
-    def __repr__(self):
-        strlist = []
-        for operator, cond in self._conditions.items():
-            operator_str = [o for o in self._OPERATORS if self._OPERATORS[o] == operator][0]
-            for indexes, value in cond:
-                strlist.append(f"{list(indexes)}{operator_str}{value}")
-        return "&".join(strlist)
-
-    def __eq__(self, other):
-        return self._conditions == other._conditions
-
-    @property
-    def has_condition(self) -> bool:
-        """Returns True if at least one condition is defined"""
-        return len(self._conditions) > 0
-
-    def clear(self):
-        """Clear all existing conditions"""
-        self._conditions.clear()
-
-    def apply_permutation(self, perm_vector: list[int], first_mode: int = 0):
+    def apply_permutation(self, perm_vector: list[int], first_mode: int = 0) -> PostSelect:
         """
         Apply a given permutation on the conditions.
 
@@ -170,72 +112,13 @@ class PostSelect:
         :param first_mode: First mode of the permutation to apply (default 0)
         :return: A PostSelect with the permutation applied
         """
-        output = PostSelect()
-        for operator, cond in self._conditions.items():
-            output._conditions[operator] = []
-            for (indexes, value) in cond:
-                new_indexes = []
-                for i in indexes:
-                    if i < first_mode or i >= first_mode + len(perm_vector):
-                        new_indexes.append(i)
-                    else:
-                        new_indexes.append(first_mode + perm_vector[i - first_mode])
-                output._conditions[operator].append((tuple(new_indexes), value))
-        return output
-
-    def shift_modes(self, shift: int):
-        """
-        Shift all mode indexes inside this instance
-
-        :param shift: Value to shift all mode indexes with
-        """
-        for operator, cond in self._conditions.items():
-            for c, (indexes, value) in enumerate(cond):
-                assert min(indexes) + shift >= 0, f"A shift of {shift} would lead to negative mode# on {self}"
-                new_indexes = tuple(i + shift for i in indexes)
-                cond[c] = (new_indexes, value)
-
-    def can_compose_with(self, modes: list[int]) -> bool:
-        """
-        Check if all conditions are compatible with a composition on given modes
-
-        :param modes: Modes used in the composition
-        :return: `True` if the composition is allowed without mixing conditions, `False` otherwise
-        """
-        m_set = set(modes)
-        m_size = len(m_set)
-        for _, cond in self._conditions.items():
-            for (indexes, _) in cond:
-                i_set = set(indexes)
-                intersection = i_set.intersection(m_set)
-                l = len(intersection)
-                if l != 0 and l != m_size:
-                    return False
-        return True
-
-    def merge(self, other):
-        """
-        Merge with other PostSelect. Updates the current instance.
-
-        :param other: Another PostSelect instance
-        """
-        for operator, cond in other._conditions.items():
-            for indexes, value in cond:
-                self._add_condition(indexes, operator, value)
+        ps = copy(self)
+        ps.apply_permutation_inplace(perm_vector, first_mode)
+        return ps
 
 
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
-    ps1_mode_set = set()
-    for _, cond in ps1._conditions.items():
-        for (indexes, _) in cond:
-            for i in indexes:
-                ps1_mode_set.add(i)
-    for _, cond in ps2._conditions.items():
-        for (indexes, _) in cond:
-            for i in indexes:
-                if i in ps1_mode_set:
-                    return False
-    return True
+    return ps1.is_independent_with(ps2)
 
 
 def post_select_distribution(
