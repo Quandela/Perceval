@@ -99,8 +99,8 @@ class LocalJob(Job):
             else:
                 self._status.stop_run()
         except Exception as e:
-            get_logger().warn(f"An exception was raised during job execution.\n{type(e)}: {e}", channel.user)
-            self._status.stop_run(RunningStatus.ERROR, str(type(e))+": "+str(e))
+            get_logger().warn(f"An exception was raised during job execution.\n{type(e).__name__}: {e}", channel.user)
+            self._status.stop_run(RunningStatus.ERROR, type(e).__name__+": "+str(e))
 
     def execute_async(self, *args, **kwargs) -> Job:
         assert self._status.waiting, "job has already been executed"
@@ -126,8 +126,10 @@ class LocalJob(Job):
                                                                          **self._delta_parameters['mapping'])
             elif 'results_list' in self._results:
                 for res in self._results["results_list"]:
-                    res["results"] = self._result_mapping_function(res['results'],
-                                                                   **self._delta_parameters['mapping'])
+                    mapping_args = {key: res["iteration"].get(key, val)
+                                    for key, val in self._delta_parameters['mapping'].items()}
+
+                    res["results"] = self._result_mapping_function(res['results'], **mapping_args)
             else:
                 raise KeyError("Cannot find either 'result' or 'results_list' in self._results")
             self._result_mapping_function = None
