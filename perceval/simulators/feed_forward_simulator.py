@@ -91,8 +91,7 @@ class FFSimulator(ISimulator):
     def _probs_svd(self,
                    input_state: SVDistribution | BasicState,
                    detectors: list[IDetector] = None,
-                   progress_callback: callable = None,
-                   normalize: bool = True) -> tuple[BSDistribution, float]:
+                   progress_callback: callable = None) -> tuple[BSDistribution, float]:
 
         # 1: Find all the FFConfigurators that can be simulated without measuring more modes
         considered_config, measured_modes = self._find_next_simulation_layer()
@@ -116,7 +115,14 @@ class FFSimulator(ISimulator):
         intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
-        default_res = sim.probs_svd(new_input_state, new_detectors, prog_cb, normalize=False)["results"]
+        default_res = sim.probs_svd(new_input_state, new_detectors, prog_cb)
+
+        if "global_perf" in default_res:
+            default_norm_factor = default_res["global_perf"]
+        else:
+            default_norm_factor = default_res["physical_perf"] * default_res["logical_perf"]
+
+        default_res = default_res["results"]
 
         prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
 
@@ -137,6 +143,7 @@ class FFSimulator(ISimulator):
                 # This can be a problem if we copy the default circuit or instantiate a new one
 
                 if self._post_process_state(state) and default_proc._state_selected(state):
+                    prob *= default_norm_factor
                     res[state[:input_state.m]] = prob
                     global_perf += prob
 
@@ -159,19 +166,23 @@ class FFSimulator(ISimulator):
                                                                            new_heralds=new_heralds)
 
                 new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
-                sub_res = sim.probs_svd(new_input_state, new_detectors, new_prog_cb, normalize=False)["results"]
+                sub_res = sim.probs_svd(new_input_state, new_detectors, new_prog_cb)
+
+                if "global_perf" in sub_res:
+                    norm_factor = sub_res["global_perf"]
+                else:
+                    norm_factor = sub_res["physical_perf"] * sub_res["logical_perf"]
 
                 # The remaining states are only the ones with n >= filter and mask
-                global_perf += sum(sub_res.values())
+                global_perf += norm_factor
 
-                for st, p in sub_res.items():
+                for st, p in sub_res["results"].items():
                     # No need for post_process here: results are already post-processed by the sub simulator
-                    res[st[:input_state.m]] = p
+                    res[st[:input_state.m]] = p * norm_factor
 
                 simulated_measures.add(measured_state)
 
-        if normalize:
-            res.normalize()
+        res.normalize()
         return res, global_perf
 
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int]]:
@@ -285,40 +296,37 @@ class FFSimulator(ISimulator):
 
         return False
 
-    def probs(self, input_state: BasicState, normalize: bool = True) -> BSDistribution:
+    def probs(self, input_state: BasicState) -> BSDistribution:
         """
         Compute the probability distribution from a BasicState input
 
         :param input_state: A basic state describing the input to simulate
-        :param normalize: If False, results are not normalized
 
         :return: A BSDistribution
         """
-        return self._probs_svd(SVDistribution(input_state), normalize=normalize)[0]
+        return self._probs_svd(SVDistribution(input_state))[0]
 
     def probs_svd(self,
                   input_dist: SVDistribution,
                   detectors: list[IDetector] = None,
-                  progress_callback: callable = None,
-                  normalize: bool = True):
+                  progress_callback: callable = None):
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
         :param input_dist: A state vector distribution describing the input to simulate
         :param detectors: An optional list of detectors
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
-        :param normalize: If False, results are not normalized
 
         :return: A dictionary of the form { "results": BSDistribution, "global_perf": float }
 
             * results is the post-selected output state distribution
             * global_perf is the probability that a state is post-selected
         """
-        res = self._probs_svd(input_dist, detectors, progress_callback, normalize=normalize)
+        res = self._probs_svd(input_dist, detectors, progress_callback)
         return {'results': res[0],
                 'global_perf': res[1]}
 
-    def evolve(self, input_state, normalize: bool = True) -> StateVector:
+    def evolve(self, input_state) -> StateVector:
         raise RuntimeError("Cannot perform state evolution with feed-forward")
 
     def set_min_detected_photons_filter(self, value: int):

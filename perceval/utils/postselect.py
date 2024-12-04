@@ -225,20 +225,16 @@ def post_select_distribution(
         bsd: BSDistribution,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True,
-        normalize: bool = True) -> tuple[BSDistribution, float]:
+        keep_heralds: bool = True) -> tuple[BSDistribution, float]:
     if not (postselect.has_condition or heralds):
-        if normalize:
-            bsd.normalize()
+        bsd.normalize()
         return bsd, 1
 
     if heralds is None:
         heralds = {}
-    logical_perf = 0
-    perf_factor = 0
+    logical_perf = 1
     result = BSDistribution()
     for state, prob in bsd.items():
-        perf_factor += prob
         heralds_ok = True
         for m, v in heralds.items():
             if state[m] != v:
@@ -247,11 +243,9 @@ def post_select_distribution(
             if not keep_heralds:
                 state = state.remove_modes(list(heralds.keys()))
             result[state] = prob
-            logical_perf += prob
-    if normalize:
-        result.normalize()
-    else:
-        logical_perf /= perf_factor
+        else:
+            logical_perf -= prob
+    result.normalize()
     return result, logical_perf
 
 
@@ -259,11 +253,9 @@ def post_select_statevector(
         sv: StateVector,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True,
-        normalize: bool = True) -> tuple[StateVector, float]:
+        keep_heralds: bool = True) -> tuple[StateVector, float]:
     if not (postselect.has_condition or heralds):
-        if normalize:
-            sv.normalize()
+        sv.normalize()
         return sv, 1
 
     if heralds is None:
@@ -281,6 +273,5 @@ def post_select_statevector(
             result += ampli * state
         else:
             logical_perf -= abs(ampli) ** 2
-    if normalize:
-        result.normalize()
+    result.normalize()
     return result, logical_perf
