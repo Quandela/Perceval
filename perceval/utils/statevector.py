@@ -44,10 +44,12 @@ from .globals import global_params
 from .qmath import exponentiation_by_squaring
 
 BasicState: TypeAlias = xq.FockState
+BSCount: TypeAlias = xq.BSCount
+BSSamples: TypeAlias = xq.BSSamples
 StateVector: TypeAlias = xq.StateVector
 
 
-def allstate_iterator(input_state: BasicState | StateVector, mask=None) -> BasicState:
+def allstate_iterator(input_state: BasicState | StateVector, mask: xq.FSMask = None) -> BasicState:
     """Iterator on all possible output states compatible with mask generating StateVector
 
     :param input_state: a given input state vector
@@ -66,6 +68,7 @@ def allstate_iterator(input_state: BasicState | StateVector, mask=None) -> Basic
         for output_state in output_array:
             yield output_state
 
+
 def max_photon_state_iterator(m: int, n_max: int):
     """
     Iterator on all possible output state on m modes with at most n_max photons
@@ -75,12 +78,12 @@ def max_photon_state_iterator(m: int, n_max: int):
     :return: list of BasicState
     """
     for n in range(n_max+1):
-        output_array = xq.FSArray(m,n)
+        output_array = xq.FSArray(m, n)
         for output_state in output_array:
             yield output_state
 
 
-def tensorproduct(states: list[StateVector | BasicState]):
+def tensorproduct(states: list[StateVector | BasicState]) -> StateVector | BasicState:
     r""" Computes states[0] * states[1] * ...
     """
     if len(states) == 1:
@@ -106,27 +109,28 @@ class ProbabilityDistribution(defaultdict, ABC):
         if proba > global_params['min_p']:
             self[obj] += proba
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{\n  "\
                + "\n  ".join(["%s: %s" % (str(k), v) for k, v in self.items()])\
                + "\n}"
 
-    def __copy__(self):
+    def __copy__(self) -> ProbabilityDistribution:
         distribution_copy = type(self)()
         for k, prob in self.items():
             distribution_copy[copy(k)] = prob
         return distribution_copy
 
-    def __pow__(self, power):
+    def __pow__(self, power) -> ProbabilityDistribution:
         return exponentiation_by_squaring(self, power)
 
     @abstractmethod
-    def sample(self, count: int, non_null: bool = True):
+    def sample(self, count: int, non_null: bool = True) -> list:
         pass
 
 
 class SVDistribution(ProbabilityDistribution):
-    r"""Time-Independent Probabilistic distribution of StateVectors
+    r"""
+    Mixed state represented as a time-independent probabilistic distribution of StateVectors
     """
     def __init__(self, sv: BasicState | StateVector | dict | None = None):
         super().__init__()
@@ -166,7 +170,7 @@ class SVDistribution(ProbabilityDistribution):
         assert isinstance(key, StateVector), "SVDistribution key must be a BasicState or a StateVector"
         return super().__getitem__(key)
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> SVDistribution:
         r"""Combines two `SVDistribution`
 
         :param other: State / distribution to multiply with
@@ -186,7 +190,7 @@ class SVDistribution(ProbabilityDistribution):
                 new_svd[sv1*sv2] = proba1 * proba2
         return new_svd
 
-    def __rmul__(self, other):
+    def __rmul__(self, other) -> SVDistribution:
         if isinstance(other, SVDistribution):
             pass
         elif isinstance(other, (BasicState, StateVector)):
@@ -219,15 +223,15 @@ class SVDistribution(ProbabilityDistribution):
         return list(results)
 
     @property
-    def m(self):
+    def m(self) -> int:
         return self._m
 
     @property
-    def n_max(self):
+    def n_max(self) -> int:
         return self._n_max
 
     @staticmethod
-    def tensor_product(svd1, svd2, prob_threshold: float = 0):
+    def tensor_product(svd1, svd2, prob_threshold: float = 0) -> SVDistribution:
         """
         Compute the tensor product of two SVDistribution with an optional probability threshold
         """
@@ -244,7 +248,7 @@ class SVDistribution(ProbabilityDistribution):
 
 
 @dispatch(StateVector, annot_tag=str)
-def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
+def anonymize_annotations(sv: StateVector, annot_tag: str = "a") -> StateVector:
     # This algo anonymizes annotations but is not enough to have superposed states exactly the same given the storage
     # order of BasicStates inside the StateVector
     m = sv.m
@@ -264,7 +268,7 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a"):
 
 
 @dispatch(SVDistribution, annot_tag=str)
-def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a"):
+def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a") -> SVDistribution:
     sv_dist = defaultdict(lambda: 0)
     for k, p in svd.items():
         state = anonymize_annotations(k, annot_tag=annot_tag)
@@ -295,7 +299,7 @@ class BSDistribution(ProbabilityDistribution):
             raise ValueError("Number of modes is not consistent")
         super().__setitem__(key, value)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> float:
         assert isinstance(key, BasicState), "BSDistribution key must be a BasicState"
         return super().__getitem__(key)
 
@@ -303,6 +307,7 @@ class BSDistribution(ProbabilityDistribution):
         r""" Samples basic states from the `BSDistribution`
 
         :param count: number of samples to draw
+        :param non_null: excludes null states from the sample generation
         :return: a list of :math:`count` samples
         """
         self.normalize()
@@ -315,7 +320,7 @@ class BSDistribution(ProbabilityDistribution):
         probs = list(d.values())
         return random.choices(states, k=count, weights=probs)
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> BSDistribution:
         if isinstance(other, BSDistribution):
             pass
         elif isinstance(other, BasicState):
@@ -334,7 +339,10 @@ class BSDistribution(ProbabilityDistribution):
         return BSDistribution.tensor_product(other, self)
 
     @staticmethod
-    def tensor_product(bsd1: BSDistribution, bsd2: BSDistribution, merge_modes: bool = False, prob_threshold: float = 0):
+    def tensor_product(bsd1: BSDistribution,
+                       bsd2: BSDistribution,
+                       merge_modes: bool = False,
+                       prob_threshold: float = 0) -> BSDistribution:
         """
         Compute the tensor product of two BasicState Distribution
         """
@@ -353,52 +361,5 @@ class BSDistribution(ProbabilityDistribution):
         return new_dist
 
     @property
-    def m(self):
+    def m(self) -> int:
         return self._m
-
-
-
-class BSCount(defaultdict):
-    r"""Container that counts basic state events
-    """
-    def __init__(self, d: dict | None = None):
-        super().__init__(int)
-        if d is not None:
-            for k, v in d.items():
-                self[BasicState(k)] = v
-
-    def __setitem__(self, key, value):
-        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
-        assert value >= 0, "Count must be a positive value"
-        super().__setitem__(key, int(value))
-
-    def __getitem__(self, key):
-        assert isinstance(key, BasicState), "BSCount key must be a BasicState"
-        return super().__getitem__(key)
-
-    def add(self, obj, count: int):
-        if count != 0:
-            self[obj] += count
-
-    def total(self):
-        return sum(list(self.values()))
-
-    def __str__(self):
-        return "{\n  " + "\n  ".join([f"{k}: {v}" for k, v in self.items()]) + "\n}"
-
-
-class BSSamples(list):
-    r"""Container that stores samples in a time ordered way
-    """
-    def __setitem__(self, index, item):
-        assert isinstance(item, BasicState), "BSSamples key must be a BasicState"
-        super().__setitem__(index, item)
-
-    def __str__(self):
-        sz = len(self)
-        n_to_display = min(sz, 10)
-        s = '[' + ', '.join([str(bs) for bs in self[:n_to_display]])
-        if sz > n_to_display:
-            s += f', ... (size={sz})'
-        s += ']'
-        return s

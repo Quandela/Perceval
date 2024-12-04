@@ -240,6 +240,7 @@ class Sampler(AAlgorithm):
         if max_samples is None and max_shots is None:
             if not self._check_sample_shot_iterator():
                 raise RuntimeError("Local sampling simulation requires max_samples and/or max_shots parameters")
+
         if max_samples is None:
             max_samples = self.SAMPLES_MAX_COUNT
         self._max_samples = max_samples

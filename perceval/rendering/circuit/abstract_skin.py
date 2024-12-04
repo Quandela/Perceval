@@ -30,7 +30,7 @@
 from abc import ABC, abstractmethod
 from multipledispatch import dispatch
 
-from perceval.components import ACircuit, AProcessor, PERM, AComponent, TD, LC
+from perceval.components import ACircuit, AFFConfigurator, AProcessor, PERM, AComponent, TD, LC
 from perceval.utils import format_parameters, ModeType
 
 
@@ -48,10 +48,11 @@ class ASkin(ABC):
     - exposing style data (stroke style, colors, etc.)
     """
 
-    def __init__(self, stroke_style, style_subcircuit, compact_display: bool = False):
+    def __init__(self, photonic_style: dict, style_subcircuit: dict, compact_display: bool = False):
         self._compact = compact_display
-        self.style = {ModeType.PHOTONIC: stroke_style,
-                      ModeType.HERALD: {"stroke": None, "stroke_width": 1}
+        self.style = {ModeType.PHOTONIC: photonic_style,
+                      ModeType.HERALD: {"stroke": None, "stroke_width": 1},
+                      ModeType.CLASSICAL: {"stroke": "blue", "stroke_width": 1}
                       }
         self.style_subcircuit = style_subcircuit
         self.precision: float = 1e-6
@@ -91,6 +92,8 @@ class ASkin(ABC):
             start_w = max(w[r])
             if comp.is_composite() and recursive:
                 comp_width, _ = self.get_size(comp, False)
+            elif isinstance(comp, AFFConfigurator) and recursive:
+                comp_width, _ = self.get_size(comp.circuit_template(), False)
             else:
                 comp_width = self.get_width(comp)
             end_w = start_w + comp_width

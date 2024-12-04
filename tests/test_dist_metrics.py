@@ -26,46 +26,41 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""module test rpc handler"""
 
-from _mock_rpc_handler import get_rpc_handler
+from perceval.utils.dist_metrics import tvd_dist
+from perceval.utils import BSDistribution, BasicState
+from copy import copy
 
+bs1 = BasicState([0, 1, 0])
+bs2 = BasicState([0, 0, 0])
+bs3 = BasicState([0, 0, 1])
+bs4 = BasicState([1, 0, 0])
 
-def test_build_endpoint(requests_mock):
-    """test build endpoint function"""
-    rpc = get_rpc_handler(requests_mock, url='https://example.org')
+def test_tvd_identical_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.5
+    target_bsd[bs2] = 0.5
 
-    wanted = 'https://example.org/endpoint'
-    assert rpc.build_endpoint('/endpoint') == wanted
+    bsd_to_comp = copy(target_bsd)
 
-    wanted = 'https://example.org/endpoint/id'
-    assert rpc.build_endpoint('/endpoint', 'id') == wanted
-
-    wanted = 'https://example.org/endpoint/path/id'
-    assert rpc.build_endpoint('/endpoint', 'path', 'id') == wanted
-
-    wanted = 'https://example.org/endpoint/with/trailing/slash'
-    assert rpc.build_endpoint('/endpoint/', 'with', 'trailing/slash') == wanted
-
-    wanted = 'https://example.org/endpoint/path/with/slash'
-    assert rpc.build_endpoint('/endpoint/', '/path/', 'with/', '/slash/') == wanted
-
-    wanted = 'https://example.org/endpoint/with/number/1/8/789'
-    assert rpc.build_endpoint('/endpoint/', '/with/number', 1, '/8/', 789) == wanted
+    assert tvd_dist(target_bsd, bsd_to_comp) == 0
 
 
-def test_rpc_handler(requests_mock):
-    """test rpc handler calls"""
-    rpc = get_rpc_handler(requests_mock, url='https://example.org')
-    resp_details = rpc.fetch_platform_details()
-    assert 'name' in resp_details
-    job_id = rpc.create_job({})
-    assert isinstance(job_id, str)
-    resp_status = rpc.get_job_status(job_id)
-    assert resp_status['msg'] == 'ok'
-    rpc.cancel_job(job_id)
-    resp_result = rpc.get_job_results(job_id)
-    assert 'results' in resp_result
-    new_job_id = rpc.rerun_job(job_id)
-    assert new_job_id is not None
-    assert new_job_id != job_id
+def test_tvd_disjoint_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.5
+    target_bsd[bs2] = 0.5
+
+    bsd_to_comp = BSDistribution()
+    bsd_to_comp[bs3] = 1
+    bsd_to_comp[bs4] = 0
+
+    assert tvd_dist(target_bsd, bsd_to_comp) == 1.0
+
+
+def test_tvd_one_empty_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.3
+    target_bsd[bs2] = 0.7
+
+    assert tvd_dist(target_bsd, BSDistribution()) == 0.5

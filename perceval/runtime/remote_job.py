@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import json
 import time
@@ -110,7 +111,7 @@ class RemoteJob(Job):
         self._status_refresh_error += 1
         if self._status_refresh_error == self._MAX_ERROR:
             get_logger().error("Reached max number of HTTP errors in a row when updating job {self._id} status.",
-                         channel.general)
+                               channel.general)
             raise error
         if isinstance(error, HTTPError):
             error_code = error.response.status_code
@@ -160,21 +161,24 @@ class RemoteJob(Job):
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
+    def _create_payload_data(self, *args, **kwargs):
+        self._handle_params(args, kwargs)
+        if self._delta_parameters['mapping']:
+            if self._job_context is None:
+                self._job_context = {}
+            self._job_context["mapping_delta_parameters"] = self._delta_parameters["mapping"]
+
+        kwargs = self._delta_parameters['command']
+        kwargs['job_context'] = self._job_context
+        self._request_data['job_name'] = self._name
+        self._request_data['payload'].update(kwargs)
+        self._check_max_shots_samples_validity()
+        return self._request_data
+
     def execute_async(self, *args, **kwargs):
         assert self._job_status.waiting, "job has already been executed"
         try:
-            self._handle_params(args, kwargs)
-            if self._delta_parameters['mapping']:
-                if self._job_context is None:
-                    self._job_context = {}
-                self._job_context["mapping_delta_parameters"] = self._delta_parameters["mapping"]
-
-            kwargs = self._delta_parameters['command']
-            kwargs['job_context'] = self._job_context
-            self._request_data['job_name'] = self._name
-            self._request_data['payload'].update(kwargs)
-            self._check_max_shots_samples_validity()
-            self._id = self._rpc_handler.create_job(serialize(self._request_data))
+            self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(*args, **kwargs)))
             get_logger().info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
 
         except Exception as e:
@@ -199,6 +203,18 @@ class RemoteJob(Job):
         else:
             raise RuntimeError('Job is not waiting or running, cannot cancel it')
 
+    def rerun(self) -> RemoteJob:
+        """Rerun a job. Same job will be executed again as a new one.
+        Job must have failed, meaning job status must be either CANCELED or ERROR.
+
+        :raises RuntimeError: Job have not failed, therefore it cannot be rerun.
+        :return: The new remote job.
+        """
+        if not self.status.failed:
+            raise RuntimeError(f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
+        return RemoteJob.from_id(self._rpc_handler.rerun_job(self._id), self._rpc_handler)
+
+
     def _get_results(self) -> None:
         if self._results and self.status.completed:
             return self._results
@@ -221,3 +237,10 @@ class RemoteJob(Job):
                 self._results["results"] = result_mapping_function(
                     self._results["results"], **self._delta_parameters)
         return self._results
+
+    def __str__(self):
+        if self._id is None:
+            # handles unsent jobs of a JobGroup
+            return f"RemoteJob with name:{self.name}, id:{self._id}, status:None"
+        else:
+            return f"RemoteJob with name:{self.name}, id:{self._id}, status:{self._job_status}"

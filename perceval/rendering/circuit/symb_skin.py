@@ -26,10 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import math
 from multipledispatch import dispatch
 
-from perceval.components import AComponent, Circuit, Port, PortLocation, Herald, IDetector,\
+from perceval.components import AComponent, AFFConfigurator, Circuit, Port, PortLocation, Herald, IDetector,\
     unitary_components as cp,\
     non_unitary_components as nu
 from ._canvas_shapes import ShapeFactory
@@ -44,11 +44,16 @@ class SymbSkin(ASkin):
                           "fill": "white",
                           "stroke_style": {"stroke": "black", "stroke_width": 1}},
                          compact_display)
+        self.style[ModeType.CLASSICAL] = {"stroke": "gray", "stroke_width": 3}
 
     @dispatch(AComponent)
     def get_width(self, c) -> int:
         """Absolute fallback"""
         return 1
+
+    @dispatch(AFFConfigurator)
+    def get_width(self, c) -> int:
+        return self.get_width(c.circuit_template())
 
     @dispatch(cp.Unitary)
     def get_width(self, c) -> int:
@@ -74,6 +79,10 @@ class SymbSkin(ASkin):
     @dispatch(AComponent)
     def get_shape(self, c):
         return self.default_shape
+
+    @dispatch(AFFConfigurator)
+    def get_shape(self, c):
+        return self.ffconf_shape
 
     @dispatch(cp.BS)
     def get_shape(self, c):
@@ -134,6 +143,30 @@ class SymbSkin(ASkin):
         if location == PortLocation.INPUT:
             return self.herald_shape_in
         return self.herald_shape_out
+
+    def ffconf_shape(self, comp: AFFConfigurator, canvas, mode_style):
+        w = self.get_width(comp)
+        for i in range(comp.m):
+            canvas.add_mpath(["M", 0, 25 + i * 50, "l", 50 * w, 0], **self.style[ModeType.CLASSICAL])
+
+        # Control wire between the feed-forward configurator and the configured circuit
+        offset_sign = math.copysign(1, comp.circuit_offset)
+        origin = [w * 25, 25 + offset_sign * 15]
+        destination = [w * 25, 40 + offset_sign * 15 + 50 * comp.circuit_offset]
+        if offset_sign > 0:  # Move to the bottom of the ff configurator block if offset is "to the bottom"
+            origin[1] += (comp.m - 1)*50
+            destination[1] += (comp.m - 1)*50
+        canvas.add_mline(origin + destination, stroke="white", stroke_width=4.5)
+        canvas.add_mline(origin + destination, **self.style[ModeType.CLASSICAL], stroke_dasharray="9,5")
+        origin[1] += offset_sign * 8
+        arrow_size = 5
+        for side in [-1, 1]:
+            canvas.add_mline(origin + [origin[0] + side * arrow_size, origin[1] - offset_sign * arrow_size],
+                             **self.style[ModeType.CLASSICAL])
+
+        # The actual component
+        canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="honeydew")
+        canvas.add_text((w * 25, 30 + 50*(comp.m-1)/2), size=10, ta="middle", text=comp.name)
 
     @dispatch(IDetector)
     def get_shape(self, detector):
@@ -297,7 +330,9 @@ class SymbSkin(ASkin):
             canvas.add_text((27, 50*port.m - 9), text='[' + port.name + ']', size=6, ta="right", fontstyle="italic")
 
     def detector_shape(self, detector, canvas, mode_style):
-        canvas.add_mpath(["M", -25, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
-        canvas.add_mpath(ShapeFactory.half_circle_port_out(10), stroke="black", stroke_width=1, fill="white")
+        canvas.add_mpath(["M", 0, 25, "l", 25, 0], **self.style[ModeType.PHOTONIC])
+        if mode_style[0] is not None:
+            canvas.add_mpath(["M", 25, 25, "l", 25, 0], **self.style[ModeType.CLASSICAL])
+        canvas.add_mpath(ShapeFactory.half_circle_port_out(10, 20), stroke="black", stroke_width=1, fill="white")
         if detector.name:
-            canvas.add_text((0, 12), text=detector.name, size=5, ta="left", fontstyle="italic")
+            canvas.add_text((12, 12), text=detector.name, size=5, ta="left", fontstyle="italic")

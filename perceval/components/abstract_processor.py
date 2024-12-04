@@ -39,10 +39,11 @@ from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
 from .detector import IDetector, Detector, DetectionType, get_detection_type
+from .feed_forward_configurator import AFFConfigurator
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
-from .unitary_components import PERM, Unitary
+from .unitary_components import Barrier, PERM, Unitary
 
 
 class ProcessorType(Enum):
@@ -70,11 +71,13 @@ class AProcessor(ABC):
 
         self._is_unitary: bool = True
         self._has_td: bool = False
+        self._has_feedforward = False
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
         self._components: list[tuple[tuple, AComponent]] = []  # Any type of components, not only unitary ones
         self._detectors: list[IDetector] = []
+        self.detectors_injected: list[int] = []  # List of modes where detectors are already in the circuit
         self._mode_type: list[ModeType] = []
 
         self._n_moi: int = 0  # Number of modes of interest (moi)
@@ -252,6 +255,10 @@ class AProcessor(ABC):
             self._compose_processor(connector, component, keep_port)
         elif isinstance(component, IDetector):
             self._add_detector(mode_mapping, component)
+        elif isinstance(component, AFFConfigurator):
+            self._add_ffconfig(mode_mapping, component)
+        elif isinstance(component, Barrier):
+            self._components.append((mode_mapping, component))
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component, keep_port)
         else:
@@ -259,7 +266,40 @@ class AProcessor(ABC):
         self._circuit_changed()
         return self
 
+    def _add_ffconfig(self, modes, component: AFFConfigurator):
+        if isinstance(modes, int):
+            modes = tuple(range(modes, modes + component.m))
+
+        # Check composition consistency
+        if min(modes) < 0 or max(modes) >= self.m:
+            raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {modes})")
+        if any([self._mode_type[i] != ModeType.CLASSICAL for i in modes]):
+            raise UnavailableModeException(modes, "Cannot add a classical component on non-classical modes")
+        photonic_modes = component.config_modes(modes)
+        if min(photonic_modes) < 0 or max(photonic_modes) >= self.m:
+            raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
+        if any([self._mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
+            raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
+
+        modes_add_detectors = [m for m in modes if m not in self.detectors_injected]
+        self._components.append((tuple(range(self.m)), Barrier(self.m, visible=len(modes_add_detectors) == 0)))
+        if modes_add_detectors and modes_add_detectors[0] > 0:  # Barrier above detectors
+            ports = tuple(range(0, modes_add_detectors[0]))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
+        for m in modes_add_detectors:
+            self.detectors_injected.append(m)
+            self._components.append(((m,), self._detectors[m]))
+        if modes_add_detectors and modes_add_detectors[-1] < self.m - 1:  # Barrier below detectors
+            ports = tuple(range(modes_add_detectors[-1] + 1, self.m))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
+        self._components.append((modes, component))
+        self._has_feedforward = True
+        self._is_unitary = False
+
     def _add_detector(self, mode: int, detector: IDetector):
+        if isinstance(mode, (tuple, list)) and len(mode) == 1:
+            mode = mode[0]
+
         if not isinstance(mode, int):
             raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
 
@@ -268,6 +308,10 @@ class AProcessor(ABC):
         self._detectors[mode] = detector
         if self._mode_type[mode] == ModeType.PHOTONIC:
             self._mode_type[mode] = ModeType.CLASSICAL
+
+    @property
+    def detectors(self):
+        return self._detectors
 
     def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
@@ -366,7 +410,7 @@ class AProcessor(ABC):
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
+        sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)

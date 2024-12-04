@@ -102,7 +102,7 @@ def test_cnot_1_postprocessed():
     pc = convertor.convert(myqlmc, use_postselection=True)
     assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
-    assert len(pc._components) == 2  # No permutation needed, only H and CNOT components exist in the Processor
+    assert len(pc.components) == 2  # No permutation needed, only H and CNOT components exist in the Processor
     # should be BS//CNOT
     bsd_out = pc.probs()['results']
     assert len(bsd_out) == 2
@@ -131,9 +131,9 @@ def test_basic_circuit_swap():
 
     pc = convertor.convert(myqlmc)
     assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
-    assert len(pc._components) == 1
-    r0, c0 = pc._components[0]
-    assert r0 == [0, 1, 2, 3]
+    assert len(pc.components) == 1
+    r0, c0 = pc.components[0]
+    assert r0 == (0, 1, 2, 3)
     assert isinstance(c0, comp.PERM)
     assert c0.perm_vector == [2, 3, 0, 1]
 
@@ -207,7 +207,7 @@ def test_converter_ghz_state():
 
     pc = convertor.convert(myqlmc, use_postselection=True)
     assert pc.m == 6
-    assert pc.circuit_size == 10 # m + heralded modes = m + nb_cnot*2
+    assert pc.circuit_size == 10  # m + heralded modes = m + nb_cnot*2
     import perceval as pcvl
     pc.with_input(pcvl.LogicalState([0, 0, 0]))
     sampler = Sampler(pc)

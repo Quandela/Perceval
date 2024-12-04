@@ -31,11 +31,11 @@ import math
 import numpy as np
 
 import exqalibur as xq
-from ._abstract_backends import AProbAmpliBackend
+from ._abstract_backends import AStrongSimulationBackend
 from perceval.utils import BasicState
 
 
-class NaiveBackend(AProbAmpliBackend):
+class NaiveBackend(AStrongSimulationBackend):
     """Naive algorithm, no clever calculation path, does not cache anything,
        recompute all states on the fly"""
 
@@ -67,5 +67,5 @@ class NaiveBackend(AProbAmpliBackend):
                 colidx += 1
         return u_st
 
-    def _compute_permanent(self, M: np.ndarray):
-        return xq.permanent_cx(M, n_threads=1)
+    def _compute_permanent(self, m):
+        return xq.permanent_cx(m)

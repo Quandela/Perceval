@@ -35,7 +35,7 @@ from .unitary_components import PERM
 
 
 class UnavailableModeException(Exception):
-    def __init__(self, mode: int | list[int], reason: str = None):
+    def __init__(self, mode: int | list[int] | tuple[int], reason: str = None):
         because = ''
         if reason:
             because = f' because: {reason}'

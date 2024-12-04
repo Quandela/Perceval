@@ -29,6 +29,8 @@
 from perceval.components import Processor, Source, Circuit, BS, PS, PERM
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
+from .converter_utils import label_cnots_in_gate_sequence
+from perceval.utils import NoiseModel
 
 import numpy as np
 import re
@@ -66,7 +68,6 @@ _CQASM_2_QUBIT_GATES = {
     "CNOT", "CZ"
 }
 
-
 class ConversionBadVersionError(Exception):
     pass
 
@@ -86,12 +87,11 @@ class CQASMConverter(AGateConverter):
     :param backend_name: backend name used in the converted processor (default SLOS)
     :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
+        super().__init__(backend_name, source, noise_model)
         import cqasm.v3x as cqasm
 
         self._qubit_list = []
-        self._num_cnots = 0
         self._use_postselection = False
         self._cqasm = cqasm
 
@@ -119,7 +119,7 @@ class CQASMConverter(AGateConverter):
         else:
             raise ConversionUnsupportedFeatureError(f"Cannot map variable { name } to a declared qubit")
 
-    def _convert_statement(self, statement):
+    def _get_gate_inf(self, statement):
         gate_name = statement.name
         num_operands = len(statement.operands)
 
@@ -150,6 +150,11 @@ class CQASMConverter(AGateConverter):
             raise ConversionUnsupportedFeatureError(
                 f"Gate { gate_name } has more than one control (n = { num_controls })")
 
+        return gate_name, controls, targets, parameter
+
+    def _convert_statement(self, statement, gate_index, optimized_gate_sequence):
+        gate_name, controls, targets, parameter = self._get_gate_inf(statement)
+
         if not controls:
             circuit_template = _CQASM_1_QUBIT_GATES.get(gate_name, None)
             if not circuit_template:
@@ -165,13 +170,8 @@ class CQASMConverter(AGateConverter):
                 raise ConversionUnsupportedFeatureError(
                     f"Unsupported 2-qubit gate { gate_name }")
             for target in targets:
-                self._create_2_qubit_gates_from_catalog(
-                    gate_name,
-                    self._num_cnots,
-                    controls[0] * 2,
-                    target * 2,
-                    self._use_postselection,
-                    parameter=parameter)
+                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], controls[0] * 2,
+                                                        target * 2, self._use_postselection)
 
     def convert(self, ast, use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
@@ -188,16 +188,27 @@ class CQASMConverter(AGateConverter):
         get_logger().info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
                     channel.general)
         self._collect_qubit_list(ast)
-        self._num_cnots = sum(
-            (s.name == "CNOT") + 2 * (s.name in ["CR", "CRk"])
-            for s in ast.block.statements)
         self._use_postselection = use_postselection
 
         qubit_names = [
             f'{ q }[{ i }]' if i >= 0 else q for (q, i) in self._qubit_list]
         self._configure_processor(ast, qubit_names=qubit_names)
+
+        # for gate sequence to optimize cnots
+        gate_sequence = []
         for statement in ast.block.statements:
-            self._convert_statement(statement)
+            gate_name, controls, targets, parameter = self._get_gate_inf(statement)
+            if len(targets) > 1 and gate_name == 'CNOT':
+                get_logger().debug(f"Converting a multi-target CNOT {targets} to multiple Heralded CNOTs", channel.general)
+                for i in range(len(targets)):
+                    gate_sequence.append([gate_name, controls+[targets[i]]])
+            else:
+                gate_sequence.append([gate_name, controls + targets])
+
+        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
+
+        for gate_index, statement in enumerate(ast.block.statements):
+            self._convert_statement(statement, gate_index, optimized_gate_sequence)
         self.apply_input_state()
         return self._converted_processor
 

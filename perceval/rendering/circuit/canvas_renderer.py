@@ -31,8 +31,8 @@ from copy import copy
 
 from .renderer_interface import ICircuitRenderer
 from ..canvas import Canvas
-from perceval.components import ACircuit, APort, PortLocation, PERM
-from perceval.utils import ModeType
+from perceval.components import ACircuit, APort, PortLocation, PERM, IDetector, Herald
+from perceval.utils import ModeType, BasicState
 
 
 class _PortPos:
@@ -83,17 +83,20 @@ class CanvasRenderer(ICircuitRenderer):
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> tuple[int, int]:
         return self._skin.get_size(circuit, recursive)
 
-    def display_input_photons(self, input_pos) -> None:
+    def display_input_photons(self, input_pos: BasicState) -> None:
         """
-        Display small arrows at the beginning of any mode where input photons are expected
+        Display half-cup showing the number of expected photons at the beginning of any mode
         """
         for k in range(input_pos.m):
-            if input_pos[k] > 0 and self._mode_style[k] != ModeType.HERALD:
+            if self._mode_style[k] != ModeType.HERALD:
                 self._canvas.set_offset(
-                    (CanvasRenderer.AFFIX_ALL_SIZE*3/4, CanvasRenderer.AFFIX_ALL_SIZE * (2*k + 1)),
-                    0,
-                    0)
-                self._canvas.add_mpath(("M", -3, -3, "L", 0, 0, "L", -3, 3), **self._skin.style[ModeType.PHOTONIC])
+                    (-CanvasRenderer.AFFIX_ALL_SIZE * 1.5, CanvasRenderer.AFFIX_ALL_SIZE * 2 * k), 0, 0)
+                self._canvas.add_mline([
+                    CanvasRenderer.AFFIX_ALL_SIZE, CanvasRenderer.AFFIX_ALL_SIZE,
+                    CanvasRenderer.SCALE - 2, CanvasRenderer.AFFIX_ALL_SIZE],
+                    **self._skin.style[ModeType.PHOTONIC])
+                h = Herald(input_pos[k])
+                self._canvas.add_shape(self._skin.get_shape(h, PortLocation.INPUT), h, None)
 
     def add_mode_index(self):
         self._canvas.set_offset(
@@ -152,12 +155,12 @@ class CanvasRenderer(ICircuitRenderer):
                 continue
             self._canvas.set_offset(
                 (
-                    CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * (max_pos + 1),
+                    CanvasRenderer.AFFIX_ALL_SIZE + CanvasRenderer.SCALE * (max_pos + .5),
                     CanvasRenderer.SCALE * i
                 ),
                 CanvasRenderer.AFFIX_ALL_SIZE,
                 CanvasRenderer.SCALE)
-            self._canvas.add_shape(self._skin.get_shape(det), det, None)
+            self._canvas.add_shape(self._skin.get_shape(det), det, [None])
 
     def open_subblock(self, lines: tuple[int, ...], name: str, size: tuple[int, int], color=None):
         # Get recommended margins for this block
@@ -248,7 +251,10 @@ class CanvasRenderer(ICircuitRenderer):
         self._herald_info = info
 
     def _update_mode_style(self, lines, circuit, w: int):
-        if not isinstance(circuit, PERM):
+        if isinstance(circuit, IDetector):
+            self._mode_style[lines[0]] = ModeType.CLASSICAL
+
+        elif not isinstance(circuit, PERM):
             input_heralds = {}
             output_heralds = {}
 

@@ -28,6 +28,7 @@
 # SOFTWARE.
 from __future__ import annotations
 
+from .feed_forward_simulator import FFSimulator
 from .simulator_interface import ISimulator
 from .simulator import Simulator
 from .delay_simulator import DelaySimulator
@@ -36,6 +37,7 @@ from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Processor
 from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST
+from ..components.feed_forward_configurator import AFFConfigurator
 
 
 class SimulatorFactory:
@@ -61,10 +63,13 @@ class SimulatorFactory:
         sim_polarization = False
         sim_delay = False
         sim_losses = False
+        sim_feed_forward = False
         convert_to_circuit = False
         min_detected_photons = None
         post_select = None
         heralds = None
+        source = None
+        noise = None
         m = 0
 
         if not isinstance(circuit, ACircuit):
@@ -77,6 +82,8 @@ class SimulatorFactory:
                 min_detected_photons = circuit.parameters.get('min_detected_photons')
                 post_select = circuit.post_select_fn
                 heralds = circuit.heralds
+                source = circuit.source
+                noise = circuit.noise
                 if circuit._is_unitary:
                     circuit = circuit.linear_circuit()
                 else:
@@ -92,6 +99,9 @@ class SimulatorFactory:
                         convert_to_circuit = False
                     if not sim_polarization and isinstance(cp, ACircuit):
                         sim_polarization = cp.requires_polarization
+                    if not sim_feed_forward and isinstance(cp, AFFConfigurator):
+                        sim_feed_forward = True
+                        convert_to_circuit = False
 
         if isinstance(circuit, ACircuit):
             sim_polarization = circuit.requires_polarization
@@ -106,13 +116,22 @@ class SimulatorFactory:
                 raise ValueError(f"Backend '{backend}' not supported")
 
         # Building the simulator layers
-        simulator = Simulator(backend)
-        if sim_polarization:
-            simulator = PolarizationSimulator(simulator)
-        if sim_delay:
-            simulator = DelaySimulator(simulator)
-        if sim_losses:
-            simulator = LossSimulator(simulator)
+        if sim_feed_forward:
+            assert not sim_delay, "Cannot simulate time delays in a feed-forward simulation"
+            assert not sim_polarization, "Cannot simulate polarization in a feed-forward simulation"
+            simulator = FFSimulator(backend)
+            simulator.set_noise(noise)
+            simulator.set_source(source)
+
+        else:
+            simulator = Simulator(backend)
+            if sim_polarization:
+                simulator = PolarizationSimulator(simulator)
+            if sim_delay:
+                simulator = DelaySimulator(simulator)
+            if sim_losses:
+                simulator = LossSimulator(simulator)
+
         simulator.set_selection(min_detected_photons_filter=min_detected_photons,
                                 postselect=post_select, heralds=heralds)
 
