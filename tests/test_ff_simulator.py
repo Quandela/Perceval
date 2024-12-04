@@ -282,3 +282,47 @@ def test_non_adjacent_config():
     sampler = Sampler(proc)
 
     assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 1])))
+
+
+def test_with_state_vector():
+    proc = Processor("SLOS", 4)
+
+    proc.add(0, detector)
+    proc.add(1, detector)
+    proc.add(0, cnot)
+
+    input_state = (BasicState([1, 0]) + BasicState([0, 1])) * BasicState([1, 0])
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(input_state)
+    sampler = Sampler(proc)
+
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 1, 0]): .5,
+        BasicState([0, 1, 0, 1]): .5
+    }))
+
+
+def test_with_annotated_state_vector():
+    proc = Processor("SLOS", 5)
+
+    tri_not = (FFCircuitProvider(2, 0, Circuit(3))
+               .add_configuration([0, 2], PERM([2, 1, 0]))
+               .add_configuration([1, 1], PERM([1, 2, 0])))
+
+    proc.add(0, BS())
+    proc.add(0, detector)
+    proc.add(1, detector)
+    proc.add(0, tri_not)
+
+    input_state = (BasicState("|{_:0}, {_:1}>") + BasicState("|{_:0}, {_:0}>")) * BasicState("|{_:0}, 0, 0>")
+
+    proc.min_detected_photons_filter(2)
+    proc.with_input(input_state)
+    sampler = Sampler(proc)
+
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+        BasicState([2, 0, 1, 0, 0]): .375,
+        BasicState([0, 2, 0, 0, 1]): .375,
+        BasicState([1, 1, 0, 1, 0]): .25
+    }))

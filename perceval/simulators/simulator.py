@@ -435,16 +435,17 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         self._logical_perf = 1
-        if self._heralds:
-            self._setup_heralds()
-        else:
-            self._backend.clear_mask()
 
         svd, p_threshold, has_superposed_states = self._preprocess_svd(input_dist)
 
         if has_superposed_states:
+            self._backend.clear_mask()
             res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
+            if self._heralds:  # TODO: do this also with superposed states when logical perf computation is ready
+                self._setup_heralds()
+            else:
+                self._backend.clear_mask()
             res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
         if detectors:
