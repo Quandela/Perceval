@@ -29,12 +29,12 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import Enum
+from functools import cache
 
 from .abstract_component import AComponent
 from .linear_circuit import Circuit
 from .unitary_components import BS, PERM
 from perceval.utils import BasicState, BSDistribution
-from perceval.utils.logging import get_logger, channel
 
 
 class DetectionType(Enum):
@@ -132,48 +132,99 @@ class BSLayeredPPNR(IDetector):
 
 
 class Detector(IDetector):
-    def __init__(self, p_multiphoton_detection: float = 1):
+    """
+    Interleaved detector class
+
+    Such a detector is made of one or multiple wires, each able to simultaneously detect a photon. The `detect` method
+    takes the number of wires into acocunt to simulate the detection probability for each case.
+    Having 1 wire makes the detector threshold, whereas having an infinity of them makes the detector perfectly PNR.
+
+    :param n_wires: Number of detecting wires in the interleaved detector (defaults to infinity)
+    :param max_detections: Max number of photons the user is willing to read. The |max_detection> state would then mean
+                           "max_detection or more photons were detected". (defaults to None)
+
+    See `pnr()`, `threshold()` and `ppnr(n_wires, max_detections)` static methods for easy detector initialization
+    """
+
+    def __init__(self, n_wires: int = None, max_detections: int = None):
         super().__init__()
-        assert 0 <= p_multiphoton_detection <= 1,\
-            f"A probability must be within 0 and 1 (got {p_multiphoton_detection})"
-        self._pmd = p_multiphoton_detection
-        if self.type == DetectionType.PPNR:
-            get_logger().error("Generic PPNR was not implemented yet and will behave like a threshold detector for now",
-                               channel.user)
+        assert n_wires is None or n_wires > 0, f"A detector requires at least 1 wire (got {n_wires})"
+        assert max_detections is None or n_wires is None or max_detections <= n_wires, \
+            f"Max detections has to be lower or equal than the number of wires (got {max_detections} > {n_wires} wires)"
+        self._wires = n_wires
+        self._max = None
+        if self._wires is not None:
+            self._max = self._wires if max_detections is None else min(max_detections, self._wires)
+        self._cache = {}
 
     @staticmethod
     def threshold():
         """Builds a threshold detector"""
-        d = Detector(0)
+        d = Detector(1)
         d.name = "Threshold"
         return d
 
     @staticmethod
     def pnr():
-        """Builds a perfect detector"""
+        """Builds a perfect photon number resolving (PNR) detector"""
         d = Detector()
         d.name = "PNR"
         return d
 
     @staticmethod
-    def ppnr(p: float):
-        d = Detector(p)
+    def ppnr(n_wires: int, max_detections: int = None):
+        """Builds an interleaved pseudo-PNR detector"""
+        d = Detector(n_wires, max_detections)
         d.name = f"PPNR"
         return d
 
     @property
     def type(self) -> DetectionType:
-        if self._pmd == 0:
+        if self._wires == 1:
             return DetectionType.Threshold
-        elif self._pmd == 1:
+        elif self._wires is None and self._max is None:
             return DetectionType.PNR
         return DetectionType.PPNR
 
     def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
-        if theoretical_photons < 2 or self.type == DetectionType.PNR:
+        detector_type = self.type
+        if theoretical_photons < 2 or detector_type == DetectionType.PNR:
             return BasicState([theoretical_photons])
-        # Adjust the model to treat the PPNR case here
-        return BasicState([1])
+
+        if detector_type == DetectionType.Threshold:
+            return BasicState([1])
+
+        if theoretical_photons in self._cache:
+            return self._cache[theoretical_photons]
+
+        remaining_p = 1
+        result = BSDistribution()
+        max_detectable = min(self._max, theoretical_photons)
+        for i in range(1, max_detectable):
+            p_i = self._cond_probability(i, theoretical_photons)
+            result.add(BasicState([i]), p_i)
+            remaining_p -= p_i
+        # The highest detectable photon count gains all the remaining probability
+        result.add(BasicState([max_detectable]), remaining_p)
+        self._cache[theoretical_photons] = result
+        return result
+
+    @cache
+    def _cond_probability(self, det: int, nph: int):
+        """
+        The conditional probability of having `det` detections with `nph` photons on the total number of wires.
+        This uses a recurrence formula set to compute each conditional probability from the ones with one less photon.
+        Hitting `i` wires with `n` photons is:
+        - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon
+        OR
+        - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon
+        """
+        if det == 0:
+            return 1 if nph == 0 else 0
+        if nph < det:
+            return 0
+        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) / self._wires \
+            + self._cond_probability(det, nph - 1) * det / self._wires
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:
