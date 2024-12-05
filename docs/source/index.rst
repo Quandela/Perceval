@@ -110,6 +110,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
    notebooks/Shor_Implementation
    notebooks/2-mode_Grover_algorithm
+   notebooks/Quantum_teleportation_feed_forward
 
 .. toctree::
    :caption: Variational quantum algorithms

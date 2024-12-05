@@ -27,7 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from __future__ import annotations
+
+import copy
 from abc import ABC, abstractmethod
+from typing import Self
 
 from .unitary_components import Unitary
 from .abstract_component import AComponent
@@ -101,6 +104,9 @@ class AFFConfigurator(AComponent, ABC):
     def circuit_offset(self, offset: int):
         assert isinstance(offset, int), f"A feed-forward configurator offset must be an integer (received {offset})"
         self._offset = offset
+
+    def copy(self, subs=None) -> Self:
+        return copy.copy(self)
 
 
 class FFCircuitProvider(AFFConfigurator):
