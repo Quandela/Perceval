@@ -117,7 +117,3 @@ def test_check_group_progress(mock_warn, mock_write_file,
 
     unfinished_job_details = group_progress['Unfinished'][1]
     assert unfinished_job_details['not sent'] == num_rj_add
-
-    unset_jobs = jgroup.list_unsent_jobs()
-    assert len(unset_jobs) == num_rj_add
-    assert all(isinstance(each_unsent, RemoteJob) for each_unsent in unset_jobs)

@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from urllib.error import HTTPError
 
 from perceval.runtime import RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
@@ -369,20 +370,12 @@ class JobGroup:
         for f in files_to_del:
             JobGroup.delete_job_group(f)
 
-    def _list_jobs_status_type(self, statuses: list[str] = None) -> list[RemoteJob]:
+    def _list_jobs_status_type(self, statuses: list[str]) -> list[RemoteJob]:
         remote_jobs = []
-        if statuses is None:
-            # handles unsent jobs with given statuses
-            for job_entry in self._group_info['job_group_data']:
-                if job_entry['status'] is None:
-                    remote_jobs.append(self._recreate_unsent_remote_job(job_entry))
-            return remote_jobs
-        else:
-            # handles jobs sent to cloud
-            for job_entry in self._group_info['job_group_data']:
-                if job_entry['status'] in statuses:
-                    remote_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
-            return remote_jobs
+        for job_entry in self._group_info['job_group_data']:
+            if job_entry['status'] in statuses:
+                remote_jobs.append(self._recreate_remote_job_from_stored_data(job_entry))
+        return remote_jobs
 
     def list_successful_jobs(self) -> list[RemoteJob]:
         """
@@ -397,13 +390,6 @@ class JobGroup:
         """
         return self._list_jobs_status_type(['RUNNING', 'WAITING'])
 
-    def list_failed_jobs(self) -> list[RemoteJob]:
-        """
-        Returns a list of all the failed RemoteJobs in the group - includes those with
-         RUNNINGSTATUS -> ERROR or CANCELED.
-        """
-        return self._list_jobs_status_type(['ERROR', 'CANCELED'])
-
     @staticmethod
     def _recreate_unsent_remote_job(job_entry):
         platform_metadata = job_entry['metadata']
@@ -414,15 +400,13 @@ class JobGroup:
         return RemoteJob(request_data=job_entry['body'], rpc_handler=rpc_handler,
                          job_name=job_entry['body']['job_name'])
 
-    def _list_unsent_jobs(self) -> list[RemoteJob]:
-        """
-        Returns a list of all the RemoteJobs in the group that were not sent to the cloud.
-        """
-        return self._list_jobs_status_type()
-
     def run_parallel(self):
-
-        # loop through job group to find None jobs
+        """
+        Launches all the unsent jobs in the group on Cloud, running them in parallel.
+        If the user lacks authorization to send multiple jobs to the cloud or exceeds
+        the maximum allowed limit, an exception is raised, terminating the launch process.
+        Any remaining jobs in the group will not be sent.
+        """
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] is None:
                 curr_remote_job = self._recreate_unsent_remote_job(job_entry)
@@ -431,60 +415,57 @@ class JobGroup:
                 job_entry['status'] = curr_remote_job.status()
 
         # todo: include error message or something if no more jobs can be sent ot cloud
-        self._write_job_group_to_disk()  # jobs with id's updated after launch
+        self._write_job_group_to_disk()  # update job entries on disk
 
     def run_sequential(self, delay: int = 60):
         """
+        Launches the unsent jobs in the group on Cloud in a sequential manner with a
+        user-specified delay between the completion of one job and the start of the next.
 
         :param delay: number of seconds to wait between launching to jobs on cloud
         """
-
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] is None:
                 curr_remote_job = self._recreate_unsent_remote_job(job_entry)
                 curr_remote_job.execute_async()
                 job_entry['id'] = curr_remote_job.id
                 job_entry['status'] = curr_remote_job.status()
-
                 while not curr_remote_job.is_complete:
                     # wait for current job to finish
                     time.sleep(1)
 
+            if job_entry != self._group_info['job_group_data'][-1]:
                 time.sleep(delay)  # add delay before launching next job
-        self._write_job_group_to_disk()  # jobs with id's updated after launch
+        self._write_job_group_to_disk()  # update job entries on disk
 
     def rerun_failed_sequential(self, delay: int = 60):
         """
+        Reruns the 'Failed' jobs in the group on Cloud in a sequential manner with a
+        user-specified delay between the completion of one job and the start of the next.
 
         :param delay: number of seconds to wait between launching to jobs on cloud
         """
 
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] in ['ERROR', 'CANCELED']:
-                curr_remote_job = self._recreate_unsent_remote_job(job_entry)
-                curr_remote_job.rerun()
-                # TODO: curre_remotejob in this case is a different identical job, need to update info -> process id maybe different
-                job_entry['id'] = curr_remote_job.id
-                job_entry['status'] = curr_remote_job.status()
-
-                while not curr_remote_job.is_complete:
+                rerun_rj = self._recreate_remote_job_from_stored_data(job_entry).rerun()
+                job_entry['id'] = rerun_rj.id
+                job_entry['status'] = rerun_rj.status()
+                while not rerun_rj.is_complete:
                     # wait for current job to finish
                     time.sleep(1)
 
                 time.sleep(delay)  # add delay before launching next job
-        self._write_job_group_to_disk()  # jobs with id's updated after launch
+        self._write_job_group_to_disk()  # update job entries on disk
 
     def rerun_failed_parallel(self):
 
         # loop through job group to find None jobs
         for job_entry in self._group_info['job_group_data']:
             if job_entry['status'] in ['ERROR', 'CANCELED']:
-                curr_remote_job = self._recreate_unsent_remote_job(job_entry)
-                curr_remote_job.rerun()
-                # TODO: curre_remotejob in this case is a different identical job, need
-                #  to update info -> process id maybe different
-                job_entry['id'] = curr_remote_job.id
-                job_entry['status'] = curr_remote_job.status()
+                rerun_rj = self._recreate_remote_job_from_stored_data(job_entry).rerun()
 
-        # todo: include error message or something if no more jobs can be sent ot cloud
-        self._write_job_group_to_disk()  # jobs with id's updated after launch
+                job_entry['id'] = rerun_rj.id
+                job_entry['status'] = rerun_rj.status()
+
+        self._write_job_group_to_disk()  # update job entries on disk
