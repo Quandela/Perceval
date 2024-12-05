@@ -400,6 +400,71 @@ class JobGroup:
         return RemoteJob(request_data=job_entry['body'], rpc_handler=rpc_handler,
                          job_name=job_entry['body']['job_name'])
 
+    def _launch_jobs_sequential(self, delay: int, rerun: bool):
+        """
+        Launches or reruns jobs in the group on Cloud in a sequential manner.
+
+        :param delay: number of seconds to wait between the launch of to jobs on cloud
+        :param rerun: if True rerun failed jobs or run unsent jobs
+        """
+        for job_entry in self._group_info['job_group_data']:
+            if not rerun and job_entry['status'] is None:
+                remote_job = self._recreate_unsent_remote_job(job_entry)
+                remote_job.execute_async()
+            elif rerun and job_entry['status'] in ['ERROR', 'CANCELED']:
+                remote_job = self._recreate_remote_job_from_stored_data(job_entry).rerun()
+            else:
+                continue
+
+            job_entry['id'] = remote_job.id
+            job_entry['status'] = remote_job.status()
+
+            while not remote_job.is_complete:
+                time.sleep(1)
+
+            if job_entry != self._group_info['job_group_data'][-1]:
+                time.sleep(delay)  # add delay before launching next job
+        self._write_job_group_to_disk()  # update job entries on disk
+
+    def run_sequential(self, delay: int):
+        """
+        Launches the unsent jobs in the group on Cloud in a sequential manner with a
+        user-specified delay between the completion of one job and the start of the next.
+
+        :param delay: number of seconds to wait between launching jobs on cloud
+        """
+        self._launch_jobs_sequential(delay=delay, rerun=False)
+
+    def rerun_failed_sequential(self, delay: int):
+        """
+        Reruns Failed jobs in the group on the Cloud in a sequential manner with a
+        user-specified delay between the completion of one job and the start of the next.
+
+        :param delay: number of seconds to wait between re-launching jobs on cloud
+        """
+        self._launch_jobs_sequential(delay=delay, rerun=True)
+
+    def _launch_jobs_parallel(self, rerun: bool):
+        """
+        Launches or reruns jobs in the group on Cloud parallely.
+
+        :param rerun: if True rerun failed jobs or run unsent jobs
+        """
+        for job_entry in self._group_info['job_group_data']:
+            if not rerun and job_entry['status'] is None:
+                remote_job = self._recreate_unsent_remote_job(job_entry)
+                remote_job.execute_async()
+            elif rerun and job_entry['status'] in ['ERROR', 'CANCELED']:
+                print('RE launching jobs in parallel')
+                remote_job = self._recreate_remote_job_from_stored_data(job_entry).rerun()
+            else:
+                continue
+
+            job_entry['id'] = remote_job.id
+            job_entry['status'] = remote_job.status()
+
+        self._write_job_group_to_disk()  # update job entries on disk
+
     def run_parallel(self):
         """
         Launches all the unsent jobs in the group on Cloud, running them in parallel.
@@ -407,65 +472,13 @@ class JobGroup:
         the maximum allowed limit, an exception is raised, terminating the launch process.
         Any remaining jobs in the group will not be sent.
         """
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] is None:
-                curr_remote_job = self._recreate_unsent_remote_job(job_entry)
-                curr_remote_job.execute_async()
-                job_entry['id'] = curr_remote_job.id
-                job_entry['status'] = curr_remote_job.status()
-
-        # todo: include error message or something if no more jobs can be sent ot cloud
-        self._write_job_group_to_disk()  # update job entries on disk
-
-    def run_sequential(self, delay: int = 60):
-        """
-        Launches the unsent jobs in the group on Cloud in a sequential manner with a
-        user-specified delay between the completion of one job and the start of the next.
-
-        :param delay: number of seconds to wait between launching to jobs on cloud
-        """
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] is None:
-                curr_remote_job = self._recreate_unsent_remote_job(job_entry)
-                curr_remote_job.execute_async()
-                job_entry['id'] = curr_remote_job.id
-                job_entry['status'] = curr_remote_job.status()
-                while not curr_remote_job.is_complete:
-                    # wait for current job to finish
-                    time.sleep(1)
-
-            if job_entry != self._group_info['job_group_data'][-1]:
-                time.sleep(delay)  # add delay before launching next job
-        self._write_job_group_to_disk()  # update job entries on disk
-
-    def rerun_failed_sequential(self, delay: int = 60):
-        """
-        Reruns the 'Failed' jobs in the group on Cloud in a sequential manner with a
-        user-specified delay between the completion of one job and the start of the next.
-
-        :param delay: number of seconds to wait between launching to jobs on cloud
-        """
-
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] in ['ERROR', 'CANCELED']:
-                rerun_rj = self._recreate_remote_job_from_stored_data(job_entry).rerun()
-                job_entry['id'] = rerun_rj.id
-                job_entry['status'] = rerun_rj.status()
-                while not rerun_rj.is_complete:
-                    # wait for current job to finish
-                    time.sleep(1)
-
-                time.sleep(delay)  # add delay before launching next job
-        self._write_job_group_to_disk()  # update job entries on disk
+        self._launch_jobs_parallel(rerun=False)
 
     def rerun_failed_parallel(self):
-
-        # loop through job group to find None jobs
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] in ['ERROR', 'CANCELED']:
-                rerun_rj = self._recreate_remote_job_from_stored_data(job_entry).rerun()
-
-                job_entry['id'] = rerun_rj.id
-                job_entry['status'] = rerun_rj.status()
-
-        self._write_job_group_to_disk()  # update job entries on disk
+        """
+        Launches all Failed jobs in the group on Cloud, running them in parallel.
+        If the user lacks authorization to send multiple jobs to the cloud or exceeds
+        the maximum allowed limit, an exception is raised, terminating the launch process.
+        Any remaining jobs in the group will not be sent.
+        """
+        self._launch_jobs_parallel(rerun=True)
