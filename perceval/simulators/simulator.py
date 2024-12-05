@@ -288,7 +288,7 @@ class Simulator(ISimulator):
             else:
                 physical_perf -= prob
         input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
-        self._evolve_cache(input_set, normalize)
+        self._evolve_cache(input_set)
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
