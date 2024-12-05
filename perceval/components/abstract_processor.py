@@ -386,10 +386,9 @@ class AProcessor(ABC):
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
             c_first = perm_modes[0]
-            if perm_component is None:
-                other_postselect = copy.copy(processor._postselect)
-            else:
-                other_postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+            other_postselect = copy.copy(processor._postselect)
+            if perm_component is not None:
+                other_postselect.apply_permutation(perm_inv.perm_vector, c_first)
             other_postselect.shift_modes(c_first)
             if not (self._postselect is None or other_postselect is None
                     or postselect_independent(self._postselect, other_postselect)):

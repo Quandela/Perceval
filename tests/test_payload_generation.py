@@ -163,4 +163,4 @@ def test_payload_cnot(requests_mock):
     # ... but a post-selection function was added
     assert 'postselect' in payload
     ps = deserialize(payload['postselect'])
-    assert ps == PostSelect('([0,1]==1 & [2,3]==1) & ([4,5]==1 & [6,7]==1)')
+    assert ps == PostSelect('[0,1]==1 & [2,3]==1 & [4,5]==1 & [6,7]==1')

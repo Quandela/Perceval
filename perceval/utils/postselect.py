@@ -26,11 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 from copy import copy
 from typing import TypeAlias, Self
 
 from .statevector import BasicState, BSDistribution, StateVector
-from exqalibur import PostSelect as exqaliburPostSelect, PostSelect
+from exqalibur import PostSelect as ex_PostSelect
 from exqalibur import LogicOperator
 
 from perceval.utils.logging import deprecated
@@ -38,7 +40,7 @@ from perceval.utils.logging import deprecated
 operands: TypeAlias = LogicOperator
 
 
-class PostSelect(exqaliburPostSelect):
+class PostSelect(ex_PostSelect):
     """PostSelect is a callable post-selection intended to filter out unwanted output states. It is designed to be a
     user-friendly description of any post-selection logic.
 
@@ -103,18 +105,6 @@ class PostSelect(exqaliburPostSelect):
             indexes = [indexes]
         self.merge(PostSelect(f"{list(indexes)} <= {value}"))
         return self
-
-    def apply_permutation(self, perm_vector: list[int], first_mode: int = 0) -> PostSelect:
-        """
-        Apply a given permutation on the conditions.
-
-        :param perm_vector: Permutation vector to apply (as returned by PERM.perm_vector)
-        :param first_mode: First mode of the permutation to apply (default 0)
-        :return: A PostSelect with the permutation applied
-        """
-        ps = copy(self)
-        ps.apply_permutation_inplace(perm_vector, first_mode)
-        return ps
 
 
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:

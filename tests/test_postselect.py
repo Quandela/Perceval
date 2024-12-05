@@ -111,11 +111,12 @@ def test_postselect_apply_permutation():
     ps = PostSelect("[0,1]==1 & [2,3]>2 & [4,5]<3")
 
     perm_vector = [1, 2, 0]  # Corresponds to PERM(perm_vector)
-    ps_out = ps.apply_permutation(perm_vector)
-    assert ps_out == PostSelect("[1,2]==1 & [0,3]>2 & [4,5]<3")
+    ps.apply_permutation(perm_vector)
+    assert ps == PostSelect("[1,2]==1 & [0,3]>2 & [4,5]<3")
 
-    ps_out = ps.apply_permutation(perm_vector, 1)
-    assert ps_out == PostSelect("[0,2]==1 & [3,1]>2 & [4,5]<3")
+    ps = PostSelect("[0,1]==1 & [2,3]>2 & [4,5]<3")
+    ps.apply_permutation(perm_vector, 1)
+    assert ps == PostSelect("[0,2]==1 & [3,1]>2 & [4,5]<3")
 
 
 
@@ -160,7 +161,7 @@ def test_postselect_merge():
     ps1 = PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0")
     ps2 = PostSelect("[5,6,7] == 1")
     ps1.merge(ps2)
-    assert ps1 == PostSelect("([0]==0 & [1,2]==1 & [3,4]==1 & [5]==0) & [5,6,7] == 1")
+    assert ps1 == PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0 & [5,6,7] == 1")
 
     ps_empty = PostSelect()
     ps_empty.merge(ps1)
