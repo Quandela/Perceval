@@ -63,6 +63,14 @@ class RPCHandler:
     def name(self) -> str:
         return self._name
 
+    @property
+    def url(self) -> str:
+        return self._url
+
+    @property
+    def headers(self) -> dict:
+        return self._headers
+
     def set_session_id(self, session_id) -> None:
         self._session_id = session_id
 
