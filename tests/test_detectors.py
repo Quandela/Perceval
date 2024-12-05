@@ -62,12 +62,22 @@ def test_interleaved_ppnr():
     assert s[2] in res and res[s[2]] == pytest.approx(0.75)
     assert len(res) == 2
 
+    detector_3wires = Detector.ppnr(n_wires=3)
+    res = detector_3wires.detect(3)
+    assert s[0] not in res
+    assert s[1] in res and res[s[1]] == pytest.approx(3/27)
+    assert s[2] in res and res[s[2]] == pytest.approx(18/27)
+    assert s[3] in res and res[s[3]] == pytest.approx(6/27)
+    assert len(res) == 3  # Can't detect more than 3 simultaneous photons with 3 wires
+    assert 3 in detector_3wires._cache  # Check that the result is cached
+    assert detector_3wires._cache[3] == res
+
     detector_5wires = Detector.ppnr(n_wires=5)  # Adding wires increases the probability of catching all photons
     res = detector_5wires.detect(3)
     assert s[0] not in res
     assert s[1] in res and res[s[1]] == pytest.approx(0.04)
-    assert s[2] in res and res[s[2]] == pytest.approx(0.384)
-    assert s[3] in res and res[s[3]] == pytest.approx(0.576)
+    assert s[2] in res and res[s[2]] == pytest.approx(0.48)
+    assert s[3] in res and res[s[3]] == pytest.approx(0.48)
     assert len(res) == 3
 
     detector_5wires_2max = Detector.ppnr(n_wires=5, max_detections=2)  # Now limit the detected photon count at 2
@@ -75,7 +85,7 @@ def test_interleaved_ppnr():
     # Here we get the same results as above, but the probability for 2 and 3 detections are summed
     assert s[0] not in res
     assert s[1] in res and res[s[1]] == pytest.approx(0.04)
-    assert s[2] in res and res[s[2]] == pytest.approx(0.96)  # = p2_5wires + p3_5wires = 0.384 + 0.576
+    assert s[2] in res and res[s[2]] == pytest.approx(0.96)  # = p2_5wires + p3_5wires
     assert len(res) == 2
 
 

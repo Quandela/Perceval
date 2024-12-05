@@ -154,6 +154,7 @@ class Detector(IDetector):
         self._max = None
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
+        self._cache = {}
 
     @staticmethod
     def threshold():
@@ -192,23 +193,36 @@ class Detector(IDetector):
         if detector_type == DetectionType.Threshold:
             return BasicState([1])
 
+        if theoretical_photons in self._cache:
+            return self._cache[theoretical_photons]
+
         remaining_p = 1
         result = BSDistribution()
         max_detectable = min(self._max, theoretical_photons)
-        # Compute each p(i) being the probability of having exactly i detections
-        # Each iteration of the following loop is computing:
-        # The probability of having at least i detections (remaining_p)
-        # times
-        # The probability of having exactly i detections KNOWING that there are at least i (which is expressed as:
-        # remaining photons must hit a wire which was already hit by another one beforehand)
         for i in range(1, max_detectable):
-            p_i = remaining_p * (i / self._wires) ** (theoretical_photons - i)
+            p_i = self._cond_probability(i, theoretical_photons)
             result.add(BasicState([i]), p_i)
             remaining_p -= p_i
         # The highest detectable photon count gains all the remaining probability
         result.add(BasicState([max_detectable]), remaining_p)
-
+        self._cache[theoretical_photons] = result
         return result
+
+    def _cond_probability(self, det: int, nph: int):
+        """
+        The conditional probability of having `det` detections with `nph` photons on the total number of wires.
+        This uses a recurrence formula set to compute each conditional probability from the ones with one less photon.
+        Hitting `i` wires with `n` photons is:
+        - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon
+        OR
+        - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon
+        """
+        if det == 0:
+            return 1 if nph == 0 else 0
+        if nph < det:
+            return 0
+        return self._cond_probability(det - 1, nph - 1) * (self._wires - det + 1) / self._wires \
+            + self._cond_probability(det, nph - 1) * det / self._wires
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:
