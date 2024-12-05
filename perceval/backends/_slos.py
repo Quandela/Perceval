@@ -218,13 +218,12 @@ class SLOSBackend(AStrongSimulationBackend):
         xq.all_prob_normalize_output(c, self._fsas[input_state.n])
         return c
 
-    def evolve(self, normalize: bool = True) -> StateVector:
+    def evolve(self) -> StateVector:
         istate = self._input_state
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
         for output_state, pa in zip(self._get_iterator(self._input_state), c):
             res += output_state * (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
-        if normalize:
-            res.normalize()
+        res.normalize()
         return res

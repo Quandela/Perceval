@@ -64,6 +64,8 @@ class RemoteProcessor(AProcessor):
         rp.noise = processor.noise
         rp.add(0, processor)
         rp.min_detected_photons_filter(processor._min_detected_photons_filter)
+        if processor.input_state is not None:
+            rp.with_input(processor.input_state)
         return rp
 
     def __init__(self,

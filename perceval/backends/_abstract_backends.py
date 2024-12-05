@@ -150,18 +150,25 @@ class AStrongSimulationBackend(ABackend):
     def probability(self, output_state: BasicState) -> float:
         return abs(self.prob_amplitude(output_state)) ** 2
 
+    def all_prob(self, input_state: BasicState = None) -> list[float]:
+        if input_state is not None:
+            self.set_input_state(input_state)
+        results = []
+        for output_state in self._get_iterator(self._input_state):
+            results.append(self.probability(output_state))
+        return results
+
     def prob_distribution(self) -> BSDistribution:
         bsd = BSDistribution()
         for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
-    def evolve(self, normalize: bool = True) -> StateVector:
+    def evolve(self) -> StateVector:
         res = StateVector()
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
-        if normalize:
-            res.normalize()
+        res.normalize()
         return res
 
 
