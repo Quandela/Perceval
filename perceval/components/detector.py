@@ -29,6 +29,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import Enum
+from functools import cache
 
 from .abstract_component import AComponent
 from .linear_circuit import Circuit
@@ -208,6 +209,7 @@ class Detector(IDetector):
         self._cache[theoretical_photons] = result
         return result
 
+    @cache
     def _cond_probability(self, det: int, nph: int):
         """
         The conditional probability of having `det` detections with `nph` photons on the total number of wires.
