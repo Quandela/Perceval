@@ -37,18 +37,14 @@ from _mock_rpc_handler import get_rpc_handler
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
 
-@patch.object(JobGroup, '_write_job_group_to_disk')
+@patch.object(JobGroup, '_write_to_file')
 def test_job_group_creation(mock_write_file):
     jgroup = JobGroup(TEST_JG_NAME)
     assert jgroup.name == TEST_JG_NAME
     assert len(jgroup.list_remote_jobs) == 0  # empty job group
-
-    assert jgroup._group_info['created_date'] == jgroup._group_info['modified_date']
-
-    # assert mock methods called
     mock_write_file.assert_called_once()
 
-@patch.object(JobGroup, '_write_job_group_to_disk')
+@patch.object(JobGroup, '_write_to_file')
 def test_reject_non_remote_job(mock_write_file):
     # creating a local job - sampling
     p = catalog["postprocessed cnot"].build_processor()
@@ -63,14 +59,14 @@ def test_reject_non_remote_job(mock_write_file):
     # assert mock methods called
     mock_write_file.assert_called_once()
 
+
 @patch.object(JobGroup, 'list_existing')
-@patch.object(JobGroup, '_read_job_group_from_disk')
-@patch.object(JobGroup, '_write_job_group_to_disk')
+@patch.object(JobGroup, '_write_to_file')
 @patch.object(get_logger(), "warn")
 def test_add_remote_to_group(mock_warn, mock_write_file,
-                             mock_read, mock_list, requests_mock):
+                             mock_list, requests_mock):
     mock_rpc = get_rpc_handler(requests_mock)
-    remote_job = RemoteJob({'payload':{}}, mock_rpc, 'a_remote_job')
+    remote_job = RemoteJob({'payload': {}}, mock_rpc, 'a_remote_job')
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(10):
@@ -81,7 +77,7 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
     for each_job in jgroup._group_info['job_group_data']:
         assert each_job['id'] is None
         assert each_job['status'] is None
-        assert each_job['body'] ==  {'payload': {'job_context': None}, 'job_name': 'a_remote_job'}
+        assert each_job['body'] == {'payload': {'job_context': None}, 'job_name': 'a_remote_job'}
 
         # check correct metadata stored
         assert each_job['metadata']['headers'] == mock_rpc.headers
@@ -89,18 +85,16 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
         assert each_job['metadata']['url'] == mock_rpc.url
 
     # assert mock method calls
-    assert mock_write_file.call_count == 11 # 1 creation + 10 add/modify
-    assert mock_read.call_count == 10
+    assert mock_write_file.call_count == 11  # 1 creation + 10 add/modify
 
 
 @patch.object(JobGroup, 'list_existing')
-@patch.object(JobGroup, '_read_job_group_from_disk')
-@patch.object(JobGroup, '_write_job_group_to_disk')
+@patch.object(JobGroup, '_write_to_file')
 @patch.object(get_logger(), "warn")
 def test_check_group_progress(mock_warn, mock_write_file,
-                             mock_read, mock_list, requests_mock):
+                              mock_list, requests_mock):
     mock_rpc = get_rpc_handler(requests_mock)
-    remote_job = RemoteJob({'payload':{}}, mock_rpc, 'a_remote_job')
+    remote_job = RemoteJob({'payload': {}}, mock_rpc, 'a_remote_job')
 
     num_rj_add = 10
 
