@@ -48,8 +48,8 @@ DEFAULT_MAX_SAMPLES = 10000
 
 class JobGroup:
     """
-    A JobGroup handles a collection of Jobs saved on disk using perceval
-    persistent data. It can perform various tasks such as
+    A JobGroup handles a collection of Jobs saved on disk using perceval persistent data.
+    It can perform various tasks such as
     - Saving information for a collection of jobs, whether they have been sent to the cloud or not.
     - Running jobs within the group either in parallel or sequentially.
     - Rerunning failed jobs within the group.
@@ -62,7 +62,7 @@ class JobGroup:
     def __init__(self, name: str):
         self._name = name
         self._group_info = dict()
-        self._file_path =  os.path.join(JobGroup._JGRP_DIR_PATH, f"{self._name}.{FILE_EXT_JGRP}")
+        self._file_path = os.path.join(JobGroup._JGRP_DIR_PATH, f"{self._name}.{FILE_EXT_JGRP}")
 
         if self._job_group_exists(name):
             get_logger().info(f'Job Group with name {name} exists; subsequent jobs will be appended to it',
@@ -86,13 +86,13 @@ class JobGroup:
         """
         list_rj = []
         for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] != None:
+            if job_entry['status'] is not None:
                 rj = self._recreate_remote_job_from_stored_data(job_entry)
                 list_rj.append(rj)
             else:
                 list_rj.append(None)
 
-        return  list_rj
+        return list_rj
 
     @staticmethod
     def _get_current_datetime() -> str:
