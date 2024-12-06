@@ -5,3 +5,4 @@ qutip~=4.7.5
 seaborn~=0.13
 nbconvert
 myqlm~=1.9.5
+scikit-learn>=1.4
