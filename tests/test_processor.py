@@ -269,12 +269,14 @@ def test_phase_quantization():
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
 
 
-def test_empty_output():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_empty_output(mock_warn):
     p = Processor("SLOS", 4)
     p.add(0, PERM([1, 0]))
     p.add_herald(0, 1)
     p.min_detected_photons_filter(2)
     p.with_input(BasicState([0, 1, 0]))
 
-    # TODO: remove warning message
-    assert p.probs()["results"] == BSDistribution()
+    with LogChecker(mock_warn, expected_log_number=2):  # Normalize is called twice
+        res = p.probs()["results"]
+    assert res == BSDistribution()

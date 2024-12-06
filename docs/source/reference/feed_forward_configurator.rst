@@ -6,7 +6,7 @@ As they are non-unitary components, they can only be added to :code:`Processor` 
 
 Their purpose is to link measurements on given modes to circuits to configure.
 
-They are based on common principles:
+They are based on the following common features:
 
 * A default circuit is mandatory for when the measurement does not fall into one of the configured cases. This circuit determines the size of the configured circuit.
 * All referenced circuits have the same size.
