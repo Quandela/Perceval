@@ -400,11 +400,11 @@ class JobGroup:
         return RemoteJob(request_data=job_entry['body'], rpc_handler=rpc_handler,
                          job_name=job_entry['body']['job_name'])
 
-    def _launch_jobs(self, rerun: bool, use_delay: bool, delay: int):
+    def _launch_jobs(self, rerun: bool, use_delay: bool, delay: int = 0):
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
-        :param delay: number of seconds to wait between the launch of to jobs on cloud
+        :param delay: number of seconds to wait between the launch of to jobs on cloud (=0 by default)
         :param rerun: if True rerun failed jobs or run unsent jobs
         """
         for job_entry in self._group_info['job_group_data']:
