@@ -26,31 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import os
 import json
 import warnings
-from typing import Union
 from platformdirs import PlatformDirs
 
 from .metadata import PMetadata
 from ._enums import FileFormat
 
 _CONFIG_FILE_NAME = "config.json"
-
-
-def _removesuffix(data, suffix):
-    """Replace the python 3.9 method removesuffix
-
-    :param data: data on which remove suffix
-    :param suffix: suffix to remove
-    :return: data
-    """
-    if data.endswith(suffix):
-        data = data[:-len(suffix)]
-
-    return data
-
+SUB_DIRECTORIES = ['logs', 'job_group']
 
 class PersistentData:
     """PersistentData handle perceval persistent data
@@ -132,7 +119,7 @@ class PersistentData:
         except OSError:
             warnings.warn(UserWarning("Cannot delete persistent file {file_path}"))
 
-    def write_file(self, filename: str, data: Union[bytes, str], file_format: FileFormat):
+    def write_file(self, filename: str, data: bytes | str, file_format: FileFormat):
         """Write data into a file in persistent data directory
 
         :param filename: name of the file to write in (with extension)
@@ -154,7 +141,7 @@ class PersistentData:
         else:
             warnings.warn(UserWarning(f"Can't save {filename}"))
 
-    def read_file(self, filename: str, file_format: FileFormat) -> Union[bytes, str]:
+    def read_file(self, filename: str, file_format: FileFormat) -> bytes | str:
         """Read data from a file in persistent data directory
 
         :param filename: name of the file to read (with extension)
@@ -169,12 +156,12 @@ class PersistentData:
         if file_format == FileFormat.BINARY:
             with open(file_path, "r+b") as file:
                 data = file.read()
-            data = _removesuffix(data, b'\n')
-            data = _removesuffix(data, b' ')
+            data = data.removesuffix(b'\n')
+            data = data.removesuffix(b' ')
         elif file_format == FileFormat.TEXT:
             with open(file_path, "r+t", encoding="UTF-8") as file:
                 data = str(file.read())
-            data = _removesuffix(data, '\n').rstrip()
+            data = data.removesuffix('\n').rstrip()
         else:
             raise NotImplementedError(f"format {format} is not supported")
         return data
@@ -210,7 +197,7 @@ class PersistentData:
         """Delete all persistent data except for log
         """
         for file in os.listdir(self._directory):
-            if "log" not in file:
+            if all(keyword not in file for keyword in SUB_DIRECTORIES):
                 self.delete_file(file)
 
     @property
@@ -220,3 +207,29 @@ class PersistentData:
         :return: persistent data directory
         """
         return self._directory
+
+    def create_sub_directory(self, relative_path):
+        """
+        Creates a sub folder in persistent data directory if non-existent
+        """
+        dir_path = os.path.join(self.directory, relative_path)
+
+        try:
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+        except OSError as exc:
+            warnings.warn(UserWarning(f"{exc}"))
+
+        if not PersistentData._is_subdir_writable(dir_path):
+            raise PermissionError(f"Write permission denied for sub-directory {relative_path}")
+
+        if not PersistentData._is_subdir_readable(dir_path):
+            raise PermissionError(f"Read permission denied for sub-directory {relative_path}")
+
+    @staticmethod
+    def _is_subdir_writable(path_sub_dir):
+        return os.access(path_sub_dir, os.W_OK)
+
+    @staticmethod
+    def _is_subdir_readable(path_sub_dir):
+        return os.access(path_sub_dir, os.R_OK)

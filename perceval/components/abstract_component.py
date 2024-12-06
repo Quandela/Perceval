@@ -26,9 +26,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 from abc import ABC
-from typing import Dict, Union, List
+from collections.abc import Iterable
 import sympy as sp
 import copy
 
@@ -72,7 +73,7 @@ class AParametrizedComponent(AComponent):
         self._vars = {}
 
     @property
-    def vars(self) -> Dict[str, Parameter]:
+    def vars(self) -> dict[str, Parameter]:
         return {p.name: p for p in self._params.values() if not p.fixed}
 
     def assign(self,
@@ -95,10 +96,15 @@ class AParametrizedComponent(AComponent):
         return True
 
     @property
-    def params(self):
+    def params(self) -> Iterable[str]:
+        """Returns a list of all variable parameter names in the component"""
         return self._params.keys()
 
-    def get_parameters(self, all_params: bool = False) -> List[Parameter]:
+    def param(self, param_name: str) -> Parameter:
+        """Returns a `Parameter` object from its name"""
+        return self._params[param_name]
+
+    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
@@ -112,19 +118,20 @@ class AParametrizedComponent(AComponent):
 
     def _set_parameter(self,
                        name: str,
-                       p: Union[Parameter, float],
+                       p: Parameter | float,
                        min_v: float,
                        max_v: float,
                        periodic: bool = True) -> Parameter:
         """
-            Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
-            min/max value or a parameter defined by a value that we create on the fly
-        :param name:
-        :param p:
-        :param min_v:
-        :param max_v:
-        :param periodic:
-        :return:
+        Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
+        min/max value or a parameter defined by a value that we create on the fly
+
+        :param name: parameter name
+        :param p: parameter instance or numerical value
+        :param min_v: minimum numerical value (can be None)
+        :param max_v: maximum numerical value (can be None)
+        :param periodic: True if the value is periodic (e.g. for an angle)
+        :return: The corresponding `Parameter` object
         """
         if isinstance(p, Parameter):
             if min_v is not None:
@@ -144,31 +151,31 @@ class AParametrizedComponent(AComponent):
         self._params[name] = p
         return p
 
-    def variable_def(self, out_parameters: dict, k, pname, default_value, map_param_kid=None):
-        if map_param_kid is None:
-            map_param_kid = {}
-        if self._params[k].defined:
-            if default_value is None or self._params[k]._value != default_value:
-                v = self._params[k]._value
+    def _populate_parameters(self, out_parameters: dict, pname: str, default_value: float = None):
+        """
+        Populate an in/out dictionary with a {parameter name: best value for display} couple, if needed.
+        A value equal to the optional default value will not be injected in the dictionary.
+
+        :param out_parameters: out dictionary, where key/value pairs are added.
+        :param pname: parameter name to consider, in the component definition.
+            e.g. to retrieve "phi0" from PS(phi=P("phi0")), ask for pname="phi", as it's the parameter name for a PS.
+        :param default_value: optional default numerical value. None means no default value.
+        """
+        p = self._params[pname]
+        if p.defined:
+            if default_value is None or p._value != default_value:
+                v = p._value
                 if isinstance(v, sp.Expr):
-                    v = str(v)
-                    out_parameters[pname] = v
-                elif default_value is None or abs(v-float(default_value)) > 1e-6:
+                    out_parameters[pname] = str(v)
+                elif default_value is None or abs(v - float(default_value)) > 1e-6:
                     out_parameters[pname] = v
         else:
-            out_parameters[pname] = map_param_kid[self._params[k]._pid]
+            out_parameters[pname] = self._params[pname].name
 
-    def get_variables(self, _=None):
+    def get_variables(self):
         return {}
 
-    def map_parameters(self):
-        map_param_kid = {}
-        for k, p in self._params.items():
-            if not p.defined:
-                map_param_kid[p._pid] = p.name
-        return map_param_kid
-
-    def copy(self, subs: Union[dict, list] = None):
+    def copy(self, subs: dict | list = None):
         nc = copy.deepcopy(self)
 
         if subs is None:

@@ -32,8 +32,6 @@ from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circu
 from perceval.components import ACircuit, LC, PERM, BS
 from perceval.utils import BasicState, BSDistribution, StateVector
 
-from typing import List
-
 
 class LossSimulator(ASimulatorDecorator):
 
@@ -59,7 +57,7 @@ class LossSimulator(ASimulatorDecorator):
             output += probampli*reduced_out_state
         return output
 
-    def _simulate_losses_with_beam_splitters(self, components: List) -> ACircuit:
+    def _simulate_losses_with_beam_splitters(self, components: list) -> ACircuit:
         output = []
         can_output_circuit = True
         next_free_mode = self._original_m
@@ -77,7 +75,7 @@ class LossSimulator(ASimulatorDecorator):
                     in_perm = [next_free_mode-r[0]-1] + [m for m in range(1, next_free_mode-r[0]-1)] + [0]
                     output.append((r_ip, PERM(in_perm)))
 
-                loss = c.get_variables()["loss"]
+                loss = float(c.param("loss"))
                 bs = BS.H(BS.r_to_theta(1 - loss))
                 r_bs = (r[0], r[0]+1)
                 output.append((r_bs, bs))

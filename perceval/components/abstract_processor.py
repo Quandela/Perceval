@@ -26,22 +26,24 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 from multipledispatch import dispatch
-from typing import Any, Dict, List, Union, Tuple
 
-from perceval.components.linear_circuit import Circuit, ACircuit
-from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel
-from perceval.utils.logging import get_logger, channel
+from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel, ModeType
+from perceval.utils.logging import get_logger, channel, deprecated
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
-from .abstract_component import AComponent
+from .abstract_component import AComponent, AParametrizedComponent
+from .detector import IDetector, Detector, DetectionType, get_detection_type
+from .feed_forward_configurator import AFFConfigurator
+from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
-from .unitary_components import PERM, Unitary
+from .unitary_components import Barrier, PERM, Unitary
 
 
 class ProcessorType(Enum):
@@ -53,28 +55,32 @@ class AProcessor(ABC):
     def __init__(self):
         self._input_state = None
         self.name: str = ""
-        self._parameters: Dict[str, Any] = {}
+        self._parameters: dict[str, any] = {}
 
-        self._noise: Union[NoiseModel, None] = None
+        self._noise: NoiseModel | None = None
 
-        self._thresholded_output: bool = False
-        self._min_detected_photons_filter: Union[int, None] = None
+        self._thresholded_output: bool = False  # Deprecated, avoid using this field
+        self._min_detected_photons_filter: int | None = None
 
         self._reset_circuit()
 
     def _reset_circuit(self):
-        self._in_ports: Dict = {}
-        self._out_ports: Dict = {}
-        self._postselect: Union[PostSelect, None] = None
+        self._in_ports: dict = {}
+        self._out_ports: dict = {}
+        self._postselect: PostSelect | None = None
 
         self._is_unitary: bool = True
         self._has_td: bool = False
+        self._has_feedforward = False
 
         self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
-        self._components: List[Tuple[int, AComponent]] = []  # Any type of components, not only unitary ones
+        self._components: list[tuple[tuple, AComponent]] = []  # Any type of components, not only unitary ones
+        self._detectors: list[IDetector] = []
+        self.detectors_injected: list[int] = []  # List of modes where detectors are already in the circuit
+        self._mode_type: list[ModeType] = []
 
-        self._n_moi = None  # Number of modes of interest (moi)
+        self._n_moi: int = 0  # Number of modes of interest (moi)
 
     @property
     @abstractmethod
@@ -90,11 +96,11 @@ class AProcessor(ABC):
     def specs(self):
         return dict()
 
-    def set_parameters(self, params: Dict[str, Any]):
+    def set_parameters(self, params: dict[str, any]):
         for key, value in params.items():
             self.set_parameter(key, value)
 
-    def set_parameter(self, key: str, value: Any):
+    def set_parameter(self, key: str, value: any):
         if not isinstance(key, str):
             raise TypeError(f"A parameter name has to be a string (got {type(key)})")
         self._parameters[key] = value
@@ -112,10 +118,10 @@ class AProcessor(ABC):
         self._input_state = None
         self._circuit_changed()
         if new_m is not None:
-            self._n_moi = new_m
+            self.m = new_m
 
     def _circuit_changed(self):
-        # Can be used by child class
+        # Can be used by child class to react to a circuit change
         pass
 
     def min_detected_photons_filter(self, n: int):
@@ -147,14 +153,12 @@ class AProcessor(ABC):
 
     @property
     @abstractmethod
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         pass
 
-    def postprocess_output(self, s: BasicState, keep_herald: bool = False) -> BasicState:
-        if not keep_herald and self.heralds:
+    def remove_heralded_modes(self, s: BasicState) -> BasicState:
+        if self.heralds:
             s = s.remove_modes(list(self.heralds.keys()))
-        if self._thresholded_output:
-            s = s.threshold_detection()
         return s
 
     @property
@@ -190,7 +194,7 @@ class AProcessor(ABC):
             return self._postselect(state)
         return True
 
-    def copy(self, subs: Union[dict, list] = None):
+    def copy(self, subs: dict | list = None):
         get_logger().debug(f"Copy processor {self.name}", channel.general)
         new_proc = copy.copy(self)
         new_proc._components = []
@@ -198,20 +202,22 @@ class AProcessor(ABC):
             new_proc._components.append((r, c.copy(subs=subs)))
         return new_proc
 
-    def set_circuit(self, circuit: ACircuit):
+    def set_circuit(self, circuit: ACircuit) -> AProcessor:
         r"""
-        Removes all components and replace them by the given circuit's components.
-        :return: self. Allows to directly chain this with .add
+        Removes all components and replace them by the given circuit.
+
+        :param circuit: The circuit to start the processor with
+        :return: Self to allow direct chain this with .add()
         """
-        if self._n_moi is None:
-            self._n_moi = circuit.m
+        if self._n_moi == 0:
+            self.m = circuit.m
         assert circuit.m == self.circuit_size, "Circuit doesn't have the right number of modes"
         self._components = []
         for r, c in circuit:
             self._components.append((r, c))
         return self
 
-    def add(self, mode_mapping, component, keep_port=True):
+    def add(self, mode_mapping, component, keep_port: bool = True) -> AProcessor:
         """
         Add a component to the processor (unitary or non-unitary).
 
@@ -225,6 +231,7 @@ class AProcessor(ABC):
          * A unitary circuit
          * A non-unitary component
          * A processor
+         * A detector
 
         :param keep_port: if True, saves `self`'s output ports on modes impacted by the new component, otherwise removes them.
 
@@ -238,22 +245,75 @@ class AProcessor(ABC):
         >>> p.add([2,5], BS())  # Modes (2, 5) of the processor's output connected to (0, 1) of the added beam splitter
         >>> p.add({2:0, 5:1}, BS())  # Same as above
         """
-        if self._n_moi is None:
-            self._n_moi = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
-            get_logger().debug(f"Number of modes of interest defaulted to {self._n_moi} in processor {self.name}",
-                         channel.general)
+        if self.m == 0:
+            self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
+            get_logger().debug(f"Number of modes of interest defaulted to {self.m} in processor {self.name}",
+                               channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
         if isinstance(component, AProcessor):
             self._compose_processor(connector, component, keep_port)
+        elif isinstance(component, IDetector):
+            self._add_detector(mode_mapping, component)
+        elif isinstance(component, AFFConfigurator):
+            self._add_ffconfig(mode_mapping, component)
+        elif isinstance(component, Barrier):
+            self._components.append((mode_mapping, component))
         elif isinstance(component, AComponent):
-            self._add_component(connector.resolve(), component)
+            self._add_component(connector.resolve(), component, keep_port)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
         self._circuit_changed()
         return self
 
-    def _validate_postselect_composition(self, mode_mapping: Dict):
+    def _add_ffconfig(self, modes, component: AFFConfigurator):
+        if isinstance(modes, int):
+            modes = tuple(range(modes, modes + component.m))
+
+        # Check composition consistency
+        if min(modes) < 0 or max(modes) >= self.m:
+            raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {modes})")
+        if any([self._mode_type[i] != ModeType.CLASSICAL for i in modes]):
+            raise UnavailableModeException(modes, "Cannot add a classical component on non-classical modes")
+        photonic_modes = component.config_modes(modes)
+        if min(photonic_modes) < 0 or max(photonic_modes) >= self.m:
+            raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
+        if any([self._mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
+            raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
+
+        modes_add_detectors = [m for m in modes if m not in self.detectors_injected]
+        self._components.append((tuple(range(self.m)), Barrier(self.m, visible=len(modes_add_detectors) == 0)))
+        if modes_add_detectors and modes_add_detectors[0] > 0:  # Barrier above detectors
+            ports = tuple(range(0, modes_add_detectors[0]))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
+        for m in modes_add_detectors:
+            self.detectors_injected.append(m)
+            self._components.append(((m,), self._detectors[m]))
+        if modes_add_detectors and modes_add_detectors[-1] < self.m - 1:  # Barrier below detectors
+            ports = tuple(range(modes_add_detectors[-1] + 1, self.m))
+            self._components.append((ports, Barrier(len(ports), visible=True)))
+        self._components.append((modes, component))
+        self._has_feedforward = True
+        self._is_unitary = False
+
+    def _add_detector(self, mode: int, detector: IDetector):
+        if isinstance(mode, (tuple, list)) and len(mode) == 1:
+            mode = mode[0]
+
+        if not isinstance(mode, int):
+            raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
+
+        if self._mode_type[mode] == ModeType.CLASSICAL:
+            raise UnavailableModeException(mode, "Mode is not photonic, cannot plug a detector.")
+        self._detectors[mode] = detector
+        if self._mode_type[mode] == ModeType.PHOTONIC:
+            self._mode_type[mode] = ModeType.CLASSICAL
+
+    @property
+    def detectors(self):
+        return self._detectors
+
+    def _validate_postselect_composition(self, mode_mapping: dict):
         if self._postselect is not None and isinstance(self._postselect, PostSelect):
             impacted_modes = list(mode_mapping.keys())
             # can_compose_with can take a bit of time so leave this test as an assert which can be removed by -O
@@ -284,6 +344,9 @@ class AProcessor(ABC):
         # Compute new herald positions
         n_new_heralds = connector.add_heralded_modes(mode_mapping)
         self._n_heralds += n_new_heralds
+        self._mode_type += [ModeType.HERALD] * n_new_heralds
+        for m_herald in processor.heralds:
+            self._detectors += [processor._detectors[m_herald]]
 
         # Add PERM, component, PERM^-1
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
@@ -334,13 +397,20 @@ class AProcessor(ABC):
             self._postselect = self._postselect or PostSelect()
             self._postselect.merge(other_postselect)
 
-    def _add_component(self, mode_mapping, component):
+    def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
+        if not keep_port:
+            # Remove output ports used to connect the new processor
+            for i in mode_mapping:
+                port = self.get_output_port(i)
+                if port is not None:
+                    del self._out_ports[port]
+
         perm_modes, perm_component = ModeConnector.generate_permutation(mode_mapping)
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        sorted_modes = list(range(min(mode_mapping), min(mode_mapping)+component.m))
+        sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping)+component.m))
         self._components.append((sorted_modes, component))
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)
@@ -356,9 +426,10 @@ class AProcessor(ABC):
             self._anon_herald_num += 1
         self._in_ports[Herald(expected, name)] = [mode]
         self._out_ports[Herald(expected, name)] = [mode]
+        self._mode_type[mode] = ModeType.HERALD
         self._circuit_changed()
 
-    def add_herald(self, mode: int, expected: int, name: str = None):
+    def add_herald(self, mode: int, expected: int, name: str = None) -> AProcessor:
         r"""
         Add a heralded mode
 
@@ -378,18 +449,26 @@ class AProcessor(ABC):
 
     @property
     def m(self) -> int:
-        r"""
+        """
         :return: Number of modes of interest (MOI) defined in the processor
         """
         return self._n_moi
+
+    @m.setter
+    def m(self, value: int):
+        if self._n_moi != 0:
+            raise RuntimeError(f"The number of modes of this processor was already set (to {self._n_moi})")
+        if not isinstance(value, int) or value < 1:
+            raise ValueError(f"The number of modes should be a strictly positive integer (got {value})")
+        self._n_moi = value
+        self._detectors = [None] * value
+        self._mode_type = [ModeType.PHOTONIC] * value
 
     @property
     def circuit_size(self) -> int:
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
-        if self._n_moi is None:
-            raise ValueError("No circuit size was set")
         return self._n_moi + self._n_heralds
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -404,7 +483,7 @@ class AProcessor(ABC):
             circuit.add(pos_m, component, merge=flatten)
         return circuit
 
-    def non_unitary_circuit(self, flatten: bool = False) -> List:
+    def non_unitary_circuit(self, flatten: bool = False) -> list[tuple[tuple, AComponent]]:
         if self._has_td:  # Inherited from the parent processor in this case
             return self.components
 
@@ -434,11 +513,11 @@ class AProcessor(ABC):
         if unitary_circuit.ncomponents():
             new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
                              Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
-
         return new_comp
 
-    def get_circuit_parameters(self) -> Dict[str, Parameter]:
-        return {p.name: p for _, c in self._components for p in c.get_parameters()}
+    def get_circuit_parameters(self) -> dict[str, Parameter]:
+        return {p.name: p for _, c in self._components if isinstance(c, AParametrizedComponent)
+                for p in c.get_parameters()}
 
     @property
     def out_port_names(self):
@@ -478,7 +557,7 @@ class AProcessor(ABC):
         return self
 
     @staticmethod
-    def _find_and_remove_port_from_list(m, port_list):
+    def _find_and_remove_port_from_list(m, port_list) -> bool:
         for current_port, current_port_range in port_list.items():
             if m in current_port_range:
                 del port_list[current_port]
@@ -495,21 +574,12 @@ class AProcessor(ABC):
                 raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
         return self
 
-    @property
-    def _closed_photonic_modes(self):
-        output = [False] * self.circuit_size
-        for port, m_range in self._out_ports.items():
-            if port.is_output_photonic_mode_closed():
-                for i in m_range:
-                    output[i] = True
-        return output
-
     def is_mode_connectible(self, mode: int) -> bool:
         if mode < 0:
             return False
         if mode >= self.circuit_size:
             return False
-        return not self._closed_photonic_modes[mode]
+        return self._mode_type[mode] == ModeType.PHOTONIC
 
     def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
         """
@@ -537,6 +607,7 @@ class AProcessor(ABC):
                 return port
         return None
 
+    @deprecated(version=0.12, reason="Add detectors as components")
     def thresholded_output(self, value: bool):
         r"""
         Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
@@ -545,10 +616,16 @@ class AProcessor(ABC):
         :param value: enables threshold detection when True, otherwise disables it.
         """
         self._thresholded_output = value
+        self._detectors = [Detector.threshold() if self._thresholded_output else None] * len(self._detectors)
 
     @property
+    @deprecated(version=0.12, reason="Use `detection_type` property instead")
     def is_threshold(self) -> bool:
         return self._thresholded_output
+
+    @property
+    def detection_type(self) -> DetectionType:
+        return get_detection_type(self._detectors)
 
     @property
     def heralds(self):
@@ -597,14 +674,14 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
-    def flatten(self) -> List:
+    def flatten(self) -> list[tuple]:
         """
         :return: a component list where recursive circuits have been flattened
         """
         return _flatten(self)
 
 
-def _flatten(composite, starting_mode=0) -> List:
+def _flatten(composite, starting_mode=0) -> list[tuple]:
     component_list = []
     for m_range, comp in composite._components:
         if isinstance(comp, Circuit):

@@ -31,11 +31,38 @@ from enum import Enum
 
 
 class Encoding(Enum):
+    """Logical encodings
+
+    QUDITn: a Qudit partition encoding n qubits with 1 photon in 2**n modes
+    """
     DUAL_RAIL = 0
     POLARIZATION = 1
-    QUDIT = 2
     TIME = 3
     RAW = 4
+    QUDIT2 = 5
+    QUDIT3 = 6
+    QUDIT4 = 7
+    QUDIT5 = 8  # 2**5 = 32 modes
+
+    @property
+    def logical_length(self) -> int:
+        """Logical length of a """
+        n = self.name
+        if n.startswith("QUDIT"):
+            return int(n.replace("QUDIT", ""))
+        return 1
+
+    @property
+    def fock_length(self) -> int:
+        if self == Encoding.DUAL_RAIL:
+            return 2
+        elif self == Encoding.POLARIZATION:
+            return 1
+        elif self == Encoding.TIME:
+            return 1
+        elif self == Encoding.RAW:
+            return 1
+        return 2**self.logical_length
 
 
 class InterferometerShape(Enum):
@@ -46,3 +73,9 @@ class InterferometerShape(Enum):
 class FileFormat(Enum):
     BINARY = 0
     TEXT = 1
+
+
+class ModeType(Enum):
+    PHOTONIC = 0
+    HERALD = 1
+    CLASSICAL = 2

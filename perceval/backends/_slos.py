@@ -27,14 +27,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._abstract_backends import AProbAmpliBackend
+from ._abstract_backends import AStrongSimulationBackend
 from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 
 import exqalibur as xq
 import math
 import numpy as np
-from typing import Dict, List
 
 
 class _Path:
@@ -105,26 +104,28 @@ class _Path:
             child.compute(u, self.coefs, mk)
 
 
-class SLOSBackend(AProbAmpliBackend):
+class SLOSBackend(AStrongSimulationBackend):
     def __init__(self, mask=None, n=None, use_symbolic=False):
         super().__init__()
         self._reset()
         self._symb = use_symbolic
-        self._mask_str = mask
-        self._n = n
-        self._mask = None
+        if mask is not None:
+            self.set_mask(mask)
+        if n is not None:
+            get_logger().warn(
+                f"DeprecationWarning: 'n' parameter is now ignored and deprecated. version=0.12", channel.user)
 
     @property
     def name(self) -> str:
         return "SLOS"
 
     def _reset(self):
-        self._fsms = [[]]  # xq.FSMask
-        self._fsas = {}  # xq.FSArray
-        self._mk_l: List[int] = [1]
-        self._path_roots: List[_Path] = []
-        self._state_mapping: Dict[BasicState, _Path] = {}
-        self._mask = None  # xq.FSMAsk
+        self._fsms: list[xq.FSMap] = [[]]
+        self._fsas: dict[int, xq.FSArray] = {}
+        self._mk_l: list[int] = [1]
+        self._path_roots: list[_Path] = []
+        self._state_mapping: dict[BasicState, _Path] = {}
+        self._mask: xq.FSMask = None
         self.clear_iterator_cache()
 
     def _compute_path(self, umat):
@@ -143,15 +144,16 @@ class SLOSBackend(AProbAmpliBackend):
             self._compute_path(self._umat)
         else:
             self._reset()
-            if self._mask_str is not None:
-                assert self._n is not None, "Photon count (n) is required when using a mask"
-                self._mask = xq.FSMask(circuit.m, self._n, self._mask_str)
 
     def set_input_state(self, input_state: BasicState):
-        self.preprocess([input_state])
         super().set_input_state(input_state)
+        self.preprocess([input_state])
 
-    def _deploy(self, input_list: List[BasicState]):
+    def clear_mask(self):
+        super().clear_mask()
+        self._reset()
+
+    def _deploy(self, input_list: list[BasicState]):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
         # after calculation, we only need to keep fsa for input_state n
         # during calculation we need to keep current fsa and previous fsa
@@ -170,7 +172,7 @@ class SLOSBackend(AProbAmpliBackend):
             if n not in self._fsas:
                 self._fsas[n] = current_fsa
 
-    def preprocess(self, input_list: List[BasicState]) -> bool:
+    def preprocess(self, input_list: list[BasicState]) -> bool:
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:
@@ -201,13 +203,16 @@ class SLOSBackend(AProbAmpliBackend):
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        for output_state, probability in zip(self._get_iterator(self._input_state, self._mask), c):
+        for output_state, probability in zip(self._get_iterator(self._input_state), c):
             bsd.add(output_state, probability)
         return bsd
 
-    def all_prob(self, input_state: BasicState):
+    def all_prob(self, input_state: BasicState = None):
         """SLOS specific signature, to enhance optimization in some computations"""
-        self.set_input_state(input_state)
+        if input_state is not None:
+            self.set_input_state(input_state)
+        else:
+            input_state = self._input_state
         c = np.copy(self._state_mapping[input_state].coefs).reshape(self._fsas[input_state.n].count())
         c = abs(c)**2 / self._input_state.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[input_state.n])
@@ -218,7 +223,7 @@ class SLOSBackend(AProbAmpliBackend):
         c = np.copy(self._state_mapping[istate].coefs).reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
-        for output_state, pa in zip(self._get_iterator(self._input_state, self._mask), c):
+        for output_state, pa in zip(self._get_iterator(self._input_state), c):
             res += output_state * (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
         res.normalize()
         return res

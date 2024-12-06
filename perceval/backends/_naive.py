@@ -31,11 +31,11 @@ import math
 import numpy as np
 
 import exqalibur as xq
-from ._abstract_backends import AProbAmpliBackend
+from ._abstract_backends import AStrongSimulationBackend
 from perceval.utils import BasicState
 
 
-class NaiveBackend(AProbAmpliBackend):
+class NaiveBackend(AStrongSimulationBackend):
     """Naive algorithm, no clever calculation path, does not cache anything,
        recompute all states on the fly"""
 
@@ -48,24 +48,24 @@ class NaiveBackend(AProbAmpliBackend):
         M = self._compute_submatrix(output_state)
         return self._compute_permanent(M) / math.sqrt(p) if M.size > 1 else M[0, 0]
 
-    def _compute_submatrix(self, output_state: BasicState) -> np.matrix:
+    def _compute_submatrix(self, output_state: BasicState) -> np.ndarray:
         n = self._input_state.n
         m = self._input_state.m
         if n != output_state.n:
-            return np.matrix([[complex(0)]], dtype=complex)
+            return np.zeros((1, 1), dtype=complex)
         if n == 0:
-            return np.matrix([[complex(1)]], dtype=complex)
+            return np.ones((1, 1), dtype=complex)
         u_st = np.empty((n, n), dtype=complex)
         colidx = 0
         for ik in range(m):
-            for i in range(self._input_state[ik]):
+            for _ in range(self._input_state[ik]):
                 rowidx = 0
                 for ok in range(m):
-                    for j in range(output_state[ok]):
+                    for _ in range(output_state[ok]):
                         u_st[rowidx, colidx] = self._umat[ok, ik]
                         rowidx += 1
                 colidx += 1
         return u_st
 
-    def _compute_permanent(self, M):
-        return xq.permanent_cx(M, n_threads=1)
+    def _compute_permanent(self, m):
+        return xq.permanent_cx(m)

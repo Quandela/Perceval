@@ -88,6 +88,7 @@ def _build_test_circuit():
          // comp.Unitary(Matrix.random_unitary(3))
     c2 = Circuit(2) // comp.BS.H(theta=0.36, phi_tl=1.94, phi_br=5.8817, phi_bl=0.0179) // comp.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
+    c1.add(0, comp.Barrier(2, visible=True))
     c1.add(0, comp.PR(delta=0.89))
     return c1
 

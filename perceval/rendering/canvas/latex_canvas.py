@@ -40,10 +40,13 @@ tikz_implemented_colors = {
     "cyan": True,
     "darkgray": True,
     "darkred": "\\definecolor{darkred}{rgb}{0.55, 0.0, 0.0}",
+    "dimgrey": "\\definecolor{dimgrey}{rgb}{0.27, 0.27, 0.27}",
     "gray": True,
     "green": True,
+    "honeydew": "\\definecolor{honeydew}{rgb}{0.94, 1, 0.94}",
     "lightblue": "\\definecolor{lightblue}{rgb}{0.68, 0.85, 0.9}",
     "lightgray": True,
+    "lightgreen": "\\definecolor{lightgreen}{rgb}{0.56, 0.93, 0.56}",
     "lightpink": "\\definecolor{lightpink}{rgb}{1.0, 0.71, 0.76}",
     "lightyellow": "\\definecolor{lightyellow}{rgb}{1.0, 1.0, 0.88}",
     "lime": True,
@@ -57,6 +60,7 @@ tikz_implemented_colors = {
     "thistle": "\\definecolor{thistle}{rgb}{0.85, 0.75, 0.85}",
     "violet": True,
     "white": True,
+    "whitesmoke": "\\definecolor{whitesmoke}{rgb}{0.96, 0.96, 0.96}",
     "yellow": True,
 }
 

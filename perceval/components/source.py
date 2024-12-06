@@ -26,12 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import math
 
 from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params
 from perceval.utils.logging import get_logger, channel
-from typing import Dict, List, Union
 
 DISTINGUISHABLE_KEY = 'distinguishable'
 INDISTINGUISHABLE_KEY = 'indistinguishable'
@@ -58,7 +58,7 @@ class Source:
                  indistinguishability: float = 1,
                  losses: float = 0,
                  multiphoton_model: str = DISTINGUISHABLE_KEY,  # Literal[DISTINGUISHABLE_KEY, INDISTINGUISHABLE_KEY]
-                 context: Dict = None) -> None:
+                 context: dict = None) -> None:
 
         assert 0 < emission_probability <= 1, "emission_probability must be in ]0;1]"
         assert 0 <= losses <= 1, "losses must be in [0;1]"
@@ -113,7 +113,7 @@ class Source:
         return p1to1, p2to1, p2to2
 
     @staticmethod
-    def _merge_photon_distributions(d1: List, d2: List):
+    def _merge_photon_distributions(d1: list, d2: list):
         # Merges two lists of annotations (or unannotated photon count) following the tensor product rules
         if len(d1) == 0:
             return d2
@@ -130,7 +130,7 @@ class Source:
         return res
 
     @staticmethod
-    def _add(plist: List, annotations: Union[int, List], probability: float):
+    def _add(plist: list, annotations: int | list, probability: float):
         # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
         # parameter `plist`
         if probability > 0:
@@ -203,7 +203,7 @@ class Source:
         """
         dist = SVDistribution()
         prob_threshold = max(prob_threshold, global_params['min_p'])
-        get_logger().info(f"Apply 'Source' noise model to {expected_input}", channel.general)
+        get_logger().debug(f"Apply 'Source' noise model to {expected_input}", channel.general)
         for photon_count in expected_input:
             dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
         dist.normalize()
@@ -228,7 +228,7 @@ class Source:
             self._context == value._context and \
             self.simplify_distribution == value.simplify_distribution
 
-    def __dict__(self) -> Dict:
+    def __dict__(self) -> dict:
         return {'g2': self._multiphoton_component,
                 'transmittance': 1 - self._losses,
                 'brightness': self._emission_probability,

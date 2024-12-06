@@ -26,16 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 from collections import defaultdict
-from typing import List, Union, Callable, Dict
 import copy
 
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
-from perceval.utils.logging import deprecated, get_logger
+from perceval.utils.logging import deprecated
 from perceval.components import ACircuit
-from perceval.backends import AProbAmpliBackend, BACKEND_LIST
+from perceval.backends import AStrongSimulationBackend, BACKEND_LIST
 from .simulator_interface import ISimulator
 from ._simulator_utils import _to_bsd
+from ._simulate_detectors import simulate_detectors
 
 
 class Stepper(ISimulator):
@@ -43,7 +45,8 @@ class Stepper(ISimulator):
     Step-by-step circuit propagation algorithm, main usage is on a circuit, but could work in degraded mode
     on a list of components [(r, comp)].
     """
-    def __init__(self, backend: AProbAmpliBackend = None):
+    def __init__(self, backend: AStrongSimulationBackend = None):
+        super().__init__()
         self._out = None
         self._backend = backend
         if backend is None:
@@ -51,6 +54,10 @@ class Stepper(ISimulator):
         self._min_detected_photons_filter = 0
         self._clear_cache()
         self._C = None
+        self._postprocess = True
+
+    def do_postprocess(self, doit: bool):
+        self._postprocess = doit
 
     def _clear_cache(self):
         self._result_dict = defaultdict(lambda: {'_set': set()})
@@ -60,15 +67,10 @@ class Stepper(ISimulator):
         self._C = circuit
         self._clear_cache()
 
-    #TODO: remove for PCVL-786
-    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        self._min_detected_photons_filter = value
-
     def set_min_detected_photons_filter(self, value: int):
         self._min_detected_photons_filter = value
 
-    def apply(self, sv: StateVector, r: List[int], c: ACircuit) -> StateVector:
+    def apply(self, sv: StateVector, r: list[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position
@@ -107,12 +109,16 @@ class Stepper(ISimulator):
     def probs(self, input_state) -> BSDistribution:
         return _to_bsd(self.evolve(input_state))
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)
             for bs, p_res in res.items():
                 res_bsd[bs] += p_res*p_sv
+
+        if detectors:
+            res_bsd, _ = simulate_detectors(res_bsd, detectors, self._min_detected_photons_filter)
+
         return {"results": res_bsd}
 
     def evolve(self, input_state) -> StateVector:
@@ -120,7 +126,7 @@ class Stepper(ISimulator):
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out
 
-    def compile(self, input_states: Union[BasicState, StateVector]) -> bool:
+    def compile(self, input_states: BasicState | StateVector) -> bool:
         if isinstance(input_states, BasicState):
             sv = StateVector(input_states)
         else:

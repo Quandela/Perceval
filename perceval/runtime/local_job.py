@@ -26,8 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
-from typing import Callable, Optional
 import threading
 
 from perceval.utils.logging import get_logger, channel
@@ -37,8 +37,8 @@ from .job_status import JobStatus, RunningStatus
 
 class LocalJob(Job):
     def __init__(self,
-                 fn: Callable,
-                 result_mapping_function: Callable = None,
+                 fn: callable,
+                 result_mapping_function: callable = None,
                  delta_parameters: dict = None,
                  command_param_names: list = None):
         """
@@ -58,7 +58,7 @@ class LocalJob(Job):
         self._user_cb = None
         self._cancel_requested = False
 
-    def set_progress_callback(self, callback: Callable):  # Signature must be (float, Optional[str])
+    def set_progress_callback(self, callback: callable):  # Signature must be (float, str | None)
         self._user_cb = callback
 
     @property
@@ -68,7 +68,7 @@ class LocalJob(Job):
             self._status.stop_run()
         return self._status
 
-    def _progress_cb(self, progress: float, phase: Optional[str] = None):
+    def _progress_cb(self, progress: float, phase: str | None = None):
         self._status.update_progress(progress, phase)
         if self._cancel_requested:
             return {'cancel_requested': True}
@@ -99,8 +99,8 @@ class LocalJob(Job):
             else:
                 self._status.stop_run()
         except Exception as e:
-            get_logger().warn(f"An exception was raised during job execution.\n{type(e)}: {e}", channel.user)
-            self._status.stop_run(RunningStatus.ERROR, str(type(e))+": "+str(e))
+            get_logger().warn(f"An exception was raised during job execution.\n{type(e).__name__}: {e}", channel.user)
+            self._status.stop_run(RunningStatus.ERROR, type(e).__name__+": "+str(e))
 
     def execute_async(self, *args, **kwargs) -> Job:
         assert self._status.waiting, "job has already been executed"
@@ -126,8 +126,10 @@ class LocalJob(Job):
                                                                          **self._delta_parameters['mapping'])
             elif 'results_list' in self._results:
                 for res in self._results["results_list"]:
-                    res["results"] = self._result_mapping_function(res['results'],
-                                                                   **self._delta_parameters['mapping'])
+                    mapping_args = {key: res["iteration"].get(key, val)
+                                    for key, val in self._delta_parameters['mapping'].items()}
+
+                    res["results"] = self._result_mapping_function(res['results'], **mapping_args)
             else:
                 raise KeyError("Cannot find either 'result' or 'results_list' in self._results")
             self._result_mapping_function = None

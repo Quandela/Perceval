@@ -28,16 +28,13 @@
 # SOFTWARE.
 
 import pytest
-import numpy as np
 from perceval.error_mitigation import photon_recycling
 from perceval.utils import BasicState, BSDistribution
 from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
 from perceval import Processor
-from perceval.error_mitigation._loss_mitigation_utils import _gen_lossy_dists
-from perceval.error_mitigation.loss_mitigation import _generate_one_photon_per_mode_mapping
-
+from perceval.utils.dist_metrics import tvd_dist
 
 
 def _sampler_setup_cnot(output_type: str):
@@ -130,11 +127,6 @@ def _compute_random_circ_probs(source_emission, num_photons):
     sampler = Sampler(processor)
     return sampler.probs()['results']
 
-def total_variation_distance(p1, p2):
-    # calculate Total Variation distance between 2 probability distributions
-    tvd = 0.5 * np.sum(np.abs(np.array(p1) - np.array(p2)))
-    return tvd
-
 def test_mitigation_over_postselect_tvd():
 
     ideal_photon_count = 4
@@ -143,24 +135,18 @@ def test_mitigation_over_postselect_tvd():
     # lossy distribution
     lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
 
-    # compute the migitated distribution from
+    # compute the mitigated distribution
     mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
 
-    # computing the postselected distribution for this random computation.
-    # Using the internal methods of loss_mitigation codes for this
-    # as the PostSelect function to set on Processor is not known
+    # post-selected distribution
+    post_select_dist = BSDistribution()
+    for state, prob in lossy_dist.items():
+        if state.n == ideal_photon_count:
+            post_select_dist.add(state, prob)
+    post_select_dist.normalize()
 
-    num_modes = next(iter(lossy_dist)).m  # number of modes
-    pattern_map = _generate_one_photon_per_mode_mapping(num_modes, ideal_photon_count)
-    noisy_distributions = _gen_lossy_dists(lossy_dist, ideal_photon_count, pattern_map)
-    post_dist = noisy_distributions[0]
+    # TVD Metric
+    tvd_miti = tvd_dist(ideal_dist, mitigated_dist)
+    tvd_post = tvd_dist(ideal_dist, post_select_dist)
 
-    for key, values in ideal_dist.items():
-        if key not in mitigated_dist.keys():
-            mitigated_dist[key] = 0.0
-
-    # computing tvd
-    tvd_miti = total_variation_distance(list(ideal_dist.values()), list(mitigated_dist.values()))
-    tvd_ps = total_variation_distance(list(ideal_dist.values()), list(post_dist))
-
-    assert tvd_miti < tvd_ps  # checks that mitigated is closer to ideal than post-selected distribution
+    assert tvd_miti < tvd_post  # checks that mitigated is closer to ideal than post-selected distribution

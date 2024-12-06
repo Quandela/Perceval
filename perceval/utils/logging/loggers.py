@@ -33,7 +33,6 @@ import warnings
 import logging as py_log
 
 from abc import ABC, abstractmethod
-from typing import Dict
 from os import path
 
 from exqalibur import logging as exq_log
@@ -81,7 +80,7 @@ class ALogger(ABC):
     def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         pass
 
-    def log_resources(self, my_dict: Dict):
+    def log_resources(self, my_dict: dict):
         """Log resources as a dictionary with:
              - level: info
              - channel: resources

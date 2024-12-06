@@ -28,10 +28,9 @@
 # SOFTWARE.
 
 from perceval.components import Circuit, BS, Port
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog.heralded_cz import HeraldedCzItem
 from perceval.utils import Encoding
-from perceval.utils.logging import deprecated
 
 
 class HeraldedCnotItem(CatalogItem):
@@ -48,14 +47,6 @@ data (dual rail) ─────┤ H ├───┤          ├───┤ H
 
     def __init__(self):
         super().__init__("heralded cnot")
-        self._default_opts['type'] = AsType.PROCESSOR
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        if self._opt('type') == AsType.CIRCUIT:
-            return self.build_circuit()
-        elif self._opt('type') == AsType.PROCESSOR:
-            return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
         c = Circuit(6, name="Heralded CNOT")
