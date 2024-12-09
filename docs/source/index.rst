@@ -157,6 +157,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/stategenerator
    reference/scaleway_session
    reference/density_matrix
+   reference/job_group
 
 .. toctree::
    :caption: Community
