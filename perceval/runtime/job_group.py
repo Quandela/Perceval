@@ -389,17 +389,15 @@ class JobGroup:
 
     def list_unfinished_jobs(self) -> list[RemoteJob]:
         """
-        Returns a list of all RemoteJobs in the group that are currently active on the cloud - those
-        with RUNNINGSTATUS - ERROR or CANCELED.
+        Returns a list of all RemoteJobs in the group that have run unsuccessfully on the cloud - errored or canceled
         """
         return self._list_jobs_status_type(['ERROR', 'CANCELED'])
 
-    def list_never_sent_jobs(self) -> list[RemoteJob]:
-        remote_jobs = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] is None:
-                remote_jobs.append(self._recreate_unsent_remote_job(job_entry))
-        return remote_jobs
+    def count_never_sent_jobs(self) -> int:
+        """
+        Returns the number of all RemoteJobs in the group that were never sent to the cloud.
+        """
+        return sum(job_entry['status'] is None for job_entry in self._group_info['job_group_data'])
 
     @staticmethod
     def _recreate_unsent_remote_job(job_entry):
@@ -424,7 +422,7 @@ class JobGroup:
             if rerun:
                 count = len(self.list_unfinished_jobs())
             else:
-                count = len(self.list_never_sent_jobs())
+                count = self.count_never_sent_jobs()
 
             prog = tqdm(total=count, bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
