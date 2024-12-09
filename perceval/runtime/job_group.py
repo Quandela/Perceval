@@ -257,28 +257,35 @@ class JobGroup:
         # define tqdm bars
         bar_format = '{desc}{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}'
         success_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Successful Jobs", position=0, leave=True)
-        active_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Running/Waiting Jobs", position=1, leave=True)
+        active_bar = tqdm(total=len(self.list_active_jobs()), bar_format=bar_format, desc="Running/Waiting Jobs",
+                          position=1, leave=True)  # non-active job can't become active, as long as this function is blocking
         inactive_bar = tqdm(total=tot_jobs, bar_format=bar_format, desc="Inactive/Unsuccessful Jobs", position=2,
                             leave=True)
 
         while True:
-            status_list = self._collect_job_statuses()  # list of statuses for jobs
-            group_categories = []
+            # Question: is this going to flood the cloud? Should we add a delay between refresh?
 
-            for job_index in range(tot_jobs):
-                job_category = JobGroup._map_job_status_category(status_list[job_index])
-                group_categories.append(job_category)
+            job_categories = [self._map_job_status_category(status) for status in self._collect_job_statuses()]
+            count_success = 0
+            count_running = 0
+            count_inactive = 0
 
-                if job_category == 'FIN_SUCCESS':
-                    success_bar.update(1)
-                elif job_category == 'UNFIN_SENT':
-                    active_bar.update(1)
-                elif job_category in ['FIN_OTHER', 'UNFIN_NOT_SENT']:
-                    inactive_bar.update(1)
+            for cat in job_categories:
+                if cat == 'FIN_SUCCESS':
+                    count_success += 1
+                elif cat == 'UNFIN_SENT':
+                    count_running += 1
+                else:
+                    count_inactive += 1
 
-            # category list from status
-            if not any(category == 'UNFIN_SENT' for category in group_categories):
-                # exit if no jobs running/waiting on cloud
+            success_bar.n = count_success
+            active_bar.n = count_running
+            inactive_bar.n = count_inactive
+
+            for bar in [success_bar, active_bar, inactive_bar]:
+                bar.refresh()  # needed to change the displayed value to bar.n
+
+            if count_running == 0:
                 break
 
         success_bar.close()
@@ -360,6 +367,20 @@ class JobGroup:
         """
         return self._list_jobs_status_type(['RUNNING', 'WAITING'])
 
+    def list_unfinished_jobs(self) -> list[RemoteJob]:
+        """
+        Returns a list of all RemoteJobs in the group that are currently active on the cloud - those
+        with RUNNINGSTATUS - ERROR or CANCELED.
+        """
+        return self._list_jobs_status_type(['ERROR', 'CANCELED'])
+
+    def list_never_sent_jobs(self) -> list[RemoteJob]:
+        remote_jobs = []
+        for job_entry in self._group_info['job_group_data']:
+            if job_entry['status'] is None:
+                remote_jobs.append(self._recreate_unsent_remote_job(job_entry))
+        return remote_jobs
+
     @staticmethod
     def _recreate_unsent_remote_job(job_entry):
         platform_metadata = job_entry['metadata']
@@ -377,6 +398,19 @@ class JobGroup:
         :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of to jobs on cloud
         """
+        if delay is not None:
+            # Use tqdm to track progress if sequential
+            bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
+            if rerun:
+                count = len(self.list_unfinished_jobs())
+            else:
+                count = len(self.list_never_sent_jobs())
+
+            prog = tqdm(total=count, bar_format=bar_format, desc="Successful: 0, Failed: 0")
+
+        count_success = 0
+        count_fail = 0
+
         for job_entry in self._group_info['job_group_data']:
             if not rerun and job_entry['status'] is None:
                 remote_job = self._recreate_unsent_remote_job(job_entry)
@@ -394,8 +428,20 @@ class JobGroup:
                 while not remote_job.is_complete:
                     time.sleep(1)
 
+                category = self._map_job_status_category(remote_job.status())
+                if category == 'FIN_SUCCESS':
+                    count_success += 1
+                else:
+                    count_fail += 1
+
+                prog.update(1)
+                prog.set_description_str(f"Successful: {count_success}, Failed: {count_fail}")
+
                 if job_entry != self._group_info['job_group_data'][-1]:
                     time.sleep(delay)  # add delay before launching next job
+
+        if delay is not None:
+            prog.close()
 
         self._write_to_file()
 
