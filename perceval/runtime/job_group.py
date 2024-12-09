@@ -45,13 +45,19 @@ DATE_TIME_FORMAT = "%Y%m%d_%H%M%S"
 
 class JobGroup:
     """
-    A JobGroup handles a collection of Jobs saved on disk using perceval persistent data.
-    It can perform various tasks such as
+    JobGroup handles a collection of remote jobs.
+    A job group is named and persistent (job metadata will be written on disk).
+    Job results will never be stored and will be retrieved everytime from the Cloud.
+
+    The JobGroup class can perform various tasks such as:
+
     - Saving information for a collection of jobs, whether they have been sent to the cloud or not.
     - Running jobs within the group either in parallel or sequentially.
     - Rerunning failed jobs within the group.
+    - Retrieving all results at once.
 
-    :param name: a name for the group of jobs (also, the filename used to save JobGroup on disk)
+    :param name: A name uniquely identifying the group (also, the filename used to save data on disk).
+                 If the same name is used more than once, jobs can be appended to the same group.
     """
     _PERSISTENT_DATA = PersistentData()  # Persistent data object for the job group class
     _DIR_PATH = os.path.join(_PERSISTENT_DATA.directory, JGRP_DIR_NAME)
@@ -71,9 +77,23 @@ class JobGroup:
     @property
     def name(self) -> str:
         """
-        Name of the job Group [also the filename (without extension) on disk]
+        Name of the job group
         """
         return self._name
+
+    @property
+    def created_date(self) -> datetime:
+        """
+        Date time of JobGroup creation
+        """
+        return datetime.strptime(self._group_info['created_date'], DATE_TIME_FORMAT)
+
+    @property
+    def modified_date(self) -> datetime:
+        """
+        Date time of the latest JobGroup change
+        """
+        return datetime.strptime(self._group_info['modified_date'], DATE_TIME_FORMAT)
 
     @property
     def list_remote_jobs(self) -> list[RemoteJob]:
@@ -301,7 +321,7 @@ class JobGroup:
     @staticmethod
     def delete_all_job_groups():
         """
-        To delete all existing Job groups on disk
+        Delete all existing groups on disk
         """
         jgrp_dir_path = JobGroup._DIR_PATH
         list_groups = JobGroup.list_existing()
@@ -309,21 +329,21 @@ class JobGroup:
             JobGroup._PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, each_file + '.' + FILE_EXT_JGRP))
 
     @staticmethod
-    def delete_job_group(group_name: str):
+    def delete_job_group(name: str):
         """
-        Delete a single JobGroup file by its name
+        Delete a single group by name
 
-        :param group_name: a JobGroup name to delete
+        :param name: name of the JobGroup to delete
         """
-        file_path = os.path.join(JobGroup._DIR_PATH, group_name + '.' + FILE_EXT_JGRP)
+        file_path = os.path.join(JobGroup._DIR_PATH, name + '.' + FILE_EXT_JGRP)
         JobGroup._PERSISTENT_DATA.delete_file(file_path)
 
     @staticmethod
     def delete_job_groups_date(del_before_date: datetime):
         """
-        Delete all saved Job Groups created before a date (not included).
+        Delete all saved groups created before a date.
 
-        :param del_before_date: integer (form - YYYYMMDD) files created before this date deleted
+        :param del_before_date: datetime of the oldest job group to keep. Anterior groups will be deleted.
         """
         existing_groups = JobGroup.list_existing()
         files_to_del = []  # list of files before date to delete
@@ -334,7 +354,7 @@ class JobGroup:
                 files_to_del.append(jg_name)
 
         if not files_to_del:
-            get_logger().warn(f'No files found to delete before{del_before_date}', channel.user)
+            get_logger().warn(f'No files found to delete before {del_before_date}', channel.user)
 
         # delete files
         for f in files_to_del:
@@ -355,8 +375,8 @@ class JobGroup:
 
     def list_active_jobs(self) -> list[RemoteJob]:
         """
-        Returns a list of all RemoteJobs in the group that are currently active on the cloud - those
-        with RUNNINGSTATUS - RUNNING or WAITING.
+        Returns a list of all RemoteJobs in the group that are currently active on the cloud - those with a Running or
+        Waiting status.
         """
         return self._list_jobs_status_type(['RUNNING', 'WAITING'])
 
@@ -429,11 +449,10 @@ class JobGroup:
 
     def rerun_failed_parallel(self):
         """
-        Launches all Failed jobs in the group on Cloud, running them in parallel.
+        Restart all failed jobs in the group on the Cloud, running them in parallel.
 
-        If the user lacks authorization to send multiple jobs to the cloud or exceeds
-        the maximum allowed limit, an exception is raised, terminating the launch process.
-        Any remaining jobs in the group will not be sent.
+        If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
+        is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
         """
         self._launch_jobs(rerun=True)
 
