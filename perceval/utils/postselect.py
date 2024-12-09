@@ -28,83 +28,37 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from copy import copy
-from typing import TypeAlias, Self
+from typing import TypeAlias
+import exqalibur as xq
 
-from .statevector import BasicState, BSDistribution, StateVector
-from exqalibur import PostSelect as ex_PostSelect
-from exqalibur import LogicOperator
-
-from perceval.utils.logging import deprecated
-
-operands: TypeAlias = LogicOperator
+from .statevector import BSDistribution, StateVector
 
 
-class PostSelect(ex_PostSelect):
-    """PostSelect is a callable post-selection intended to filter out unwanted output states. It is designed to be a
-    user-friendly description of any post-selection logic.
+"""PostSelect is a callable post-selection intended to filter out unwanted output states. It is designed to be a
+user-friendly description of any post-selection logic.
 
-    Init uses a string representation of the selection logic. The format is: "cond_1 OP cond_2 OP ... OP cond_n"
-    where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, >, <, >=, <=).
+Init uses a string representation of the selection logic. The format is: "cond_1 OP cond_2 OP ... OP cond_n"
+where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, >, <, >=, <=).
 
-    Logic operators between conditions can be
-        - "AND", "and", "&"
-        - "OR", "or", "|"
-        - "XOR", "xor"
-        - "NOT", "not", "!"
+Logic operators between conditions can be
+    - "AND", "and", "&"
+    - "OR", "or", "|"
+    - "XOR", "xor", "^"
+    - "NOT", "not", "!"
 
-    Different operators can be used using parentheses to separate them.
-    "and", "or" and "xor" operators can be chained without the need of added parentheses.
+Different operators can be chained using parentheses to separate them.
+"and", "or" and "xor" operators can be chained without the need of added parentheses.
 
-    Example:
+Example:
 
-    >>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
-    >>> ps = PostSelect().eq([0,1], 1).gt(2, 1) # Same as above
-    >>> print(ps(BasicState([0, 1, 1])))
-    True
-    >>> print(ps(BasicState([1, 1, 1])))
-    False
-    """
-
-    @deprecated(version="0.12.0", reason="Use merge instead")
-    def eq(self, indexes: int | list[int], value: int) -> Self:
-        """Create a new "equals"     condition for the current PostSelect instance"""
-        if isinstance(indexes, int):
-            indexes = [indexes]
-        self.merge(PostSelect(f"{list(indexes)} == {value}"))
-        return self
-
-    @deprecated(version="0.12.0", reason="Use merge instead")
-    def gt(self, indexes, value: int) -> Self:
-        """Create a new "greater than" condition for the current PostSelect instance"""
-        if isinstance(indexes, int):
-            indexes = [indexes]
-        self.merge(PostSelect(f"{list(indexes)} > {value}"))
-        return self
-
-    @deprecated(version="0.12.0", reason="Use merge instead")
-    def lt(self, indexes, value: int) -> Self:
-        """Create a new "lower than" condition for the current PostSelect instance"""
-        if isinstance(indexes, int):
-            indexes = [indexes]
-        self.merge(PostSelect(f"{list(indexes)} < {value}"))
-        return self
-
-    @deprecated(version="0.12.0", reason="Use merge instead")
-    def ge(self, indexes, value: int) -> Self:
-        """Create a new "greater or equal than" condition for the current PostSelect instance"""
-        if isinstance(indexes, int):
-            indexes = [indexes]
-        self.merge(PostSelect(f"{list(indexes)} >= {value}"))
-        return self
-
-    @deprecated(version="0.12.0", reason="Use merge instead")
-    def le(self, indexes, value: int) -> Self:
-        """Create a new "lower or equal than" condition for the current PostSelect instance"""
-        if isinstance(indexes, int):
-            indexes = [indexes]
-        self.merge(PostSelect(f"{list(indexes)} <= {value}"))
-        return self
+>>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
+>>> ps = PostSelect().eq([0,1], 1).gt(2, 1) # Same as above
+>>> print(ps(BasicState([0, 1, 1])))
+True
+>>> print(ps(BasicState([1, 1, 1])))
+False
+"""
+PostSelect: TypeAlias = xq.PostSelect
 
 
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
