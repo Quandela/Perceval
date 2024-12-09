@@ -94,6 +94,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Graph_States_generation_and_display
    notebooks/Tomography_walkthrough
    notebooks/Density_matrix_Fock_space
+   notebooks/Quantum_teleportation_feed_forward
 
 .. toctree::
    :caption: Boson sampling
@@ -110,7 +111,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
    notebooks/Shor_Implementation
    notebooks/2-mode_Grover_algorithm
-   notebooks/Quantum_teleportation_feed_forward
 
 .. toctree::
    :caption: Variational quantum algorithms
@@ -158,6 +158,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/stategenerator
    reference/scaleway_session
    reference/density_matrix
+   reference/feed_forward_configurator
 
 .. toctree::
    :caption: Community
