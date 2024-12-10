@@ -66,7 +66,8 @@ class GenericInterferometer(Circuit):
                  phase_shifter_fun_gen: Callable[[int], ACircuit] = None,
                  phase_at_output: bool = False,
                  upper_component_gen: Callable[[int], ACircuit] = None,
-                 lower_component_gen: Callable[[int], ACircuit] = None):
+                 lower_component_gen: Callable[[int], ACircuit] = None,
+                 align_with_barriers: bool = True):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
@@ -77,6 +78,7 @@ class GenericInterferometer(Circuit):
         self._has_input_phase_layer = False
         self._upper_component_gen = upper_component_gen
         self._lower_component_gen = lower_component_gen
+        self._use_barriers = align_with_barriers
         if phase_shifter_fun_gen and not phase_at_output:
             self._has_input_phase_layer = True
             for i in range(0, m):
@@ -159,7 +161,8 @@ class GenericInterferometer(Circuit):
                 self._depth_per_mode[j+1] += 1
                 idx += 1
             self._add_lower_component(i)
-            self.add(0, Barrier(self.m, visible=False))
+            if self._use_barriers:
+                self.add(0, Barrier(self.m, visible=False))
 
     def _build_triangle(self):
         idx = 0
@@ -169,7 +172,8 @@ class GenericInterferometer(Circuit):
                                                 or self._depth_per_mode[j] == self._depth):
                     continue
                 self.add((j-1, j), self._pattern_generator(idx), merge=True)
-                self.add((j-1, j), Barrier(2, visible=False))
+                if self._use_barriers:
+                    self.add((j-1, j), Barrier(2, visible=False))
                 self._depth_per_mode[j-1] += 1
                 self._depth_per_mode[j] += 1
                 idx += 1
