@@ -47,6 +47,6 @@ setuptools.setup(
         "all": QISKIT_BRIDGE_PKGS+QUTIP_BRIDGE_PKGS+MYQLM_BRIDGE_PKGS+CQASM_BRIDGE_PKGS
     },
     setup_requires=["scmver"],
-    python_requires=">=3.9,<=3.13",
+    python_requires=">=3.9,<3.14",
     scmver=True
 )
