@@ -283,8 +283,6 @@ class JobGroup:
                             leave=True)
 
         while True:
-            # Question: is this going to flood the cloud? Should we add a delay between refresh?
-
             job_categories = [self._map_job_status_category(status) for status in self._collect_job_statuses()]
             count_success = 0
             count_running = 0
@@ -307,6 +305,8 @@ class JobGroup:
 
             if count_running == 0:
                 break
+
+            time.sleep(5)  # delay before next acquisition of statuses
 
         success_bar.close()
         active_bar.close()
@@ -500,7 +500,11 @@ class JobGroup:
         """
         self._launch_jobs(rerun=True)
 
-    def retrieve_results(self) -> list[dict]:
+    def get_results(self) -> list[dict]:
+        """
+        Retrieve results for all jobs in the group. It aggregates results by calling the `get_results()`
+        method of each job object that have completed successfully.
+        """
         job_list = self.list_remote_jobs
         results = []
         for j in job_list:

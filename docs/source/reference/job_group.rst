@@ -34,19 +34,25 @@ This first script only prepared the experiment, nothing was executed remotely. B
 user to know the details of their plan on the Cloud, for this will establish the number of job they can run
 concurrently.
 
-The second script may only be used run the jobs:
+The job group supports executing jobs sequentially or in parallel and includes the ability to rerun
+failed jobs, if needed.
+
+The second script may be used exclusively to run jobs. It includes a built-in `tqdm` progress bar to
+provide real-time updates on job execution. To run jobs sequentially with a given delay:
 
 >>> import perceval as pcvl
 >>>
 >>> jg = JobGroup("compare_knill_and_ralph_cnot")  # Loads prepared experiment data
->>> jg.run_sequential(0)  # Will send the 2nd job to the Cloud as soons as the first one is complete
+>>> jg.run_sequential(0)  # Will send the 2nd job to the Cloud as soon as the first one is complete
+
+Other methods - :code:`jg.run_parallel()`, :code:`jg.rerun_failed_parallel()`, and :code:`jg.rerun_failed_sequential(delay)`.
 
 A third script can then prepared to analyze results:
 
 >>> import perceval as pcvl
 >>>
 >>> jg = JobGroup("compare_knill_and_ralph_cnot")
->>> results = jg.retrieve_results()
+>>> results = jg.get_results()
 >>> ralph_res = results[0]
 >>> knill_res = results[1]
 >>> perf_ratio = (ralph_res['physical_perf'] * ralph_res['logical_perf']) / (knill_res['physical_perf'] * knill_res['logical_perf'])
