@@ -47,14 +47,13 @@ class JobGroup:
     """
     JobGroup handles a collection of remote jobs.
     A job group is named and persistent (job metadata will be written on disk).
-    Job results will never be stored and will be retrieved everytime from the Cloud.
+    Job results will never be stored and will be retrieved every time from the Cloud.
 
     The JobGroup class can perform various tasks such as:
-
-    - Saving information for a collection of jobs, whether they have been sent to the cloud or not.
-    - Running jobs within the group either in parallel or sequentially.
-    - Rerunning failed jobs within the group.
-    - Retrieving all results at once.
+        - Saving information for a collection of jobs, whether they have been sent to the cloud or not.
+        - Running jobs within the group either in parallel or sequentially.
+        - Rerunning failed jobs within the group.
+        - Retrieving all results at once.
 
     :param name: A name uniquely identifying the group (also, the filename used to save data on disk).
                  If the same name is used more than once, jobs can be appended to the same group.
