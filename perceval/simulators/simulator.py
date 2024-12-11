@@ -37,7 +37,7 @@ from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AStrongSimulationBackend
-from perceval.components import ACircuit, IDetector
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.utils.density_matrix_utils import extract_upper_triangle
@@ -404,18 +404,21 @@ class Simulator(ISimulator):
         res.normalize()
         return res, physical_perf
 
-    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool]:
+    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool, bool]:
         """Trim input SVD given _rel_precision threshold and extract characteristics from it"""
         max_p = 0
         has_superposed_states = False
+        has_annotations = False
         for sv, p in svd.items():
             if max(sv.n) >= self._min_detected_photons_filter:
                 max_p = max(p, max_p)
             if len(sv) > 1:
                 has_superposed_states = True
+            if not has_annotations and any(bs.has_annotations for bs in sv.keys()):
+                has_annotations = True
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
         trimmed_svd = SVDistribution({state: pr for state, pr in svd.items() if pr > p_threshold})
-        return trimmed_svd, p_threshold, has_superposed_states
+        return trimmed_svd, p_threshold, has_superposed_states, has_annotations
 
     def probs_svd(self,
                   input_dist: SVDistribution,
@@ -436,13 +439,15 @@ class Simulator(ISimulator):
         """
         self._logical_perf = 1
 
-        svd, p_threshold, has_superposed_states = self._preprocess_svd(input_dist)
+        svd, p_threshold, has_superposed_states, has_annotations = self._preprocess_svd(input_dist)
 
         if has_superposed_states:
             self._backend.clear_mask()
             res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
-            if self._heralds:  # TODO: do this also with superposed states when logical perf computation is ready
+            if self._heralds and not has_annotations and get_detection_type(detectors) == DetectionType.PNR:
+                # TODO: do this also with superposed states when logical perf computation is ready
+                # TODO: give detectors to setup_heralds to keep only modes with PNR in the mask
                 self._setup_heralds()
             else:
                 self._backend.clear_mask()
@@ -475,7 +480,7 @@ class Simulator(ISimulator):
                 if herald_expectation > 32:  # FsMask limitation
                     raise ValueError("Cannot simulate an herald expecting more than 32 detected photons")
                 # Encodes expected photon count from 0x30 to 0x4F ASCII characters
-                mask_str += f"{chr(0x30+herald_expectation)}"
+                mask_str += f"{chr(0x30 + herald_expectation)}"
                 n_heralded_photons += herald_expectation
             else:
                 mask_str += " "
@@ -484,8 +489,8 @@ class Simulator(ISimulator):
         # Check that heralds and physical filter are consistent
         if self._min_detected_photons_filter < n_heralded_photons:
             if not self._silent:
-                get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
-                                  f"to the number of heralded photons ({n_heralded_photons})")
+                get_logger().debug(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
+                                   f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
@@ -576,8 +581,10 @@ class Simulator(ISimulator):
             return SVDistribution(self.evolve(svd))
 
         self._logical_perf = 1
-        if self._heralds:
+        if self._heralds and not any(bs.has_annotations for sv in svd for bs in sv.keys()):
             self._setup_heralds()
+        else:
+            self._backend.clear_mask()
 
         intermediary_logical_perf = 1
         physical_perf = 1

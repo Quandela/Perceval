@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import sympy as sp
+import numpy as np
 
 
 def simple_float(alpha, precision=1e-6, nsimplify=True, fracmax=63, multiplier=1, mult10=None):
@@ -45,9 +46,10 @@ def simple_float(alpha, precision=1e-6, nsimplify=True, fracmax=63, multiplier=1
     if nsimplify:
         for r in range(1, fracmax):
             for multiplier2 in [sp.S(1), sp.pi, sp.sqrt(2), sp.sqrt(3), sp.sqrt(5), sp.sqrt(6)]:
-                v = alpha/multiplier2*r
-                if abs(float(v)-round(float(v))) < precision:
-                    simple = sign*sp.Rational(round(v), r)*multiplier*multiplier2
+                v = np.float64(alpha/multiplier2*r)
+                round_v = float(np.float64(v).round())
+                if abs(float(v)-round_v) < precision:
+                    simple = sign*sp.Rational(round_v, r)*multiplier*multiplier2
                     return simple, str(simple)
     if mult10 is None:
         mult10 = 0
@@ -64,7 +66,7 @@ def simple_float(alpha, precision=1e-6, nsimplify=True, fracmax=63, multiplier=1
             alpha = alpha / 10
             mult10 -= 1
 
-    alpha = round(alpha/precision) * precision
+    alpha = float(np.float64(alpha/precision).round()) * precision
     simple_str = str(sp.S(alpha))
     if simple_str.find(".") != -1:
         for i in range(len(simple_str)-1, 0, -1):
