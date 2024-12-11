@@ -36,27 +36,26 @@ from .statevector import BSDistribution, StateVector, BasicState
 
 
 class PostSelect(xq.PostSelect):
-    """PostSelect is a callable basic state predicate intended to filter out unwanted output states. It is designed to be a
+    """PostSelect is a callable basic state predicate intended to filter out unwanted basic states. It is designed to be an
     user-friendly description of any post-selection logic.
 
-    :param expression: PostSelect string representation
+    :param expression: PostSelect string representation of the post-selection logic.
     :type expression: str
 
+    PostSelect Syntax
+    =================
 
-    PostSelect is initialized by a string representation of the post-selection logic.
+    Condition
+    ---------
+        Condition syntax is `[mode list] <operator> <photon count>`
 
-    PostSelect syntax is always composed of at least one condition.
-
-    Within an expression, several conditions can be composed with operators, grouped (with parenthesis) and even nested.
-
-    Condition:
-        Condition syntax is "[mode list] <operator> <photon count>"
+        PostSelect expression is always composed of at least one condition.
 
         - Mode list:
             - string that represented a list[int]
             - should be a set of positive integer
 
-        - Operator (str):
+        - Operator:
             - string that represent an operator.
             - Operator within a condition can be:
                 - Equal: "=="
@@ -65,12 +64,14 @@ class PostSelect(xq.PostSelect):
                 - Less than: "<"
                 - Less or equal to: "<="
 
-        - Photon count (int):
+        - Photon count:
             - string that represent an non negative integer
 
+    Logic operators
+    ---------------
+        Within a PostSelect expression, several conditions can be composed with operators, grouped (with parenthesis) and even nested.
 
-    Logic operators:
-        Condition(s) composed with an operator while be consider as a condition group
+        Condition(s) composed with an operator will is consider as a condition group.
 
         Available logic operators are:
             - AND:
@@ -79,31 +80,42 @@ class PostSelect(xq.PostSelect):
                     - "AND"
                     - "and"
                     - "&" (default serialization string representation)
-            - OR
+            - OR:
                 - can compose 2 or more condition groups
                 - possible string representation:
                     - "OR"
                     - "or"
                     - "|" (default serialization string representation)
-            - XOR
+            - XOR:
                 - can compose 2 or more condition groups
                 - possible string representation:
                     - "XOR"
                     - "xor"
                     - "^" (default serialization string representation)
-            - NOT
+            - NOT:
                 - can be used in front of a condition group
                 - possible string representation:
-                    - "AND"*
-                    - "and"
-                    - "&" (default serialization string representation)
+                    - "NOT"
+                    - "not"
+                    - "!" (default serialization string representation)
 
         Different operators cannot be used within the same condition group, parenthesis are necessary in order to explicit operator resolution.
 
-    Example:
+    Examples
+    ========
 
     >>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
     >>> print(ps(BasicState([0, 1, 1])))
+    True
+    >>> print(ps(BasicState([0, 1, 0])))
+    False
+    >>> print(ps(BasicState([1, 1, 1])))
+    False
+
+    >>> ps = PostSelect("([0,1] == 1 & [2] > 1) | [2] == 0") # Means "I want either exactly one photon in mode 0 or 1, and at least one photon in mode 2, either no photon in mode 2"
+    >>> print(ps(BasicState([0, 1, 1])))
+    True
+    >>> print(ps(BasicState([0, 1, 0])))
     True
     >>> print(ps(BasicState([1, 1, 1])))
     False
@@ -115,7 +127,7 @@ class PostSelect(xq.PostSelect):
         :param state: Basic state to post select
         :return: Returns `True` if the input state validates the defined post-selection logic, returns `False` otherwise.
         """
-        super().__call__(state)
+        return super().__call__(state)
 
     @property
     def has_condition(self) -> bool:
@@ -176,7 +188,7 @@ class PostSelect(xq.PostSelect):
 
 @deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
-    """ Check if PostSelect instances are independent with current one.
+    """ Check if two PostSelect instances are independent.
 
     :param ps1: First post selection
     :param ps2: Second post selection
