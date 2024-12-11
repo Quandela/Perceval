@@ -36,8 +36,8 @@ from .statevector import BSDistribution, StateVector, BasicState
 
 
 class PostSelect(xq.PostSelect):
-    """PostSelect is a callable basic state predicate intended to filter out unwanted basic states. It is designed to be an
-    user-friendly description of any post-selection logic.
+    """PostSelect is a callable basic state predicate intended to filter out unwanted basic states. It is designed to be
+    a user-friendly description of any post-selection logic.
 
     :param expression: PostSelect string representation of the post-selection logic.
     :type expression: str
@@ -65,11 +65,12 @@ class PostSelect(xq.PostSelect):
                 - Less or equal to: "<="
 
         - Photon count:
-            - string that represent an non negative integer
+            - string that represent a non-negative integer
 
     Logic operators
     ---------------
-        Within a PostSelect expression, several conditions can be composed with operators, grouped (with parenthesis) and even nested.
+        Within a PostSelect expression, several conditions can be composed with operators, grouped (with parenthesis)
+        and even nested.
 
         Condition(s) composed with an operator will is consider as a condition group.
 
@@ -99,25 +100,26 @@ class PostSelect(xq.PostSelect):
                     - "not"
                     - "!" (default serialization string representation)
 
-        Different operators cannot be used within the same condition group, parenthesis are necessary in order to explicit operator resolution.
+        Different operators cannot be used within the same condition group, parenthesis are necessary in order to
+        explicit resolution order.
 
     Examples
     ========
 
     >>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
-    >>> print(ps(BasicState([0, 1, 1])))
+    >>> print(ps(BasicState([0, 1, 2])))
     True
     >>> print(ps(BasicState([0, 1, 0])))
     False
-    >>> print(ps(BasicState([1, 1, 1])))
+    >>> print(ps(BasicState([1, 1, 2])))
     False
 
-    >>> ps = PostSelect("([0,1] == 1 & [2] > 1) | [2] == 0") # Means "I want either exactly one photon in mode 0 or 1, and at least one photon in mode 2, either no photon in mode 2"
+    >>> ps = PostSelect("([0,1] == 1 & [2] > 1) | [2] == 0") # Means "I want either exactly one photon in mode 0 or 1, and at least one photon in mode 2, or no photon in mode 2"
     >>> print(ps(BasicState([0, 1, 1])))
-    True
+    False
     >>> print(ps(BasicState([0, 1, 0])))
     True
-    >>> print(ps(BasicState([1, 1, 1])))
+    >>> print(ps(BasicState([1, 1, 2])))
     False
     """
 
@@ -159,7 +161,7 @@ class PostSelect(xq.PostSelect):
         """
         Check if all conditions are compatible with a composition on given modes.
 
-        Compatible means that modes list is either a subset, either doesn't intersect with any mode list of any conditions.
+        Compatible means that modes list is either a subset, or doesn't intersect with any mode list of any conditions.
 
         :param modes: Mode list to check compatibility
         :return: `True` if the mode list is compatible, `False` otherwise
@@ -205,10 +207,11 @@ def post_select_distribution(
     """Post select a BSDistribution
 
     :param bsd: BSDistribution to post select
-    :param postselect: post selection to apply
-    :param heralds: heralds to apply, defaults to None
-    :param keep_heralds: Keep heralds modes in the BSDistribution (heralds modes will be remove from Basic state), defaults to True
-    :return: BSDistribution post selected
+    :param postselect: Post-selection conditions to apply
+    :param heralds: Heralds to apply, defaults to None
+    :param keep_heralds: Keep heralded modes in the BSDistribution (heralded modes will be removed from Basic state),
+                         defaults to True
+    :return: Post-selected BSDistribution
     """
     if not (postselect.has_condition or heralds):
         bsd.normalize()

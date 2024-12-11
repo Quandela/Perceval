@@ -31,12 +31,12 @@ PostSelect API changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The :code:`PostSelect` class, used to represent a set of post-selection conditions, was moved from Python to C++. This
-change allows to support a richer boolean syntax, with nested condition based on more than the `and` operator.
+change allows supporting a richer boolean syntax, including nested condition based on more than the `and` operator.
 
 Removal of operator methods
 +++++++++++++++++++++++++++
 
-Now that we support nested logical expression, it made no sense to be able to add conditions one by one. As such,
+Now that we support nested logical expression, adding conditions one by one no longer makes sense. Consequently,
 :code:`eq`, :code:`gt`, :code:`lt`, :code:`ge` and :code:`le` methods were removed. All :code:`PostSelect` must now be
 constructed from a string or through merging two existing post-selection objects.
 
@@ -44,7 +44,7 @@ In-place apply permutation
 ++++++++++++++++++++++++++
 
 Previously, :code:`apply_permutation` method would create a new :code:`PostSelect` object and return it. For
-consistency purpose, the new behavior is to work on the data of the instance :code:`apply_permutation` is called on.
+consistency purpose, the new behavior modifies the data of the instance on which :code:`apply_permutation` is called.
 
 Circuit.generic_interferometer method was removed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
