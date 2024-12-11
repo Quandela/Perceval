@@ -280,3 +280,49 @@ def test_empty_output(mock_warn):
     with LogChecker(mock_warn, expected_log_number=2):  # Normalize is called twice
         res = p.probs()["results"]
     assert res == BSDistribution()
+
+
+def test_mask_distinguishability():
+    p = Processor("SLOS", 3, noise=NoiseModel(indistinguishability=.5))
+
+    p.add_herald(1, 1)
+    p.add_herald(2, 1)
+
+    p.min_detected_photons_filter(2)
+    input_state = BasicState([0])
+    p.with_input(input_state)
+
+    assert p.probs()["results"][input_state] == pytest.approx(1)
+
+
+def test_mask_detectors():
+    p = Processor("SLOS", 2)
+
+    p.add(0, BS())
+    p.add(0, Detector.threshold())
+    p.add_herald(0, 1)  # Since using a threshold, expected is at least 1
+
+    p.min_detected_photons_filter(1)
+    p.with_input(BasicState([1]))
+
+    res = p.probs()
+
+    assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["logical_perf"] == pytest.approx(.5)
+
+
+def test_min_photons_reset():
+    p = Processor("SLOS", 2, noise=NoiseModel(brightness=.5))
+
+    p.min_detected_photons_filter(2)
+    input_state = BasicState([1, 1])
+    p.with_input(input_state)
+
+    res = p.probs()
+    assert res["results"][input_state] == pytest.approx(1)
+    assert res["physical_perf"] == pytest.approx(.25)
+
+    p.min_detected_photons_filter(0)
+    res = p.probs()
+    assert res["results"][input_state] == pytest.approx(.25)
+    assert res["physical_perf"] == pytest.approx(1)
