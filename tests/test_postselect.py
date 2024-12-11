@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from copy import copy
-from perceval.utils import BasicState, PostSelect, postselect_independent
+from perceval.utils import BasicState, PostSelect
 
 import pytest
 
@@ -170,8 +170,8 @@ def test_postselect_merge():
 
 def test_postselect_independent():
     ps1 = PostSelect("[0]==0 & [1,2]==1")
-    assert not postselect_independent(ps1, ps1)
+    assert not ps1.is_independent_with(ps1)
     ps2 = PostSelect("[2,3] == 1")
-    assert not postselect_independent(ps1, ps2)
+    assert not ps1.is_independent_with(ps2)
     ps3 = PostSelect("[3]<1 & [4]<1 & [5]>0")
-    assert postselect_independent(ps1, ps3)
+    assert ps1.is_independent_with(ps3)

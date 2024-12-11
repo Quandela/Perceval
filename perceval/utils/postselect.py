@@ -28,40 +28,160 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from typing import TypeAlias
+from perceval.utils.logging import deprecated
+
 import exqalibur as xq
 
-from .statevector import BSDistribution, StateVector
+from .statevector import BSDistribution, StateVector, BasicState
 
 
-"""PostSelect is a callable post-selection intended to filter out unwanted output states. It is designed to be a
-user-friendly description of any post-selection logic.
+class PostSelect(xq.PostSelect):
+    """PostSelect is a callable basic state predicate intended to filter out unwanted output states. It is designed to be a
+    user-friendly description of any post-selection logic.
 
-Init uses a string representation of the selection logic. The format is: "cond_1 OP cond_2 OP ... OP cond_n"
-where cond_i is "[mode list] <operator> <photon count>" (supported operators are ==, >, <, >=, <=).
-
-Logic operators between conditions can be
-    - "AND", "and", "&"
-    - "OR", "or", "|"
-    - "XOR", "xor", "^"
-    - "NOT", "not", "!"
-
-Different operators can be chained using parentheses to separate them.
-"and", "or" and "xor" operators can be chained without the need of added parentheses.
-
-Example:
-
->>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
->>> ps = PostSelect().eq([0,1], 1).gt(2, 1) # Same as above
->>> print(ps(BasicState([0, 1, 1])))
-True
->>> print(ps(BasicState([1, 1, 1])))
-False
-"""
-PostSelect: TypeAlias = xq.PostSelect
+    :param expression: PostSelect string representation
+    :type expression: str
 
 
+    PostSelect is initialized by a string representation of the post-selection logic.
+
+    PostSelect syntax is always composed of at least one condition.
+
+    Within an expression, several conditions can be composed with operators, grouped (with parenthesis) and even nested.
+
+    Condition:
+        Condition syntax is "[mode list] <operator> <photon count>"
+
+        - Mode list:
+            - string that represented a list[int]
+            - should be a set of positive integer
+
+        - Operator (str):
+            - string that represent an operator.
+            - Operator within a condition can be:
+                - Equal: "=="
+                - Greater than: ">"
+                - Greater or equal to: ">="
+                - Less than: "<"
+                - Less or equal to: "<="
+
+        - Photon count (int):
+            - string that represent an non negative integer
+
+
+    Logic operators:
+        Condition(s) composed with an operator while be consider as a condition group
+
+        Available logic operators are:
+            - AND:
+                - can compose 2 or more condition groups
+                - possible string representation:
+                    - "AND"
+                    - "and"
+                    - "&" (default serialization string representation)
+            - OR
+                - can compose 2 or more condition groups
+                - possible string representation:
+                    - "OR"
+                    - "or"
+                    - "|" (default serialization string representation)
+            - XOR
+                - can compose 2 or more condition groups
+                - possible string representation:
+                    - "XOR"
+                    - "xor"
+                    - "^" (default serialization string representation)
+            - NOT
+                - can be used in front of a condition group
+                - possible string representation:
+                    - "AND"*
+                    - "and"
+                    - "&" (default serialization string representation)
+
+        Different operators cannot be used within the same condition group, parenthesis are necessary in order to explicit operator resolution.
+
+    Example:
+
+    >>> ps = PostSelect("[0,1] == 1 & [2] > 1") # Means "I want exactly one photon in mode 0 or 1, and at least one photon in mode 2"
+    >>> print(ps(BasicState([0, 1, 1])))
+    True
+    >>> print(ps(BasicState([1, 1, 1])))
+    False
+    """
+
+    def __call__(self, state: BasicState) -> bool:
+        """Return whether a state validates the defined post-selection logic.
+
+        :param state: Basic state to post select
+        :return: Returns `True` if the input state validates the defined post-selection logic, returns `False` otherwise.
+        """
+        super().__call__(state)
+
+    @property
+    def has_condition(self) -> bool:
+        """Returns True if at least one condition is defined"""
+        return super().has_condition
+
+    def clear(self) -> None:
+        """Clear all existing conditions"""
+        super().clear()
+
+    def shift_modes(self, shift: int):
+        """
+        Shift all mode indexes on all conditions. Updates the current instance.
+
+        :param shift: Value to shift all mode indexes with
+        """
+        super().shift_modes(shift)
+
+    def apply_permutation(self, perm_vector: list[int], first_mode: int = 0):
+        """
+        Apply a given permutation on the conditions. Updates the current instance.
+
+        :param perm_vector: Permutation vector to apply (as returned by PERM.perm_vector)
+        :param first_mode: First mode to apply the permutation on (default 0)
+        """
+        super().apply_permutation(perm_vector, first_mode)
+
+    def can_compose_with(self, modes: list[int]) -> bool:
+        """
+        Check if all conditions are compatible with a composition on given modes.
+
+        Compatible means that modes list is either a subset, either doesn't intersect with any mode list of any conditions.
+
+        :param modes: Mode list to check compatibility
+        :return: `True` if the mode list is compatible, `False` otherwise
+        """
+        return super().can_compose_with(modes)
+
+    def is_independent_with(self, other: PostSelect) -> bool:
+        """
+        Check if other PostSelect instance is independent with current one.
+
+        Independent means that current and other instances does not share any modes within their conditions.
+
+        :param other: Another PostSelect instance
+        :return: `True` if current and other instances are independent, `False` otherwise
+        """
+        return super().is_independent_with(other)
+
+    def merge(self, other: PostSelect):
+        """
+        Merge other PostSelect with an AND operator. Updates the current instance.
+
+        :param other: Another PostSelect instance
+        """
+        super().merge(other)
+
+
+@deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
+    """ Check if PostSelect instances are independent with current one.
+
+    :param ps1: First post selection
+    :param ps2: Second post selection
+    :return: `True` if PostSelect instances are independent, `False` otherwise
+    """
     return ps1.is_independent_with(ps2)
 
 
@@ -70,6 +190,14 @@ def post_select_distribution(
         postselect: PostSelect,
         heralds: dict = None,
         keep_heralds: bool = True) -> tuple[BSDistribution, float]:
+    """Post select a BSDistribution
+
+    :param bsd: BSDistribution to post select
+    :param postselect: post selection to apply
+    :param heralds: heralds to apply, defaults to None
+    :param keep_heralds: Keep heralds modes in the BSDistribution (heralds modes will be remove from Basic state), defaults to True
+    :return: BSDistribution post selected
+    """
     if not (postselect.has_condition or heralds):
         bsd.normalize()
         return bsd, 1
@@ -98,6 +226,14 @@ def post_select_statevector(
         postselect: PostSelect,
         heralds: dict = None,
         keep_heralds: bool = True) -> tuple[StateVector, float]:
+    """Post select a state vector
+
+    :param sv: State Vector to post select
+    :param postselect: post selection to apply
+    :param heralds: heralds to apply, defaults to None
+    :param keep_heralds: Keep heralds modes in the BSDistribution (heralds modes will be remove from Basic state), defaults to True
+    :return: State Vector post selected
+    """
     if not (postselect.has_condition or heralds):
         sv.normalize()
         return sv, 1
