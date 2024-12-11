@@ -248,7 +248,7 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
     distribution = analyzer.distribution
     d = []
     for iidx, _ in enumerate(analyzer.input_states_list):
-        d.append([simple_float(f, nsimplify=nsimplify, precision=precision)[1]
+        d.append([simple_float(f.real, nsimplify=nsimplify, precision=precision)[1]
                   for f in list(distribution[iidx])])
     return tabulate(d, headers=[analyzer._mapping.get(o, str(o)) for o in analyzer.output_states_list],
                     showindex=[analyzer._mapping.get(i, str(i)) for i in analyzer.input_states_list],
