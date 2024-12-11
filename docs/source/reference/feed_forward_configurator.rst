@@ -1,5 +1,5 @@
 Feed forward Configurators
-======
+==========================
 
 Configurators are the way to perform a feed-forward computation.
 As they are non-unitary components, they can only be added to :code:`Processor` instances.
@@ -18,7 +18,7 @@ This offset represents the number of modes between the measured modes and the ci
 Two configurators exist.
 
 FFCircuitProvider class reference
----------------------------
+---------------------------------
 
 This class directly links measurements to circuits or processors.
 Any circuit or processor matching the default circuit size can be used given all parameters have numerical values.
@@ -34,7 +34,7 @@ Any circuit or processor matching the default circuit size can be used given all
    :inherited-members:
 
 FFConfigurator class reference
----------------------------
+------------------------------
 
 This class links measurements to a mapping of parameter values that can be set in the given circuit.
 

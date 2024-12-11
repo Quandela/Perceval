@@ -33,7 +33,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from multipledispatch import dispatch
 
-from perceval.utils import BasicState, Parameter, PostSelect, postselect_independent, LogicalState, NoiseModel, ModeType
+from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType
 from perceval.utils.logging import get_logger, channel, deprecated
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -386,13 +386,12 @@ class AProcessor(ABC):
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
             c_first = perm_modes[0]
-            if perm_component is None:
-                other_postselect = copy.copy(processor._postselect)
-            else:
-                other_postselect = processor._postselect.apply_permutation(perm_inv.perm_vector, c_first)
+            other_postselect = copy.copy(processor._postselect)
+            if perm_component is not None:
+                other_postselect.apply_permutation(perm_inv.perm_vector, c_first)
             other_postselect.shift_modes(c_first)
             if not (self._postselect is None or other_postselect is None
-                    or postselect_independent(self._postselect, other_postselect)):
+                    or self._postselect.is_independent_with(other_postselect)):
                 raise RuntimeError("Cannot automatically compose processor's post-selection conditions")
             self._postselect = self._postselect or PostSelect()
             self._postselect.merge(other_postselect)

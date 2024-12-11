@@ -63,7 +63,8 @@ class QiskitConverter(AGateConverter):
         :param qc: quantum-based qiskit circuit
         :type qc: qiskit.QuantumCircuit
         :param use_postselection: when True (default), uses optimized number of `postprocessed CNOT` and
-        'Heralded CNOT' gates. Otherwise, uses only `heralded CNOT`.
+            'Heralded CNOT' gates. Otherwise, uses only `heralded CNOT`.
+
         :return: the converted processor
         """
         import qiskit  # this nested import fixes automatic class reference generation
