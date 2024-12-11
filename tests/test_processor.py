@@ -32,6 +32,7 @@ import numpy as np
 from unittest.mock import patch
 
 import perceval as pcvl
+from perceval import BSDistribution
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
     PS, PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
@@ -266,3 +267,16 @@ def test_phase_quantization():
     p0.noise = nm
     p1.noise = nm
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+
+
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_empty_output(mock_warn):
+    p = Processor("SLOS", 4)
+    p.add(0, PERM([1, 0]))
+    p.add_herald(0, 1)
+    p.min_detected_photons_filter(2)
+    p.with_input(BasicState([0, 1, 0]))
+
+    with LogChecker(mock_warn, expected_log_number=2):  # Normalize is called twice
+        res = p.probs()["results"]
+    assert res == BSDistribution()

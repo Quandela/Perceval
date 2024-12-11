@@ -27,9 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from __future__ import annotations
+
+import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import cache
+from typing import Self
 
 from .abstract_component import AComponent
 from .linear_circuit import Circuit
@@ -64,6 +67,9 @@ class IDetector(AComponent, ABC):
         :param theoretical_photons: Number of photons coming at once into the detector
         :return: The resulting measured state or distribution of all possible measurements
         """
+
+    def copy(self, subs=None) -> Self:
+        return copy.copy(self)
 
 
 class BSLayeredPPNR(IDetector):
