@@ -37,7 +37,7 @@ from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AStrongSimulationBackend
-from perceval.components import ACircuit, IDetector
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.utils.density_matrix_utils import extract_upper_triangle
@@ -445,7 +445,9 @@ class Simulator(ISimulator):
             self._backend.clear_mask()
             res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
-            if self._heralds and not has_annotations:  # TODO: do this also with superposed states when logical perf computation is ready
+            if self._heralds and not has_annotations and get_detection_type(detectors) == DetectionType.PNR:
+                # TODO: do this also with superposed states when logical perf computation is ready
+                # TODO: give detectors to setup_heralds to keep only modes with PNR in the mask
                 self._setup_heralds()
             else:
                 self._backend.clear_mask()
