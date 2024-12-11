@@ -148,7 +148,8 @@ class Analyzer(AAlgorithm):
                             expected_o = k
                             break
                 if sum_p > 0:
-                    self.error_rate += 1 - self._distribution[iidx, self.output_states_list.index(expected_o)]/sum_p
+                    self.error_rate += 1 - \
+                        (self._distribution[iidx, self.output_states_list.index(expected_o)]/sum_p).real
             if normalize and sum_p != 0:
                 self._distribution[iidx, :] /= sum_p
         self.performance = min(logical_perf)
