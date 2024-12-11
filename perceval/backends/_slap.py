@@ -34,7 +34,7 @@ from perceval.components import ACircuit
 from ._abstract_backends import AStrongSimulationBackend
 
 
-class SLOSTreeBackend(AStrongSimulationBackend):
+class SLAPBackend(AStrongSimulationBackend):
 
     def __init__(self):
         super().__init__()
@@ -76,7 +76,7 @@ class SLOSTreeBackend(AStrongSimulationBackend):
 
     @property
     def name(self) -> str:
-        return "SLOSTree"
+        return "SLAP"
 
     def all_prob(self, input_state: BasicState = None):
         if input_state is not None:

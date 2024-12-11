@@ -155,6 +155,13 @@ discussed in :cite:p:`heurtel2022`, Boson Sampling with ``SLOS`` is possible wit
 The tradeoff in this approach is a huge memory usage in :math:`\mathrm{nC^{n+m-1}_n}` that limits usage on personal
 computers to circuits with :math:`\approx 20` photons and to :math:`\approx 24` photons on super-computers.
 
+SLAP
+^^^^
+
+The Simulator of LAttice of Polynoms ``SLAP`` algorithm computes all output probability amplitudes at once by iterating
+over a lattice of intermediary results representation. It is designed to require less memory than ``SLOS`` (2^n complex
+values) at the cost of a slightly higher computation time.
+
 Naive
 ^^^^^
 

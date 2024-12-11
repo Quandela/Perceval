@@ -453,6 +453,9 @@ class Simulator(ISimulator):
                 self._backend.clear_mask()
             res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
+        if not len(res):
+            return {'results': res, 'physical_perf': 1, 'logical_perf': 1}
+
         if detectors:
             min_photons = self._min_detected_photons_filter if self._postprocess else 0
             res, phys_perf = simulate_detectors(res, detectors, min_photons)

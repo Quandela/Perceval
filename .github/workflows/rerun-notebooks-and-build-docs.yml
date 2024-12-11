@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        version: [3.9, 3.12] # only running with oldest and newest version
+        version: [3.9, 3.13] # only running with oldest and newest version
     steps:
     - if: runner.os == 'Linux'
       name: Initialize PYTHON_V_CP linux
@@ -73,6 +73,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
+        # Documentation needs 3.11 to be built
         python-version: '3.11'
 
     - name: Install dependencies

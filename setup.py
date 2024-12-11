@@ -31,13 +31,16 @@ setuptools.setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.6.0',
+    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.6.2',
                       'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'requests<3',
-                      'networkx~=3.1', 'latexcodec<4', 'platformdirs<5', 'tqdm'],
+                      'networkx~=3.1', 'latexcodec<4', 'platformdirs<5', 'tqdm',
+                      "typing_extensions; python_version == '3.9'"  # TODO: remove when dropping 3.9
+                      ],
     extras_require={
         "qiskit_bridge": QISKIT_BRIDGE_PKGS,
         "qutip_bridge": QUTIP_BRIDGE_PKGS,
@@ -46,6 +49,6 @@ setuptools.setup(
         "all": QISKIT_BRIDGE_PKGS+QUTIP_BRIDGE_PKGS+MYQLM_BRIDGE_PKGS+CQASM_BRIDGE_PKGS
     },
     setup_requires=["scmver"],
-    python_requires=">=3.9",
+    python_requires=">=3.9,<3.14",
     scmver=True
 )

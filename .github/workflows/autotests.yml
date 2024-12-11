@@ -25,6 +25,7 @@ on:
           - '3.10'
           - '3.11'
           - '3.12'
+          - '3.13'
 
 env:
   PYTHON_V: ${{ github.event.inputs.python_v || '3.11' }}

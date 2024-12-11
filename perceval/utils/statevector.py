@@ -35,7 +35,10 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import copy
 from multipledispatch import dispatch
-from typing import TypeAlias
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias  # Only used with python 3.9
 
 import exqalibur as xq
 from perceval.utils.logging import get_logger, channel
