@@ -56,6 +56,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
                 phys_perf -= p
             else:
                 result[s] += p
+        result.normalize()
         return result, phys_perf
 
     for s, p in dist.items():
@@ -70,6 +71,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
                 phys_perf -= p * p_out
             else:
                 result.add(s_out, p * p_out)
+    result.normalize()
     return result, phys_perf
 
 
