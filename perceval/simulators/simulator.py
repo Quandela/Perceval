@@ -478,7 +478,7 @@ class Simulator(ISimulator):
                 if herald_expectation > 32:  # FsMask limitation
                     raise ValueError("Cannot simulate an herald expecting more than 32 detected photons")
                 # Encodes expected photon count from 0x30 to 0x4F ASCII characters
-                mask_str += f"{chr(0x30+herald_expectation)}"
+                mask_str += f"{chr(0x30 + herald_expectation)}"
                 n_heralded_photons += herald_expectation
             else:
                 mask_str += " "
@@ -487,8 +487,8 @@ class Simulator(ISimulator):
         # Check that heralds and physical filter are consistent
         if self._min_detected_photons_filter < n_heralded_photons:
             if not self._silent:
-                get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
-                                  f"to the number of heralded photons ({n_heralded_photons})")
+                get_logger().debug(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
+                                   f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
