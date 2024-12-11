@@ -209,9 +209,9 @@ def post_select_distribution(
     :param bsd: BSDistribution to post select
     :param postselect: Post-selection conditions to apply
     :param heralds: Heralds to apply, defaults to None
-    :param keep_heralds: Keep heralded modes in the BSDistribution (heralded modes will be removed from Basic state),
+    :param keep_heralds: Keep heralded modes in the BSDistribution (heralded modes will be removed from Fock states),
                          defaults to True
-    :return: Post-selected BSDistribution
+    :return: A tuple containing post-selected BSDistribution and logical performance
     """
     if not (postselect.has_condition or heralds):
         bsd.normalize()
@@ -246,8 +246,9 @@ def post_select_statevector(
     :param sv: State Vector to post select
     :param postselect: post selection to apply
     :param heralds: heralds to apply, defaults to None
-    :param keep_heralds: Keep heralds modes in the BSDistribution (heralds modes will be remove from Basic state), defaults to True
-    :return: State Vector post selected
+    :param keep_heralds: Keep heralded modes in the BSDistribution (heralded modes will be removed from Fock states),
+                         defaults to True
+    :return:  A tuple containing the post-selected StateVector and logical performance
     """
     if not (postselect.has_condition or heralds):
         sv.normalize()
