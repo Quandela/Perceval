@@ -284,6 +284,7 @@ class Processor(AProcessor):
             self._simulator = SimulatorFactory.build(self)
         else:
             self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components)
+            self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
 
         if precision is not None:
             self._simulator.set_precision(precision)
