@@ -136,6 +136,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
    notebooks/Gedik_qudit
    notebooks/Boson_Bunching
+   notebooks/quantum_kernel_methods
 
 .. toctree::
    :caption: Code Reference
@@ -159,6 +160,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/scaleway_session
    reference/density_matrix
    reference/feed_forward_configurator
+   reference/job_group
 
 .. toctree::
    :caption: Community
