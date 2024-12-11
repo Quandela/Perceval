@@ -225,15 +225,17 @@ class JobGroup:
 
     def progress(self) -> dict:
         """
-        Iterates over all jobs in the group to create a dictionary of display
-        the current status of jobs in a tabular form. Jobs in the group are
-        categorized as follows (depending on their RunningStatus on the Cloud)
-            - Finished
-                -- successful {'SUCCESS'}
-                -- unsuccessful {'CANCELED', 'ERROR', 'UNKNOWN', 'SUSPENDED'}
-            - Unfinished
-                -- sent {'WAITING', 'RUNNING', 'CANCEL_REQUESTED'}
-                -- not sent {None}
+        Iterates over all jobs in the group to create a dictionary of the current status of jobs.
+        Jobs in the group are categorized as follows (depending on their RunningStatus on the Cloud)
+
+        - Finished
+            - successful {'SUCCESS'}
+            - unsuccessful {'CANCELED', 'ERROR', 'UNKNOWN', 'SUSPENDED'}
+        - Unfinished
+            - sent {'WAITING', 'RUNNING', 'CANCEL_REQUESTED'}
+            - not sent {None}
+
+        :return: dictionary of the current status of jobs
         """
         success_job_cnt = 0
         other_job_cnt = 0
