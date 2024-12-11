@@ -484,12 +484,12 @@ class Simulator(ISimulator):
                 mask_str += " "
         self._backend.set_mask(mask_str)
 
-        # # Check that heralds and physical filter are consistent
-        # if self._min_detected_photons_filter < n_heralded_photons:
-        #     if not self._silent:
-        #         get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
-        #                           f"to the number of heralded photons ({n_heralded_photons})")
-        #     self._min_detected_photons_filter = n_heralded_photons
+        # Check that heralds and physical filter are consistent
+        if self._min_detected_photons_filter < n_heralded_photons:
+            if not self._silent:
+                get_logger().warn(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
+                                  f"to the number of heralded photons ({n_heralded_photons})")
+            self._min_detected_photons_filter = n_heralded_photons
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
