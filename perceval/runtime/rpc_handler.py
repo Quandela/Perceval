@@ -37,7 +37,10 @@ _ENDPOINT_PLATFORM_DETAILS = '/api/platform/'
 _ENDPOINT_JOB_CREATE = '/api/job'
 _ENDPOINT_JOB_STATUS = '/api/job/status/'
 _ENDPOINT_JOB_CANCEL = '/api/job/cancel/'
+_ENDPOINT_JOB_RERUN = '/api/job/rerun/'
 _ENDPOINT_JOB_RESULT = '/api/job/result/'
+
+_JOB_ID_KEY = 'job_id'
 
 
 class RPCHandler:
@@ -96,7 +99,7 @@ class RPCHandler:
         if request.status_code != 200:
             raise HTTPError(json_res.get('error', 'Unspecified error'))
 
-        return json_res['job_id']
+        return json_res[_JOB_ID_KEY]
 
     def cancel_job(self, job_id: str):
         """cancel a job
@@ -106,6 +109,18 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
         req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
         req.raise_for_status()
+
+    def rerun_job(self, job_id: str) -> str:
+        """Rerun a job
+
+        :param job_id: job id to rerun
+        :return: new job id
+        """
+        endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
+        req.raise_for_status()
+        assert _JOB_ID_KEY in req.json(), f'Missing {_JOB_ID_KEY} field in rerun response'
+        return req.json()[_JOB_ID_KEY]
 
     def get_job_status(self, job_id: str):
         """get the status of a job

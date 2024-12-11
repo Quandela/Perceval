@@ -26,13 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from typing import Union
+from __future__ import annotations
 
 from perceval.utils import Parameter, Expression
 from perceval.serialization import _schema_circuit_pb2 as pb
 
 
-def serialize_parameter(param: Union[Parameter, float]):
+def serialize_parameter(param: Parameter | float):
     pb_param = pb.Parameter()
     if isinstance(param, float):
         pb_param.real_value = param

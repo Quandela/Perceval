@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from .abstract_component import AComponent
-from .abstract_processor import AProcessor
+from .abstract_processor import AProcessor, ProcessorType
 from .linear_circuit import Circuit, ACircuit
 from .generic_interferometer import GenericInterferometer
 from .processor import Processor
@@ -38,9 +38,11 @@ from ._pauli import (PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_
                      get_pauli_eigenvectors)
 from .tomography_exp_configurer import processor_circuit_configurator
 from .comp_utils import decompose_perms
-from .port import Port, Herald, PortLocation, get_basic_state_from_ports
+from .port import APort, Port, Herald, PortLocation, get_basic_state_from_ports
+from .detector import IDetector, DetectionType, Detector, BSLayeredPPNR, get_detection_type
 from .unitary_components import BSConvention, BS, PS, WP, HWP, QWP, PR, Unitary, PERM, PBS, Barrier
 from .non_unitary_components import TD, LC
 from .component_catalog import Catalog
 from ._mode_connector import ModeConnector, UnavailableModeException
+from .feed_forward_configurator import AFFConfigurator, FFCircuitProvider, FFConfigurator
 catalog = Catalog('perceval.components.core_catalog')

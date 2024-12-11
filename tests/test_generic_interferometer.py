@@ -30,7 +30,7 @@
 import math
 import pytest
 
-from perceval.components import GenericInterferometer, catalog, PS
+from perceval.components import GenericInterferometer, catalog, BS, PS
 from perceval.backends import SLOSBackend
 from perceval.utils import BasicState, P
 
@@ -38,6 +38,18 @@ from perceval.utils import BasicState, P
 
 size_identity = 6
 mzi_generator_func = catalog['mzi phase last'].generate
+
+
+def test_variable_parameters_count():
+    def _gen_bs(i: int):
+        return BS(theta=P(f"theta{i}"))
+
+    c = GenericInterferometer(5, _gen_bs)
+    assert len(c.get_parameters()) == 5*4/2
+    c = GenericInterferometer(5, _gen_bs, depth=1)
+    assert len(c.get_parameters()) == 2
+    c = GenericInterferometer(5, _gen_bs, depth=2)
+    assert len(c.get_parameters()) == 4
 
 
 @pytest.mark.parametrize('interferometer', [

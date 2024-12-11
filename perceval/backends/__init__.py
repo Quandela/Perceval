@@ -27,12 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ._abstract_backends import ABackend, ASamplingBackend, AProbAmpliBackend
+# AProbAmpliBackend name was deprecated in 0.12
+from ._abstract_backends import ABackend, ASamplingBackend, AStrongSimulationBackend, AProbAmpliBackend
 from ._clifford2017 import Clifford2017Backend
+from ._mps import MPSBackend
 from ._naive import NaiveBackend
 from ._naive_approx import NaiveApproxBackend
 from ._slos import SLOSBackend
-from ._mps import MPSBackend
+from ._slap import SLAPBackend
 
 
 BACKEND_LIST = {
@@ -40,6 +42,7 @@ BACKEND_LIST = {
     "MPS": MPSBackend,
     "Naive": NaiveBackend,
     "NaiveApprox": NaiveApproxBackend,
+    "SLAP": SLAPBackend,
     "SLOS": SLOSBackend
 }
 

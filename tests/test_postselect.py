@@ -27,22 +27,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from copy import copy
-from perceval.utils import BasicState, PostSelect, postselect_independent
+from perceval.utils import BasicState, PostSelect
 
 import pytest
 
 
 def test_postselect_init():
     ps_empty = PostSelect()  # Should work
-    ps1 = PostSelect("[0]==0 & [1,2]==1 & [3,4]==1 & [5]==0")
-    ps2 = PostSelect().eq(0, 0).eq([1, 2], 1).eq([3, 4], 1).eq(5, 0)
-    assert ps1 == ps2
+    ps1 = PostSelect("([0]==0 & [1,2]==1 & [3,4]==1) | [5]==0")
+    ps2 = PostSelect("([     0 ]   ==0 and [1 , 2]== 1 & [3,4] == 1)OR[5]==0")
 
-    ps3 = PostSelect().eq(0, 0).lt([1, 2], 2).lt([3, 4], 1).eq(5, 0)
-    assert ps1 != ps3
-
-    ps4 = PostSelect("[     0 ]   ==0 & [1 , 2]== 1 & [3,4] == 1&[5]==0")
-    assert ps4 == ps1
+    assert ps2 == ps1
 
 
 def test_postselect_init_invalid():
@@ -56,15 +51,15 @@ def test_postselect_init_invalid():
         PostSelect("[0]==0 & (1,2)==1 & [3,4]==1 & [5]==0")  # Tuple syntax is not supported
 
     with pytest.raises(RuntimeError):
-        PostSelect("[2] >= 4 | [1] > 2")  # Invalid separator
+        PostSelect("[2] < 4 + [1] > 2")  # Invalid separator
 
-    with pytest.raises(KeyError):
-        PostSelect("[2] % 4 | [1] > 2")  # Invalid separator
+    with pytest.raises(RuntimeError):
+        PostSelect("[2] == 4 | [1] > 2 & [0] < 1")  # Invalid use of different separators
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         PostSelect("[2] >> 4")  # Invalid operator
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         PostSelect("[0]==0 & [1,2]]==1 & [3,4]==1 & [5]==0")  # Too many brackets => Invalid operator
 
 
@@ -95,6 +90,16 @@ def test_postselect_usage_advanced_ge_le():
         assert not ps3(bs)
         assert not ps4(bs)
 
+def test_postselect_operators():
+    ps = PostSelect("([1,2]>=1 & [3] < 2) | ([4] == 1 xor [5] > 0)")
+    assert ps(BasicState([0, 1, 0, 1, 0, 0]))  # and True
+    assert not ps(BasicState([0, 1, 0, 2, 0, 0]))
+    assert ps(BasicState([0, 0, 0, 0, 1, 0]))
+    assert not ps(BasicState([0, 0, 0, 0, 1, 1]))   # xor False
+    assert ps(BasicState([0, 0, 0, 0, 1, 0]))   # xor True
+    assert ps(BasicState([0, 0, 0, 0, 0, 1]))   # xor True
+    assert not ps(BasicState([0, 0, 0, 0, 2, 0]))   # xor False
+
 
 def test_postselect_str():
     ps1 = PostSelect("[0]==0 & [1, 2 ]>0 & [3, 4]==1 & [5]<1")
@@ -106,17 +111,13 @@ def test_postselect_apply_permutation():
     ps = PostSelect("[0,1]==1 & [2,3]>2 & [4,5]<3")
 
     perm_vector = [1, 2, 0]  # Corresponds to PERM(perm_vector)
-    ps_out = ps.apply_permutation(perm_vector)
-    assert len(ps_out._conditions) == len(ps._conditions)
-    assert ((1, 2), 1) in ps_out._conditions[int.__eq__]
-    assert ((0, 3), 2) in ps_out._conditions[int.__gt__]
-    assert ((4, 5), 3) in ps_out._conditions[int.__lt__]
+    ps.apply_permutation(perm_vector)
+    assert ps == PostSelect("[1,2]==1 & [0,3]>2 & [4,5]<3")
 
-    ps_out = ps.apply_permutation(perm_vector, 1)
-    assert len(ps_out._conditions) == len(ps._conditions)
-    assert ((0, 2), 1) in ps_out._conditions[int.__eq__]
-    assert ((3, 1), 2) in ps_out._conditions[int.__gt__]
-    assert ((4, 5), 3) in ps_out._conditions[int.__lt__]
+    ps = PostSelect("[0,1]==1 & [2,3]>2 & [4,5]<3")
+    ps.apply_permutation(perm_vector, 1)
+    assert ps == PostSelect("[0,2]==1 & [3,1]>2 & [4,5]<3")
+
 
 
 def test_postselect_shift_modes():
@@ -131,7 +132,7 @@ def test_postselect_shift_modes():
     ps.shift_modes(-2)
     assert ps == initial_ps
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         ps.shift_modes(-1)
 
 
@@ -169,8 +170,8 @@ def test_postselect_merge():
 
 def test_postselect_independent():
     ps1 = PostSelect("[0]==0 & [1,2]==1")
-    assert not postselect_independent(ps1, ps1)
+    assert not ps1.is_independent_with(ps1)
     ps2 = PostSelect("[2,3] == 1")
-    assert not postselect_independent(ps1, ps2)
+    assert not ps1.is_independent_with(ps2)
     ps3 = PostSelect("[3]<1 & [4]<1 & [5]>0")
-    assert postselect_independent(ps1, ps3)
+    assert ps1.is_independent_with(ps3)

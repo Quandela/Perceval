@@ -26,12 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import sys
 
 from multipledispatch import dispatch
 from numpy import inf
-from typing import Dict, Callable, Union, List
 
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
@@ -61,14 +61,14 @@ class Processor(AProcessor):
                   Note: source and noise are mutually exclusive
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: Union[ABackend, str], m_circuit: Union[int, ACircuit] = None, source: Source = None,
+    def __init__(self, backend: ABackend | str, m_circuit: int | ACircuit = None, source: Source = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
         super().__init__()
         self._init_backend(backend)
         self._init_circuit(m_circuit)
         self._init_noise(noise, source)
         self.name = name
-        self._inputs_map: Union[SVDistribution, None] = None
+        self._inputs_map: SVDistribution | None = None
         self._simulator = None
 
     def _init_noise(self, noise: NoiseModel, source: Source):
@@ -98,7 +98,7 @@ class Processor(AProcessor):
             self._generate_noisy_input()
 
     @property
-    def source_distribution(self) -> Union[SVDistribution, None]:
+    def source_distribution(self) -> SVDistribution | None:
         r"""
         Retrieve the computed input distribution.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
@@ -124,12 +124,12 @@ class Processor(AProcessor):
         self._source = source
         self._inputs_map = None
 
-    def _init_circuit(self, m_circuit):
+    def _init_circuit(self, m_circuit: ACircuit | int):
         if isinstance(m_circuit, ACircuit):
-            self._n_moi = m_circuit.m
+            self.m = m_circuit.m
             self.add(0, m_circuit)
-        else:
-            self._n_moi = m_circuit  # number of modes of interest (MOI)
+        elif m_circuit is not None:
+            self.m = m_circuit  # number of modes of interest
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
@@ -158,6 +158,10 @@ class Processor(AProcessor):
 
     def _generate_noisy_input(self):
         self._inputs_map = self._source.generate_distribution(self._input_state)
+
+    def generate_noisy_heralds(self) -> SVDistribution:
+        heralds_perfect_state = BasicState([v for k, v in sorted(self.heralds.items())])
+        return self._source.generate_distribution(heralds_perfect_state)
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
@@ -229,13 +233,7 @@ class Processor(AProcessor):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
-    def _state_preselected_physical(self, input_state: StateVector) -> bool:
-        return max(input_state.n) >= self._min_detected_photons_filter
-
     def _state_selected_physical(self, output_state: BasicState) -> bool:
-        if self.is_threshold:
-            modes_with_photons = len([n for n in output_state if n > 0])
-            return modes_with_photons >= self._min_detected_photons_filter
         return output_state.n >= self._min_detected_photons_filter
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
@@ -260,16 +258,18 @@ class Processor(AProcessor):
                                     force=True)
         return circuit
 
-    def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> Dict:
+    def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         from perceval.simulators import NoisySamplingSimulator
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
         sampling_simulator.sleep_between_batches = 0  # Remove sleep time between batches of samples in local simulation
         sampling_simulator.set_circuit(self.linear_circuit())
         sampling_simulator.set_selection(
-            min_detected_photons_filter=self._min_detected_photons_filter, postselect=self.post_select_fn, heralds=self.heralds)
-        sampling_simulator.set_threshold_detector(self.is_threshold)
+            min_detected_photons_filter=self._min_detected_photons_filter,
+            postselect=self.post_select_fn,
+            heralds=self.heralds)
         sampling_simulator.keep_heralds(False)
+        sampling_simulator.set_detectors(self._detectors)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
@@ -277,39 +277,41 @@ class Processor(AProcessor):
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
-    def probs(self, precision: float = None, progress_callback: Callable = None) -> Dict:
+    def probs(self, precision: float = None, progress_callback: callable = None) -> dict:
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
             self._simulator = SimulatorFactory.build(self)
         else:
             self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components)
+            self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
 
         if precision is not None:
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
-                    channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, progress_callback=progress_callback)
+                          channel.general)
+        res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
         pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
             if self._state_selected_physical(state):
-                postprocessed_res[self.postprocess_output(state)] += prob
+                postprocessed_res[self.remove_heralded_modes(state)] += prob
             else:
                 pperf -= prob
 
         postprocessed_res.normalize()
-        res['physical_perf'] = res['physical_perf']*pperf if 'physical_perf' in res else pperf
+        perf_word = "global_perf" if "global_perf" in res else 'physical_perf'
+        res[perf_word] = res[perf_word]*pperf if perf_word in res else pperf
         res['results'] = postprocessed_res
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res
 
     @property
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         return ["samples" if isinstance(self.backend, ASamplingBackend) else "probs"]
 
-    def log_resources(self, method: str, extra_parameters: Dict):
+    def log_resources(self, method: str, extra_parameters: dict):
         """Log resources of the processor
 
         :param method: name of the method used

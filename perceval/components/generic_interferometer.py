@@ -26,12 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import math
-from typing import Callable, List, Optional, Tuple
+from collections.abc import Callable
 
 from .linear_circuit import ACircuit, Circuit
-
+from .unitary_components import Barrier
 
 from perceval.utils import InterferometerShape
 from perceval.utils.logging import get_logger, channel
@@ -64,10 +63,11 @@ class GenericInterferometer(Circuit):
                  fun_gen: Callable[[int], ACircuit],
                  shape: InterferometerShape = InterferometerShape.RECTANGLE,
                  depth: int = None,
-                 phase_shifter_fun_gen: Optional[Callable[[int], ACircuit]] = None,
+                 phase_shifter_fun_gen: Callable[[int], ACircuit] = None,
                  phase_at_output: bool = False,
                  upper_component_gen: Callable[[int], ACircuit] = None,
-                 lower_component_gen: Callable[[int], ACircuit] = None):
+                 lower_component_gen: Callable[[int], ACircuit] = None,
+                 align_with_barriers: bool = True):
         assert isinstance(shape, InterferometerShape),\
             f"Wrong type for shape, expected InterferometerShape, got {type(shape)}"
         super().__init__(m)
@@ -78,6 +78,7 @@ class GenericInterferometer(Circuit):
         self._has_input_phase_layer = False
         self._upper_component_gen = upper_component_gen
         self._lower_component_gen = lower_component_gen
+        self._use_barriers = align_with_barriers
         if phase_shifter_fun_gen and not phase_at_output:
             self._has_input_phase_layer = True
             for i in range(0, m):
@@ -102,7 +103,7 @@ class GenericInterferometer(Circuit):
         return f"Generic interferometer ({self.m} modes, {str(self._shape.name)}, {self.ncomponents()} components)"
 
     @property
-    def mzi_depths(self) -> List[int]:
+    def mzi_depths(self) -> list[int]:
         """Return a list of MZI depth, per mode"""
         return self._depth_per_mode
 
@@ -151,7 +152,6 @@ class GenericInterferometer(Circuit):
         idx = 0
         for i in range(0, max_depth):
             self._add_upper_component(i)
-            self._add_lower_component(i)
             for j in range(0+i%2, self.m-1, 2):
                 if self._depth is not None and (self._depth_per_mode[j] == self._depth
                                                 or self._depth_per_mode[j+1] == self._depth):
@@ -160,22 +160,22 @@ class GenericInterferometer(Circuit):
                 self._depth_per_mode[j] += 1
                 self._depth_per_mode[j+1] += 1
                 idx += 1
+            self._add_lower_component(i)
+            if self._use_barriers:
+                self.add(0, Barrier(self.m, visible=False))
 
     def _build_triangle(self):
         idx = 0
-        # record the physical position of each block for aligning purpose
-        pos_mode = [0] * self.m
         for i in range(1, self.m):
             for j in range(i, 0, -1):
                 if self._depth is not None and (self._depth_per_mode[j-1] == self._depth
                                                 or self._depth_per_mode[j] == self._depth):
                     continue
-                pos_component = max(pos_mode[j-1], pos_mode[j])
-                self.add((j-1, j), self._pattern_generator(idx), merge=True, x_grid=pos_component)
+                self.add((j-1, j), self._pattern_generator(idx), merge=True)
+                if self._use_barriers:
+                    self.add((j-1, j), Barrier(2, visible=False))
                 self._depth_per_mode[j-1] += 1
                 self._depth_per_mode[j] += 1
-                pos_mode[j-1] = pos_component+1
-                pos_mode[j] = pos_component+1
                 idx += 1
 
     def _find_param_index(self, col: int, lin: int, even_col_size: int, odd_col_size: int) -> int:
@@ -198,7 +198,7 @@ class GenericInterferometer(Circuit):
             cc += 1
         return depth
 
-    def set_param_list(self, param_list: List[float], top_left_pos: Tuple[int, int], m: int):
+    def set_param_list(self, param_list: list[float], top_left_pos: tuple[int, int], m: int):
         """Insert parameters value starting from a given position in the interferometer.
 
         This method is designed to work on rectangular interferometers
@@ -233,7 +233,7 @@ class GenericInterferometer(Circuit):
                     break
             cc += 1
 
-    def set_params_from_other(self, other: Circuit, top_left_pos: Tuple[int, int]):
+    def set_params_from_other(self, other: Circuit, top_left_pos: tuple[int, int]):
         """Retrieve parameter value from another interferometer
 
         :param other: Another interferometer

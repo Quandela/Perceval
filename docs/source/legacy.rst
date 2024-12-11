@@ -2,16 +2,66 @@ Legacy
 ======
 
 Perceval has evolved quickly from the initial release, some evolution are introducing breaking changes for existing code.
-While we are trying hard to avoid unnecessary API changes, some of necessary to bring new features and keep a consistent
-code base.
+While we are trying hard to avoid unnecessary API changes, we may break some in order to bring new features and keep a
+consistent code base.
 
 This section lists the major breaking changes introduced.
+
+Breaking changes in Perceval 0.12
+---------------------------------
+
+Simulator.probs_svd method signature changed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`detectors` parameter was introduced at 2nd position in the signature of :code:`Simulator.probs_svd`, between
+the :code:`SVDistribution` and the optional progress callback. If you were using such callbacks, please update your code
+from
+
+>>> results = simulator.probs_svd(svd, my_callback)  # Would work pre-0.12
+
+to either
+
+>>> results = simulator.probs_svd(svd, progress_callback=my_callback)
+
+or
+
+>>> results = simulator.probs_svd(svd, my_detector_list, my_callback)  # my_detector_list can be None
+
+PostSelect API changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`PostSelect` class, used to represent a set of post-selection conditions, was moved from Python to C++. This
+change allows supporting a richer boolean syntax, including nested condition based on more than the `and` operator.
+
+Removal of operator methods
++++++++++++++++++++++++++++
+
+Now that we support nested logical expression, adding conditions one by one no longer makes sense. Consequently,
+:code:`eq`, :code:`gt`, :code:`lt`, :code:`ge` and :code:`le` methods were removed. All :code:`PostSelect` must now be
+constructed from a string or through merging two existing post-selection objects.
+
+In-place apply permutation
+++++++++++++++++++++++++++
+
+Previously, :code:`apply_permutation` method would create a new :code:`PostSelect` object and return it. For
+consistency purpose, the new behavior modifies the data of the instance on which :code:`apply_permutation` is called.
+
+Circuit.generic_interferometer method was removed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`Circuit.generic_interferometer` method has been deprecated since Perceval 0.10.0 and was removed from the
+code base (in order to avoid a circular import).
+
+Please use the :code:`GenericInterferometer` class (from `perceval.components`) directly.
+See :ref:`Generic Interferometer` and you can find a usage example in the :ref:`Circuit Optimizer` code reference.
+
 
 Breaking changes in Perceval 0.11
 ---------------------------------
 
 postprocess
 ^^^^^^^^^^^
+
 :code:`set_postprocess` and :code:`clear_postprocess` have been deprecated since Perceval 0.9.0 and are no more available.
 
 See :ref:`Simulation rework: processor`

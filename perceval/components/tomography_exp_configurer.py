@@ -27,12 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import List
 from .processor import AProcessor
 from ._pauli import PauliType, PauliEigenStateType, get_pauli_eigen_state_prep_circ, get_pauli_basis_measurement_circuit
 
 
-def _prep_state_circuit_preparer(prep_state_indices: List):
+def _prep_state_circuit_preparer(prep_state_indices: list):
     """
     Generates a layer of state preparation circuits (essentially 1-qubit pauli gates) for each qubit.
     The logical qubit state prepared will be one of the list: |0>,|1>,|+>,|+i> using Pauli Gates.
@@ -42,7 +41,7 @@ def _prep_state_circuit_preparer(prep_state_indices: List):
         yield i * 2, get_pauli_eigen_state_prep_circ(pauli_type)
 
 
-def _meas_state_circuit_preparer(pauli_indices: List):
+def _meas_state_circuit_preparer(pauli_indices: list):
     """
     Generates a layer of state measurement circuits (essentially measuring eigenstates of one of the pauli gates)
      for each qubit.

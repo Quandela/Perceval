@@ -26,12 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import copy
 import math
 import numpy
 import os
-
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -42,18 +42,19 @@ with warnings.catch_warnings():
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 from multipledispatch import dispatch
-from tabulate import tabulate
-from typing import Union
-import matplotlib.pyplot as plt
+import networkx as nx
 import sympy as sp
+from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
-from perceval.components import ACircuit, Circuit, AProcessor, non_unitary_components as nl
-from perceval.rendering.circuit import DisplayConfig, create_renderer, ModeStyle
-from perceval.rendering._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
-from perceval.utils import Matrix, simple_float, simple_complex, DensityMatrix, mlstr
+from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator,
+                                 non_unitary_components as nl)
+from .circuit import DisplayConfig, create_renderer, ASkin
+from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
+from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
+from perceval.runtime import JobGroup
 
 from .format import Format
 from ._processor_utils import collect_herald_info
@@ -82,16 +83,17 @@ except (ImportError, AttributeError):
 
 def pdisplay_circuit(
         circuit: ACircuit,
-        map_param_kid: dict = None,
         output_format: Format = Format.TEXT,
         recursive: bool = False,
         compact: bool = False,
         precision: float = 1e-6,
         nsimplify: bool = True,
-        skin=None,
+        skin: ASkin = None,
         **opts):
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
+    skin.precision = precision
+    skin.nsimplify = nsimplify
     w, h = skin.get_size(circuit, recursive)
     renderer, _ = create_renderer(
         circuit.m,
@@ -101,10 +103,8 @@ def pdisplay_circuit(
         total_height=h,
         **opts)
 
-    if map_param_kid is None:
-        map_param_kid = circuit.map_parameters()
     renderer.open()
-    renderer.render_circuit(circuit, map_param_kid, recursive=recursive, precision=precision, nsimplify=nsimplify)
+    renderer.render_circuit(circuit, recursive=recursive, precision=precision, nsimplify=nsimplify)
     renderer.close()
     renderer.add_mode_index()
     return renderer.draw()
@@ -116,11 +116,13 @@ def pdisplay_processor(processor: AProcessor,
                        compact: bool = False,
                        precision: float = 1e-6,
                        nsimplify: bool = True,
-                       skin=None,
+                       skin: ASkin = None,
                        **opts):
     n_modes = processor.circuit_size
     if skin is None:
         skin = DisplayConfig.get_selected_skin(compact_display=compact)
+    skin.precision = precision
+    skin.nsimplify = nsimplify
     w, h = skin.get_size(processor, recursive)
     renderer, pre_renderer = create_renderer(
         n_modes,
@@ -134,7 +136,7 @@ def pdisplay_processor(processor: AProcessor,
     herald_info = {}
     if len(processor.heralds):
         for k in processor.heralds.keys():
-            renderer.set_mode_style(k, ModeStyle.HERALD)
+            renderer.set_mode_style(k, ModeType.HERALD)
         herald_info = collect_herald_info(processor, recursive)
 
     for rendering_pass in [pre_renderer, renderer]:
@@ -152,16 +154,47 @@ def pdisplay_processor(processor: AProcessor,
                 precision=precision,
                 nsimplify=nsimplify,
                 shift=shift)
+            if isinstance(c, AFFConfigurator):
+                controlled_circuit = c.circuit_template()
+                if isinstance(controlled_circuit, Circuit):
+                    controlled_circuit = Circuit(controlled_circuit.m).add(0, controlled_circuit)
+                rendering_pass.render_circuit(
+                    controlled_circuit, recursive=recursive, shift=c.config_modes(r)[0]
+                )
+
         rendering_pass.close()
         if pre_renderer:
             # Pass pre-computed subblock info to the main rendering pass.
             renderer.subblock_info.update(pre_renderer.subblock_info)
 
+    in_ports_drawn_on_modes = []
     for port, port_range in processor._in_ports.items():
+        in_ports_drawn_on_modes += port_range
         renderer.add_in_port(port_range[0], port)
 
+    if isinstance(processor._input_state, BasicState):
+        renderer.display_input_photons(processor._input_state)
+        # In this case add mono-mode ports on all modes containing none
+        empty_raw_port = Port(Encoding.RAW, "")
+        for i in range(processor.circuit_size):
+            if i not in in_ports_drawn_on_modes:
+                renderer.add_in_port(i, empty_raw_port)
+
+    renderer.add_detectors(processor._detectors)
+    ports_drawn_on_modes = []
     for port, port_range in processor._out_ports.items():
+        ports_drawn_on_modes += port_range
+        if isinstance(port, Herald):
+            det = processor._detectors[port_range[0]]
+            if det is not None:
+                port.detector_type = det.type
         renderer.add_out_port(port_range[0], port)
+    for i in range(processor.circuit_size):
+        if i not in ports_drawn_on_modes and \
+                i not in processor.detectors_injected and processor._detectors[i] is not None:
+            renderer.add_out_port(i, Port(Encoding.RAW, ""))
+
+    renderer.add_mode_index()
     return renderer.draw()
 
 
@@ -215,14 +248,14 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
     distribution = analyzer.distribution
     d = []
     for iidx, _ in enumerate(analyzer.input_states_list):
-        d.append([simple_float(f, nsimplify=nsimplify, precision=precision)[1]
+        d.append([simple_float(f.real, nsimplify=nsimplify, precision=precision)[1]
                   for f in list(distribution[iidx])])
     return tabulate(d, headers=[analyzer._mapping.get(o, str(o)) for o in analyzer.output_states_list],
                     showindex=[analyzer._mapping.get(i, str(i)) for i in analyzer.input_states_list],
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_state_distrib(sv: Union[StateVector, ProbabilityDistribution, BSCount],
+def pdisplay_state_distrib(sv: StateVector | ProbabilityDistribution | BSCount,
                            output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
     :meta private:
@@ -296,6 +329,7 @@ def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
     else:
         has_only_one_value = True
         rgba = [color_map(0)]
+
 
     # Caption
     font_size = 6
@@ -393,6 +427,33 @@ def pdisplay_density_matrix(dm,
         return ""
 
 
+def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
+    if output_format not in {Format.MPLOT, Format.LATEX}:
+        raise TypeError(f"Graph plot does not support {output_format}")
+    if output_format == Format.LATEX:
+        return nx.to_latex(g)
+
+
+    pos = nx.spring_layout(g, seed=42)
+    nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
+    nx.draw_networkx_edges(g, pos)
+    nx.draw_networkx_labels(g, pos, font_size=10, font_color='white', font_family="sans-serif")
+    edge_labels = nx.get_edge_attributes(g, "weight")
+    nx.draw_networkx_edge_labels(g, pos, edge_labels)
+    plt.show()
+
+
+def pdisplay_job_group(jg: JobGroup,  output_format: Format = Format.TEXT):
+    progress = jg.progress()
+
+    for key, value in progress.items():
+        if isinstance(value, int):
+            progress[key] = [value]
+
+    return tabulate(progress.values(), headers=['Job Category', 'Count', 'Details'], showindex=progress.keys(),
+                    tablefmt=_TABULATE_FMT_MAPPING[output_format])
+
+
 @dispatch(object)
 def _pdisplay(o, **kwargs):
     raise NotImplementedError(f"pdisplay not implemented for {type(o)}")
@@ -406,7 +467,12 @@ def _pdisplay(qpt, **kwargs):
     return pdisplay_tomography_chi(qpt, **kwargs)
 
 
-@dispatch((ACircuit, nl.TD))
+@dispatch(JobGroup)
+def _pdisplay(jg, **kwargs):
+    return pdisplay_job_group(jg, **kwargs)
+
+
+@dispatch((ACircuit, nl.TD, nl.LC))
 def _pdisplay(circuit, **kwargs):
     return pdisplay_circuit(circuit, **kwargs)
 
@@ -456,6 +522,10 @@ def _pdisplay(f, **kwargs):
 def _pdisplay(c, **kwargs):
     return simple_complex(c, **_get_simple_number_kwargs(**kwargs))[1]
 
+@dispatch(nx.Graph)
+def _pdisplay(g, **kwargs):
+    return pdisplay_graph(g, **kwargs)
+
 
 def _default_output_format(o):
     """
@@ -465,7 +535,7 @@ def _default_output_format(o):
         if isinstance(o, Matrix):
             return Format.LATEX
         return Format.HTML
-    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, AProcessTomography))):
+    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, AProcessTomography, nl.TD, nl.LC))):
         return Format.MPLOT
     return Format.TEXT
 

@@ -29,7 +29,18 @@
 
 from perceval.components import Circuit, Processor, Source, BS, PS
 from perceval.utils.logging import get_logger, channel
+from .converter_utils import label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
+from perceval.utils import NoiseModel
+
+
+def _get_gate_sequence(myqlm_circ) -> list:
+    # returns a nested list of gate names with corresponding qubit positions from a myqlm circuit
+    gate_info = []
+    for gate_instruction in myqlm_circ.iterate_simple():
+        gate_info.append([gate_instruction[0], gate_instruction[2]])
+
+    return gate_info
 
 
 class MyQLMConverter(AGateConverter):
@@ -39,8 +50,8 @@ class MyQLMConverter(AGateConverter):
     :param backend_name: Backend to use in computation, defaults to SLOS
     :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self, catalog, backend_name: str = "SLOS", source: Source = Source()):
-        super().__init__(catalog, backend_name, source)
+    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
+        super().__init__(backend_name, source, noise_model)
 
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
@@ -59,8 +70,12 @@ class MyQLMConverter(AGateConverter):
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits) to processor", channel.general)
-        n_cnot = qlmc.count("CNOT")  # count the number of CNOT gates in circuit - needed to find the num. heralds
+        get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
+            channel.general)
+
+        gate_sequence = _get_gate_sequence(qlmc)
+        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
+
         self._configure_processor(qlmc)    # empty processor with ports initialized
 
         for i, instruction in enumerate(qlmc.iterate_simple()):
@@ -94,12 +109,7 @@ class MyQLMConverter(AGateConverter):
                     raise ValueError(f"Gates with number of Qbits higher than 2 not implemented")
                 c_idx = instruction_qbit[0] * 2
                 c_data = instruction_qbit[1] * 2
-                self._create_2_qubit_gates_from_catalog(
-                    instruction_name,
-                    n_cnot,
-                    c_idx,
-                    c_data,
-                    use_postselection)
+                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[i], c_idx, c_data, use_postselection)
 
         self.apply_input_state()
         return self._converted_processor

@@ -28,15 +28,25 @@
 # SOFTWARE.
 
 from abc import ABC, abstractmethod
-from typing import Callable, Dict
 
-from perceval.components import ACircuit
+from perceval.components import ACircuit, IDetector
 from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSelect, post_select_distribution, \
     post_select_statevector
 from perceval.utils.logging import deprecated, get_logger
 
 
 class ISimulator(ABC):
+
+    def __init__(self):
+        self._silent = False
+
+    def set_silent(self, silent: bool):
+        self._silent = silent
+
+    @abstractmethod
+    def do_postprocess(self, doit: bool):
+        pass
+
     @abstractmethod
     def set_circuit(self, circuit):
         pass
@@ -46,7 +56,10 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
+    def probs_svd(self,
+                  svd: SVDistribution,
+                  detectors: list[IDetector] = None,
+                  progress_callback: callable = None) -> dict:
         pass
 
     @abstractmethod
@@ -54,12 +67,21 @@ class ISimulator(ABC):
         pass
 
     @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    @abstractmethod
     def set_min_detected_photon_filter(self, value: int):
-        pass
+        """
+        Set a minimum number of detected photons in the output distribution
+
+        :param value: The minimum photon count
+        """
+        self.set_min_detected_photons_filter(value)
 
     @abstractmethod
     def set_min_detected_photons_filter(self, value: int):
+        """
+        Set a minimum number of detected photons in the output distribution
+
+        :param value: The minimum photon count
+        """
         pass
 
     def set_precision(self, precision: float):
@@ -68,7 +90,8 @@ class ISimulator(ABC):
 
 class ASimulatorDecorator(ISimulator, ABC):
     def __init__(self, simulator: ISimulator):
-        self._simulator = simulator
+        super().__init__()
+        self._simulator: ISimulator = simulator
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
 
@@ -87,6 +110,9 @@ class ASimulatorDecorator(ISimulator, ABC):
             self._postselect = postselect
         if heralds is not None:
             self._heralds = heralds
+
+    def do_postprocess(self, doit: bool):
+        self._simulator.do_postprocess(doit)
 
     @abstractmethod
     def _prepare_input(self, input_state):
@@ -125,8 +151,9 @@ class ASimulatorDecorator(ISimulator, ABC):
         results, _ = self._postprocess_bsd(results)
         return results
 
-    def probs_svd(self, svd: SVDistribution, progress_callback: Callable = None) -> Dict:
-        probs = self._simulator.probs_svd(self._prepare_input(svd), progress_callback)
+    def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+        probs = self._simulator.probs_svd(self._prepare_input(svd),
+                                          progress_callback=progress_callback)
         probs['results'], logical_perf_coeff = self._postprocess_bsd(probs['results'])
         probs['logical_perf'] *= logical_perf_coeff
         return probs
@@ -134,11 +161,6 @@ class ASimulatorDecorator(ISimulator, ABC):
     def evolve(self, input_state) -> StateVector:
         results = self._simulator.evolve(self._prepare_input(input_state))
         return self._postprocess_sv(results)
-
-    # TODO: remove for PCVL-786
-    @deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        self.set_min_detected_photons_filter(value)
 
     def set_min_detected_photons_filter(self, value: int):
         self._simulator.set_min_detected_photons_filter(value)

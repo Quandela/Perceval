@@ -53,7 +53,8 @@ class MplotCanvas(Canvas):
         mpath = ["M", points[0], points[1]]
         for n in range(2, len(points), 2):
             mpath += ["L", points[n], points[n+1]]
-        self.add_mpath(mpath, stroke=stroke, stroke_width=stroke_width, stroke_linejoin=stroke_linejoin)
+        self.add_mpath(mpath, stroke=stroke, stroke_width=stroke_width, stroke_linejoin=stroke_linejoin,
+                       stroke_dasharray=stroke_dasharray)
 
     def add_polygon(self, points, stroke="black", stroke_width=1, fill=None, stroke_linejoin="miter",
                     stroke_dasharray=None):
@@ -85,10 +86,11 @@ class MplotCanvas(Canvas):
                 points = points[5:]
         codes, vertices = zip(*path_data)
         path = mpath.Path(vertices, codes)
+        linestyle = '-' if stroke_dasharray is None else '--'
         self._patches.append(mpatches.PathPatch(path,
                                                 fill=fill is not None, color=fill,
                                                 ec=stroke, linewidth=stroke_width,
-                                                joinstyle=stroke_linejoin))
+                                                joinstyle=stroke_linejoin, linestyle=linestyle))
 
     def add_circle(self, points, r, stroke="black", stroke_width=1, fill=None,
                    stroke_dasharray=None):

@@ -33,7 +33,6 @@ from perceval.components import ACircuit, PERM, TD
 from perceval.utils import BasicState, BSDistribution, StateVector, global_params
 
 from enum import Enum
-from typing import List, Tuple
 
 
 class _CType(Enum):
@@ -42,10 +41,10 @@ class _CType(Enum):
     OTHER = 2
 
 
-def _count_total_delay(component_list: List) -> int:
+def _count_total_delay(component_list: list) -> int:
     return int(sum([c.get_variables()["t"] if isinstance(c, TD) else 0 for _, c in component_list]))
 
-def _compute_depth(component_list: List, mode_count: int) -> int:
+def _compute_depth(component_list: list, mode_count: int) -> int:
     depth = 1
     count_per_mode = [[0, {i}] for i in range(mode_count)]
     for r, c in component_list:
@@ -91,7 +90,7 @@ class DelaySimulator(ASimulatorDecorator):
         self._expanded_m = expanded_mode_count
         return expanded_circuit
 
-    def _mode_range(self) -> Tuple[int, int]:
+    def _mode_range(self) -> tuple[int, int]:
         return (self._depth - 1) * self._original_m, self._depth * self._original_m
 
     def _postprocess_bsd_impl(self, results):
@@ -112,7 +111,7 @@ class DelaySimulator(ASimulatorDecorator):
                 output += probampli*reduced_out_state
         return output
 
-    def _expand_td(self, component_list: List):
+    def _expand_td(self, component_list: list):
         mode_count = self._original_m
         expanded = []
         current_chunk = []
@@ -128,7 +127,10 @@ class DelaySimulator(ASimulatorDecorator):
                 can_output_circuit = False
 
             else:  # case time delay
-                t = int(c.get_variables()["t"])
+                t = float(c.param("t"))
+                if not t.is_integer():
+                    raise ValueError(f"'t' parameter must be an integer, got {t}")
+                t = int(t)
                 r0 = r[0]
 
                 if r0 != mode_count - 1:

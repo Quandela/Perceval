@@ -27,11 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import uuid
-from typing import Dict, List, Any
 from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source, AComponent
+from perceval.components import ACircuit, Processor, Source, AComponent, AFFConfigurator
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
@@ -65,6 +64,8 @@ class RemoteProcessor(AProcessor):
         rp.noise = processor.noise
         rp.add(0, processor)
         rp.min_detected_photons_filter(processor._min_detected_photons_filter)
+        if processor.input_state is not None:
+            rp.with_input(processor.input_state)
         return rp
 
     def __init__(self,
@@ -110,7 +111,7 @@ class RemoteProcessor(AProcessor):
         self.fetch_data()
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
         if m is not None:
-            self._n_moi = m
+            self.m = m
 
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
         self.noise = noise
@@ -157,12 +158,12 @@ class RemoteProcessor(AProcessor):
         return self._perfs
 
     @property
-    def constraints(self) -> Dict:
+    def constraints(self) -> dict:
         if 'constraints' in self._specs:
             return self._specs['constraints']
         return {}
 
-    def set_parameter(self, key: str, value: Any):
+    def set_parameter(self, key: str, value: any):
         super().set_parameter(key, value)
         if key in DEPRECATED_NOISE_PARAMS:
             get_logger().warn(
@@ -216,11 +217,11 @@ class RemoteProcessor(AProcessor):
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
 
     @property
-    def available_commands(self) -> List[str]:
+    def available_commands(self) -> list[str]:
         return self._specs.get("available_commands", [])
 
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
-                            ) -> Dict[str, Any]:
+                            ) -> dict[str, any]:
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),
@@ -255,20 +256,19 @@ class RemoteProcessor(AProcessor):
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
 
-    @property
-    def m(self) -> int:
-        if self._n_moi is None:
-            return 0
-        return self._n_moi
-
-    def _add_component(self, mode_mapping, component: AComponent):
+    def _add_component(self, mode_mapping, component: AComponent, keep_port: bool):
         if not isinstance(component, ACircuit):
             raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
-        super()._add_component(mode_mapping, component)
+        super()._add_component(mode_mapping, component, keep_port)
+
+    def _add_ffconfig(self, modes, component: AFFConfigurator):
+        raise NotImplementedError("Feed-forward was not implemented for RemoteProcessors")
 
     def _compose_processor(self, connector, processor: AProcessor, keep_port: bool):
         if not processor._is_unitary:
             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        if processor._has_feedforward:
+            raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
         super()._compose_processor(connector, processor, keep_port)
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
@@ -332,7 +332,7 @@ class RemoteProcessor(AProcessor):
         p_interest = self._compute_sample_of_interest_probability(param_values=param_values)
         return round(nshots * p_interest)
 
-    def log_resources(self, command: str, extra_parameters: Dict):
+    def log_resources(self, command: str, extra_parameters: dict):
         """Log resources of the remote processor
 
         :param method: name of the method used

@@ -59,10 +59,13 @@ def test_rpc_handler(requests_mock):
     rpc = get_rpc_handler(requests_mock, url='https://example.org')
     resp_details = rpc.fetch_platform_details()
     assert 'name' in resp_details
-    id_job = rpc.create_job({})
-    assert isinstance(id_job, str)
-    resp_status = rpc.get_job_status(id_job)
+    job_id = rpc.create_job({})
+    assert isinstance(job_id, str)
+    resp_status = rpc.get_job_status(job_id)
     assert resp_status['msg'] == 'ok'
-    rpc.cancel_job(id_job)
-    resp_result = rpc.get_job_results(id_job)
+    rpc.cancel_job(job_id)
+    resp_result = rpc.get_job_results(job_id)
     assert 'results' in resp_result
+    new_job_id = rpc.rerun_job(job_id)
+    assert new_job_id is not None
+    assert new_job_id != job_id

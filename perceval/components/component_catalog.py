@@ -26,20 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import importlib
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import List
 
 from perceval.utils import Parameter
 from perceval.components import Processor, Circuit
 from perceval.utils.logging import get_logger, channel
-
-
-class AsType(Enum):
-    CIRCUIT = 0
-    PROCESSOR = 1
 
 
 class CatalogItem(ABC):
@@ -51,29 +43,7 @@ class CatalogItem(ABC):
 
     def __init__(self, name: str):
         self._name = name
-        self._default_opts = {
-            'type': AsType.PROCESSOR,
-            'backend': 'SLOS'
-        }
-        self._reset_opts()
-
-    def _reset_opts(self):
-        self._build_opts = self._default_opts.copy()
-
-    def as_circuit(self):
-        self._build_opts['type'] = AsType.CIRCUIT
-        return self
-
-    def as_processor(self, backend_name: str = None):
-        self._build_opts['type'] = AsType.PROCESSOR
-        if backend_name is not None:
-            self._build_opts['backend'] = backend_name
-        return self
-
-    def _opt(self, key):
-        if key in self._build_opts:
-            return self._build_opts[key]
-        return self._default_opts[key] if key in self._default_opts else None
+        self._default_backend = 'SLOS'
 
     @property
     def name(self) -> str:
@@ -104,11 +74,6 @@ class CatalogItem(ABC):
         title += '-' * len(title) + '\n'
         return title + content
 
-    # @abstractmethod was removed and build method deprecated in all child classes
-    # The goal is to get rid of the overkill builder pattern and use build_processor and build_circuit instead
-    def build(self):
-        pass
-
     @staticmethod
     def _handle_param(value):
         if isinstance(value, str):
@@ -116,7 +81,7 @@ class CatalogItem(ABC):
         return value
 
     def _init_processor(self, **kwargs):
-        return Processor(kwargs.get("backend", "SLOS"), self.build_circuit(**kwargs),
+        return Processor(kwargs.get("backend", self._default_backend), self.build_circuit(**kwargs),
                          name=kwargs.get("name") or self._name.upper())
 
     @abstractmethod
@@ -132,7 +97,7 @@ class CatalogItem(ABC):
         """Build the component as processor
 
         kwargs:
-            * backend(Union[ABackend, str]): Name or instance of a simulation backend. Default "SLOS"
+            * backend(ABackend or str): Name or instance of a simulation backend. Default "SLOS"
 
         :return: A Perceval processor
         """
@@ -159,7 +124,7 @@ class Catalog:
             if isinstance(obj, CatalogItem):
                 self._items[obj.name] = obj
 
-    def list(self) -> List[str]:
+    def list(self) -> list[str]:
         return list(self._items.keys())
 
     def __contains__(self, item: str) -> bool:

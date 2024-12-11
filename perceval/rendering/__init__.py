@@ -28,4 +28,5 @@
 # SOFTWARE.
 
 from .pdisplay import pdisplay, pdisplay_to_file
+from .circuit import DisplayConfig, DebugSkin, PhysSkin, SymbSkin
 from .format import Format

@@ -41,10 +41,11 @@ from .globals import global_params
 from .conversion import samples_to_sample_count, samples_to_probs, sample_count_to_samples, sample_count_to_probs,\
     probs_to_samples, probs_to_sample_count
 from .stategenerator import StateGenerator
-from ._enums import Encoding, InterferometerShape, FileFormat
+from ._enums import Encoding, InterferometerShape, FileFormat, ModeType
 from .persistent_data import PersistentData
 from .metadata import PMetadata
 from .density_matrix import DensityMatrix
 from .noise_model import NoiseModel
 from .logging import get_logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
 from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
+from .progress_cb import partial_progress_callable

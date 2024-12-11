@@ -165,7 +165,7 @@ def test_bs_u():
     assert pdisplay_matrix(bs.U) == "⎡0  I⎤\n⎣I  0⎦"
 
 
-def test_parameter():
+def test_symbolic_theta_in_beam_splitter():
     theta = P("theta0")
     bs = comp.BS(theta=theta)
     with pytest.raises(AssertionError):  # Cannot request a numeric matrix with variable parameters
@@ -216,9 +216,11 @@ def test_build_composition_4():
     assert pdisplay_matrix(c.U) == "⎡sqrt(2)/2   sqrt(2)*I/2⎤\n⎣-sqrt(2)/2  sqrt(2)*I/2⎦"
 
 
-def test_invalid_ifloor():
+def test_out_of_bound_composition():
     with pytest.raises(AssertionError):
-        comp.BS() // (1, comp.BS())  # invalid ifloor should fail
+        comp.BS() // (1, comp.BS())  # Cannot add a 2-mode component on a 2-mode circuit, starting from mode 1
+    with pytest.raises(AssertionError):
+        comp.BS().add(1, comp.BS())
 
 
 def test_unitary_component():
@@ -259,20 +261,6 @@ def test_unitary_inverse():
     u2.inverse(v=True)
     u2.inverse(h=True)
     assert np.allclose(u1.U, u2.U, atol=1e-12)
-
-
-def _gen_bs(i: int):
-    return comp.BS(theta=P(f"theta{i}"))
-
-
-# noinspection PyTypeChecker
-def test_generator():
-    c = GenericInterferometer(5, _gen_bs)
-    assert len(c.get_parameters()) == 5*4/2
-    c = GenericInterferometer(5, _gen_bs, depth=1)
-    assert len(c.get_parameters()) == 2
-    c = GenericInterferometer(5, _gen_bs, depth=2)
-    assert len(c.get_parameters()) == 4
 
 
 def test_iterator():
@@ -375,8 +363,8 @@ def test_getitem1_index():
 
 
 def test_getitem2_value():
-    c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
-    assert c[0, 0].describe() == "BS(convention=BSConvention.H)"
+    c = Circuit(2) // comp.BS.H(theta=P("thet0")) // comp.PS(P("phi1")) // comp.BS.H() // comp.PS(P("phi2"))
+    assert c[0, 0].describe() == "BS.H(theta=thet0)"
     assert c[0, 1].describe() == "PS(phi=phi1)"
 
 
@@ -385,25 +373,16 @@ def test_getitem3_parameter():
     assert c.getitem((0, 0), True).describe() == "PS(phi=phi1)"
 
 
-def test_x_grid_1_setting_values():
-    c = Circuit(4)
-    c.add(0, comp.BS(), x_grid=1)
-    c.add(2, comp.BS(), x_grid=1)
-    with pytest.raises(ValueError):
-        c.add(1, comp.BS(), x_grid=1)
-    # reinitialize the circuit...
-    c = Circuit(4)
-    c.add(0, comp.BS(), x_grid=1)
-    c.add(2, comp.BS(), x_grid=1)
-    c.add(1, comp.BS(), x_grid=2)
-    c.add(0, comp.BS())
-    with pytest.raises(ValueError):
-        c.add(2, comp.BS(), x_grid=1)
-    # reinitialize again the circuit...
-    c = Circuit(4)
-    c.add(0, comp.BS(), x_grid=1)
-    c.add(2, comp.BS(), x_grid=1)
-    c.add(1, comp.BS(), x_grid=2)
-    c.add(0, comp.BS())
-    c.add(0, comp.BS(), x_grid=3)
-    c.add(2, comp.BS(), x_grid=3)
+def test_describe():
+    assert comp.BS().describe() == "BS.Rx()"
+    assert comp.BS.Rx().describe() == "BS.Rx()"
+    assert comp.BS.Ry().describe() == "BS.Ry()"
+    assert comp.BS.H().describe() == "BS.H()"
+    assert comp.BS.H(theta=1.07).describe() == "BS.H(theta=1.07)"
+    assert comp.BS.H(theta=1.07, phi_br=0.2687).describe() == "BS.H(theta=1.07, phi_br=0.2687)"
+    assert comp.BS.H(theta=P("my_var")).describe() == "BS.H(theta=my_var)"
+    param = P("my_var2")
+    param.set_value(1.097)
+    assert comp.BS.H(theta=param).describe() == "BS.H(theta=1.097)"
+    assert comp.PS(0).describe() == "PS(phi=0)"
+    assert comp.PERM([1, 2, 3, 0]).describe() == "PERM([1, 2, 3, 0])"

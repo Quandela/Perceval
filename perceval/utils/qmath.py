@@ -27,6 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import numpy as np
+from scipy.spatial.distance import cdist
+
 
 def exponentiation_by_squaring(base, power: int):
     """Calculate the result of base^power i.e. base**power using exponentiation by squaring (or square-and-multiply)
@@ -163,3 +166,44 @@ def distinct_permutations(iterable, r=None):
         return _full(items) if (r == size) else _partial(items, r)
 
     return iter(() if r else ((),))
+
+
+def kmeans(features: np.ndarray, n_clusters: int, n_init: int = 10) -> np.ndarray:
+    """
+    Manual KMeans implementation. Clusterizes the system in k subsets.
+
+    :param features: Data points for clustering.
+    :param n_clusters: Number of clusters.
+    :param n_init: Number of times the k-means algorithm will be run with different centroid seeds.
+    :return: Cluster labels.
+    """
+    best_labels = None
+    best_inertia = np.inf
+    MAX_ITERATIONS = 300
+    for _ in range(n_init):
+        # Initialize centroids randomly
+        indices = np.random.choice(features.shape[0], n_clusters, replace=False)
+        centroids = features[indices]
+
+        for _ in range(MAX_ITERATIONS):  # Maximum number of iterations
+            # Assign points to the nearest centroid
+            distances = cdist(features, centroids, 'euclidean')
+            labels = np.argmin(distances, axis=1)
+
+            # Compute new centroids
+            new_centroids = np.array([features[labels == i].mean(axis=0) for i in range(n_clusters)])
+
+            # Check for convergence (if centroids do not change)
+            if np.allclose(centroids, new_centroids):
+                break
+
+            centroids = new_centroids
+
+        # Compute inertia (sum of squared distances to the nearest centroid)
+        inertia = np.sum((features - centroids[labels]) ** 2)
+
+        if inertia < best_inertia:
+            best_inertia = inertia
+            best_labels = labels
+
+    return best_labels

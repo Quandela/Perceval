@@ -30,9 +30,9 @@
 from math import sqrt
 
 from perceval.components import Circuit, BS, PERM, Port
-from perceval.components.component_catalog import CatalogItem, AsType
+from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding
-from perceval.utils.logging import get_logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel
 
 _WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
                        "better in every aspect (see 'heralded cnot' in the catalog)"
@@ -58,14 +58,6 @@ data (dual rail) ─────┤     ├───── data (dual rail)
 
     def __init__(self):
         super().__init__("klm cnot")
-        self._default_opts['type'] = AsType.PROCESSOR
-
-    @deprecated(version="0.10.0", reason="Use build_circuit or build_processor instead")
-    def build(self):
-        if self._opt('type') == AsType.CIRCUIT:
-            return self.build_circuit()
-        elif self._opt('type') == AsType.PROCESSOR:
-            return self.build_processor(backend=self._opt('backend'))
 
     def build_circuit(self, **kwargs):
         return (Circuit(8, name=_GATE_NAME)
