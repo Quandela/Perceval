@@ -34,7 +34,7 @@ from ._mps import MPSBackend
 from ._naive import NaiveBackend
 from ._naive_approx import NaiveApproxBackend
 from ._slos import SLOSBackend
-from ._slos_tree import SLOSTreeBackend
+from ._slap import SLAPBackend
 
 
 BACKEND_LIST = {
@@ -42,8 +42,8 @@ BACKEND_LIST = {
     "MPS": MPSBackend,
     "Naive": NaiveBackend,
     "NaiveApprox": NaiveApproxBackend,
-    "SLOS": SLOSBackend,
-    "SLOSTree": SLOSTreeBackend
+    "SLAP": SLAPBackend,
+    "SLOS": SLOSBackend
 }
 
 
