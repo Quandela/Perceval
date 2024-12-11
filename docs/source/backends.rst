@@ -159,7 +159,7 @@ SLAP
 ^^^^
 
 The Simulator of LAttice of Polynoms ``SLAP`` algorithm iterates over output probability amplitudes by walking in a
-lattice of intermediary results representation. It is designed to require a less memory than ``SLOS`` (2^n complex
+lattice of intermediary results representation. It is designed to require less memory than ``SLOS`` (2^n complex
 values) at the cost of a slightly higher computation time.
 
 Naive
