@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
-from typing import Self
 
 from .unitary_components import Unitary
 from .abstract_component import AComponent
@@ -105,7 +104,7 @@ class AFFConfigurator(AComponent, ABC):
         assert isinstance(offset, int), f"A feed-forward configurator offset must be an integer (received {offset})"
         self._offset = offset
 
-    def copy(self, subs=None) -> Self:
+    def copy(self, subs=None) -> AFFConfigurator:
         return copy.copy(self)
 
 
