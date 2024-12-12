@@ -29,7 +29,7 @@
 
 from perceval.utils import BSDistribution
 from perceval.utils.logging import get_logger, channel
-
+from math import log
 
 def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
     """
@@ -50,3 +50,32 @@ def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
     tvd = 0.5 * sum(abs(dist_lh.get(basic_state, 0) - dist_rh.get(basic_state, 0)) for basic_state in all_states)
 
     return tvd
+
+
+def kl_divergence(ideal_dist: BSDistribution, est_dist: BSDistribution) -> float:
+    """
+    Computes the Kullback-Leibler (KL) divergence of a model (simulated/observed) BSdistribution with respect to
+     an ideal BSDistributions.
+     Our computation ignores states absent from the estimated distribution or have null probabilities.
+
+    :param ideal_dist: Ideal BSDistribution (known from theory or an ideal computation)
+    :param est_dist: Estimated BSDistribution (simulated or observed from experiment)
+    :return : KL divergence of the estimated distribution relative to the ideal.
+    """
+
+    kl_div = 0
+    zero_states_count = 0  # states with null probabilities or missing in estimated distribution
+
+    for states, ideal_probs in ideal_dist.items():
+        est_probs = est_dist.get(states, 0)
+        if est_probs > 0:
+            kl_div += ideal_probs * log(ideal_probs/est_probs)
+        else:
+            zero_states_count += 1
+
+    if zero_states_count > 0:
+        get_logger().warn(f"{zero_states_count} Basic states are absent from the "
+                          f"estimated BSDistribution with respect to the ideal. These states are"
+                          f" excluded from KL divergence computation.", channel.user)
+
+    return kl_div

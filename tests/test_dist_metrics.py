@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.dist_metrics import tvd_dist
+from perceval.utils.dist_metrics import tvd_dist, kl_divergence
 from perceval.utils import BSDistribution, BasicState
 from copy import copy
 
@@ -64,3 +64,13 @@ def test_tvd_one_empty_dist():
     target_bsd[bs2] = 0.7
 
     assert tvd_dist(target_bsd, BSDistribution()) == 0.5
+
+
+def test_kl_div_identical_dist():
+    target_bsd = BSDistribution()
+    target_bsd[bs1] = 0.5
+    target_bsd[bs2] = 0.5
+
+    bsd_to_comp = copy(target_bsd)
+
+    assert kl_divergence(target_bsd, bsd_to_comp) == 0
