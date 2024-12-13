@@ -45,253 +45,225 @@ from perceval.components.component_catalog import CatalogItem
 
 class ASingleQubitGate(CatalogItem, ABC):
     description = "2 mode LO circuit equivalent of a single Qubit Gate"
-    # TODO : keep the following handleparam until i have all gates implemented and tested
-    # params_doc = {
-    #     'phi_a': "first phase of the MZI (default 'phi_a')",
-    #     'phi_b': "second phase of the MZI (default 'phi_b')",
-    #     'theta_a': "theta value of the first beam splitter (default pi/2)",
-    #     'theta_b': "theta value of the second beam splitter (default pi/2)",
-    # }
-    #
-    # @staticmethod
-    # def _handle_params(**kwargs):
-    #     if "i" in kwargs:
-    #         kwargs["phi_a"] = f"phi_a{kwargs['i']}"
-    #         kwargs["phi_b"] = f"phi_b{kwargs['i']}"
-    #     return CatalogItem._handle_param(kwargs.get("phi_a", "phi_a")), \
-    #         CatalogItem._handle_param(kwargs.get("phi_b", "phi_b")), \
-    #         CatalogItem._handle_param(kwargs.get("theta_a", math.pi/2)), \
-    #         CatalogItem._handle_param(kwargs.get("theta_b", math.pi/2))
 
     def build_processor(self, **kwargs) -> Processor:
         return self._init_processor(**kwargs)
 
-    def generate(self, i: int):
-        return self.build_circuit(i=i)
-
 
 class HadamardItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤  H  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Hadamard')
+        super().__init__('hadamard')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="H") // BS.H()
 
 
 class PauliXItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
+              ──┤  X  ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Pauli X')
+        super().__init__('pauli x')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name='X') // PERM([1,0])
 
-
-# TODO : one class for rotation X gates? with params?
-class Rx90Item(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
-
-    def __init__(self):
-        super().__init__('Rotation X90')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Rx(π / 2)") // BS.Rx(theta=-math.pi / 2)
-
-
-class Rxm90Item(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
-
-    def __init__(self):
-        super().__init__('Rotation mX90')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Rx(-π / 2)") // BS.Rx(theta=math.pi / 2)
+#
+# class RxPi2Item(ASingleQubitGate):
+#     str_repr = r"""    ╭─────╮
+# 0:─┤BS.Rx├─:0
+#    │     │
+# 1:─┤     ├─:1
+#    ╰─────╯ """
+#
+#
+#     def __init__(self):
+#         super().__init__('rotation x90')
+#
+#     def build_circuit(self, **kwargs) -> Circuit:
+#         return Circuit(2, name="Rx(π / 2)") // BS.Rx(theta=-math.pi / 2)
+#
+#
+# class RxMinusPi2Item(ASingleQubitGate):
+#     str_repr = r"""    ╭─────╮
+#     0:─┤BS.Rx├─:0
+#        │     │
+#     1:─┤     ├─:1
+#        ╰─────╯ """
+#
+#     def __init__(self):
+#         super().__init__('rotation xminus90')
+#
+#     def build_circuit(self, **kwargs) -> Circuit:
+#         return Circuit(2, name="Rx(-π / 2)") // BS.Rx(theta=math.pi / 2)
 
 
 class RxItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤ Rx  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Rotation X')
+        super().__init__('rx')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        theta = self._handle_params(**kwargs)
+        theta = kwargs.get('theta', 0)
         return Circuit(2, name=f"Rx({theta:.3})") // BS.Rx(theta=-theta)
 
 class PauliYItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
+              ──┤  Y  ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Pauli Y')
+        super().__init__('pauli y')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Y") // PERM([1, 0]) // (1, PS(math.pi / 2)) // (0, PS(-math.pi / 2))
 
 
-# TODO : one class for rotation X gates? with params?
-class Ry90Item(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
-
-    def __init__(self):
-        super().__init__('Rotation Y90')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Ry(π / 2)") // BS.Ry(theta=math.pi / 2)
-
-
-class Rym90Item(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
-
-    def __init__(self):
-        super().__init__('Rotation mY90')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Ry(-π / 2)") // BS.Ry(theta=-math.pi / 2)
+# class Ry90Item(ASingleQubitGate):
+#     str_repr = r"""    ╭─────╮
+#         0:─┤BS.Ry ├─:0
+#            │(π/2) │
+#         1:─┤      ├─:1
+#            ╰──────╯ """
+#
+#     def __init__(self):
+#         super().__init__('Rotation Y90')
+#
+#     def build_circuit(self, **kwargs) -> Circuit:
+#         return Circuit(2, name="Ry(π / 2)") // BS.Ry(theta=math.pi / 2)
+#
+#
+# class Rym90Item(ASingleQubitGate):
+#     str_repr = r"""    ╭──────╮
+#     0:─┤BS.Ry ├─:0
+#        │(-π/2)│
+#     1:─┤      ├─:1
+#        ╰──────╯ """
+#
+#     def __init__(self):
+#         super().__init__('Rotation mY90')
+#
+#     def build_circuit(self, **kwargs) -> Circuit:
+#         return Circuit(2, name="Ry(-π / 2)") // BS.Ry(theta=-math.pi / 2)
 
 
 class RyItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤ Ry  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Rotation Y')
+        super().__init__('ry')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        theta = self._handle_params(**kwargs)
+        theta = kwargs.get('theta', 0)
         return Circuit(2, name=f"Ry({theta:.3})") // BS.Ry(theta=theta)
 
 
 class PauliZItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮
-0:──┤BS.Rx├┤phi_a├┤BS.Rx├──:0
-    │     │╰─────╯│     │
-    │     │╭─────╮│     │
-1:──┤     ├┤phi_b├┤     ├──:1
-    ╰─────╯╰─────╯╰─────╯ """
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
+              ──┤  Z  ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Pauli Z')
+        super().__init__('pauli z')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Z") // (1, PS(-math.pi))
 
 
 class RzItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮╭─────╮╭─────╮╭─────╮
-0:──┤phi_a├┤BS.Rx├┤phi_b├┤BS.Rx├──:0
-    ╰─────╯│     │╰─────╯│     │
-1:─────────┤     ├───────┤     ├──:1
-           ╰─────╯       ╰─────╯ """
-
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤ Rz  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Rotation Z')
+        super().__init__('rz')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        theta = self._handle_params(**kwargs)
-        return Circuit(2, name="Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2))
+        theta = kwargs.get('theta', 0)
+        return Circuit(2, name=f"Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2))
 
 
-# TODO: All T, Tdag, S, Sdag are PHASE gates - maybe we combine them together.
-#  although they exist as separate names in both qiskit and cqasm, maybe we use paramterization here?
-class SItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮       ╭─────╮
-0:──┤BS.Rx├───────┤BS.Rx├─────────:0
-    │     │╭─────╮│     │╭─────╮
-1:──┤     ├┤phi_a├┤     ├┤phi_b├──:1
-    ╰─────╯╰─────╯╰─────╯╰─────╯ """
+# QISKIT AND CQASM has names s, sdag, t, tdag (also have P -> generic phase shift gate)
+# TODO: All T, Tdag, S, Sdag are PHASE gates - maybe we combine them together here and use converter
+#  to phase shift values?
+
+class PhaseShiftITem(ASingleQubitGate):
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('S gate')
+        super().__init__('phase shift')
+
+    def build_circuit(self, **kwargs) -> Circuit:
+        phi = kwargs.get('phi')
+        return Circuit(2, name="phase shift") // (1, PS(phi))
+
+class SGateItem(ASingleQubitGate):
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤  S  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
+
+    def __init__(self):
+        super().__init__('s')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="S") // (1, PS(math.pi / 2))
 
 
-class SDagItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮       ╭─────╮
-0:──┤BS.Rx├───────┤BS.Rx├─────────:0
-    │     │╭─────╮│     │╭─────╮
-1:──┤     ├┤phi_a├┤     ├┤phi_b├──:1
-    ╰─────╯╰─────╯╰─────╯╰─────╯ """
+class SDagGateItem(ASingleQubitGate):
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤ S†  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('S gate')
+        super().__init__('sdag')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Sdag") // (1, PS(-math.pi / 2))
 
 
-class TransposeGateItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮       ╭─────╮
-0:──┤BS.Rx├───────┤BS.Rx├─────────:0
-    │     │╭─────╮│     │╭─────╮
-1:──┤     ├┤phi_a├┤     ├┤phi_b├──:1
-    ╰─────╯╰─────╯╰─────╯╰─────╯ """
+class TGateItem(ASingleQubitGate):
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤  T  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('T gate')
+        super().__init__('t')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="T") // (1, PS(math.pi / 4))
 
 
 class TDagGateItem(ASingleQubitGate):
-    str_repr = r"""    ╭─────╮       ╭─────╮
-0:──┤BS.Rx├───────┤BS.Rx├─────────:0
-    │     │╭─────╮│     │╭─────╮
-1:──┤     ├┤phi_a├┤     ├┤phi_b├──:1
-    ╰─────╯╰─────╯╰─────╯╰─────╯ """
+    str_repr = r"""                ╭─────╮
+Q1:(dual rail)──┤ T†  ├── (dual rail) :Q1
+              ──┤     ├──
+                ╰─────╯ """
 
     def __init__(self):
-        super().__init__('Tdag gate')
+        super().__init__('tdag')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Tdag") // (1, PS(-math.pi / 4))
