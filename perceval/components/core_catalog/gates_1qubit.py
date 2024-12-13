@@ -29,19 +29,9 @@
 
 import math
 from abc import ABC
-
-
 from perceval.components import Processor, Circuit, BS, PS, PERM
 from perceval.components.component_catalog import CatalogItem
 
-# Todo: all the following gates are from the list in CQASM (unitaryhack)
-#  check documentation- qiskit and find good ways of implementing to remain generic
-# todo: also check in myqlm ;-)
-
-# todo: fix all str_repr - i have not updated any - all are copied from prvs
-
-# todo: update usage in _pauli.py -> used in tomography, TU,
-#  and update usage in converters ofcourse
 
 class ASingleQubitGate(CatalogItem, ABC):
     description = "2 mode LO circuit equivalent of a single Qubit Gate"
@@ -75,35 +65,6 @@ Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name='X') // PERM([1,0])
 
-#
-# class RxPi2Item(ASingleQubitGate):
-#     str_repr = r"""    ╭─────╮
-# 0:─┤BS.Rx├─:0
-#    │     │
-# 1:─┤     ├─:1
-#    ╰─────╯ """
-#
-#
-#     def __init__(self):
-#         super().__init__('rotation x90')
-#
-#     def build_circuit(self, **kwargs) -> Circuit:
-#         return Circuit(2, name="Rx(π / 2)") // BS.Rx(theta=-math.pi / 2)
-#
-#
-# class RxMinusPi2Item(ASingleQubitGate):
-#     str_repr = r"""    ╭─────╮
-#     0:─┤BS.Rx├─:0
-#        │     │
-#     1:─┤     ├─:1
-#        ╰─────╯ """
-#
-#     def __init__(self):
-#         super().__init__('rotation xminus90')
-#
-#     def build_circuit(self, **kwargs) -> Circuit:
-#         return Circuit(2, name="Rx(-π / 2)") // BS.Rx(theta=math.pi / 2)
-
 
 class RxItem(ASingleQubitGate):
     str_repr = r"""                ╭─────╮
@@ -118,6 +79,7 @@ Q1:(dual rail)──┤ Rx  ├── (dual rail) :Q1
         theta = kwargs.get('theta', 0)
         return Circuit(2, name=f"Rx({theta:.3})") // BS.Rx(theta=-theta)
 
+
 class PauliYItem(ASingleQubitGate):
     str_repr = r"""                ╭─────╮
 Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
@@ -129,34 +91,6 @@ Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Y") // PERM([1, 0]) // (1, PS(math.pi / 2)) // (0, PS(-math.pi / 2))
-
-
-# class Ry90Item(ASingleQubitGate):
-#     str_repr = r"""    ╭─────╮
-#         0:─┤BS.Ry ├─:0
-#            │(π/2) │
-#         1:─┤      ├─:1
-#            ╰──────╯ """
-#
-#     def __init__(self):
-#         super().__init__('Rotation Y90')
-#
-#     def build_circuit(self, **kwargs) -> Circuit:
-#         return Circuit(2, name="Ry(π / 2)") // BS.Ry(theta=math.pi / 2)
-#
-#
-# class Rym90Item(ASingleQubitGate):
-#     str_repr = r"""    ╭──────╮
-#     0:─┤BS.Ry ├─:0
-#        │(-π/2)│
-#     1:─┤      ├─:1
-#        ╰──────╯ """
-#
-#     def __init__(self):
-#         super().__init__('Rotation mY90')
-#
-#     def build_circuit(self, **kwargs) -> Circuit:
-#         return Circuit(2, name="Ry(-π / 2)") // BS.Ry(theta=-math.pi / 2)
 
 
 class RyItem(ASingleQubitGate):
@@ -200,10 +134,6 @@ Q1:(dual rail)──┤ Rz  ├── (dual rail) :Q1
         return Circuit(2, name=f"Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2))
 
 
-# QISKIT AND CQASM has names s, sdag, t, tdag (also have P -> generic phase shift gate)
-# TODO: All T, Tdag, S, Sdag are PHASE gates - maybe we combine them together here and use converter
-#  to phase shift values?
-
 class PhaseShiftITem(ASingleQubitGate):
     str_repr = r"""                ╭─────╮
 Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
@@ -216,6 +146,7 @@ Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
     def build_circuit(self, **kwargs) -> Circuit:
         phi = kwargs.get('phi')
         return Circuit(2, name="phase shift") // (1, PS(phi))
+
 
 class SGateItem(ASingleQubitGate):
     str_repr = r"""                ╭─────╮
