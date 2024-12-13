@@ -136,6 +136,8 @@ class FFCircuitProvider(AFFConfigurator):
     def add_configuration(self, state, circuit: ACircuit) -> FFCircuitProvider:
         state = BasicState(state)
         assert state.m == self.m, f"Incorrect number of modes for state {state} (expected {self.m})"
+        assert not isinstance(circuit, AFFConfigurator), \
+            "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
         if not self._blocked_circuit_size:
             self._max_circuit_size = max(self._max_circuit_size, circuit.m)
         else:

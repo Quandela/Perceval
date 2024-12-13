@@ -93,7 +93,7 @@ class FFSimulator(ISimulator):
                    progress_callback: callable = None) -> tuple[BSDistribution, float]:
 
         # 1: Find all the FFConfigurators that can be simulated without measuring more modes
-        considered_config, measured_modes, safe_modes = self._find_next_simulation_layer()
+        considered_config, measured_modes, unsafe_modes = self._find_next_simulation_layer()
 
         # 2: Launch a simulation with the default circuits
         components = self._components.copy()
@@ -107,8 +107,10 @@ class FFSimulator(ISimulator):
             components[i] = (circ_r[0], config.default_circuit)
 
         # We can't reject any state at this moment since we need all possible measured states
-        # Except for heralds on safe modes
-        new_heralds = {r: v for r, v in self._heralds.items() if r in safe_modes} if self._heralds is not None else {}
+        # Except for heralds on safe modes (i.e. not subject to feed-forward anywhere)
+        new_heralds = {r: v for r, v in self._heralds.items() if r not in unsafe_modes} if self._heralds is not None else None
+        # TODO: in theory, if we can split the Postselect keeping only the safe modes,
+        #  it can be even faster by removing more impossible measures (thus not simulating them)
         sim, new_input_state, new_detectors, default_proc = self._init_simulator(input_state, components, detectors,
                                                                                  new_heralds=new_heralds)
 
@@ -187,27 +189,28 @@ class FFSimulator(ISimulator):
         res.normalize()
         return res, global_perf
 
-    def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int], list[int]]:
+    def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int], set[int]]:
         """
         :return: The list containing the tuples with the index in the component list
         of the configuration independent FFConfigurators and their instances,
          the list of the associated measured modes,
-         and the list of modes that we are sure will not be touched at anytime by feed-forward configurators
+         and the list of modes that are touched at anytime by feed-forward configurators (including after the layer)
         """
         # We can add a configurator as long as the measured mode don't come from a configurable circuit
         feed_forwarded_modes: set[int] = set()
         measured_modes = set()
-        safe_modes = []
         res = []
+        lock_res = False
 
         for i, (r, c) in enumerate(self._components):
             if isinstance(c, AFFConfigurator):
-                if any(r0 in feed_forwarded_modes for r0 in r):
-                    return res, list(measured_modes), safe_modes
+                if not lock_res and any(r0 in feed_forwarded_modes for r0 in r):
+                    lock_res = True
 
                 feed_forwarded_modes.update(c.config_modes(r))
-                res.append((i, c))
-                measured_modes.update(r)
+                if not lock_res:
+                    res.append((i, c))
+                    measured_modes.update(r)
 
             elif isinstance(c, Barrier):
                 continue
@@ -223,15 +226,10 @@ class FFSimulator(ISimulator):
                 feed_forwarded_modes.difference_update(to_remove)
                 feed_forwarded_modes.update(to_add)
 
-            elif isinstance(c, IDetector):
-                # r is only one mode --> no need to update the feed_forwarded_modes list
-                if not len(feed_forwarded_modes):
-                    safe_modes.append(r[0])
-
             elif any(new_mode in feed_forwarded_modes for new_mode in r):
                 feed_forwarded_modes.update(r)
 
-        return res, list(measured_modes), safe_modes
+        return res, list(measured_modes), feed_forwarded_modes
 
     def _init_simulator(self, input_state: SVDistribution,
                         components: list[tuple[tuple, AComponent | Processor]],
