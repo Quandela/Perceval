@@ -55,7 +55,7 @@ def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
 def kl_divergence(ideal_dist: BSDistribution, est_dist: BSDistribution) -> float:
     """
     Computes the Kullback-Leibler (KL) divergence of a model (simulated/observed) BSdistribution with respect to
-     an ideal BSDistributions.
+     an ideal BSDistribution.
      Our computation ignores states absent from the estimated distribution or have null probabilities.
 
     :param ideal_dist: Ideal BSDistribution (known from theory or an ideal computation)
