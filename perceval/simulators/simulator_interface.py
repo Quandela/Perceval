@@ -44,10 +44,6 @@ class ISimulator(ABC):
         self._silent = silent
 
     @abstractmethod
-    def do_postprocess(self, doit: bool):
-        pass
-
-    @abstractmethod
     def set_circuit(self, circuit):
         pass
 
@@ -110,9 +106,6 @@ class ASimulatorDecorator(ISimulator, ABC):
             self._postselect = postselect
         if heralds is not None:
             self._heralds = heralds
-
-    def do_postprocess(self, doit: bool):
-        self._simulator.do_postprocess(doit)
 
     @abstractmethod
     def _prepare_input(self, input_state):
