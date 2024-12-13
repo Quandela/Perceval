@@ -116,6 +116,8 @@ class FFCircuitProvider(AFFConfigurator):
     """
 
     def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
+        assert not isinstance(default_circuit, AFFConfigurator), \
+            "Can't add directly a Feed-forward configurator to a configurator (use a Processor)"
         super().__init__(m, offset, default_circuit, name)
         self._map: dict[BasicState, ACircuit] = {}
 
