@@ -191,6 +191,30 @@ def test_sampler_iterator(backend_name):
             sampler.add_iteration(circuit_params={"phi1" : "phi"})  # Not a number
         assert sampler.n_iterations == n_it  # No new iteration
 
+
+def test_iterator_with_heralds():
+    c = pcvl.catalog['postprocessed cnot'].build_processor()
+
+    processor = pcvl.Processor("SLOS")
+    processor.add(0, c)
+
+    processor.with_input(pcvl.BasicState([0, 1, 0, 1]))
+    processor.min_detected_photons_filter(1)
+
+    sampler = Sampler(processor, max_shots_per_call=500)
+    sampler.add_iteration(input_state=pcvl.BasicState([1, 0, 1, 0]))
+    sampler.add_iteration(input_state=pcvl.BasicState([0, 1, 0, 1]))
+    sampler.add_iteration(input_state=pcvl.BasicState([0, 1, 1, 0]))
+    sampler.add_iteration(input_state=pcvl.BasicState([1, 0, 0, 1]))
+
+    res = sampler.probs()['results_list']
+
+    assert res[0]["results"][pcvl.BasicState([1, 0, 1, 0])] == pytest.approx(1.)
+    assert res[1]["results"][pcvl.BasicState([0, 1, 1, 0])] == pytest.approx(1.)
+    assert res[2]["results"][pcvl.BasicState([0, 1, 0, 1])] == pytest.approx(1.)
+    assert res[3]["results"][pcvl.BasicState([1, 0, 0, 1])] == pytest.approx(1.)
+
+
 @pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "CliffordClifford2017"])
 def test_sampler_shots(backend_name):
     p = Processor(backend_name, BS(theta=0.8))
