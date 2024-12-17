@@ -137,10 +137,12 @@ class Simulator(ISimulator):
     def clear_heralds(self):
         self._heralds = {}
 
-    def set_circuit(self, circuit: ACircuit):
+    def set_circuit(self, circuit: ACircuit, m = None):
         """Set a circuit for simulation.
 
         :param circuit: a unitary circuit without polarized components
+        :param m: The number of modes in the circuit. Only used in LC and TD simulators.
+         If not provided, it is inferred from the modes of the components of the circuit list.
         """
         self._invalidate_cache()
         self._backend.set_circuit(circuit)

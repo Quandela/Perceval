@@ -38,8 +38,11 @@ class LossSimulator(ASimulatorDecorator):
     def _prepare_input(self, input_state):
         return input_state * BasicState([0] * (self._expanded_m - self._original_m))
 
-    def _prepare_circuit(self, circuit):
-        self._original_m = _retrieve_mode_count(circuit)
+    def _prepare_circuit(self, circuit, m = None):
+        if m is None:
+            self._original_m = _retrieve_mode_count(circuit)
+        else:
+            self._original_m = m
         expanded_circuit = self._simulate_losses_with_beam_splitters(circuit)
         return expanded_circuit
 
