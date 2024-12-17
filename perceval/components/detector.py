@@ -153,8 +153,8 @@ class Detector(IDetector):
     Example:
 
     >>> from perceval.components import Detector
-    >>> ppnr_detector = Detector.ppnr(5, 2)
-    >>> print(ppnr_detector.detect(3))
+    >>> ppnr_detector = Detector.ppnr(5, 2)  # Create a 5-wires interleaved detector, able to detect 1 or 2+ photons
+    >>> print(ppnr_detector.detect(3))       # and simulate the outcome of 3 photons hitting it at once
     {
       |1>: 0.04
       |2>: 0.96
