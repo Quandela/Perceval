@@ -137,5 +137,6 @@ class SimulatorFactory:
 
         if convert_to_circuit:
             circuit = _unitary_components_to_circuit(circuit, m)
-        simulator.set_circuit(circuit)
+        # m can only be retrieved from a Processor (and useful only in that case)
+        simulator.set_circuit(circuit, m if m else None)
         return simulator

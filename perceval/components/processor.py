@@ -175,7 +175,8 @@ class Processor(AProcessor):
         """
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons_filter = self._parameters['min_detected_photons']
-        if not self._min_detected_photons_filter and self._source.is_perfect():
+        if self._min_detected_photons_filter is None and self._source.is_perfect():
+            # Avoid the warning from super().with_input if the min_detected_photons_filter is not set
             self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
         super().with_input(input_state)
         self._generate_noisy_input()
@@ -283,7 +284,7 @@ class Processor(AProcessor):
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
             self._simulator = SimulatorFactory.build(self)
         else:
-            self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components)
+            self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components, self.circuit_size)
             self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
 
         if precision is not None:

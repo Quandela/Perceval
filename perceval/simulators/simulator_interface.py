@@ -48,7 +48,7 @@ class ISimulator(ABC):
         pass
 
     @abstractmethod
-    def set_circuit(self, circuit):
+    def set_circuit(self, circuit, m = None):
         pass
 
     @abstractmethod
@@ -119,7 +119,7 @@ class ASimulatorDecorator(ISimulator, ABC):
         pass
 
     @abstractmethod
-    def _prepare_circuit(self, circuit) -> ACircuit:
+    def _prepare_circuit(self, circuit, m = None) -> ACircuit:
         pass
 
     @abstractmethod
@@ -143,8 +143,8 @@ class ASimulatorDecorator(ISimulator, ABC):
             sv, _ = post_select_statevector(sv, self._postselect, self._heralds)
         return sv
 
-    def set_circuit(self, circuit):
-        self._simulator.set_circuit(self._prepare_circuit(circuit))
+    def set_circuit(self, circuit, m = None):
+        self._simulator.set_circuit(self._prepare_circuit(circuit, m))
 
     def probs(self, input_state) -> BSDistribution:
         results = self._simulator.probs(self._prepare_input(input_state))
