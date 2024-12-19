@@ -76,7 +76,8 @@ class BSLayeredPPNR(IDetector):
     BSLayeredPPNR implements Pseudo Photon Number Resolving detection using layers of beam splitter plugged on
     :math:`2^(number of layers)` threshold detectors.
 
-    :param bs_layers: Number of beam splitter layers. Adding more layers enabled to detect
+    :param bs_layers: Number of beam splitter layers. Adding more layers improves the probability to detect multiple
+                      photons.
     :param reflectivity: Reflectivity of the beam splitters used to split photons (defaults to 0.5)
     """
 
@@ -140,15 +141,19 @@ class Detector(IDetector):
     """
     Interleaved detector model
 
-    Such a detector is made of one or multiple wires, each able to simultaneously detect a photon. The `detect` method
-    takes the number of wires into acocunt to simulate the detection probability for each case.
+    Such a detector is made of one or multiple wires, each able to simultaneously detect a photon. Each photon hitting
+    the detector is absorbed randomly by one of the wires. When photons hit the same wire, only one is detected. When
+    they hit different wires, all are detected.
+
+    The `detect` method takes the number of wires into account to simulate the detection probability for each case.
     Having 1 wire makes the detector threshold, whereas having an infinity of them makes the detector perfectly PNR.
 
     :param n_wires: Number of detecting wires in the interleaved detector (defaults to infinity)
     :param max_detections: Max number of photons the user is willing to read. The |max_detection> state would then mean
                            "max_detection or more photons were detected". (defaults to None)
 
-    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections)` static methods for easy detector initialization
+    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections)` static methods for easy detector
+    initialization.
 
     Example:
 
