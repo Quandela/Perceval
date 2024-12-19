@@ -34,7 +34,7 @@ from perceval.components import catalog, Unitary
 from perceval.utils import Matrix, NoiseModel
 from perceval.algorithm import Sampler
 from perceval import Processor
-from perceval.utils.dist_metrics import tvd_dist
+from perceval.utils.dist_metrics import tvd_dist, kl_divergence
 
 
 def _sampler_setup_cnot(output_type: str):
@@ -150,3 +150,5 @@ def test_mitigation_over_postselect_tvd():
     tvd_post = tvd_dist(ideal_dist, post_select_dist)
 
     assert tvd_miti < tvd_post  # checks that mitigated is closer to ideal than post-selected distribution
+
+    assert kl_divergence(ideal_dist, post_select_dist) > kl_divergence(ideal_dist, mitigated_dist)
