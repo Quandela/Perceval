@@ -28,7 +28,7 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from sympy.combinatorics import Permutation
+from typing import Any
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
 from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, PostSelect, get_logger, \
@@ -111,15 +111,13 @@ class FFSimulator(ISimulator):
         new_heralds = {r: v for r, v in self._heralds.items() if r not in unsafe_modes} if self._heralds is not None else None
         # TODO: in theory, if we can split the Postselect keeping only the safe modes,
         #  it can be even faster by removing more impossible measures (thus not simulating them)
-        sim, new_input_state, new_detectors, default_proc = self._init_simulator(input_state, components, detectors,
-                                                                                 new_heralds=new_heralds)
 
         # Estimation of possible measures: n for each measured mode
         n = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
         intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
-        default_res = sim.probs_svd(new_input_state, new_detectors, prog_cb)
+        default_res = self._simulate(input_state, components, detectors, prog_cb, new_heralds=new_heralds)
 
         if "global_perf" in default_res:
             default_norm_factor = default_res["global_perf"]
@@ -128,13 +126,12 @@ class FFSimulator(ISimulator):
 
         default_res = default_res["results"]
 
-        prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
-
         # 3: deduce all measurable states and launch one simulation for each of them
         res = BSDistribution()
         simulated_measures = set()
 
         global_perf = 0  # = P(logic_filter and n >= photon_filter)
+        prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
 
         for j, (state, prob) in enumerate(default_res.items()):
             sub_circuits = [config.configure(state[slice(self._components[i][0][0], self._components[i][0][-1] + 1)])
@@ -146,7 +143,7 @@ class FFSimulator(ISimulator):
                 # There is a problem here: if the same circuit is instanced twice, the == operator returns False
                 # This can be a problem if we copy the default circuit or instantiate a new one
 
-                if self._post_process_state(state) and default_proc._state_selected(state):
+                if self._post_process_state(state):
                     prob *= default_norm_factor
                     res[state[:input_state.m]] = prob
                     global_perf += prob
@@ -165,12 +162,10 @@ class FFSimulator(ISimulator):
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
                 new_heralds = {i: state[i] for i in measured_modes}
-                sim, new_input_state, new_detectors, _ = self._init_simulator(input_state, components, detectors,
-                                                                              filter_states=True,
-                                                                              new_heralds=new_heralds)
-
                 new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
-                sub_res = sim.probs_svd(new_input_state, new_detectors, new_prog_cb)
+
+                sub_res = self._simulate(input_state, components, detectors, new_prog_cb,
+                                         filter_states=True, new_heralds=new_heralds)
 
                 if "global_perf" in sub_res:
                     norm_factor = sub_res["global_perf"]
@@ -231,19 +226,23 @@ class FFSimulator(ISimulator):
 
         return res, list(measured_modes), feed_forwarded_modes
 
-    def _init_simulator(self, input_state: SVDistribution,
-                        components: list[tuple[tuple, AComponent | Processor]],
-                        detectors: list[IDetector],
-                        filter_states: bool = False,
-                        new_heralds: dict[int, int] = None) \
-            -> tuple[ISimulator, SVDistribution, list[IDetector], Processor]:
+    def _simulate(self, input_state: SVDistribution,
+                  components: list[tuple[tuple, AComponent | Processor]],
+                  detectors: list[IDetector],
+                  prog_cb=None,
+                  filter_states: bool = False,
+                  new_heralds: dict[int, int] = None) \
+            -> dict[str, Any]:
         """Initialize a new simulator with the given components and heralds.
          Heralds that are already in this simulator are still considered.
 
          :param input_state: The input state used for the simulation
          :param components: A list of components that will be added in the simulation. Can themselves be processors.
          :param filter_states: Whether the states should be filtered in the sub-simulation.
-         :param new_heralds: The list of heralds that should be added, containing the position and the value"""
+         :param new_heralds: The list of heralds that should be added, containing the position and the value
+
+         :return: the results of a sub-simulation prob_svd
+         """
 
         m = input_state.m
         if detectors is None:
@@ -260,7 +259,7 @@ class FFSimulator(ISimulator):
         # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
         heralded_dist = proc.generate_noisy_heralds()
         if len(heralded_dist):
-            input_state = input_state * heralded_dist
+            input_state *= heralded_dist
 
         if new_heralds is not None:
             for r, v in new_heralds.items():
@@ -283,7 +282,7 @@ class FFSimulator(ISimulator):
         if self._precision is not None:
             sim.set_precision(self._precision)
         sim.set_silent(True)
-        return sim, input_state, detectors + proc.detectors[m:], proc
+        return sim.probs_svd(input_state, detectors + proc.detectors[m:], prog_cb)
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""
