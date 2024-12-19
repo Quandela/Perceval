@@ -95,4 +95,4 @@ def test_kl_div_unequal_dist():
     model2_bsd[bs2] = 10/25
     model2_bsd[bs3] = 7/25
 
-    assert kl_divergence(ideal_bsd, model_bsd) > kl_divergence(ideal_bsd, model2_bsd)  # Model2 closer to the ideal better
+    assert kl_divergence(ideal_bsd, model_bsd) > kl_divergence(ideal_bsd, model2_bsd)  # Model 2 closer to the ideal
