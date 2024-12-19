@@ -60,16 +60,16 @@ def kl_divergence(ideal_dist: BSDistribution, est_dist: BSDistribution) -> float
 
     :param ideal_dist: Ideal BSDistribution (known from theory or an ideal computation)
     :param est_dist: Estimated BSDistribution (simulated or observed from experiment)
-    :return : KL divergence of the estimated distribution relative to the ideal.
+    :return: KL divergence of the estimated distribution relative to the ideal.
     """
 
     kl_div = 0
     zero_states_count = 0  # states with null probabilities or missing in estimated distribution
 
-    for states, ideal_probs in ideal_dist.items():
-        est_probs = est_dist.get(states, 0)
-        if est_probs > 0:
-            kl_div += ideal_probs * log(ideal_probs/est_probs)
+    for state, ideal_prob in ideal_dist.items():
+        est_prob = est_dist.get(state, 0)
+        if est_prob > 0:
+            kl_div += ideal_prob * log(ideal_prob/est_prob)
         else:
             zero_states_count += 1
 

@@ -78,12 +78,21 @@ def test_kl_div_identical_dist():
 
 
 def test_kl_div_unequal_dist():
-    ideal_bsd = BSDistribution()
-    ideal_bsd[bs1] = 0.25
-    ideal_bsd[bs2] = 0.5
+    ideal_bsd = BSDistribution()  # Binomial
+    ideal_bsd[bs1] = 9/25
+    ideal_bsd[bs2] = 12/25
+    ideal_bsd[bs3] = 4/25
 
-    model_bsd = BSDistribution()
-    model_bsd[bs1] = 1
-    model_bsd[bs2] = 0.7
+    model_bsd = BSDistribution()  # uniform
+    model_bsd[bs1] = 1/3
+    model_bsd[bs2] = 1/3
+    model_bsd[bs3] = 1/3
 
-    assert kl_divergence(ideal_bsd, model_bsd) != 0
+    assert kl_divergence(ideal_bsd, model_bsd) != kl_divergence(model_bsd, ideal_bsd)  # it is not symmetric
+
+    model2_bsd = BSDistribution()  # Binomial
+    model2_bsd[bs1] = 8/25
+    model2_bsd[bs2] = 10/25
+    model2_bsd[bs3] = 7/25
+
+    assert kl_divergence(ideal_bsd, model_bsd) > kl_divergence(ideal_bsd, model2_bsd)  # Model2 closer to the ideal better
