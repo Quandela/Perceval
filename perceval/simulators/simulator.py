@@ -256,8 +256,6 @@ class Simulator(ISimulator):
         return _to_bsd(self.evolve(input_state))
 
     def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Callable | None = None):
-        physical_perf = 1
-        decomposed_input = []
         """decomposed input:
         From a SVD = {
             pa_11*bs_11 + ... + pa_n1*bs_n1: p1,
@@ -282,11 +280,7 @@ class Simulator(ISimulator):
             )
         ]
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
-        for sv, prob in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
-                decomposed_input.append((prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]))
-            else:
-                physical_perf -= prob
+        decomposed_input = [(prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]) for sv, prob in input_dist.items()]
         input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
         self._evolve_cache(input_set)
 
@@ -310,10 +304,7 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                if bs.n >= self._min_detected_photons_filter or not self._postprocess:
-                    res[bs] += p * prob0
-                else:
-                    physical_perf -= p * prob0
+                res[bs] += p * prob0
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
@@ -322,9 +313,7 @@ class Simulator(ISimulator):
         res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
-        physical_perf = 1
-        decomposed_input = []
+    def _probs_svd_fast(self, input_dist, p_threshold, physical_perf, progress_callback: Callable = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -340,13 +329,7 @@ class Simulator(ISimulator):
            ]
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
-        for sv, prob in input_dist.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
-                decomposed_input.append(
-                    (prob, sv[0].separate_state(keep_annotations=False))
-                )
-            else:
-                physical_perf -= prob
+        decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False)) for sv, prob in input_dist.items()]
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
@@ -427,8 +410,6 @@ class Simulator(ISimulator):
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
         trimmed_svd = SVDistribution({state: pr for state, pr in trimmed_svd.items() if pr > p_threshold})
         phys_perf = sum(trimmed_svd.values())  # too low probabilities are integrated into the phys_perf
-        if len(trimmed_svd):
-            trimmed_svd.normalize()
         return trimmed_svd, p_threshold, has_superposed_states, has_annotations, phys_perf
 
     def probs_svd(self,
@@ -458,14 +439,13 @@ class Simulator(ISimulator):
         else:
             if self._heralds and not has_annotations and get_detection_type(detectors) == DetectionType.PNR:
                 # TODO: do this also with superposed states when logical perf computation is ready
-                # TODO: give detectors to setup_heralds to keep only modes with PNR in the mask
                 self._setup_heralds()
             else:
                 self._backend.clear_mask()
-            res = self._probs_svd_fast(svd, p_threshold, progress_callback)
+            res = self._probs_svd_fast(svd, p_threshold, physical_perf, progress_callback)
 
         if not len(res):
-            return {'results': res, 'physical_perf': 1, 'logical_perf': 1}
+            return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
 
         if detectors:
             min_photons = self._min_detected_photons_filter if self._postprocess else 0
