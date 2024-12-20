@@ -43,7 +43,7 @@ from perceval.utils import BasicState, BSDistribution, StateVector, SVDistributi
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 
-from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping
+from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
 
@@ -320,7 +320,7 @@ class Simulator(ISimulator):
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         res.normalize()
-        return res, physical_perf
+        return res
 
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
         physical_perf = 1
@@ -402,23 +402,34 @@ class Simulator(ISimulator):
         if self._logical_perf > 0 and physical_perf > 0:
             self._logical_perf = 1 - (1 - self._logical_perf) / physical_perf
         res.normalize()
-        return res, physical_perf
+        return res
 
-    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool, bool]:
+    def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool, bool, float]:
         """Trim input SVD given _rel_precision threshold and extract characteristics from it"""
         max_p = 0
         has_superposed_states = False
         has_annotations = False
+        trimmed_svd = SVDistribution()
         for sv, p in svd.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
-                max_p = max(p, max_p)
-            if len(sv) > 1:
-                has_superposed_states = True
-            if not has_annotations and any(bs.has_annotations for bs in sv.keys()):
-                has_annotations = True
+            new_svd = _split_by_photon_count(sv)
+
+            for split_sv, ps in new_svd.items():
+                # split_sv.n is a set so we can't use [0]
+                if max(split_sv.n) >= self._min_detected_photons_filter:
+                    prob = ps * p
+                    trimmed_svd[split_sv] = prob
+                    max_p = max(prob, max_p)
+                if len(split_sv) > 1:
+                    has_superposed_states = True
+                if not has_annotations and any(bs.has_annotations for bs in split_sv.keys()):
+                    has_annotations = True
+
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
-        trimmed_svd = SVDistribution({state: pr for state, pr in svd.items() if pr > p_threshold})
-        return trimmed_svd, p_threshold, has_superposed_states, has_annotations
+        trimmed_svd = SVDistribution({state: pr for state, pr in trimmed_svd.items() if pr > p_threshold})
+        phys_perf = sum(trimmed_svd.values())  # too low probabilities are integrated into the phys_perf
+        if len(trimmed_svd):
+            trimmed_svd.normalize()
+        return trimmed_svd, p_threshold, has_superposed_states, has_annotations, phys_perf
 
     def probs_svd(self,
                   input_dist: SVDistribution,
@@ -439,11 +450,11 @@ class Simulator(ISimulator):
         """
         self._logical_perf = 1
 
-        svd, p_threshold, has_superposed_states, has_annotations = self._preprocess_svd(input_dist)
+        svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
         if has_superposed_states:
             self._backend.clear_mask()
-            res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
+            res = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
             if self._heralds and not has_annotations and get_detection_type(detectors) == DetectionType.PNR:
                 # TODO: do this also with superposed states when logical perf computation is ready
@@ -451,7 +462,7 @@ class Simulator(ISimulator):
                 self._setup_heralds()
             else:
                 self._backend.clear_mask()
-            res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
+            res = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
         if not len(res):
             return {'results': res, 'physical_perf': 1, 'logical_perf': 1}
