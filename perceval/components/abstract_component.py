@@ -33,7 +33,7 @@ from collections.abc import Iterable
 import sympy as sp
 import copy
 
-from perceval.utils.parameter import Parameter
+from perceval.utils.parameter import Parameter, Expression
 
 
 class AComponent(ABC):
@@ -104,13 +104,20 @@ class AParametrizedComponent(AComponent):
         """Returns a `Parameter` object from its name"""
         return self._params[param_name]
 
-    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
+    def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
         :return: the list of parameters
         """
-        return [v for v in self._params.values() if all_params or not v.fixed]
+        param_list = set()
+        for param in self._params.values():
+            if all_params or not param.fixed:
+                if isinstance(param, Expression):
+                    param_list.update(param.parameters if not expressions else [param])
+                else:
+                    param_list.add(param)
+        return list(param_list)
 
     def reset_parameters(self) -> None:
         for v in self._params.values():

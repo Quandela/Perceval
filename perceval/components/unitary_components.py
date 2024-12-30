@@ -153,30 +153,45 @@ class BS(ACircuit):
         return f"BS.{self._convention.name}({params_str})"
 
     def inverse(self, v=False, h=False):
-        if not self.defined:
-            raise ValueError('Cannot invert BS with variable parameters')
-        phi_bl = float(self._phi_bl)
-        phi_tl = float(self._phi_tl)
-        phi_tr = float(self._phi_tr)
-        phi_br = float(self._phi_br)
+        theta = float(self._theta) if self._theta.defined else self._theta
+        phi_bl = float(self._phi_bl) if self._phi_bl.defined else self._phi_bl
+        phi_tl = float(self._phi_tl) if self._phi_tl.defined else self._phi_tl
+        phi_tr = float(self._phi_tr) if self._phi_tr.defined else self._phi_tr
+        phi_br = float(self._phi_br) if self._phi_br.defined else self._phi_br
+        
         if v:
-            self._phi_bl.set_value(phi_tl, force=True)
-            self._phi_tr.set_value(phi_br, force=True)
-            self._phi_tl.set_value(phi_bl, force=True)
-            self._phi_br.set_value(phi_tr, force=True)
+            self._phi_bl.set_value(phi_bl, force=True) if self._phi_bl.defined else None
+            self._phi_tr.set_value(phi_tr, force=True) if self._phi_tr.defined else None
+            self._phi_tl.set_value(phi_tl, force=True) if self._phi_tl.defined else None
+            self._phi_br.set_value(phi_br, force=True) if self._phi_br.defined else None
+        
             # For Rx BS, vertical inversion does not impact theta parameter
             if self._convention == BSConvention.Ry:
-                self._theta.set_value(- float(self._theta), force=True)
+                if self._theta.defined:
+                    self._theta.set_value(-theta, force=True)
+                else:
+                    expr = -theta 
+                    self._theta = self._set_parameter("theta", expr, 0, 4*sp.pi)
+                    
             elif self._convention == BSConvention.H:
-                self._theta.set_value(2*math.pi - float(self._theta), force=True)
+                if self._theta.defined:
+                    self._theta.set_value(2*math.pi - float(self._theta), force=True)
+                else:
+                    self._theta = self._set_parameter("theta", 2*math.pi - theta, 0, 4*sp.pi)
+        
         if h:
-            self._phi_bl.set_value(-phi_br, force=True)
-            self._phi_tr.set_value(-phi_tl, force=True)
-            self._phi_tl.set_value(-phi_tr, force=True)
-            self._phi_br.set_value(-phi_bl, force=True)
+            for param in [self._phi_tl, self._phi_bl, self._phi_tr, self._phi_br]:
+                if param.defined:
+                    param.set_value(-float(param), force=True)
+                else:
+                    param = self._set_parameter(param.name, -param, 0, 4*sp.pi)
+            
             # For H BS, horizontal inversion does not impact theta parameter
             if self._convention == BSConvention.Rx or self._convention == BSConvention.Ry:
-                self._theta.set_value(- float(self._theta), force=True)
+                if self._theta.defined:
+                    self._theta.set_value(-theta, force=True)
+                else:
+                    self._theta = self._set_parameter("theta", -theta, 0, 4*sp.pi)
 
     def definition(self):
         return BS(Parameter('theta'), Parameter('phi_tl'), Parameter('phi_bl'), Parameter('phi_tr'),
@@ -209,8 +224,8 @@ class PS(ACircuit):
 
     def inverse(self, v=False, h=False):
         if h:
-            if self._phi.is_symbolic():
-                raise ValueError('Cannot invert PS with variable parameters')
+            if self._phi.is_symbolic:
+                self._phi = self._set_parameter("phi", -self._phi, 0, 4*sp.pi)
             else:
                 self._phi.set_value(-float(self._phi), force=True)
 
