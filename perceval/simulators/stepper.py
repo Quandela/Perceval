@@ -56,9 +56,6 @@ class Stepper(ISimulator):
         self._C = None
         self._postprocess = True
 
-    def do_postprocess(self, doit: bool):
-        self._postprocess = doit
-
     def _clear_cache(self):
         self._result_dict = defaultdict(lambda: {'_set': set()})
         self._compiled_input = None
