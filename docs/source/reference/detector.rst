@@ -1,6 +1,8 @@
 Detector
 ========
 
+.. autoenum:: perceval.components.detector.DetectionType
+
 .. autoclass:: perceval.components.detector.Detector
    :members:
    :inherited-members:
