@@ -87,9 +87,9 @@ class StateGenerator:
         :param state: name of the bell state you want to generate:
 
             * "phi+" = :math:`\\frac{|0,0>+|1,1>}{\sqrt{2}}`
-            * "phi-" = :math:`\\frac{|0,0>-|1,1>}{/\sqrt{2}}`
-            * "psi+" = :math:`\\frac{|0,1>+|1,0>}{/\sqrt{2}}`
-            * "psi-" = :math:`\\frac{|0,1>-|1,0>}{/\sqrt{2}}`
+            * "phi-" = :math:`\\frac{|0,0>-|1,1>}{\sqrt{2}}`
+            * "psi+" = :math:`\\frac{|0,1>+|1,0>}{\sqrt{2}}`
+            * "psi-" = :math:`\\frac{|0,1>-|1,0>}{\sqrt{2}}`
         :return: StateVector for a bell state
         """
 

@@ -99,7 +99,7 @@ class BSLayeredPPNR(IDetector):
         self._cache = {}  # This cache records simulations for a given photon count to speed up computations
 
     @property
-    def type(self) -> DetectionType.PPNR:
+    def type(self) -> DetectionType:
         return DetectionType.PPNR
 
     def clear_cache(self):
