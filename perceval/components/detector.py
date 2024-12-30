@@ -48,9 +48,10 @@ class DetectionType(Enum):
     Mixed = 3
 
 
-DetectionType.PNR.__doc__ = "Photon Number Resolving"
+DetectionType.PNR.__doc__ = "Photon Number Resolving (perfect detection)"
+DetectionType.Threshold.__doc__ = "Threshold detection (detects 1 photon at most)"
 DetectionType.PPNR.__doc__ = "Pseudo PNR"
-DetectionType.Mixed.__doc__ = "A mix of at least two others DetectionType"
+DetectionType.Mixed.__doc__ = "Multiple DetectionType"
 
 
 class IDetector(AComponent, ABC):
