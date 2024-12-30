@@ -42,7 +42,7 @@ class StateGenerator:
     :param encoding: for specifying the output format of the StateVector
         supported are Encoding.RAW, Encoding.DUAL_RAIL, Encoding.POLARIZATION
     :param polarization_base: (optional) you can provide your own polarization basis as a tuple of BasicStates.
-        default=(BasicState("\|{P:H}>"), BasicState("\|{P:V}>")
+        default=(BasicState("`|{P:H}>`"), BasicState("`|{P:V}>`")
     """
     def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
 
@@ -86,10 +86,10 @@ class StateGenerator:
 
         :param state: name of the bell state you want to generate:
 
-            * "phi+" = (\|0,0>+\|1,1>)/sqrt(2)
-            * "phi-" = (\|0,0>-\|1,1>)/sqrt(2)
-            * "psi+" = (\|0,1>+\|1,0>)/sqrt(2)
-            * "psi-" = (\|0,1>-\|1,0>)/sqrt(2)
+            * "phi+" = :math:`\\frac{|0,0>+|1,1>}{\sqrt{2}}`
+            * "phi-" = :math:`\\frac{|0,0>-|1,1>}{/\sqrt{2}}`
+            * "psi+" = :math:`\\frac{|0,1>+|1,0>}{/\sqrt{2}}`
+            * "psi-" = :math:`\\frac{|0,1>-|1,0>}{/\sqrt{2}}`
         :return: StateVector for a bell state
         """
 
@@ -158,17 +158,17 @@ class StateGenerator:
         return sv
 
     def dicke_state(self, n: int, k: int = None) -> StateVector:
-        """Get the Dicke state \|D(n,k)> which is the equal superposition state of all C(n,k) basis states of weight k
+        """Get the Dicke state :math:`|D(n,k)>` which is the equal superposition state of all :math:`C(n,k)` basis states of weight :math:`k`
 
         Mode number:
-            * For RAW and Polarization: n
-            * For Dual rail encoding: 2*n
+            * For RAW and Polarization: :math:`n`
+            * For Dual rail encoding: :math:`2*n`
 
         Photon number:
-            * For Raw encoding: k
-            * For Dual rail and Polarization encoding: n
+            * For Raw encoding: :math:`k`
+            * For Dual rail and Polarization encoding: :math:`n`
 
-        :param n: Number of qubits equal to \|1>_L or photons
+        :param n: Number of qubits equal to :math:`|1>_L` or photons
         :param k: Weight (Number of qubits or modes)
         :return: Dicke state vector
         """
