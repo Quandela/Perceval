@@ -34,9 +34,12 @@ from .heralded_cz import HeraldedCzItem
 from .generic_2mode import Generic2ModeItem
 from .mzi import MZIPhaseFirst, MZIPhaseLast, SymmetricMZI
 from .postprocessed_ccz import PostProcessedCCZItem
+from .postprocessed_cz import PostProcessedCzItem
+from .qloq_ansatz import QLOQAnsatz
 from .toffoli import ToffoliItem
 from .controlled_rotation_gates import PostProcessedControlledRotationsItem
 
 catalog_items = [KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
-                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem
-]
+                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem,
+                 PostProcessedCzItem, QLOQAnsatz
+                 ]
