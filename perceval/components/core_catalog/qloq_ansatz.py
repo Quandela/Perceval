@@ -37,12 +37,11 @@ from perceval.utils import Encoding, PostSelect
 
 
 class QLOQAnsatz(CatalogItem):
-    description = "A universal 2 mode component, implemented as a beam splitter with variable theta + 3 free phases"
-    str_repr = r"""
-    ╭─────╮
+    description = "A QLOQ Ansatz generator, linking qudits with CZ gates"
+    str_repr = r"""    ╭─────╮
 0:──┤     ├──:0
-    │BS.H │
-    │theta│
+    │     │
+    │     │
 1:──┤     ├──:1
     ╰─────╯ """  # TODO: change this representation
     params_doc = {
@@ -183,7 +182,7 @@ class QLOQAnsatz(CatalogItem):
         parameter_nb = self.get_parameter_nb(group_sizes, len(layers))
 
         if "Z" in layers:
-            # TODO: remove this assert when Parameter expressions are ready
+            # TODO: remove these asserts when Parameter expressions are ready
             assert phases is not None, "phases must be given as numerical values when using Z layer"
             assert isinstance(phases, list), "phases must be a list"
             assert all(isinstance(phase, Number) for phase in phases), \
