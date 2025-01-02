@@ -27,7 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, PERM, BS, Port, Barrier
+from .postprocessed_cz import PostProcessedCzItem
+
+from perceval.components import Circuit, BS, Port
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect
 
@@ -48,18 +50,11 @@ data (dual rail) ─────┤     ├───── data (dual rail)
         super().__init__("postprocessed cnot")
 
     def build_circuit(self, **kwargs):
-        theta_13 = BS.r_to_theta(1 / 3)
+        postprocessed_cz = PostProcessedCzItem()
         return (Circuit(6, name="PostProcessed CNOT")
-                .add(0, PERM([0, 2, 3, 4, 1]))  # So that both heralded modes are on the bottom of the gate
-                .add((3, 4), BS.H())
-                .add((2, 3), PERM([1, 0]))
-                .add(0, Barrier(6, visible=False))
-                .add((0, 1), BS.H(theta_13))
-                .add((2, 3), BS.H(theta_13))
-                .add((4, 5), BS.H(theta_13))
-                .add((2, 3), PERM([1, 0]))
-                .add((3, 4), BS.H())
-                .add(1, PERM([3, 0, 1, 2])))  # So that both heralded modes are on the bottom of the gate
+                .add((2, 3), BS.H())
+                .add(0, postprocessed_cz.build_circuit(), merge=True)
+                .add((2, 3), BS.H()))
 
     def build_processor(self, **kwargs):
         p = self._init_processor(**kwargs)

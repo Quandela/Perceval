@@ -31,7 +31,7 @@ from __future__ import annotations
 from numbers import Number
 
 from perceval.components.component_catalog import CatalogItem
-from .constructors import generate_chained_controlled_ops, generalized_cz, apply_rotations_to_qubits
+from ._helpers import generate_chained_controlled_ops, generalized_cz, apply_rotations_to_qubits
 from perceval.components import Circuit, Processor, Port
 from perceval.utils import Encoding, PostSelect
 
