@@ -109,34 +109,18 @@ def _generate_rotation_last_qubit(gate: Circuit, nqubits: int, circuit_name: str
 
 def G_RYn(angle, n):
     """Apply the RY gate to nth qubit."""
-    return _generate_rotation_last_qubit(
-        BS.Ry(theta=angle, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0), nqubits=n, circuit_name=f"RY{n}")
-
-
-def G_RYk(angle, n, k):
-    """Apply the RY gate to the k-th qubit of n qubits."""
-    return _generate_rotation_kth_qubit(G_RYn(angle, n), n, k, f"RY{k}")
+    return _generate_rotation_last_qubit(BS.Ry(theta=angle), nqubits=n, circuit_name=f"RY{n}")
 
 
 def G_RZn(angle, n):
     """Apply the RZ gate to nth qubit."""
-    return _generate_rotation_last_qubit(
-        BS.Rx(theta=0, phi_tl=-angle / 2, phi_bl=angle / 2, phi_tr=0, phi_br=0), nqubits=n, circuit_name=f"RZ{n}")
-
-
-def G_RZk(angle, n, k):
-    """Apply the RZ gate to the k-th qubit of n qubits."""
-    return _generate_rotation_kth_qubit(G_RZn(angle, n), n, k, f"RZ{k}")
+    return _generate_rotation_last_qubit(BS.Rx(theta=0, phi_tl=-angle / 2, phi_bl=angle / 2), nqubits=n,
+                                         circuit_name=f"RZ{n}")
 
 
 def G_RXn(angle, n):
     """Apply the RX gate to nth qubit."""
     return _generate_rotation_last_qubit(BS.Rx(theta=angle), nqubits=n, circuit_name=f"RX{n}")
-
-
-def G_RXk(angle, n, k):
-    """Apply the RX gate to the k-th qubit of n qubits."""
-    return _generate_rotation_kth_qubit(G_RXn(angle, n), n, k, f"RX{k}")
 
 
 def G_RHn(n):
@@ -149,8 +133,16 @@ def G_RHk(n, k):
     return _generate_rotation_kth_qubit(G_RHn(n), n, k, f"RH{k}")
 
 
+def _g_rk(angle: float, n: int, k: int, rotation: str):
+    g_n = {"X": G_RXn,
+           "Y": G_RYn,
+           "Z": G_RZn}
+
+    return _generate_rotation_kth_qubit(g_n[rotation](angle, n), n, k, f"R{rotation}{k}")
+
+
 def apply_rotations_to_qubits(angle_list, n, rotation: str):
-    """Apply the RY gate to each qubit in a group of n qubits based on an angle list."""
+    """Apply the rotation gate to each qubit in a group of n qubits based on an angle list."""
     assert len(angle_list) == n, "Angle list should match the number of qubits in the group."
     assert rotation in ["Y", "Z", "X"], "Rotation must be X or Y or Z."
 
@@ -158,12 +150,6 @@ def apply_rotations_to_qubits(angle_list, n, rotation: str):
 
     # Apply the rotation gate for each qubit based on the provided angle.
     for idx, angle in enumerate(angle_list):
-        if rotation == "X":
-            c = G_RXk(angle, n, idx)
-        elif rotation == "Y":
-            c = G_RYk(angle, n, idx)
-        else:
-            c = G_RZk(angle, n, idx)
-        circ.add(0, c, merge=True)
+        circ.add(0, _g_rk(angle, n, idx, rotation), merge=True)
 
     return circ
