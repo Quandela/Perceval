@@ -76,7 +76,7 @@ Q1:(dual rail)──┤ Rx  ├── (dual rail) :Q1
         super().__init__('rx')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        theta = kwargs.get('theta', 0)
+        theta = kwargs.get('theta', 0.0)
         return Circuit(2, name=f"Rx({theta:.3})") // BS.Rx(theta=-theta)
 
 
@@ -103,7 +103,7 @@ Q1:(dual rail)──┤ Ry  ├── (dual rail) :Q1
         super().__init__('ry')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        theta = kwargs.get('theta', 0)
+        theta = kwargs.get('theta', 0.0)
         return Circuit(2, name=f"Ry({theta:.3})") // BS.Ry(theta=theta)
 
 
@@ -130,7 +130,7 @@ Q1:(dual rail)──┤ Rz  ├── (dual rail) :Q1
         super().__init__('rz')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        theta = kwargs.get('theta', 0)
+        theta = kwargs.get('theta', 0.0)
         return Circuit(2, name=f"Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2))
 
 
