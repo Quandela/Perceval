@@ -29,6 +29,7 @@
 
 from __future__ import annotations
 
+import heapq
 import random
 
 from abc import ABC, abstractmethod
@@ -250,24 +251,23 @@ class SVDistribution(ProbabilityDistribution):
         return new_dist
 
     @staticmethod
-    def list_tensor_product(distributions: list[SVDistribution], prob_threshold: float = 0):
+    def list_tensor_product(distributions: list[SVDistribution], prob_threshold: float = 0) -> SVDistribution:
         """Efficient tensor product for a list of distributions"""
-        if len(distributions) == 1:
-            return distributions[0]
         if len(distributions) == 0:
             return SVDistribution()
 
-        photon_counts = [len(dist) for dist in distributions]
+        while len(distributions) > 1:
+            state_counts = [len(dist) for dist in distributions]
 
-        # Find the index of lowest product with a sliding window and performs the tensor product with these.
-        products = [photon_counts[i] * photon_counts[i + 1] for i in range(len(photon_counts) - 1)]
-        index = min(range(len(products)), key=products.__getitem__)
+            # Find the index of lowest product with a sliding window and performs the tensor product with these.
+            products = [state_counts[i] * state_counts[i + 1] for i in range(len(state_counts) - 1)]
+            index = min(range(len(products)), key=products.__getitem__)
 
-        dist = SVDistribution.tensor_product(distributions[index], distributions[index + 1], prob_threshold)
-        distributions[index] = dist
-        distributions.pop(index + 1)
+            dist = SVDistribution.tensor_product(distributions[index], distributions[index + 1], prob_threshold)
+            distributions[index] = dist
+            distributions.pop(index + 1)
 
-        return SVDistribution.list_tensor_product(distributions, prob_threshold)
+        return distributions[0]
 
 
 @dispatch(StateVector, annot_tag=str)
@@ -382,6 +382,35 @@ class BSDistribution(ProbabilityDistribution):
                     bs = bs1 * bs2
                 new_dist[bs] += proba1 * proba2
         return new_dist
+
+    @staticmethod
+    def list_tensor_product(distributions: list[BSDistribution], prob_threshold: float = 0) -> BSDistribution:
+        """Efficient tensor product for a list of distributions"""
+        if len(distributions) == 0:
+            return BSDistribution()
+
+        BSDistribution._expand_modes(distributions)
+
+        while len(distributions) > 1:
+            state_counts = [len(dist) for dist in distributions]
+
+            # Find the two smallest distributions and merge them
+            idx_a, idx_b = heapq.nsmallest(2, range(len(state_counts)), key=state_counts.__getitem__)
+
+            dist = BSDistribution.tensor_product(distributions[idx_a], distributions[idx_b], True, prob_threshold)
+            distributions[idx_a] = dist
+            distributions.pop(idx_b)
+
+        return distributions[0]
+
+    @staticmethod
+    def _expand_modes(distributions: list[BSDistribution]):
+        current_m = 0
+        total_m = sum(dist.m for dist in distributions)
+        for i, dist in enumerate(distributions):
+            dist = BSDistribution(BasicState(current_m * [0])) * dist
+            dist *= BSDistribution(BasicState((total_m - dist.m) * [0]))
+            distributions[i] = dist
 
     @property
     def m(self) -> int:
