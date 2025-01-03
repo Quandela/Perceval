@@ -201,11 +201,12 @@ class Source:
         :param prob_threshold: Probability threshold under which the resulting state is filtered out. By default,
             `global_params['min_p']` value is used.
         """
-        dist = SVDistribution()
         prob_threshold = max(prob_threshold, global_params['min_p'])
         get_logger().debug(f"Apply 'Source' noise model to {expected_input}", channel.general)
-        for photon_count in expected_input:
-            dist = SVDistribution.tensor_product(dist, self.probability_distribution(photon_count), prob_threshold)
+
+        distributions = [self.probability_distribution(photon_count) for photon_count in expected_input]
+        dist = SVDistribution.list_tensor_product(distributions, prob_threshold)
+
         dist.normalize()
         if self.simplify_distribution and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')

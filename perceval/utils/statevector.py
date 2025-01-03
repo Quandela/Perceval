@@ -249,6 +249,26 @@ class SVDistribution(ProbabilityDistribution):
                 new_dist[sv] += proba1 * proba2
         return new_dist
 
+    @staticmethod
+    def list_tensor_product(distributions: list[SVDistribution], prob_threshold: float = 0):
+        """Efficient tensor product for a list of distributions"""
+        if len(distributions) == 1:
+            return distributions[0]
+        if len(distributions) == 0:
+            return SVDistribution()
+
+        photon_counts = [len(dist) for dist in distributions]
+
+        # Find the index of lowest product with a sliding window and performs the tensor product with these.
+        products = [photon_counts[i] * photon_counts[i + 1] for i in range(len(photon_counts) - 1)]
+        index = min(range(len(products)), key=products.__getitem__)
+
+        dist = SVDistribution.tensor_product(distributions[index], distributions[index + 1], prob_threshold)
+        distributions[index] = dist
+        distributions.pop(index + 1)
+
+        return SVDistribution.list_tensor_product(distributions, prob_threshold)
+
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a") -> StateVector:
