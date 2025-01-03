@@ -371,11 +371,11 @@ class Simulator(ISimulator):
 
             """
             1st step of computing logical performance:
-            When using a mask, the sum of output probs sum(probs_in_s.values()) can be <1.
-            In this case remove the missing part, weighted by the probability (prob0) of the input state to appear
+            When using a mask, the sum of output probs sum(probs_in_s.values()) can be < 1.
+            In this case add the success rate (the sum), weighted by the probability (prob0) of the input state to appear
             in the mixed state (input_dist, reworked to decomposed_input).
             """
-            self._logical_perf -= (1 - sum(probs_in_s.values())) * prob0
+            self._logical_perf += sum(probs_in_s.values()) * prob0
 
             """Then, add the resulting distribution to the global distribution"""
             for bs, p in probs_in_s.items():
@@ -389,13 +389,12 @@ class Simulator(ISimulator):
 
         """
         2nd step of computing logical performance:
-        After the whole mixed state (input_dist) has been simulated, the missing part of the logical performance needs
-        to be normalized against the physical performance. Indeed, the physical performance is less than 1 for all input
-        states in the input distribution which did not contain enough photons.
-        The more input states were filtered by the physical filter, the heavier the missing part of the logical perf.
+        After the whole mixed state (input_dist) has been simulated,
+        the logical performance is the probability of getting a state that is both physically and logically accepted.
+        To get the right logical perf, we need to divide by the physical perf
         """
         if self._logical_perf > 0 and physical_perf > 0:
-            self._logical_perf = 1 - (1 - self._logical_perf) / physical_perf
+            self._logical_perf /= physical_perf
         if len(res):
             res.normalize()
         return res, physical_perf
@@ -433,8 +432,6 @@ class Simulator(ISimulator):
             * physical_perf is the performance computed from the detected photon filter
             * logical_perf is the performance computed from the post-selection
         """
-        self._logical_perf = 1
-
         svd, p_threshold, has_superposed_states, has_annotations = self._preprocess_svd(input_dist)
 
         if self.use_mask(has_superposed_states, has_annotations, detectors):
@@ -443,8 +440,10 @@ class Simulator(ISimulator):
             self._backend.clear_mask()
 
         if has_superposed_states:
+            self._logical_perf = 1
             res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
+            self._logical_perf = 0
             res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
         if not len(res):
@@ -491,8 +490,7 @@ class Simulator(ISimulator):
                 and not has_superposed_states
                 # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
 
-                and (get_detection_type(detectors) == DetectionType.PNR or self._min_detected_photons_filter <= 1)
-                # We can use mask with filter of 0 or 1 since no state will be rejected in the detectors simulation
+                and get_detection_type(detectors) == DetectionType.PNR
                 )
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
