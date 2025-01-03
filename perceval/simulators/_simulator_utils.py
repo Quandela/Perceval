@@ -90,11 +90,9 @@ def _unitary_components_to_circuit(component_list: list, m: int = 0):
     return circuit
 
 
-def _split_by_photon_count(sv: StateVector) -> SVDistribution | StateVector:
+def _split_by_photon_count(sv: StateVector) -> SVDistribution:
     """
     Split a state vector into a SVDistribution such that each key of the SVD corresponds to one photon count
-
-    Return the StateVector if all states have the same number of photons
     """
     counter = defaultdict(lambda: [StateVector(), 0])  # State and prob
     for state, pa in sv:
