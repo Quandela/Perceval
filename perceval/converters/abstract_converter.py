@@ -103,7 +103,7 @@ class AGateConverter(ABC):
         pass
 
     def _create_catalog_1_qubit_gate(self, gate_name, **kwargs):
-        param = kwargs.get("param", 0.0)
+        param = kwargs.get("param", None)
         if gate_name in ["rx", "ry", "rz"]:
             return catalog[gate_name].build_circuit(theta=param)
         elif gate_name in ["ph"]:
