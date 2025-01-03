@@ -47,7 +47,7 @@ Q1:(dual rail)──┤  H  ├── (dual rail) :Q1
                 ╰─────╯ """
 
     def __init__(self):
-        super().__init__('hadamard')
+        super().__init__('h')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="H") // BS.H()
@@ -60,7 +60,7 @@ Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
                 ╰─────╯ """
 
     def __init__(self):
-        super().__init__('pauli x')
+        super().__init__('x')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name='X') // PERM([1,0])
@@ -87,7 +87,7 @@ Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
                 ╰─────╯ """
 
     def __init__(self):
-        super().__init__('pauli y')
+        super().__init__('y')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Y") // PERM([1, 0]) // (1, PS(math.pi / 2)) // (0, PS(-math.pi / 2))
@@ -114,7 +114,7 @@ Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
                 ╰─────╯ """
 
     def __init__(self):
-        super().__init__('pauli z')
+        super().__init__('z')
 
     def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name="Z") // (1, PS(-math.pi))
@@ -141,7 +141,7 @@ Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
                 ╰─────╯ """
 
     def __init__(self):
-        super().__init__('phase shift')
+        super().__init__('ph')
 
     def build_circuit(self, **kwargs) -> Circuit:
         phi = kwargs.get('phi')

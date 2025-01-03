@@ -38,7 +38,7 @@ from perceval.components import catalog, PS, BS, PERM
 
 @pytest.mark.parametrize("gate_name, exptd_phi", [("s", math.pi/2), ("sdag", 3*math.pi/2),
                                        ("t", math.pi/4), ("tdag", 7*math.pi/4),
-                                                  ("phase shift", "phi")])
+                                                  ("ph", "phi")])
 def test_single_qubit_phase_gates(gate_name, exptd_phi):
     c = catalog[gate_name].build_circuit()
 
@@ -50,7 +50,7 @@ def test_single_qubit_phase_gates(gate_name, exptd_phi):
 
 
 def test_pauli_y_gate():
-    c = catalog["pauli y"].build_circuit()
+    c = catalog["y"].build_circuit()
 
     assert len(c._components) == 3
     assert isinstance(c._components[0][1], PERM)
@@ -100,7 +100,7 @@ def test_rx_gate():
     print(Operator(qisk_circ))
 
 
-@pytest.mark.parametrize("gate_name, lo_comp", [('pauli x', PERM), ('pauli z', PS), ('hadamard', BS)])
+@pytest.mark.parametrize("gate_name, lo_comp", [('x', PERM), ('z', PS), ('h', BS)])
 def test_single_qubit_gates(gate_name, lo_comp):
     c = catalog[gate_name].build_circuit()
     assert c.m == 2

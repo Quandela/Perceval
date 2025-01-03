@@ -102,6 +102,15 @@ class AGateConverter(ABC):
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
         pass
 
+    def _create_catalog_1_qubit_gate(self, gate_name, **kwargs):
+        param = kwargs.get("param", 0.0)
+        if gate_name in ["rx", "ry", "rz"]:
+            return catalog[gate_name].build_circuit(theta=param)
+        elif gate_name in ["ph"]:
+            return catalog[gate_name].build_processor(phi=param)
+        else:
+            return catalog[gate_name].build_processor()
+
     def _create_generic_1_qubit_gate(self, u) -> Circuit:
         # universal method, takes in unitary and approximates one using
         # Frobenius method
