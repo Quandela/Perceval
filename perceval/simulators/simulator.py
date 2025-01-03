@@ -392,24 +392,43 @@ class Simulator(ISimulator):
         max_p = 0
         has_superposed_states = False
         has_annotations = False
-        trimmed_svd = SVDistribution()
+        to_remove = []
+        # We need to work on a copy. Let's do a first trim as copy
         for sv, p in svd.items():
-            new_svd = _split_by_photon_count(sv)
-
-            for split_sv, ps in new_svd.items():
-                # split_sv.n is a set so we can't use [0]
-                if max(split_sv.n) >= self._min_detected_photons_filter:
-                    prob = ps * p
-                    trimmed_svd[split_sv] = prob
-                    max_p = max(prob, max_p)
-                if len(split_sv) > 1:
-                    has_superposed_states = True
-                if not has_annotations and any(bs.has_annotations for bs in split_sv.keys()):
-                    has_annotations = True
-
+            if max(sv.n) >= self._min_detected_photons_filter:
+                max_p = max(p, max_p)
+            else:
+                to_remove.append(sv)
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
-        trimmed_svd = SVDistribution({state: pr for state, pr in trimmed_svd.items() if pr > p_threshold})
+        trimmed_svd = SVDistribution({state: pr for state, pr in svd.items() if pr > p_threshold and state not in to_remove})
+
+        # At this stage, all states have at least one BS with enough photons
+        to_remove = []
+        to_add = SVDistribution()
+        for sv, p in trimmed_svd.items():
+            if len(sv) != 1 and len(sv.n) != 1:
+                to_remove.append(sv)
+                new_svd = _split_by_photon_count(sv)
+                for split_sv, ps in new_svd.items():
+                    # split_sv.n is a set so we can't use [0]
+                    if max(split_sv.n) >= self._min_detected_photons_filter:
+                        to_add[split_sv] += ps * p
+
+        if to_remove:
+            for sv, p in to_add.items():
+                trimmed_svd[sv] += p
+                max_p = max(trimmed_svd[sv], max_p)
+
+            p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
+            trimmed_svd = SVDistribution({state: pr for state, pr in trimmed_svd.items() if pr > p_threshold and state not in to_remove})
+
         phys_perf = sum(trimmed_svd.values())  # too low probabilities are integrated into the phys_perf
+
+        for sv in trimmed_svd.keys():
+            if len(sv) > 1:
+                has_superposed_states = True
+            if not has_annotations and any(bs.has_annotations for bs in sv.keys()):
+                has_annotations = True
         return trimmed_svd, p_threshold, has_superposed_states, has_annotations, phys_perf
 
     def probs_svd(self,
