@@ -437,16 +437,14 @@ class Simulator(ISimulator):
 
         svd, p_threshold, has_superposed_states, has_annotations = self._preprocess_svd(input_dist)
 
-        if has_superposed_states:
+        if self.use_mask(has_superposed_states, has_annotations, detectors):
+            self._setup_heralds()
+        else:
             self._backend.clear_mask()
+
+        if has_superposed_states:
             res, physical_perf = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
-            if self._heralds and not has_annotations and get_detection_type(detectors) == DetectionType.PNR:
-                # TODO: do this also with superposed states when logical perf computation is ready
-                # TODO: give detectors to setup_heralds to keep only modes with PNR in the mask
-                self._setup_heralds()
-            else:
-                self._backend.clear_mask()
             res, physical_perf = self._probs_svd_fast(svd, p_threshold, progress_callback)
 
         if not len(res):
@@ -486,6 +484,16 @@ class Simulator(ISimulator):
                 get_logger().debug(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
                                    f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
+
+    def use_mask(self, has_superposed_states, has_annotations, detectors) -> bool:
+        return (self._heralds
+                and not has_annotations
+                and not has_superposed_states
+                # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
+
+                and (get_detection_type(detectors) == DetectionType.PNR or self._min_detected_photons_filter <= 1)
+                # We can use mask with filter of 0 or 1 since no state will be rejected in the detectors simulation
+                )
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
