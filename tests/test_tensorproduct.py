@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import BasicState, StateVector, tensorproduct, BSDistribution
+from perceval import BasicState, StateVector, tensorproduct, BSDistribution, SVDistribution
 from unittest.mock import patch
 from perceval.utils.logging import ExqaliburLogger
 from _test_utils import LogChecker
@@ -121,6 +121,31 @@ def test_bsd_tensor_product(mock_warn):
     # Now with empty BSD
     bsd_list = [bsd_1, bsd_2, BSDistribution(), bsd_3]
 
-    with LogChecker(mock_warn, expected_log_number=1):
+    with LogChecker(mock_warn):
         assert BSDistribution.list_tensor_product(bsd_list, merge_modes=True) == pytest.approx(product), \
             "Wrong list tensor product result when merge_modes is True and there are empty BSD"
+
+
+@patch.object(ExqaliburLogger, "warn")
+def test_svd_tensor_product(mock_warn):
+    svd_1 = SVDistribution({StateVector([2, 3]): .4,
+                            StateVector([0, 1]): .6})
+
+    svd_2 = SVDistribution({StateVector([4, 5]): .3,
+                            StateVector([6, 7]): .7})
+
+    svd_3 = SVDistribution({StateVector([8, 9]): .3,
+                            StateVector([10, 11]): .5,
+                            StateVector([12, 13]): .2})
+
+    assert SVDistribution.tensor_product(svd_1, svd_2) == pytest.approx(svd_1 * svd_2), "SVD tensor product is wrong"
+
+    assert SVDistribution.list_tensor_product([svd_1, svd_2, svd_3]) == pytest.approx(svd_1 * svd_2 * svd_3), \
+        "SVD list tensor product is wrong"
+
+    # Now with empty BSD
+    bsd_list = [svd_1, svd_2, BSDistribution(), svd_3]
+
+    with LogChecker(mock_warn):
+        assert BSDistribution.list_tensor_product(bsd_list) == pytest.approx(svd_1 * svd_2 * svd_3), \
+            "Wrong list tensor product result when there are empty BSD"

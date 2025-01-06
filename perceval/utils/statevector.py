@@ -255,6 +255,10 @@ class SVDistribution(ProbabilityDistribution):
         if len(distributions) == 0:
             return SVDistribution()
 
+        if any(len(dist) == 0 for dist in distributions):
+            get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
+            distributions = [dist for dist in distributions if len(dist) > 0]
+
         while len(distributions) > 1:
             state_counts = [len(dist) for dist in distributions]
 
@@ -395,14 +399,16 @@ class BSDistribution(ProbabilityDistribution):
             return BSDistribution()
 
         if any(len(dist) == 0 for dist in distributions):
-            get_logger().warn("Empty distribution in tensor product. Ignoring it")
+            get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
             distributions = [dist for dist in distributions if len(dist) > 0]
 
         if not merge_modes:
+            # Expanding the modes before allows performing the products in any order,
+            # as the tensor product is commutative if merge_modes is True
             BSDistribution._expand_modes(distributions)
 
         while len(distributions) > 1:
-            state_counts = [len(dist) for dist in distributions]
+            state_counts = [len(dist) for dist in distributions]  # strictly positive integers
 
             # Find the two smallest distributions and merge them
             idx_a = 0
