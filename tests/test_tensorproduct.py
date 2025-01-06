@@ -147,5 +147,5 @@ def test_svd_tensor_product(mock_warn):
     bsd_list = [svd_1, svd_2, BSDistribution(), svd_3]
 
     with LogChecker(mock_warn):
-        assert BSDistribution.list_tensor_product(bsd_list) == pytest.approx(svd_1 * svd_2 * svd_3), \
+        assert SVDistribution.list_tensor_product(bsd_list) == pytest.approx(svd_1 * svd_2 * svd_3), \
             "Wrong list tensor product result when there are empty BSD"
