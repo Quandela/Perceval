@@ -29,7 +29,6 @@
 
 from __future__ import annotations
 
-import heapq
 import random
 
 from abc import ABC, abstractmethod
@@ -384,18 +383,45 @@ class BSDistribution(ProbabilityDistribution):
         return new_dist
 
     @staticmethod
-    def list_tensor_product(distributions: list[BSDistribution], prob_threshold: float = 0) -> BSDistribution:
-        """Efficient tensor product for a list of distributions"""
+    def list_tensor_product(distributions: list[BSDistribution],
+                            merge_modes: bool = False,
+                            prob_threshold: float = 0) -> BSDistribution:
+        """
+        Efficient tensor product for a list of BasicState Distribution.
+         Can modify the distributions in place if merge_modes is False.
+         Performs `len(distributions) - 1` tensor products
+         """
         if len(distributions) == 0:
             return BSDistribution()
 
-        BSDistribution._expand_modes(distributions)
+        if any(len(dist) == 0 for dist in distributions):
+            get_logger().warn("Empty distribution in tensor product. Ignoring it")
+            distributions = [dist for dist in distributions if len(dist) > 0]
+
+        if not merge_modes:
+            BSDistribution._expand_modes(distributions)
 
         while len(distributions) > 1:
             state_counts = [len(dist) for dist in distributions]
 
             # Find the two smallest distributions and merge them
-            idx_a, idx_b = heapq.nsmallest(2, range(len(state_counts)), key=state_counts.__getitem__)
+            idx_a = 0
+            val_a = state_counts[idx_a]  # Smallest
+            idx_b = 1
+            val_b = state_counts[idx_b]  # Second smallest
+            if val_b < val_a:
+                val_a, val_b = val_b, val_a
+                idx_a, idx_b = idx_b, idx_a
+            for i, val in enumerate(state_counts[2:], 2):
+                if val_a == 1 and val_b == 1:
+                    break
+                if val < val_a:
+                    val_b, idx_b = val_a, idx_a
+                    val_a = val
+                    idx_a = i
+                elif val < val_b:
+                    val_b = val
+                    idx_b = i
 
             dist = BSDistribution.tensor_product(distributions[idx_a], distributions[idx_b], True, prob_threshold)
             distributions[idx_a] = dist
@@ -405,12 +431,16 @@ class BSDistribution(ProbabilityDistribution):
 
     @staticmethod
     def _expand_modes(distributions: list[BSDistribution]):
+        """Add empty modes on the left and right of the distributions
+         so their number of modes is the initial total number of modes"""
         current_m = 0
         total_m = sum(dist.m for dist in distributions)
         for i, dist in enumerate(distributions):
+            m = dist.m
             dist = BSDistribution(BasicState(current_m * [0])) * dist
             dist *= BSDistribution(BasicState((total_m - dist.m) * [0]))
             distributions[i] = dist
+            current_m += m
 
     @property
     def m(self) -> int:
