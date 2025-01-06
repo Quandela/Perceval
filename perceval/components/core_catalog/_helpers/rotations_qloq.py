@@ -26,8 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from perceval.components import Circuit, PERM, BS
+from perceval.components import Circuit, PERM, BS, PS
 
 
 def internal_swap(qubit1: int, qubit2: int, num_qubits: int):
@@ -114,7 +113,7 @@ def G_RYn(angle, n):
 
 def G_RZn(angle, n):
     """Apply the RZ gate to nth qubit."""
-    return _generate_rotation_last_qubit(BS.Rx(theta=0, phi_tl=-angle / 2, phi_bl=angle / 2), nqubits=n,
+    return _generate_rotation_last_qubit(Circuit(2) // PS(phi=-angle / 2) // (1, PS(phi=angle / 2)), nqubits=n,
                                          circuit_name=f"RZ{n}")
 
 
