@@ -392,15 +392,15 @@ class BSDistribution(ProbabilityDistribution):
                             prob_threshold: float = 0) -> BSDistribution:
         """
         Efficient tensor product for a list of BasicState Distribution.
-         Can modify the distributions in place if merge_modes is False.
+         Can modify the distributions in place if merge_modes is False by adding empty modes.
          Performs `len(distributions) - 1` tensor products
          """
-        if len(distributions) == 0:
-            return BSDistribution()
-
         if any(len(dist) == 0 for dist in distributions):
             get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
             distributions = [dist for dist in distributions if len(dist) > 0]
+
+        if len(distributions) == 0:
+            return BSDistribution()
 
         if not merge_modes:
             # Expanding the modes before allows performing the products in any order,

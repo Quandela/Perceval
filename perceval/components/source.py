@@ -30,7 +30,8 @@ from __future__ import annotations
 
 import math
 
-from perceval.utils import SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params
+from perceval.utils import (SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params,
+                            BSDistribution)
 from perceval.utils.logging import get_logger, channel
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -113,30 +114,16 @@ class Source:
         return p1to1, p2to1, p2to2
 
     @staticmethod
-    def _merge_photon_distributions(d1: list, d2: list):
-        # Merges two lists of annotations (or unannotated photon count) following the tensor product rules
-        if len(d1) == 0:
-            return d2
-        res = []
-        for k1, p1 in d1:
-            for k2, p2 in d2:
-                if k1 == 0:
-                    k = k2
-                elif k2 == 0:
-                    k = k1
-                else:
-                    k = k1+k2
-                res.append([k, p1*p2])
-        return res
-
-    @staticmethod
-    def _add(plist: list, annotations: int | list, probability: float):
+    def _add(plist: BSDistribution, annotations: int | list, probability: float):
         # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
         # parameter `plist`
         if probability > 0:
-            plist.append([annotations, probability])
+            if isinstance(annotations, int):
+                plist[BasicState([annotations])] = probability
+                return
+            plist[BasicState([len(annotations)], {0: annotations})] = probability
 
-    def _generate_one_photon_distribution(self):
+    def _generate_one_photon_distribution(self) -> BSDistribution:
         # Generates a distribution of annotations given the source parameters for one photon in one mode
         distinguishability = 1 - math.sqrt(self._indistinguishability)
 
@@ -148,7 +135,7 @@ class Source:
         (p1to1, p2to1, p2to2) = self._get_probs()
         p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)  # 2 * p2to1 because of symmetry
 
-        dist = []  # Distribution represented as a list of annotations on 1 mode + probability
+        dist = BSDistribution()
         self._add(dist, 0, p0)
         if self.partially_distinguishable:
             self._add(dist, ["_:0", "_:%s" % second_photon], (1 - distinguishability) * p2to2)
@@ -170,25 +157,17 @@ class Source:
         return self._indistinguishability != 1 \
             or (self._multiphoton_model == DISTINGUISHABLE_KEY and self._multiphoton_component)
 
-    def probability_distribution(self, nphotons: int = 1) -> SVDistribution:
+    def probability_distribution(self, nphotons: int = 1, prob_threshold: float = 0) -> SVDistribution:
         r"""returns SVDistribution on 1 mode associated to the source
 
         :param nphotons: Require `nphotons` in the mode (default 1).
         """
-        if nphotons == 0:
-            return SVDistribution(StateVector("|0>"))
-        dist_all = []
-        for p in range(nphotons):
-            d1 = self._generate_one_photon_distribution()
-            dist_all = self._merge_photon_distributions(dist_all, d1)
+        if nphotons == 0 or self.is_perfect():
+            return SVDistribution(StateVector([nphotons]))
+        dist_all = BSDistribution.list_tensor_product([self._generate_one_photon_distribution() for _ in range(nphotons)],
+                                                      merge_modes=True, prob_threshold=prob_threshold)
 
-        svd = SVDistribution()
-        for photons, prob in dist_all:
-            if isinstance(photons, int):
-                svd.add(StateVector([photons]), prob)
-            else:
-                svd.add(StateVector(BasicState([len(photons)], {0: photons})), prob)
-        return svd
+        return SVDistribution(dist_all)
 
     def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
         """
@@ -204,8 +183,8 @@ class Source:
         prob_threshold = max(prob_threshold, global_params['min_p'])
         get_logger().debug(f"Apply 'Source' noise model to {expected_input}", channel.general)
 
-        distributions = [self.probability_distribution(photon_count) for photon_count in expected_input]
-        dist = SVDistribution.list_tensor_product(distributions, prob_threshold)
+        distributions = [self.probability_distribution(photon_count, prob_threshold) for photon_count in expected_input]
+        dist = SVDistribution.list_tensor_product(distributions, prob_threshold=prob_threshold)
 
         dist.normalize()
         if self.simplify_distribution and self.partially_distinguishable:
