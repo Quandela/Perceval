@@ -51,7 +51,7 @@ class QLOQAnsatz(CatalogItem):
                   "Required length can be computed using self.get_parameter_nb",
         "ctype": "name of the entanglement gate to apply. Value can be one of 'cx' and 'cz' (default 'cx')",
     }
-    article_ref = ""  # TODO: put the article link here
+    article_ref = "https://arxiv.org/pdf/2411.03878"
 
     def __init__(self):
         super().__init__('QLOQ ansatz')
