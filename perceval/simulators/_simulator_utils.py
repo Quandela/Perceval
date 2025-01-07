@@ -28,8 +28,7 @@
 # SOFTWARE.
 from collections import defaultdict
 
-from perceval import SVDistribution
-from perceval.utils import BasicState, BSDistribution, StateVector, Annotation
+from perceval.utils import BasicState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
 from copy import copy
 from math import sqrt
