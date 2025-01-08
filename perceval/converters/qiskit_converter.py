@@ -87,6 +87,10 @@ class QiskitConverter(AGateConverter):
                 if gate_name == 'p':
                     # not the same name in our catalog
                     gate_name = 'ph'
+                elif gate_name == 'sdg':
+                    gate_name = 'sdag'
+                elif gate_name == 'tdg':
+                    gate_name = 'tdag'
 
                 if gate_name in catalog.list():
                     if instruction.operation.params:
