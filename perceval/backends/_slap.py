@@ -50,13 +50,6 @@ class SLAPBackend(AStrongSimulationBackend):
         if self._fock_space is None or self._fock_space.m != input_state.m or self._fock_space.n != input_state.n:
             self._fock_space = xq.FSArray(input_state.m, input_state.n)
 
-    def use_steiner(self, use_it: bool):
-        """
-        Use Steiner walk into the tree rather than the naive walk (default is naive walk).
-        Steiner's method is more efficient when the number of photons is close to the number of modes.
-        """
-        self._stree.set_steiner(use_it)
-
     def prob_amplitude(self, output_state: BasicState) -> complex:
         istate = self._input_state
         all_pa = self._stree.all_prob_ampli(istate)
