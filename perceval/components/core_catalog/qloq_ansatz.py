@@ -38,12 +38,7 @@ from perceval.utils import Encoding, PostSelect
 
 class QLOQAnsatz(CatalogItem):
     description = "A QLOQ Ansatz generator, linking qudits with CZ gates"
-    str_repr = r"""    ╭─────╮
-0:──┤     ├──:0
-    │     │
-    │     │
-1:──┤     ├──:1
-    ╰─────╯ """  # TODO: change this representation
+    str_repr = "User defined (depends on the parameters)"  # TODO: change this representation
     params_doc = {
         "group_sizes": "list of DUAL_RAIL or QUDITn Encodings",
         "layers": "list of rotation layers to apply. Values can be either 'X', 'Y', or 'Z'",
