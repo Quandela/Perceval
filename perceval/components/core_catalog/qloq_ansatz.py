@@ -46,30 +46,27 @@ class QLOQAnsatz(CatalogItem):
     ╰─────╯ """  # TODO: change this representation
     params_doc = {
         "group_sizes": "list of DUAL_RAIL or QUDITn Encodings",
-        "layers": "list of rotation layers to apply. Values can be one of 'X', 'Y', and 'Z'",
+        "layers": "list of rotation layers to apply. Values can be either 'X', 'Y', or 'Z'",
         "phases": "list of names or numerical values for qudit phases (default 'phi{i}'). "
                   "Required length can be computed using self.get_parameter_nb",
-        "ctype": "name of the entanglement gate to apply. Value can be one of 'cx' and 'cz' (default 'cx')",
+        "ctype": "name of the entanglement gate to apply. Value can be either 'cx' or 'cz' (default 'cx')",
     }
     article_ref = "https://arxiv.org/pdf/2411.03878"
 
     def __init__(self):
-        super().__init__('QLOQ ansatz')
+        super().__init__('qloq ansatz')
         self._circ = None
         self._lp = None
         self._angle_offset = 0
         self._layers = None
 
-    def _apply_layer_operations(self, offset, size):
+    def _apply_layer_operations(self, offset: int, size: int) -> None:
         """
         Applies a set of layer operations to a segment of the quantum circuit.
 
         Args:
-            offset (int): The starting mode on which to apply the layer operations.
-            size (int): The size of the qubit group for which to apply layer operations.
-
-        Returns:
-            int: The updated angle_offset after applying all the layers.
+            offset: The starting mode on which to apply the layer operations.
+            size: The size of the qubit group for which to apply layer operations.
         """
         for layer in self._layers:
             self._circ.add(offset,
@@ -172,7 +169,7 @@ class QLOQAnsatz(CatalogItem):
 
         layers = kwargs["layers"]
 
-        assert len(layers), "layers is empty"
+        assert len(layers), "No layers provided"
         assert all(l in ("X", "Y", "Z") for l in layers), "layers can only be 'X', 'Y', 'Z'"
         ctype = kwargs.get("ctype", "cx")
 
@@ -181,19 +178,17 @@ class QLOQAnsatz(CatalogItem):
         phases = kwargs.get("phases", None)
         parameter_nb = self.get_parameter_nb(group_sizes, len(layers))
 
-        if "Z" in layers:
-            # TODO: remove these asserts when Parameter expressions are ready
-            assert phases is not None, "phases must be given as numerical values when using Z layer"
-            assert isinstance(phases, list), "phases must be a list"
-            assert all(isinstance(phase, Number) for phase in phases), \
-                "phases must be given as numerical values when using Z layer"
-
         if phases is not None:
             assert isinstance(phases, list), "phases must be a list"
             assert len(phases) == parameter_nb, \
                 f"there must be enough phases for the circuit {parameter_nb} (got {len(phases)})"
         else:
             phases = self._generate_phases(parameter_nb)
+
+        if "Z" in layers:
+            # TODO: remove these asserts when Parameter expressions are ready
+            assert all(isinstance(phase, Number) for phase in phases), \
+                "phases must be given as numerical values when using Z layer"
 
         phases = [self._handle_param(phase) for phase in phases]
         group_sizes = [size.logical_length for size in group_sizes]

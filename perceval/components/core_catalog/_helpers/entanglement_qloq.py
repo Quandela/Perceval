@@ -32,13 +32,13 @@ from perceval.components.core_catalog import PostProcessedCzItem
 from .rotations_qloq import G_RHk
 
 
-def generalized_cz(n, m) -> Processor:
+def generalized_cz(n: int, m: int) -> Processor:
     """
     Generates a generalized CZ gate for `n` control and `m` target qubits.
 
     Args:
-        n (int): Number of control qubits.
-        m (int): Number of target qubits.
+        n: Number of control qubits.
+        m: Number of target qubits.
 
     Returns:
         Processor: Generalized CZ gate as a Perceval processor object.
@@ -62,10 +62,16 @@ def generalized_cz(n, m) -> Processor:
 
     return circ
 
-def generate_permutation_for_controlled_op(control, target, num_qubits):
+def generate_permutation_for_controlled_op(control: int, target: int, num_qubits: int) -> list[int]:
+    """
+    Generate the permutation required for a controlled operation (either CNOT or CZ)
 
-    """ Generate the permutation required for a controlled operation (either CNOT or CZ) """
+    :param control: Control qubit
+    :param target: Target qubit
+    :param num_qubits: Number of qubits in this qudit operation.
 
+    :return: the permutation list.
+    """
     m = 2 ** num_qubits
     perm = list(range(m))
 
@@ -77,16 +83,26 @@ def generate_permutation_for_controlled_op(control, target, num_qubits):
             flipped[target] = '0' if flipped[target] == '1' else '1'
             perm[i] = int("".join(flipped), 2)
 
-    return list(tuple(perm))
+    return perm
 
-def create_internal_controlled_op(op_type, control, target, num_qubits) -> Circuit:
+def create_internal_controlled_op(op_type: str, control: int, target: int, num_qubits: int) -> Circuit:
+    """
+    Generate a CNOT or CZ gate using the given `control` qubit and `target` qubit for a qudit of size `num_qubits`.
+
+    :param op_type: Operation type (either CNOT or CZ)
+    :param control: Control qubit
+    :param target: Target qubit
+    :param num_qubits: Number of qubits in this qudit operation.
+
+    :return: CNOT or CZ gate, internal to the qudit.
+    """
     circ = Circuit(2**num_qubits, name=f"{op_type}")
-    perm = generate_permutation_for_controlled_op(control, target, num_qubits)
 
     # toggling G_RHK makes the below CX into a CZ.
     if op_type == "CZ":
         circ.add(0, G_RHk(num_qubits, target))
 
+    perm = generate_permutation_for_controlled_op(control, target, num_qubits)
     circ.add(0, PERM(perm))  # This is a CX in qudit encoding
 
     if op_type == "CZ":
@@ -94,13 +110,13 @@ def create_internal_controlled_op(op_type, control, target, num_qubits) -> Circu
 
     return circ
 
-def generate_chained_controlled_ops(op_type, n) -> Circuit:
+def generate_chained_controlled_ops(op_type: str, n: int) -> Circuit:
     """
     Generates a circuit with a chain of controlled operations.
 
     Args:
-        op_type (str): Type of controlled operation ("CZ" or "CX").
-        n (int): Number of qubits in the circuit.
+        op_type: Type of controlled operation ("CZ" or "CX").
+        n: Number of qubits in the circuit.
 
     Returns:
         Circuit: A circuit containing the chained controlled operations.

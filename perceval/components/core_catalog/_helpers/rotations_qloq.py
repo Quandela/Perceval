@@ -26,12 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
+from perceval.utils import Parameter
 from perceval.components import Circuit, PERM, BS, PS
 
 
-def internal_swap(qubit1: int, qubit2: int, num_qubits: int):
+def internal_swap(qubit1: int, qubit2: int, num_qubits: int) -> Circuit:
     """
-    Creates an internal SWAP gate that swaps two qubits within a quantum circuit.
+    Creates an internal SWAP gate that swaps two qubits within a quantum circuit in a single qudit encoding.
 
     Args:
         qubit1: The index of the first qubit to be swapped.
@@ -39,17 +42,16 @@ def internal_swap(qubit1: int, qubit2: int, num_qubits: int):
         num_qubits: The total number of qubits in the circuit.
 
     Returns:
-        Circuit: A Perceval circuit object representing the SWAP operation.
+        A Perceval circuit object representing the SWAP operation.
 
     Raises:
         ValueError: If either of the qubit indices are invalid or if they are the same.
 
-    >>> InternalSwap(1, 3, 4)
+    >>> internal_swap(1, 3, 4)
     will swap the second and fourth qubits in a 4-qubit system.
 
     Note:
-        The function constructs a permutation that describes the SWAP operation for
-        the given qubits and adds that permutation to the Perceval circuit.
+        The function constructs a permutation that describes the SWAP operation for the given qubits
     """
 
     # Check if qubit1 and qubit2 are valid qubit indices
@@ -79,8 +81,8 @@ def internal_swap(qubit1: int, qubit2: int, num_qubits: int):
     return circ
 
 
-def _generate_rotation_kth_qubit(gate_layer: Circuit, nqubits: int, k: int, circuit_name: str):
-    """Apply the Hadamard gate to the k-th qubit of n qubits."""
+def _generate_rotation_kth_qubit(gate_layer: Circuit, nqubits: int, k: int, circuit_name: str) -> Circuit:
+    """Apply the given gate to the k-th qubit of n qubits for a circuit in a single qudit encoding."""
     if k == nqubits - 1:
         return gate_layer
 
@@ -98,41 +100,41 @@ def _generate_rotation_kth_qubit(gate_layer: Circuit, nqubits: int, k: int, circ
     return circ
 
 
-def _generate_rotation_last_qubit(gate: Circuit, nqubits: int, circuit_name: str):
-    """Apply the gate to nth qubit."""
+def _generate_rotation_last_qubit(gate: Circuit, nqubits: int, circuit_name: str) -> Circuit:
+    """Apply the gate to nth qubit for a circuit in a single qudit encoding."""
     circ = Circuit(2 ** nqubits, name=circuit_name)
     for i in range(0, 2 ** nqubits, 2):
         circ.add(i, gate)
     return circ
 
 
-def G_RYn(angle, n):
-    """Apply the RY gate to nth qubit."""
+def G_RYn(angle: float | Parameter, n: int) -> Circuit:
+    """Apply the RY gate to nth qubit for a circuit in a single qudit encoding."""
     return _generate_rotation_last_qubit(BS.Ry(theta=angle), nqubits=n, circuit_name=f"RY{n}")
 
 
-def G_RZn(angle, n):
-    """Apply the RZ gate to nth qubit."""
+def G_RZn(angle: float | Parameter, n: int) -> Circuit:
+    """Apply the RZ gate to nth qubit for a circuit in a single qudit encoding."""
     return _generate_rotation_last_qubit(Circuit(2) // PS(phi=-angle / 2) // (1, PS(phi=angle / 2)), nqubits=n,
                                          circuit_name=f"RZ{n}")
 
 
-def G_RXn(angle, n):
-    """Apply the RX gate to nth qubit."""
+def G_RXn(angle: float | Parameter, n: int) -> Circuit:
+    """Apply the RX gate to nth qubit for a circuit in a single qudit encoding."""
     return _generate_rotation_last_qubit(BS.Rx(theta=angle), nqubits=n, circuit_name=f"RX{n}")
 
 
-def G_RHn(n):
-    """Apply the Hadamard gate to nth qubit."""
+def G_RHn(n: int) -> Circuit:
+    """Apply the Hadamard gate to nth qubit for a circuit in a single qudit encoding."""
     return _generate_rotation_last_qubit(BS.H(), nqubits=n, circuit_name=f"RH{n - 1}")
 
 
-def G_RHk(n, k):
-    """Apply the Hadamard gate to the k-th qubit of n qubits."""
+def G_RHk(n: int, k: int) -> Circuit:
+    """Apply the Hadamard gate to the k-th qubit of n qubits for a circuit in a single qudit encoding."""
     return _generate_rotation_kth_qubit(G_RHn(n), n, k, f"RH{k}")
 
 
-def _g_rk(angle: float, n: int, k: int, rotation: str):
+def _g_rk(angle: float, n: int, k: int, rotation: str) -> Circuit:
     g_n = {"X": G_RXn,
            "Y": G_RYn,
            "Z": G_RZn}
@@ -140,7 +142,7 @@ def _g_rk(angle: float, n: int, k: int, rotation: str):
     return _generate_rotation_kth_qubit(g_n[rotation](angle, n), n, k, f"R{rotation}{k}")
 
 
-def apply_rotations_to_qubits(angle_list, n, rotation: str):
+def apply_rotations_to_qubits(angle_list: list[float | Parameter], n: int, rotation: str):
     """Apply the rotation gate to each qubit in a group of n qubits based on an angle list."""
     assert len(angle_list) == n, "Angle list should match the number of qubits in the group."
     assert rotation in ["Y", "Z", "X"], "Rotation must be X or Y or Z."
