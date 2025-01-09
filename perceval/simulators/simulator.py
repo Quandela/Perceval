@@ -390,8 +390,9 @@ class Simulator(ISimulator):
         """
         2nd step of computing logical performance:
         After the whole mixed state (input_dist) has been simulated,
-        the logical performance is the probability of getting a state that is both physically and logically accepted.
-        To get the right logical perf, we need to divide by the physical perf
+        the `_logical_perf` is the probability of getting a state that is both physically and logically accepted.
+        To get the probability of getting a state that is logically accepted knowing that it was physically accepted,
+        we need to divide the current logical perf value by the physical perf
         """
         if self._logical_perf > 0 and physical_perf > 0:
             self._logical_perf /= physical_perf
@@ -434,7 +435,7 @@ class Simulator(ISimulator):
         """
         svd, p_threshold, has_superposed_states, has_annotations = self._preprocess_svd(input_dist)
 
-        if self.use_mask(has_superposed_states, has_annotations, detectors):
+        if self.can_use_mask(has_superposed_states, has_annotations, detectors):
             self._setup_heralds()
         else:
             self._backend.clear_mask()
@@ -484,7 +485,7 @@ class Simulator(ISimulator):
                                    f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
-    def use_mask(self, has_superposed_states, has_annotations, detectors) -> bool:
+    def can_use_mask(self, has_superposed_states, has_annotations, detectors) -> bool:
         return (self._heralds
                 and not has_annotations
                 and not has_superposed_states
