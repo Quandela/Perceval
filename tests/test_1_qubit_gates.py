@@ -81,23 +81,10 @@ def test_rz_gate():
 
 def test_rx_gate():
     # TODO : fix test after confirming BS convention
-    c = catalog["rx"].build_circuit(theta=math.pi)
-    # pcvl.pdisplay(c)
-    print('\n')
-    print('same as cqasm')
-    print(c.compute_unitary())
+    c = catalog["rx"].build_circuit(theta=-math.pi/4)
 
-    c = BS.Rx(theta=math.pi)
-    # pcvl.pdisplay(c)
-    print('direct bs of pcvl')
-    print(c.compute_unitary())
-    import numpy as np
-    # m = np.array([[np.c], []])
-
-    qisk_circ = QuantumCircuit(1)
-    qisk_circ.rx(math.pi, 0)
-    print('qiskit')
-    print(Operator(qisk_circ))
+    assert isinstance(c._components[0][1], BS)
+    assert c._components[0][1].get_variables()['theta'] == math.pi/4
 
 
 @pytest.mark.parametrize("gate_name, lo_comp", [('x', PERM), ('z', PS), ('h', BS)])
