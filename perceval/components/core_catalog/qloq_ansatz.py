@@ -186,7 +186,7 @@ class QLOQAnsatz(CatalogItem):
             phases = self._generate_phases(parameter_nb)
 
         if "Z" in layers:
-            # TODO: remove these asserts when Parameter expressions are ready
+            # TODO: remove this assert when Parameter expressions are ready (PCVL-866)
             assert all(isinstance(phase, Number) for phase in phases), \
                 "phases must be given as numerical values when using Z layer"
 
