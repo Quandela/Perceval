@@ -91,30 +91,6 @@ class Simulator(ISimulator):
         """
         self._keep_heralds = value
 
-    def set_selection(self,
-                      min_detected_photons_filter: int = None,
-                      postselect: PostSelect = None,
-                      heralds: dict = None,
-                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
-        """Set multiple selection filters at once to remove unwanted states from computed output distribution
-
-        :param min_detected_photons_filter: minimum number of detected photons in the output distribution
-        :param postselect: a post-selection function
-        :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
-                        out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
-                        on mode 6.
-        """
-        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            get_logger().warn(
-                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
-            min_detected_photons_filter = min_detected_photon_filter
-        if min_detected_photons_filter is not None:
-            self._min_detected_photons_filter = min_detected_photons_filter
-        if postselect is not None:
-            self._postselect = postselect
-        if heralds is not None:
-            self._heralds = heralds
-
     @property
     def logical_perf(self):
         return self._logical_perf

@@ -65,22 +65,6 @@ class FFSimulator(ISimulator):
         else:
             self._components = circuit
 
-    def set_selection(self,
-                      min_detected_photons_filter: int = None,
-                      postselect: PostSelect = None,
-                      heralds: dict = None,
-                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
-        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            get_logger().warn(
-                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
-            min_detected_photons_filter = min_detected_photon_filter
-        if min_detected_photons_filter is not None:
-            self.set_min_detected_photons_filter(min_detected_photons_filter)
-        if postselect is not None:
-            self._postselect = postselect
-        if heralds is not None:
-            self._heralds = heralds
-
     def set_noise(self, nm: NoiseModel):
         self._noise_model = nm
 

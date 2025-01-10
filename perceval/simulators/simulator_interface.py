@@ -39,6 +39,8 @@ class ISimulator(ABC):
 
     def __init__(self):
         self._silent = False
+        self._postselect: PostSelect = PostSelect()
+        self._heralds: dict = {}
 
     def set_silent(self, silent: bool):
         self._silent = silent
@@ -83,14 +85,6 @@ class ISimulator(ABC):
     def set_precision(self, precision: float):
         pass
 
-
-class ASimulatorDecorator(ISimulator, ABC):
-    def __init__(self, simulator: ISimulator):
-        super().__init__()
-        self._simulator: ISimulator = simulator
-        self._postselect: PostSelect = PostSelect()
-        self._heralds: dict = {}
-
     def set_selection(self,
                       min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
@@ -101,11 +95,17 @@ class ASimulatorDecorator(ISimulator, ABC):
                 'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
             min_detected_photons_filter = min_detected_photon_filter
         if min_detected_photons_filter is not None:
-            self._min_detected_photons_filter = min_detected_photons_filter
+            self.set_min_detected_photons_filter(min_detected_photons_filter)
         if postselect is not None:
             self._postselect = postselect
         if heralds is not None:
             self._heralds = heralds
+
+
+class ASimulatorDecorator(ISimulator, ABC):
+    def __init__(self, simulator: ISimulator):
+        super().__init__()
+        self._simulator: ISimulator = simulator
 
     @abstractmethod
     def _prepare_input(self, input_state):
