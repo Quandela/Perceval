@@ -31,8 +31,7 @@ from __future__ import annotations
 from typing import Any
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
-from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, PostSelect, get_logger, \
-    partial_progress_callable
+from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend
 
@@ -44,13 +43,9 @@ class FFSimulator(ISimulator):
     def __init__(self, backend: AStrongSimulationBackend):
         super().__init__()
         self._precision = None
-        self._heralds = None
-        self._postselect = None
-        self._min_detected_photons_filter = None
 
         self._components = None
         self._backend = backend
-        self._postprocess = True
 
         self._noise_model = None
         self._source = None
@@ -255,7 +250,7 @@ class FFSimulator(ISimulator):
                 for r, v in self._heralds.items():
                     proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
-            if self._postselect is not None:
+            if self._postselect.has_condition:
                 proc.set_postselection(self._postselect)
 
         proc.min_detected_photons_filter(self._min_detected_photons_filter if filter_states else 0)

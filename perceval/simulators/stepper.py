@@ -51,7 +51,6 @@ class Stepper(ISimulator):
         self._backend = backend
         if backend is None:
             self._backend = BACKEND_LIST['SLOS']()
-        self._min_detected_photons_filter = 0
         self._clear_cache()
         self._C = None
         self._postprocess = True
