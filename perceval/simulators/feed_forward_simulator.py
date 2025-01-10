@@ -316,8 +316,5 @@ class FFSimulator(ISimulator):
     def evolve(self, input_state) -> StateVector:
         raise RuntimeError("Cannot perform state evolution with feed-forward")
 
-    def set_min_detected_photons_filter(self, value: int):
-        self._min_detected_photons_filter = value
-
     def set_precision(self, precision: float):
         self._precision = precision

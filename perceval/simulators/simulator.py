@@ -61,9 +61,6 @@ class Simulator(ISimulator):
         super().__init__()
         self._backend = backend
         self._invalidate_cache()
-        self._min_detected_photons_filter: int = 0
-        self._postselect: PostSelect = PostSelect()
-        self._heralds: dict = {}
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
@@ -79,9 +76,6 @@ class Simulator(ISimulator):
 
     def set_precision(self, precision: float):
         self.precision = precision
-
-    def set_min_detected_photons_filter(self, value: int):
-        self._min_detected_photons_filter = value
 
     def keep_heralds(self, value: bool):
         """

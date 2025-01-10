@@ -64,9 +64,6 @@ class Stepper(ISimulator):
         self._C = circuit
         self._clear_cache()
 
-    def set_min_detected_photons_filter(self, value: int):
-        self._min_detected_photons_filter = value
-
     def apply(self, sv: StateVector, r: list[int], c: ACircuit) -> StateVector:
         """Apply a circuit on a StateVector generating another StateVector
         :param sv: input StateVector

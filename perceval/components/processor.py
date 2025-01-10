@@ -233,9 +233,6 @@ class Processor(AProcessor):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
-    def _state_selected_physical(self, output_state: BasicState) -> bool:
-        return output_state.n >= self._min_detected_photons_filter
-
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
         Creates a linear circuit from internal components, if all internal components are unitary. Takes phase
@@ -292,17 +289,10 @@ class Processor(AProcessor):
                           channel.general)
         res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
-        pperf = 1
         postprocessed_res = BSDistribution()
         for state, prob in res['results'].items():
-            if self._state_selected_physical(state):
-                postprocessed_res[self.remove_heralded_modes(state)] += prob
-            else:
-                pperf -= prob
+            postprocessed_res[self.remove_heralded_modes(state)] += prob
 
-        postprocessed_res.normalize()
-        perf_word = "global_perf" if "global_perf" in res else 'physical_perf'
-        res[perf_word] = res[perf_word]*pperf if perf_word in res else pperf
         res['results'] = postprocessed_res
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res
