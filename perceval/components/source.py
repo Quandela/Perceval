@@ -161,6 +161,7 @@ class Source:
         r"""returns SVDistribution on 1 mode associated to the source
 
         :param nphotons: Require `nphotons` in the mode (default 1).
+        :param prob_threshold: Probability threshold under which the resulting state is filtered out.
         """
         if nphotons == 0 or self.is_perfect():
             return SVDistribution(StateVector([nphotons]))
