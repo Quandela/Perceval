@@ -115,10 +115,9 @@ def test_remote_processor_creation(requests_mock):
     rp.add(0, BS())
 
 
-def test_remote_processor_composition_input_ports(requests_mock):
+def test_processor_composition_ports(requests_mock):
     ls = LogicalState([0, 0])
     cnot = catalog['postprocessed cnot'].build_processor()
-    cnot.min_detected_photons_filter(2)
 
     rp = RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=4)
     rp.min_detected_photons_filter(2)
