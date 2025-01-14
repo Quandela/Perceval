@@ -225,6 +225,58 @@ class SVDistribution(ProbabilityDistribution):
         results = random.choices(states, k=count, weights=probs)
         return list(results)
 
+    def photon_threshold_simplification(self, photon_threshold):
+        r""" Simplify this `SVDistribution` with a photon threshold for each mode
+        (ex: |0,3,0,0> -> |0,1,0,0> if photon_threshold=1)
+
+        :param photon_threshold: the maximum number of photons per mode
+        :return: the simplified distribution
+        """
+        simplified_distribution = {}
+        for sv, p in self.items():
+            sv_list = []
+            for component, _ in sv:
+                for mode in range(len(component)):
+                    if component[mode] > photon_threshold:
+                        sv_list.append(photon_threshold) # apply threshold for this mode
+                    else:
+                        sv_list.append(component[mode])
+            sv = StateVector(sv_list)
+            if sv in simplified_distribution:
+                simplified_distribution[sv] = simplified_distribution[sv] + p
+            else:
+                simplified_distribution[sv] = p
+
+        return SVDistribution(simplified_distribution)
+
+
+    def group_modes_simplification(self, group_size):
+        r""" Simplify this `SVDistribution` by grouping modes
+        (ex: |1,3,0,0> -> |4,0> if group_size=2)
+
+        :param group_size: the size of the groups of modes
+        :return: the simplified distribution
+        """
+        simplified_distribution = {}
+        for sv, p in self.items():
+            sv_list = []
+            for component, _ in sv:
+                i, mode_sum = 0, 0
+                for mode in range(len(component)):
+                    if i == group_size: # max size of group is reached, create a new group
+                        sv_list.append(mode_sum)
+                        i, mode_sum = 0, 0
+                    i += 1
+                    mode_sum += component[mode]
+                sv_list.append(mode_sum) # add the last group
+            sv = StateVector(sv_list)
+            if sv in simplified_distribution:
+                simplified_distribution[sv] = simplified_distribution[sv] + p
+            else:
+                simplified_distribution[sv] = p
+
+        return SVDistribution(simplified_distribution)
+
     @property
     def m(self) -> int:
         return self._m

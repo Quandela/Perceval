@@ -194,6 +194,49 @@ def test_svdistribution():
         SVDistribution({StateVector("|1>"): .5, StateVector("|1,1>"): .5})
 
 
+def test_distribution_simplification():
+    st1 = StateVector("|0,1,0,0>")
+    st2 = StateVector("|0,3,0,0>")
+    st3 = StateVector("|0,0,2,1>")
+    st4 = StateVector("|0,0,1,1>")
+    st5 = StateVector("|0,0,0,1>")
+    svd = SVDistribution()
+    svd.add(st1, 0.3)
+    svd.add(st2, 0.1)
+    svd.add(st3, 0.1)
+    svd.add(st4, 0.2)
+    svd.add(st5, 0.3)
+
+    photon_threshold = 1
+    simp_p1 = svd.photon_threshold_simplification(photon_threshold)
+    assert simp_p1[st1] == pytest.approx(0.4)
+    assert simp_p1[st4] == pytest.approx(0.3)
+    assert simp_p1[st5] == pytest.approx(0.3)
+
+    st1 = StateVector("|1,1,0,0>")
+    st2 = StateVector("|0,2,0,0>")
+    st3 = StateVector("|0,0,1,1>")
+    st4 = StateVector("|0,1,0,1>")
+    st5 = StateVector("|1,0,0,1>")
+    svd = SVDistribution()
+    svd.add(st1, 0.3)
+    svd.add(st2, 0.1)
+    svd.add(st3, 0.1)
+    svd.add(st4, 0.2)
+    svd.add(st5, 0.3)
+
+    group_size = 2
+    simp_g2 = svd.group_modes_simplification(group_size)
+    assert simp_g2[StateVector("|2,0>")] == pytest.approx(0.4)
+    assert simp_g2[StateVector("|0,2>")] == pytest.approx(0.1)
+    assert simp_g2[StateVector("|1,1>")] == pytest.approx(0.5)
+
+    group_size = 3
+    simp_g3 = svd.group_modes_simplification(group_size)
+    assert simp_g3[StateVector("|2,0>")] == pytest.approx(0.4)
+    assert simp_g3[StateVector("|1,1>")] == pytest.approx(0.6)
+
+
 def test_separate_state_without_annots():
     st1 = BasicState("|0,1>")
     assert st1.separate_state() == [BasicState("|0,1>")]
