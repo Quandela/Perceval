@@ -397,6 +397,12 @@ class AProcessor(ABC):
             self._postselect = self._postselect or PostSelect()
             self._postselect.merge(other_postselect)
 
+        # Adding input ports from component processor
+        for port, m_range in processor._in_ports.items():
+            for m in m_range:
+                if self.are_modes_free([m], PortLocation.INPUT):
+                    self.add_port(m, port, PortLocation.INPUT)
+
     def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
