@@ -55,7 +55,7 @@ class FFSimulator(ISimulator):
         self._noise_model = None
         self._source = None
 
-    def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]]):
+    def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]], m = None):
         if isinstance(circuit, Processor):
             self._components = circuit.components
             min_detected_photons = circuit.parameters.get('min_detected_photons')

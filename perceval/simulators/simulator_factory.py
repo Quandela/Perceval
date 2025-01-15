@@ -70,7 +70,7 @@ class SimulatorFactory:
         heralds = None
         source = None
         noise = None
-        m = 0
+        m = None
 
         if not isinstance(circuit, ACircuit):
             convert_to_circuit = True
@@ -137,5 +137,6 @@ class SimulatorFactory:
 
         if convert_to_circuit:
             circuit = _unitary_components_to_circuit(circuit, m)
-        simulator.set_circuit(circuit)
+        # m can only be retrieved from a Processor (and useful only in that case)
+        simulator.set_circuit(circuit, m)
         return simulator
