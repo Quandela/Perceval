@@ -391,6 +391,6 @@ class BSDistribution(ProbabilityDistribution):
         """
         simplified_distribution = BSDistribution()
         for bs, p in self.items():
-            bs = BasicState([sum([s for s in bs[group_size*k:group_size*(k+1)]]) for k in range(-(len(bs)//-group_size))]) # group modes by groups of size 'group_size'
+            bs = BasicState([sum(bs[group_size*k:group_size*(k+1)]) for k in range(-(len(bs)//-group_size))]) # group modes by groups of size 'group_size'
             simplified_distribution.add(bs, p)
         return simplified_distribution
