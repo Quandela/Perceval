@@ -40,8 +40,8 @@ def gates_and_qubits(qiskit_circuit) -> tuple[list[str], list[list[int]]]:
     gates_qubits = []
     for instr in qiskit_circuit.data:
         # Extract gate name and qubits
-        gates_names.append(instr[0].name)
-        qubits = instr[1]
+        gates_names.append(instr.operation.name)
+        qubits = instr.qubits
         qubit_numbers = [qiskit_circuit.find_bit(q).index for q in qubits]
         gates_qubits.append(qubit_numbers)
     return gates_names, gates_qubits
