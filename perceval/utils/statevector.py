@@ -377,18 +377,8 @@ class BSDistribution(ProbabilityDistribution):
         """
         simplified_distribution = BSDistribution()
         for bs, p in self.items():
-            bs_list = []
-            for mode in range(len(bs)):
-                if bs[mode] > photon_threshold:
-                    bs_list.append(photon_threshold) # apply threshold for this mode
-                else:
-                    bs_list.append(bs[mode])
-            bs = BasicState(bs_list)
-            if bs in simplified_distribution:
-                simplified_distribution[bs] = simplified_distribution[bs] + p
-            else:
-                simplified_distribution.add(bs, p)
-
+            bs = BasicState([min(s, photon_threshold) for s in bs]) # for each mode, keep at max 'photon_threshold' photons
+            simplified_distribution.add(bs, p)
         return simplified_distribution
 
     def group_modes_simplification(self, group_size: int) -> BSDistribution:
@@ -401,19 +391,6 @@ class BSDistribution(ProbabilityDistribution):
         """
         simplified_distribution = BSDistribution()
         for bs, p in self.items():
-            bs_list = []
-            i, mode_sum = 0, 0
-            for mode in range(len(bs)):
-                if i == group_size: # max size of group is reached, create a new group
-                    bs_list.append(mode_sum)
-                    i, mode_sum = 0, 0
-                i += 1
-                mode_sum += bs[mode]
-            bs_list.append(mode_sum) # add the last group
-            bs = BasicState(bs_list)
-            if bs in simplified_distribution:
-                simplified_distribution[bs] = simplified_distribution[bs] + p
-            else:
-                simplified_distribution.add(bs, p)
-
+            bs = BasicState([sum([s for s in bs[group_size*k:group_size*(k+1)]]) for k in range(-(len(bs)//-group_size))]) # group modes by groups of size 'group_size'
+            simplified_distribution.add(bs, p)
         return simplified_distribution
