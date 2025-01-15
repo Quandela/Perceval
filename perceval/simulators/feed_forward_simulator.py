@@ -68,12 +68,7 @@ class FFSimulator(ISimulator):
     def set_selection(self,
                       min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None,
-                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
-        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            get_logger().warn(
-                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
-            min_detected_photons_filter = min_detected_photon_filter
+                      heralds: dict = None):
         if min_detected_photons_filter is not None:
             self.set_min_detected_photons_filter(min_detected_photons_filter)
         if postselect is not None:

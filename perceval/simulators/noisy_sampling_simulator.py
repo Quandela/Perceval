@@ -35,7 +35,7 @@ from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
-from perceval.utils.logging import get_logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel
 from ._simulate_detectors import simulate_detectors_sample
 
 
@@ -124,8 +124,7 @@ class NoisySamplingSimulator:
     def set_selection(self,
                       min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None,
-                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
+                      heralds: dict = None):
         """Set multiple selection filters at once to remove unwanted states from computed output distribution
 
         :param min_detected_photons_filter: minimum number of detected photons in the output distribution
@@ -134,10 +133,6 @@ class NoisySamplingSimulator:
                         out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
                         on mode 6.
         """
-        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            get_logger().warn(
-                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
-            min_detected_photons_filter = min_detected_photon_filter
         if min_detected_photons_filter is not None:
             self._min_detected_photons_filter = min_detected_photons_filter
         if postselect is not None:
@@ -163,16 +158,6 @@ class NoisySamplingSimulator:
         :param circuit: A unitary circuit
         """
         self._backend.set_circuit(circuit)
-
-    # TODO: remove for PCVL-786
-    @ deprecated(version="0.11.1", reason="Use set_min_detected_photons_filter instead")
-    def set_min_detected_photon_filter(self, value: int):
-        """
-        Set the physical detection filter. Any output state with less than this threshold gets discarded.
-
-        :param value: Minimal photon count in output states of interest.
-        """
-        self._min_detected_photons_filter = value
 
     def set_min_detected_photons_filter(self, value: int):
         """
