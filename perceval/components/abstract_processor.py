@@ -295,6 +295,7 @@ class AProcessor(ABC):
         self._components.append((modes, component))
         self._has_feedforward = True
         self._is_unitary = False
+        component.block_circuit_size()  # User cannot add larger photonic circuit output from now on
 
     def _add_detector(self, mode: int, detector: IDetector):
         if isinstance(mode, (tuple, list)) and len(mode) == 1:
@@ -644,6 +645,12 @@ class AProcessor(ABC):
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
+        if input_state.has_polarization:
+            get_logger().warn("Given input state has polarization, that will be ignored in the computation"
+                              " (use with_polarized_input instead).")
+        elif input_state.has_annotations:
+            get_logger().warn("Given input state has annotations, that will be ignored in the computation."
+                              " To use them, consider using a StateVector.")
 
     def _deduce_min_detected_photons(self, expected_photons: int) -> None:
         get_logger().warn(

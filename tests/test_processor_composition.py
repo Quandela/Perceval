@@ -159,3 +159,18 @@ def test_processor_feed_forward_multiple_layers():
                 FFConfigurator)
     for (r, c), expected_type in zip(p.components, expected):
         assert isinstance(c, expected_type)
+
+
+def test_ff_controlled_circuit_size():
+    m = 4
+    u = Unitary(Matrix.random_unitary(m), "U0")
+    p = Processor("SLOS", u)
+
+    ffm = FFCircuitProvider(1, 0, Circuit(1), name="D2")
+    ffm.add_configuration((1,), Circuit(2))  # Can add a larger circuit than the default one before it's used
+
+    p.add(0, Detector.pnr())
+    p.add(0, ffm)
+
+    with pytest.raises(RuntimeError):
+        ffm.add_configuration((1,), Circuit(3))

@@ -40,10 +40,18 @@ from perceval.utils import BasicState, BSDistribution
 
 
 class DetectionType(Enum):
+    """Type of photon detection.
+    """
     PNR = 0
     Threshold = 1
     PPNR = 2
     Mixed = 3
+
+
+DetectionType.PNR.__doc__ = "Photon Number Resolving (perfect detection)"
+DetectionType.Threshold.__doc__ = "Threshold detection (detects 1 photon at most)"
+DetectionType.PPNR.__doc__ = "Pseudo PNR"
+DetectionType.Mixed.__doc__ = "Multiple DetectionType"
 
 
 class IDetector(AComponent, ABC):
@@ -55,16 +63,16 @@ class IDetector(AComponent, ABC):
     @abstractmethod
     def type(self) -> DetectionType:
         """
-        Returns the detector type
+        Returns the detector type.
         """
 
     @abstractmethod
     def detect(self, theoretical_photons: int) -> BSDistribution | BasicState:
         """
-        Returns a one mode Fock state or distribution out of a theoretical photon count coming in the detector.
+        Returns a one mode Fock state or distribution out of a theoretical photon count hitting the detector.
 
-        :param theoretical_photons: Number of photons coming at once into the detector
-        :return: The resulting measured state or distribution of all possible measurements
+        :param theoretical_photons: Number of photons hitting the detector simultaneously.
+        :return: The resulting measured state or distribution of all possible measurements.
         """
 
     def copy(self, subs=None) -> IDetector:
@@ -74,10 +82,11 @@ class IDetector(AComponent, ABC):
 class BSLayeredPPNR(IDetector):
     """
     BSLayeredPPNR implements Pseudo Photon Number Resolving detection using layers of beam splitter plugged on
-    2**(number of layers) threshold detectors.
+    :math:`2^{(number\ of\ layers)}` threshold detectors.
 
-    :param bs_layers: Number of beam splitter layers. Adding more layers enabled to detect
-    :param reflectivity: Reflectivity of the beam splitters used to split photons
+    :param bs_layers: Number of beam splitter layers.
+                    Adding more layers improves the probability to detect multiple photons.
+    :param reflectivity: Reflectivity of the beam splitters used to split photons. (defaults to 0.5)
     """
 
     def __init__(self, bs_layers: int, reflectivity: float = 0.5):
@@ -103,7 +112,7 @@ class BSLayeredPPNR(IDetector):
 
     def create_circuit(self) -> Circuit:
         """
-        Creates the beam splitter layered circuit to simulate PPNR with threshold detectors
+        Creates the beam splitter layered circuit to simulate PPNR with threshold detectors.
         """
         ppnr_circuit = Circuit(2 ** self._layers)
         for l in range(self._layers):
@@ -138,17 +147,31 @@ class BSLayeredPPNR(IDetector):
 
 class Detector(IDetector):
     """
-    Interleaved detector class
+    Interleaved detector model
+    --------------------------
 
-    Such a detector is made of one or multiple wires, each able to simultaneously detect a photon. The `detect` method
-    takes the number of wires into acocunt to simulate the detection probability for each case.
+    Such a detector is made of one or multiple wires, each able to simultaneously detect a photon.
+    Each photon hitting the detector is absorbed randomly by one of the wires.
+    When photons hit the same wire, only one is detected.
+    When they hit different wires, all are detected.
+
+    The :code:`detect` method takes the number of wires into account to simulate the detection probability for each case.
     Having 1 wire makes the detector threshold, whereas having an infinity of them makes the detector perfectly PNR.
 
-    :param n_wires: Number of detecting wires in the interleaved detector (defaults to infinity)
-    :param max_detections: Max number of photons the user is willing to read. The |max_detection> state would then mean
-                           "max_detection or more photons were detected". (defaults to None)
+    :param n_wires: Number of detecting wires in the interleaved detector. (defaults to infinity)
+    :param max_detections: Max number of photons the user is willing to read. The `|max_detection>` state would then mean "max_detection or more photons were detected". (defaults to None)
 
-    See `pnr()`, `threshold()` and `ppnr(n_wires, max_detections)` static methods for easy detector initialization
+    See :code:`pnr()`, :code:`threshold()` and :code:`ppnr(n_wires, max_detections)` static methods for easy detector initialization.
+
+    Example:
+
+    >>> from perceval.components import Detector
+    >>> ppnr_detector = Detector.ppnr(5, 2)  # Create a 5-wires interleaved detector, able to detect 1 or 2+ photons
+    >>> print(ppnr_detector.detect(3))       # and simulate the outcome of 3 photons hitting it at once
+    {
+      |1>: 0.04
+      |2>: 0.96
+    }
     """
 
     def __init__(self, n_wires: int = None, max_detections: int = None):
@@ -163,22 +186,22 @@ class Detector(IDetector):
         self._cache = {}
 
     @staticmethod
-    def threshold():
-        """Builds a threshold detector"""
+    def threshold() -> Detector:
+        """Builds a threshold detector."""
         d = Detector(1)
         d.name = "Threshold"
         return d
 
     @staticmethod
-    def pnr():
-        """Builds a perfect photon number resolving (PNR) detector"""
+    def pnr() -> Detector:
+        """Builds a perfect photon number resolving (PNR) detector."""
         d = Detector()
         d.name = "PNR"
         return d
 
     @staticmethod
-    def ppnr(n_wires: int, max_detections: int = None):
-        """Builds an interleaved pseudo-PNR detector"""
+    def ppnr(n_wires: int, max_detections: int = None) -> Detector:
+        """Builds an interleaved pseudo-PNR detector."""
         d = Detector(n_wires, max_detections)
         d.name = f"PPNR"
         return d
@@ -219,10 +242,11 @@ class Detector(IDetector):
         """
         The conditional probability of having `det` detections with `nph` photons on the total number of wires.
         This uses a recurrence formula set to compute each conditional probability from the ones with one less photon.
+
         Hitting `i` wires with `n` photons is:
-        - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon
-        OR
-        - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon
+            - hitting `i - 1` wires with `n - 1` photons AND hitting a new wire with the nth photon
+            OR
+            - hitting `i` wires with `n - 1` photons AND hitting one of the wire that were already hit with the nth photon
         """
         if det == 0:
             return 1 if nph == 0 else 0
@@ -233,14 +257,14 @@ class Detector(IDetector):
 
 
 def get_detection_type(detectors: list[IDetector]) -> DetectionType:
-    """
-    Computes a global detection type from a given list of detectors.
+    """Computes a global detection type from a given list of detectors.
 
-    :param detectors: List of detectors (None is treated as PNR)
-    :return: PNR if all detectors are PNR or not set
-             Threshold if all detectors are threshold
-             PPNR if all detectors are PPNR
-             else Mixed
+    :param detectors: List of detectors (None is treated as PNR).
+    :return:
+        * :code:`DetectionType.PNR` if all detectors are PNR or not set.
+        * :code:`DetectionType.Threshold` if all detectors are threshold.
+        * :code:`DetectionType.PPNR` if all detectors are PPNR.
+        * else :code:`DetectionType.Mixed`.
     """
     if not detectors:
         return DetectionType.PNR  # To keep previous behavior where not setting any detector would mean PNR

@@ -290,8 +290,13 @@ class Sampler(AAlgorithm):
 
     def _it_default_parameters(self) -> dict:
         """Creates an iteration with default parameters"""
+        input_state = self._processor.input_state
+        if isinstance(input_state, BasicState) and self._processor.heralds:
+            # If it's not a BasicState, the user needs to provide all the modes
+            input_state = BasicState([v for m, v in enumerate(input_state) if m not in self._processor.heralds])
+
         return {"circuit_params": {k: v._value for k, v in self._processor.get_circuit_parameters().items()},
-                "input_state": self._processor.input_state,
+                "input_state": input_state,
                 "min_detected_photons": self._processor.parameters.get("min_detected_photons", None),
                 "max_samples": self._max_samples,
                 "max_shots": self._max_shots,
