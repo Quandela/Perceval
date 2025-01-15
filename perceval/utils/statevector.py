@@ -367,14 +367,15 @@ class BSDistribution(ProbabilityDistribution):
     def m(self) -> int:
         return self._m
 
-    def photon_threshold_simplification(self, photon_threshold: int):
+    def photon_threshold_simplification(self, photon_threshold: int) -> BSDistribution:
         r""" Simplify this `BSDistribution` with a photon threshold for each mode
         (ex: |0,3,0,0> -> |0,1,0,0> if photon_threshold=1)
+        These "coarse grain" simplification methods can be used to decrease the number of components of a given distribution.
 
         :param photon_threshold: the maximum number of photons per mode
         :return: the simplified distribution
         """
-        simplified_distribution = {}
+        simplified_distribution = BSDistribution()
         for bs, p in self.items():
             bs_list = []
             for mode in range(len(bs)):
@@ -386,18 +387,19 @@ class BSDistribution(ProbabilityDistribution):
             if bs in simplified_distribution:
                 simplified_distribution[bs] = simplified_distribution[bs] + p
             else:
-                simplified_distribution[bs] = p
+                simplified_distribution.add(bs, p)
 
-        return BSDistribution(simplified_distribution)
+        return simplified_distribution
 
-    def group_modes_simplification(self, group_size: int):
+    def group_modes_simplification(self, group_size: int) -> BSDistribution:
         r""" Simplify this `BSDistribution` by grouping modes
         (ex: |1,3,0,0> -> |4,0> if group_size=2)
+        These "coarse grain" simplification methods can be used to decrease the number of components of a given distribution.
 
         :param group_size: the size of the groups of modes
         :return: the simplified distribution
         """
-        simplified_distribution = {}
+        simplified_distribution = BSDistribution()
         for bs, p in self.items():
             bs_list = []
             i, mode_sum = 0, 0
@@ -412,6 +414,6 @@ class BSDistribution(ProbabilityDistribution):
             if bs in simplified_distribution:
                 simplified_distribution[bs] = simplified_distribution[bs] + p
             else:
-                simplified_distribution[bs] = p
+                simplified_distribution.add(bs, p)
 
-        return BSDistribution(simplified_distribution)
+        return simplified_distribution
