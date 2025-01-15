@@ -377,7 +377,7 @@ class BSDistribution(ProbabilityDistribution):
         """
         simplified_distribution = BSDistribution()
         for bs, p in self.items():
-            bs = BasicState([min(s, photon_threshold) for s in bs]) # for each mode, keep at max 'photon_threshold' photons
+            bs = BasicState([min(s, photon_threshold) for s in bs]) # for each mode, keep at most 'photon_threshold' photons
             simplified_distribution.add(bs, p)
         return simplified_distribution
 
@@ -391,6 +391,7 @@ class BSDistribution(ProbabilityDistribution):
         """
         simplified_distribution = BSDistribution()
         for bs, p in self.items():
-            bs = BasicState([sum(bs[group_size*k:group_size*(k+1)]) for k in range(-(len(bs)//-group_size))]) # group modes by groups of size 'group_size'
+            bs = BasicState([sum(bs[group_size*k:group_size*(k+1)]) for k in range(-(len(bs)//-group_size))]) # group modes by groups of size 'group_size'.
+            # -(len(bs)//-group_size) is just the ceiling of len(bs)/group_size. The case group_size*(k+1) > len(bs) is correctly managed in python.
             simplified_distribution.add(bs, p)
         return simplified_distribution
