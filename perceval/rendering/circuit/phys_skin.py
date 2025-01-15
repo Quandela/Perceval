@@ -210,7 +210,7 @@ class PhysSkin(ASkin):
         w = self.get_width(circuit)
         content = self._get_display_content(circuit)
         for i in range(circuit.m):
-            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[mode_style])
+            canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[mode_style[i]])
         canvas.add_rect((5, 5), 50*w - 10, 50*circuit.m - 10, fill="gray")
         canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
 

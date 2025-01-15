@@ -28,6 +28,8 @@
 # SOFTWARE.
 from __future__ import annotations
 
+from typing import Any
+
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
 from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, PostSelect, get_logger, \
     partial_progress_callable
@@ -52,9 +54,6 @@ class FFSimulator(ISimulator):
 
         self._noise_model = None
         self._source = None
-
-    def do_postprocess(self, doit: bool):
-        self._postprocess = doit
 
     def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]], m = None):
         if isinstance(circuit, Processor):
@@ -94,7 +93,7 @@ class FFSimulator(ISimulator):
                    progress_callback: callable = None) -> tuple[BSDistribution, float]:
 
         # 1: Find all the FFConfigurators that can be simulated without measuring more modes
-        considered_config, measured_modes = self._find_next_simulation_layer()
+        considered_config, measured_modes, unsafe_modes = self._find_next_simulation_layer()
 
         # 2: Launch a simulation with the default circuits
         components = self._components.copy()
@@ -108,14 +107,17 @@ class FFSimulator(ISimulator):
             components[i] = (circ_r[0], config.default_circuit)
 
         # We can't reject any state at this moment since we need all possible measured states
-        sim, new_input_state, new_detectors, default_proc = self._init_simulator(input_state, components, detectors)
+        # Except for heralds on safe modes (i.e. not subject to feed-forward anywhere)
+        new_heralds = {r: v for r, v in self._heralds.items() if r not in unsafe_modes} if self._heralds is not None else None
+        # TODO: in theory, if we can split the Postselect keeping only the safe modes,
+        #  it can be even faster by removing more impossible measures (thus not simulating them)
 
         # Estimation of possible measures: n for each measured mode
         n = input_state.n if isinstance(input_state, BasicState) else input_state.n_max
         intermediate_progress = 1 / n ** len(measured_modes)
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
-        default_res = sim.probs_svd(new_input_state, new_detectors, prog_cb)
+        default_res = self._simulate(input_state, components, detectors, prog_cb, new_heralds=new_heralds)
 
         if "global_perf" in default_res:
             default_norm_factor = default_res["global_perf"]
@@ -124,13 +126,12 @@ class FFSimulator(ISimulator):
 
         default_res = default_res["results"]
 
-        prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
-
         # 3: deduce all measurable states and launch one simulation for each of them
         res = BSDistribution()
         simulated_measures = set()
 
         global_perf = 0  # = P(logic_filter and n >= photon_filter)
+        prog_cb = partial_progress_callable(progress_callback, min_val=intermediate_progress)
 
         for j, (state, prob) in enumerate(default_res.items()):
             sub_circuits = [config.configure(state[slice(self._components[i][0][0], self._components[i][0][-1] + 1)])
@@ -142,7 +143,7 @@ class FFSimulator(ISimulator):
                 # There is a problem here: if the same circuit is instanced twice, the == operator returns False
                 # This can be a problem if we copy the default circuit or instantiate a new one
 
-                if self._post_process_state(state) and default_proc._state_selected(state):
+                if self._post_process_state(state):
                     prob *= default_norm_factor
                     res[state[:input_state.m]] = prob
                     global_perf += prob
@@ -161,12 +162,10 @@ class FFSimulator(ISimulator):
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
                 new_heralds = {i: state[i] for i in measured_modes}
-                sim, new_input_state, new_detectors, _ = self._init_simulator(input_state, components, detectors,
-                                                                           filter_states=True,
-                                                                           new_heralds=new_heralds)
-
                 new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
-                sub_res = sim.probs_svd(new_input_state, new_detectors, new_prog_cb)
+
+                sub_res = self._simulate(input_state, components, detectors, new_prog_cb,
+                                         filter_states=True, new_heralds=new_heralds)
 
                 if "global_perf" in sub_res:
                     norm_factor = sub_res["global_perf"]
@@ -185,24 +184,28 @@ class FFSimulator(ISimulator):
         res.normalize()
         return res, global_perf
 
-    def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int]]:
+    def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int], set[int]]:
         """
         :return: The list containing the tuples with the index in the component list
-        of the configuration independent FFConfigurators and their instances, and the list of the associated measured modes
+        of the configuration independent FFConfigurators and their instances,
+         the list of the associated measured modes,
+         and the list of modes that are touched at anytime by feed-forward configurators (including after the layer)
         """
         # We can add a configurator as long as the measured mode don't come from a configurable circuit
         feed_forwarded_modes: set[int] = set()
         measured_modes = set()
         res = []
+        lock_res = False
 
         for i, (r, c) in enumerate(self._components):
             if isinstance(c, AFFConfigurator):
-                if any(r0 in feed_forwarded_modes for r0 in r):
-                    return res, list(measured_modes)
+                if not lock_res and any(r0 in feed_forwarded_modes for r0 in r):
+                    lock_res = True
 
                 feed_forwarded_modes.update(c.config_modes(r))
-                res.append((i, c))
-                measured_modes.update(r)
+                if not lock_res:
+                    res.append((i, c))
+                    measured_modes.update(r)
 
             elif isinstance(c, Barrier):
                 continue
@@ -221,21 +224,25 @@ class FFSimulator(ISimulator):
             elif any(new_mode in feed_forwarded_modes for new_mode in r):
                 feed_forwarded_modes.update(r)
 
-        return res, list(measured_modes)
+        return res, list(measured_modes), feed_forwarded_modes
 
-    def _init_simulator(self, input_state: SVDistribution,
-                        components: list[tuple[tuple, AComponent | Processor]],
-                        detectors: list[IDetector],
-                        filter_states: bool = False,
-                        new_heralds: dict[int, int] = None) \
-            -> tuple[ISimulator, SVDistribution, list[IDetector], Processor]:
+    def _simulate(self, input_state: SVDistribution,
+                  components: list[tuple[tuple, AComponent | Processor]],
+                  detectors: list[IDetector],
+                  prog_cb=None,
+                  filter_states: bool = False,
+                  new_heralds: dict[int, int] = None) \
+            -> dict[str, Any]:
         """Initialize a new simulator with the given components and heralds.
          Heralds that are already in this simulator are still considered.
 
          :param input_state: The input state used for the simulation
          :param components: A list of components that will be added in the simulation. Can themselves be processors.
          :param filter_states: Whether the states should be filtered in the sub-simulation.
-         :param new_heralds: The list of heralds that should be added, containing the position and the value"""
+         :param new_heralds: The list of heralds that should be added, containing the position and the value
+
+         :return: the results of a sub-simulation prob_svd
+         """
 
         m = input_state.m
         if detectors is None:
@@ -254,11 +261,11 @@ class FFSimulator(ISimulator):
         if len(heralded_dist):
             input_state *= heralded_dist
 
-        if filter_states:
+        if new_heralds is not None:
+            for r, v in new_heralds.items():
+                proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
-            if new_heralds is not None:
-                for r, v in new_heralds.items():
-                    proc.add_port(r, Herald(v), PortLocation.OUTPUT)
+        if filter_states:
 
             if self._heralds is not None:
                 for r, v in self._heralds.items():
@@ -267,19 +274,15 @@ class FFSimulator(ISimulator):
             if self._postselect is not None:
                 proc.set_postselection(self._postselect)
 
-        proc.min_detected_photons_filter(self._min_detected_photons_filter)
+        proc.min_detected_photons_filter(self._min_detected_photons_filter if filter_states else 0)
 
         from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
         sim = SimulatorFactory.build(proc)
         if self._precision is not None:
             sim.set_precision(self._precision)
-        if filter_states:
-            sim.do_postprocess(self._postprocess)
-        else:
-            sim.do_postprocess(False)
         sim.set_silent(True)
-        return sim, input_state, detectors + proc.detectors[m:], proc
+        return sim.probs_svd(input_state, detectors + proc.detectors[m:], prog_cb)
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""

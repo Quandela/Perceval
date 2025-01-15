@@ -277,7 +277,7 @@ def test_empty_output(mock_warn):
     p.min_detected_photons_filter(2)
     p.with_input(BasicState([0, 1, 0]))
 
-    with LogChecker(mock_warn, expected_log_number=2):  # Normalize is called twice
+    with LogChecker(mock_warn, expected_log_number=1):  # Normalize is called once
         res = p.probs()["results"]
     assert res == BSDistribution()
 

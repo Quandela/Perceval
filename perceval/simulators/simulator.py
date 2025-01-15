@@ -67,10 +67,6 @@ class Simulator(ISimulator):
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
-        self._postprocess = True
-
-    def do_postprocess(self, doit: bool):
-        self._postprocess = doit
 
     @property
     def precision(self):
@@ -246,9 +242,7 @@ class Simulator(ISimulator):
         input_list = input_state.separate_state(keep_annotations=False)
         self._evolve_cache(set(input_list))
         result = self._merge_probability_dist(input_list)
-        if self._postprocess:
-            result, self._logical_perf = post_select_distribution(
-                result, self._postselect, self._heralds, self._keep_heralds)
+        result, self._logical_perf = post_select_distribution(result, self._postselect, self._heralds, self._keep_heralds)
         return result
 
     @dispatch(StateVector)
@@ -321,7 +315,8 @@ class Simulator(ISimulator):
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
-        res.normalize()
+        if len(res):
+            res.normalize()
         return res, physical_perf
 
     def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
@@ -403,7 +398,8 @@ class Simulator(ISimulator):
         """
         if self._logical_perf > 0 and physical_perf > 0:
             self._logical_perf = 1 - (1 - self._logical_perf) / physical_perf
-        res.normalize()
+        if len(res):
+            res.normalize()
         return res, physical_perf
 
     def _preprocess_svd(self, svd: SVDistribution) -> tuple[SVDistribution, float, bool, bool]:
@@ -459,14 +455,12 @@ class Simulator(ISimulator):
             return {'results': res, 'physical_perf': 1, 'logical_perf': 1}
 
         if detectors:
-            min_photons = self._min_detected_photons_filter if self._postprocess else 0
-            res, phys_perf = simulate_detectors(res, detectors, min_photons)
+            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter)
             physical_perf *= phys_perf
 
-        if self._postprocess:
-            res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds,
-                                                                 self._keep_heralds)
-            self._logical_perf *= logical_perf_contrib
+        res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
+        self._logical_perf *= logical_perf_contrib
+
         self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
         return {'results': res,
                 'physical_perf': physical_perf,
@@ -604,7 +598,8 @@ class Simulator(ISimulator):
                 if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
                     raise RuntimeError("Cancel requested")
         self._logical_perf = intermediary_logical_perf
-        new_svd.normalize()
+        if len(new_svd):
+            new_svd.normalize()
         return {'results': new_svd,
                 'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf}
