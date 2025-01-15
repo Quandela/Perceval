@@ -34,7 +34,7 @@ import pytest
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval.utils import BasicState, StateVector, SVDistribution, allstate_iterator
+from perceval.utils import BasicState, StateVector, SVDistribution, BSDistribution, allstate_iterator
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_sv_close, assert_svd_close
 
@@ -195,46 +195,46 @@ def test_svdistribution():
 
 
 def test_distribution_simplification():
-    st1 = StateVector("|0,1,0,0>")
-    st2 = StateVector("|0,3,0,0>")
-    st3 = StateVector("|0,0,2,1>")
-    st4 = StateVector("|0,0,1,1>")
-    st5 = StateVector("|0,0,0,1>")
-    svd = SVDistribution()
-    svd.add(st1, 0.3)
-    svd.add(st2, 0.1)
-    svd.add(st3, 0.1)
-    svd.add(st4, 0.2)
-    svd.add(st5, 0.3)
+    bs1 = BasicState("|0,1,0,0>")
+    bs2 = BasicState("|0,3,0,0>")
+    bs3 = BasicState("|0,0,2,1>")
+    bs4 = BasicState("|0,0,1,1>")
+    bs5 = BasicState("|0,0,0,1>")
+    bsd = BSDistribution()
+    bsd.add(bs1, 0.3)
+    bsd.add(bs2, 0.1)
+    bsd.add(bs3, 0.1)
+    bsd.add(bs4, 0.2)
+    bsd.add(bs5, 0.3)
 
     photon_threshold = 1
-    simp_p1 = svd.photon_threshold_simplification(photon_threshold)
-    assert simp_p1[st1] == pytest.approx(0.4)
-    assert simp_p1[st4] == pytest.approx(0.3)
-    assert simp_p1[st5] == pytest.approx(0.3)
+    simp_p1 = bsd.photon_threshold_simplification(photon_threshold)
+    assert simp_p1[bs1] == pytest.approx(0.4)
+    assert simp_p1[bs4] == pytest.approx(0.3)
+    assert simp_p1[bs5] == pytest.approx(0.3)
 
-    st1 = StateVector("|1,1,0,0>")
-    st2 = StateVector("|0,2,0,0>")
-    st3 = StateVector("|0,0,1,1>")
-    st4 = StateVector("|0,1,0,1>")
-    st5 = StateVector("|1,0,0,1>")
-    svd = SVDistribution()
-    svd.add(st1, 0.3)
-    svd.add(st2, 0.1)
-    svd.add(st3, 0.1)
-    svd.add(st4, 0.2)
-    svd.add(st5, 0.3)
+    bs1 = BasicState("|1,1,0,0>")
+    bs2 = BasicState("|0,2,0,0>")
+    bs3 = BasicState("|0,0,1,1>")
+    bs4 = BasicState("|0,1,0,1>")
+    bs5 = BasicState("|1,0,0,1>")
+    bsd = BSDistribution()
+    bsd.add(bs1, 0.3)
+    bsd.add(bs2, 0.1)
+    bsd.add(bs3, 0.1)
+    bsd.add(bs4, 0.2)
+    bsd.add(bs5, 0.3)
 
     group_size = 2
-    simp_g2 = svd.group_modes_simplification(group_size)
-    assert simp_g2[StateVector("|2,0>")] == pytest.approx(0.4)
-    assert simp_g2[StateVector("|0,2>")] == pytest.approx(0.1)
-    assert simp_g2[StateVector("|1,1>")] == pytest.approx(0.5)
+    simp_g2 = bsd.group_modes_simplification(group_size)
+    assert simp_g2[BasicState("|2,0>")] == pytest.approx(0.4)
+    assert simp_g2[BasicState("|0,2>")] == pytest.approx(0.1)
+    assert simp_g2[BasicState("|1,1>")] == pytest.approx(0.5)
 
     group_size = 3
-    simp_g3 = svd.group_modes_simplification(group_size)
-    assert simp_g3[StateVector("|2,0>")] == pytest.approx(0.4)
-    assert simp_g3[StateVector("|1,1>")] == pytest.approx(0.6)
+    simp_g3 = bsd.group_modes_simplification(group_size)
+    assert simp_g3[BasicState("|2,0>")] == pytest.approx(0.4)
+    assert simp_g3[BasicState("|1,1>")] == pytest.approx(0.6)
 
 
 def test_separate_state_without_annots():
