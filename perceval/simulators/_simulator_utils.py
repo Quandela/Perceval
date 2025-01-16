@@ -26,7 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.utils import BasicState, BSDistribution, StateVector, Annotation
+from collections import defaultdict
+
+from perceval.utils import BasicState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
 from copy import copy
 from math import sqrt
@@ -85,3 +87,20 @@ def _unitary_components_to_circuit(component_list: list, m: int = 0):
     for r, c in component_list:
         circuit.add(r, c)
     return circuit
+
+
+def _split_by_photon_count(sv: StateVector) -> SVDistribution:
+    """
+    Split a state vector into a SVDistribution such that each key of the SVD corresponds to one photon count
+    """
+    counter = defaultdict(lambda: [StateVector(), 0])  # State and prob
+    for state, pa in sv:
+        counter[state.n][0] += pa * state
+        counter[state.n][1] += abs(pa) ** 2
+
+    res = SVDistribution()
+    for (state, prob) in counter.values():
+        state.normalize()
+        res[state] = prob
+
+    return res
