@@ -39,7 +39,7 @@ def fidelity(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float:
 
     :param u: the unitary to evaluate
     :param v: the reference unitary
-    :empty_mode_list: list of input modes that should be ignored during
+    :skip_colums: list of columns (input modes) that should be ignored when computing fidelity
     :return: real [0-1] float fidelity
     """
     n = _count_non_skipped_cols(u.shape[1], skip_colums)
@@ -57,9 +57,10 @@ def modulus_fidelity(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float
 
     :param u: the unitary to evaluate
     :param v: the reference unitary
+    :skip_colums: list of columns (input modes) that should be ignored when computing fidelity
     :return: real [0-1] float fidelity
     """
-    n = _count_non_skipped_cols(u.C.shape[1], skip_colums)
+    n = _count_non_skipped_cols(u.shape[1], skip_colums)
     if n == 0:
         return 1.0
     f = frobenius_inner_product(u, v, skip_colums)/n
@@ -73,13 +74,11 @@ def frobenius(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float:
 
     :param u: the unitary to evaluate
     :param v: the reference unitary
+    :skip_colums: list of columns (input modes) that should be ignored when computing product
     :return: real distance between matrices
     """
     difference = u - v
-    if skip_colums:
-        return np.sqrt(frobenius_inner_product(difference, difference, skip_colums))
-    else:
-        return np.linalg.norm(u - v)
+    return np.sqrt(frobenius_inner_product(difference, difference, skip_colums))
 
 def frobenius_inner_product(A: np.ndarray, B: np.ndarray, skip_colums: list[int] = []) -> float:
     # calculates the inner product associated to Frobenius norm
@@ -88,8 +87,4 @@ def frobenius_inner_product(A: np.ndarray, B: np.ndarray, skip_colums: list[int]
     # the i-th diagonal element C_ii is the product of i-th column of A and B
     # C_ii = sum(conj(a_ki).b_ki, k=0..N)
     # as we want to skip cols from A and B, we omit their indices when computing the trace
-    r = range(C.shape[1])
-    elts = [i for i in r if i not in skip_colums]
-    D = C.diagonal()
-    tr = sum([ D[i] for i in elts ])
     return sum([ C.diagonal()[i] for i in range(C.shape[1]) if i not in skip_colums ])
