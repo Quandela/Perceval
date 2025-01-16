@@ -77,3 +77,16 @@ def test_lc_source_losses_equivalence():
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]
     assert pytest.approx(real_out) == cd.probs()["results"]
+
+
+def test_lc_empty_modes():
+    p = Processor("SLOS", 2).add(0, LC(loss))
+    p.min_detected_photons_filter(0)
+    p.with_input(input_state)
+
+    sampler = Sampler(p)
+    real_out = sampler.probs()["results"]
+    assert pytest.approx(real_out) == BSDistribution(
+        {BasicState([0, 1]): loss,
+         BasicState([1, 1]): 1 - loss}
+    )

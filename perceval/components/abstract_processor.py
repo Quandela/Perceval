@@ -295,6 +295,7 @@ class AProcessor(ABC):
         self._components.append((modes, component))
         self._has_feedforward = True
         self._is_unitary = False
+        component.block_circuit_size()  # User cannot add larger photonic circuit output from now on
 
     def _add_detector(self, mode: int, detector: IDetector):
         if isinstance(mode, (tuple, list)) and len(mode) == 1:

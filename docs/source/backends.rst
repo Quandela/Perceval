@@ -158,7 +158,7 @@ computers to circuits with :math:`\approx 20` photons and to :math:`\approx 24` 
 SLAP
 ^^^^
 
-The Simulator of LAttice of Polynoms ``SLAP`` algorithm computes all output probability amplitudes at once by iterating
+The Simulator of LAttice of Polynomials ``SLAP`` algorithm computes all output probability amplitudes at once by iterating
 over a lattice of intermediary results representation. It is designed to require less memory than ``SLOS`` (2^n complex
 values) at the cost of a slightly higher computation time.
 

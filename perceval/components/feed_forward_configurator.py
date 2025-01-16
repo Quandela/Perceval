@@ -143,8 +143,8 @@ class FFCircuitProvider(AFFConfigurator):
         if not self._blocked_circuit_size:
             self._max_circuit_size = max(self._max_circuit_size, circuit.m)
         else:
-            assert circuit.m == self._max_circuit_size, \
-                f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)"
+            if circuit.m != self._max_circuit_size:
+                raise RuntimeError(f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)")
         self._map[state] = circuit
 
         return self
