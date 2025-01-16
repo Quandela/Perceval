@@ -96,7 +96,7 @@ class CircuitOptimizer:
 
         :param target: The target unitary circuit or matrix
         :param template: A circuit with variable parameters (supports only beam splitters and phase shifters)
-        :empty_mode_list: list of the modes without input photon, which are ignored during optmisation as this does not alter the computations
+        :empty_mode_list: list of the modes without input photon, which are ignored during optimisation as this does not alter the results
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):

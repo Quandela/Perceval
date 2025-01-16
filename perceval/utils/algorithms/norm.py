@@ -31,22 +31,27 @@ import numpy as np
 
 from perceval.utils.matrix import Matrix
 
+def _count_non_skipped_cols(nb_colums: int, skip_colums: list[int]) -> int:
+    return sum([ 1 for i in range(nb_colums) if i not in skip_colums ])
 
-def fidelity(u: Matrix, v: Matrix) -> float:
+def fidelity(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float:
     r""" Calculate the fidelity of a unitary implementation compared to a reference unitary
 
     :param u: the unitary to evaluate
     :param v: the reference unitary
+    :empty_mode_list: list of input modes that should be ignored during
     :return: real [0-1] float fidelity
     """
-    u_dag = np.transpose(np.conjugate(u))
-    f = abs(np.trace(u_dag @ v)) ** 2 / (u.shape[0] * np.trace(u_dag @ u))
+    n = _count_non_skipped_cols(u.shape[1], skip_colums)
+    if n == 0:
+        return 1.0
+    f = abs(frobenius_inner_product(u, v, skip_colums)) ** 2 / (n * frobenius_inner_product(u, u, skip_colums))
     if isinstance(f, complex):
         return f.real
     else:
         return f
 
-def modulus_fidelity(u: Matrix, v: Matrix) -> float:
+def modulus_fidelity(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float:
     r""" Calculate the fidelity of a unitary implementation compared to a reference unitary just comparing
     single input-single output probabilities
 
@@ -54,22 +59,37 @@ def modulus_fidelity(u: Matrix, v: Matrix) -> float:
     :param v: the reference unitary
     :return: real [0-1] float fidelity
     """
-    u_dag = np.transpose(np.conjugate(u))
-    f = np.trace(np.dot(abs(u_dag), abs(v)))/u.shape[0]
+    n = _count_non_skipped_cols(u.C.shape[1], skip_colums)
+    if n == 0:
+        return 1.0
+    f = frobenius_inner_product(u, v, skip_colums)/n
     if isinstance(f, complex):
         return f.real
     else:
         return f
 
-def frobenius(u: Matrix, v: Matrix) -> float:
+def frobenius(u: Matrix, v: Matrix, skip_colums: list[int] = []) -> float:
     r""" Frobenius norm
 
     :param u: the unitary to evaluate
     :param v: the reference unitary
-    :return: real [0-1] float fidelity
+    :return: real distance between matrices
     """
-    return np.linalg.norm(u - v)
+    difference = u - v
+    if skip_colums:
+        return np.sqrt(frobenius_inner_product(difference, difference, skip_colums))
+    else:
+        return np.linalg.norm(u - v)
 
-def frobenius_inner_product(A: np.ndarray, B: np.ndarray) -> float:
+def frobenius_inner_product(A: np.ndarray, B: np.ndarray, skip_colums: list[int] = []) -> float:
     # calculates the inner product associated to Frobenius norm
-    return np.trace(np.dot(np.transpose(np.conjugate(A)), B))
+    C = np.dot(np.transpose(np.conjugate(A)), B)
+    # the generic element of C is C_ij = sum(conj(a_ki).b_kj, k=0..N)
+    # the i-th diagonal element C_ii is the product of i-th column of A and B
+    # C_ii = sum(conj(a_ki).b_ki, k=0..N)
+    # as we want to skip cols from A and B, we omit their indices when computing the trace
+    r = range(C.shape[1])
+    elts = [i for i in r if i not in skip_colums]
+    D = C.diagonal()
+    tr = sum([ D[i] for i in elts ])
+    return sum([ C.diagonal()[i] for i in range(C.shape[1]) if i not in skip_colums ])
