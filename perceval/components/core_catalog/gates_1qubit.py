@@ -29,7 +29,8 @@
 
 import math
 from abc import ABC
-from perceval.components import Processor, Circuit, BS, PS, PERM
+from perceval.components import Processor, Circuit, BS, PS, PERM, Port
+from perceval.utils import Encoding
 from perceval.components.component_catalog import CatalogItem
 
 
@@ -37,7 +38,8 @@ class ASingleQubitGate(CatalogItem, ABC):
     description = "2 mode LO circuit equivalent of a single Qubit Gate"
 
     def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)
+        p = self._init_processor(**kwargs)
+        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'data'))
 
 
 class HadamardItem(ASingleQubitGate):
@@ -117,7 +119,7 @@ Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
         super().__init__('z')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Z") // (1, PS(-math.pi))
+        return Circuit(2, name="Z") // (1, PS(math.pi))
 
 
 class RzItem(ASingleQubitGate):
@@ -134,7 +136,7 @@ Q1:(dual rail)──┤ Rz  ├── (dual rail) :Q1
         return Circuit(2, name=f"Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2))
 
 
-class PhaseShiftITem(ASingleQubitGate):
+class PhaseShiftItem(ASingleQubitGate):
     str_repr = r"""                ╭─────╮
 Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
               ──┤     ├──
@@ -144,8 +146,8 @@ Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
         super().__init__('ph')
 
     def build_circuit(self, **kwargs) -> Circuit:
-        phi = kwargs.get('phi')
-        return Circuit(2, name="phase shift") // (1, PS(phi))
+        phi = kwargs.get('phi', 0.0)
+        return Circuit(2, name=f"ps({phi:.3})") // (1, PS(phi))
 
 
 class SGateItem(ASingleQubitGate):

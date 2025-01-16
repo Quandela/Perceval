@@ -367,3 +367,16 @@ qubits 2
     pc = CQASMConverter().convert(source, use_postselection=False)
     assert pc.circuit_size == 4
     assert pc.source_distribution[StateVector('|1,0,1,0>')] == 1
+
+def test_converter_multi_target_1qubit():
+    # cqasm allows the same single gate at many qubit locations using multiple targets
+    cqasm_program = """
+version 3
+qubit[3] q
+Z q[0, 1, 2]
+"""
+    pc = CQASMConverter().convert(cqasm_program, use_postselection=False)
+    assert pc.circuit_size == 6
+
+    for _, c in pc.components:
+        assert c.name == 'Z'

@@ -36,9 +36,9 @@ import perceval as pcvl
 from perceval.components import catalog, PS, BS, PERM
 
 
-@pytest.mark.parametrize("gate_name, exptd_phi", [("s", math.pi/2), ("sdag", 3*math.pi/2),
-                                       ("t", math.pi/4), ("tdag", 7*math.pi/4),
-                                                  ("ph", "phi")])
+@pytest.mark.parametrize("gate_name, exptd_phi", [("s", math.pi/2), ("sdag", -math.pi/2),
+                                       ("t", math.pi/4), ("tdag", -math.pi/4),
+                                                  ("ph", 0.0)])
 def test_single_qubit_phase_gates(gate_name, exptd_phi):
     c = catalog[gate_name].build_circuit()
 
@@ -46,7 +46,8 @@ def test_single_qubit_phase_gates(gate_name, exptd_phi):
 
     for _, comp in c._components:
         assert isinstance(comp, PS)
-        assert comp.get_variables()['phi'] == exptd_phi
+
+        assert comp.get_variables()['phi'] == exptd_phi % (2 * math.pi)
 
 
 def test_pauli_y_gate():
@@ -59,7 +60,7 @@ def test_pauli_y_gate():
     assert c._components[1][1].get_variables()['phi'] == math.pi/2
 
     assert isinstance(c._components[2][1], PS)
-    assert c._components[2][1].get_variables()['phi'] == 3*math.pi / 2  # simplification modifies -pi/2 -> 3pi/2
+    assert pytest.approx(c._components[2][1].get_variables()['phi']) == - math.pi / 2 % (2 * math.pi)
 
 
 def test_ry_gate():
@@ -75,7 +76,7 @@ def test_rz_gate():
     assert isinstance(c._components[0][1], PS)
     assert isinstance(c._components[1][1], PS)
 
-    assert c._components[0][1].get_variables()['phi'] == 3 * math.pi / 2
+    assert pytest.approx(c._components[0][1].get_variables()['phi']) == - math.pi / 2 % (2 * math.pi)
     assert c._components[1][1].get_variables()['phi'] == math.pi/2
 
 

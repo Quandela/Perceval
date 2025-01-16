@@ -92,12 +92,9 @@ class QiskitConverter(AGateConverter):
                 elif gate_name == 'tdg':
                     gate_name = 'tdag'
 
-                if gate_name in catalog.list():
-                    if instruction.operation.params:
-                        gate_param = instruction.operation.params[0]
-                        ins = self._create_catalog_1_qubit_gate(gate_name, param=gate_param)
-                    else:
-                        ins = self._create_catalog_1_qubit_gate(gate_name)
+                if gate_name in catalog:
+                    gate_param = instruction.operation.params[0] if instruction.operation.params else None
+                    ins = self._create_catalog_1_qubit_gate(gate_name, param=gate_param)
                 else:
                     ins = self._create_generic_1_qubit_gate(instruction.operation.to_matrix())
                     ins._name = instruction.operation.name

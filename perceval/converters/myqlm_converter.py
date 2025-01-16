@@ -92,12 +92,8 @@ class MyQLMConverter(AGateConverter):
             if len(instruction_qbit) == 1:
                 ins = None
 
-                if instruction_name.lower() in catalog.list():
-                    if instruction[1]:
-                        # parametrized gates
-                        ins = self._create_catalog_1_qubit_gate(instruction_name.lower(), param=instruction[1][0])
-                    else:
-                        ins = self._create_catalog_1_qubit_gate(instruction_name.lower())
+                if instruction_name.lower() in catalog:
+                    ins = self._create_catalog_1_qubit_gate(instruction_name.lower(), param=instruction[1][0] if instruction[1] else None)
                 else:
                     gate_id = qlmc.ops[i].gate
                     gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data

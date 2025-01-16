@@ -37,12 +37,11 @@ from .postprocessed_ccz import PostProcessedCCZItem
 from .toffoli import ToffoliItem
 from .controlled_rotation_gates import PostProcessedControlledRotationsItem
 from .gates_1qubit import (PauliXItem, PauliYItem, PauliZItem, HadamardItem,
-                           RxItem, RyItem, RzItem, PhaseShiftITem,
+                           RxItem, RyItem, RzItem, PhaseShiftItem,
                            SGateItem, SDagGateItem, TGateItem, TDagGateItem)
 
-catalog_items = [KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
-                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem,
-                 PauliXItem, PauliYItem, PauliZItem, HadamardItem, PhaseShiftITem,
-                 SGateItem, SDagGateItem, TGateItem, TDagGateItem, TDagGateItem,
-                 RxItem, RyItem, RzItem
+catalog_items = [PauliXItem, PauliYItem, PauliZItem, HadamardItem, RxItem, RyItem, RzItem,
+                 PhaseShiftItem, SGateItem, SDagGateItem, TGateItem, TDagGateItem,
+                 KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
+                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem
 ]

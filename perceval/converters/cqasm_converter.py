@@ -137,7 +137,7 @@ class CQASMConverter(AGateConverter):
     def _convert_statement(self, statement, gate_index, optimized_gate_sequence):
         gate_name, controls, targets, parameter = self._get_gate_inf(statement)
 
-        # TODO: refactor
+        # TODO: refactor all converter code PCVL - 821
         if gate_name == 'X90':
             gate_name = 'rx'
             parameter = np.pi / 2
@@ -153,18 +153,12 @@ class CQASMConverter(AGateConverter):
 
         if not controls:
             # working with 1 qubit gates
-            if gate_name.lower() in catalog.list():
-                if parameter is None:
-                    circuit = self._create_catalog_1_qubit_gate(gate_name.lower())
-                else:
-                    circuit = self._create_catalog_1_qubit_gate(gate_name.lower(), param=parameter)
+            if gate_name.lower() in catalog:
+                circuit = self._create_catalog_1_qubit_gate(gate_name.lower(), param=parameter if parameter else None)
             else:
-                # TODO: find how to get matrix. Perhaps it is not possible with CQASM
-                raise ConversionUnsupportedFeatureError(
-                    f"Unsupported 1-qubit gate {gate_name}")
+                raise ConversionUnsupportedFeatureError(f"Unsupported 1-qubit gate {gate_name}")
 
             for target in targets:
-                # TODO: check if target is of len=1 for 1 qubit gate always
                 self._converted_processor.add(target * 2, circuit)
         else:
             if gate_name not in _CQASM_2_QUBIT_GATES:
