@@ -356,11 +356,11 @@ class Simulator(ISimulator):
 
             """
             1st step of computing logical performance:
-            When using a mask, the sum of output probs sum(probs_in_s.values()) can be <1.
-            In this case remove the missing part, weighted by the probability (prob0) of the input state to appear
+            When using a mask, the sum of output probs sum(probs_in_s.values()) can be < 1.
+            In this case add the success rate (the sum), weighted by the probability (prob0) of the input state to appear
             in the mixed state (input_dist, reworked to decomposed_input).
             """
-            self._logical_perf -= (1 - sum(probs_in_s.values())) * prob0
+            self._logical_perf += sum(probs_in_s.values()) * prob0
 
             """Then, add the resulting distribution to the global distribution"""
             for bs, p in probs_in_s.items():
@@ -374,13 +374,13 @@ class Simulator(ISimulator):
 
         """
         2nd step of computing logical performance:
-        After the whole mixed state (input_dist) has been simulated, the missing part of the logical performance needs
-        to be normalized against the physical performance. Indeed, the physical performance is less than 1 for all input
-        states in the input distribution which did not contain enough photons.
-        The more input states were filtered by the physical filter, the heavier the missing part of the logical perf.
+        After the whole mixed state (input_dist) has been simulated,
+        the `_logical_perf` is the probability of getting a state that is both physically and logically accepted.
+        To get the probability of getting a state that is logically accepted knowing that it was physically accepted,
+        we need to divide the current logical perf value by the physical perf
         """
         if self._logical_perf > 0 and physical_perf > 0:
-            self._logical_perf = 1 - (1 - self._logical_perf) / physical_perf
+            self._logical_perf /= physical_perf
         if len(res):
             res.normalize()
         return res
@@ -447,19 +447,18 @@ class Simulator(ISimulator):
             * physical_perf is the performance computed from the detected photon filter
             * logical_perf is the performance computed from the post-selection
         """
-        self._logical_perf = 1
-
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
-        if has_superposed_states:
+        if self.can_use_mask(has_superposed_states, has_annotations, detectors):
+            self._setup_heralds()
+        else:
             self._backend.clear_mask()
+
+        if has_superposed_states:
+            self._logical_perf = 1
             res = self._probs_svd_generic(svd, p_threshold, progress_callback)
         else:
-            if self._heralds and not has_annotations and get_detection_type(detectors) == DetectionType.PNR:
-                # TODO: do this also with superposed states when logical perf computation is ready
-                self._setup_heralds()
-            else:
-                self._backend.clear_mask()
+            self._logical_perf = 0
             res = self._probs_svd_fast(svd, p_threshold, physical_perf, progress_callback)
 
         if not len(res):
@@ -499,6 +498,15 @@ class Simulator(ISimulator):
                 get_logger().debug(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
                                    f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
+
+    def can_use_mask(self, has_superposed_states, has_annotations, detectors) -> bool:
+        return (self._heralds
+                and not has_annotations
+                and not has_superposed_states
+                # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
+
+                and get_detection_type(detectors) == DetectionType.PNR
+                )
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
