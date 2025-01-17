@@ -37,12 +37,14 @@ class SimulatorChecker:
     """This class is a helper to simulator to check consistency on the simulation parameters"""
 
     @staticmethod
-    def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector] | None) -> bool:
+    def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector | None] | None) -> bool:
         if heralds is not None and detectors is not None:
             for k, v in heralds.items():
-                max_val = detectors[k].max_value
-                if max_val is not None and max_val < v:
-                    get_logger().warn(f"Incompatible heralds and detectors on mode {k}", channel.user)
-                    return False
+                detector = detectors[k]
+                if detector is not None:
+                    max_val = detectors[k].max_value
+                    if max_val is not None and max_val < v:
+                        get_logger().warn(f"Incompatible heralds and detectors on mode {k}", channel.user)
+                        return False
 
         return True
