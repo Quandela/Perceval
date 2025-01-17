@@ -55,6 +55,7 @@ DetectionType.Mixed.__doc__ = "Multiple DetectionType"
 
 
 class IDetector(AComponent, ABC):
+    max_value: int
 
     def __init__(self):
         super().__init__(1)
@@ -98,6 +99,11 @@ class BSLayeredPPNR(IDetector):
         self._layers = bs_layers
         self._r = reflectivity
         self._cache = {}  # This cache records simulations for a given photon count to speed up computations
+
+    @property
+    def max_value(self) -> int:
+        """Maximum number of detected photons"""
+        return 2 ** self._layers
 
     @property
     def type(self) -> DetectionType:
@@ -184,6 +190,11 @@ class Detector(IDetector):
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
+
+    @property
+    def max_value(self) -> int:
+        """Maximum number of detected photons (None for infinity)"""
+        return self._max
 
     @staticmethod
     def threshold() -> Detector:
