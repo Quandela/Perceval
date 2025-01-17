@@ -29,15 +29,20 @@
 
 from __future__ import annotations
 
-from perceval import IDetector
+from perceval.components import IDetector
+from perceval.utils.logging import channel, get_logger
 
 
 class SimulatorChecker:
     """This class is a helper to simulator to check consistency on the simulation parameters"""
 
     @staticmethod
-    def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector] | None):
+    def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector] | None) -> bool:
         if heralds is not None and detectors is not None:
             for k, v in heralds.items():
                 max_val = detectors[k].max_value
-                assert max_val is None or max_val >= v
+                if max_val is not None and max_val < v:
+                    get_logger().warn(f"Incompatible heralds and detectors on mode {k}", channel.user)
+                    return False
+
+        return True

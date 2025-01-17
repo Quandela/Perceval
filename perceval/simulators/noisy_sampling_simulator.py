@@ -334,7 +334,8 @@ class NoisySamplingSimulator:
         * physical_perf is the performance computed from the detected photon filter
         * logical_perf is the performance computed from the post-selection
         """
-        self.checker.check_heralds_detectors(self._heralds, self._detectors)
+        if not self.checker.check_heralds_detectors(self._heralds, self._detectors):
+            return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
 
         zpp, max_p = self._check_input_svd(svd)
 
