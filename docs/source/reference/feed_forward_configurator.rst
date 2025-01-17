@@ -24,11 +24,10 @@ This class directly links measurements to circuits or processors.
 Any circuit or processor matching the default circuit size can be used given all parameters have numerical values.
 
 >>> import perceval as pcvl
->>> from perceval.components import Detector
 >>> p = pcvl.Processor("SLOS", 4)
 >>> c = pcvl.FFCircuitProvider(1, offset=1, default_circuit=pcvl.Circuit(2), name="FFCircuitProvider Example")
 >>> c.add_configuration([1], pcvl.BS())
->>> p.add(0, Detector.threshold())
+>>> p.add(0, pcvl.Detector.threshold())
 >>> p.add(0, c)
 
 .. autoclass:: perceval.components.feed_forward_configurator.FFCircuitProvider
@@ -41,13 +40,12 @@ FFConfigurator class reference
 This class links measurements to a mapping of parameter values that can be set in the given circuit.
 
 >>> import perceval as pcvl
->>> from perceval.components import Detector
 >>> p = pcvl.Processor("SLOS", 4)
 >>> phi = pcvl.P("phi")
 >>> c = pcvl.FFConfigurator(2, offset=1, controlled_circuit=pcvl.PS(phi), default_config={"phi": 0}, name="FFConfigurator Example")
 >>> c.add_configuration([1, 0], {"phi": 1.23})
->>> p.add(0, Detector.threshold())
->>> p.add(1, Detector.threshold())
+>>> p.add(0, pcvl.Detector.threshold())
+>>> p.add(1, pcvl.Detector.threshold())
 >>> p.add(0, c)
 
 .. autoclass:: perceval.components.feed_forward_configurator.FFConfigurator
