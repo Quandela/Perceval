@@ -87,5 +87,5 @@ class PolarizationSimulator(ASimulatorDecorator):
         return output
 
     def set_min_detected_photons_filter(self, value: int):
-        super().set_min_detected_photons_filter(value)
-        self._min_detected_photons_filter = 0  # Photon count is kept, no need to filter results
+        super().set_min_detected_photons_filter(value)  # Transmit value to next layer
+        self._min_detected_photons_filter = 0  # Photon count is kept, no need to filter results in this layer
