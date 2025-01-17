@@ -64,7 +64,7 @@ def generalized_cz(n: int, m: int) -> Processor:
 
 def generate_permutation_for_controlled_op(control: int, target: int, num_qubits: int) -> list[int]:
     """
-    Generate the permutation required for a controlled operation (either CNOT or CZ)
+    Generate the permutation required for a controlled NOT operation
 
     :param control: Control qubit
     :param target: Target qubit
