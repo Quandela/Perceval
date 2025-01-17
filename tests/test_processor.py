@@ -269,8 +269,7 @@ def test_phase_quantization():
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_empty_output(mock_warn):
+def test_empty_output():
     p = Processor("SLOS", 4)
     p.add(0, PERM([1, 0]))
     p.add_herald(0, 1)

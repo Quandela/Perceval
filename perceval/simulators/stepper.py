@@ -53,7 +53,6 @@ class Stepper(ISimulator):
             self._backend = BACKEND_LIST['SLOS']()
         self._clear_cache()
         self._C = None
-        self._postprocess = True
 
     def _clear_cache(self):
         self._result_dict = defaultdict(lambda: {'_set': set()})
