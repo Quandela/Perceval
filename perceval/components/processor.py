@@ -289,11 +289,13 @@ class Processor(AProcessor):
                           channel.general)
         res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
-        postprocessed_res = BSDistribution()
-        for state, prob in res['results'].items():
-            postprocessed_res[self.remove_heralded_modes(state)] += prob
 
-        res['results'] = postprocessed_res
+        if self.heralds:
+            postprocessed_res = BSDistribution()
+            for state, prob in res['results'].items():
+                postprocessed_res[self.remove_heralded_modes(state)] += prob
+            res['results'] = postprocessed_res
+
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res
 
