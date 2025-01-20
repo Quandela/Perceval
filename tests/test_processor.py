@@ -326,20 +326,3 @@ def test_min_photons_reset():
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(.25)
     assert res["physical_perf"] == pytest.approx(1)
-
-
-@pytest.mark.parametrize("backend", ["SLOS", "CliffordClifford2017"])
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_incompatible_heralds_slos(mock_warn, backend):
-    p = Processor(backend, 2)
-
-    p.add(0, Detector.threshold())
-    p.add_port(0, Herald(2))
-    p.min_detected_photons_filter(0)
-    p.with_input(BasicState([1, 1]))
-
-    with LogChecker(mock_warn):
-        if backend == "CliffordClifford2017":
-            p.samples(1000)
-        else:
-            p.probs()

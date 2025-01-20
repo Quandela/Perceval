@@ -27,28 +27,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
+from unittest.mock import patch
 
-from perceval.components import IDetector
-from perceval.utils.logging import channel, get_logger
+import perceval as pcvl
+from perceval import Detector
+from perceval.simulators._simulation_checker import SimulatorChecker
+from _test_utils import LogChecker
 
 
-class SimulatorChecker:
-    """This class is a helper to simulator to check consistency on the simulation parameters"""
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_incompatible_heralds_slos(mock_warn):
+    checker = SimulatorChecker()
+    detector_th = Detector.threshold()
+    detector_2 = Detector.ppnr(24, 2)
+    assert checker.check_heralds_detectors({0: 14, 1: 1, 2: 2}, [None, detector_th, detector_2])
 
-    @staticmethod
-    def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector | None] | None) -> bool:
-        """
-        Check that heralds are compatible with the given detectors.
-         Returns True if the maximum value for all detectors is bigger than the expected herald value
-        """
-        if heralds and detectors:
-            for k, v in heralds.items():
-                detector = detectors[k]
-                if detector:
-                    max_val = detector.max_value
-                    if max_val is not None and max_val < v:
-                        get_logger().warn(f"Incompatible heralds and detectors on mode {k}", channel.user)
-                        return False
+    with LogChecker(mock_warn):
+        assert not checker.check_heralds_detectors({0: 14, 1: 2, 2: 0}, [None, detector_th, detector_2])
 
-        return True
+    with LogChecker(mock_warn):
+        assert not checker.check_heralds_detectors({0: 14, 1: 1, 2: 3}, [None, detector_th, detector_2])
