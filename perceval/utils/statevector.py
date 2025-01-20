@@ -367,6 +367,35 @@ class BSDistribution(ProbabilityDistribution):
     def m(self) -> int:
         return self._m
 
+    def photon_threshold_simplification(self, photon_threshold: int) -> BSDistribution:
+        r""" Simplify this `BSDistribution` with a photon threshold for each mode
+        (ex: |0,3,0,0> -> |0,1,0,0> if photon_threshold=1)
+        These "coarse grain" simplification methods can be used to decrease the number of components of a given distribution.
+
+        :param photon_threshold: the maximum number of photons per mode
+        :return: the simplified distribution
+        """
+        simplified_distribution = BSDistribution()
+        for bs, p in self.items():
+            bs = BasicState([min(s, photon_threshold) for s in bs]) # for each mode, keep at most 'photon_threshold' photons
+            simplified_distribution.add(bs, p)
+        return simplified_distribution
+
+    def group_modes_simplification(self, group_size: int) -> BSDistribution:
+        r""" Simplify this `BSDistribution` by grouping modes
+        (ex: |1,3,0,0> -> |4,0> if group_size=2)
+        These "coarse grain" simplification methods can be used to decrease the number of components of a given distribution.
+
+        :param group_size: the size of the groups of modes
+        :return: the simplified distribution
+        """
+        simplified_distribution = BSDistribution()
+        for bs, p in self.items():
+            bs = BasicState([sum(bs[group_size*k:group_size*(k+1)]) for k in range(-(len(bs)//-group_size))]) # group modes by groups of size 'group_size'.
+            # -(len(bs)//-group_size) is just the ceiling of len(bs)/group_size. The case group_size*(k+1) > len(bs) is correctly managed in python.
+            simplified_distribution.add(bs, p)
+        return simplified_distribution
+
 
 def filter_distribution_photon_count(bsd: BSDistribution, min_photons_filter: int) -> tuple[BSDistribution, float]:
     """
