@@ -37,13 +37,12 @@ from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AStrongSimulationBackend
-from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
 
-from ._simulation_checker import SimulatorChecker
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
@@ -68,7 +67,6 @@ class Simulator(ISimulator):
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
-        self.checker = SimulatorChecker()
 
     @property
     def precision(self):
@@ -449,7 +447,7 @@ class Simulator(ISimulator):
             * physical_perf is the performance computed from the detected photon filter
             * logical_perf is the performance computed from the post-selection
         """
-        if not self.checker.check_heralds_detectors(self._heralds, detectors):
+        if not check_heralds_detectors(self._heralds, detectors):
             return {'results': BSDistribution(), 'physical_perf': 1, 'logical_perf': 0}
 
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)

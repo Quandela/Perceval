@@ -32,12 +32,11 @@ import time
 import sys
 
 from perceval.backends import ASamplingBackend
-from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel, deprecated
 from ._simulate_detectors import simulate_detectors_sample
-from ._simulation_checker import SimulatorChecker
 
 
 class SamplesProvider:
@@ -107,7 +106,6 @@ class NoisySamplingSimulator:
         self._keep_heralds = True
         self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
         self._detectors = None
-        self.checker = SimulatorChecker()
 
     def set_detectors(self, detector_list: list[IDetector]):
         """
@@ -334,7 +332,7 @@ class NoisySamplingSimulator:
         * physical_perf is the performance computed from the detected photon filter
         * logical_perf is the performance computed from the post-selection
         """
-        if not self.checker.check_heralds_detectors(self._heralds, self._detectors):
+        if not check_heralds_detectors(self._heralds, self._detectors):
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
 
         zpp, max_p = self._check_input_svd(svd)
