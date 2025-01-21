@@ -376,6 +376,7 @@ class AProcessor(ABC):
         self._components += new_components
 
         # Retrieve ports from the other processor
+        # Output ports
         for port, port_range in processor._out_ports.items():
             port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
             if isinstance(port, Herald):
@@ -383,6 +384,11 @@ class AProcessor(ABC):
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m)):
                     self.add_port(port_mode, port, PortLocation.OUTPUT)
+        # Input ports
+        for port, port_range in processor._in_ports.items():
+            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
+                self.add_port(port_mode, port, PortLocation.INPUT)
 
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
@@ -396,12 +402,6 @@ class AProcessor(ABC):
                 raise RuntimeError("Cannot automatically compose processor's post-selection conditions")
             self._postselect = self._postselect or PostSelect()
             self._postselect.merge(other_postselect)
-
-        # Adding input ports from component processor
-        for port, m_range in processor._in_ports.items():
-            for m in m_range:
-                if self.are_modes_free([m], PortLocation.INPUT):
-                    self.add_port(m, port, PortLocation.INPUT)
 
     def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
