@@ -215,3 +215,5 @@ class QLOQAnsatz(CatalogItem):
     @staticmethod
     def _generate_phases(parameter_nb: int) -> list[str]:
         return [f"phi{i}" for i in range(parameter_nb)]
+
+
