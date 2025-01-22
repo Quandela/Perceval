@@ -40,8 +40,16 @@ from .gates_1qubit import (PauliXItem, PauliYItem, PauliZItem, HadamardItem,
                            RxItem, RyItem, RzItem, PhaseShiftItem,
                            SGateItem, SDagGateItem, TGateItem, TDagGateItem)
 
-catalog_items = [PauliXItem, PauliYItem, PauliZItem, HadamardItem, RxItem, RyItem, RzItem,
-                 PhaseShiftItem, SGateItem, SDagGateItem, TGateItem, TDagGateItem,
-                 KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
-                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem
+catalog_items = [
+    # 2 qubits gate
+    KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem,
+    # MZIs
+    Generic2ModeItem, MZIPhaseFirst, MZIPhaseLast, SymmetricMZI,
+    # 3 qubits gate
+    PostProcessedCCZItem, ToffoliItem,
+    # N qubits gate
+    PostProcessedControlledRotationsItem,
+    # 1 qubit gate
+    PauliXItem, PauliYItem, PauliZItem, HadamardItem, RxItem, RyItem, RzItem,
+    PhaseShiftItem, SGateItem, SDagGateItem, TGateItem, TDagGateItem
 ]

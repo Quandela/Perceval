@@ -28,175 +28,184 @@
 # SOFTWARE.
 
 import math
-from abc import ABC
+from abc import ABC, abstractmethod
+
 from perceval.components import Processor, Circuit, BS, PS, PERM, Port
 from perceval.utils import Encoding
 from perceval.components.component_catalog import CatalogItem
 
+_COMPONENT_STRING_REPR = [
+    ("                ╭", "╮"),
+    ("Q (dual rail) ──┤", "├── Q (dual rail)"),
+    ("              ──┤", "├──"),
+    ("                ╰", "╯")]
+
+
+def _get_component_str_repr(repr_name: str) -> str:
+    str_len = len(repr_name) + 2
+    output_str = ""
+    for i in range(len(_COMPONENT_STRING_REPR)):
+        output_str += _COMPONENT_STRING_REPR[i][0]
+        if i == 1:
+            output_str += f" {repr_name} "
+        elif i == 2:
+            output_str += ' ' * str_len
+        else:
+            output_str += '─' * str_len
+        output_str += _COMPONENT_STRING_REPR[i][1] + '\n'
+    return output_str
+
 
 class ASingleQubitGate(CatalogItem, ABC):
-    description = "2 mode LO circuit equivalent of a single Qubit Gate"
+    repr_name: str
+    catalog_name: str
+    doc_name: str
+
+    def __init__(self):
+        super().__init__(self.catalog_name)
+
+    @property
+    def description(self):
+        return f"2 modes LO circuit equivalent of the {self.doc_name} single Qubit Gate."
+
+    @property
+    def str_repr(self):
+        return _get_component_str_repr(self.repr_name)
 
     def build_processor(self, **kwargs) -> Processor:
         p = self._init_processor(**kwargs)
         return p.add_port(0, Port(Encoding.DUAL_RAIL, 'data'))
 
 
-class HadamardItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤  H  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('h')
+class AFixedItem(ASingleQubitGate, ABC):
+    circuit: Circuit
 
     def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="H") // BS.H()
+        return Circuit(2, name=self.repr_name) // self.circuit
 
 
-class PauliXItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
-              ──┤  X  ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('x')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name='X') // PERM([1,0])
+class HadamardItem(AFixedItem):
+    repr_name = "H"
+    catalog_name = "h"
+    doc_name = "Hadamard"
+    circuit = BS.H()
 
 
-class RxItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤ Rx  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('rx')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        theta = kwargs.get('theta', 0.0)
-        return Circuit(2, name=f"Rx({theta:.3})") // BS.Rx(theta=-theta)
+class SGateItem(AFixedItem):
+    repr_name = "S"
+    catalog_name = "s"
+    doc_name = repr_name
+    circuit = (1, PS(math.pi / 2))
 
 
-class PauliYItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
-              ──┤  Y  ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('y')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Y") // PERM([1, 0]) // (1, PS(math.pi / 2)) // (0, PS(-math.pi / 2))
+class SDagGateItem(AFixedItem):
+    repr_name = "S†"
+    catalog_name = "sdag"
+    doc_name = ":math:`S^†`"
+    circuit = (1, PS(-math.pi / 2))
 
 
-class RyItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤ Ry  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('ry')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        theta = kwargs.get('theta', 0.0)
-        return Circuit(2, name=f"Ry({theta:.3})") // BS.Ry(theta=theta)
+class TGateItem(AFixedItem):
+    repr_name = "T"
+    catalog_name = "t"
+    doc_name = repr_name
+    circuit = (1, PS(math.pi / 4))
 
 
-class PauliZItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤Pauli├── (dual rail) :Q1
-              ──┤  Z  ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('z')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Z") // (1, PS(math.pi))
+class TDagGateItem(AFixedItem):
+    repr_name = "T†"
+    catalog_name = "tdag"
+    doc_name = ":math:`T^†`"
+    circuit = (1, PS(-math.pi / 4))
 
 
-class RzItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤ Rz  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
+class APauliItem(AFixedItem, ABC):
+    axis: str
 
-    def __init__(self):
-        super().__init__('rz')
+    @property
+    def repr_name(self):
+        return self.axis
 
-    def build_circuit(self, **kwargs) -> Circuit:
-        theta = kwargs.get('theta', 0.0)
-        return Circuit(2, name=f"Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2))
+    @property
+    def catalog_name(self):
+        return self.axis.lower()
 
-
-class PhaseShiftItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤ PS  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('ph')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        phi = kwargs.get('phi', 0.0)
-        return Circuit(2, name=f"ps({phi:.3})") // (1, PS(phi))
+    @property
+    def doc_name(self):
+        return f"Pauli {self.axis}"
 
 
-class SGateItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤  S  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('s')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="S") // (1, PS(math.pi / 2))
+class PauliXItem(APauliItem):
+    axis = "X"
+    circuit = PERM([1, 0])
 
 
-class SDagGateItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤ S†  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('sdag')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Sdag") // (1, PS(-math.pi / 2))
+class PauliYItem(APauliItem):
+    axis = "Y"
+    circuit = PERM([1, 0]) // (1, PS(math.pi / 2)) // (0, PS(-math.pi / 2))
 
 
-class TGateItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤  T  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
-
-    def __init__(self):
-        super().__init__('t')
-
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="T") // (1, PS(math.pi / 4))
+class PauliZItem(APauliItem):
+    axis = "Z"
+    circuit = (1, PS(math.pi))
 
 
-class TDagGateItem(ASingleQubitGate):
-    str_repr = r"""                ╭─────╮
-Q1:(dual rail)──┤ T†  ├── (dual rail) :Q1
-              ──┤     ├──
-                ╰─────╯ """
+class AParamItem(ASingleQubitGate, ABC):
+    param_key: str
 
-    def __init__(self):
-        super().__init__('tdag')
+    @abstractmethod
+    def get_circuit(self, param) -> Circuit:
+        pass
 
-    def build_circuit(self, **kwargs) -> Circuit:
-        return Circuit(2, name="Tdag") // (1, PS(-math.pi / 4))
+    def build_circuit(self, **kwargs):
+        param = kwargs.get(self.param_key, 0.0)
+        return (Circuit(2, name=f"{self.repr_name}({param:.3})") //
+                self.get_circuit(param))
+
+
+class PhaseShiftItem(AParamItem):
+    repr_name = "Ps"
+    catalog_name = "ph"
+    doc_name = "Phase Shifter"
+    param_key = "phi"
+
+    def get_circuit(self, phi):
+        return Circuit(2)//(1, PS(phi))
+
+
+class ARItem(AParamItem, ABC):
+    axis: str
+    param_key = "theta"
+
+    @property
+    def repr_name(self):
+        return f"R{self.axis.lower()}"
+
+    @property
+    def catalog_name(self):
+        return self.repr_name.lower()
+
+    @property
+    def doc_name(self):
+        return self.repr_name
+
+
+class RxItem(ARItem):
+    axis = "X"
+
+    def get_circuit(self, theta):
+        return BS.Rx(theta=-theta)
+
+
+class RyItem(ARItem):
+    axis = "Y"
+
+    def get_circuit(self, theta):
+        return BS.Ry(theta=theta)
+
+
+class RzItem(ARItem):
+    axis = "Z"
+
+    def get_circuit(self, theta):
+        return Circuit(2) // (0, PS(-theta / 2)) // (1, PS(theta / 2))
