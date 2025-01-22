@@ -249,6 +249,29 @@ class SVDistribution(ProbabilityDistribution):
                 new_dist[sv] += proba1 * proba2
         return new_dist
 
+    @staticmethod
+    def list_tensor_product(distributions: list[SVDistribution], prob_threshold: float = 0) -> SVDistribution:
+        """Efficient tensor product for a list of distributions"""
+        if len(distributions) == 0:
+            return SVDistribution()
+
+        if any(len(dist) == 0 for dist in distributions):
+            get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
+            distributions = [dist for dist in distributions if len(dist) > 0]
+
+        while len(distributions) > 1:
+            state_counts = [len(dist) for dist in distributions]
+
+            # Find the index of lowest product with a sliding window and performs the tensor product with these.
+            products = [state_counts[i] * state_counts[i + 1] for i in range(len(state_counts) - 1)]
+            index = min(range(len(products)), key=products.__getitem__)
+
+            dist = SVDistribution.tensor_product(distributions[index], distributions[index + 1], prob_threshold)
+            distributions[index] = dist
+            distributions.pop(index + 1)
+
+        return distributions[0]
+
 
 @dispatch(StateVector, annot_tag=str)
 def anonymize_annotations(sv: StateVector, annot_tag: str = "a") -> StateVector:
@@ -362,6 +385,68 @@ class BSDistribution(ProbabilityDistribution):
                     bs = bs1 * bs2
                 new_dist[bs] += proba1 * proba2
         return new_dist
+
+    @staticmethod
+    def list_tensor_product(distributions: list[BSDistribution],
+                            merge_modes: bool = False,
+                            prob_threshold: float = 0) -> BSDistribution:
+        """
+        Efficient tensor product for a list of BasicState Distribution.
+         Can modify the distributions in place if merge_modes is False by adding empty modes.
+         Performs `len(distributions) - 1` tensor products
+         """
+        if any(len(dist) == 0 for dist in distributions):
+            get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
+            distributions = [dist for dist in distributions if len(dist) > 0]
+
+        if len(distributions) == 0:
+            return BSDistribution()
+
+        if not merge_modes:
+            # Expanding the modes before allows performing the products in any order,
+            # as the tensor product is commutative if merge_modes is True
+            BSDistribution._expand_modes(distributions)
+
+        while len(distributions) > 1:
+            state_counts = [len(dist) for dist in distributions]  # strictly positive integers
+
+            # Find the two smallest distributions and merge them
+            idx_a = 0
+            val_a = state_counts[idx_a]  # Smallest
+            idx_b = 1
+            val_b = state_counts[idx_b]  # Second smallest
+            if val_b < val_a:
+                val_a, val_b = val_b, val_a
+                idx_a, idx_b = idx_b, idx_a
+            for i, val in enumerate(state_counts[2:], 2):
+                if val_a == 1 and val_b == 1:
+                    break
+                if val < val_a:
+                    val_b, idx_b = val_a, idx_a
+                    val_a = val
+                    idx_a = i
+                elif val < val_b:
+                    val_b = val
+                    idx_b = i
+
+            dist = BSDistribution.tensor_product(distributions[idx_a], distributions[idx_b], True, prob_threshold)
+            distributions[idx_a] = dist
+            distributions.pop(idx_b)
+
+        return distributions[0]
+
+    @staticmethod
+    def _expand_modes(distributions: list[BSDistribution]):
+        """Add empty modes on the left and right of the distributions
+         so their number of modes is the initial total number of modes"""
+        current_m = 0
+        total_m = sum(dist.m for dist in distributions)
+        for i, dist in enumerate(distributions):
+            m = dist.m
+            dist = BSDistribution(BasicState(current_m * [0])) * dist
+            dist *= BSDistribution(BasicState((total_m - dist.m) * [0]))
+            distributions[i] = dist
+            current_m += m
 
     @property
     def m(self) -> int:
