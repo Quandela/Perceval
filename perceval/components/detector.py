@@ -297,7 +297,11 @@ def get_detection_type(detectors: list[IDetector]) -> DetectionType:
 def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector | None] | None) -> bool:
     """
     Check that heralds are compatible with the given detectors.
-     Returns True if the maximum value for all detectors is bigger than the expected herald value
+
+    :param heralds: A dictionary mapping herald mode to its value.
+    :param detectors: List of detectors (None is treated as PNR).
+
+    :return: True if the maximum value for all detectors is bigger than the expected herald value
     """
     if heralds and detectors:
         for k, v in heralds.items():
