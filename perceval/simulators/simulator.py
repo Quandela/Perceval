@@ -226,11 +226,9 @@ class Simulator(ISimulator):
                 self.DEBUG_evolve_count += 1
 
     def _merge_probability_dist(self, input_list) -> BSDistribution:
-        results = BSDistribution()
-        for input_state in input_list:
-            results = BSDistribution.tensor_product(results, _to_bsd(self._evolve[input_state]), merge_modes=True)
-            self.DEBUG_merge_count += 1
-        return results
+        distributions = [_to_bsd(self._evolve[input_state]) for input_state in input_list]
+        self.DEBUG_merge_count += len(distributions) - 1
+        return BSDistribution.list_tensor_product(distributions, merge_modes=True)
 
     @dispatch(BasicState)
     def probs(self, input_state: BasicState) -> BSDistribution:
@@ -345,14 +343,10 @@ class Simulator(ISimulator):
         res = BSDistribution()
         for idx, (prob0, bs_data) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution()
-            for in_s in bs_data:
-                probs_in_s = BSDistribution.tensor_product(probs_in_s, cache[in_s],
-                                                           merge_modes=True,
-                                                           prob_threshold=p_threshold / (10 * prob0))
-                if len(probs_in_s) == 0:
-                    break
-                self.DEBUG_merge_count += 1
+            probs_in_s = BSDistribution.list_tensor_product([cache[state] for state in bs_data],
+                                                            merge_modes=True,
+                                                            prob_threshold=p_threshold / (10 * prob0))
+            self.DEBUG_merge_count += len(bs_data) - 1
 
             """
             1st step of computing logical performance:
