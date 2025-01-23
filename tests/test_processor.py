@@ -28,13 +28,12 @@
 # SOFTWARE.
 
 import pytest
-import numpy as np
 from unittest.mock import patch
 
 import perceval as pcvl
 from perceval import BSDistribution
 from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
-    PS, PERM, Detector
+    PERM, Detector
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
 from perceval.backends import Clifford2017Backend
 
