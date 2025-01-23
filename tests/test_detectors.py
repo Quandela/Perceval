@@ -161,6 +161,23 @@ def test_incompatible_heralds(mock_warn):
     detector_th = Detector.threshold()
     detector_2 = Detector.ppnr(24, 2)
     detector_pnr = Detector.pnr()
+
+    # Single detectors test
+    assert check_heralds_detectors({0: 213}, [None])
+    assert check_heralds_detectors({0: 213}, [detector_pnr])
+
+    assert check_heralds_detectors({0: 0}, [detector_th])
+    assert check_heralds_detectors({0: 1}, [detector_th])
+    with LogChecker(mock_warn):
+        assert not check_heralds_detectors({0: 2}, [detector_th])
+
+    assert check_heralds_detectors({0: 0}, [detector_2])
+    assert check_heralds_detectors({0: 1}, [detector_2])
+    assert check_heralds_detectors({0: 2}, [detector_2])
+    with LogChecker(mock_warn):
+        assert not check_heralds_detectors({0: 3}, [detector_2])
+
+    # Mixed detectors test
     assert check_heralds_detectors({0: 14, 1: 1, 2: 2}, [None, detector_th, detector_2])
     assert check_heralds_detectors({0: 14, 1: 1, 2: 2}, [detector_pnr, detector_th, detector_2])
 
