@@ -61,9 +61,6 @@ class Simulator(ISimulator):
         super().__init__()
         self._backend = backend
         self._invalidate_cache()
-        self._min_detected_photons_filter: int = 0
-        self._postselect: PostSelect = PostSelect()
-        self._heralds: dict = {}
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
@@ -80,9 +77,6 @@ class Simulator(ISimulator):
     def set_precision(self, precision: float):
         self.precision = precision
 
-    def set_min_detected_photons_filter(self, value: int):
-        self._min_detected_photons_filter = value
-
     def keep_heralds(self, value: bool):
         """
         Tells the simulator to keep or discard ancillary modes in output states
@@ -90,30 +84,6 @@ class Simulator(ISimulator):
         :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
         """
         self._keep_heralds = value
-
-    def set_selection(self,
-                      min_detected_photons_filter: int = None,
-                      postselect: PostSelect = None,
-                      heralds: dict = None,
-                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
-        """Set multiple selection filters at once to remove unwanted states from computed output distribution
-
-        :param min_detected_photons_filter: minimum number of detected photons in the output distribution
-        :param postselect: a post-selection function
-        :param heralds: expected detections (heralds). Only corresponding states will be selected, others are filtered
-                        out. Mapping of heralds. For instance `{5: 0, 6: 1}` means 0 photon is expected on mode 5 and 1
-                        on mode 6.
-        """
-        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            get_logger().warn(
-                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
-            min_detected_photons_filter = min_detected_photon_filter
-        if min_detected_photons_filter is not None:
-            self._min_detected_photons_filter = min_detected_photons_filter
-        if postselect is not None:
-            self._postselect = postselect
-        if heralds is not None:
-            self._heralds = heralds
 
     @property
     def logical_perf(self):

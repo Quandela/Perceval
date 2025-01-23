@@ -268,16 +268,14 @@ def test_phase_quantization():
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_empty_output(mock_warn):
+def test_empty_output():
     p = Processor("SLOS", 4)
     p.add(0, PERM([1, 0]))
     p.add_herald(0, 1)
     p.min_detected_photons_filter(2)
     p.with_input(BasicState([0, 1, 0]))
 
-    with LogChecker(mock_warn, expected_log_number=2):  # Normalize is called once, a void tensor product is called once
-        res = p.probs()["results"]
+    res = p.probs()["results"]
     assert res == BSDistribution()
 
 

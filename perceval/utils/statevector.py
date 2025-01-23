@@ -480,3 +480,22 @@ class BSDistribution(ProbabilityDistribution):
             # -(len(bs)//-group_size) is just the ceiling of len(bs)/group_size. The case group_size*(k+1) > len(bs) is correctly managed in python.
             simplified_distribution.add(bs, p)
         return simplified_distribution
+
+
+def filter_distribution_photon_count(bsd: BSDistribution, min_photons_filter: int) -> tuple[BSDistribution, float]:
+    """
+    Filter the states of a BSDistribution to keep only those having state.n >= min_photons_filter
+
+    :param bsd: the BSDistribution to filter out
+    :param min_photons_filter: the minimum number of photons required to keep a state
+    :return: a tuple containing the normalized filtered BSDistribution and the probability that the state is kept
+    """
+    if min_photons_filter == 0:
+        return bsd, 1
+
+    res = BSDistribution({state: prob for state, prob in bsd.items() if state.n >= min_photons_filter})
+    perf = sum(res.values())
+
+    if len(res):
+        res.normalize()
+    return res, perf
