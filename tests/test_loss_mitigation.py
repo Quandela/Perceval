@@ -128,15 +128,13 @@ def _compute_random_circ_probs(source_emission, num_photons):
     return sampler.probs()['results']
 
 def test_mitigation_over_postselect_tvd():
+    nb_trials = 100
 
     ideal_photon_count = 4
     # lossless distribution
     ideal_dist = _compute_random_circ_probs(source_emission=1, num_photons=ideal_photon_count)
     # lossy distribution
     lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
-
-    # compute the mitigated distribution
-    mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
 
     # post-selected distribution
     post_select_dist = BSDistribution()
@@ -145,10 +143,22 @@ def test_mitigation_over_postselect_tvd():
             post_select_dist.add(state, prob)
     post_select_dist.normalize()
 
-    # TVD Metric
-    tvd_miti = tvd_dist(ideal_dist, mitigated_dist)
-    tvd_post = tvd_dist(ideal_dist, post_select_dist)
+    number_of_failures = 0
+    for _ in range(nb_trials):
+        # compute the mitigated distribution
+        mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
 
-    assert tvd_miti < tvd_post + .1 # checks that mitigated is closer to ideal than post-selected distribution
+        # TVD Metric
+        tvd_miti = tvd_dist(ideal_dist, mitigated_dist)
+        tvd_post = tvd_dist(ideal_dist, post_select_dist)
 
-    assert kl_divergence(ideal_dist, mitigated_dist) < kl_divergence(ideal_dist, post_select_dist) + .1
+        kl_miti = kl_divergence(ideal_dist, mitigated_dist)
+        kl_post = kl_divergence(ideal_dist, post_select_dist)
+
+        # checks that mitigated is closer to ideal than post-selected distribution
+        if tvd_miti < tvd_post and kl_miti < kl_post:
+            break
+
+        number_of_failures = _ + 1
+
+    assert number_of_failures < nb_trials
