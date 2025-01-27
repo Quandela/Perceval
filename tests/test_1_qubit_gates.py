@@ -81,7 +81,7 @@ def test_rz_gate():
 
 
 def test_rx_gate():
-    # TODO : fix test after confirming BS convention
+    # TODO : PCVL-881
     c = catalog["rx"].build_circuit(theta=-math.pi/4)
 
     assert isinstance(c._components[0][1], BS)
