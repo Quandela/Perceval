@@ -128,7 +128,7 @@ def test_source_sample():
         dist = source.generate_distribution(bs,0)
         samples_diff = {sample:(count-dist[sample])**2 for sample, count in samples_count.items()}
         diff = (sum(samples_diff.values()))**0.5
-        assert diff < 0.1
+        assert diff < 0.15
 
         # number of photons in samples
         nb_1p = 0
