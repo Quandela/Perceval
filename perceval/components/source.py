@@ -192,6 +192,37 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
+    def generate_samples(self, max_samples, expected_input: BasicState):
+        """
+        Simulates plugging the photonic source on certain modes and turning it on.
+        Computes the input probability distribution
+
+        :param max_samples: Number of samples to generate
+        :param expected_input: Expected input BasicState
+            The properties of the source will alter the input state. A perfect source always delivers the expected state
+            as an input. Imperfect ones won't.
+        """
+
+        bsd = self._generate_one_photon_distribution()
+
+        samples = []
+        for photon_count in expected_input:
+            if photon_count == 0 or self.is_perfect():
+                new_samples = [BasicState([photon_count])] * max_samples
+            else:
+                new_samples = bsd.sample(max_samples, non_null=False)
+                for _ in range(photon_count-1):
+                    new_samples_one_mode = bsd.sample(max_samples, non_null=False)
+                    for i in range(len(new_samples_one_mode)):
+                        new_samples[i] = new_samples[i].merge(new_samples_one_mode[i])
+            if len(samples) == 0:
+                samples = new_samples
+                continue
+            for i in range(len(new_samples)):
+                samples[i] = samples[i]*new_samples[i]
+
+        return samples
+
     def is_perfect(self) -> bool:
         return \
             self._emission_probability == 1 and \

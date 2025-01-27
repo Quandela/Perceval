@@ -110,3 +110,37 @@ def test_source_multiple_photons_per_mode():
     s = Source(emission_probability=ep)
     svd = s.probability_distribution(2)
     assert_svd_close(svd, dict2svd({"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2}))
+
+
+def test_source_sample():
+    from perceval.utils import BasicState
+
+    nb_samples = 200
+    source = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
+
+    for bs in [BasicState("|1,1>"), BasicState("|{_:0},{_:1}>")]: # with or without annotations
+        # generate samples directly from the source
+        samples_from_source = source.generate_samples(nb_samples, bs)
+        assert len(samples_from_source) == nb_samples
+        samples_count = {sample: samples_from_source.count(sample)/nb_samples for sample in samples_from_source}
+
+        # compare these samples with complete distribution
+        dist = source.generate_distribution(bs,0)
+        samples_diff = {sample:(count-dist[sample])**2 for sample, count in samples_count.items()}
+        diff = (sum(samples_diff.values()))**0.5
+        assert diff < 0.1
+
+        # number of photons in samples
+        nb_1p = 0
+        nb_2p = 0
+        nb_3p = 0
+        for sample in samples_from_source:
+            if sample.n == 1:
+                nb_1p += 1
+            elif sample.n == 2:
+                nb_2p += 1
+            elif sample.n == 3:
+                nb_3p += 1
+        assert nb_2p > nb_1p
+        assert nb_2p > nb_3p
+        assert nb_1p > nb_3p
