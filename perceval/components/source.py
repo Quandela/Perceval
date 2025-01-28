@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import math
 
+from exqalibur import BSSamples
+
 from perceval.utils import (SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params,
                             BSDistribution)
 from perceval.utils.logging import get_logger, channel
@@ -192,24 +194,31 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
-    def generate_samples(self, max_samples, expected_input: BasicState):
+    def generate_samples(self, max_samples: int, expected_input: BasicState) -> BSSamples:
         """
-        Simulates plugging the photonic source on certain modes and turning it on.
-        Computes the input probability distribution
+        Generate samples directly from the source, without generating the source probability distribution first.
 
         :param max_samples: Number of samples to generate
         :param expected_input: Expected input BasicState
             The properties of the source will alter the input state. A perfect source always delivers the expected state
             as an input. Imperfect ones won't.
         """
+        samples = BSSamples()
 
-        bsd = self._generate_one_photon_distribution()
+        if self.is_perfect():
+            samples.extend([expected_input] * max_samples)
+            return samples
 
-        samples = []
+        if not self.partially_distinguishable:
+            bsd = self._generate_one_photon_distribution()
+
         for photon_count in expected_input:
-            if photon_count == 0 or self.is_perfect():
-                new_samples = [BasicState([photon_count])] * max_samples
+            new_samples = BSSamples()
+            if photon_count == 0:
+                new_samples.extend([BasicState([photon_count])] * max_samples)
             else:
+                if self.partially_distinguishable:
+                    bsd = self._generate_one_photon_distribution()
                 new_samples = bsd.sample(max_samples, non_null=False)
                 for _ in range(photon_count-1):
                     new_samples_one_mode = bsd.sample(max_samples, non_null=False)
@@ -219,7 +228,7 @@ class Source:
                 samples = new_samples
                 continue
             for i in range(len(new_samples)):
-                samples[i] = samples[i]*new_samples[i]
+                samples[i] *= new_samples[i]
 
         return samples
 
