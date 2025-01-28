@@ -31,8 +31,7 @@ from __future__ import annotations
 from typing import Any
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
-from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, PostSelect, get_logger, \
-    partial_progress_callable
+from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend
 
@@ -44,18 +43,14 @@ class FFSimulator(ISimulator):
     def __init__(self, backend: AStrongSimulationBackend):
         super().__init__()
         self._precision = None
-        self._heralds = None
-        self._postselect = None
-        self._min_detected_photons_filter = None
 
         self._components = None
         self._backend = backend
-        self._postprocess = True
 
         self._noise_model = None
         self._source = None
 
-    def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]]):
+    def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]], m = None):
         if isinstance(circuit, Processor):
             self._components = circuit.components
             min_detected_photons = circuit.parameters.get('min_detected_photons')
@@ -64,22 +59,6 @@ class FFSimulator(ISimulator):
             self.set_selection(min_detected_photons, post_select, heralds)
         else:
             self._components = circuit
-
-    def set_selection(self,
-                      min_detected_photons_filter: int = None,
-                      postselect: PostSelect = None,
-                      heralds: dict = None,
-                      min_detected_photon_filter: int = None):  # TODO: remove for PCVL-786
-        if min_detected_photon_filter is not None:  # TODO: remove for PCVL-786
-            get_logger().warn(
-                'DeprecationWarning: Call with deprecated argument "min_detected_photon_filter", please use "min_detected_photons_filter" instead')
-            min_detected_photons_filter = min_detected_photon_filter
-        if min_detected_photons_filter is not None:
-            self.set_min_detected_photons_filter(min_detected_photons_filter)
-        if postselect is not None:
-            self._postselect = postselect
-        if heralds is not None:
-            self._heralds = heralds
 
     def set_noise(self, nm: NoiseModel):
         self._noise_model = nm
@@ -271,7 +250,7 @@ class FFSimulator(ISimulator):
                 for r, v in self._heralds.items():
                     proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
-            if self._postselect is not None:
+            if self._postselect.has_condition:
                 proc.set_postselection(self._postselect)
 
         proc.min_detected_photons_filter(self._min_detected_photons_filter if filter_states else 0)
@@ -331,9 +310,6 @@ class FFSimulator(ISimulator):
 
     def evolve(self, input_state) -> StateVector:
         raise RuntimeError("Cannot perform state evolution with feed-forward")
-
-    def set_min_detected_photons_filter(self, value: int):
-        self._min_detected_photons_filter = value
 
     def set_precision(self, precision: float):
         self._precision = precision

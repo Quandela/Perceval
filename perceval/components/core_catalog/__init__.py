@@ -38,8 +38,22 @@ from .postprocessed_cz import PostProcessedCzItem
 from .qloq_ansatz import QLOQAnsatz
 from .toffoli import ToffoliItem
 from .controlled_rotation_gates import PostProcessedControlledRotationsItem
+from .gates_1qubit import (PauliXItem, PauliYItem, PauliZItem, HadamardItem,
+                           RxItem, RyItem, RzItem, PhaseShiftItem,
+                           SGateItem, SDagGateItem, TGateItem, TDagGateItem)
 
-catalog_items = [KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, Generic2ModeItem, MZIPhaseFirst,
-                 MZIPhaseLast, SymmetricMZI, PostProcessedCCZItem, ToffoliItem, PostProcessedControlledRotationsItem,
-                 PostProcessedCzItem, QLOQAnsatz
-                 ]
+catalog_items = [
+    # 2 qubits gate
+    KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, PostProcessedCzItem,
+    # MZIs
+    Generic2ModeItem, MZIPhaseFirst, MZIPhaseLast, SymmetricMZI,
+    # 3 qubits gate
+    PostProcessedCCZItem, ToffoliItem,
+    # N qubits gate
+    PostProcessedControlledRotationsItem,
+    # 1 qubit gate
+    PauliXItem, PauliYItem, PauliZItem, HadamardItem, RxItem, RyItem, RzItem,
+    PhaseShiftItem, SGateItem, SDagGateItem, TGateItem, TDagGateItem,
+    # User defined gates
+    QLOQAnsatz
+]

@@ -32,7 +32,7 @@ import time
 import sys
 
 from perceval.backends import ASamplingBackend
-from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel, deprecated
@@ -332,6 +332,9 @@ class NoisySamplingSimulator:
         * physical_perf is the performance computed from the detected photon filter
         * logical_perf is the performance computed from the post-selection
         """
+        if not check_heralds_detectors(self._heralds, self._detectors):
+            return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
+
         zpp, max_p = self._check_input_svd(svd)
 
         # Choose a consistent samples limit

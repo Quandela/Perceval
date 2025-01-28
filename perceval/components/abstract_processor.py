@@ -295,6 +295,7 @@ class AProcessor(ABC):
         self._components.append((modes, component))
         self._has_feedforward = True
         self._is_unitary = False
+        component.block_circuit_size()  # User cannot add larger photonic circuit output from now on
 
     def _add_detector(self, mode: int, detector: IDetector):
         if isinstance(mode, (tuple, list)) and len(mode) == 1:
@@ -375,6 +376,7 @@ class AProcessor(ABC):
         self._components += new_components
 
         # Retrieve ports from the other processor
+        # Output ports
         for port, port_range in processor._out_ports.items():
             port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
             if isinstance(port, Herald):
@@ -382,6 +384,11 @@ class AProcessor(ABC):
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m)):
                     self.add_port(port_mode, port, PortLocation.OUTPUT)
+        # Input ports
+        for port, port_range in processor._in_ports.items():
+            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
+                self.add_port(port_mode, port, PortLocation.INPUT)
 
         # Retrieve post process function from the other processor
         if processor._postselect is not None:

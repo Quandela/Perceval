@@ -33,6 +33,11 @@ import numpy as np
 import perceval as pcvl
 import perceval.utils.algorithms.norm as norm
 
+def test_skip_colums_from_frobenius_product():
+    a = np.array([[1,2,3],[1,2,1]])
+    assert norm.frobenius_inner_product(a, a) == 20 # sum of squared elements
+    assert norm.frobenius_inner_product(a, a, [1]) == 12
+    assert norm.frobenius_inner_product(a, a, [1, 2, 2, 2, 51]) == 2
 
 def test_fidelity():
     size = 8
@@ -40,6 +45,7 @@ def test_fidelity():
     # fidelity of a matrix with itself is maximum (1)
     random_unitary = pcvl.Matrix.random_unitary(size)
     assert norm.fidelity(random_unitary, random_unitary) == pytest.approx(1)
+    assert norm.fidelity(random_unitary, random_unitary, [ 1, 4, 6 ]) == pytest.approx(1)
 
     # fidelity is commutative
     random_unitary_2 = pcvl.Matrix.random_unitary(size)

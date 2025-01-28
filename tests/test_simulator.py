@@ -102,6 +102,12 @@ def test_simulator_probs_svd_indistinguishable():
     assert res[BasicState("|0,2>")] == pytest.approx(0.225)
     assert res[BasicState("|1,1>")] == pytest.approx(0.1)
 
+    # remove the |0, 1> state from the second sv, and the first sv
+    simulator.set_min_detected_photons_filter(2)
+    res = simulator.probs_svd(svd)
+    assert res["physical_perf"] == pytest.approx(0.55)
+    assert len(res["results"]) == 3
+
 
 def test_simulator_probs_svd_distinguishable():
     in_svd = SVDistribution({

@@ -109,10 +109,21 @@ class AFFConfigurator(AComponent, ABC):
 
 
 class FFCircuitProvider(AFFConfigurator):
+    DEFAULT_NAME = "FFC"
+
     """
     For any measurement, FFCircuitProvider will return a circuit or a processor, picked from known mapping of configurations.
     Each configuration links a measurement to a circuit or processor.
     If a measurement is received and was not set in the mapping, a mandatory default circuit or processor is returned.
+
+    :param m: The number of classical modes that are detected (after a detector)
+    :param offset: The distance between the configurator and the first mode of the implemented circuits.
+        For positive values, it is the number of empty modes between the configurator and the configured circuit below.
+        For negative values, it is the same but the circuit is located above the configurator
+        (the number of empty modes is abs(`offset`) - 1,
+        so an offset of -1 means that there is no empty modes between the configurator and the circuit).
+        All circuits are considered to have the size of the biggest possible circuit in this configurator.
+    :param default_circuit: The circuit to be used if the measured state does not befall into one of the declared cases
     """
 
     def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
@@ -143,8 +154,8 @@ class FFCircuitProvider(AFFConfigurator):
         if not self._blocked_circuit_size:
             self._max_circuit_size = max(self._max_circuit_size, circuit.m)
         else:
-            assert circuit.m == self._max_circuit_size, \
-                f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)"
+            if circuit.m != self._max_circuit_size:
+                raise RuntimeError(f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)")
         self._map[state] = circuit
 
         return self
@@ -157,9 +168,23 @@ class FFCircuitProvider(AFFConfigurator):
 
 
 class FFConfigurator(AFFConfigurator):
+    DEFAULT_NAME = "FFC"
+
     """
     This class relies on a mapping between detections and a mapping of variable names and numerical values, controlling
     a circuit template.
+
+    :param m: The number of classical modes that are detected (after a detector)
+    :param offset: The distance between the configurator and the first mode of the implemented circuits.
+        For positive values, it is the number of empty modes between the configurator and the configured circuit below.
+        For negative values, it is the same but the circuit is located above the configurator
+        (the number of empty modes is abs(`offset`) - 1,
+        so an offset of -1 means that there is no empty modes between the configurator and the circuit).
+        All circuits are considered to have the size of the biggest possible circuit in this configurator.
+    :param controlled_circuit: A circuit containing symbolic parameters whose value will be changed depending on the 
+        measured state.
+    :param default_config: A dictionary mapping the parameters of the circuit and their value to use in case a measured 
+        state does not befall into one of the declared cases.
     """
 
     def __init__(self,

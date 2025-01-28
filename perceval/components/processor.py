@@ -175,7 +175,8 @@ class Processor(AProcessor):
         """
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons_filter = self._parameters['min_detected_photons']
-        if not self._min_detected_photons_filter and self._source.is_perfect():
+        if self._min_detected_photons_filter is None and self._source.is_perfect():
+            # Avoid the warning from super().with_input if the min_detected_photons_filter is not set
             self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
         super().with_input(input_state)
         self._generate_noisy_input()
@@ -233,9 +234,6 @@ class Processor(AProcessor):
         assert isinstance(processor, Processor), "can not mix types of processors"
         super(Processor, self)._compose_processor(connector, processor, keep_port)
 
-    def _state_selected_physical(self, output_state: BasicState) -> bool:
-        return output_state.n >= self._min_detected_photons_filter
-
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
         Creates a linear circuit from internal components, if all internal components are unitary. Takes phase
@@ -283,7 +281,7 @@ class Processor(AProcessor):
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
             self._simulator = SimulatorFactory.build(self)
         else:
-            self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components)
+            self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components, self.circuit_size)
             self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
 
         if precision is not None:
@@ -292,18 +290,13 @@ class Processor(AProcessor):
                           channel.general)
         res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
-        pperf = 1
-        postprocessed_res = BSDistribution()
-        for state, prob in res['results'].items():
-            if self._state_selected_physical(state):
-                postprocessed_res[self.remove_heralded_modes(state)] += prob
-            else:
-                pperf -= prob
 
-        postprocessed_res.normalize()
-        perf_word = "global_perf" if "global_perf" in res else 'physical_perf'
-        res[perf_word] = res[perf_word]*pperf if perf_word in res else pperf
-        res['results'] = postprocessed_res
+        if self.heralds:
+            postprocessed_res = BSDistribution()
+            for state, prob in res['results'].items():
+                postprocessed_res[self.remove_heralded_modes(state)] += prob
+            res['results'] = postprocessed_res
+
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res
 
