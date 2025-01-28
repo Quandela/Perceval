@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from perceval.components import Circuit, Processor, PERM
-from perceval.components.core_catalog import PostProcessedCzItem
+from perceval.components.core_catalog.postprocessed_cz import PostProcessedCzItem
 from .rotations_qloq import G_RHk
 
 

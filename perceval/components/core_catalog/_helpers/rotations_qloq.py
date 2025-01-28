@@ -28,8 +28,9 @@
 # SOFTWARE.
 from __future__ import annotations
 
+from perceval.components.core_catalog.gates_1qubit import HadamardItem, RxItem, RyItem, RzItem
 from perceval.utils import Parameter
-from perceval.components import Circuit, PERM, BS, PS
+from perceval.components import Circuit, PERM
 
 
 def internal_swap(qubit1: int, qubit2: int, num_qubits: int) -> Circuit:
@@ -100,33 +101,25 @@ def _generate_rotation_kth_qubit(gate_layer: Circuit, nqubits: int, k: int, circ
     return circ
 
 
-def _generate_rotation_last_qubit(gate: Circuit, nqubits: int, circuit_name: str) -> Circuit:
+def _generate_rotation_last_qubit(gate: Circuit, nqubits: int) -> Circuit:
     """Apply the gate to nth qubit for a circuit in a single qudit encoding."""
-    circ = Circuit(2 ** nqubits, name=circuit_name)
+    circ = Circuit(2 ** nqubits, name=gate.name)
     for i in range(0, 2 ** nqubits, 2):
         circ.add(i, gate)
     return circ
 
 
-def G_RYn(angle: float | Parameter, n: int) -> Circuit:
-    """Apply the RY gate to nth qubit for a circuit in a single qudit encoding."""
-    return _generate_rotation_last_qubit(BS.Ry(theta=angle), nqubits=n, circuit_name=f"RY{n}")
+def _g_rn(gate_name: str, angle: float | Parameter, n: int ) -> Circuit:
+    gates = {"X": RxItem,
+             "Y": RyItem,
+             "Z": RzItem}
 
-
-def G_RZn(angle: float | Parameter, n: int) -> Circuit:
-    """Apply the RZ gate to nth qubit for a circuit in a single qudit encoding."""
-    return _generate_rotation_last_qubit(Circuit(2) // PS(phi=-angle / 2) // (1, PS(phi=angle / 2)), nqubits=n,
-                                         circuit_name=f"RZ{n}")
-
-
-def G_RXn(angle: float | Parameter, n: int) -> Circuit:
-    """Apply the RX gate to nth qubit for a circuit in a single qudit encoding."""
-    return _generate_rotation_last_qubit(BS.Rx(theta=angle), nqubits=n, circuit_name=f"RX{n}")
+    return _generate_rotation_last_qubit(gates[gate_name]().build_circuit(theta=angle), nqubits=n)
 
 
 def G_RHn(n: int) -> Circuit:
     """Apply the Hadamard gate to nth qubit for a circuit in a single qudit encoding."""
-    return _generate_rotation_last_qubit(BS.H(), nqubits=n, circuit_name=f"RH{n - 1}")
+    return _generate_rotation_last_qubit(HadamardItem().build_circuit(), nqubits=n)
 
 
 def G_RHk(n: int, k: int) -> Circuit:
@@ -135,11 +128,7 @@ def G_RHk(n: int, k: int) -> Circuit:
 
 
 def _g_rk(angle: float, n: int, k: int, rotation: str) -> Circuit:
-    g_n = {"X": G_RXn,
-           "Y": G_RYn,
-           "Z": G_RZn}
-
-    return _generate_rotation_kth_qubit(g_n[rotation](angle, n), n, k, f"R{rotation}{k}")
+    return _generate_rotation_kth_qubit(_g_rn(rotation, angle, n), n, k, f"R{rotation}{k}")
 
 
 def apply_rotations_to_qubits(angle_list: list[float | Parameter], n: int, rotation: str):

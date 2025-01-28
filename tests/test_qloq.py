@@ -29,11 +29,10 @@
 
 import pytest
 
-from perceval import PERM, BS, Circuit, catalog
+from perceval import PERM, Circuit, catalog
 from perceval.components.core_catalog._helpers.entanglement_qloq import generate_permutation_for_controlled_op, \
     create_internal_controlled_op
-from perceval.components.core_catalog._helpers.rotations_qloq import internal_swap, G_RXn, G_RYn, G_RZn, G_RHn, G_RHk, \
-    _g_rk
+from perceval.components.core_catalog._helpers.rotations_qloq import internal_swap, G_RHn, G_RHk, _g_rk, _g_rn
 
 
 def test_internal_swap():
@@ -60,16 +59,16 @@ def test_internal_swap():
 def test_rotations_qloq():
     n_qubit = 2
     angle = 1.23
-    mapping = {"X": (G_RXn, catalog["rx"].build_circuit(theta=-angle)),  # TODO: remove minus sign after PCVL-881
-               "Y": (G_RYn, catalog["ry"].build_circuit(theta=angle)),
-               "Z": (G_RZn, catalog["rz"].build_circuit(theta=angle)),
-               "H": (G_RHn, catalog["h"].build_circuit())}
-    for gate, (fn, target) in mapping.items():
+    mapping = {"X": catalog["rx"].build_circuit(theta=angle),
+               "Y": catalog["ry"].build_circuit(theta=angle),
+               "Z": catalog["rz"].build_circuit(theta=angle),
+               "H": catalog["h"].build_circuit()}
+    for gate, target in mapping.items():
         # Rotations on last qubit
         if gate == "H":
-            circ = fn(n_qubit)
+            circ = G_RHn(n_qubit)
         else:
-            circ = fn(angle, n_qubit)
+            circ = _g_rn(gate, angle, n_qubit)
         target_circuit = Circuit(2 ** n_qubit)
         for i in range(0, 2 ** n_qubit, 2):
             target_circuit //= (i, target)
