@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Processor, Source
+from perceval.components import Processor, Source, catalog
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 from .converter_utils import label_cnots_in_gate_sequence
@@ -82,10 +82,23 @@ class QiskitConverter(AGateConverter):
             # some limitation in the conversion, in particular measure
             assert isinstance(instruction.operation, qiskit.circuit.gate.Gate), "cannot convert (%s)" % instruction[0]
 
+            gate_name = instruction.operation.name
             if instruction.operation.num_qubits == 1:
-                # one mode gate
-                ins = self._create_generic_1_qubit_gate(instruction.operation.to_matrix())
-                ins._name = instruction.operation.name
+                if gate_name == 'p':
+                    # not the same name in our catalog
+                    gate_name = 'ph'
+                elif gate_name == 'sdg':
+                    gate_name = 'sdag'
+                elif gate_name == 'tdg':
+                    gate_name = 'tdag'
+
+                if gate_name in catalog:
+                    gate_param = instruction.operation.params[0] if instruction.operation.params else None
+                    ins = self._create_catalog_1_qubit_gate(gate_name, param=gate_param)
+                else:
+                    ins = self._create_generic_1_qubit_gate(instruction.operation.to_matrix())
+                    ins._name = instruction.operation.name
+
                 self._converted_processor.add(qc.find_bit(instruction.qubits[0])[0] * 2, ins.copy())
             else:
                 if instruction.operation.num_qubits > 2:
