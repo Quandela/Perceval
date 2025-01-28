@@ -147,7 +147,7 @@ def apply_rotations_to_qubits(angle_list: list[float | Parameter], n: int, rotat
     assert len(angle_list) == n, "Angle list should match the number of qubits in the group."
     assert rotation in ["Y", "Z", "X"], "Rotation must be X or Y or Z."
 
-    circ = Circuit(2 ** n, name=f"GroupR{rotation}Multi{n}")
+    circ = Circuit(2 ** n, name=f"R{rotation}QUDIT{n}")
 
     # Apply the rotation gate for each qubit based on the provided angle.
     for idx, angle in enumerate(angle_list):

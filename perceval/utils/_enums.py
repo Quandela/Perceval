@@ -44,7 +44,7 @@ class Encoding(Enum):
     QUDIT4 = 7
     QUDIT5 = 8
     QUDIT6 = 9
-    QUDIT7 = 10  # 2**7 = 124 modes
+    QUDIT7 = 10  # 2**7 = 128 modes
 
     @property
     def logical_length(self) -> int:
