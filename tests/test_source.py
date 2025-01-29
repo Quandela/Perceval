@@ -137,7 +137,7 @@ def test_source_sample():
         dist_samples[el] = 0
 
     tvd = tvd_dist(dist_samples, dist)
-    assert tvd < 0.15
+    assert tvd == pytest.approx(0.0, abs=0.15)  # total variation between two distributions is less than 0.15
 
     # number of photons in samples
     nb_1p = 0

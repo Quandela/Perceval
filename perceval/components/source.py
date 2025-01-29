@@ -217,15 +217,17 @@ class Source:
             if photon_count == 0:
                 new_samples.extend([BasicState([photon_count])] * max_samples)
             else:
-                if self.partially_distinguishable:
-                    bsd = self._generate_one_photon_distribution()
-                new_samples = bsd.sample(max_samples, non_null=False)
-                for _ in range(photon_count-1):
+                for _ in range(photon_count):
+                    if self.partially_distinguishable:
+                        bsd = self._generate_one_photon_distribution()
                     new_samples_one_mode = bsd.sample(max_samples, non_null=False)
+                    if len(new_samples) == 0:
+                        new_samples = new_samples_one_mode # first samples
+                        continue
                     for i in range(len(new_samples_one_mode)):
                         new_samples[i] = new_samples[i].merge(new_samples_one_mode[i])
             if len(samples) == 0:
-                samples = new_samples
+                samples = new_samples # first samples
                 continue
             for i in range(len(new_samples)):
                 samples[i] *= new_samples[i]
