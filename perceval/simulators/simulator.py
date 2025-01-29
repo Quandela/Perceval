@@ -353,11 +353,13 @@ class Simulator(ISimulator):
         """Trim input SVD given _rel_precision threshold and extract characteristics from it"""
         max_p = 0
         to_remove = set()  # O(1) to test __contains__ against O(n) for a list
+        phys_perf = 1
         # We need to work on a copy. Let's do a first trim as copy
         for sv, p in svd.items():
             if max(sv.n) >= self._min_detected_photons_filter:
                 max_p = max(p, max_p)
             else:
+                phys_perf -= p
                 to_remove.add(sv)
         p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
         if len(to_remove):
@@ -374,9 +376,12 @@ class Simulator(ISimulator):
                 to_remove.add(sv)
                 new_svd = _split_by_photon_count(sv)
                 for split_sv, ps in new_svd.items():
+                    prob = p * ps
                     # split_sv.n is a set so we can't use [0]
                     if max(split_sv.n) >= self._min_detected_photons_filter:
-                        to_add[split_sv] += ps * p
+                        to_add[split_sv] += prob
+                    else:
+                        phys_perf -= prob
 
         if len(to_remove):
             for sv, p in to_add.items():
@@ -386,8 +391,6 @@ class Simulator(ISimulator):
             p_threshold = max(global_params['min_p'], max_p * self._rel_precision)
             trimmed_svd = SVDistribution({state: pr for state, pr in trimmed_svd.items()
                                           if pr > p_threshold and state not in to_remove})
-
-        phys_perf = sum(trimmed_svd.values())  # too low probabilities are integrated into the phys_perf
 
         has_superposed_states = any(len(sv) > 1 for sv in trimmed_svd)
         has_annotations = any(bs.has_annotations for sv in trimmed_svd for bs in sv.keys())
