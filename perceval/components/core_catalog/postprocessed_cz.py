@@ -27,16 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .postprocessed_cz import PostProcessedCzItem
-
-from perceval.components import Circuit, BS, Port
+from perceval.components import Circuit, PERM, BS, Port, Barrier
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect
 
 
-class PostProcessedCnotItem(CatalogItem):
+class PostProcessedCzItem(CatalogItem):
     article_ref = "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
-    description = r"""CNOT gate with 2 heralded modes and a post-selection function"""
+    description = r"""CZ gate with 2 heralded modes and a post-selection function"""
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
@@ -44,17 +42,20 @@ ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
 data (dual rail) ─────┤     ├───── data (dual rail)
                  ─────┤     ├─────
                       ╰─────╯"""
-    see_also = "klm cnot and heralded cnot (using cz)"
+    see_also = "heralded cz"
 
     def __init__(self):
-        super().__init__("postprocessed cnot")
+        super().__init__("postprocessed cz")
 
     def build_circuit(self, **kwargs):
-        postprocessed_cz = PostProcessedCzItem()
-        return (Circuit(6, name="PostProcessed CNOT")
-                .add((2, 3), BS.H())
-                .add(0, postprocessed_cz.build_circuit(), merge=True)
-                .add((2, 3), BS.H()))
+        theta_13 = BS.r_to_theta(1 / 3)
+        return (Circuit(6, name="PostProcessed CZ")
+                .add(1, PERM([2, 1, 3, 0]))  # So that both heralded modes are on the bottom of the gate
+                .add(0, Barrier(6, visible=False))
+                .add((0, 1), BS.H(theta_13))
+                .add((2, 3), BS.H(theta_13))
+                .add((4, 5), BS.H(theta_13))
+                .add(1, PERM([3, 1, 0, 2])))  # So that both heralded modes are on the bottom of the gate
 
     def build_processor(self, **kwargs):
         p = self._init_processor(**kwargs)

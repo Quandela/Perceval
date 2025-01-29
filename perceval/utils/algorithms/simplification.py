@@ -354,7 +354,8 @@ def _simplify_perm(components, m :int = None, display :bool = False):
 
         else:
             r, c = reduce_perm(extended_r, c_list)
-            end_components.append([r, comp.PERM(c)])
+            if len(r):
+                end_components.append([r, comp.PERM(c)])
 
     else:  # It's the only permutation or it can't be simplified with the previous one
         r, c = reduce_perm(r, c.perm_vector)

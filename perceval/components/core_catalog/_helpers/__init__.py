@@ -27,33 +27,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .klm_cnot import KLMCnotItem
-from .postprocessed_cnot import PostProcessedCnotItem
-from .heralded_cnot import HeraldedCnotItem
-from .heralded_cz import HeraldedCzItem
-from .generic_2mode import Generic2ModeItem
-from .mzi import MZIPhaseFirst, MZIPhaseLast, SymmetricMZI
-from .postprocessed_ccz import PostProcessedCCZItem
-from .postprocessed_cz import PostProcessedCzItem
-from .qloq_ansatz import QLOQAnsatz
-from .toffoli import ToffoliItem
-from .controlled_rotation_gates import PostProcessedControlledRotationsItem
-from .gates_1qubit import (PauliXItem, PauliYItem, PauliZItem, HadamardItem,
-                           RxItem, RyItem, RzItem, PhaseShiftItem,
-                           SGateItem, SDagGateItem, TGateItem, TDagGateItem)
-
-catalog_items = [
-    # 2 qubits gate
-    KLMCnotItem, HeraldedCnotItem, PostProcessedCnotItem, HeraldedCzItem, PostProcessedCzItem,
-    # MZIs
-    Generic2ModeItem, MZIPhaseFirst, MZIPhaseLast, SymmetricMZI,
-    # 3 qubits gate
-    PostProcessedCCZItem, ToffoliItem,
-    # N qubits gate
-    PostProcessedControlledRotationsItem,
-    # 1 qubit gate
-    PauliXItem, PauliYItem, PauliZItem, HadamardItem, RxItem, RyItem, RzItem,
-    PhaseShiftItem, SGateItem, SDagGateItem, TGateItem, TDagGateItem,
-    # User defined gates
-    QLOQAnsatz
-]
+from .rotations_qloq import apply_rotations_to_qubits
+from .entanglement_qloq import generalized_cz, generate_chained_controlled_ops
