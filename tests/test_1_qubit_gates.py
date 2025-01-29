@@ -29,15 +29,11 @@
 
 import pytest
 import math
-from qiskit.quantum_info import Operator
-from qiskit import QuantumCircuit
-
-import perceval as pcvl
 from perceval.components import catalog, PS, BS, PERM
 
 
-@pytest.mark.parametrize("gate_name, exptd_phi", [("s", math.pi/2), ("sdag", -math.pi/2),
-                                       ("t", math.pi/4), ("tdag", -math.pi/4),
+@pytest.mark.parametrize("gate_name, exptd_phi", [("s", math.pi / 2), ("sdag", -math.pi / 2),
+                                                  ("t", math.pi / 4), ("tdag", -math.pi / 4),
                                                   ("ph", 0.0)])
 def test_single_qubit_phase_gates(gate_name, exptd_phi):
     c = catalog[gate_name].build_circuit()
