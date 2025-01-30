@@ -82,12 +82,12 @@ def internal_swap(qubit1: int, qubit2: int, num_qubits: int) -> Circuit:
     return circ
 
 
-def _generate_rotation_kth_qubit(gate_layer: Circuit, nqubits: int, k: int) -> Circuit:
+def _generate_rotation_kth_qubit(gate_layer: Circuit, nqubits: int, k: int, circuit_name: str) -> Circuit:
     """Apply the given gate to the k-th qubit of n qubits for a circuit in a single qudit encoding."""
     if k == nqubits - 1:
         return gate_layer
 
-    circ = Circuit(2 ** nqubits, name=gate_layer.name)
+    circ = Circuit(2 ** nqubits, name=circuit_name)
 
     # Add the internal swap gate to swap the k-th qubit to the (n-1)-th qubit.
     circ.add(0, internal_swap(k, nqubits - 1, nqubits), merge=True)
@@ -124,11 +124,11 @@ def G_RHn(n: int) -> Circuit:
 
 def G_RHk(n: int, k: int) -> Circuit:
     """Apply the Hadamard gate to the k-th qubit of n qubits for a circuit in a single qudit encoding."""
-    return _generate_rotation_kth_qubit(G_RHn(n), n, k)
+    return _generate_rotation_kth_qubit(G_RHn(n), n, k, f"RH{k}")
 
 
-def _g_rk(gate: Circuit, n: int, k: int) -> Circuit:
-    return _generate_rotation_kth_qubit(gate, n, k)
+def _g_rk(angle: float, n: int, k: int, rotation: str) -> Circuit:
+    return _generate_rotation_kth_qubit(_g_rn(rotation, angle, n), n, k, f"R{rotation}{k}")
 
 
 def apply_rotations_to_qubits(angle_list: list[float | Parameter], n: int, rotation: str):
@@ -140,6 +140,6 @@ def apply_rotations_to_qubits(angle_list: list[float | Parameter], n: int, rotat
 
     # Apply the rotation gate for each qubit based on the provided angle.
     for idx, angle in enumerate(angle_list):
-        circ.add(0, _g_rk(_g_rn(rotation, angle, n), n, idx), merge=True)
+        circ.add(0, _g_rk(angle, n, idx, rotation), merge=True)
 
     return circ
