@@ -29,6 +29,7 @@
 
 import math
 from abc import ABC, abstractmethod
+from numbers import Number
 
 from perceval.components import Processor, Circuit, BS, PS, PERM, Port
 from perceval.utils import Encoding
@@ -159,8 +160,10 @@ class AParamItem(ASingleQubitGate, ABC):
 
     def build_circuit(self, **kwargs):
         param = kwargs.get(self.param_key, 0.0)
-        return (Circuit(2, name=f"{self.repr_name}({param:.3})") //
-                self.get_circuit(param))
+        if isinstance(param, Number):
+            return (Circuit(2, name=f"{self.repr_name}({param:.3})") //
+                    self.get_circuit(param))
+        return Circuit(2, name=f"{self.repr_name}") // self.get_circuit(param)
 
 
 class PhaseShiftItem(AParamItem):
