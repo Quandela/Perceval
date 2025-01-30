@@ -29,9 +29,10 @@
 
 import math
 from abc import ABC, abstractmethod
+from numbers import Number
 
 from perceval.components import Processor, Circuit, BS, PS, PERM, Port
-from perceval.utils import Encoding
+from perceval.utils import Encoding, P
 from perceval.components.component_catalog import CatalogItem
 
 _COMPONENT_STRING_REPR = [
@@ -159,8 +160,13 @@ class AParamItem(ASingleQubitGate, ABC):
 
     def build_circuit(self, **kwargs):
         param = kwargs.get(self.param_key, 0.0)
-        return (Circuit(2, name=f"{self.repr_name}({param:.3})") //
-                self.get_circuit(param))
+        param = self._handle_param(param)
+        name = self.repr_name
+        if isinstance(param, Number):
+            name = f"{self.repr_name}({param:.3})"
+        elif isinstance(param, P):
+            name = f"{self.repr_name}({param.name})"
+        return Circuit(2, name) // self.get_circuit(param)
 
 
 class PhaseShiftItem(AParamItem):

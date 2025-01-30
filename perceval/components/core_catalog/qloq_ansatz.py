@@ -180,10 +180,10 @@ class QLOQAnsatz(CatalogItem):
         else:
             phases = self._generate_phases(parameter_nb)
 
-        if "Z" in layers:
+        if not all(layer == "Y" for layer in layers):
             # TODO: remove this assert when Parameter expressions are ready (PCVL-866)
             assert all(isinstance(phase, Number) for phase in phases), \
-                "phases must be given as numerical values when using Z layer"
+                "phases must be given as numerical values when using X or Z layer"
 
         phases = [self._handle_param(phase) for phase in phases]
         group_sizes = [size.logical_length for size in group_sizes]
