@@ -121,6 +121,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/Variational_Quantum_Eigensolver
    notebooks/Reinforcement_learning
    notebooks/QUBO
+   notebooks/QLOQ_QUBO_tutorial
 
 .. toctree::
    :caption: Quantum walk
@@ -161,6 +162,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/density_matrix
    reference/feed_forward_configurator
    reference/job_group
+   reference/detector
 
 .. toctree::
    :caption: Community

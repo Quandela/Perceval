@@ -5,7 +5,7 @@
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/autotests.yml)
 [![CI](https://github.com/Quandela/Perceval/actions/workflows/build-and-deploy-docs.yml/badge.svg)](https://github.com/Quandela/Perceval/actions/workflows/build-and-deploy-docs.ym)
 
-# Perceval <a href="https://perceval.quandela.net" target="_blank"> <img src="https://perceval.quandela.net/img/Perceval_logo_white_320X320.png" width="50" height="50"> </a>
+# Perceval <a href="https://perceval.quandela.net" target="_blank"> <img src="logo-perceval.png" width="50" height="50"> </a>
 
 
 
@@ -39,7 +39,7 @@ practitioners.
 
 Perceval requires:
 
-* Above Python 3.9 and below Python 3.13
+* Python between 3.9 and 3.13
 
 ## PIP
 We recommend installing it with `pip`:
@@ -104,7 +104,7 @@ Comparison benchmarks for different platforms are also committed in `.benchmarks
 * The [Community Forum](https://perceval.quandela.net/forum)
 
 #
-[<img src="https://www.quandela.com/wp-content/themes/quandela/img/logo-QUANDELA.svg" width="300" height=auto>](https://www.quandela.com/)
+[<img src="logo-quandela.png" width="300" height=auto>](https://www.quandela.com/)
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/Quandela_SAS?style=social)](https://twitter.com/Quandela_SAS)
 [![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UCl5YMpSqknJ1n-IT-XWfLsQ?style=social)](https://www.youtube.com/channel/UCl5YMpSqknJ1n-IT-XWfLsQ)

@@ -326,3 +326,34 @@ def test_with_annotated_state_vector():
         BasicState([0, 2, 0, 0, 1]): .375,
         BasicState([1, 1, 0, 1, 0]): .25
     }))
+
+
+def test_config_with_config():
+    proc = Processor("SLOS", 8)
+
+    # Note: please don't do this, this is just to test an edge case
+    cnot_proc = Processor("SLOS", 4)
+    cnot_proc.add(0, PERM([1, 0]))
+    cnot_proc.add(0, Detector.pnr())
+    cnot_proc.add(1, Detector.pnr())
+    cnot_proc.add(0, cnot)
+
+    double_not = FFCircuitProvider(2, 0, Circuit(2)).add_configuration([0, 1], cnot_proc)
+
+    proc.add(0, BS())
+    proc.add(0, Detector.pnr())
+    proc.add(1, Detector.pnr())
+    proc.add(0, double_not)
+    proc.add(4, Detector.pnr())
+    proc.add(5, Detector.pnr())
+    proc.add(4, cnot)
+
+    proc.min_detected_photons_filter(4)
+    proc.with_input(BasicState([1, 0, 1, 0, 1, 0, 1, 0]))
+
+    sampler = Sampler(proc)
+
+    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+        BasicState([1, 0, 1, 0, 1, 0, 1, 0]): .5,
+        BasicState([0, 1, 0, 1, 0, 1, 0, 1]): .5
+    }))

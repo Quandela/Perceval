@@ -90,3 +90,18 @@ def test_lc_source_losses_equivalence():
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]
     assert pytest.approx(real_out) == res_1
+
+
+def test_lc_perf():
+    p = Processor("SLOS", 2)
+    p.add(1, LC(loss))
+
+    p.add_herald(1, 1)
+    p.min_detected_photons_filter(2)
+
+    p.with_input(BasicState([1]))
+
+    res = p.probs()
+
+    assert res["logical_perf"] == pytest.approx(1), "Wrong logical perf with LC and heralds"
+    assert res["physical_perf"] == pytest.approx(1 - loss), "Wrong physical_perf with LC and heralds"

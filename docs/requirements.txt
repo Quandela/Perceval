@@ -3,6 +3,7 @@ sphinx==6.2.1
 sphinx_rtd_theme
 sphinxcontrib-bibtex
 sphinx_autodoc_typehints
+enum-tools[sphinx]
 nbsphinx
 jinja2==3.0.0
 ipython

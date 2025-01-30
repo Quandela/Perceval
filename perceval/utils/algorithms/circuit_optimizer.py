@@ -88,13 +88,15 @@ class CircuitOptimizer:
 
     def optimize(self,
                  target: ACircuit | Matrix,
-                 template: ACircuit
+                 template: ACircuit,
+                 empty_mode_list: list[int] = []
                  ) -> tuple[ACircuit, float]:
         """
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
 
         :param target: The target unitary circuit or matrix
         :param template: A circuit with variable parameters (supports only beam splitters and phase shifters)
+        :empty_mode_list: list of the modes without input photon, which are ignored during optimisation as this does not alter the results
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):
@@ -114,7 +116,7 @@ class CircuitOptimizer:
         if target.is_symbolic():
             raise TypeError("Target must be numeric")
 
-        optimizer = xq.CircuitOptimizer(target, serialize_binary(template))
+        optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list)
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
         optimized_circuit = deserialize_circuit(optimizer.optimize(self._trials))

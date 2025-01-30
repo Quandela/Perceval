@@ -84,10 +84,12 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.autosectionlabel",
     "sphinxcontrib.bibtex",
+    "enum_tools.autoenum",
     "nbsphinx",
     "sphinx_multiversion",
 ]
 
+suppress_warnings = ['autosectionlabel.*']
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 

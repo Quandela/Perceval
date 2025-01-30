@@ -28,7 +28,10 @@
 # SOFTWARE.
 
 import pytest
-from perceval import BasicState, StateVector, tensorproduct
+from perceval import BasicState, StateVector, tensorproduct, BSDistribution, SVDistribution
+from unittest.mock import patch
+from perceval.utils.logging import ExqaliburLogger
+from _test_utils import LogChecker
 
 sv0 = StateVector([0, 1]) + StateVector([1, 1]) * 1j
 sv1 = StateVector([2, 3]) + StateVector([4, 5])
@@ -79,3 +82,70 @@ def test_power():
     result = bs ** power
     expected = BasicState([6, 7] * power)
     assert result == expected, "BS pow is wrong"
+
+
+@patch.object(ExqaliburLogger, "warn")
+def test_bsd_tensor_product(mock_warn):
+    bsd_1 = BSDistribution({BasicState([2, 3]): .4,
+                            BasicState([0, 1]): .6})
+
+    bsd_2 = BSDistribution({BasicState([4, 5]): .3,
+                            BasicState([6, 7]): .7})
+
+    bsd_3 = BSDistribution({BasicState([8, 9]): .3,
+                            BasicState([10, 11]): .5,
+                            BasicState([12, 13]): .2})
+
+    assert BSDistribution.tensor_product(bsd_1, bsd_2) == pytest.approx(bsd_1 * bsd_2), "BSD tensor product is wrong"
+
+    assert BSDistribution.tensor_product(bsd_1, bsd_2, merge_modes=True) == pytest.approx(BSDistribution({
+        BasicState([6, 8]): .4 * .3 + .6 * .7,
+        BasicState([8, 10]): .4 * .7,
+        BasicState([4, 6]): .6 * .3,
+    })), "Wrong tensor product result when merge_modes is True"
+
+    assert (BSDistribution.tensor_product(bsd_1, bsd_2, merge_modes=True)
+            == pytest.approx(BSDistribution.tensor_product(bsd_2, bsd_1, merge_modes=True))), \
+        "BSD tensor product is not symmetric when merge_modes is True"
+
+    assert BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3]) == pytest.approx(bsd_1 * bsd_2 * bsd_3), \
+        "BSD list tensor product is wrong"
+
+    product = BSDistribution()
+    for bsd in [bsd_1, bsd_2, bsd_3]:
+        product = BSDistribution.tensor_product(product, bsd, merge_modes=True)
+
+    assert BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3], merge_modes=True) == pytest.approx(product), \
+        "Wrong list tensor product result when merge_modes is True"
+
+    # Now with empty BSD
+    bsd_list = [bsd_1, bsd_2, BSDistribution(), bsd_3]
+
+    with LogChecker(mock_warn):
+        assert BSDistribution.list_tensor_product(bsd_list, merge_modes=True) == pytest.approx(product), \
+            "Wrong list tensor product result when merge_modes is True and there are empty BSD"
+
+
+@patch.object(ExqaliburLogger, "warn")
+def test_svd_tensor_product(mock_warn):
+    svd_1 = SVDistribution({StateVector([2, 3]): .4,
+                            StateVector([0, 1]): .6})
+
+    svd_2 = SVDistribution({StateVector([4, 5]): .3,
+                            StateVector([6, 7]): .7})
+
+    svd_3 = SVDistribution({StateVector([8, 9]): .3,
+                            StateVector([10, 11]): .5,
+                            StateVector([12, 13]): .2})
+
+    assert SVDistribution.tensor_product(svd_1, svd_2) == pytest.approx(svd_1 * svd_2), "SVD tensor product is wrong"
+
+    assert SVDistribution.list_tensor_product([svd_1, svd_2, svd_3]) == pytest.approx(svd_1 * svd_2 * svd_3), \
+        "SVD list tensor product is wrong"
+
+    # Now with empty SVD
+    bsd_list = [svd_1, svd_2, SVDistribution(), svd_3]
+
+    with LogChecker(mock_warn):
+        assert SVDistribution.list_tensor_product(bsd_list) == pytest.approx(svd_1 * svd_2 * svd_3), \
+            "Wrong list tensor product result when there are empty BSD"
