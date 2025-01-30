@@ -42,18 +42,21 @@ class Encoding(Enum):
     QUDIT2 = 5
     QUDIT3 = 6
     QUDIT4 = 7
-    QUDIT5 = 8  # 2**5 = 32 modes
+    QUDIT5 = 8
+    QUDIT6 = 9
+    QUDIT7 = 10  # 2**7 = 128 modes
 
     @property
     def logical_length(self) -> int:
-        """Logical length of a """
+        """Logical length of an encoding"""
         n = self.name
         if n.startswith("QUDIT"):
-            return int(n.replace("QUDIT", ""))
+            return int(n[len("QUDIT"):])
         return 1
 
     @property
     def fock_length(self) -> int:
+        """Fock state length of an encoding"""
         if self == Encoding.DUAL_RAIL:
             return 2
         elif self == Encoding.POLARIZATION:

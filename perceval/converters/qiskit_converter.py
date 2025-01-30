@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Processor, Source
+from perceval.components import Processor, Source, catalog
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 from .converter_utils import label_cnots_in_gate_sequence
@@ -38,10 +38,7 @@ def _get_gate_sequence(qisk_circ) -> list:
     # returns a nested list of gate names with corresponding qubit positions
     gate_names, qubit_pos = gates_and_qubits(qisk_circ)  # from qiskit circuit
 
-    gate_info = []
-    for index, elem in enumerate(gate_names):
-        gate_info.append([gate_names[index], qubit_pos[index]])
-
+    gate_info = [[gate_name, q_pos] for gate_name, q_pos in zip(gate_names, qubit_pos)]
     return gate_info
 
 
@@ -80,22 +77,35 @@ class QiskitConverter(AGateConverter):
 
         for gate_index, instruction in enumerate(qc.data):
             # barrier has no effect
-            if isinstance(instruction[0], qiskit.circuit.barrier.Barrier):
+            if isinstance(instruction.operation, qiskit.circuit.barrier.Barrier):
                 continue
             # some limitation in the conversion, in particular measure
-            assert isinstance(instruction[0], qiskit.circuit.gate.Gate), "cannot convert (%s)" % instruction[0]
+            assert isinstance(instruction.operation, qiskit.circuit.gate.Gate), "cannot convert (%s)" % instruction[0]
 
-            if instruction[0].num_qubits == 1:
-                # one mode gate
-                ins = self._create_generic_1_qubit_gate(instruction[0].to_matrix())
-                ins._name = instruction[0].name
-                self._converted_processor.add(qc.find_bit(instruction[1][0])[0] * 2, ins.copy())
+            gate_name = instruction.operation.name
+            if instruction.operation.num_qubits == 1:
+                if gate_name == 'p':
+                    # not the same name in our catalog
+                    gate_name = 'ph'
+                elif gate_name == 'sdg':
+                    gate_name = 'sdag'
+                elif gate_name == 'tdg':
+                    gate_name = 'tdag'
+
+                if gate_name in catalog:
+                    gate_param = instruction.operation.params[0] if instruction.operation.params else None
+                    ins = self._create_catalog_1_qubit_gate(gate_name, param=gate_param)
+                else:
+                    ins = self._create_generic_1_qubit_gate(instruction.operation.to_matrix())
+                    ins._name = instruction.operation.name
+
+                self._converted_processor.add(qc.find_bit(instruction.qubits[0])[0] * 2, ins.copy())
             else:
-                if instruction[0].num_qubits > 2:
+                if instruction.operation.num_qubits > 2:
                     # only 2 qubit gates
                     raise NotImplementedError("2+ Qubit gates not implemented")
-                c_idx = qc.find_bit(instruction[1][0])[0] * 2
-                c_data = qc.find_bit(instruction[1][1])[0] * 2
+                c_idx = qc.find_bit(instruction.qubits[0])[0] * 2
+                c_data = qc.find_bit(instruction.qubits[1])[0] * 2
                 self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], c_idx, c_data,
                                                         use_postselection)
         self.apply_input_state()

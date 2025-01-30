@@ -37,6 +37,7 @@ from .abstract_component import AComponent
 from .linear_circuit import Circuit
 from .unitary_components import BS, PERM
 from perceval.utils import BasicState, BSDistribution
+from perceval.utils.logging import channel, get_logger
 
 
 class DetectionType(Enum):
@@ -78,6 +79,11 @@ class IDetector(AComponent, ABC):
     def copy(self, subs=None) -> IDetector:
         return copy.copy(self)
 
+    @property
+    @abstractmethod
+    def max_detections(self):
+        pass
+
 
 class BSLayeredPPNR(IDetector):
     """
@@ -98,6 +104,11 @@ class BSLayeredPPNR(IDetector):
         self._layers = bs_layers
         self._r = reflectivity
         self._cache = {}  # This cache records simulations for a given photon count to speed up computations
+
+    @property
+    def max_detections(self) -> int:
+        """Maximum number of detected photons"""
+        return 2 ** self._layers
 
     @property
     def type(self) -> DetectionType:
@@ -184,6 +195,11 @@ class Detector(IDetector):
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
+
+    @property
+    def max_detections(self) -> int:
+        """Maximum number of detected photons (None for infinity)"""
+        return self._max
 
     @staticmethod
     def threshold() -> Detector:
@@ -276,3 +292,24 @@ def get_detection_type(detectors: list[IDetector]) -> DetectionType:
         elif result != current:
             return DetectionType.Mixed
     return result
+
+
+def check_heralds_detectors(heralds: dict[int, int] | None, detectors: list[IDetector | None] | None) -> bool:
+    """
+    Check that heralds are compatible with the given detectors.
+
+    :param heralds: A dictionary mapping herald mode to its value.
+    :param detectors: List of detectors (None is treated as PNR).
+
+    :return: True if the maximum value for all detectors is bigger than the expected herald value
+    """
+    if heralds and detectors:
+        for k, v in heralds.items():
+            detector = detectors[k]
+            if detector:
+                max_val = detector.max_detections
+                if max_val is not None and max_val < v:
+                    get_logger().warn(f"Incompatible heralds and detectors on mode {k}", channel.user)
+                    return False
+
+    return True

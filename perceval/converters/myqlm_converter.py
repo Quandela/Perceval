@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, Processor, Source, BS, PS
+from perceval.components import Circuit, Processor, Source, BS, PS, catalog
 from perceval.utils.logging import get_logger, channel
 from .converter_utils import label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
@@ -91,11 +91,9 @@ class MyQLMConverter(AGateConverter):
 
             if len(instruction_qbit) == 1:
                 ins = None
-                if instruction_name == "H":
-                    ins = Circuit(2, name='H') // BS.H()
-                elif instruction_name == "PH":
-                    phi = instruction[1][0]  # value of the variable parameter in gate
-                    ins = Circuit(2, name='PS') // (1, PS(phi))  # apply phase shift on 2nd mode
+
+                if instruction_name.lower() in catalog:
+                    ins = self._create_catalog_1_qubit_gate(instruction_name.lower(), param=instruction[1][0] if instruction[1] else None)
                 else:
                     gate_id = qlmc.ops[i].gate
                     gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data
