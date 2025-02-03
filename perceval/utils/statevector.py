@@ -282,7 +282,8 @@ class SVDistribution(ProbabilityDistribution):
                 _inner_tensor_product(dist[1:], current_state * sv, prob)
 
         # First, easy trim. Slightly faster.
-        # distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold} for dist in distributions]
+        distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold}
+                         for dist in distributions]
         _inner_tensor_product(distributions, StateVector(), 1)
         return res
 
@@ -441,7 +442,8 @@ class BSDistribution(ProbabilityDistribution):
 
         start_state = BasicState(distributions[0].m) if merge_modes else BasicState()
         # First, easy trim. Slightly faster.
-        distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold} for dist in distributions]
+        distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold}
+                         for dist in distributions]
         _inner_tensor_product(distributions, start_state, 1)
         return res
 
