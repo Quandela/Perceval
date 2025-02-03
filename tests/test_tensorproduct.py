@@ -84,8 +84,7 @@ def test_power():
     assert result == expected, "BS pow is wrong"
 
 
-@patch.object(ExqaliburLogger, "warn")
-def test_bsd_tensor_product(mock_warn):
+def test_bsd_tensor_product():
     bsd_1 = BSDistribution({BasicState([2, 3]): .4,
                             BasicState([0, 1]): .6})
 
@@ -120,10 +119,8 @@ def test_bsd_tensor_product(mock_warn):
 
     # Now with empty BSD
     bsd_list = [bsd_1, bsd_2, BSDistribution(), bsd_3]
-
-    with LogChecker(mock_warn):
-        assert BSDistribution.list_tensor_product(bsd_list, merge_modes=True) == pytest.approx(product), \
-            "Wrong list tensor product result when merge_modes is True and there are empty BSD"
+    assert BSDistribution.list_tensor_product(bsd_list, merge_modes=True) == pytest.approx(BSDistribution()), \
+        "Wrong list tensor product result when merge_modes is True and there are empty BSD"
 
 
 @patch.object(ExqaliburLogger, "warn")
