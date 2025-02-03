@@ -60,12 +60,17 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
         return result, phys_perf
 
     for s, p in dist.items():
-        state_distrib = BSDistribution()
+        distributions = []
         for photons_in_mode, detector in zip(s, detectors):
             if detector is not None:
-                state_distrib *= detector.detect(photons_in_mode)
+                d = detector.detect(photons_in_mode)
+                if isinstance(d, BasicState):
+                    d = BSDistribution(d)
+                distributions.append(d)
             else:
-                state_distrib *= BasicState([photons_in_mode])
+                distributions.append(BSDistribution(BasicState([photons_in_mode])))
+
+        state_distrib = BSDistribution.list_tensor_product(distributions)  # TODO: use prob_threshold (PCVL-888)
         for s_out, p_out in state_distrib.items():
             if min_photons is not None and s_out.n < min_photons:
                 phys_perf -= p * p_out
