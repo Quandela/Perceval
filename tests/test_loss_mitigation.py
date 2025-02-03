@@ -58,6 +58,7 @@ def _sampler_setup_cnot(output_type: str):
     elif output_type == 'probs':
         return sampler.probs()['results']
 
+
 @pytest.mark.parametrize('result_type', ['probs', 'samples'])
 def test_photon_loss_mitigation(result_type):
 
@@ -68,6 +69,7 @@ def test_photon_loss_mitigation(result_type):
     for keys, value in mitigated_dist.items():
         assert sum(keys) == ideal_photon_count
         assert value > 1e-6
+
 
 def test_input_validation_loss_mitigation():
     bs1 = BasicState([1, 1, 1, 0, 0, 0, 0])
@@ -110,6 +112,7 @@ def test_input_validation_loss_mitigation():
     with pytest.raises(ValueError):
         photon_recycling(lossy_bsd2, 6)
 
+
 def _compute_random_circ_probs(source_emission, num_photons):
 
     random_loc = Unitary(Matrix.random_unitary(20))
@@ -127,24 +130,25 @@ def _compute_random_circ_probs(source_emission, num_photons):
     sampler = Sampler(processor)
     return sampler.probs()['results']
 
+
 def test_mitigation_over_postselect_tvd():
-    nb_trials = 100
-
-    ideal_photon_count = 4
-    # lossless distribution
-    ideal_dist = _compute_random_circ_probs(source_emission=1, num_photons=ideal_photon_count)
-    # lossy distribution
-    lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
-
-    # post-selected distribution
-    post_select_dist = BSDistribution()
-    for state, prob in lossy_dist.items():
-        if state.n == ideal_photon_count:
-            post_select_dist.add(state, prob)
-    post_select_dist.normalize()
+    nb_trials = 3
 
     number_of_failures = 0
-    for _ in range(nb_trials):
+    for trial in range(nb_trials):
+        ideal_photon_count = 4
+        # lossless distribution
+        ideal_dist = _compute_random_circ_probs(source_emission=1, num_photons=ideal_photon_count)
+        # lossy distribution
+        lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
+
+        # post-selected distribution
+        post_select_dist = BSDistribution()
+        for state, prob in lossy_dist.items():
+            if state.n == ideal_photon_count:
+                post_select_dist.add(state, prob)
+        post_select_dist.normalize()
+
         # compute the mitigated distribution
         mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
 
@@ -159,6 +163,6 @@ def test_mitigation_over_postselect_tvd():
         if tvd_miti < tvd_post and kl_miti < kl_post:
             break
 
-        number_of_failures = _ + 1
+        number_of_failures = trial + 1
 
     assert number_of_failures < nb_trials
