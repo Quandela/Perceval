@@ -223,8 +223,13 @@ def test_postselect_serialization(ps):
 def test_detector_serialization(detector):
     serialized = serialize(detector)
     deserialized = deserialize(serialized)
-    assert detector == deserialized
-
+    assert detector.name == deserialized.name, "Wrong deserialized detector name"
+    if isinstance(detector, BSLayeredPPNR):
+        assert detector._layers == deserialized._layers and detector._r == deserialized._r, \
+            "Wrong deserialized detector parameters"
+    else:
+        assert detector._wires == deserialized._wires and detector.max_detections == deserialized.max_detections, \
+            "Wrong deserialized detector parameters"
 
 def test_json():
     svd = SVDistribution()

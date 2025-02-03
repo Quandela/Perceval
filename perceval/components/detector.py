@@ -105,11 +105,6 @@ class BSLayeredPPNR(IDetector):
         self._r = reflectivity
         self._cache = {}  # This cache records simulations for a given photon count to speed up computations
 
-    def __eq__(self, other):
-        if isinstance(other, BSLayeredPPNR):
-            return self.name == other.name and self._layers == other._layers and self._r == other._r
-        return False
-
     @property
     def max_detections(self) -> int:
         """Maximum number of detected photons"""
@@ -200,11 +195,6 @@ class Detector(IDetector):
         if self._wires is not None:
             self._max = self._wires if max_detections is None else min(max_detections, self._wires)
         self._cache = {}
-
-    def __eq__(self, other):
-        if isinstance(other, Detector):
-            return self.name == other.name and self._wires == other._wires and self.max_detections == other.max_detections
-        return False
 
     @property
     def max_detections(self) -> int:
