@@ -28,6 +28,9 @@
 # SOFTWARE.
 
 import pytest
+
+from _test_utils import retry
+
 from perceval.error_mitigation import photon_recycling
 from perceval.utils import BasicState, BSDistribution
 from perceval.components import catalog, Unitary
@@ -131,38 +134,29 @@ def _compute_random_circ_probs(source_emission, num_photons):
     return sampler.probs()['results']
 
 
+@retry(AssertionError, 3)
 def test_mitigation_over_postselect_tvd():
-    nb_trials = 3
 
-    number_of_failures = 0
-    for trial in range(nb_trials):
-        ideal_photon_count = 4
-        # lossless distribution
-        ideal_dist = _compute_random_circ_probs(source_emission=1, num_photons=ideal_photon_count)
-        # lossy distribution
-        lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
+    ideal_photon_count = 4
+    # lossless distribution
+    ideal_dist = _compute_random_circ_probs(source_emission=1, num_photons=ideal_photon_count)
+    # lossy distribution
+    lossy_dist = _compute_random_circ_probs(source_emission=0.3, num_photons=ideal_photon_count)
 
-        # post-selected distribution
-        post_select_dist = BSDistribution()
-        for state, prob in lossy_dist.items():
-            if state.n == ideal_photon_count:
-                post_select_dist.add(state, prob)
-        post_select_dist.normalize()
+    # compute the mitigated distribution
+    mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
 
-        # compute the mitigated distribution
-        mitigated_dist = photon_recycling(lossy_dist, ideal_photon_count)
+    # post-selected distribution
+    post_select_dist = BSDistribution()
+    for state, prob in lossy_dist.items():
+        if state.n == ideal_photon_count:
+            post_select_dist.add(state, prob)
+    post_select_dist.normalize()
 
-        # TVD Metric
-        tvd_miti = tvd_dist(ideal_dist, mitigated_dist)
-        tvd_post = tvd_dist(ideal_dist, post_select_dist)
+    # TVD Metric
+    tvd_miti = tvd_dist(ideal_dist, mitigated_dist)
+    tvd_post = tvd_dist(ideal_dist, post_select_dist)
 
-        kl_miti = kl_divergence(ideal_dist, mitigated_dist)
-        kl_post = kl_divergence(ideal_dist, post_select_dist)
+    assert tvd_miti < tvd_post  # checks that mitigated is closer to ideal than post-selected distribution
 
-        # checks that mitigated is closer to ideal than post-selected distribution
-        if tvd_miti < tvd_post and kl_miti < kl_post:
-            break
-
-        number_of_failures = trial + 1
-
-    assert number_of_failures < nb_trials
+    assert kl_divergence(ideal_dist, mitigated_dist) < kl_divergence(ideal_dist, post_select_dist)
