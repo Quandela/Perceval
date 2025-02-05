@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import math
 
+from exqalibur import BSSamples
+
 from perceval.utils import (SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params,
                             BSDistribution)
 from perceval.utils.logging import get_logger, channel
@@ -191,6 +193,46 @@ class Source:
         if self.simplify_distribution and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
+
+    def generate_samples(self, max_samples: int, expected_input: BasicState) -> BSSamples:
+        """
+        Generate samples directly from the source, without generating the source probability distribution first.
+
+        :param max_samples: Number of samples to generate
+        :param expected_input: Expected input BasicState
+            The properties of the source will alter the input state. A perfect source always delivers the expected state
+            as an input. Imperfect ones won't.
+        """
+        samples = BSSamples()
+
+        if self.is_perfect():
+            samples.extend([expected_input] * max_samples)
+            return samples
+
+        if not self.partially_distinguishable:
+            bsd = self._generate_one_photon_distribution()
+
+        for photon_count in expected_input:
+            new_samples = BSSamples()
+            if photon_count == 0:
+                new_samples.extend([BasicState([photon_count])] * max_samples)
+            else:
+                for _ in range(photon_count):
+                    if self.partially_distinguishable:
+                        bsd = self._generate_one_photon_distribution()
+                    new_samples_one_mode = bsd.sample(max_samples, non_null=False)
+                    if len(new_samples) == 0:
+                        new_samples = new_samples_one_mode # first samples
+                        continue
+                    for i in range(len(new_samples_one_mode)):
+                        new_samples[i] = new_samples[i].merge(new_samples_one_mode[i])
+            if len(samples) == 0:
+                samples = new_samples # first samples
+                continue
+            for i in range(len(new_samples)):
+                samples[i] *= new_samples[i]
+
+        return samples
 
     def is_perfect(self) -> bool:
         return \
