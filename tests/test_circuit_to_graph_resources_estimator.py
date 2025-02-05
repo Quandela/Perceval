@@ -32,6 +32,7 @@ import numpy as np
 
 try:
     from qiskit.circuit import QuantumCircuit
+    from qiskit.circuit.random import random_circuit
 except ModuleNotFoundError as e:
     assert e.name == "qiskit"
     pytest.skip("Requires `qiskit`", allow_module_level=True)
