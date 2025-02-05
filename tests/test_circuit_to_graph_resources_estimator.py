@@ -30,19 +30,15 @@
 import pytest
 import numpy as np
 
-has_qiskit = True
 try:
-    from qiskit.circuit.random import random_circuit
+    from qiskit.circuit import QuantumCircuit
 except ModuleNotFoundError as e:
     assert e.name == "qiskit"
-    pytest.skip("need `qiskit` module", allow_module_level=True)
-
+    pytest.skip("Requires `qiskit`", allow_module_level=True)
 
 from perceval.converters import CircuitToGraphConverter
 from perceval.converters import ResourcesEstimator
 from perceval.utils.qmath import kmeans
-from perceval import pdisplay
-import matplotlib.pyplot as plt
 
 
 def test_kmeans():
@@ -79,19 +75,62 @@ def test_circuit_to_graph_converter():
     assert all(c >= 0 for c in min_cx_count)
 
 
+num_qubits = 8
+
+
+def _arbitrary_qiskit_circuit():
+    """
+    Generates a hard-coded 8 qubits qiskit circuit where all qubits are entangled with at least one 2-qubits gate
+    """
+    qc = QuantumCircuit(num_qubits)
+    qc.cx(0, 1)
+    qc.ry(0.65, 0)
+    qc.rx(1.65, 7)
+    qc.cx(0, 2)
+    qc.ry(0.3, 1)
+    qc.cx(2, 3)
+    qc.rz(0.02, 5)
+    qc.cz(1, 2)
+    qc.cry(0.12, 0, 1)
+    qc.cz(2, 4)
+    qc.cx(0, 5)
+    qc.swap(2, 3)
+    qc.cx(5, 6)
+    qc.cz(3, 4)
+    qc.cx(6, 7)
+    return qc
+
+
+def _independant_qubits_qiskit_circuit():
+    qc = QuantumCircuit(5)
+    qc.cx(0, 1)
+    qc.cx(0, 2)
+    qc.cx(3, 4)
+    return qc
+
+
 def test_resources_estimator():
-    qiskit_circuit = random_circuit(8, 10, max_operands=2)  # Generate a random circuit for demonstration
+    qiskit_circuit = _arbitrary_qiskit_circuit()
     estimator = ResourcesEstimator(qiskit_circuit)
 
-    assert type(estimator.encoding) == list
-    assert estimator.num_entangling_gates_needed > 0
-    assert estimator.num_modes_needed > 0
-    assert estimator.num_photons_needed > 0
+    assert estimator.encoding == [[0, 1], [2], [3], [4], [5], [6, 7]]  # Best encoding found for the given
+    assert estimator.num_entangling_gates_needed == 11
+    assert estimator.num_modes_needed == sum([2 ** len(item) for item in estimator.encoding])
+    # In the photons needed estimte, all entangling gates are supposed to be heralded (i.e. using 2 ancillary photons)
+    assert estimator.num_photons_needed == estimator.num_entangling_gates_needed * 2 + len(estimator.encoding)
 
-    custom_encoding = [[0, 1], [2, 3], [4], [5], [6, 7]]
-    estimator_with_encoding = ResourcesEstimator(qiskit_circuit, custom_encoding)
+    custom_encoding = [[0, 1], [2, 3], [4, 5], [6, 7]]  # Force a given encoding
+    est2 = ResourcesEstimator(qiskit_circuit, custom_encoding)
 
-    assert estimator_with_encoding.encoding == custom_encoding
-    assert estimator_with_encoding.num_entangling_gates_needed >= 0
-    assert estimator_with_encoding.num_modes_needed > 0
-    assert estimator_with_encoding.num_photons_needed > 0
+    assert est2.encoding == custom_encoding
+    assert est2.num_entangling_gates_needed == 24
+    assert est2.num_modes_needed == sum([2 ** len(item) for item in est2.encoding])
+    assert est2.num_photons_needed == est2.num_entangling_gates_needed * 2 + len(est2.encoding)
+
+    independant_qubits_circuit = _independant_qubits_qiskit_circuit()
+    est3 = ResourcesEstimator(independant_qubits_circuit)
+
+    assert est3.encoding == [[0, 1, 2], [3, 4]]
+    assert est3.num_entangling_gates_needed == 0
+    assert est3.num_modes_needed == sum([2 ** len(item) for item in est3.encoding])
+    assert est3.num_photons_needed == est3.num_entangling_gates_needed * 2 + len(est3.encoding)
