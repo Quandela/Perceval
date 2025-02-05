@@ -30,6 +30,7 @@
 import re
 import pytest
 import time
+import warnings
 
 from functools import wraps
 from pathlib import Path
@@ -233,7 +234,7 @@ def retry(exception_to_check: type[Exception], tries: int = 4, delay: float = 0,
     :param tries: number of tries (not retries) before giving up
     :param delay: initial delay between retries in seconds
     :param backoff: backoff multiplier e.g. value of 2 will double the delay each retry
-    :param logger: logger to use. If None, print
+    :param logger: logger to use. If None, send a warning
     """
     def deco_retry(f):
 
@@ -244,11 +245,11 @@ def retry(exception_to_check: type[Exception], tries: int = 4, delay: float = 0,
                 try:
                     return f(*args, **kwargs)
                 except exception_to_check as e:
-                    msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
+                    msg = f"{e}, Retrying in {mdelay} seconds..."
                     if logger:
                         logger.warning(msg)
                     else:
-                        print(msg)
+                        warnings.warn(msg)
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff
