@@ -53,7 +53,6 @@ def _get_gate_sequence(myqlm_circ) -> list:
                           gate_instruction[2],
                           gate_instruction[1][0] if gate_instruction[1] else None,
                           gate_unitary if need_unitary else None])
-
     return gate_info
 
 
@@ -83,10 +82,6 @@ class MyQLMConverter(AGateConverter):
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
 
-        # TODO : add tests for random gate,
-        #  also those with instructions that are not gate name that raises the error following below
-        # TODO: add test for rx, ry,rz and ph
-
         get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
             channel.general)
 
@@ -96,7 +91,6 @@ class MyQLMConverter(AGateConverter):
         # only gates are converted -> checking if instruction is in gate_set of AQASM
 
         gate_sequence = _get_gate_sequence(qlmc)
-
         self._configure_processor(qlmc)    # empty processor with ports initialized
 
         return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
