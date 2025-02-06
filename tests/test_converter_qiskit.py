@@ -61,6 +61,7 @@ EXPECTED_QISK_SIM_PROBS_DATA = {
     "0011": 0.04397458167828672,
     "1011": 0.03813827757909818,
     "0111": 0.030211036941779033,
+    "0111": 0.030211036941779033,
     "1111": 0.026201429754745716
 }
 
@@ -310,3 +311,56 @@ def test_cnot_ppcnot_vs_hcnot_sim():
         tot_diff += abs(value - EXPECTED_QISK_SIM_PROBS_DATA[bit_form])
 
     assert tot_diff == pytest.approx(0, abs=1e-7)
+
+
+def test_basic_circuit_sdg():
+    convertor = QiskitConverter()
+    qc = qiskit.QuantumCircuit(1)
+    qc.sdg(0)
+    pc = convertor.convert(qc)
+    c = pc.linear_circuit()
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1]._components[0][1], comp.PS)
+
+def test_basic_circuit_tdg():
+    convertor = QiskitConverter()
+    qc = qiskit.QuantumCircuit(1)
+    qc.tdg(0)
+    pc = convertor.convert(qc)
+    c = pc.linear_circuit()
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1]._components[0][1], comp.PS)
+
+def test_circuit_measure():
+    circuit = qiskit.QuantumCircuit(4)
+    circuit.h(range(2))
+    circuit.cx(0, 1)
+    circuit.measure_all()
+
+    convertor = QiskitConverter()
+    with pytest.raises(AssertionError):
+        convertor.convert(circuit)
+
+def test_random_qiskit_circuit():
+    qc = qiskit.QuantumCircuit(1)
+    random_u = qiskit.quantum_info.random_unitary(2)
+    qc.unitary(random_u, 0)
+
+    convertor = QiskitConverter()
+    pc = convertor.convert(qc)
+
+    c = pc.linear_circuit()
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1]._components[0][1], comp.BS)

@@ -29,16 +29,30 @@
 
 from perceval.components import Circuit, Processor, Source, BS, PS, catalog
 from perceval.utils.logging import get_logger, channel
-from .converter_utils import label_cnots_in_gate_sequence
 from .abstract_converter import AGateConverter
 from perceval.utils import NoiseModel
 
+def _get_gate_unitary(myqlm_circ, i):
+    from qat.core.circuit_builder.matrix_util import circ_to_np
+
+    gate_id = myqlm_circ.ops[i].gate
+    gate_matrix = myqlm_circ.gateDic[gate_id].matrix  # gate matrix data
+    return circ_to_np(gate_matrix)  # gate matrix to numpy
 
 def _get_gate_sequence(myqlm_circ) -> list:
     # returns a nested list of gate names with corresponding qubit positions from a myqlm circuit
     gate_info = []
-    for gate_instruction in myqlm_circ.iterate_simple():
-        gate_info.append([gate_instruction[0], gate_instruction[2]])
+    for i, gate_instruction in enumerate(myqlm_circ.iterate_simple()):
+        gate_name = gate_instruction[0].lower()
+        need_unitary = False
+        if gate_name not in catalog and len(gate_instruction[2]) == 1:
+            need_unitary = True
+            gate_unitary = _get_gate_unitary(myqlm_circ, i)
+
+        gate_info.append([gate_name,
+                          gate_instruction[2],
+                          gate_instruction[1][0] if gate_instruction[1] else None,
+                          gate_unitary if need_unitary else None])
 
     return gate_info
 
@@ -66,48 +80,23 @@ class MyQLMConverter(AGateConverter):
         :return: the converted Processor
         """
         import qat
-        from qat.core.circuit_builder.matrix_util import circ_to_np
         # importing the quantum toolbox of myqlm
         # this nested import fixes automatic class reference generation
+
+        # TODO : add tests for random gate,
+        #  also those with instructions that are not gate name that raises the error following below
+        # TODO: add test for rx, ry,rz and ph
 
         get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
             channel.general)
 
+        invalid_gates = [instruction for instruction in qlmc.iterate_simple() if
+                                instruction[0] not in qlmc.gate_set]
+        assert not invalid_gates, f"Invalid instructions: {', '.join(str(instr[0]) for instr in invalid_gates)}"
+        # only gates are converted -> checking if instruction is in gate_set of AQASM
+
         gate_sequence = _get_gate_sequence(qlmc)
-        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
 
         self._configure_processor(qlmc)    # empty processor with ports initialized
 
-        for i, instruction in enumerate(qlmc.iterate_simple()):
-            # qlmc.iterate_simple() is a tuple containing
-            # ('Name', [value of the parameter for gate], [list of qbit positions where gate is applied])
-
-            instruction_name = instruction[0]  # name of the Gate
-            instruction_qbit = instruction[-1]  # tuple with list of qbit positions
-
-            if instruction_name not in qlmc.gate_set:
-                raise ValueError(f"cannot convert {instruction_name} - Not a Gate")
-            # only gates are converted -> checking if instruction is in gate_set of AQASM
-
-            if len(instruction_qbit) == 1:
-                ins = None
-
-                if instruction_name.lower() in catalog:
-                    ins = self._create_catalog_1_qubit_gate(instruction_name.lower(), param=instruction[1][0] if instruction[1] else None)
-                else:
-                    gate_id = qlmc.ops[i].gate
-                    gate_matrix = qlmc.gateDic[gate_id].matrix  # gate matrix data
-                    gate_u = circ_to_np(gate_matrix)  # gate matrix to numpy
-                    ins = self._create_generic_1_qubit_gate(gate_u)
-
-                self._converted_processor.add(instruction_qbit[0]*2, ins.copy())
-            else:
-                if len(instruction_qbit) > 2:
-                    # only 2 qubit gates
-                    raise ValueError(f"Gates with number of Qbits higher than 2 not implemented")
-                c_idx = instruction_qbit[0] * 2
-                c_data = instruction_qbit[1] * 2
-                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[i], c_idx, c_data, use_postselection)
-
-        self.apply_input_state()
-        return self._converted_processor
+        return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)

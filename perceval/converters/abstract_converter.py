@@ -35,6 +35,8 @@ from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
 from perceval.utils.logging import get_logger
+from perceval.converters.converter_utils import label_cnots_in_gate_sequence
+
 
 def _create_mode_map(c_idx: int, c_data: int) -> dict:
     return {c_idx: 0, c_idx + 1: 1, c_data: 2, c_data + 1: 3}
@@ -101,6 +103,33 @@ class AGateConverter(ABC):
     @abstractmethod
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
         pass
+
+    def _generate_converted_processor(self, gate_sequence, use_postselection):
+        # gate_inf -> [gate name, gate qubit pos, param if any or None, unitary Matrix or None]
+        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
+
+        for gate_index, gate_inf in enumerate(gate_sequence):
+            gate_name = gate_inf[0]  # instruction.operation.name
+
+            if len(gate_inf[1]) == 1:
+                if gate_name in catalog:
+                    gate_param = gate_inf[2]
+                    ins = self._create_catalog_1_qubit_gate(gate_name, param=gate_param)
+                else:
+                    ins = self._create_generic_1_qubit_gate(gate_inf[3])
+                    ins._name = gate_inf[0]
+                self._converted_processor.add(gate_inf[1][0] * 2, ins.copy())
+
+            else:
+                if len(gate_inf[1]) > 2:
+                    # only 2 qubit gates
+                    raise NotImplementedError("2+ Qubit gates not implemented")
+                c_idx = gate_inf[1][0] * 2
+                c_data = gate_inf[1][1] * 2
+                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], c_idx, c_data,
+                                                        use_postselection)
+        self.apply_input_state()
+        return self._converted_processor
 
     def _create_catalog_1_qubit_gate(self, gate_name, **kwargs):
         param = kwargs.get("param", None)
