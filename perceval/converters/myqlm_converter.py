@@ -85,8 +85,7 @@ class MyQLMConverter(AGateConverter):
         get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
             channel.general)
 
-        invalid_gates = [instruction for instruction in qlmc.iterate_simple() if
-                                instruction[0] not in qlmc.gate_set]
+        invalid_gates = [instruction for instruction in qlmc.iterate_simple() if instruction[0] not in qlmc.gate_set]
         assert not invalid_gates, f"Invalid instructions: {', '.join(str(instr[0]) for instr in invalid_gates)}"
         # only gates are converted -> checking if instruction is in gate_set of AQASM
 

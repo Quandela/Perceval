@@ -131,7 +131,7 @@ class AGateConverter(ABC):
         self.apply_input_state()
         return self._converted_processor
 
-    def _create_catalog_1_qubit_gate(self, gate_name, **kwargs):
+    def _create_catalog_1_qubit_gate(self, gate_name: str, **kwargs) -> Processor:
         param = kwargs.get("param", None)
         if gate_name in ["rx", "ry", "rz"]:
             return catalog[gate_name].build_processor(theta=param)
