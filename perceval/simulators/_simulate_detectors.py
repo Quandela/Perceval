@@ -31,14 +31,15 @@ from perceval.components.detector import IDetector, DetectionType, get_detection
 from perceval.utils import BSDistribution, BasicState
 
 
-def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None
-                       ) -> tuple[BSDistribution, float]:
+def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None,
+                       prob_threshold: float = 0) -> tuple[BSDistribution, float]:
     """
     Simulates the effect of imperfect detectors on a theoretical distribution.
 
     :param dist: A theoretical distribution of detections, as would Photon Number Resolving (PNR) detectors detect.
     :param detectors: A List of detectors
     :param min_photons: Minimum detected photons filter value (when None, does not apply this physical filter)
+    :param prob_threshold: Filter states that have a probability below this threshold
 
     :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
     """
@@ -70,8 +71,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             else:
                 distributions.append(BSDistribution(BasicState([photons_in_mode])))
 
-        state_distrib = BSDistribution.list_tensor_product(distributions)  # TODO: use prob_threshold (PCVL-888)
-        for s_out, p_out in state_distrib.items():
+        state_dist = BSDistribution.list_tensor_product(distributions, prob_threshold=prob_threshold)
+        for s_out, p_out in state_dist.items():
             if min_photons is not None and s_out.n < min_photons:
                 phys_perf -= p * p_out
             else:

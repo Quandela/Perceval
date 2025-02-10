@@ -435,7 +435,7 @@ class Simulator(ISimulator):
             return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
 
         if detectors:
-            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter)
+            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter, p_threshold)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
