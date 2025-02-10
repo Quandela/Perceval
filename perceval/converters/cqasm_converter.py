@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.components import Processor, Source, Circuit, BS, PS, PERM
+from perceval.components import Processor, Source, Circuit, BS, PS, PERM, catalog
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 from .converter_utils import label_cnots_in_gate_sequence
@@ -39,29 +39,11 @@ import re
 # phase shifter, permutation) exist.
 # Source:
 # https://qutech-delft.github.io/cQASM-spec/language_specification/instructions/gates.html#standard-gate-set
+
 _CQASM_1_QUBIT_GATES = {
-    "H": Circuit(2, name="H") // BS.H(),
-
-    "X": Circuit(2, name="X") // PERM([1, 0]),
-    "X90": Circuit(2, name="Rx(π / 2)") // BS.Rx(theta=-np.pi / 2),
-    "mX90": Circuit(2, name="Rx(-π / 2)") // BS.Rx(theta=np.pi / 2),
-    "Rx": lambda theta: Circuit(2, name=f"Rx({theta:.3})") // BS.Rx(theta=-theta),
-
-    "Y": Circuit(2, name="Y") // PERM([1, 0]) // (1, PS(np.pi / 2)) // (0, PS(-np.pi / 2)),
-    "Y90": Circuit(2, name="Ry(π / 2)") // BS.Ry(theta=np.pi / 2),
-    "mY90": Circuit(2, name="Ry(-π / 2)") // BS.Ry(theta=-np.pi / 2),
-    "Ry": lambda theta: Circuit(2, name=f"Ry({theta:.3})") // BS.Ry(theta=theta),
-
-    "S": Circuit(2, name="S") // (1, PS(np.pi / 2)),
-    "Sdag": Circuit(2, name="Sdag") // (1, PS(-np.pi / 2)),
-    "T": Circuit(2, name="T") // (1, PS(np.pi / 4)),
-    "Tdag": Circuit(2, name="Tdag") // (1, PS(-np.pi / 4)),
-
-    "Z": Circuit(2, name="Z") // (1, PS(-np.pi)),
-    "Rz": lambda theta: Circuit(2, name="Rz({theta:.3})") // (0, PS(-theta / 2)) // (1, PS(theta / 2)),
-
+    "H", "X", "X90", "mX90", "Rx", "Y", "Y90", "mY90", "Ry", "S", "Sdag", "T", "Tdag", "Z", "Rz",
     # For v1 compatibility
-    "I": Circuit(2, name="I"),
+    "I"
 }
 
 _CQASM_2_QUBIT_GATES = {
@@ -155,15 +137,28 @@ class CQASMConverter(AGateConverter):
     def _convert_statement(self, statement, gate_index, optimized_gate_sequence):
         gate_name, controls, targets, parameter = self._get_gate_inf(statement)
 
+        # TODO: refactor all converter code PCVL - 821
+        if gate_name == 'X90':
+            gate_name = 'rx'
+            parameter = np.pi / 2
+        elif gate_name == 'mX90':
+            gate_name = 'rx'
+            parameter = - np.pi / 2
+        elif gate_name == 'Y90':
+            gate_name = 'ry'
+            parameter = np.pi / 2
+        elif gate_name == 'mY90':
+            gate_name = 'ry'
+            parameter = - np.pi / 2
+
         if not controls:
-            circuit_template = _CQASM_1_QUBIT_GATES.get(gate_name, None)
-            if not circuit_template:
-                raise ConversionUnsupportedFeatureError(
-                    f"Unsupported 1-qubit gate { gate_name }")
-            if parameter:
-                circuit_template = circuit_template(parameter)
+            # working with 1 qubit gates
+            if gate_name.lower() in catalog:
+                circuit = self._create_catalog_1_qubit_gate(gate_name.lower(), param=parameter if parameter else None)
+            else:
+                raise ConversionUnsupportedFeatureError(f"Unsupported 1-qubit gate {gate_name}")
+
             for target in targets:
-                circuit = circuit_template.copy()
                 self._converted_processor.add(target * 2, circuit)
         else:
             if gate_name not in _CQASM_2_QUBIT_GATES:

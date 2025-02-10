@@ -31,7 +31,7 @@ import math
 import pytest
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
                                  FFConfigurator, FFCircuitProvider, Unitary, Barrier)
-from perceval.utils import Matrix, P
+from perceval.utils import Matrix, P, LogicalState
 from perceval.runtime import RemoteProcessor
 from _mock_rpc_handler import get_rpc_handler
 
@@ -115,6 +115,26 @@ def test_remote_processor_creation(requests_mock):
     rp.add(0, BS())
 
 
+def test_processor_composition_ports(requests_mock):
+    ls = LogicalState([0, 0])
+    cnot = catalog['postprocessed cnot'].build_processor()
+
+    rp = RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=4)
+    rp.min_detected_photons_filter(2)
+    rp.add(0, cnot)
+    rp.with_input(ls)
+
+    # check that the input ports of the cnot are identical to the remote processor
+    for mode in range(4):
+        cnot_input_port = cnot.get_input_port(mode)
+        rp_input_port = rp.get_input_port(mode)
+        assert cnot_input_port == rp_input_port
+
+        cnot_output_port = cnot.get_output_port(mode)
+        rp_output_port = rp.get_output_port(mode)
+        assert cnot_output_port == rp_output_port
+
+
 def test_processor_building_feed_forward():
     m = 4
     u = Unitary(Matrix.random_unitary(m), "U0")
@@ -159,3 +179,18 @@ def test_processor_feed_forward_multiple_layers():
                 FFConfigurator)
     for (r, c), expected_type in zip(p.components, expected):
         assert isinstance(c, expected_type)
+
+
+def test_ff_controlled_circuit_size():
+    m = 4
+    u = Unitary(Matrix.random_unitary(m), "U0")
+    p = Processor("SLOS", u)
+
+    ffm = FFCircuitProvider(1, 0, Circuit(1), name="D2")
+    ffm.add_configuration((1,), Circuit(2))  # Can add a larger circuit than the default one before it's used
+
+    p.add(0, Detector.pnr())
+    p.add(0, ffm)
+
+    with pytest.raises(RuntimeError):
+        ffm.add_configuration((1,), Circuit(3))

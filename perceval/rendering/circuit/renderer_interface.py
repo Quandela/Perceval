@@ -69,18 +69,19 @@ class ICircuitRenderer(ABC):
         if circuit.is_composite() and circuit.ncomponents() > 0:
             for r, c in circuit._components:
                 shiftr = tuple(p + shift for p in r)
-                if c.is_composite() and c._components:
-                    if recursive:
-                        self._current_subblock_info = self._subblock_info.setdefault(c, {})
-                        self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=False), c._color)
-                        self.render_circuit(
-                            c,
-                            shift=shiftr[0],
-                            precision=precision,
-                            nsimplify=nsimplify)
-                        self.close_subblock(shiftr)
-                    else:
-                        self.append_subcircuit(shiftr, c)
+                if c.is_composite():
+                    if c._components:
+                        if recursive:
+                            self._current_subblock_info = self._subblock_info.setdefault(c, {})
+                            self.open_subblock(shiftr, c.name, self.get_circuit_size(c, recursive=False), c._color)
+                            self.render_circuit(
+                                c,
+                                shift=shiftr[0],
+                                precision=precision,
+                                nsimplify=nsimplify)
+                            self.close_subblock(shiftr)
+                        else:
+                            self.append_subcircuit(shiftr, c)
                 else:
                     self.append_circuit(shiftr, c)
         self.extend_pos(0, circuit.m - 1)

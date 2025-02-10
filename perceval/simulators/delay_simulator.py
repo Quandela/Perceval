@@ -84,8 +84,12 @@ class DelaySimulator(ASimulatorDecorator):
         expanded_input = input_state ** self._depth
         return expanded_input * BasicState([0] * (self._expanded_m - self._depth*self._original_m))
 
-    def _prepare_circuit(self, circuit):
-        self._original_m = _retrieve_mode_count(circuit)
+    def _prepare_circuit(self, circuit, m = None):
+        if m is None:
+            self._original_m = _retrieve_mode_count(circuit)
+        else:
+            assert m >= _retrieve_mode_count(circuit), "Given circuit size is too small for the components"
+            self._original_m = m
         expanded_circuit, expanded_mode_count = self._expand_td(circuit)
         self._expanded_m = expanded_mode_count
         return expanded_circuit

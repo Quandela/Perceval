@@ -295,6 +295,7 @@ class AProcessor(ABC):
         self._components.append((modes, component))
         self._has_feedforward = True
         self._is_unitary = False
+        component.block_circuit_size()  # User cannot add larger photonic circuit output from now on
 
     def _add_detector(self, mode: int, detector: IDetector):
         if isinstance(mode, (tuple, list)) and len(mode) == 1:
@@ -375,6 +376,7 @@ class AProcessor(ABC):
         self._components += new_components
 
         # Retrieve ports from the other processor
+        # Output ports
         for port, port_range in processor._out_ports.items():
             port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
             if isinstance(port, Herald):
@@ -382,6 +384,11 @@ class AProcessor(ABC):
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m)):
                     self.add_port(port_mode, port, PortLocation.OUTPUT)
+        # Input ports
+        for port, port_range in processor._in_ports.items():
+            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
+                self.add_port(port_mode, port, PortLocation.INPUT)
 
         # Retrieve post process function from the other processor
         if processor._postselect is not None:
@@ -644,6 +651,12 @@ class AProcessor(ABC):
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
+        if input_state.has_polarization:
+            get_logger().warn("Given input state has polarization, that will be ignored in the computation"
+                              " (use with_polarized_input instead).")
+        elif input_state.has_annotations:
+            get_logger().warn("Given input state has annotations, that will be ignored in the computation."
+                              " To use them, consider using a StateVector.")
 
     def _deduce_min_detected_photons(self, expected_photons: int) -> None:
         get_logger().warn(

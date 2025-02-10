@@ -53,10 +53,10 @@ class PolarizationSimulator(ASimulatorDecorator):
             spatial_input = SVDistribution(spatial_input)
         return spatial_input
 
-    def set_circuit(self, circuit):
+    def set_circuit(self, circuit, m = None):
         self._prepare_circuit(circuit)
 
-    def _prepare_circuit(self, circuit):
+    def _prepare_circuit(self, circuit, m = None):
         self._upol = circuit.compute_unitary(use_polarization=True)
 
     def _split_odd_even(self, fs):
@@ -85,3 +85,7 @@ class PolarizationSimulator(ASimulatorDecorator):
             reduced_out_state = s_odd.merge(s_even)
             output[reduced_out_state] += output_prob
         return output
+
+    def set_min_detected_photons_filter(self, value: int):
+        super().set_min_detected_photons_filter(value)  # Transmit value to next layer
+        self._min_detected_photons_filter = 0  # Photon count is kept, no need to filter results in this layer

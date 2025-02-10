@@ -47,7 +47,7 @@ like loss of photons, noise, time delays, and more. Ideal simulators should take
 The Backends
 ------------
 
-Perceval has 6 different built-in back-ends with the support of optimized C++ library.
+Perceval has 7 different built-in back-ends with the support of optimized C++ library.
 
 Comparison Table
 ^^^^^^^^^^^^^^^^
@@ -66,6 +66,7 @@ Comparison Table
      - :ref:`NaiveApprox`
      - :ref:`Stepper`
      - :ref:`MPS`
+     - :ref:`SLAP`
    * - Sampling Efficiency
      - :math:`\mathrm{O}(n2^n+poly(m,n))`
      - :math:`\mathrm{O}(mC_n^{n+m-1})`
@@ -73,22 +74,26 @@ Comparison Table
      - *N/A* [1]_
      - *N/A* [1]_
      - *N/A* [1]_
+     - Theoretically :math:`\mathrm{O}(n2^n+poly(m,n))`
    * - Single output Efficiency
      - *N/A*
      - *N/A*
      - :math:`\mathrm{O}(n2^n)`
      - :math:`\mathrm{O}(n)`
-     - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
-     - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{O}(n2^n)`
    * - Full Distribution Efficiency
      - *N/A*
      - :math:`\mathrm{O}(nC_n^{n+m-1})`
      - :math:`\mathrm{O}(n2^nC_n^{n+m-1})`
      - :math:`\mathrm{O}(nC_n^{n+m-1})`
-     - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
-     - :math:`\mathrm{o}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
+     - :math:`\mathrm{O}(\begin{equation} 2n\times \sum_{k=1}^n  \binom{n-1}{k-1} \times \binom{m+k-1}{m-1} \label{eq:complex} \end{equation})`
    * - Probability Amplitude
      - **No**
+     - **Yes**
      - **Yes**
      - **Yes**
      - **Yes**
@@ -101,6 +106,7 @@ Comparison Table
      - **No**
      - **Yes**
      - **No**
+     - **No**
    * - Support of Time-Circuit
      - **No**
      - **No**
@@ -108,10 +114,12 @@ Comparison Table
      - **No**
      - **Yes**
      - **No**
+     - **No**
    * - Practical Limits
      - :math:`n\approx30`
      - :math:`n,m<20`
      - :math:`n\approx30`
+     -
      -
      -
      -
@@ -158,9 +166,12 @@ computers to circuits with :math:`\approx 20` photons and to :math:`\approx 24` 
 SLAP
 ^^^^
 
-The Simulator of LAttice of Polynoms ``SLAP`` algorithm computes all output probability amplitudes at once by iterating
-over a lattice of intermediary results representation. It is designed to require less memory than ``SLOS`` (2^n complex
-values) at the cost of a slightly higher computation time.
+The Simulator of LAttice of Polynomials ``SLAP`` algorithm computes all output probability amplitudes at once by iterating over a lattice of intermediary results representation.
+It is designed to require less memory than ``SLOS`` (:math:`2^n` complex values) at the cost of a slightly higher computation time.
+
+This feature is still under development, however, in the future, we expect this backend:
+  * to reach a sampling efficiency of :math:`\mathrm{O}(n2^n+poly(m,n))`
+  * to be faster than SLOS in the regime :math:`m >> n`
 
 Naive
 ^^^^^
