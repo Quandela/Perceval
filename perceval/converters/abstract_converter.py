@@ -109,7 +109,7 @@ class AGateConverter(ABC):
         optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
 
         for gate_index, gate_inf in enumerate(gate_sequence):
-            gate_name = gate_inf[0]  # instruction.operation.name
+            gate_name = gate_inf[0]
 
             if len(gate_inf[1]) == 1:
                 if gate_name in catalog:
