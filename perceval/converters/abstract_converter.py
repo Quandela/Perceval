@@ -151,14 +151,11 @@ class AGateConverter(ABC):
         if gate_name in ["POSTPROCESSED CNOT", "HERALDED CNOT"]:
             if use_postselection and gate_name == "POSTPROCESSED CNOT":
                 cnot_processor = self.create_ppcnot_processor()
-                cnot_ps = cnot_processor._postselect
-
-                cnot_processor.clear_postselection()  # clear after saving post select information
-                post_select_curr.merge(cnot_ps)  # merge the incoming gate post-selection with the current
             else:
                 cnot_processor = self.create_hcnot_processor()
 
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
+            post_select_curr.merge(self._converted_processor._postselect)
 
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
