@@ -102,36 +102,14 @@ class QiskitConverter(AGateConverter):
                 f"{type(instruction.operation)}" for _, instruction in enumerate(qc.data)
                 if not isinstance(instruction.operation, qiskit.circuit.gate.Gate))
 
-        gate_sequence = _get_gate_sequence(qc)
-
-        # TODO: Plan for refactor of converter classes
-
-        # TODO:  use this sequence in sub classes of converters
-        #  and then all the methods for checking num qubits and calling the correct catalog element
-        #  can be defined in the abstract class.
-
-        # Todo: Need to add more information to the sequence - parameters of parametrized gates and
-        #  unitary for some generic one.
-
-        # TODO: Note - identical code change would make it work on myqlm side
-
-        # Todo: Optimization on CNOTs is also generic (our method from Liam -> optimzed sequencing can
-        #  also be present only in the abstract class
-
-        # TODO: To make this compatible with CQASM - there is one major change (the rest should follow similarly)
-        #  --- dealing with multi target gates -> maybe split the instruction into multiple instructions
-
-        # TODO : gate_Qubit names - CQASM allows random naming. Check if possible in Qiskit and myQLM
-
-        # TODO: split in two - configure -> Qubit names and circuit size - and then convert -> to apply gates
-
         qubit_names = qc.qregs[0].name
         self._configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
 
-        # TODO : what about Barrier? - the following does nothing
+        # TODO : what about Barrier? - the following does nothing - do we convert Barriers?
         for gate_index, instruction in enumerate(qc.data):
             # barrier has no effect
             if isinstance(instruction.operation, qiskit.circuit.barrier.Barrier):
                 continue
 
+        gate_sequence = _get_gate_sequence(qc)
         return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
