@@ -155,7 +155,8 @@ class AGateConverter(ABC):
                 cnot_processor = self.create_hcnot_processor()
 
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
-            post_select_curr.merge(self._converted_processor._postselect)
+            if self._converted_processor._postselect is not None:
+                post_select_curr.merge(self._converted_processor._postselect)
 
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
