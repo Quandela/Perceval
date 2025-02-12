@@ -32,29 +32,6 @@ from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 from perceval.utils import NoiseModel
 
-def _get_gate_unitary(myqlm_circ, i):
-    from qat.core.circuit_builder.matrix_util import circ_to_np
-
-    gate_id = myqlm_circ.ops[i].gate
-    gate_matrix = myqlm_circ.gateDic[gate_id].matrix  # gate matrix data
-    return circ_to_np(gate_matrix)  # gate matrix to numpy
-
-def _get_gate_sequence(myqlm_circ) -> list:
-    # returns a nested list of gate names with corresponding qubit positions from a myqlm circuit
-    gate_info = []
-    for i, gate_instruction in enumerate(myqlm_circ.iterate_simple()):
-        gate_name = gate_instruction[0].lower()
-        need_unitary = False
-        if gate_name not in catalog and len(gate_instruction[2]) == 1:
-            need_unitary = True
-            gate_unitary = _get_gate_unitary(myqlm_circ, i)
-
-        gate_info.append([gate_name,
-                          gate_instruction[2],
-                          gate_instruction[1][0] if gate_instruction[1] else None,
-                          gate_unitary if need_unitary else None])
-    return gate_info
-
 
 class MyQLMConverter(AGateConverter):
     r"""myQLM quantum circuit to perceval circuit converter.
@@ -65,6 +42,9 @@ class MyQLMConverter(AGateConverter):
     """
     def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
         super().__init__(backend_name, source, noise_model)
+        import qat as qat
+        from qat.core.circuit_builder.matrix_util import circ_to_np
+        self._circ_to_np = circ_to_np
 
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
@@ -89,7 +69,29 @@ class MyQLMConverter(AGateConverter):
         assert not invalid_gates, f"Invalid instructions: {', '.join(str(instr[0]) for instr in invalid_gates)}"
         # only gates are converted -> checking if instruction is in gate_set of AQASM
 
-        gate_sequence = _get_gate_sequence(qlmc)
+        gate_sequence = self._get_gate_sequence(qlmc)
         self._configure_processor(qlmc)    # empty processor with ports initialized
 
         return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
+
+    def _get_gate_unitary(self, myqlm_circ, i):
+        # returns the unitary matrix of gates
+        gate_id = myqlm_circ.ops[i].gate
+        gate_matrix = myqlm_circ.gateDic[gate_id].matrix  # gate matrix data
+        return self._circ_to_np(gate_matrix)  # gate matrix to numpy
+
+    def _get_gate_sequence(self, myqlm_circ) -> list:
+        # returns a nested list of gate names with corresponding qubit positions from a myqlm circuit
+        gate_info = []
+        for i, gate_instruction in enumerate(myqlm_circ.iterate_simple()):
+            gate_name = gate_instruction[0].lower()
+            need_unitary = False
+            if gate_name not in catalog and len(gate_instruction[2]) == 1:
+                need_unitary = True
+                gate_unitary = self._get_gate_unitary(myqlm_circ, i)
+
+            gate_info.append([gate_name,
+                              gate_instruction[2],
+                              gate_instruction[1][0] if gate_instruction[1] else None,
+                              gate_unitary if need_unitary else None])
+        return gate_info

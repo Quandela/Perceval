@@ -104,8 +104,9 @@ class AGateConverter(ABC):
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
         pass
 
-    def _generate_converted_processor(self, gate_sequence, use_postselection):
-        # gate_inf -> [gate name, gate qubit pos, param if any or None, unitary Matrix or None]
+    def _generate_converted_processor(self, gate_sequence: list, use_postselection: bool) -> Processor:
+        # gate_inf -> [gate name, gate qubit pos, gate parameter if any or None, unitary Matrix or None]
+
         optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
 
         for gate_index, gate_inf in enumerate(gate_sequence):
@@ -122,8 +123,8 @@ class AGateConverter(ABC):
 
             else:
                 if len(gate_inf[1]) > 2:
-                    # only 2 qubit gates
                     raise NotImplementedError("2+ Qubit gates not implemented")
+
                 c_idx = gate_inf[1][0] * 2
                 c_data = gate_inf[1][1] * 2
                 self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], c_idx, c_data,

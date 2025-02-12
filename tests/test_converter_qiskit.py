@@ -38,7 +38,6 @@ except ModuleNotFoundError as e:
 
 from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
-from perceval.converters.qiskit_converter import _get_gate_sequence
 from perceval.converters.converter_utils import label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
 from perceval.components.port import get_basic_state_from_encoding
@@ -268,7 +267,7 @@ def test_cnot_ppcnot_vs_hcnot():
     for _, c in pc.components:
         gate_seq_converted.append(c.name)
 
-    gate_seq_qisk = _get_gate_sequence(qisk_circ) # gate list from qiskit
+    gate_seq_qisk = QiskitConverter()._get_gate_sequence(qisk_circ) # gate list from qiskit
     optimized_gate_sequence = label_cnots_in_gate_sequence(gate_seq_qisk)
 
     num_ppcnot_expt = len([elem for elem in optimized_gate_sequence if elem == 'postprocessed cnot'])

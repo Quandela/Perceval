@@ -46,9 +46,7 @@ _CQASM_1_QUBIT_GATES = {
     "I"
 }
 
-_CQASM_2_QUBIT_GATES = {
-    "CNOT", "CZ"
-}
+_CQASM_2_QUBIT_GATES = { "CNOT", "CZ"}
 
 def _map_gate(gate_name: str) -> str:
     # updates gate names to be consistent with Perceval catalog
