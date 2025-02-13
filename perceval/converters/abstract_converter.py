@@ -118,9 +118,7 @@ class AGateConverter(ABC):
 
         :return: the converted processor
         """
-
         self._configure_processor(gate_circuit)  # empty processor with ports initialized
-
         gate_sequence = self._get_gate_sequence(gate_circuit)
 
         return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
