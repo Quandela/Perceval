@@ -47,7 +47,7 @@ N = 100
 def get_sample_from_statevector(sv):
     p = random.random()
     state = None
-    for state, pa in sv.items():
+    for state, pa in sv:
         proba = abs(pa)**2
         if p > proba:
             p -= proba
