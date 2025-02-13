@@ -239,7 +239,7 @@ class CQASMConverter(AGateConverter):
         if not isinstance(ast, self._cqasm.semantic.Program):
             raise ConversionSyntaxError(f"cQASM parser error: { ast[0] }")
 
-        return ast # self.convert(ast, use_postselection=use_postselection)
+        return ast
 
     def _v3_ast_from_v1_source(self, lines):
         r""""Converts a cQASM v1 quantum program into a cQASM v3 AST"""
