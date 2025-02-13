@@ -81,10 +81,19 @@ class AGateConverter(ABC):
 
     @abstractmethod
     def _get_gate_sequence(self, gate_circuit) -> list[list]:
+        """
+        Iterates over the gate circuit to return a list of Gate operations in the circuit to convert to LO circuit.
+        The information in each element of the list is  - [gate name, gate qubit positions, gate parameters, gate unitary]
+        Note - Gate parameter or gate unitary can be None if value is not needed.
+        """
         pass
 
     @abstractmethod
-    def _get_qubit_names(self, gate_circuit):
+    def _get_qubit_names(self, gate_circuit, n_qbits) -> list:
+        """
+        Returns a list of Qubit names for a given 'n_qubits' gate circuit. Use 'Q' as the default name
+         unless the framework provides a custom name.
+        """
         pass
 
     def _configure_processor(self, gate_circuit, **kwargs):

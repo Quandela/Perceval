@@ -73,7 +73,6 @@ class CQASMConverter(AGateConverter):
         import cqasm.v3x as cqasm
 
         self._qubit_list = []
-        self._use_postselection = False
         self._cqasm = cqasm
 
     def count_qubits(self, ast) -> int:
@@ -158,6 +157,9 @@ class CQASMConverter(AGateConverter):
                         f"Unsupported 2-qubit gate { gate_name }")
                 for target in targets:
                     gate_sequence.append([gate_name.lower(), [controls[0], target], parameter])
+
+        gate_sequence = [elem + [None] for elem in gate_sequence]  # to be consistent with other frameworks, None is used for gate unitary
+
         return gate_sequence
 
     def _get_qubit_names(self, ast, n_qbits):
@@ -178,9 +180,8 @@ class CQASMConverter(AGateConverter):
         get_logger().info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
                     channel.general)
         self._collect_qubit_list(ast)
-        self._use_postselection = use_postselection
 
-        return super().convert(ast, self._use_postselection)
+        return super().convert(ast, use_postselection)
 
     @classmethod
     def check_version(cls, source_string):
