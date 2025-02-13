@@ -27,9 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# ========================================
 import numpy as np
-import matplotlib.pyplot as plt
 import networkx as nx
 from perceval.utils.qmath import kmeans
 
