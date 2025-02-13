@@ -42,37 +42,22 @@ class MyQLMConverter(AGateConverter):
     """
     def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
         super().__init__(backend_name, source, noise_model)
-        import qat as qat
         from qat.core.circuit_builder.matrix_util import circ_to_np
         self._circ_to_np = circ_to_np
 
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
 
-    def convert(self, qlmc, use_postselection: bool = True) -> Processor:
-        r"""Convert a myQLM quantum circuit into a perceval `Processor`.
-
-        :param qlmc: quantum gate-based myqlm circuit
-        :type qlmc: qat.core.Circuit
-        :param use_postselection: when True, uses a `post-processed CNOT` as the last gate. Otherwise, uses only
-            `heralded CNOT`
-        :return: the converted Processor
-        """
-        import qat
-        # importing the quantum toolbox of myqlm
-        # this nested import fixes automatic class reference generation
-
+    def _check_conversion_possible(self, qlmc):
         get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
-            channel.general)
+                          channel.general)
 
         invalid_gates = [instruction for instruction in qlmc.iterate_simple() if instruction[0] not in qlmc.gate_set]
         assert not invalid_gates, f"Invalid instructions: {', '.join(str(instr[0]) for instr in invalid_gates)}"
         # only gates are converted -> checking if instruction is in gate_set of AQASM
 
-        gate_sequence = self._get_gate_sequence(qlmc)
-        self._configure_processor(qlmc)    # empty processor with ports initialized
-
-        return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
+    def _get_qubit_names(self, myqlm_circ, n_qbits):
+        return [f'{"Q"}{i}' for i in range(n_qbits)]
 
     def _get_gate_unitary(self, myqlm_circ, i):
         # returns the unitary matrix of gates

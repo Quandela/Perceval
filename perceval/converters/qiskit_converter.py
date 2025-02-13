@@ -47,20 +47,10 @@ class QiskitConverter(AGateConverter):
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.qregs[0].size  # number of qubits
 
-    def convert(self, qc, use_postselection: bool = True) -> Processor:
-        r"""Convert a qiskit quantum circuit into a `Processor`.
-
-        :param qc: quantum-based qiskit circuit
-        :type qc: qiskit.QuantumCircuit
-        :param use_postselection: when True (default), uses optimized number of `postprocessed CNOT` and
-            'Heralded CNOT' gates. Otherwise, uses only `heralded CNOT`.
-
-        :return: the converted processor
-        """
-        # import qiskit  # this nested import fixes automatic class reference generation
-
-        get_logger().info(f"Convert qiskit.QuantumCircuit ({qc.num_qubits} qubits, {len(qc.data)} operations) to processor",
-                    channel.general)
+    def _check_conversion_possible(self, qc):
+        get_logger().info(
+            f"Convert qiskit.QuantumCircuit ({qc.num_qubits} qubits, {len(qc.data)} operations) to processor",
+            channel.general)
 
         # some limitation in the conversion, in particular measure
         assert all(isinstance(instruction.operation, self._qiskit.circuit.gate.Gate)
@@ -68,12 +58,6 @@ class QiskitConverter(AGateConverter):
             "Cannot convert instruction(s): " + ", ".join(
                 f"{type(instruction.operation)}" for _, instruction in enumerate(qc.data)
                 if not isinstance(instruction.operation, self._qiskit.circuit.gate.Gate))
-
-        qubit_names = qc.qregs[0].name
-        self._configure_processor(qc, qname=qubit_names)  # empty processor with ports initialized
-
-        gate_sequence = self._get_gate_sequence(qc)
-        return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
 
     @staticmethod
     def _map_gate_names(gate_name: str) -> str:
@@ -86,6 +70,9 @@ class QiskitConverter(AGateConverter):
             return 'tdag'
         else:
             return gate_name
+
+    def _get_qubit_names(self, qc, n_qbits):
+        return [f'{qc.qregs[0].name}{i}' for i in range(n_qbits)]
 
     def _get_gate_sequence(self, qisk_circ) -> list[list]:
         """

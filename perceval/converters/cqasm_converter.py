@@ -48,34 +48,6 @@ _CQASM_1_QUBIT_GATES = {
 
 _CQASM_2_QUBIT_GATES = { "CNOT", "CZ"}
 
-def _map_gate(gate_name: str) -> str:
-    # updates gate names to be consistent with Perceval catalog
-    if gate_name == 'X90':
-        return 'rx'
-
-    elif gate_name == 'mX90':
-        return 'rx'
-    elif gate_name == 'Y90':
-        return 'ry'
-    elif gate_name == 'mY90':
-        return 'ry'
-    else:
-        return gate_name
-
-def _update_parameter_rotation_gate(gate_name, parameter) -> float:
-    # Returns circuit parameter value for CQASM gates
-    if gate_name == 'X90':
-        return np.pi / 2
-
-    elif gate_name == 'mX90':
-        return - np.pi / 2
-    elif gate_name == 'Y90':
-        return np.pi / 2
-    elif gate_name == 'mY90':
-        return - np.pi / 2
-    else:
-        return parameter
-
 
 class ConversionBadVersionError(Exception):
     pass
@@ -162,16 +134,16 @@ class CQASMConverter(AGateConverter):
 
         return gate_name, controls, targets, parameter
 
-    def _generate_gate_sequence(self, ast) -> list[list]:
+    def _get_gate_sequence(self, ast) -> list[list]:
         # generates the gate sequence by converting ast statements
         gate_sequence = []
         for statement in ast.block.statements:
             gate_name, controls, targets, parameter = self._get_gate_info(statement)
 
-            parameter = _update_parameter_rotation_gate(gate_name, parameter)
+            parameter = CQASMConverter._update_parameter_rotation_gate(gate_name, parameter)
             # x90, mx90, y90, my90 are named gates in CQASM. Their parameter values are needed to build circuit in pcvl.
 
-            gate_name = _map_gate(gate_name)
+            gate_name = CQASMConverter._map_gate(gate_name)
 
             if not controls:
                 # working with 1 qubit gates
@@ -188,6 +160,12 @@ class CQASMConverter(AGateConverter):
                     gate_sequence.append([gate_name.lower(), [controls[0], target], parameter])
         return gate_sequence
 
+    def _get_qubit_names(self, ast, n_qbits):
+        return [f'{q}[{i}]' if i >= 0 else q for (q, i) in self._qubit_list]
+
+    def _check_conversion_possible(self, gate_circuit):
+        pass
+
     def convert(self, ast, use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
 
@@ -202,16 +180,10 @@ class CQASMConverter(AGateConverter):
 
         get_logger().info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
                     channel.general)
-
         self._collect_qubit_list(ast)
         self._use_postselection = use_postselection
 
-        qubit_names = [
-            f'{ q }[{ i }]' if i >= 0 else q for (q, i) in self._qubit_list]
-        self._configure_processor(ast, qubit_names=qubit_names)
-
-        gate_sequence = self._generate_gate_sequence(ast)
-        return self._generate_converted_processor(gate_sequence, use_postselection=use_postselection)
+        return super().convert(ast, self._use_postselection)
 
     @classmethod
     def check_version(cls, source_string):
@@ -374,3 +346,33 @@ class CQASMConverter(AGateConverter):
             except ValueError:
                 print("An error in parsing the cQASM v1 file.")
         return ast
+
+    @staticmethod
+    def _map_gate(gate_name: str) -> str:
+        # updates gate names to be consistent with Perceval catalog
+        if gate_name == 'X90':
+            return 'rx'
+
+        elif gate_name == 'mX90':
+            return 'rx'
+        elif gate_name == 'Y90':
+            return 'ry'
+        elif gate_name == 'mY90':
+            return 'ry'
+        else:
+            return gate_name
+
+    @staticmethod
+    def _update_parameter_rotation_gate(gate_name, parameter) -> float:
+        # Returns circuit parameter value for CQASM gates
+        if gate_name == 'X90':
+            return np.pi / 2
+
+        elif gate_name == 'mX90':
+            return - np.pi / 2
+        elif gate_name == 'Y90':
+            return np.pi / 2
+        elif gate_name == 'mY90':
+            return - np.pi / 2
+        else:
+            return parameter
