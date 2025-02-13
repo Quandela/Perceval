@@ -47,18 +47,6 @@ class QiskitConverter(AGateConverter):
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.qregs[0].size  # number of qubits
 
-    def _check_conversion_possible(self, qc):
-        get_logger().info(
-            f"Convert qiskit.QuantumCircuit ({qc.num_qubits} qubits, {len(qc.data)} operations) to processor",
-            channel.general)
-
-        # some limitation in the conversion, in particular measure
-        assert all(isinstance(instruction.operation, self._qiskit.circuit.gate.Gate)
-                   for _, instruction in enumerate(qc.data)), \
-            "Cannot convert instruction(s): " + ", ".join(
-                f"{type(instruction.operation)}" for _, instruction in enumerate(qc.data)
-                if not isinstance(instruction.operation, self._qiskit.circuit.gate.Gate))
-
     @staticmethod
     def _map_gate_names(gate_name: str) -> str:
         # updates gate names to be consistent with Perceval catalog
@@ -82,6 +70,14 @@ class QiskitConverter(AGateConverter):
         :param qisk_circ: A qiskit circuit
         :return: A list of gate sequences with names, their positions, parameter (if any).
         """
+
+        # some limitation in the conversion, in particular measure
+        assert all(isinstance(instruction.operation, self._qiskit.circuit.gate.Gate)
+                   for _, instruction in enumerate(qisk_circ.data)), \
+            "Cannot convert instruction(s): " + ", ".join(
+                f"{type(instruction.operation)}" for _, instruction in enumerate(qisk_circ.data)
+                if not isinstance(instruction.operation, self._qiskit.circuit.gate.Gate))
+
         gate_sequence = []
         for instruction in qisk_circ.data:
             if isinstance(instruction.operation, self._qiskit.circuit.barrier.Barrier):

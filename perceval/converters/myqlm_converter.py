@@ -48,14 +48,6 @@ class MyQLMConverter(AGateConverter):
     def count_qubits(self, gate_circuit) -> int:
         return gate_circuit.nbqbits
 
-    def _check_conversion_possible(self, qlmc):
-        get_logger().info(f"Convert myQLM circuit ({qlmc.nbqbits} qubits, {len(qlmc.ops)} operations) to processor",
-                          channel.general)
-
-        invalid_gates = [instruction for instruction in qlmc.iterate_simple() if instruction[0] not in qlmc.gate_set]
-        assert not invalid_gates, f"Invalid instructions: {', '.join(str(instr[0]) for instr in invalid_gates)}"
-        # only gates are converted -> checking if instruction is in gate_set of AQASM
-
     def _get_qubit_names(self, myqlm_circ, n_qbits):
         return [f'{"Q"}{i}' for i in range(n_qbits)]
 
@@ -67,6 +59,13 @@ class MyQLMConverter(AGateConverter):
 
     def _get_gate_sequence(self, myqlm_circ) -> list:
         # returns a nested list of gate names with corresponding qubit positions from a myqlm circuit
+        get_logger().info(f"Convert myQLM circuit ({myqlm_circ.nbqbits} qubits, {len(myqlm_circ.ops)} operations) to processor",
+                          channel.general)
+
+        invalid_gates = [instruction for instruction in myqlm_circ.iterate_simple() if instruction[0] not in myqlm_circ.gate_set]
+        assert not invalid_gates, f"Invalid instructions: {', '.join(str(instr[0]) for instr in invalid_gates)}"
+        # only gates are converted -> checking if instruction is in gate_set of AQASM
+
         gate_info = []
         for i, gate_instruction in enumerate(myqlm_circ.iterate_simple()):
             gate_name = gate_instruction[0].lower()

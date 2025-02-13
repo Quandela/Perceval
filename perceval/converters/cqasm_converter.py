@@ -163,9 +163,6 @@ class CQASMConverter(AGateConverter):
     def _get_qubit_names(self, ast, n_qbits):
         return [f'{q}[{i}]' if i >= 0 else q for (q, i) in self._qubit_list]
 
-    def _check_conversion_possible(self, gate_circuit):
-        pass
-
     def convert(self, ast, use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
 

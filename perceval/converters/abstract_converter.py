@@ -87,9 +87,9 @@ class AGateConverter(ABC):
     def _get_qubit_names(self, gate_circuit):
         pass
 
-    @abstractmethod
-    def _check_conversion_possible(self, gate_circuit):
-        pass
+    # @abstractmethod
+    # def _check_conversion_possible(self, gate_circuit):
+    #     pass
 
     def _configure_processor(self, gate_circuit, **kwargs):
         """
@@ -119,7 +119,6 @@ class AGateConverter(ABC):
         :return: the converted processor
         """
 
-        self._check_conversion_possible(gate_circuit)
         self._configure_processor(gate_circuit)  # empty processor with ports initialized
 
         gate_sequence = self._get_gate_sequence(gate_circuit)
