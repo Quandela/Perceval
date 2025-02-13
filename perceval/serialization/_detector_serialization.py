@@ -26,20 +26,37 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.serialization import _schema_circuit_pb2 as pb
+from perceval.components import BSLayeredPPNR, Detector
 
-SEP = ":"
-PCVL_PREFIX = f"{SEP}PCVL{SEP}"
-ZIP_PREFIX = f"{PCVL_PREFIX}zip{SEP}"
 
-MATRIX_TAG = "Matrix"
-CIRCUIT_TAG = "ACircuit"
-BS_TAG = "BasicState"
-SV_TAG = "StateVector"
-SVD_TAG = "SVDistribution"
-BSD_TAG = "BSDistribution"
-BSC_TAG = "BSCount"
-BSS_TAG = "BSSamples"
-NOISE_TAG = "NoiseModel"
-POSTSELECT_TAG = "PostSelect"
-BS_LAYERED_DETECTOR_TAG = "BSLayeredDetector"
-DETECTOR_TAG = "Detector"
+def serialize_bs_layer(detector: BSLayeredPPNR):
+    pb_d = pb.BSLayeredPPNR()
+    pb_d.name = detector.name
+    pb_d.bs_layers = detector._layers
+    pb_d.reflectivity = detector._r
+    return pb_d
+
+
+def deserialize_bs_layer(pb_d: pb.BSLayeredPPNR) -> BSLayeredPPNR:
+    detector = BSLayeredPPNR(pb_d.bs_layers, pb_d.reflectivity)
+    detector.name = pb_d.name
+    return detector
+
+
+def serialize_detector(detector: Detector):
+    pb_d = pb.Detector()
+    pb_d.name = detector.name
+    if detector._wires is not None:
+        pb_d.n_wires = detector._wires
+    if detector.max_detections is not None:
+        pb_d.max_detections = detector.max_detections
+    return pb_d
+
+
+def deserialize_detector(pb_d: pb.Detector) -> Detector:
+    n_wires = pb_d.n_wires or None
+    max_detections = pb_d.max_detections or None
+    detector = Detector(n_wires, max_detections)
+    detector.name = pb_d.name
+    return detector
