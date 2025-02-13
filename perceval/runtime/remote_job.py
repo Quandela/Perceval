@@ -93,7 +93,11 @@ class RemoteJob(Job):
         self._results = None
 
     @property
-    def id(self):
+    def has_been_send(self) -> bool:
+        return self._id is not None
+
+    @property
+    def id(self) -> str | None:
         return self._id
 
     @staticmethod
@@ -102,6 +106,30 @@ class RemoteJob(Job):
         j._id = job_id
         j.status()
         return j
+
+    @staticmethod
+    def from_dict(my_dict: dict, rpc_handler):
+        j = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
+        j._id = my_dict['id']
+        j._job_status.status = RunningStatus[my_dict['status']]
+        return j
+
+    def to_dict(self):
+        job_info = dict()
+        job_info['id'] = self.id
+
+        if self.has_been_send:
+            job_info['status'] = str(self._job_status)
+        else:
+            job_info['status'] = None  # set status to None for Jobs not sent to cloud
+        job_info['body'] = self._create_payload_data()  # Save job payload to launch later on cloud
+
+        # save metadata to recreate remote jobs
+        job_info['metadata'] = {'headers': self._rpc_handler.headers,
+                                'platform': self._rpc_handler.name,
+                                'url': self._rpc_handler.url}
+
+        return job_info
 
     def _handle_status_error(self, error):
         """
@@ -123,13 +151,16 @@ class RemoteJob(Job):
                 429   # Too many requests
             ]:
                 get_logger().error(f"Got HTTP error {error_code} when updating job {self._id} status. Ignoring...",
-                             channel.general)
+                                   channel.general)
             else:  # If the status code is any other error, it is considered unrecoverable
                 raise error
         return self._job_status
 
     @property
     def status(self) -> JobStatus:
+        if not self.has_been_send or self._job_status.completed:  # status will never change, no need to get it
+            return self._job_status
+
         now = time.time()
         if now - self._previous_status_refresh > RemoteJob.STATUS_REFRESH_DELAY:
             self._previous_status_refresh = now
@@ -149,10 +180,6 @@ class RemoteJob(Job):
             creation_datetime, duration, start_datetime = _extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)
 
-            name = response.get("name")
-            if name and name != self.name:
-                self.name = name
-
         return self._job_status
 
     def execute_sync(self, *args, **kwargs) -> any:
@@ -161,7 +188,7 @@ class RemoteJob(Job):
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
-    def _create_payload_data(self, *args, **kwargs):
+    def set_args(self, *args, **kwargs) -> None:
         self._handle_params(args, kwargs)
         if self._delta_parameters['mapping']:
             if self._job_context is None:
@@ -172,6 +199,9 @@ class RemoteJob(Job):
         kwargs['job_context'] = self._job_context
         self._request_data['job_name'] = self._name
         self._request_data['payload'].update(kwargs)
+
+    def _create_payload_data(self, *args, **kwargs):
+        self.set_args(*args, **kwargs)
         self._check_max_shots_samples_validity()
         return self._request_data
 
@@ -192,7 +222,7 @@ class RemoteJob(Job):
         if "max_samples" in p and "max_shots" in p:
             if p["max_samples"] > p["max_shots"]:
                 get_logger().warn(f"Lowered 'max_samples' from user defined value ({p['max_samples']}) to 'max_shots' value ({p['max_shots']}) for consistency.",
-                            channel.user)
+                                  channel.user)
                 p["max_samples"] = p["max_shots"]
 
     def cancel(self):
@@ -211,9 +241,9 @@ class RemoteJob(Job):
         :return: The new remote job.
         """
         if not self.status.failed:
-            raise RuntimeError(f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
+            raise RuntimeError(
+                f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
         return RemoteJob.from_id(self._rpc_handler.rerun_job(self._id), self._rpc_handler)
-
 
     def _get_results(self) -> None:
         if self._results and self.status.completed:

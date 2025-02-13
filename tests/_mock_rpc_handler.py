@@ -44,7 +44,6 @@ from perceval.runtime.rpc_handler import (
     _JOB_ID_KEY
 )
 
-REMOTE_JOB_NAME = 'a remote job'
 REMOTE_JOB_DURATION = 5
 REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
 REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
@@ -149,7 +148,6 @@ class MockRPCHandler(RPCHandler):
             'failure_code': None,
             'last_intermediate_results': None,
             'msg': 'ok',
-            'name': REMOTE_JOB_NAME,
             'progress': 1.0,
             'progress_message': 'Computing phases to apply (step 2)',
             'start_time': REMOTE_JOB_START_TIMESTAMP,

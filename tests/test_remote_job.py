@@ -44,9 +44,7 @@ from _mock_rpc_handler import (
     REMOTE_JOB_DURATION,
     REMOTE_JOB_RESULTS,
     REMOTE_JOB_CREATION_TIMESTAMP,
-    REMOTE_JOB_START_TIMESTAMP,
-    REMOTE_JOB_NAME,
-)
+    REMOTE_JOB_START_TIMESTAMP)
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
@@ -80,8 +78,8 @@ def test_remote_job(mock_warn, requests_mock):
     resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, get_rpc_handler(requests_mock))
     assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
     assert resumed_rj.id == _TEST_JOB_ID
+
     assert rj.is_complete == job_status.completed
-    assert rj.name == REMOTE_JOB_NAME
     assert rj.status.creation_timestamp == REMOTE_JOB_CREATION_TIMESTAMP
     assert rj.status.start_timestamp == REMOTE_JOB_START_TIMESTAMP
     assert rj.status.duration == REMOTE_JOB_DURATION

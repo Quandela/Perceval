@@ -74,7 +74,7 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
 
     assert len(jgroup.list_remote_jobs) == 10
 
-    for each_job in jgroup._group_info['job_group_data']:
+    for each_job in jgroup.to_dict()['job_group_data']:
         assert each_job['id'] is None
         assert each_job['status'] is None
         assert each_job['body'] == {'payload': {'job_context': None}, 'job_name': 'a_remote_job'}
