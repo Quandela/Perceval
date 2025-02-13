@@ -87,10 +87,6 @@ class AGateConverter(ABC):
     def _get_qubit_names(self, gate_circuit):
         pass
 
-    # @abstractmethod
-    # def _check_conversion_possible(self, gate_circuit):
-    #     pass
-
     def _configure_processor(self, gate_circuit, **kwargs):
         """
         Sets port Encoding and default input state for the Processor
@@ -112,7 +108,7 @@ class AGateConverter(ABC):
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
         """Convert a gate-based quantum circuit into a `Processor`.
 
-        :param qate_circuit: gate-based quantum circuit (Qiskit, Myqlm or CQASM)
+        :param gate_circuit: gate-based quantum circuit (Qiskit, Myqlm or CQASM)
         :param use_postselection: when True (default), uses optimized number of `postprocessed CNOT` and
             'Heralded CNOT' gates. Otherwise, uses only `heralded CNOT`.
 
