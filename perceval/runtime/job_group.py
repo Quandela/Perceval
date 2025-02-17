@@ -187,23 +187,6 @@ class JobGroup:
                     self._write_to_file()
 
 
-    @staticmethod
-    def _map_job_status_category(status_entry: str):
-        # status categories
-        status_success = [RunningStatus.SUCCESS]
-        status_sent = [RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.CANCEL_REQUESTED]
-        status_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED, RunningStatus.UNKNOWN]
-
-        if status_entry is None:
-            return 'UNFIN_NOT_SENT'
-        elif RunningStatus[status_entry] in status_sent:
-            return 'UNFIN_SENT'
-        elif RunningStatus[status_entry] in status_success:
-            return 'FIN_SUCCESS'
-        elif RunningStatus[status_entry] in status_other:
-            return 'FIN_OTHER'
-        raise ValueError(f"Unspecified status of job in group with value {status_entry}. Cannot categorize")
-
     def progress(self) -> dict:
         """
         Iterates over all jobs in the group to create a dictionary of the current status of jobs.
