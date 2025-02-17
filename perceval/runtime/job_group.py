@@ -165,7 +165,6 @@ class JobGroup:
             raise TypeError(f'Only a RemoteJob can be added to a JobGroup (got {type(job_to_add)})')
 
         # Reject adding a duplicate RemoteJob
-        # TODO: only check with job_id ? what about not send job ?
         if job_to_add.id and job_to_add.id in [job.id for job in self._jobs]:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
         if kwargs:

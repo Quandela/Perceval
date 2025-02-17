@@ -125,6 +125,7 @@ class RemoteJob(Job):
         job_info['body'] = self._create_payload_data()  # Save job payload to launch later on cloud
 
         # save metadata to recreate remote jobs
+        # TODO: from/to_dict directly in rpc_handler
         job_info['metadata'] = {'headers': self._rpc_handler.headers,
                                 'platform': self._rpc_handler.name,
                                 'url': self._rpc_handler.url}
