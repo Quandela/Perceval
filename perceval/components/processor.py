@@ -94,8 +94,7 @@ class Processor(AProcessor):
         super(Processor, type(self)).noise.fset(self, nm)
         self._source = Source.from_noise_model(nm)
         self._phase_quantization = nm.phase_imprecision
-        if isinstance(self._input_state, BasicState):
-            self._generate_noisy_input()
+        self._inputs_map = None
 
     @property
     def source_distribution(self) -> SVDistribution | None:
@@ -103,6 +102,8 @@ class Processor(AProcessor):
         Retrieve the computed input distribution.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
         """
+        if self._inputs_map is None and self._input_state is not None:
+            self._generate_noisy_input()
         return self._inputs_map
 
     @property
@@ -111,7 +112,6 @@ class Processor(AProcessor):
         :return: The photonic source
         """
         return self._source
-
 
     @source.setter
     # When removing this method don't forget to also change the _init_noise method
@@ -179,7 +179,7 @@ class Processor(AProcessor):
             # Avoid the warning from super().with_input if the min_detected_photons_filter is not set
             self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
         super().with_input(input_state)
-        self._generate_noisy_input()
+        self._inputs_map = None
 
     @dispatch(StateVector)
     def with_input(self, sv: StateVector):
@@ -271,12 +271,11 @@ class Processor(AProcessor):
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
+        res = sampling_simulator.samples(self.source_distribution, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
     def probs(self, precision: float = None, progress_callback: callable = None) -> dict:
-        # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
             self._simulator = SimulatorFactory.build(self)
@@ -288,7 +287,7 @@ class Processor(AProcessor):
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
+        res = self._simulator.probs_svd(self.source_distribution, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
 
         if self.heralds:
