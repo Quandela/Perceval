@@ -111,7 +111,8 @@ class RemoteJob(Job):
     def from_dict(my_dict: dict, rpc_handler):
         j = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
         j._id = my_dict['id']
-        j._job_status.status = RunningStatus[my_dict['status']]
+        if my_dict['status'] is not None:
+            j._job_status.status = RunningStatus[my_dict['status']]
         return j
 
     def to_dict(self):

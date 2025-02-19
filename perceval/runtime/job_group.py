@@ -101,18 +101,17 @@ class JobGroup:
             group_data['job_group_data'].append(job.to_dict())
         return group_data
 
-    def from_dict(self, group_data):
+    def _from_dict(self, group_data):
         self.created_date = datetime.strptime(group_data['created_date'], DATE_TIME_FORMAT)
         self.modified_date = datetime.strptime(group_data['modified_date'], DATE_TIME_FORMAT)
         for job_entry in group_data['job_group_data']:
             self._jobs.append(self._build_remote_job(job_entry))
 
-    def _write_to_file(self, modified: datetime = None):
+    def _write_to_file(self):
         """
         Writes job group data to disk
         """
-        if modified:
-            self.modified_date = modified
+        self.modified_date = datetime.now()
         JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self.to_dict()), FileFormat.TEXT)
 
     def _load_job_group(self):
@@ -179,7 +178,7 @@ class JobGroup:
         """
         for job in self._jobs:
             if job.has_been_send:
-                old_status = job._job_status
+                old_status = job._job_status.status.name
                 status = job.status()
                 if old_status != status:
                     self._write_to_file()

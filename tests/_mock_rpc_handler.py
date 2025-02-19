@@ -97,19 +97,31 @@ class CloudEndpoint(Enum):
 
 
 class RPCHandlerResponsesBuilder():
+    """Build responses for rpc handler, act as a cloud mock.
+
+    :param rpc_handler: rpc handler to mock
+    :param platform_details: platform details that rpc_handler.fetch_platform_details will return
+    :param default_job_status: status of the job that rpc_handler.create_job will produce. Default is SUCCESS
+    """
 
     def __init__(self,
                  rpc_handler: RPCHandler,
-                 platform_info: dict = DEFAULT_PLATFORM_INFO,
+                 platform_details: dict = DEFAULT_PLATFORM_INFO,
                  default_job_status: RunningStatus | None = RunningStatus.SUCCESS) -> None:
+
         self._rpc_handler = rpc_handler
-        platform_info['name'] = rpc_handler.name
-        self._platform_info = platform_info
+        platform_details['name'] = rpc_handler.name
+        self._platform_info = platform_details
         self._job_status = default_job_status
         responses.reset()
         self._set_default_responses()
 
     def set_default_job_status(self, default_job_status: RunningStatus | None = RunningStatus.SUCCESS) -> None:
+        """Set the status of the job that rpc_handler.create_job will produce.
+        None means rpc_handler.create_job will return an error (400).
+
+        :param default_job_status: status of the job that rpc_handler.create_job will produce. Default is SUCCESS
+        """
         self._job_status = default_job_status
 
     def _set_default_responses(self) -> None:
@@ -128,7 +140,7 @@ class RPCHandlerResponsesBuilder():
 
         responses.add_callback(responses.POST,
                                self._rpc_handler.url + _ENDPOINT_JOB_CREATE,
-                               callback=self.create_job_callback)
+                               callback=self._create_job_callback)
 
     def _reset_default_responses(self) -> None:
         for method, endpoint in [
@@ -147,7 +159,7 @@ class RPCHandlerResponsesBuilder():
                 url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
                 status=404))
 
-    def create_job_callback(self, _):
+    def _create_job_callback(self, _) -> tuple[int, dict, str]:
         if self._job_status is None:
             return (400, {"content-type": "application/json"}, "")
         job_id = str(uuid.uuid4())
@@ -166,7 +178,7 @@ class RPCHandlerResponsesBuilder():
             responses.add_callback(
                 responses.POST,
                 self._rpc_handler.url + _ENDPOINT_JOB_RERUN + job_id,
-                callback=self.create_job_callback)
+                callback=self._create_job_callback)
         else:
             responses.add(responses.Response(
                 method='POST',
@@ -187,7 +199,7 @@ class RPCHandlerResponsesBuilder():
                 url=self._rpc_handler.url + _ENDPOINT_JOB_CANCEL + job_id,
                 status=400))
 
-    def get_job_status_response_body_from_job_status(self, status: RunningStatus):
+    def get_job_status_response_body_from_job_status(self, status: RunningStatus) -> dict:
         response_body = {
             'duration': None,
             'progress': None,
@@ -217,7 +229,7 @@ class RPCHandlerResponsesBuilder():
             status=200,
             json=self.get_job_status_response_body_from_job_status(status)))
 
-    def get_job_result_response_body_from_job_status(self, status: RunningStatus):
+    def get_job_result_response_body_from_job_status(self, status: RunningStatus) -> dict:
         response_body = {
             'results': None
         }
@@ -241,7 +253,14 @@ class RPCHandlerResponsesBuilder():
             json=self._platform_info))
 
 
-def get_rpc_handler_for_tests(platform_name: str = "sim:test", url: str = "https://test", token="test_token"):
-    rpc_handler = RPCHandler(platform_name, url, token)
+def get_rpc_handler_for_tests(name: str = "sim:test", url: str = "https://test", token: str = "test_token") -> RPCHandler:
+    """Return a mocked rpc_handler
+
+    :param platform_name: RPCHandler name, defaults to "sim:test"
+    :param url: RPCHandler url, defaults to "https://test"
+    :param token: RPCHandler token, defaults to "test_token"
+    :return: the mocked RPCHandler
+    """
+    rpc_handler = RPCHandler(name, url, token)
     RPCHandlerResponsesBuilder(rpc_handler)
     return rpc_handler

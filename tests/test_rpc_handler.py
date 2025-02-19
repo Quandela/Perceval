@@ -179,6 +179,6 @@ def test_get_platform_details():
     platform_info = DEFAULT_PLATFORM_INFO
     platform_info['name'] = PLATFORM_NAME
 
-    RPCHandlerResponsesBuilder(rpc_handler, platform_info=platform_info)
+    RPCHandlerResponsesBuilder(rpc_handler, platform_details=platform_info)
 
     assert platform_info == rpc_handler.fetch_platform_details()

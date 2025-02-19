@@ -28,7 +28,8 @@
 # SOFTWARE.
 
 import pytest
-from unittest.mock import patch
+import json
+from unittest.mock import MagicMock, patch
 
 import responses
 
@@ -48,88 +49,140 @@ URL = "https://test"
 
 RPC_HANDLER = RPCHandler(PLATFORM_NAME, URL, TOKEN)
 
-@patch.object(JobGroup, '_write_to_file')
-def test_job_group_creation(mock_write_file):
-    jgroup = JobGroup(TEST_JG_NAME)
-    assert jgroup.name == TEST_JG_NAME
-    assert len(jgroup.list_remote_jobs) == 0  # empty job group
-    mock_write_file.assert_called_once()
 
-@patch.object(JobGroup, '_write_to_file')
-def test_reject_non_remote_job(mock_write_file):
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_init(mock_write_file):
+    jg = JobGroup(TEST_JG_NAME)
+    assert jg.name == TEST_JG_NAME
+    assert len(jg.list_remote_jobs) == 0  # empty job group
+    assert mock_write_file.call_count == 1
+
+
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_load(mock_write_file: MagicMock):
+    jg = JobGroup(TEST_JG_NAME)
+
+    remote_job_dict = {
+        'id': None,
+        'status': None,
+        'body': {
+            'payload': {'job_context': None},
+            'job_name': "my_job"},
+        'metadata': {
+            'headers': RPC_HANDLER.headers,
+            'platform': RPC_HANDLER.name,
+            'url': RPC_HANDLER.url}
+    }
+
+    jg_dict = {
+        'created_date': '20250219_103020',
+        'modified_date': '20250219_103020',
+        'job_group_data': [remote_job_dict, remote_job_dict]}
+
+    jg._from_dict(jg_dict)
+    jg._write_to_file()
+
+    for key, value in json.loads(mock_write_file.call_args_list[-1][0][1]).items():
+        if key == 'modified_date':
+            assert jg_dict[key] < value
+        else:
+            assert jg_dict[key] == value
+
+
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_add(mock_write_file):
+    RPCHandlerResponsesBuilder(RPC_HANDLER)
+    job_name = "remote_job_"
+    jg = JobGroup(TEST_JG_NAME)
+
+    expected_write_call_count = 1
+    assert mock_write_file.call_count == expected_write_call_count
+
+    for i in range(10):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, job_name + str(i)))
+        expected_write_call_count += 1
+        assert mock_write_file.call_count == expected_write_call_count
+
+    assert len(jg.list_remote_jobs) == 10
+
+    remote_job_dict = {
+        'id': None,
+        'status': None,
+        'body': {
+            'payload': {'job_context': None},
+            'job_name': job_name},
+        'metadata': {
+            'headers': RPC_HANDLER.headers,
+            'platform': RPC_HANDLER.name,
+            'url': RPC_HANDLER.url}
+    }
+
+    for i, job_info in enumerate(jg.to_dict()['job_group_data']):
+        remote_job_dict['body']['job_name'] = job_name + str(i)
+        assert job_info == remote_job_dict
+
+    assert mock_write_file.call_count == expected_write_call_count
+
+
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_add_errors(mock_write_file):
     # creating a local job - sampling
     p = catalog["postprocessed cnot"].build_processor()
     p.with_input(BasicState([0, 1, 0, 1]))
     sampler = Sampler(p)
-    local_job = sampler.sample_count
 
-    jgroup = JobGroup(TEST_JG_NAME)
+    jg = JobGroup(TEST_JG_NAME)
+    assert mock_write_file.call_count == 1
+
     with pytest.raises(TypeError):
-        jgroup.add(local_job)
+        jg.add(sampler.sample_count)
 
-    # assert mock methods called
-    mock_write_file.assert_called_once()
+    assert mock_write_file.call_count == 1
 
 
-@patch.object(JobGroup, '_write_to_file')
-def test_add_remote_to_group(mock_write_file):
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_run(mock_write_file):
     RPCHandlerResponsesBuilder(RPC_HANDLER)
-
-    jgroup = JobGroup(TEST_JG_NAME)
-    for _ in range(10):
-        jgroup.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job'))
-
-    assert len(jgroup.list_remote_jobs) == 10
-
-    for each_job in jgroup.to_dict()['job_group_data']:
-        assert each_job['id'] is None
-        assert each_job['status'] is None
-        assert each_job['body'] == {'payload': {'job_context': None}, 'job_name': 'a_remote_job'}
-
-        # check correct metadata stored
-        assert each_job['metadata']['headers'] == RPC_HANDLER.headers
-        assert each_job['metadata']['platform'] == RPC_HANDLER.fetch_platform_details()['name']
-        assert each_job['metadata']['url'] == RPC_HANDLER.url
-
-    # assert mock method calls
-    assert mock_write_file.call_count == 11  # 1 creation + 10 add/modify
-
-
-@patch.object(JobGroup, '_write_to_file')
-def test_check_group_progress(mock_write_file):
-    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rj_nmb = 10
 
     jg = JobGroup(TEST_JG_NAME)
+
+    expected_write_call_count = 1
+    assert mock_write_file.call_count == expected_write_call_count
+
     for _ in range(rj_nmb):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job'))
+        expected_write_call_count += 1
 
+    assert mock_write_file.call_count == expected_write_call_count
     assert len(jg.list_remote_jobs) == rj_nmb
-    assert mock_write_file.call_count == rj_nmb + 1
-
     assert len(responses.calls) == 0
 
     group_progress = jg.progress()
 
-    assert len(responses.calls) == 0  # no call since jobs have not been sent
-    assert mock_write_file.call_count == rj_nmb + 1  # no need to save because no changes
+    # no calls or write since jobs have not been sent
+    assert len(responses.calls) == 0
+    assert mock_write_file.call_count == expected_write_call_count
 
     assert group_progress == {'Total': rj_nmb,
                               'Finished': [0, {'successful': 0, 'unsuccessful': 0}],
                               'Unfinished': [rj_nmb, {'sent': 0, 'not sent': rj_nmb}]}
 
+    # Running jobs
     jg.run_parallel()
+    expected_write_call_count += rj_nmb
 
     assert len(responses.calls) == rj_nmb
     assert all([CloudEndpoint.from_response(call.response) == CloudEndpoint.CreateJob for call in responses.calls])
-    assert mock_write_file.call_count == 2*rj_nmb + 1  # no need to save because no changes
+    assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
+    expected_write_call_count += rj_nmb
 
     assert len(responses.calls) == rj_nmb * 2
     assert all([CloudEndpoint.from_response(call.response) ==
                CloudEndpoint.JobStatus for call in responses.calls[rj_nmb:]])
-    assert mock_write_file.call_count == 3*rj_nmb + 1
+    assert mock_write_file.call_count == expected_write_call_count
 
     assert group_progress == {'Total': rj_nmb,
                               'Finished': [rj_nmb, {'successful': rj_nmb, 'unsuccessful': 0}],
@@ -137,13 +190,39 @@ def test_check_group_progress(mock_write_file):
 
     for _ in range(rj_nmb):
         jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job'))
-    assert mock_write_file.call_count == 4*rj_nmb + 1
+        expected_write_call_count += 1
+
+    assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
 
     assert len(responses.calls) == rj_nmb * 2
-    assert mock_write_file.call_count == 4*rj_nmb + 1
+    assert mock_write_file.call_count == expected_write_call_count
 
-    assert group_progress == {'Total': rj_nmb*2,
+    current_group_progress = {'Total': rj_nmb*2,
                               'Finished': [rj_nmb, {'successful': rj_nmb, 'unsuccessful': 0}],
                               'Unfinished': [rj_nmb, {'sent': 0, 'not sent': rj_nmb}]}
+
+    assert group_progress == current_group_progress
+
+    assert mock_write_file.call_count == expected_write_call_count
+
+    # Test complex load
+
+    new_jg = JobGroup(TEST_JG_NAME)
+    expected_write_call_count += 1
+    assert mock_write_file.call_count == expected_write_call_count
+
+    new_jg._from_dict(jg.to_dict())
+
+    # No call on load
+    assert len(responses.calls) == rj_nmb * 2
+    assert mock_write_file.call_count == expected_write_call_count
+
+    group_progress = jg.progress()
+
+    assert group_progress == current_group_progress
+
+    # No call on load
+    assert len(responses.calls) == rj_nmb * 2
+    assert mock_write_file.call_count == expected_write_call_count
