@@ -176,7 +176,7 @@ class RemoteJob(Job):
             if self._job_status.running:
                 self._job_status.update_progress(float(response['progress']), response['progress_message'])
             elif self._job_status.failed:
-                self._job_status._stop_message = response['failure_code']
+                self._job_status._stop_message = response['status_message']
 
             creation_datetime, duration, start_datetime = _extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)

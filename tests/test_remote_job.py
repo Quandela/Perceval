@@ -32,69 +32,76 @@ import pytest
 from unittest.mock import patch
 from time import sleep
 
+import responses
+
 import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
+from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.utils.conversion import sample_count_to_probs
 
 from _test_utils import LogChecker
-from _mock_rpc_handler import (
-    get_rpc_handler,
-    REMOTE_JOB_DURATION,
-    REMOTE_JOB_RESULTS,
-    REMOTE_JOB_CREATION_TIMESTAMP,
-    REMOTE_JOB_START_TIMESTAMP)
+from _mock_rpc_handler import RPCHandlerResponsesBuilder, get_rpc_handler_for_tests
+
+SIMPLE_PAYLOAD = {"command": "probs", "circuit": ":PCVL:zip:eJyzCnAO87FydM4sSi7NLLFydfTM9K9wdI7MSg52DsyO9AkNCtWu9DANqMj3cg50hAPP9GwvBM+xEKgWwXPxRFNrEegYlu/jDNTj7mzoGhZQnGEWYkF1ewCY7jxM",
+                  "input_state": ":PCVL:BasicState:|1,1>", "parameters": {"min_detected_photons": 2}, "max_shots": 10000, "job_context": None}
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_remote_job(mock_warn, requests_mock):
-    """test remote job"""
-    _FIRST_JOB_NAME = 'job name'
-    _SECOND_JOB_NAME = 'another name'
-    rj = RemoteJob({}, get_rpc_handler(requests_mock), _FIRST_JOB_NAME)
-    assert rj.name == _FIRST_JOB_NAME
-    rj.name = _SECOND_JOB_NAME
-    assert rj.name == _SECOND_JOB_NAME
-    with pytest.raises(TypeError):
-        rj.name = None
-    with pytest.raises(TypeError):
-        rj.name = 28
-    job_status = rj.status
-    assert rj.is_complete == job_status.completed
+def test_remote_job(mock_warn):
+    rpc_handler = RPCHandler("sim:test", "https://test", "test_token")
+
+    # RemoteJob init
+    job_name = 'my_job'
+    rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, job_name)
+    assert rj.name == job_name
+
+    for job_name in [None, 42]:
+        with pytest.raises(TypeError):
+            rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, job_name)
+
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(rpc_handler)
+
+    # SUCCESS
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
+    rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, 'my_job')
+    rj.execute_async()
+    assert rj.is_complete
     with pytest.raises(RuntimeError):
         rj.rerun()
-    assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
+    rj.get_results()  # no throw
 
-    rj.status.status = RunningStatus.UNKNOWN
+    # UNKNOWN
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.UNKNOWN)
+    rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, 'my_job')
+    rj.execute_async()
+    assert rj.status.unknown
+
     with LogChecker(mock_warn):
-        assert rj.get_results()['results'] == REMOTE_JOB_RESULTS
+        with pytest.raises(RuntimeError):
+            rj.get_results()
 
-    rj.status.status = RunningStatus.CANCELED
+    # CANCELED
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.CANCELED)
+    rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, 'my_job')
+    rj.execute_async()
+    assert rj.status.canceled
+    assert rj.status.stop_message == 'Cancel requested from web interface'
     new_rj = rj.rerun()
     assert new_rj.id != rj.id
-
-    _TEST_JOB_ID = "any"
-    resumed_rj = RemoteJob.from_id(_TEST_JOB_ID, get_rpc_handler(requests_mock))
-    assert resumed_rj.get_results()['results'] == REMOTE_JOB_RESULTS
-    assert resumed_rj.id == _TEST_JOB_ID
-
-    assert rj.is_complete == job_status.completed
-    assert rj.status.creation_timestamp == REMOTE_JOB_CREATION_TIMESTAMP
-    assert rj.status.start_timestamp == REMOTE_JOB_START_TIMESTAMP
-    assert rj.status.duration == REMOTE_JOB_DURATION
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
-def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
+def test_mock_remote_with_gates(mock_warn, catalog_item):
     """test mock remote with gates"""
     noise = pcvl.NoiseModel(
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
     rp = pcvl.RemoteProcessor.from_local_processor(
-        p, rpc_handler=get_rpc_handler(requests_mock)
+        p, rpc_handler=get_rpc_handler_for_tests()
     )
 
     assert p.heralds == rp.heralds

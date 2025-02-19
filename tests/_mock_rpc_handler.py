@@ -26,13 +26,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""module rpc mock handler"""
 
-import time
+import uuid
 import json
-from urllib.parse import quote_plus
-from perceval.utils import BSDistribution, BasicState
-from perceval.serialization import serialize
+import re
+import datetime
+
+import responses
+
 from perceval.runtime.rpc_handler import (
     RPCHandler,
     _ENDPOINT_JOB_CANCEL,
@@ -41,130 +42,179 @@ from perceval.runtime.rpc_handler import (
     _ENDPOINT_JOB_STATUS,
     _ENDPOINT_PLATFORM_DETAILS,
     _ENDPOINT_JOB_RERUN,
-    _JOB_ID_KEY
+    _JOB_ID_KEY,
+    quote_plus
 )
+from perceval.runtime.job_status import RunningStatus, JobStatus
 
-REMOTE_JOB_DURATION = 5
-REMOTE_JOB_CREATION_TIMESTAMP = 1687883254.77622
-REMOTE_JOB_START_TIMESTAMP = 1687883263.280909
-REMOTE_JOB_RESULTS = BSDistribution(
-    {
-        BasicState([1, 0, 0, 0]): 0.200266,
-        BasicState([0, 1, 0, 0]): 0.09734,
-        BasicState([0, 0, 1, 0]): 0.089365,
-        BasicState([0, 0, 0, 1]): 0.223731,
-        BasicState([1, 0, 1, 0]): 0.308951,
-    }
-)
+_TIMESTAMP = datetime.datetime.now().timestamp()
 
-
-def get_rpc_handler(requests_mock, url='http://test'):
-    """return a fake rpc handler"""
-    mock = MockRPCHandler(name='mocked:platform', url=url, token='no-token')
-    mock.set_mock(requests_mock)
-    return mock
-
-
-class MockRPCHandler(RPCHandler):
-    """mock of the rpc handler"""
-
-    _SLEEP_SEC = 0.2
-    requests_mock = None
-
-    def set_mock(self, mock):
-        """set the mock request"""
-        self.requests_mock = mock
-
-    def fetch_platform_details(self):
-        time.sleep(self._SLEEP_SEC)
-        quot_nam = quote_plus(self.name)
-        endpoint = super().build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quot_nam)
-        return_json = {
-            'created_date': 'Mon, 31 Oct 2022 16:54:45 GMT',
-            'description': 'Mocked Simulator',
-            'id': 'e576e49c-7b1a-470b-5910-c04e406d40f6',
-            'jobs': 6687,
-            'name': self.name,
-            'perfs': {},
-            'specs': {
-                'available_commands': ['probs'],
-                'connected_input_modes': [0, 2, 4, 6, 8, 10],
-                'constraints': {
-                    'max_mode_count': 20,
-                    'max_photon_count': 6,
-                    'min_mode_count': 1,
-                    'min_photon_count': 1,
-                },
-                'description': 'Simulator of sim:altair qpu',
-                'detector': 'threshold',
-                'parameters': {
-                    'HOM': 'indistinguishability value, using HOM model (default 1)',
-                    'backend_name': 'name of the backend that will be used for computation (default "SLOS")',
-                    'final_mode_number': 'number of modes of the output states. states having a photon on unused modes will be ignored. Useful when using computed circuits (default input_state.m)',
-                    'g2': 'g2 value (default 0)',
-                    'mode_post_select': 'number of required detected modes to keep a state. (default input_state.n)',
-                    'phase_imprecision': 'imprecision on the phase shifter phases (default 0)',
-                    'transmittance': 'probability at each pulse that a photon is sent to the system and is detected (default 1)',
-                },
-            },
-            'status': 'available',
-            'svg': '',
-            'type': 'simulator',
-            'waiting_jobs': 0,
+DEFAULT_PLATFORM_INFO = {
+    'id': str(uuid.uuid4()),
+    'name': None,
+    'perfs': {},
+    'specs': {
+        'available_commands': ['probs'],
+        'connected_input_modes': [0, 2, 4, 6, 8, 10],
+        'constraints': {
+            'max_mode_count': 20,
+            'max_photon_count': 6,
+            'min_mode_count': 1,
+            'min_photon_count': 1,
         }
-        self.requests_mock.get(
-            endpoint,
-            json=return_json,
-        )
-        return super().fetch_platform_details()
+    },
+    'status': 'available',
+    'type': 'simulator',
+}
 
-    def create_job(self, payload):
-        time.sleep(self._SLEEP_SEC)
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        arbitrary_job_id = 'ebb1f8ec-0125-474f-9ffc-5178afef4d1a'
-        return_json = {_JOB_ID_KEY: arbitrary_job_id}
-        self.requests_mock.post(endpoint, json=return_json)
-        return super().create_job(payload)
+UUID_REGEXP = "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}"
 
-    def cancel_job(self, job_id: str):
-        time.sleep(self._SLEEP_SEC)
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
-        self.requests_mock.post(endpoint, json={})
-        return super().cancel_job(job_id)
 
-    def rerun_job(self, job_id: str):
-        time.sleep(self._SLEEP_SEC)
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
-        arbitrary_job_id = '32e74bda-afc5-41d3-88de-ab68f9805cc4'
-        return_json = {_JOB_ID_KEY: arbitrary_job_id}
-        self.requests_mock.post(endpoint, json=return_json)
-        return super().rerun_job(job_id)
+class RPCHandlerResponsesBuilder():
+    def __init__(self,
+                 rpc_handler: RPCHandler,
+                 platform_info: dict = DEFAULT_PLATFORM_INFO,
+                 default_job_status: RunningStatus | None = RunningStatus.SUCCESS) -> None:
+        self._rpc_handler = rpc_handler
+        platform_info['name'] = rpc_handler.name
+        self._platform_info = platform_info
+        self._job_status = default_job_status
+        responses.reset()
+        self._set_default_responses()
 
-    def get_job_status(self, job_id: str):
-        time.sleep(self._SLEEP_SEC)
-        return_json = {
-            'creation_datetime': REMOTE_JOB_CREATION_TIMESTAMP,
-            'duration': REMOTE_JOB_DURATION,
-            'failure_code': None,
-            'last_intermediate_results': None,
-            'msg': 'ok',
-            'progress': 1.0,
-            'progress_message': 'Computing phases to apply (step 2)',
-            'start_time': REMOTE_JOB_START_TIMESTAMP,
-            'status': 'completed',
-            'status_message': None,
+    def set_default_job_status(self, default_job_status: RunningStatus | None = RunningStatus.SUCCESS) -> None:
+        self._job_status = default_job_status
+
+    def _set_default_responses(self) -> None:
+        self._set_get_platform_details_responses()
+        for method, endpoint in [
+            ('POST', _ENDPOINT_JOB_RERUN),
+            ('POST', _ENDPOINT_JOB_CANCEL),
+            ('GET', _ENDPOINT_JOB_STATUS),
+            ('GET', _ENDPOINT_JOB_RESULT),
+            ('GET', _ENDPOINT_PLATFORM_DETAILS)
+        ]:
+            responses.add(responses.Response(
+                method=method,
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                status=404))
+
+        responses.add_callback(responses.POST,
+                               self._rpc_handler.url + _ENDPOINT_JOB_CREATE,
+                               callback=self.create_job_callback)
+
+    def _reset_default_responses(self) -> None:
+        for method, endpoint in [
+            ('POST', _ENDPOINT_JOB_RERUN),
+            ('POST', _ENDPOINT_JOB_CANCEL),
+            ('GET', _ENDPOINT_JOB_STATUS),
+            ('GET', _ENDPOINT_JOB_RESULT),
+            ('GET', _ENDPOINT_PLATFORM_DETAILS)
+        ]:
+            responses.remove(responses.Response(
+                method=method,
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                status=404))
+            responses.add(responses.Response(
+                method=method,
+                url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
+                status=404))
+
+    def create_job_callback(self, _):
+        if self._job_status is None:
+            return (400, {"content-type": "application/json"}, "")
+        job_id = str(uuid.uuid4())
+        self._set_rerun_job_responses(job_id, self._job_status)
+        self._set_cancel_job_responses(job_id, self._job_status)
+        self._set_job_status_responses(job_id, self._job_status)
+        self._set_job_result_responses(job_id, self._job_status)
+        self._reset_default_responses()
+        return (200, {"content-type": "application/json"}, json.dumps({_JOB_ID_KEY: job_id}))
+
+    def _set_rerun_job_responses(self, job_id: str, status: RunningStatus = RunningStatus.SUCCESS) -> None:
+        job_status = JobStatus()
+        job_status.status = status
+        if job_status.failed:
+            responses.head
+            responses.add_callback(
+                responses.POST,
+                self._rpc_handler.url + _ENDPOINT_JOB_RERUN + job_id,
+                callback=self.create_job_callback)
+        else:
+            responses.add(responses.Response(
+                method='POST',
+                url=self._rpc_handler.url + _ENDPOINT_JOB_RERUN + job_id,
+                status=400))
+
+    def _set_cancel_job_responses(self, job_id: str, status: RunningStatus = RunningStatus.SUCCESS) -> None:
+        job_status = JobStatus()
+        job_status.status = status
+        if job_status.running or job_status.waiting:
+            responses.add(responses.Response(
+                method='POST',
+                url=self._rpc_handler.url + _ENDPOINT_JOB_CANCEL + job_id,
+                status=200))
+        else:
+            responses.add(responses.Response(
+                method='POST',
+                url=self._rpc_handler.url + _ENDPOINT_JOB_CANCEL + job_id,
+                status=400))
+
+    def get_job_status_response_body_from_job_status(self, status: RunningStatus):
+        response_body = {
+            'duration': None,
+            'progress': None,
+            'status': RunningStatus.to_server_response(status),
+            'creation_date': _TIMESTAMP,
+            'start_time': None,
+            'failure_code': None
         }
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
-        self.requests_mock.get(endpoint, json=return_json)
-        return super().get_job_status(job_id)
 
-    def get_job_results(self, job_id: str):
-        time.sleep(self._SLEEP_SEC)
-        endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
-        return_json = {
-            'results': json.dumps(
-                {'results': serialize(REMOTE_JOB_RESULTS), 'physical_perf': 1}
-            )
+        if status == RunningStatus.RUNNING:
+            response_body['progress'] = 0.5
+            response_body['duration'] = 10
+            response_body['start_time'] = response_body['creation_date'] + 1.
+        elif status == RunningStatus.SUCCESS:
+            response_body['progress'] = 1.0
+            response_body['duration'] = 20
+            response_body['start_time'] = response_body['creation_date'] + 1.
+        elif status == RunningStatus.CANCELED:
+            response_body['status_message'] = 'Cancel requested from web interface'
+
+        return response_body
+
+    def _set_job_status_responses(self, job_id: str, status: RunningStatus = RunningStatus.SUCCESS) -> None:
+        responses.add(responses.Response(
+            method='GET',
+            url=self._rpc_handler.url + _ENDPOINT_JOB_STATUS + job_id,
+            status=200,
+            json=self.get_job_status_response_body_from_job_status(status)))
+
+    def get_job_result_response_body_from_job_status(self, status: RunningStatus):
+        response_body = {
+            'results': None
         }
-        self.requests_mock.get(endpoint, json=return_json)
-        return super().get_job_results(job_id)
+        if status == RunningStatus.SUCCESS:
+            response_body['results'] = json.dumps(
+                {'results': ':PCVL:BasicState:|>', 'logical_perf': 1, 'physical_perf': 0.1})
+        return response_body
+
+    def _set_job_result_responses(self, job_id: str, status: RunningStatus = RunningStatus.SUCCESS) -> None:
+        responses.add(responses.Response(
+            method='GET',
+            url=self._rpc_handler.url + _ENDPOINT_JOB_RESULT + job_id,
+            status=200,
+            json=self.get_job_result_response_body_from_job_status(status)))
+
+    def _set_get_platform_details_responses(self) -> None:
+        responses.add(responses.Response(
+            method='GET',
+            url=self._rpc_handler.url + _ENDPOINT_PLATFORM_DETAILS + quote_plus(self._rpc_handler.name),
+            status=200,
+            json=self._platform_info))
+
+
+def get_rpc_handler_for_tests(platform_name: str = "sim:test", url: str = "https://test", token="test_token"):
+    rpc_handler = RPCHandler(platform_name, url, token)
+    RPCHandlerResponsesBuilder(rpc_handler)
+    return rpc_handler

@@ -29,13 +29,24 @@
 
 import pytest
 from unittest.mock import patch
+
+import responses
+
 from perceval.runtime import JobGroup, RemoteJob
+from perceval.runtime.rpc_handler import RPCHandler
 from perceval.components import catalog
 from perceval.algorithm import Sampler
 from perceval.utils import BasicState, get_logger
-from _mock_rpc_handler import get_rpc_handler
+
+from _mock_rpc_handler import RPCHandlerResponsesBuilder
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
+
+TOKEN = "test_token"
+PLATFORM_NAME = "sim:test"
+URL = "https://test"
+
+RPC_HANDLER = RPCHandler(PLATFORM_NAME, URL, TOKEN)
 
 @patch.object(JobGroup, '_write_to_file')
 def test_job_group_creation(mock_write_file):
@@ -64,9 +75,9 @@ def test_reject_non_remote_job(mock_write_file):
 @patch.object(JobGroup, '_write_to_file')
 @patch.object(get_logger(), "warn")
 def test_add_remote_to_group(mock_warn, mock_write_file,
-                             mock_list, requests_mock):
-    mock_rpc = get_rpc_handler(requests_mock)
-    remote_job = RemoteJob({'payload': {}}, mock_rpc, 'a_remote_job')
+                             mock_list):
+    RPCHandlerResponsesBuilder(RPC_HANDLER)
+    remote_job = RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job')
 
     jgroup = JobGroup(TEST_JG_NAME)
     for _ in range(10):
@@ -80,9 +91,9 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
         assert each_job['body'] == {'payload': {'job_context': None}, 'job_name': 'a_remote_job'}
 
         # check correct metadata stored
-        assert each_job['metadata']['headers'] == mock_rpc.headers
-        assert each_job['metadata']['platform'] == mock_rpc.fetch_platform_details()['name']
-        assert each_job['metadata']['url'] == mock_rpc.url
+        assert each_job['metadata']['headers'] == RPC_HANDLER.headers
+        assert each_job['metadata']['platform'] == RPC_HANDLER.fetch_platform_details()['name']
+        assert each_job['metadata']['url'] == RPC_HANDLER.url
 
     # assert mock method calls
     assert mock_write_file.call_count == 11  # 1 creation + 10 add/modify
@@ -92,9 +103,9 @@ def test_add_remote_to_group(mock_warn, mock_write_file,
 @patch.object(JobGroup, '_write_to_file')
 @patch.object(get_logger(), "warn")
 def test_check_group_progress(mock_warn, mock_write_file,
-                              mock_list, requests_mock):
-    mock_rpc = get_rpc_handler(requests_mock)
-    remote_job = RemoteJob({'payload': {}}, mock_rpc, 'a_remote_job')
+                              mock_list):
+    RPCHandlerResponsesBuilder(RPC_HANDLER)
+    remote_job = RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job')
 
     num_rj_add = 10
 

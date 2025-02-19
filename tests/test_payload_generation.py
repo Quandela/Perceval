@@ -29,6 +29,7 @@
 """module test payload generation"""
 
 from unittest.mock import patch
+import responses
 
 import perceval as pcvl
 
@@ -42,23 +43,22 @@ from perceval.serialization._constants import (
 )
 from perceval.serialization import deserialize
 
-from _mock_rpc_handler import get_rpc_handler
+from _mock_rpc_handler import get_rpc_handler_for_tests
 from _test_utils import LogChecker
 
 
 COMMAND_NAME = 'my_command'
 
 
-def _get_remote_processor(requests_mock, m: int = 8):
-    return RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=m)
+def _get_remote_processor(m: int = 8):
+    return RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=m)
 
 
-def test_payload_basics(requests_mock):
+def test_payload_basics():
     """test payload basics infos"""
-    rp = _get_remote_processor(requests_mock)
+    rp = _get_remote_processor()
     data = rp.prepare_job_payload(COMMAND_NAME)
-    name = get_rpc_handler(requests_mock).name
-    assert 'platform_name' in data and data['platform_name'] == name
+    assert 'platform_name' in data and data['platform_name'] == rp._rpc_handler.name
     assert 'pcvl_version' in data
     assert 'process_id' in data
     assert 'payload' in data
@@ -77,10 +77,10 @@ def test_payload_basics(requests_mock):
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_payload_parameters(mock_warn, requests_mock):
+def test_payload_parameters(mock_warn):
     """test parameters of payload"""
     n_params = 5
-    rp = _get_remote_processor(requests_mock)
+    rp = _get_remote_processor()
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
 
@@ -94,9 +94,9 @@ def test_payload_parameters(mock_warn, requests_mock):
         assert payload['parameters'][f'param{i}'] == f'value{i}'
 
 
-def test_payload_heralds(requests_mock):
+def test_payload_heralds():
     """test payload with heralds"""
-    rp = _get_remote_processor(requests_mock)
+    rp = _get_remote_processor()
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'heralds' not in payload
 
@@ -108,9 +108,9 @@ def test_payload_heralds(requests_mock):
     assert payload['heralds'][4] == 0
 
 
-def test_payload_postselect(requests_mock):
+def test_payload_postselect():
     """test payload with postselect"""
-    rp = _get_remote_processor(requests_mock)
+    rp = _get_remote_processor()
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'postselect' not in payload
 
@@ -121,9 +121,9 @@ def test_payload_postselect(requests_mock):
     assert payload['postselect'].startswith(str_start)
 
 
-def test_payload_min_detected_photons(requests_mock):
+def test_payload_min_detected_photons():
     """test payload with min_detected_photons"""
-    rp = _get_remote_processor(requests_mock)
+    rp = _get_remote_processor()
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' not in payload
 
@@ -133,9 +133,9 @@ def test_payload_min_detected_photons(requests_mock):
     assert payload['parameters']['min_detected_photons'] == 2
 
 
-def test_payload_cnot(requests_mock):
+def test_payload_cnot():
     """test payload with cnot"""
-    rp = _get_remote_processor(requests_mock)
+    rp = _get_remote_processor()
     heralded_cnot = catalog['heralded cnot'].build_processor()
     pp_cnot = catalog['postprocessed cnot'].build_processor()
     rp.add(0, heralded_cnot)

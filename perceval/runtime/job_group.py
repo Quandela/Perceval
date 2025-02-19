@@ -114,7 +114,6 @@ class JobGroup:
             self.modified_date = modified
         JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self.to_dict()), FileFormat.TEXT)
 
-
     def _load_job_group(self):
         """
         Creates a Job Group by loading an existing one from file
@@ -135,7 +134,6 @@ class JobGroup:
                                  platform_metadata['url'], user_token)
 
         return RemoteJob.from_dict(job_entry, rpc_handler)
-
 
     @staticmethod
     def list_existing() -> list[str]:
@@ -184,7 +182,6 @@ class JobGroup:
                 status = job.status()
                 if old_status != status:
                     self._write_to_file()
-
 
     def progress(self) -> dict:
         """
