@@ -26,13 +26,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import math
 import time
 import sys
+from collections import defaultdict
 
 from perceval.backends import ASamplingBackend
-from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel
@@ -43,19 +45,19 @@ class SamplesProvider:
 
     def __init__(self, sampling_backend: ASamplingBackend):
         self._backend = sampling_backend
-        self._pools = {}
+        self._pools: dict[BasicState, list[BasicState] | BSSamples] = defaultdict(list)
         self._weights = BSCount()
         self._sample_coeff = 1.1
         self._min_samples = 100  # to be sampled at once
-        self._max_samples = 2000  # to be sampled at once
+        self._max_samples = 2000  # to be sampled at once. Needs to be at least 10 * _min_samples to be coherent
         self.sleep_between_batches = 0.2
 
-    def prepare(self, noisy_input: BSDistribution, n_samples: int, progress_callback: callable = None):
-        for noisy_s, prob in noisy_input.items():
-            ns = min(math.ceil(prob * n_samples), self._max_samples)
-            for bs in noisy_s.separate_state(keep_annotations=False):
-                self._weights.add(bs, ns)
+    def prepare(self, progress_callback: callable = None):
+        """
+        Compute a first batch of outputs for all the inputs whose weight has been estimated
 
+        :param progress_callback: Optional callback function with signature progress_callback(progress: float, message: str)
+        """
         get_logger().debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
                      channel.general)
         for input_state, count in self._weights.items():
@@ -67,14 +69,52 @@ class SamplesProvider:
             self._weights[input_state] = math.ceil(0.1 * self._weights[input_state])
 
             if progress_callback:
-                cancel_request = progress_callback(0, 'prepare')
+                cancel_request = progress_callback(0, 'prepare sampling')
                 time.sleep(self.sleep_between_batches)  # else callback method doesn't have time to be called
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
+    def estimate_weights_from_distribution(self, noisy_input: BSDistribution, n_samples: int):
+        """
+        Decide how much of each input we will generate when the pool becomes empty based on
+        the probability of seeing such an input state and the total number of samples.
+
+        :param noisy_input: The trimmed input distribution after selecting the states having enough photons
+        :param n_samples: The total number of samples to generate
+        """
+        for noisy_s, prob in noisy_input.items():
+            ns = min(math.ceil(prob * n_samples), self._max_samples)
+            for bs in noisy_s.separate_state(keep_annotations=False):
+                self._weights.add(bs, ns)
+
+    def estimate_weights_from_source(self, source: Source,
+                                     expected_input: BasicState,
+                                     n_samples: int,
+                                     min_detected_photons_filter: int):
+        """
+        Decide how much of each input we will generate when the pool becomes empty based on
+        a batch of samples generated from the source and the total number of samples.
+        """
+        transmission = source._emission_probability * (1 - source._losses)
+        estimated_phys_perf = transmission ** max(min_detected_photons_filter, 1)
+        if estimated_phys_perf == 0:
+            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
+            # TODO: do something to avoid getting stuck here,
+            return
+
+        zpp = 1 - transmission  # TODO: use this with number of shots and samples to get a better size of initial batch
+
+        # Generates a batch from the source to estimate the weights
+        input_samples = source.generate_samples(math.ceil(n_samples / estimated_phys_perf), expected_input)
+        # TODO: expose this as the first batch to use, no need to generate it again
+
+        for sample in input_samples:
+            if sample.n >= min_detected_photons_filter:
+                for state in sample.separate_state(keep_annotations=False):
+                    self._weights.add(state, 1)
+
     def _compute_samples(self, fock_state: BasicState):
-        if fock_state not in self._pools:
-            self._pools[fock_state] = []
+        if fock_state not in self._weights:
             self._weights[fock_state] = self._min_samples
 
         n_samples = self._weights[fock_state]
@@ -84,10 +124,11 @@ class SamplesProvider:
         self._weights[fock_state] = max(int(self._weights[fock_state] * self._sample_coeff), 16)
 
     def sample_from(self, input_state: BasicState) -> BasicState:
-        if input_state not in self._pools or len(self._pools[input_state]) == 0:
+        """Pop an output from the pool of outputs for the given input state.
+        If none is available, computes a batch of outputs based on the associated weight."""
+        if not len(self._pools[input_state]):
             self._compute_samples(input_state)
         return self._pools[input_state].pop()
-
 
 class NoisySamplingSimulator:
     """
@@ -195,7 +236,7 @@ class NoisySamplingSimulator:
 
     def _noisy_sampling(
             self,
-            noisy_input: BSDistribution,
+            noisy_input: BSDistribution | tuple[Source, BasicState],
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
@@ -208,10 +249,41 @@ class NoisySamplingSimulator:
         not_selected = 0
         selected_inputs = []
         shots = 0
+        generated_nb = min(max_samples, max_shots) if max_shots is not None else max_samples
         while len(output) < max_samples and (max_shots is None or shots < max_shots):
+
+            # Progress handling
+            if progress_callback:
+                exec_request = progress_callback(len(output) / max_samples, "sampling")
+                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                    break
+
             if idx == len(selected_inputs):
                 idx = 0
-                selected_inputs = noisy_input.sample(max_samples, non_null=False)
+                if isinstance(noisy_input, BSDistribution):
+                    selected_inputs = noisy_input.sample(generated_nb, non_null=False)
+                else:
+                    selected_inputs = []
+                    while True:  # Actually a do... while
+                        generated = noisy_input[0].generate_samples(generated_nb, noisy_input[1])
+                        for state in generated:
+                            if state.n == 0:
+                                # 0 photons states are not taken into account for counting shots and are always rejected
+                                not_selected_physical += 1
+                            elif 0 < state.n < self._min_detected_photons_filter:
+                                not_selected_physical += 1
+                                shots += 1
+                                if max_shots is not None and shots >= max_shots:
+                                    break
+                            else:
+                                selected_inputs.append(state)
+
+                        if len(selected_inputs):
+                            break
+
+            if max_shots is not None and shots >= max_shots:
+                break
+
             selected_bs = selected_inputs[idx]
             idx += 1
 
@@ -241,12 +313,6 @@ class NoisySamplingSimulator:
                 output.append(sampled_state)
             else:
                 not_selected += 1
-
-            # Progress handling
-            if progress_callback:
-                exec_request = progress_callback(len(output) / max_samples, "sampling")
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
-                    break
 
         # Performance estimate
         selected = len(output)
@@ -301,14 +367,15 @@ class NoisySamplingSimulator:
         return new_input, physical_perf
 
     def samples(self,
-                svd: SVDistribution,
+                svd: SVDistribution | tuple[Source, BasicState],
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: callable = None) -> dict:
         """
         Run a noisy sampling simulation and retrieve the results
 
-        :param svd: The noisy input, expressed as a mixed state
+        :param svd: The noisy input, expressed as a mixed state,
+         or a tuple containing the source and the perfect input state
         :param max_samples: Max expected samples of interest in the results
         :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
         :param progress_callback: A progress callback
@@ -320,8 +387,6 @@ class NoisySamplingSimulator:
         if not check_heralds_detectors(self._heralds, self._detectors):
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
 
-        zpp, max_p = self._check_input_svd(svd)
-
         # Choose a consistent samples limit
         prepare_samples = max_samples
         if max_shots is not None:
@@ -329,30 +394,44 @@ class NoisySamplingSimulator:
         if prepare_samples == 0:
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
 
+        source_defined = isinstance(svd, tuple)
+
         # The best case scenario is a perfect sampling => use the "highway" code
         det_type = get_detection_type(self._detectors)
-        if not self._heralds and not self._postselect.has_condition and len(svd) == 1 and det_type == DetectionType.PNR:
-            only_input = next(iter(svd))[0]
+        one_input = len(svd) == 1 or (source_defined and svd[0].is_perfect())
+        if not self._heralds and not self._postselect.has_condition and one_input and det_type == DetectionType.PNR:
+            only_input = svd[1] if source_defined else next(iter(svd))[0]
             if not only_input.has_annotations:
                 get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call",
                                    channel.general)
                 return self._perfect_sampling_no_selection(only_input, prepare_samples, progress_callback)
 
-        new_input, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
-
-        # Prepare pools of pre-computed samples
         provider = SamplesProvider(self._backend)
         provider.sleep_between_batches = self.sleep_between_batches
-        provider.prepare(new_input, prepare_samples, progress_callback)
 
-        res = self._noisy_sampling(new_input, provider, max_samples, max_shots, det_type, progress_callback)
+        if source_defined:
+            source, bs_input = svd
+            n = bs_input.n
+            pre_physical_perf = 1
+            provider.estimate_weights_from_source(source, bs_input, prepare_samples, self._min_detected_photons_filter)
+
+        else:
+            n = svd.n_max
+            zpp, max_p = self._check_input_svd(svd)
+            svd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)  # Beware svd is now a BSD
+            provider.estimate_weights_from_distribution(svd, prepare_samples)
+
+        # Prepare pools of pre-computed samples
+        provider.prepare(progress_callback)
+
+        res = self._noisy_sampling(svd, provider, max_samples, max_shots, det_type, progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
-            'n': svd.n_max, 'max_samples': max_samples, 'max_shots': max_shots})
+            'n': n, 'max_samples': max_samples, 'max_shots': max_shots})
         return res
 
     def sample_count(self,
-                     svd: SVDistribution,
+                     svd: SVDistribution | tuple[Source, BasicState],
                      max_samples: int,
                      max_shots: int = None,
                      progress_callback: callable = None) -> dict:
