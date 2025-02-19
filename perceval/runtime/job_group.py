@@ -121,7 +121,7 @@ class JobGroup:
         """
         group_data = json.loads(JobGroup._PERSISTENT_DATA.read_file(self._file_path, FileFormat.TEXT))
 
-        self.from_dict(group_data)
+        self._from_dict(group_data)
 
     @staticmethod
     def _build_remote_job(job_entry: dict) -> RemoteJob:
@@ -168,7 +168,7 @@ class JobGroup:
         if job_to_add.id and job_to_add.id in [job.id for job in self._jobs]:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
         if kwargs:
-            job_to_add.set_args(kwargs)
+            job_to_add.set_args(**kwargs)
         self._jobs.append(job_to_add)
         self._write_to_file()
 

@@ -102,18 +102,18 @@ class RemoteJob(Job):
 
     @staticmethod
     def from_id(job_id: str, rpc_handler):
-        j = RemoteJob(None, rpc_handler, "resumed")  # There is no access to the job name, let's call it "resumed"
-        j._id = job_id
-        j.status()
-        return j
+        rj = RemoteJob(None, rpc_handler, "resumed")  # There is no access to the job name, let's call it "resumed"
+        rj._id = job_id
+        rj.status()
+        return rj
 
     @staticmethod
     def from_dict(my_dict: dict, rpc_handler):
-        j = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
-        j._id = my_dict['id']
+        rj = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
+        rj._id = my_dict['id']
         if my_dict['status'] is not None:
-            j._job_status.status = RunningStatus[my_dict['status']]
-        return j
+            rj._job_status.status = RunningStatus[my_dict['status']]
+        return rj
 
     def to_dict(self):
         job_info = dict()
