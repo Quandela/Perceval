@@ -107,22 +107,34 @@ class RPCHandlerResponsesBuilder():
     def __init__(self,
                  rpc_handler: RPCHandler,
                  platform_details: dict = DEFAULT_PLATFORM_INFO,
-                 default_job_status: RunningStatus | None = RunningStatus.SUCCESS) -> None:
+                 default_job_status: RunningStatus | None = RunningStatus.SUCCESS,
+                 authorized_retry=4) -> None:
 
         self._rpc_handler = rpc_handler
         platform_details['name'] = rpc_handler.name
         self._platform_info = platform_details
         self._job_status = default_job_status
+        self._job_status_index = 0
+        self._job_status_sequence = []
+        self._authorized_retry = authorized_retry
         responses.reset()
         self._set_default_responses()
 
-    def set_default_job_status(self, default_job_status: RunningStatus | None = RunningStatus.SUCCESS) -> None:
+    def set_default_job_status(self, default_job_status: RunningStatus | None) -> None:
         """Set the status of the job that rpc_handler.create_job will produce.
         None means rpc_handler.create_job will return an error (400).
 
-        :param default_job_status: status of the job that rpc_handler.create_job will produce. Default is SUCCESS
+        :param default_job_status: status of the job that rpc_handler.create_job will produce.
         """
         self._job_status = default_job_status
+
+    def set_job_status_sequence(self, job_status_sequence: list[RunningStatus | None]) -> None:
+        """Set the sequence of status of the jobs that rpc_handler.create_job will produce.
+        None means rpc_handler.create_job will return an error (400).
+
+        :param default_job_status: sequence of status of the jobs that rpc_handler.create_job will produce.
+        """
+        self._job_status_sequence = job_status_sequence
 
     def _set_default_responses(self) -> None:
         self._set_get_platform_details_responses()
@@ -159,22 +171,32 @@ class RPCHandlerResponsesBuilder():
                 url=re.compile((self._rpc_handler.url + endpoint).replace('/', "\/") + UUID_REGEXP),
                 status=404))
 
+    def _get_job_status(self):
+        if self._job_status_sequence:
+            status = self._job_status_sequence[self._job_status_index]
+            self._job_status_index += 1
+            if self._job_status_index == len(self._job_status_sequence):
+                self._job_status_index = 0
+            return status
+        return self._job_status
+
     def _create_job_callback(self, _) -> tuple[int, dict, str]:
-        if self._job_status is None:
+        status = self._get_job_status()
+        if status is None:
             return (400, {"content-type": "application/json"}, "")
         job_id = str(uuid.uuid4())
-        self._set_rerun_job_responses(job_id, self._job_status)
-        self._set_cancel_job_responses(job_id, self._job_status)
-        self._set_job_status_responses(job_id, self._job_status)
-        self._set_job_result_responses(job_id, self._job_status)
-        self._reset_default_responses()
+        for _ in range(self._authorized_retry):
+            self._set_rerun_job_responses(job_id, status)
+            self._set_cancel_job_responses(job_id, status)
+            self._set_job_status_responses(job_id, status)
+            self._set_job_result_responses(job_id, status)
+            self._reset_default_responses()
         return (200, {"content-type": "application/json"}, json.dumps({_JOB_ID_KEY: job_id}))
 
     def _set_rerun_job_responses(self, job_id: str, status: RunningStatus = RunningStatus.SUCCESS) -> None:
         job_status = JobStatus()
         job_status.status = status
         if job_status.failed:
-            responses.head
             responses.add_callback(
                 responses.POST,
                 self._rpc_handler.url + _ENDPOINT_JOB_RERUN + job_id,
@@ -206,7 +228,7 @@ class RPCHandlerResponsesBuilder():
             'status': RunningStatus.to_server_response(status),
             'creation_date': _TIMESTAMP,
             'start_time': None,
-            'failure_code': None
+            'status_message': None
         }
 
         if status == RunningStatus.RUNNING:

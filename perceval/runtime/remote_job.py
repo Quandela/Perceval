@@ -212,6 +212,7 @@ class RemoteJob(Job):
         try:
             self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(*args, **kwargs)))
             get_logger().info(f"Send payload to the Cloud (got job id: {self._id})", channel.general)
+            self._job_status.status = RunningStatus.WAITING
 
         except Exception as e:
             self._job_status.stop_run(RunningStatus.ERROR, str(e))
@@ -245,7 +246,11 @@ class RemoteJob(Job):
         if not self.status.failed:
             raise RuntimeError(
                 f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
-        return RemoteJob.from_id(self._rpc_handler.rerun_job(self._id), self._rpc_handler)
+
+        job_dict = self.to_dict()
+        job_dict['id'] = self._rpc_handler.rerun_job(self._id)
+        job_dict['status'] = RunningStatus.WAITING.name
+        return RemoteJob.from_dict(job_dict, self._rpc_handler)
 
     def _get_results(self) -> None:
         if self._results and self.status.completed:

@@ -27,15 +27,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import json
+import time
+from datetime import datetime
+from tqdm import tqdm
+
 from perceval.runtime import Job, RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
-import os
-import json
-from datetime import datetime
-import time
-from tqdm import tqdm
 
 
 FILE_EXT_JGRP = 'jgrp'
@@ -83,9 +84,9 @@ class JobGroup:
         """
         return self._name
 
-    # TODO: should be named remote_job or not a property
+    # TODO: rename list_remote_jobs to remote_jobs need deprecated call ?
     @property
-    def list_remote_jobs(self) -> list[RemoteJob]:
+    def remote_jobs(self) -> list[RemoteJob]:
         """
         Returns a chronologically ordered list of RemoteJobs in the group.
         Jobs never sent to the cloud will be represented by None.
@@ -101,20 +102,20 @@ class JobGroup:
             group_data['job_group_data'].append(job.to_dict())
         return group_data
 
-    def _from_dict(self, group_data):
+    def _from_dict(self, group_data: dict) -> None:
         self.created_date = datetime.strptime(group_data['created_date'], DATE_TIME_FORMAT)
         self.modified_date = datetime.strptime(group_data['modified_date'], DATE_TIME_FORMAT)
         for job_entry in group_data['job_group_data']:
             self._jobs.append(self._build_remote_job(job_entry))
 
-    def _write_to_file(self):
+    def _write_to_file(self) -> None:
         """
         Writes job group data to disk
         """
         self.modified_date = datetime.now()
         JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self.to_dict()), FileFormat.TEXT)
 
-    def _load_job_group(self):
+    def _load_job_group(self) -> None:
         """
         Creates a Job Group by loading an existing one from file
         """
@@ -151,7 +152,8 @@ class JobGroup:
         """
         return JobGroup._PERSISTENT_DATA.has_file(os.path.join(JobGroup._DIR_PATH, name + '.' + FILE_EXT_JGRP))
 
-    def add(self, job_to_add: Job, **kwargs):
+    # TODO: What's kwargs ? Add docstring and unit test with kwargs
+    def add(self, job_to_add: Job, **kwargs) -> None:
         """
         Adds information of the new RemoteJob to an existing Group.
         Saves the data in a chronological order in the group (each entry is
@@ -227,7 +229,7 @@ class JobGroup:
 
         return progress
 
-    def track_progress(self):
+    def track_progress(self) -> None:
         """
         Displays the status and progress of each job in the group using `tqdm` progress bars.
         Jobs are categorized into "Successful," "Running/Active on Cloud," and
@@ -262,7 +264,6 @@ class JobGroup:
                     continue
                 count_inactive += 1
 
-
             success_bar.n = count_success
             active_bar.n = count_running
             inactive_bar.n = count_inactive
@@ -280,7 +281,7 @@ class JobGroup:
         inactive_bar.close()
 
     @staticmethod
-    def delete_all_job_groups():
+    def delete_all_job_groups() -> None:
         """
         Delete all existing groups on disk
         """
@@ -290,7 +291,7 @@ class JobGroup:
             JobGroup._PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, each_file + '.' + FILE_EXT_JGRP))
 
     @staticmethod
-    def delete_job_group(name: str):
+    def delete_job_group(name: str) -> None:
         """
         Delete a single group by name
 
@@ -300,7 +301,7 @@ class JobGroup:
         JobGroup._PERSISTENT_DATA.delete_file(file_path)
 
     @staticmethod
-    def delete_job_groups_date(del_before_date: datetime):
+    def delete_job_groups_date(del_before_date: datetime) -> None:
         """
         Delete all saved groups created before a date.
 
@@ -321,52 +322,52 @@ class JobGroup:
         for f in files_to_del:
             JobGroup.delete_job_group(f)
 
-    def _list_jobs_status_type(self, statuses: list[str]) -> list[RemoteJob]:
+    def _list_jobs_status_type(self, statuses: list[RunningStatus]) -> list[RemoteJob]:
         remote_jobs = []
         self._update_job_statuses()
         for job in self._jobs:
-            if job._job_status in statuses:
-                remote_jobs.append(self._recreate_remote_job(job.to_dict()))
+            if job._job_status.status in statuses:
+                remote_jobs.append(job)
         return remote_jobs
 
     def list_successful_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have run successfully on the cloud.
         """
-        return self._list_jobs_status_type(['SUCCESS'])
+        return self._list_jobs_status_type([RunningStatus.SUCCESS])
 
     def list_active_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that are currently active on the cloud - those with a Running or
         Waiting status.
         """
-        return self._list_jobs_status_type(['RUNNING', 'WAITING'])
+        return self._list_jobs_status_type([RunningStatus.RUNNING, RunningStatus.WAITING])
 
     def list_unsuccessful_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have run unsuccessfully on the cloud - errored or canceled
         """
-        return self._list_jobs_status_type(['ERROR', 'CANCELED'])
+        return self._list_jobs_status_type([RunningStatus.ERROR, RunningStatus.CANCELED])
 
-    def list_unsend_jobs(self) -> list[RemoteJob]:
+    # TODO: rename unsend to unsent need deprecated call ?
+    def list_unsent_jobs(self) -> list[RemoteJob]:
         """
-        Returns a list of all RemoteJobs in the group that have not been send to the cloud
+        Returns a list of all RemoteJobs in the group that have not been sent to the cloud
         """
         return [job for job in self._jobs if not job.has_been_send]
 
-    def _launch_jobs(self, rerun: bool, delay: int = None):
+    def _launch_jobs(self, rerun: bool, delay: int = None, replace_previous_job: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
         :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of to jobs on cloud
         """
-
         jobs = None
         if rerun:
             jobs = self.list_unsuccessful_jobs()
         else:
-            jobs = self.list_unsend_jobs()
+            jobs = self.list_unsent_jobs()
         job_nmb = len(jobs)
 
         if delay is not None:
@@ -377,19 +378,27 @@ class JobGroup:
 
         count_success = 0
         count_fail = 0
-        for job in self._jobs:
-            if rerun:
-                self._jobs.append(job.rerun())
-            else:
+        for job_idx in range(len(self._jobs)):
+            job = self._jobs[job_idx]
+
+            if rerun and job.is_failed:
+                job = job.rerun()
+                if replace_previous_job:
+                    self._jobs[job_idx] = job
+                else:
+                    self._jobs.append(job)
+            elif not rerun and not job.has_been_send:
                 job.execute_async()
+            else:
+                continue
 
             self._write_to_file()  # save that we sent the job
 
             if delay is not None:
-                while not job.is_complete:  # TODO: stop also is job is canceled or failed
+                while not job.status.completed:
                     time.sleep(1)
 
-                self._write_to_file()  # save that we sent the job
+                self._write_to_file()  # save that we got a job status update
 
                 if job.status.success:
                     count_success += 1
@@ -401,11 +410,10 @@ class JobGroup:
 
                 time.sleep(delay)  # add delay before launching next job
 
-
         if delay is not None:
             prog.close()
 
-    def run_sequential(self, delay: int):
+    def run_sequential(self, delay: int) -> None:
         """
         Launches the unsent jobs in the group on Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
@@ -414,16 +422,17 @@ class JobGroup:
         """
         self._launch_jobs(rerun=False, delay=delay)
 
-    def rerun_failed_sequential(self, delay: int):
+    def rerun_failed_sequential(self, delay: int, replace_previous_job=True) -> None:
         """
         Reruns Failed jobs in the group on the Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
 
         :param delay: number of seconds to wait between re-launching jobs on cloud
+        :param replace_previous_job: Whether the new job from rerun replace the previous one, defaults to True
         """
-        self._launch_jobs(rerun=True, delay=delay)
+        self._launch_jobs(rerun=True, delay=delay, replace_previous_job=replace_previous_job)
 
-    def run_parallel(self):
+    def run_parallel(self) -> None:
         """
         Launches all the unsent jobs in the group on Cloud, running them in parallel.
 
@@ -433,14 +442,16 @@ class JobGroup:
         """
         self._launch_jobs(rerun=False)
 
-    def rerun_failed_parallel(self):
+    def rerun_failed_parallel(self, replace_previous_job=True) -> None:
         """
         Restart all failed jobs in the group on the Cloud, running them in parallel.
 
         If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
         is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
+
+        :param replace_previous_job: Whether the new job from rerun replace the previous one, defaults to True
         """
-        self._launch_jobs(rerun=True)
+        self._launch_jobs(rerun=True, replace_previous_job=replace_previous_job)
 
     def get_results(self) -> list[dict]:
         """

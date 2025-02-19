@@ -27,13 +27,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
 import json
+import pytest
+import requests
 from unittest.mock import MagicMock, patch
 
 import responses
 
-from perceval.runtime import JobGroup, RemoteJob
+from perceval.runtime import JobGroup, RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.components import catalog
 from perceval.algorithm import Sampler
@@ -54,7 +55,7 @@ RPC_HANDLER = RPCHandler(PLATFORM_NAME, URL, TOKEN)
 def test_init(mock_write_file):
     jg = JobGroup(TEST_JG_NAME)
     assert jg.name == TEST_JG_NAME
-    assert len(jg.list_remote_jobs) == 0  # empty job group
+    assert len(jg.remote_jobs) == 0  # empty job group
     assert mock_write_file.call_count == 1
 
 
@@ -82,7 +83,9 @@ def test_load(mock_write_file: MagicMock):
     jg._from_dict(jg_dict)
     jg._write_to_file()
 
-    for key, value in json.loads(mock_write_file.call_args_list[-1][0][1]).items():
+    last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
+
+    for key, value in last_saved_jg_dict.items():
         if key == 'modified_date':
             assert jg_dict[key] < value
         else:
@@ -103,7 +106,7 @@ def test_add(mock_write_file):
         expected_write_call_count += 1
         assert mock_write_file.call_count == expected_write_call_count
 
-    assert len(jg.list_remote_jobs) == 10
+    assert len(jg.remote_jobs) == 10
 
     remote_job_dict = {
         'id': None,
@@ -141,9 +144,9 @@ def test_add_errors(mock_write_file):
 
 
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
-def test_run(mock_write_file):
+def test_classic_run(mock_write_file):
     RPCHandlerResponsesBuilder(RPC_HANDLER)
-    rj_nmb = 10
+    rj_nmb = 2
 
     jg = JobGroup(TEST_JG_NAME)
 
@@ -151,11 +154,11 @@ def test_run(mock_write_file):
     assert mock_write_file.call_count == expected_write_call_count
 
     for _ in range(rj_nmb):
-        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job'))
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
         expected_write_call_count += 1
 
     assert mock_write_file.call_count == expected_write_call_count
-    assert len(jg.list_remote_jobs) == rj_nmb
+    assert len(jg.remote_jobs) == rj_nmb
     assert len(responses.calls) == 0
 
     group_progress = jg.progress()
@@ -189,7 +192,7 @@ def test_run(mock_write_file):
                               'Unfinished': [0, {'sent': 0, 'not sent': 0}]}
 
     for _ in range(rj_nmb):
-        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'a_remote_job'))
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
         expected_write_call_count += 1
 
     assert mock_write_file.call_count == expected_write_call_count
@@ -226,3 +229,96 @@ def test_run(mock_write_file):
     # No call on load
     assert len(responses.calls) == rj_nmb * 2
     assert mock_write_file.call_count == expected_write_call_count
+
+
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_save_on_error(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_job_status_sequence([RunningStatus.SUCCESS, None])
+
+    for method_idx in range(2):
+        jg = JobGroup(TEST_JG_NAME)
+
+        for _ in range(2):
+            jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+        with pytest.raises(requests.exceptions.HTTPError):
+            if method_idx == 0:
+                jg.run_parallel()
+            else:
+                jg.run_sequential(0.1)
+
+        last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
+        jg = JobGroup(TEST_JG_NAME)
+        jg._from_dict(last_saved_jg_dict)
+
+        remote_jobs = jg.remote_jobs
+        assert remote_jobs[0].has_been_send
+        assert remote_jobs[0].is_success
+        assert remote_jobs[1] is None
+
+
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_run_advance(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_job_status_sequence(
+        [RunningStatus.SUCCESS, RunningStatus.WAITING, RunningStatus.ERROR])
+
+    jg = JobGroup(TEST_JG_NAME)
+
+    for _ in range(3):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    jg.run_parallel()
+
+    jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    rpc_handler_responses_builder.set_job_status_sequence([])
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
+
+    assert jg.progress() == {'Total': 4,
+                             'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
+                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+
+    jg.run_parallel()
+
+    assert jg.progress() == {'Total': 4,
+                             'Finished': [3, {'successful': 2, 'unsuccessful': 1}],
+                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+
+
+@patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
+def test_rerun(mock_write_file):
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
+    rpc_handler_responses_builder.set_job_status_sequence(
+        [RunningStatus.SUCCESS, RunningStatus.WAITING, RunningStatus.ERROR])
+
+    jg = JobGroup(TEST_JG_NAME)
+
+    for _ in range(3):
+        jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    jg.run_parallel()
+
+    jg.add(RemoteJob({'payload': {}}, RPC_HANDLER, 'my_remote_job'))
+
+    rpc_handler_responses_builder.set_job_status_sequence([])
+    rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
+
+    assert jg.progress() == {'Total': 4,
+                             'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
+                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+
+    jg.rerun_failed_parallel(replace_previous_job=False)
+
+    assert jg.progress() == {'Total': 5,
+                             'Finished': [3, {'successful': 2, 'unsuccessful': 1}],
+                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+
+    jg.rerun_failed_parallel(replace_previous_job=True)
+
+    assert jg.progress() == {'Total': 5,
+                             'Finished': [3, {'successful': 3, 'unsuccessful': 0}],
+                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+
+# TODO: add payload well saved/load with complex job (iteration parameter et tout)
