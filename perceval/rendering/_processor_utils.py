@@ -61,7 +61,7 @@ def collect_herald_info(processor: AProcessor, recursive: bool):
     recursive is True, for blocks when recursive is False.
     """
     if recursive:
-        component_list = processor.flatten()
+        component_list = processor.flatten(max_iterations=1)
     else:
         component_list = processor._components
 
