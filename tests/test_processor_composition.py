@@ -30,8 +30,6 @@
 import math
 import pytest
 
-import responses
-
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
                                  FFConfigurator, FFCircuitProvider, Unitary, Barrier)
 from perceval.utils import Matrix, P, LogicalState

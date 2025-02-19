@@ -32,8 +32,6 @@ import pytest
 from unittest.mock import patch
 from time import sleep
 
-import responses
-
 import perceval as pcvl
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus

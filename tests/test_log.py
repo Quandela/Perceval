@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 import json
-import responses
 from unittest.mock import patch
 
 import perceval as pcvl

@@ -83,6 +83,7 @@ class JobGroup:
         """
         return self._name
 
+    # TODO: should be named remote_job or not a property
     @property
     def list_remote_jobs(self) -> list[RemoteJob]:
         """
@@ -386,8 +387,10 @@ class JobGroup:
             self._write_to_file()  # save that we sent the job
 
             if delay is not None:
-                while not job.is_complete:
+                while not job.is_complete:  # TODO: stop also is job is canceled or failed
                     time.sleep(1)
+
+                self._write_to_file()  # save that we sent the job
 
                 if job.status.success:
                     count_success += 1
@@ -399,10 +402,9 @@ class JobGroup:
 
                 time.sleep(delay)  # add delay before launching next job
 
+
         if delay is not None:
             prog.close()
-
-        self._write_to_file()
 
     def run_sequential(self, delay: int):
         """

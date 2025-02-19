@@ -26,11 +26,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 import uuid
 import json
 import re
 import datetime
+from enum import Enum
 
 import responses
 
@@ -70,7 +72,32 @@ DEFAULT_PLATFORM_INFO = {
 UUID_REGEXP = "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}"
 
 
+class CloudEndpoint(Enum):
+    CreateJob = 0
+    JobStatus = 1
+    JobResults = 2
+    CancelJob = 3
+    RerunJob = 4
+    PlatformDetails = 5
+
+    @staticmethod
+    def from_response(response: responses.Response) -> CloudEndpoint:
+        if _ENDPOINT_JOB_STATUS in response.url:
+            return CloudEndpoint.JobStatus
+        if _ENDPOINT_JOB_RESULT in response.url:
+            return CloudEndpoint.JobResults
+        if _ENDPOINT_JOB_CANCEL in response.url:
+            return CloudEndpoint.CancelJob
+        if _ENDPOINT_JOB_RERUN in response.url:
+            return CloudEndpoint.RerunJob
+        if _ENDPOINT_JOB_CREATE in response.url:
+            return CloudEndpoint.CreateJob
+        if _ENDPOINT_PLATFORM_DETAILS in response.url:
+            return CloudEndpoint.PlatformDetails
+
+
 class RPCHandlerResponsesBuilder():
+
     def __init__(self,
                  rpc_handler: RPCHandler,
                  platform_info: dict = DEFAULT_PLATFORM_INFO,

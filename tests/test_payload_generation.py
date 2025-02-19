@@ -29,7 +29,6 @@
 """module test payload generation"""
 
 from unittest.mock import patch
-import responses
 
 import perceval as pcvl
 
