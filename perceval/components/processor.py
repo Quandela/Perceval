@@ -276,7 +276,6 @@ class Processor(AProcessor):
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        # res = sampling_simulator.samples(self.source_distribution, max_samples, max_shots, progress_callback)
         sample_provider = self.source_distribution if self._has_custom_input else (self._source, self._input_state)
         res = sampling_simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)

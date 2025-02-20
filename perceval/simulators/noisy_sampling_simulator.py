@@ -118,16 +118,19 @@ class SamplesProvider:
             get_logger().warn(f"No useful state will be computed, aborting", channel.user)
             return []
 
+        # Only estimated: doesn't count g2 and detectors
         estimated_phys_perf = estimate_phys_perf(transmission, expected_input.n, min_detected_photons_filter)
+        n_gen = n_samples / estimated_phys_perf  # The expected number of useful samples is n_gen * P(sample.n >= filter)
 
         if n_shots is not None:
-            if min_detected_photons_filter > 0:
+            n_gen2 = n_shots
+            if min_detected_photons_filter > 0:  # No selection if 0
                 zpp = (1 - transmission) ** expected_input.n
-                n_shots = n_shots / (1 - zpp)  # The expected number of shots is n_gen * P(a sample is a shot)
-            n_samples = min(n_samples, n_shots)
+                n_gen2 = n_shots / (1 - zpp)  # The expected number of shots is n_gen2 * P(sample is a shot)
+            n_gen = min(n_gen, n_gen2)
 
         # Generates a batch from the source to estimate the weights. These will also be the first simulated samples
-        input_samples = source.generate_samples(math.ceil(n_samples / estimated_phys_perf), expected_input)
+        input_samples = source.generate_samples(math.ceil(n_gen), expected_input)
 
         for sample in input_samples:
             if sample.n >= min_detected_photons_filter:
@@ -442,7 +445,7 @@ class NoisySamplingSimulator:
             source, bs_input = svd
             n = bs_input.n
             pre_physical_perf = 1
-            first_batch = provider.estimate_weights_from_source(source, bs_input, prepare_samples, max_shots,
+            first_batch = provider.estimate_weights_from_source(source, bs_input, max_samples, max_shots,
                                                                 self._min_detected_photons_filter)
             if not len(first_batch):
                 return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
@@ -451,6 +454,10 @@ class NoisySamplingSimulator:
             n = svd.n_max
             zpp, max_p = self._check_input_svd(svd)
             svd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)  # Beware svd is now a BSD
+            if self._min_detected_photons_filter >= 2 and max_shots is not None:
+                # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
+                max_shots *= pre_physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
+                prepare_samples = min(max_shots, prepare_samples)
             provider.estimate_weights_from_distribution(svd, prepare_samples)
             first_batch = []
 
