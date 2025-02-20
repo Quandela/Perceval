@@ -43,7 +43,8 @@ from ._simulate_detectors import simulate_detectors_sample
 
 def estimate_phys_perf(transmission: float, n: int, min_photons_filter: int):
     """
-    Computes the physical performance for a source with g2 = 0. The result is lower than the real value if there is g2
+    Computes the physical performance for a source with g2 = 0.
+    The result is lower than the real value if there is g2 and `min_photons_filter` > 1.
 
     :param transmission: the transmission of the source. Corresponds to the product of the brightness and the transmittance
     :param n: the number of photons in the input state
@@ -106,19 +107,24 @@ class SamplesProvider:
     def estimate_weights_from_source(self, source: Source,
                                      expected_input: BasicState,
                                      n_samples: int,
+                                     n_shots: int | None,
                                      min_detected_photons_filter: int) -> list[BasicState] | BSSamples:
         """
         Decide how much of each input we will generate when the pool becomes empty based on
         a batch of samples generated from the source and the total number of samples.
         """
         transmission = source._emission_probability * (1 - source._losses)
-        # This is lower than the real value as it doesn't count g2
-        estimated_phys_perf = estimate_phys_perf(transmission, expected_input.n, min_detected_photons_filter)
-        if estimated_phys_perf == 0:  # Equivalently, transmission == 0 and min_detected_photons_filter >= 1
+        if transmission == 0 and min_detected_photons_filter >= 1:
             get_logger().warn(f"No useful state will be computed, aborting", channel.user)
             return []
 
-        zpp = 1 - transmission  # TODO: use this with number of shots and samples to get a better size of initial batch
+        estimated_phys_perf = estimate_phys_perf(transmission, expected_input.n, min_detected_photons_filter)
+
+        if n_shots is not None:
+            if min_detected_photons_filter > 0:
+                zpp = (1 - transmission) ** expected_input.n
+                n_shots = n_shots / (1 - zpp)  # The expected number of shots is n_gen * P(a sample is a shot)
+            n_samples = min(n_samples, n_shots)
 
         # Generates a batch from the source to estimate the weights. These will also be the first simulated samples
         input_samples = source.generate_samples(math.ceil(n_samples / estimated_phys_perf), expected_input)
@@ -260,14 +266,14 @@ class NoisySamplingSimulator:
             max_samples: int,
             max_shots: int,
             detection_type: DetectionType,
-            progress_callback: callable = None,
-            first_batch = None) -> dict:
+            first_batch: list[BasicState] | BSSamples,
+            progress_callback: callable = None) -> dict:
 
         output = BSSamples()
         idx = 0
         not_selected_physical = 0
         not_selected = 0
-        selected_inputs = first_batch or []
+        selected_inputs = first_batch
         shots = 0
         batch_size = min(max_samples, max_shots) if max_shots is not None else max_samples
         while len(output) < max_samples and (max_shots is None or shots < max_shots):
@@ -279,6 +285,7 @@ class NoisySamplingSimulator:
                     break
 
             if idx == len(selected_inputs):
+                # Generate new inputs
                 idx = 0
                 if isinstance(noisy_input, BSDistribution):
                     selected_inputs = noisy_input.sample(batch_size, non_null=False)
@@ -290,19 +297,20 @@ class NoisySamplingSimulator:
                             if state.n == 0 and self._min_detected_photons_filter > 0:
                                 # 0 photons states are not taken into account for counting shots
                                 not_selected_physical += 1
-                            elif 0 < state.n < self._min_detected_photons_filter:
+                            elif state.n < self._min_detected_photons_filter:
                                 not_selected_physical += 1
                                 shots += 1
-                                # TODO: fix this
-                                if max_shots is not None and shots >= max_shots:
+                                if max_shots is not None and shots + len(selected_inputs) >= max_shots:
                                     break
                             else:
+                                # Must be considered as already shot, but will be counted later
                                 selected_inputs.append(state)
 
                         if len(selected_inputs):
                             break
 
-            if max_shots is not None and shots >= max_shots:
+            if not len(selected_inputs):
+                # max_shots has been reached during generation
                 break
 
             selected_bs = selected_inputs[idx]
@@ -434,7 +442,7 @@ class NoisySamplingSimulator:
             source, bs_input = svd
             n = bs_input.n
             pre_physical_perf = 1
-            first_batch = provider.estimate_weights_from_source(source, bs_input, prepare_samples,
+            first_batch = provider.estimate_weights_from_source(source, bs_input, prepare_samples, max_shots,
                                                                 self._min_detected_photons_filter)
             if not len(first_batch):
                 return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
@@ -449,7 +457,7 @@ class NoisySamplingSimulator:
         # Prepare pools of pre-computed samples
         provider.prepare(progress_callback)
 
-        res = self._noisy_sampling(svd, provider, max_samples, max_shots, det_type, progress_callback, first_batch)
+        res = self._noisy_sampling(svd, provider, max_samples, max_shots, det_type, first_batch, progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': n, 'max_samples': max_samples, 'max_shots': max_shots})
