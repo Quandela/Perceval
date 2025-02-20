@@ -309,13 +309,13 @@ def test_rerun(mock_write_file):
                              'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
                              'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
 
-    jg.rerun_failed_parallel(replace_previous_job=False)
+    jg.rerun_failed_parallel(replace_failed_jobs=False)
 
     assert jg.progress() == {'Total': 5,
                              'Finished': [3, {'successful': 2, 'unsuccessful': 1}],
                              'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
 
-    jg.rerun_failed_parallel(replace_previous_job=True)
+    jg.rerun_failed_parallel(replace_failed_jobs=True)
 
     assert jg.progress() == {'Total': 5,
                              'Finished': [3, {'successful': 3, 'unsuccessful': 0}],

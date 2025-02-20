@@ -356,7 +356,7 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.has_been_send]
 
-    def _launch_jobs(self, rerun: bool, delay: int = None, replace_previous_job: bool = False) -> None:
+    def _launch_jobs(self, rerun: bool, delay: int = None, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
@@ -383,7 +383,7 @@ class JobGroup:
 
             if rerun and job.is_failed:
                 job = job.rerun()
-                if replace_previous_job:
+                if replace_failed_jobs:
                     self._jobs[job_idx] = job
                 else:
                     self._jobs.append(job)
@@ -422,15 +422,15 @@ class JobGroup:
         """
         self._launch_jobs(rerun=False, delay=delay)
 
-    def rerun_failed_sequential(self, delay: int, replace_previous_job=True) -> None:
+    def rerun_failed_sequential(self, delay: int, replace_failed_jobs=True) -> None:
         """
         Reruns Failed jobs in the group on the Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
 
         :param delay: number of seconds to wait between re-launching jobs on cloud
-        :param replace_previous_job: Whether the new job from rerun replace the previous one, defaults to True
+        :param replace_failed_jobs: Whether the new job from rerun replace the failed one, defaults to True
         """
-        self._launch_jobs(rerun=True, delay=delay, replace_previous_job=replace_previous_job)
+        self._launch_jobs(rerun=True, delay=delay, replace_failed_jobs=replace_failed_jobs)
 
     def run_parallel(self) -> None:
         """
@@ -442,16 +442,16 @@ class JobGroup:
         """
         self._launch_jobs(rerun=False)
 
-    def rerun_failed_parallel(self, replace_previous_job=True) -> None:
+    def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
         Restart all failed jobs in the group on the Cloud, running them in parallel.
 
         If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
         is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
 
-        :param replace_previous_job: Whether the new job from rerun replace the previous one, defaults to True
+        :param replace_failed_jobs: Whether the new job from rerun replace the failed one, defaults to True
         """
-        self._launch_jobs(rerun=True, replace_previous_job=replace_previous_job)
+        self._launch_jobs(rerun=True, replace_failed_jobs=replace_failed_jobs)
 
     def get_results(self) -> list[dict]:
         """
