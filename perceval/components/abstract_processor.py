@@ -643,6 +643,7 @@ class AProcessor(ABC):
 
     def _with_logical_input(self, input_state: LogicalState):
         input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
+        self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
         self.with_input(input_state)
 
     def check_input(self, input_state: BasicState):
