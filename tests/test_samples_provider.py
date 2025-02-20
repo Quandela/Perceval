@@ -66,7 +66,7 @@ def test_samples_provider_distribution():
 
 def test_samples_provider_source():
     provider = SamplesProvider(clifford)
-    provider.estimate_weights_from_source(source, ideal_input, 1000, 0)
+    provider.estimate_weights_from_source(source, ideal_input, 1000, 1000, 0)
     provider.prepare()
 
     assert provider._pools and provider._weights

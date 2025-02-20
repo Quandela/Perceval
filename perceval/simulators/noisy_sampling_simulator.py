@@ -262,6 +262,25 @@ class NoisySamplingSimulator:
             "logical_perf": 1
         }
 
+    def _filter_generated_inputs(self, generated_inputs: list[BasicState] | BSSamples,
+                                 shots: int, max_shots: int = None) -> tuple[list[BasicState], int, int]:
+        not_selected_physical = 0
+        selected_inputs = []
+        for state in generated_inputs:
+            if state.n == 0 and self._min_detected_photons_filter > 0:
+                # 0 photons states are not taken into account for counting shots
+                not_selected_physical += 1
+            elif state.n < self._min_detected_photons_filter:
+                not_selected_physical += 1
+                shots += 1
+                if max_shots is not None and shots + len(selected_inputs) >= max_shots:
+                    break
+            else:
+                # Must be considered as already shot, but will be counted later
+                selected_inputs.append(state)
+
+        return selected_inputs, not_selected_physical, shots
+
     def _noisy_sampling(
             self,
             noisy_input: BSDistribution | tuple[Source, BasicState],
@@ -274,10 +293,13 @@ class NoisySamplingSimulator:
 
         output = BSSamples()
         idx = 0
-        not_selected_physical = 0
         not_selected = 0
-        selected_inputs = first_batch
-        shots = 0
+        if isinstance(noisy_input, BSDistribution):
+            selected_inputs = first_batch
+            not_selected_physical = 0
+            shots = 0
+        else:
+            selected_inputs, not_selected_physical, shots = self._filter_generated_inputs(first_batch, 0, max_shots)
         batch_size = min(max_samples, max_shots) if max_shots is not None else max_samples
         while len(output) < max_samples and (max_shots is None or shots < max_shots):
 
@@ -293,21 +315,10 @@ class NoisySamplingSimulator:
                 if isinstance(noisy_input, BSDistribution):
                     selected_inputs = noisy_input.sample(batch_size, non_null=False)
                 else:
-                    selected_inputs = []
                     while True:  # Actually a do... while
                         generated = noisy_input[0].generate_samples(batch_size, noisy_input[1])
-                        for state in generated:
-                            if state.n == 0 and self._min_detected_photons_filter > 0:
-                                # 0 photons states are not taken into account for counting shots
-                                not_selected_physical += 1
-                            elif state.n < self._min_detected_photons_filter:
-                                not_selected_physical += 1
-                                shots += 1
-                                if max_shots is not None and shots + len(selected_inputs) >= max_shots:
-                                    break
-                            else:
-                                # Must be considered as already shot, but will be counted later
-                                selected_inputs.append(state)
+                        selected_inputs, new_rejected, shots = self._filter_generated_inputs(generated, shots, max_shots)
+                        not_selected_physical += new_rejected
 
                         if len(selected_inputs):
                             break
