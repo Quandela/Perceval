@@ -61,6 +61,7 @@ class SamplesProvider:
         get_logger().debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
                      channel.general)
         for input_state, count in self._weights.items():
+            count = min(count, self._max_samples)
             if input_state.n == 0:
                 self._pools[input_state] = [input_state]*count
             else:
@@ -85,7 +86,10 @@ class SamplesProvider:
         for noisy_s, prob in noisy_input.items():
             ns = min(math.ceil(prob * n_samples), self._max_samples)
             for bs in noisy_s.separate_state(keep_annotations=False):
-                self._weights.add(bs, ns)
+                if self._weights[bs] + ns < self._max_samples:
+                    self._weights.add(bs, ns)
+                else:
+                    self._weights.add(bs, self._max_samples - self._weights[bs])
 
     def estimate_weights_from_source(self, source: Source,
                                      expected_input: BasicState,
@@ -111,13 +115,15 @@ class SamplesProvider:
         for sample in input_samples:
             if sample.n >= min_detected_photons_filter:
                 for state in sample.separate_state(keep_annotations=False):
-                    self._weights.add(state, 1)
+                    if self._weights[state] < self._max_samples:
+                        self._weights.add(state, 1)
 
     def _compute_samples(self, fock_state: BasicState):
         if fock_state not in self._weights:
             self._weights[fock_state] = self._min_samples
 
         n_samples = self._weights[fock_state]
+        n_samples = min(n_samples, self._max_samples)
         get_logger().debug(f"Simulate {n_samples} more {fock_state.n}-photon samples", channel.general)
         self._backend.set_input_state(fock_state)
         self._pools[fock_state] += self._backend.samples(n_samples)
@@ -267,7 +273,7 @@ class NoisySamplingSimulator:
                     while True:  # Actually a do... while
                         generated = noisy_input[0].generate_samples(generated_nb, noisy_input[1])
                         for state in generated:
-                            if state.n == 0:
+                            if state.n == 0 and self._min_detected_photons_filter > 0:
                                 # 0 photons states are not taken into account for counting shots and are always rejected
                                 not_selected_physical += 1
                             elif 0 < state.n < self._min_detected_photons_filter:
