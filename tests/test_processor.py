@@ -323,3 +323,30 @@ def test_min_photons_reset():
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(.25)
     assert res["physical_perf"] == pytest.approx(1)
+
+
+def test_flatten_processor():
+    ansatz = catalog["qloq ansatz"]
+    group_sizes = [Encoding.QUDIT2, Encoding.QUDIT2]
+    layers = ["Y"]
+    phases = None
+    p = ansatz.build_processor(
+        group_sizes=group_sizes,
+        layers=layers,
+        phases=phases,
+        ctype="cz"
+    )
+
+    level_0_components = p.flatten(0)
+    level_1_components = p.flatten(1)
+    level_2_components = p.flatten(2)
+    level_3_components = p.flatten(3)
+    level_4_components = p.flatten(4)
+    all_components = p.flatten()
+
+    assert len(level_0_components) == 1 # 1 sub-circuit
+    assert len(level_1_components) == 15 # 13 sub-sub-circuits (8 RYQUDIT2, 4 CZ2, 1 POSTPROCESSED CZ) + 2 PERM
+    assert len(level_2_components) == 60 # 8*4 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
+    assert len(level_3_components) == 68 # 8*5 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
+    assert len(level_4_components) == 76 # 8*6 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
+    assert len(all_components) == len(level_4_components)

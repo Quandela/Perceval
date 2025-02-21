@@ -686,20 +686,22 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             self._deduce_min_detected_photons(expected_photons)
 
-    def flatten(self, max_iterations = None) -> list[tuple]:
+    def flatten(self, max_depth = None) -> list[tuple]:
         """
-        :return: a component list where recursive circuits have been flattened
+        List all the components in the processor where recursive circuits have been flattened.
+
+        :param max_depth: The maximum depth of recursion. The remaining sub-circuits at this depth are listed as a component.
         """
-        return _flatten(self, max_iterations = max_iterations)
+        return _flatten(self, max_depth = max_depth)
 
 
-def _flatten(composite, starting_mode=0, max_iterations = None) -> list[tuple]:
+def _flatten(composite, starting_mode=0, max_depth = None) -> list[tuple]:
     component_list = []
     for m_range, comp in composite._components:
         if isinstance(comp, Circuit):
-            if max_iterations is None or max_iterations > 0:
+            if max_depth is None or max_depth > 0:
                 sub_list = _flatten(comp, starting_mode=m_range[0],
-                                    max_iterations=max_iterations - 1 if max_iterations is not None else None)
+                                    max_depth=max_depth - 1 if max_depth is not None else None)
                 component_list += sub_list
             else:
                 m_range = [m + starting_mode for m in m_range]
