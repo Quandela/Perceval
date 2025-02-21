@@ -149,7 +149,7 @@ class SamplesProvider:
         get_logger().debug(f"Simulate {n_samples} more {fock_state.n}-photon samples", channel.general)
         self._backend.set_input_state(fock_state)
         self._pools[fock_state] += self._backend.samples(n_samples)
-        self._weights[fock_state] = max(int(self._weights[fock_state] * self._sample_coeff), 16)
+        self._weights[fock_state] = min(max(int(self._weights[fock_state] * self._sample_coeff), 16), self._max_samples)
 
     def sample_from(self, input_state: BasicState) -> BasicState:
         """Pop an output from the pool of outputs for the given input state.
