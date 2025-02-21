@@ -1,18 +1,16 @@
 import argparse
 import base64
 import os
-import pathlib
 import re
 import sys
 import setuptools
 from glob import glob
 
-
 def getLocalFileContent(filename):
-    if not pathlib.is_file(filename):
+    if not os.path.isfile(filename):
         return None
-    fileExtension = filename.suffix()
-    if fileExtension not in ['gif', 'jpeg', 'jpg', 'png']:
+    fileExtension = os.path.splitext(filename)[1]
+    if fileExtension not in ['.gif', '.jpeg', '.jpg', '.png']:
         return None
     with open(filename, "rb") as img_file:
         return "data:image/{};base64,{}".format(fileExtension, base64.b64encode(img_file.read()).decode('utf-8'))
