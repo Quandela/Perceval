@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
 
 from copy import copy
 from multipledispatch import dispatch
@@ -59,6 +60,7 @@ class Simulator(ISimulator):
 
     def __init__(self, backend: AStrongSimulationBackend):
         super().__init__()
+        self._can_use_mask = False
         self._backend = backend
         self._invalidate_cache()
         self._logical_perf: float = 1
@@ -294,13 +296,29 @@ class Simulator(ISimulator):
            ]
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
-        decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False)) for sv, prob in input_dist.items()]
+        # decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False)) for sv, prob in input_dist.items()]
+        decomposed_input = []
+        input_dict = defaultdict(int)
+        for sv, prob in input_dist.items():
+            decomposed_input.append((prob, sv[0].separate_state(keep_annotations=False)))
+            n = sv[0].n
+            for bs in decomposed_input[-1][1]:
+                input_dict[bs] = max(input_dict[bs], n)
+
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
-        input_set = set([state for s in decomposed_input for state in s[1]])
-        len_input_set = len(input_set)
-        for idx, state in enumerate(input_set):
+        # input_set = set([state for s in decomposed_input for state in s[1]])
+        # len_input_set = len(input_set)
+        len_input_set = len(input_dict)
+        # for idx, state in enumerate(input_set):
+        previous_n = None
+        for idx, (state, n) in enumerate(sorted(input_dict.items(), key=lambda x: x[1])):
+            if n != previous_n and n != 0:
+                previous_n = n
+                self._backend._input_state = None
+                self.use_mask(n)
+
             self._backend.set_input_state(state)
             cache[state] = self._backend.prob_distribution()
             if progress_callback and idx % 10 == 0:
@@ -419,10 +437,7 @@ class Simulator(ISimulator):
 
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
-        if self.can_use_mask(has_superposed_states, has_annotations, detectors):
-            self._setup_heralds()
-        else:
-            self._backend.clear_mask()
+        self.init_use_mask(has_superposed_states, detectors)
 
         if has_superposed_states:
             self._logical_perf = 1
@@ -446,7 +461,7 @@ class Simulator(ISimulator):
                 'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf}
 
-    def _setup_heralds(self):
+    def _setup_heralds(self, n=None):
         # Set up a mask corresponding to heralds:
         mask_str = ""
         n_heralded_photons = 0
@@ -460,7 +475,7 @@ class Simulator(ISimulator):
                 n_heralded_photons += herald_expectation
             else:
                 mask_str += " "
-        self._backend.set_mask(mask_str)
+        self._backend.set_mask(mask_str, n)
 
         # Check that heralds and physical filter are consistent
         if self._min_detected_photons_filter < n_heralded_photons:
@@ -469,14 +484,19 @@ class Simulator(ISimulator):
                                    f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
-    def can_use_mask(self, has_superposed_states, has_annotations, detectors) -> bool:
-        return (self._heralds
-                and not has_annotations
+    def init_use_mask(self, has_superposed_states, detectors) -> None:
+        self._can_use_mask = (self._heralds
                 and not has_superposed_states
                 # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
 
                 and get_detection_type(detectors) == DetectionType.PNR
                 )
+
+    def use_mask(self, n=None):
+        if self._can_use_mask:
+            self._setup_heralds(n)
+        else:
+            self._backend.clear_mask()
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """

@@ -77,11 +77,12 @@ class AStrongSimulationBackend(ABackend):
 
     def __init__(self):
         super().__init__()
+        self.mask_n = None
         self._cache_iterator: dict = dict()
         self._masks_str: list[str] | None = None
         self._mask: xq.FSMask | None = None
 
-    def set_mask(self, masks: str | list[str]):
+    def set_mask(self, masks: str | list[str], n=None):
         """
         Sets new masks, replacing the former ones if they exist.
         Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
@@ -100,13 +101,14 @@ class AStrongSimulationBackend(ABackend):
             m = m.replace("*", " ")
             assert len(m) == mask_length, "Inconsistent mask lengths"
         self._masks_str = masks
+        self.mask_n = n
         self._init_mask()
 
     def _init_mask(self):
         if self._masks_str is not None and self._input_state is not None:
             instate = self._input_state
             assert len(self._masks_str[0]) == instate.m, "Mask and input state lengths have to be the same"
-            self._mask = xq.FSMask(instate.m, instate.n, self._masks_str)
+            self._mask = xq.FSMask(instate.m, self.mask_n or instate.n, self._masks_str)
 
     def clear_mask(self):
         """
