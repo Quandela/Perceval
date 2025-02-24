@@ -253,7 +253,7 @@ def test_save_on_error(mock_write_file):
         jg._from_dict(last_saved_jg_dict)
 
         remote_jobs = jg.remote_jobs
-        assert remote_jobs[0].has_been_send
+        assert remote_jobs[0].was_sent
         assert remote_jobs[0].is_success
         assert remote_jobs[1] is None
 

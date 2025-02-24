@@ -93,11 +93,17 @@ class RemoteJob(Job):
         self._results = None
 
     @property
-    def has_been_send(self) -> bool:
-        return self._id is not None
+    def was_sent(self) -> bool:
+        """
+        :return: True if the job was sent to a Cloud provider, False otherwise
+        """
+        return self._id is not None  # id is created when created on a Cloud
 
     @property
     def id(self) -> str | None:
+        """
+        Job unique identifier
+        """
         return self._id
 
     @staticmethod
@@ -119,7 +125,7 @@ class RemoteJob(Job):
         job_info = dict()
         job_info['id'] = self.id
 
-        if self.has_been_send:
+        if self.was_sent:
             job_info['status'] = str(self._job_status)
         else:
             job_info['status'] = None  # set status to None for Jobs not sent to cloud
@@ -160,7 +166,7 @@ class RemoteJob(Job):
 
     @property
     def status(self) -> JobStatus:
-        if not self.has_been_send or self._job_status.completed:  # status will never change, no need to get it
+        if not self.was_sent or self._job_status.completed:  # status will never change, no need to get it
             return self._job_status
 
         now = time.time()
@@ -276,8 +282,7 @@ class RemoteJob(Job):
         return self._results
 
     def __str__(self):
-        if self._id is None:
-            # handles unsent jobs of a JobGroup
-            return f"RemoteJob with name:{self.name}, id:{self._id}, status:None"
+        if not self.was_sent:
+            return f"RemoteJob '{self.name}', id:{self._id}, status:not sent"
         else:
-            return f"RemoteJob with name:{self.name}, id:{self._id}, status:{self._job_status}"
+            return f"RemoteJob '{self.name}', id:{self._id}, status:{self._job_status}"

@@ -91,13 +91,12 @@ class JobGroup:
         Returns a chronologically ordered list of RemoteJobs in the group.
         Jobs never sent to the cloud will be represented by None.
         """
-        return [job if job.has_been_send else None for job in self._jobs]
+        return [job if job.was_sent else None for job in self._jobs]
 
     def to_dict(self) -> dict:
-        group_data = {}
-        group_data['created_date'] = self.created_date.strftime(DATE_TIME_FORMAT)
-        group_data['modified_date'] = self.modified_date.strftime(DATE_TIME_FORMAT)
-        group_data['job_group_data'] = []
+        group_data = {'created_date': self.created_date.strftime(DATE_TIME_FORMAT),
+                      'modified_date': self.modified_date.strftime(DATE_TIME_FORMAT),
+                      'job_group_data': []}
         for job in self._jobs:
             group_data['job_group_data'].append(job.to_dict())
         return group_data
@@ -179,7 +178,7 @@ class JobGroup:
         updated with new information
         """
         for job in self._jobs:
-            if job.has_been_send:
+            if job.was_sent:
                 old_status = job._job_status.status.name
                 status = job.status()
                 if old_status != status:
@@ -207,7 +206,7 @@ class JobGroup:
         sent_job_cnt = 0
 
         for job in self._jobs:
-            if not job.has_been_send:
+            if not job.was_sent:
                 unsent_job_cnt += 1
                 continue
             status = job._job_status
@@ -354,7 +353,7 @@ class JobGroup:
         """
         Returns a list of all RemoteJobs in the group that have not been sent to the cloud
         """
-        return [job for job in self._jobs if not job.has_been_send]
+        return [job for job in self._jobs if not job.was_sent]
 
     def _launch_jobs(self, rerun: bool, delay: int = None, replace_failed_jobs: bool = False) -> None:
         """
@@ -387,7 +386,7 @@ class JobGroup:
                     self._jobs[job_idx] = job
                 else:
                     self._jobs.append(job)
-            elif not rerun and not job.has_been_send:
+            elif not rerun and not job.was_sent:
                 job.execute_async()
             else:
                 continue
