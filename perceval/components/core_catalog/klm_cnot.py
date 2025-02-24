@@ -32,7 +32,6 @@ from math import sqrt
 from perceval.components import Circuit, BS, PERM, Port
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding
-from perceval.utils.logging import get_logger, channel
 
 _GATE_NAME = "KLM CNOT"
 
