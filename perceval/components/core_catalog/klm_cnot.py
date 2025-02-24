@@ -41,7 +41,7 @@ _GATE_NAME = "KLM CNOT"
 
 class KLMCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
-    description = f"{_GATE_NAME} gate with 4 ancillary modes\n{_WARNING_NOT_OPTIMAL}"
+    description = f"{_GATE_NAME} gate with 4 ancillary modes.\n{_WARNING_NOT_OPTIMAL}"
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
@@ -79,7 +79,6 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                 .add(1, PERM([4, 3, 0, 2, 1])))
 
     def build_processor(self, **kwargs):
-        get_logger().warn(_WARNING_NOT_OPTIMAL, channel.user)
         p = self._init_processor(**kwargs)
         return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
