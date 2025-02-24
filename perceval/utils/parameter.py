@@ -30,7 +30,6 @@
 import random
 import re
 import sympy as sp
-from typing import Tuple, List
 
 
 class Parameter:
@@ -71,7 +70,7 @@ class Parameter:
         self._periodic = periodic
         self._pid = Parameter._id
         self._is_expression = is_expression
-        self._observers = []
+        self._expressions = []
         self._original = None
         Parameter._id += 1
 
@@ -139,7 +138,7 @@ class Parameter:
         if self.fixed and not force:
             raise RuntimeError("cannot set fixed parameter", v, self._value)
         self._value = v
-        self._notify_observers()
+        self._notify_expressions()
 
     def fix_value(self, v):
         r"""Fix the value of a non-fixed parameter
@@ -148,13 +147,13 @@ class Parameter:
         """
         self._symbol = None
         self._value = self._check_value(v, self._min, self._max, self._periodic)
-        self._notify_observers()
+        self._notify_expressions()
 
     def reset(self):
         r"""Reset the value of a non-fixed parameter"""
         if self._symbol:
             self._value = None
-            self._notify_observers()
+            self._notify_expressions()
 
     @property
     def defined(self) -> bool:
@@ -184,7 +183,7 @@ class Parameter:
                                                        self._max is not None and ", max_v="+str(self._max) or "")
 
     @property
-    def bounds(self) -> Tuple[float, float]:
+    def bounds(self) -> tuple[float, float]:
         r"""Minimal and maximal values for the parameter
         """
         return self._min, self._max
@@ -220,12 +219,12 @@ class Parameter:
         r"""Unique identifier for the parameter"""
         return self._pid
     
-    def _add_observer(self, observer_callback):
+    def _add_expression(self, expression_callback):
         """Adds a function to be called whenever the parameter changes"""
-        self._observers.append(observer_callback)
+        self._expressions.append(expression_callback)
         
-    def _notify_observers(self):
-        for callback in self._observers:
+    def _notify_expressions(self):
+        for callback in self._expressions:
             callback()
 
     def __mul__(self, other):
@@ -313,7 +312,7 @@ class Expression(Parameter):
             raise ValueError("%s is not an expression: %s", name, str(err))
         assert isinstance(e, sp.Expr), "%s is not an expression" % name
         
-        # Create set containing all base parameters
+        # Create set containing all parent parameters
         self._params = set() if parameters is None else set(parameters)
         self._create_missing_parameters()
         
@@ -323,11 +322,12 @@ class Expression(Parameter):
         else:
             value = None
         super().__init__(self.name, value, is_expression=True, periodic=False)
+        del self._expressions
         self._symbol = sp.S(name)
         
-        # Force value change when base parameters change values
+        # Force value change when parent parameters change values
         for param in self._params:
-            param._add_observer(self._update_value)
+            param._add_expression(self._update_value)
         self._update_value()
         
     def __repr__(self):
@@ -393,15 +393,15 @@ class Expression(Parameter):
                 self._params.add(P(name))
         
     def _update_value(self):
-        """Updates Expression with respect to any changes made to base Parameters"""
+        """Updates Expression with respect to any changes made to parent Parameters"""
         if any(not param.defined for param in self._params):
             self._value = None
         else:
             self._value = sp.S(self.name).subs({param.name : param._value for param in self._params})
 
     @property
-    def parameters(self) -> List[Parameter]:
-        """Returns list of base parameters in alphabetical order"""
+    def parameters(self) -> list[Parameter]:
+        """Returns list of parent parameters in alphabetical order"""
         return sorted(self._params, key=lambda obj: obj.name)
 
     @property

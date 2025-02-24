@@ -109,6 +109,8 @@ class AParametrizedComponent(AComponent):
 
         :param all_params: if False, only returns the variable parameters
         :return: the list of parameters
+        :expressions: if True, returns Expressions and parameters embedded in circuit components.
+            If False, returns the raw parameters that make up the expressions only. Default `False`.
         """
         param_list = set()
         for param in self._params.values():

@@ -425,7 +425,7 @@ class Circuit(ACircuit):
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
-                if p.name in self._params and p._pid != self._params[p.name]._pid and not p._is_expression:
+                if p.name in self._params and p._pid != self._params[p.name]._pid:
                     raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                 self._params[p.name] = p
         # register the component
