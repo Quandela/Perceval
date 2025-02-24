@@ -34,14 +34,14 @@ from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding
 from perceval.utils.logging import get_logger, channel
 
-_WARNING_NOT_OPTIMAL = "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
-                       "better in every aspect (see 'heralded cnot' in the catalog)"
 _GATE_NAME = "KLM CNOT"
 
 
 class KLMCnotItem(CatalogItem):
     article_ref = "https://doi.org/10.1073/pnas.1018839108"
-    description = f"{_GATE_NAME} gate with 4 ancillary modes.\n{_WARNING_NOT_OPTIMAL}"
+    description = f"{_GATE_NAME} gate with 4 ancillary modes.\n" \
+                  "You probably shouldn't use the KLM CNOT, except for educational purpose. The Knill CNOT is " \
+                  "better in every aspect (see 'heralded cnot' in the catalog)."
     str_repr = r"""                      ╭─────╮
 ctrl (dual rail) ─────┤     ├───── ctrl (dual rail)
                  ─────┤     ├─────
