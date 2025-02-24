@@ -296,31 +296,23 @@ class Simulator(ISimulator):
            ]
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
-        # decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False)) for sv, prob in input_dist.items()]
-        decomposed_input = []
-        input_dict = defaultdict(int)
-        for sv, prob in input_dist.items():
-            decomposed_input.append((prob, sv[0].separate_state(keep_annotations=False)))
-            n = sv[0].n
-            for bs in decomposed_input[-1][1]:
-                input_dict[bs] = max(input_dict[bs], n)
+        n_heralds = sum(self._heralds.values())
 
+        decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False), sv[0].n) for sv, prob in input_dist.items()]
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
-        # input_set = set([state for s in decomposed_input for state in s[1]])
-        # len_input_set = len(input_set)
-        len_input_set = len(input_dict)
-        # for idx, state in enumerate(input_set):
+        input_set = set((state, min(s[2], state.n + n_heralds)) for s in decomposed_input for state in s[1])
+        len_input_set = len(input_set)
         previous_n = None
-        for idx, (state, n) in enumerate(sorted(input_dict.items(), key=lambda x: x[1])):
+        for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
             if n != previous_n and n != 0:
                 previous_n = n
                 self._backend._input_state = None
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[state] = self._backend.prob_distribution()
+            cache[(state, n)] = self._backend.prob_distribution()
             if progress_callback and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set * 0.5  # From 0. to 0.5
                 exec_request = progress_callback(progress, 'compute probability distributions')
@@ -329,9 +321,9 @@ class Simulator(ISimulator):
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
-        for idx, (prob0, bs_data) in enumerate(decomposed_input):
+        for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution.list_tensor_product([cache[state] for state in bs_data],
+            probs_in_s = BSDistribution.list_tensor_product([cache[(state, min(n, state.n + n_heralds))] for state in bs_data],
                                                             merge_modes=True,
                                                             prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
