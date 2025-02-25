@@ -462,6 +462,7 @@ class Circuit(ACircuit):
 
     def inverse(self, v=False, h=False):
         _new_components = []
+        _new_params = []
         _components = self._components
         if h:
             _components.reverse()
@@ -476,6 +477,19 @@ class Circuit(ACircuit):
                 range = [self._m - 1 - p for p in range]
             if v or h:
                 component.inverse(v=v, h=h)
+                
+                for p_name, param in component._params.items():
+                    if not param.fixed:
+                        # Check if inverted parameter is in circuit
+                        expr = next((p for p in _new_params if p.name == param.name), None)
+                        if param.name in self._params:
+                            component._vars = {}
+                            # Set component parameter to existing Expression
+                            component._set_parameter(p_name, expr, None, None)
+                        else:
+                            self._params[p_name] = param 
+                            _new_params.append(param)
+                
                 for param in component.get_parameters(expressions=True):
                     self._params[param.name] = param
             _new_components.append((range, component))
