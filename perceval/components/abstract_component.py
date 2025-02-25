@@ -126,7 +126,7 @@ class AParametrizedComponent(AComponent):
                 else:
                     if param not in param_list:
                         param_list.append(param)
-        return list(param_list)
+        return param_list
 
     def reset_parameters(self) -> None:
         for v in self._params.values():
