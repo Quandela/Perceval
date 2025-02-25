@@ -262,6 +262,31 @@ class Canvas(ABC):
             self.position = (points[0]+size*len(text)/2, points[1]+size)
         return f_points[0], self._inverse_Y * f_points[1]
 
+    def normalize_text(self, text, size, points, max_size):
+        if max_size is not None and size * len(text) > max_size:
+            new_size = int(max_size / len(text) * 1.5)
+            if new_size < size / 2:
+                size = size / 2
+                # try to split text on spaces instead of reducing size
+                pos_x, pos_y = points
+                remaining = text
+                new_text = ''
+                min_index = int(max_size/size * 0.8)
+                max_index = int(max_size/size * 1.2)
+                while size * len(remaining) > max_size:
+                    index = int(max_size/size)
+                    if ' ' in remaining[min_index:max_index]:
+                        index = remaining[min_index:max_index].index(' ') + min_index
+                    new_text += remaining[:index] + '\n'
+                    remaining = remaining[index:]
+                    pos_y += size / 2
+                new_text += remaining
+                text = new_text
+                points = (pos_x, pos_y)
+            else:
+                size = new_size
+        return text, size, points
+
     def add_shape(self, shape_fn, circuit, mode_style):
         shape_fn(circuit, self, mode_style)
 

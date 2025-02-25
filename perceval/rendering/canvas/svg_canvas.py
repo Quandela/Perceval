@@ -98,11 +98,13 @@ class SvgCanvas(Canvas):
         self._draws.append(draw.Circle(points[0], points[1], r,
                                        stroke_width=stroke_width, fill=fill, stroke=stroke))
 
-    def add_text(self, points, text, size, ta="start", fontstyle="normal"):
+    def add_text(self, points, text, size, ta="start", fontstyle="normal", max_size=None):
         if ta == "right":
             ta = "end"
         elif ta == "left":
             ta = "start"
+        if max_size is not None:
+            text, size, points = super().normalize_text(text, size, points, max_size)
         points = super().add_text(points, text, size, ta)
         opts = {'text_anchor': ta}
         if fontstyle == "italic":

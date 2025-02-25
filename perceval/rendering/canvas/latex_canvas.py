@@ -209,7 +209,9 @@ class LatexCanvas(Canvas):
             f"\\draw[color={stroke},line width={stroke_width},fill={fill}] ({points[0]},{points[1]}) circle[radius={r}];"
         )
 
-    def add_text(self, points, text, size, ta="left", fontstyle="normal"):
+    def add_text(self, points, text, size, ta="left", fontstyle="normal", max_size=None):
+        if max_size is not None:
+            text, size, points = super().normalize_text(text, size, points, max_size)
         if ta == "middle":
             ta = "base"
         elif ta == "left":
