@@ -112,13 +112,20 @@ class AParametrizedComponent(AComponent):
         :expressions: if True, returns Expressions and parameters embedded in circuit components.
             If False, returns the raw parameters that make up the expressions only. Default `False`.
         """
-        param_list = set()
+        param_list = []
         for param in self._params.values():
             if all_params or not param.fixed:
                 if isinstance(param, Expression):
-                    param_list.update(param.parameters if not expressions else [param])
+                    if expressions:
+                        if param not in param_list:
+                            param_list.append(param)
+                    else:
+                        for p in param.parameters:
+                            if p not in param_list:
+                                param_list.append(p)
                 else:
-                    param_list.add(param)
+                    if param not in param_list:
+                        param_list.append(param)
         return list(param_list)
 
     def reset_parameters(self) -> None:
