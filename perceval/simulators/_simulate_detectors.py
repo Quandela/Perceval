@@ -81,7 +81,10 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             else:
                 distributions.append(BSDistribution(BasicState([photons_in_mode])))
 
-        state_dist = BSDistribution.list_tensor_product(distributions, prob_threshold=prob_threshold)
+        state_dist = BSDistribution.list_tensor_product(distributions,
+                                prob_threshold=max(prob_threshold, prob_threshold / (10 * p) if p > 0 else prob_threshold))
+        # "magic factor" 10 like in the simulator
+
         for s_out, p_out in state_dist.items():
             if min_photons is not None and s_out.n < min_photons:
                 phys_perf -= p * p_out
