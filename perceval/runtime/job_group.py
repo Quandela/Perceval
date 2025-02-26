@@ -388,7 +388,7 @@ class JobGroup:
         """
         return self._list_jobs_status_type(['RUNNING', 'WAITING'])
 
-    def list_unfinished_jobs(self) -> list[RemoteJob]:
+    def list_unsuccessful_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have run unsuccessfully on the cloud - errored or canceled
         """
@@ -421,7 +421,7 @@ class JobGroup:
             # Use tqdm to track progress if sequential
             bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
             if rerun:
-                count = len(self.list_unfinished_jobs())
+                count = len(self.list_unsuccessful_jobs())
             else:
                 count = self.count_never_sent_jobs()
 
@@ -442,8 +442,9 @@ class JobGroup:
             job_entry['id'] = remote_job.id
             job_entry['status'] = remote_job.status()
 
+            self._write_to_file()
+
             if delay is not None:
-                self._write_to_file()
                 while not remote_job.is_complete:
                     time.sleep(1)
 
