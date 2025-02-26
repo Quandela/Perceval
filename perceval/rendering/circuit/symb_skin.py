@@ -304,8 +304,8 @@ class SymbSkin(ASkin):
             canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((2.5, 2.5), w*50 - 5, 50*circuit.m - 5,
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
-        title = circuit.name.upper().split(" ")
-        canvas.add_text((10, 8 + 8 * len(title)), "\n".join(title), 8, fontstyle="bold", max_size=w*50)
+        title = circuit.name.upper()
+        canvas.add_text((10, 8), title, 8, fontstyle="bold", max_size=w*50)
 
     def herald_shape_in(self, herald, canvas, mode_style):
         canvas.add_mpath(ShapeFactory.half_circle_port_in(10), stroke="black", stroke_width=1, fill="white")
