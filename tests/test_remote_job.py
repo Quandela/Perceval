@@ -108,7 +108,7 @@ def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
 
     for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
         if i == 0:
-            with LogChecker(mock_warn) as warn_log_checker:
+            with LogChecker(mock_warn, expected_log_number=0) as warn_log_checker:
                 p.with_input(input_state)
             with warn_log_checker:
                 rp.with_input(input_state)

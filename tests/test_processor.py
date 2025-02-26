@@ -68,7 +68,7 @@ def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
                     indistinguishability=0.9)
     source.simplify_distribution = True
     p = Processor("Naive", Circuit(4), source)
-    with LogChecker(mock_warn):
+    with LogChecker(mock_warn, expected_log_number=1):
         p.min_detected_photons_filter(2)
         p.with_input(BasicState([0, 1, 1, 0]))
 
