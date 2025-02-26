@@ -38,7 +38,6 @@ except ModuleNotFoundError as e:
 
 from perceval import BasicState, StateVector, Circuit
 from perceval.converters import QiskitConverter
-from perceval.converters.qiskit_converter import _get_gate_sequence
 from perceval.converters.converter_utils import label_cnots_in_gate_sequence
 import perceval.components.unitary_components as comp
 from perceval.components.port import get_basic_state_from_encoding
@@ -268,7 +267,7 @@ def test_cnot_ppcnot_vs_hcnot():
     for _, c in pc.components:
         gate_seq_converted.append(c.name)
 
-    gate_seq_qisk = _get_gate_sequence(qisk_circ) # gate list from qiskit
+    gate_seq_qisk = QiskitConverter()._get_gate_sequence(qisk_circ) # gate list from qiskit
     optimized_gate_sequence = label_cnots_in_gate_sequence(gate_seq_qisk)
 
     num_ppcnot_expt = len([elem for elem in optimized_gate_sequence if elem == 'postprocessed cnot'])
@@ -310,3 +309,56 @@ def test_cnot_ppcnot_vs_hcnot_sim():
         tot_diff += abs(value - EXPECTED_QISK_SIM_PROBS_DATA[bit_form])
 
     assert tot_diff == pytest.approx(0, abs=1e-7)
+
+
+def test_basic_circuit_sdg():
+    convertor = QiskitConverter()
+    qc = qiskit.QuantumCircuit(1)
+    qc.sdg(0)
+    pc = convertor.convert(qc)
+    c = pc.linear_circuit()
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1]._components[0][1], comp.PS)
+
+def test_basic_circuit_tdg():
+    convertor = QiskitConverter()
+    qc = qiskit.QuantumCircuit(1)
+    qc.tdg(0)
+    pc = convertor.convert(qc)
+    c = pc.linear_circuit()
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1]._components[0][1], comp.PS)
+
+def test_circuit_measure():
+    circuit = qiskit.QuantumCircuit(4)
+    circuit.h(range(2))
+    circuit.cx(0, 1)
+    circuit.measure_all()
+
+    convertor = QiskitConverter()
+    with pytest.raises(AssertionError):
+        convertor.convert(circuit)
+
+def test_random_qiskit_circuit():
+    qc = qiskit.QuantumCircuit(1)
+    random_u = qiskit.quantum_info.random_unitary(2)
+    qc.unitary(random_u, 0)
+
+    convertor = QiskitConverter()
+    pc = convertor.convert(qc)
+
+    c = pc.linear_circuit()
+    sd = pc.source_distribution
+    assert len(sd) == 1
+    assert sd[StateVector('|1,0>')] == 1
+    assert len(c._components) == 1
+    assert isinstance(c._components[0][1], Circuit) and len(c._components[0][1]._components) == 1
+    assert isinstance(c._components[0][1]._components[0][1], comp.BS)
