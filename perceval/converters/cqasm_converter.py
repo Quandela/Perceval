@@ -26,10 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.components import Processor, Source, Circuit, BS, PS, PERM, catalog
+from perceval.components import Processor, catalog
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
-from .converter_utils import label_cnots_in_gate_sequence
 from perceval.utils import NoiseModel
 
 import numpy as np
@@ -64,12 +63,10 @@ class ConversionUnsupportedFeatureError(Exception):
 class CQASMConverter(AGateConverter):
     r"""cQASM quantum circuit to perceval processor converter.
 
-    :param catalog: a component library to use for the conversion. It must contain CNOT gates.
     :param backend_name: backend name used in the converted processor (default SLOS)
-    :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
-        super().__init__(backend_name, source, noise_model)
+    def __init__(self, backend_name: str = "SLOS", noise_model: NoiseModel = None):
+        super().__init__(backend_name, noise_model)
         import cqasm.v3x as cqasm
 
         self._qubit_list = []

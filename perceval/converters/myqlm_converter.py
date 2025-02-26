@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, Processor, Source, BS, PS, catalog
+from perceval.components import catalog
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
 from perceval.utils import NoiseModel
@@ -36,12 +36,10 @@ from perceval.utils import NoiseModel
 class MyQLMConverter(AGateConverter):
     r"""myQLM quantum circuit to perceval circuit converter.
 
-    :param catalog: component library of perceval
     :param backend_name: Backend to use in computation, defaults to SLOS
-    :param source: Defines the parameters of the source, defaults to an ideal one.
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
-        super().__init__(backend_name, source, noise_model)
+    def __init__(self, backend_name: str = "SLOS", noise_model: NoiseModel = None):
+        super().__init__(backend_name, noise_model)
         from qat.core.circuit_builder.matrix_util import circ_to_np
         self._circ_to_np = circ_to_np
 
