@@ -262,7 +262,15 @@ class Canvas(ABC):
             self.position = (points[0]+size*len(text)/2, points[1]+size)
         return f_points[0], self._inverse_Y * f_points[1]
 
-    def normalize_text(self, text, size, points, max_size):
+    def normalize_text(self, text: str, size: int, points: tuple[float, float], max_size: int) -> tuple[str, int, tuple[float, float]]:
+        """
+        If the text does not fit in max_size, reduce the font size or split text over several lines.
+        :param text: the text to check
+        :param size: the font size of the text
+        :param points: the position on the canvas. The text can be moved vertically when lines are added.
+        :param max_size: the maximum size that the text can take horizontally
+        :return: Modified text, size and points.
+        """
         if max_size is not None and size * len(text) > max_size:
             new_size = int(max_size / len(text) * 1.5)
             if new_size < size / 2:

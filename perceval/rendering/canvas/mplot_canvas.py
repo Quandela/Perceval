@@ -101,7 +101,7 @@ class MplotCanvas(Canvas):
 
     def add_text(self, points, text, size, ta="left", fontstyle="normal", max_size=None):
         if max_size is not None:
-            text, size, points = super().normalize_text(text, size, points, max_size)
+            text, size, points = self.normalize_text(text, size, points, max_size)
         points = super().add_text(points, text, size, ta)
         if ta == "middle":
             ta = "center"
