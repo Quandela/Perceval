@@ -49,7 +49,7 @@ def test_processor_input_fock_state(mock_warn):
 
 
 def test_processor_input_fock_state_with_loss():
-    p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
+    p = Processor("Naive", Circuit(4), NoiseModel(brightness=0.2))
     p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
         StateVector([0, 1, 1, 0]): 0.04,
@@ -62,35 +62,37 @@ def test_processor_input_fock_state_with_loss():
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
-    source = Source(emission_probability=0.2,
-                    multiphoton_component=0.1, multiphoton_model="indistinguishable",
-                    indistinguishability=0.9)
-    source.simplify_distribution = True
-    p = Processor("Naive", Circuit(4), source)
+    nm = NoiseModel(brightness=0.2, indistinguishability=0.9, g2=0.1, g2_distinguishable=False)
+    p = Processor("Naive", Circuit(4), nm)
     with LogChecker(mock_warn):
         p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
-                '|0,0,2{_:0},0>': 0.0015490319977879558,
-                '|0,0,{_:0},0>': 0.15836717690616972,
-                '|0,0,{_:0}{_:1},0>': 8.37910960423266e-05,
-                '|0,2{_:0},0,0>': 0.0015490319977879558,
-                '|0,2{_:0},2{_:0},0>': 3.749218953392102e-06,
-                '|0,2{_:0},{_:0},0>': 0.0003636359771584214,
-                '|0,2{_:0},{_:0}{_:1},0>': 2.0280482640513694e-07,
-                '|0,2{_:0},{_:1},0>': 1.96699985087703e-05,
-                '|0,{_:0},0,0>': 0.15836717690616972,
-                '|0,{_:0},2{_:0},0>': 0.0003636359771584214,
-                '|0,{_:0},2{_:1},0>': 1.96699985087703e-05,
-                '|0,{_:0},{_:0},0>': 0.03526897882672976,
-                '|0,{_:0},{_:0}{_:1},0>': 1.96699985087703e-05,
-                '|0,{_:0},{_:1},0>': 0.0039187754251921985,
-                '|0,{_:0},{_:1}{_:2},0>': 1.0640004445062523e-06,
-                '|0,{_:0}{_:1},0,0>': 8.37910960423266e-05,
-                '|0,{_:0}{_:1},2{_:0},0>': 2.0280482640513694e-07,
-                '|0,{_:0}{_:1},{_:0},0>': 1.96699985087703e-05,
-                '|0,{_:0}{_:1},{_:0}{_:2},0>': 1.097023089996e-08,
-                '|0,{_:0}{_:1},{_:2},0>': 1.0640004445062523e-06}
+                '|0,0,2{_:0},0>': 0.0015490319977879553,
+                '|0,0,{_:0}{_:2},0>': 8.379109604232658e-05,
+                '|0,0,{_:2},0>': 0.00812688121587547,
+                '|0,0,{_:0},0>': 0.15024029569029423,
+                '|0,2{_:0},0,0>': 0.0015490319977879553,
+                '|0,2{_:0},2{_:0},0>': 3.7492189533921014e-06,
+                '|0,2{_:0},{_:0}{_:2},0>': 2.028048264051369e-07,
+                '|0,2{_:0},{_:2},0>': 1.9669998508770297e-05,
+                '|0,2{_:0},{_:0},0>': 0.00036363597715842135,
+                '|0,{_:0}{_:1},0,0>': 8.379109604232658e-05,
+                '|0,{_:0}{_:1},2{_:0},0>': 2.028048264051369e-07,
+                '|0,{_:0}{_:1},{_:0}{_:2},0>': 1.0970230899959998e-08,
+                '|0,{_:0}{_:1},{_:2},0>': 1.0640004445062521e-06,
+                '|0,{_:0}{_:1},{_:0},0>': 1.9669998508770297e-05,
+                '|0,{_:1},0,0>': 0.00812688121587547,
+                '|0,{_:1},2{_:0},0>': 1.9669998508770297e-05,
+                '|0,{_:1},{_:0}{_:2},0>': 1.0640004445062521e-06,
+                '|0,{_:1},{_:2},0>': 0.00010319718483898369,
+                '|0,{_:1},{_:0},0>': 0.0019077891201766072,
+                '|0,{_:0},0,0>': 0.15024029569029423,
+                '|0,{_:0},2{_:0},0>': 0.00036363597715842135,
+                '|0,{_:0},{_:0}{_:2},0>': 1.9669998508770297e-05,
+                '|0,{_:0},{_:2},0>': 0.0019077891201766072,
+                '|0,{_:0},{_:0},0>': 0.035268978826729754,
+                }
     result = {str(k): v for k, v in p.source_distribution.items()}
     assert pytest.approx(expected) == result
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
@@ -106,24 +108,6 @@ def test_processor_input_state_vector():
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
-
-
-def test_processor_source_vs_noise_model():
-    LOSS = .4
-    G2 = .06
-
-    # A Processor does not accept both a Source and a NoiseModel input
-    with pytest.raises(ValueError):
-        Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2),
-                  noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-
-    # Check that input states are the same with equivalent parameter
-    input_state = BasicState([1, 1, 1, 1])
-    p_source = Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2))
-    p_source.with_input(input_state)
-    p_noise = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-    p_noise.with_input(input_state)
-    assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
 def test_processor_probs():

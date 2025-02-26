@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, Source
+from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, Source, NoiseModel
 from perceval.algorithm import Sampler
 from perceval.simulators.loss_simulator import LossSimulator
 from perceval.simulators.simulator import Simulator
@@ -74,8 +74,7 @@ def test_lc_commutative():
 
 def test_lc_source_losses_equivalence():
     # When the losses are balanced
-    source = Source(losses=loss)
-    p = Processor("SLOS", Unitary(U), source)
+    p = Processor("SLOS", Unitary(U), NoiseModel(transmittance=1 - loss))
     p.with_input(input_state)
     p.min_detected_photons_filter(0)
 

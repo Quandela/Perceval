@@ -278,7 +278,6 @@ class RemoteProcessor(AProcessor):
             transmittance = DEFAULT_TRANSMITTANCE
             get_logger().warn(
                 f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
-        losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
@@ -293,7 +292,7 @@ class RemoteProcessor(AProcessor):
         if param_values:
             for n, v in param_values.items():
                 c.param(n).set_value(v)
-        lp = Processor("SLOS", c, Source(losses=losses))
+        lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
         lp.thresholded_output(self._thresholded_output)
         lp.with_input(self._input_state)
