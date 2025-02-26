@@ -127,7 +127,7 @@ def test_processor_source_vs_noise_model():
     p_source.min_detected_photons_filter(4)
     p_source.with_input(input_state)
     p_noise = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-    p_source.min_detected_photons_filter(4)
+    p_noise.min_detected_photons_filter(4)
     p_noise.with_input(input_state)
     assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 

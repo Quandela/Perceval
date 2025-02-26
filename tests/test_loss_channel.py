@@ -71,8 +71,8 @@ def test_lc_source_losses_equivalence():
     # When the losses are balanced
     source = Source(losses=loss)
     p = Processor("SLOS", Unitary(U), source)
-    p.with_input(input_state)
     p.min_detected_photons_filter(0)
+    p.with_input(input_state)
 
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]

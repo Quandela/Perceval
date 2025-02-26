@@ -81,6 +81,7 @@ def test_shots_estimate_circuit_with_variables():
     rp = _MockRemoteProcessor()
     c = BS() // PS(phi=P("my_phase")) // BS()
     rp.set_circuit(c)
+    rp.min_detected_photons_filter(2)
     rp.with_input(BasicState([1, 1]))
     assert 28 < rp.estimate_expected_samples(1000, {"my_phase": 0.2}) < 32
     assert 32000 < rp.estimate_required_shots(1000, {"my_phase": 0.2}) < 33000
