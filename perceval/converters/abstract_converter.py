@@ -112,6 +112,8 @@ class AGateConverter(ABC):
 
     def apply_input_state(self):
         default_input_state = BasicState(self._input_list)
+        # Heralds are not taken into account
+        self._converted_processor.min_detected_photons_filter(default_input_state.n)
         self._converted_processor.with_input(default_input_state)
 
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
@@ -205,14 +207,12 @@ class AGateConverter(ABC):
         if gate_name in ["POSTPROCESSED CNOT", "HERALDED CNOT"]:
             if use_postselection and gate_name == "POSTPROCESSED CNOT":
                 cnot_processor = self.create_ppcnot_processor()
-                cnot_ps = cnot_processor._postselect
-
-                cnot_processor.clear_postselection()  # clear after saving post select information
-                post_select_curr.merge(cnot_ps)  # merge the incoming gate post-selection with the current
             else:
                 cnot_processor = self.create_hcnot_processor()
 
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
+            if self._converted_processor._postselect is not None:
+                post_select_curr.merge(self._converted_processor._postselect)
 
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN
