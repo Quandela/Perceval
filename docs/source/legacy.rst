@@ -7,6 +7,30 @@ consistent code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 0.13
+---------------------------------
+
+Source parameter has been removed from Processor and Converter
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :code:`source` parameter of :code:`Processor` and :code:`Converter` has been deprecated since Perceval 0.11
+and was removed from the instantiation call.
+You must now use a :code:`NoiseModel` instead.
+
+Also, it is no longer possible to set the :code:`source` attribute of a :code:`Processor`.
+You must now set a :code:`NoiseModel` in the :code:`noise` attribute instead.
+However, the :code:`source` attribute is still available to reading and will give the :code:`Source` object used internally.
+
+The correspondence is the following (:code:`Source` on the left, :code:`NoiseModel` on the right):
+
+- emission_probability = brightness
+- multiphoton_component = g2
+- indistinguishability = indistinguishability (no change)
+- losses = 1 - transmittance
+- multiphoton_model = g2_distinguishable (True if g2 photons are distinguishable, False otherwise)
+
+Beware also that the order of the arguments is not the same.
+
 Breaking changes in Perceval 0.12
 ---------------------------------
 
