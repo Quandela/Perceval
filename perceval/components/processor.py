@@ -211,7 +211,8 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons_filter = self._parameters['min_detected_photons']
         if self._min_detected_photons_filter is None:
-            self._deduce_min_detected_photons(expected_photons)
+            raise ValueError("The value of min_detected_photons is not set." +
+                               " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input).")
 
     def _circuit_changed(self):
         # Override parent's method to reset the internal simulator as soon as the component list changes
@@ -224,7 +225,8 @@ class Processor(AProcessor):
         if 'min_detected_photons' in self._parameters:
             self._min_detected_photons_filter = self._parameters['min_detected_photons']
         if self._min_detected_photons_filter is None:
-            self._deduce_min_detected_photons(bs.n)
+            raise ValueError("The value of min_detected_photons is not set." +
+            " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input).")
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)

@@ -95,9 +95,11 @@ def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
     p = pcvl.catalog[catalog_item].build_processor()
     p.noise = noise
+    p.min_detected_photons_filter(2)
     rp = pcvl.RemoteProcessor.from_local_processor(
         p, rpc_handler=get_rpc_handler(requests_mock)
     )
+    rp.min_detected_photons_filter(2)
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn

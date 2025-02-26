@@ -50,6 +50,7 @@ def test_processor_input_fock_state(mock_warn):
 
 def test_processor_input_fock_state_with_loss():
     p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
+    p.min_detected_photons_filter(2)
     p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
         StateVector([0, 1, 1, 0]): 0.04,
