@@ -442,8 +442,9 @@ class JobGroup:
             job_entry['id'] = remote_job.id
             job_entry['status'] = remote_job.status()
 
+            self._write_to_file()
+
             if delay is not None:
-                self._write_to_file()
                 while not remote_job.is_complete:
                     time.sleep(1)
 
