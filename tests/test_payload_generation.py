@@ -69,6 +69,7 @@ def test_payload_basics(requests_mock):
     assert 'input_state' not in payload  # No input state was passed
 
     input_state = BasicState([1, 0] * 4)
+    rp.min_detected_photons_filter(4)
     rp.with_input(input_state)
     new_payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert (
@@ -145,6 +146,7 @@ def test_payload_cnot(requests_mock):
     assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
 
     input_state = BasicState([1, 0] * 4)
+    rp.min_detected_photons_filter(4)
     rp.with_input(input_state)
 
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']

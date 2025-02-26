@@ -47,8 +47,8 @@ def test_shots_estimate_trivial_filter_values():
     rp = _MockRemoteProcessor()
     m = Matrix.random_unitary(10)
     rp.set_circuit(Unitary(m))
-    rp.with_input(BasicState([1]*5 + [0]*5))
     rp.min_detected_photons_filter(1)
+    rp.with_input(BasicState([1]*5 + [0]*5))
 
     ANY_VALUE = random.randint(1000, 9999999999)
 
@@ -71,6 +71,7 @@ def test_shots_estimate_regular_use_case():
     rp = _MockRemoteProcessor()
     c = BS() // PS(phi=0.2) // BS()
     rp.set_circuit(c)
+    rp.min_detected_photons_filter(2)
     rp.with_input(BasicState([1, 1]))
     assert 28 < rp.estimate_expected_samples(1000) < 32
     assert 32000 < rp.estimate_required_shots(1000) < 33000

@@ -301,6 +301,7 @@ def test_sv_parse_tuple_annot():
 def test_svd_sample():
     source = pcvl.Source(emission_probability=1, multiphoton_component=0.1, indistinguishability=0.9)
     qpu = pcvl.Processor("Naive", comp.BS(), source)
+    qpu.min_detected_photons_filter(1)
     qpu.with_input(BasicState([1, 0]))
     sample = qpu.source_distribution.sample(1)
     assert isinstance(sample, list)
