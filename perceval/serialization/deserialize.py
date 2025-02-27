@@ -33,9 +33,9 @@ from os import path
 import json
 from zlib import decompress
 
-from perceval.components import Circuit
+from perceval.components import Circuit, BSLayeredPPNR, Detector
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
-from perceval.serialization import _matrix_serialization, deserialize_state
+from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
 from ._constants import (
     SEP,
     PCVL_PREFIX,
@@ -50,6 +50,8 @@ from ._constants import (
     CIRCUIT_TAG,
     NOISE_TAG,
     POSTSELECT_TAG,
+    BS_LAYERED_DETECTOR_TAG,
+    DETECTOR_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
@@ -146,6 +148,28 @@ def deserialize_postselect(serial_ps: str) -> PostSelect:
     return PostSelect(serial_ps)
 
 
+def deserialize_bs_layered_detector(pb_detect: str | bytes | pb.BSLayeredPPNR) -> BSLayeredPPNR:
+    if not isinstance(pb_detect, pb.BSLayeredPPNR):
+        pb_binary_repr = pb_detect
+        pb_detect = pb.BSLayeredPPNR()
+        if isinstance(pb_binary_repr, bytes):
+            pb_detect.ParseFromString(pb_binary_repr)
+        else:
+            pb_detect.ParseFromString(b64decode(pb_binary_repr))
+    return _detector_serialization.deserialize_bs_layer(pb_detect)
+
+
+def deserialize_detector(pb_detect: str | bytes | pb.Detector) -> Detector:
+    if not isinstance(pb_detect, pb.Detector):
+        pb_binary_repr = pb_detect
+        pb_detect = pb.Detector()
+        if isinstance(pb_binary_repr, bytes):
+            pb_detect.ParseFromString(pb_binary_repr)
+        else:
+            pb_detect.ParseFromString(b64decode(pb_binary_repr))
+    return _detector_serialization.deserialize_detector(pb_detect)
+
+
 # Known deserializer functions
 DESERIALIZER = {
     BS_TAG: BasicState,
@@ -157,7 +181,9 @@ DESERIALIZER = {
     MATRIX_TAG: deserialize_matrix,
     CIRCUIT_TAG: deserialize_circuit,
     NOISE_TAG: deserialize_noise_model,
-    POSTSELECT_TAG: deserialize_postselect
+    POSTSELECT_TAG: deserialize_postselect,
+    DETECTOR_TAG: deserialize_detector,
+    BS_LAYERED_DETECTOR_TAG: deserialize_bs_layered_detector,
 }
 
 
