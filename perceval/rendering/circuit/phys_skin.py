@@ -353,7 +353,7 @@ class PhysSkin(ASkin):
         canvas.add_rect((2.5, 2.5), w*50 - 5, 50*circuit.m - 5,
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
         title = circuit.name.upper()
-        canvas.add_text((10, 8), title, 8, fontstyle="bold", max_size=w*50)
+        canvas.add_text((10, 16), title, 8, fontstyle="bold", max_size=w*50-15)
 
     def herald_shape_in(self, herald, canvas, mode_style):
         canvas.add_mpath(ShapeFactory.half_circle_port_in(10), stroke="black", stroke_width=1, fill="white")
