@@ -46,8 +46,8 @@ cd.min_detected_photons_filter(0)
 
 def test_lc_minimal():
     p = Processor("SLOS", 1).add(0, LC(loss))
-    p.min_detected_photons_filter(0)
     p.with_input(SVDistribution(BasicState([2])))
+    p.min_detected_photons_filter(0)
     expected_svd = BSDistribution()
     expected_svd[BasicState([0])] = loss ** 2
     expected_svd[BasicState([1])] = 2 * loss * (1 - loss)
@@ -71,8 +71,8 @@ def test_lc_source_losses_equivalence():
     # When the losses are balanced
     source = Source(losses=loss)
     p = Processor("SLOS", Unitary(U), source)
-    p.min_detected_photons_filter(0)
     p.with_input(input_state)
+    p.min_detected_photons_filter(0)
 
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]

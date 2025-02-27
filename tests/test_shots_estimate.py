@@ -47,8 +47,8 @@ def test_shots_estimate_trivial_filter_values():
     rp = _MockRemoteProcessor()
     m = Matrix.random_unitary(10)
     rp.set_circuit(Unitary(m))
-    rp.min_detected_photons_filter(1)
     rp.with_input(BasicState([1]*5 + [0]*5))
+    rp.min_detected_photons_filter(1)
 
     ANY_VALUE = random.randint(1000, 9999999999)
 

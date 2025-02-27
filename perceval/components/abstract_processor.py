@@ -679,9 +679,6 @@ class AProcessor(ABC):
 
         self._input_state = BasicState(input_list)
 
-        if self._min_detected_photons_filter is None:
-            raise ValueError("The value of min_detected_photons is not set." +
-            " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input).")
 
     def flatten(self) -> list[tuple]:
         """
