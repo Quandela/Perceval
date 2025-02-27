@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, Source, NoiseModel
+from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, NoiseModel
 from perceval.algorithm import Sampler
 from perceval.simulators.loss_simulator import LossSimulator
 from perceval.simulators.simulator import Simulator

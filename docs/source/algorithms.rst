@@ -8,7 +8,7 @@ Build a processor
 
 A :ref:`Processor` is a composite element aiming at simulating an actual QPU, in real world conditions.
 
-* It holds a :code:`NoiseModel` defining a single photon :ref:`Source` and other types of noise
+* It holds a :ref:`Noise Model` defining a single photon :ref:`Source` and other types of noise
 * It is a composition of unitary circuits and non-unitary components
 * Input and output ports can be defined, with encoding semantics
 * Logical post-processing can be set-up through heralded modes (ancillas) and a final post-selection function
@@ -18,11 +18,11 @@ Create a local processor
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 To create a local processor, you just need to start with a :ref:`Circuit`, provide a backend name, and an
-optional :code:`NoiseModel` with the following syntax:
+optional :ref:`Noise Model` with the following syntax:
 
 >>> processor = pcvl.Processor("MY_BACKEND", my_circuit, my_noise_model)
 
-If the the :code:`NoiseModel` is omitted, no noise is applied.
+If the :ref:`Noise Model` is omitted, no noise is applied.
 
 The processor definition is then fine-tuned with ports (:code:`add_port`) and herald (:code:`add_herald`) definition as
 in the following post-processed CNOT gate example:

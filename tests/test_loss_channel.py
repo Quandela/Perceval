@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, Source, SVDistribution, NoiseModel
+from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, SVDistribution, NoiseModel
 from perceval.algorithm import Sampler
 
 
