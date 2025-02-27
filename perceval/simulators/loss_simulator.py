@@ -29,7 +29,7 @@
 
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
-from perceval.components import ACircuit, LC, PERM, BS
+from perceval.components import ACircuit, LC, PERM, BS, IDetector
 from perceval.utils import BasicState, BSDistribution, StateVector
 
 
@@ -46,6 +46,9 @@ class LossSimulator(ASimulatorDecorator):
             self._original_m = m
         expanded_circuit = self._simulate_losses_with_beam_splitters(circuit)
         return expanded_circuit
+
+    def _prepare_detectors_impl(self, detectors: list[IDetector]):
+        return detectors + [None] * (self._expanded_m - self._original_m)
 
     def _postprocess_bsd_impl(self, results: BSDistribution) -> BSDistribution:
         output = BSDistribution()

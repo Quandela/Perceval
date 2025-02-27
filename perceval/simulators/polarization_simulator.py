@@ -28,7 +28,8 @@
 # SOFTWARE.
 from .simulator_interface import ASimulatorDecorator
 from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector, SVDistribution, BSDistribution
-from perceval.components import Unitary
+from perceval.utils.logging import channel, get_logger
+from perceval.components import Unitary, IDetector, DetectionType, get_detection_type
 
 
 class PolarizationSimulator(ASimulatorDecorator):
@@ -59,12 +60,14 @@ class PolarizationSimulator(ASimulatorDecorator):
     def _prepare_circuit(self, circuit, m = None):
         self._upol = circuit.compute_unitary(use_polarization=True)
 
+    def _prepare_detectors_impl(self, detectors: list[IDetector]):
+        if get_detection_type(detectors) != DetectionType.PNR:
+            get_logger().warn("Cannot use detectors in polarized circuits; giving PNR results", channel.user)
+        return None
+
     def _split_odd_even(self, fs):
-        s_odd = BasicState()
-        s_even = BasicState()
-        for i in range(0, fs.m, 2):
-            s_even *= fs[slice(i, i + 1)]
-            s_odd *= fs[slice(i + 1, i + 2)]
+        s_odd = fs[1: fs.m: 2]
+        s_even = fs[0: fs.m: 2]
         return s_odd, s_even
 
     def _postprocess_sv_impl(self, results: StateVector) -> StateVector:

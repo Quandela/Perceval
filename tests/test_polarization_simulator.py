@@ -26,15 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from unittest.mock import patch
 
+from perceval import Detector
 from perceval.simulators.polarization_simulator import PolarizationSimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends import NaiveBackend, BackendFactory
 from perceval.components import Circuit, BS, PBS, PERM, PS, PR, HWP
 from perceval.utils import BasicState, StateVector
-from _test_utils import assert_sv_close
+from _test_utils import assert_sv_close, LogChecker
 import pytest
 import math
+
+from perceval.utils.logging import ExqaliburLogger
 
 
 def _oracle(mark):
@@ -123,3 +127,13 @@ def test_polarization_circuit_0(backend_name):
     assert_sv_close(psimu.evolve(BasicState("|{P:V}>")), complex(0,1)*StateVector('|{P:H}>'))
     assert_sv_close(psimu.evolve(BasicState("|{P:D}>")), complex(0,1)*(StateVector('|{P:H}>') + StateVector('|{P:V}>')))
     # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
+
+
+@patch.object(ExqaliburLogger, "warn")
+def test_polarization_detector(mock_warn):
+    psimu = PolarizationSimulator(Simulator(NaiveBackend()))
+    with LogChecker(mock_warn):
+        assert psimu._prepare_detectors([Detector.ppnr(3)]) is None
+
+    with LogChecker(mock_warn, expected_log_number=0):
+        assert psimu._prepare_detectors([Detector.pnr()]) is None
