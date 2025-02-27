@@ -45,7 +45,6 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
-DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
@@ -162,12 +161,6 @@ class RemoteProcessor(AProcessor):
         if 'constraints' in self._specs:
             return self._specs['constraints']
         return {}
-
-    def set_parameter(self, key: str, value: any):
-        super().set_parameter(key, value)
-        if key in DEPRECATED_NOISE_PARAMS:
-            get_logger().warn(
-                f"DeprecationWarning: '{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead. version=0.11", channel.user)
 
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
