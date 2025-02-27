@@ -105,7 +105,7 @@ def test_mock_remote_with_gates(requests_mock, catalog_item):
     assert p._noise == rp._noise
     assert noise == rp._noise
 
-    for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
+    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
         p.with_input(input_state)
         rp.with_input(input_state)
 
