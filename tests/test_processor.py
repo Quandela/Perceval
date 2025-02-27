@@ -50,7 +50,6 @@ def test_processor_input_fock_state(mock_warn):
 
 def test_processor_input_fock_state_with_loss():
     p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
-    p.min_detected_photons_filter(2)
     p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
         StateVector([0, 1, 1, 0]): 0.04,
@@ -67,7 +66,6 @@ def test_processor_input_fock_state_with_all_noise_sources():
                     indistinguishability=0.9)
     source.simplify_distribution = True
     p = Processor("Naive", Circuit(4), source)
-    p.min_detected_photons_filter(2)
     p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
@@ -99,13 +97,11 @@ def test_processor_input_fock_state_with_all_noise_sources():
 def test_processor_input_state_vector():
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
-    p.min_detected_photons_filter(2)
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}
 
     p = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=.4, g2=.06))  # Init with noise
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
-    p.min_detected_photons_filter(2)
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
 
@@ -122,10 +118,8 @@ def test_processor_source_vs_noise_model():
     # Check that input states are the same with equivalent parameter
     input_state = BasicState([1, 1, 1, 1])
     p_source = Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2))
-    p_source.min_detected_photons_filter(4)
     p_source.with_input(input_state)
     p_noise = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-    p_noise.min_detected_photons_filter(4)
     p_noise.with_input(input_state)
     assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
