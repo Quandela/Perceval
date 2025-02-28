@@ -661,6 +661,16 @@ class AProcessor(ABC):
                               " To use them, consider using a StateVector.")
 
 
+    def check_min_detected_photons_filter(self):
+        if self._min_detected_photons_filter is None:
+            if self._source is not None and self._source.is_perfect():
+                # Automatically set the min_detected_photons_filter for perfect sources if not set
+                self._min_detected_photons_filter = self._input_state.n + list(self.heralds.values()).count(1)
+            else:
+                raise ValueError("The value of min_detected_photons is not set."
+                                 " Use the method processor.min_detected_photons_filter(value).")
+
+
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         self.check_input(input_state)

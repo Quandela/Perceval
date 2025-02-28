@@ -222,9 +222,7 @@ class RemoteProcessor(AProcessor):
 
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
                             ) -> dict[str, any]:
-        if self._min_detected_photons_filter is None:
-            raise ValueError("The value of min_detected_photons is not set."
-                             " Use the method processor.min_detected_photons_filter(value).")
+        self.check_min_detected_photons_filter()
 
         j = {
             'platform_name': self.name,
