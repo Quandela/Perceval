@@ -27,8 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Processor, Source, catalog
-from perceval.utils.logging import get_logger, channel
+from perceval.components import catalog
 from .abstract_converter import AGateConverter
 from perceval.utils import NoiseModel
 
@@ -37,10 +36,9 @@ class QiskitConverter(AGateConverter):
     r"""Qiskit quantum circuit to perceval processor converter.
 
     :param backend_name: backend name used in the converted processor (default SLOS)
-    :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
-        super().__init__(backend_name, source, noise_model)
+    def __init__(self, backend_name: str = "SLOS", noise_model: NoiseModel = None):
+        super().__init__(backend_name, noise_model)
         import qiskit as qiskit # this nested import fixes automatic class reference generation
         self._qiskit = qiskit
 

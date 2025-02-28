@@ -76,16 +76,12 @@ def test_payload_basics(requests_mock):
     )
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_payload_parameters(mock_warn, requests_mock):
+def test_payload_parameters(requests_mock):
     """test parameters of payload"""
     n_params = 5
     rp = _get_remote_processor(requests_mock)
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
-
-    with LogChecker(mock_warn):
-        rp.set_parameter('g2', 0.05)
 
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' in payload

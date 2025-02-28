@@ -45,7 +45,6 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
-DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
@@ -163,12 +162,6 @@ class RemoteProcessor(AProcessor):
             return self._specs['constraints']
         return {}
 
-    def set_parameter(self, key: str, value: any):
-        super().set_parameter(key, value)
-        if key in DEPRECATED_NOISE_PARAMS:
-            get_logger().warn(
-                f"DeprecationWarning: '{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead. version=0.11", channel.user)
-
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
@@ -278,7 +271,6 @@ class RemoteProcessor(AProcessor):
             transmittance = DEFAULT_TRANSMITTANCE
             get_logger().warn(
                 f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
-        losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
@@ -293,7 +285,7 @@ class RemoteProcessor(AProcessor):
         if param_values:
             for n, v in param_values.items():
                 c.param(n).set_value(v)
-        lp = Processor("SLOS", c, Source(losses=losses))
+        lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
         lp.thresholded_output(self._thresholded_output)
         lp.with_input(self._input_state)
