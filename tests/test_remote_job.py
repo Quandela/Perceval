@@ -87,9 +87,8 @@ def test_remote_job(mock_warn, requests_mock):
     assert rj.status.duration == REMOTE_JOB_DURATION
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
-def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
+def test_mock_remote_with_gates(requests_mock, catalog_item):
     """test mock remote with gates"""
     noise = pcvl.NoiseModel(
         g2=0.003, transmittance=0.06, phase_imprecision=0, indistinguishability=0.92)
@@ -104,15 +103,9 @@ def test_mock_remote_with_gates(mock_warn, requests_mock, catalog_item):
     assert p._noise == rp._noise
     assert noise == rp._noise
 
-    for i, input_state in enumerate([pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]):
-        if i == 0:
-            with LogChecker(mock_warn) as warn_log_checker:
-                p.with_input(input_state)
-            with warn_log_checker:
-                rp.with_input(input_state)
-        else:
-            p.with_input(input_state)
-            rp.with_input(input_state)
+    for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
+        p.with_input(input_state)
+        rp.with_input(input_state)
 
         assert p._input_state == rp._input_state
 

@@ -215,6 +215,8 @@ class RemoteProcessor(AProcessor):
 
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
                             ) -> dict[str, any]:
+        self.check_min_detected_photons_filter()
+
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),

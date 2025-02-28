@@ -60,13 +60,11 @@ def test_processor_input_fock_state_with_loss():
     assert pytest.approx(p.source_distribution) == expected
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
+def test_processor_input_fock_state_with_all_noise_sources():
     nm = NoiseModel(brightness=0.2, indistinguishability=0.9, g2=0.1, g2_distinguishable=False)
     p = Processor("Naive", Circuit(4), nm)
     p.source.simplify_distribution = True
-    with LogChecker(mock_warn):
-        p.with_input(BasicState([0, 1, 1, 0]))
+    p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
                 '|0,0,2{_:0},0>': 0.0015490319977879558,

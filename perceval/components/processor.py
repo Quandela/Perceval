@@ -143,11 +143,6 @@ class Processor(AProcessor):
         The properties of the source will alter the input state. A perfect source always delivers the expected state as
         an input. Imperfect ones won't.
         """
-        if 'min_detected_photons' in self._parameters:
-            self._min_detected_photons_filter = self._parameters['min_detected_photons']
-        if self._min_detected_photons_filter is None and self._source.is_perfect():
-            # Avoid the warning from super().with_input if the min_detected_photons_filter is not set
-            self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
         super().with_input(input_state)
         self._generate_noisy_input()
 
@@ -178,10 +173,6 @@ class Processor(AProcessor):
                     raise ValueError(
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._inputs_map = svd
-        if 'min_detected_photons' in self._parameters:
-            self._min_detected_photons_filter = self._parameters['min_detected_photons']
-        if self._min_detected_photons_filter is None:
-            self._deduce_min_detected_photons(expected_photons)
 
     def _circuit_changed(self):
         # Override parent's method to reset the internal simulator as soon as the component list changes
@@ -191,10 +182,6 @@ class Processor(AProcessor):
         assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
         self._input_state = bs
         self._inputs_map = SVDistribution(bs)
-        if 'min_detected_photons' in self._parameters:
-            self._min_detected_photons_filter = self._parameters['min_detected_photons']
-        if self._min_detected_photons_filter is None:
-            self._deduce_min_detected_photons(bs.n)
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)
@@ -227,6 +214,7 @@ class Processor(AProcessor):
         return circuit
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
+        self.check_min_detected_photons_filter()
         from perceval.simulators import NoisySamplingSimulator
         assert isinstance(self.backend, ASamplingBackend), "A sampling backend is required to call samples method"
         sampling_simulator = NoisySamplingSimulator(self.backend)
@@ -246,6 +234,8 @@ class Processor(AProcessor):
         return res
 
     def probs(self, precision: float = None, progress_callback: callable = None) -> dict:
+        self.check_min_detected_photons_filter()
+
         # assert self._inputs_map is not None, "Input is missing, please call with_inputs()"
         if self._simulator is None:
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
