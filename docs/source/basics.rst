@@ -36,7 +36,7 @@ sources* to generate these photons.
 Single photon sources are defined by specifying parameters such as
 *brightness*, *purity* or *indistinguishability*.
 
-Once a source has been defined, it can be plugged into a circuit, and
+Sources can be defined as noise models then plugged into a circuit, and
 used to simulate the whole setup.
 
 
