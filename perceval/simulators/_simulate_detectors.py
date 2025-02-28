@@ -26,13 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Callable
 
+from perceval.runtime import cancel_requested
 from perceval.components.detector import IDetector, DetectionType, get_detection_type
 from perceval.utils import BSDistribution, BasicState
 
 
 def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None,
-                       prob_threshold: float = 0) -> tuple[BSDistribution, float]:
+                       prob_threshold: float = 0,
+                       progress_callback: Callable = None) -> tuple[BSDistribution, float]:
     """
     Simulates the effect of imperfect detectors on a theoretical distribution.
 
@@ -40,6 +43,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     :param detectors: A List of detectors
     :param min_photons: Minimum detected photons filter value (when None, does not apply this physical filter)
     :param prob_threshold: Filter states that have a probability below this threshold
+    :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
     :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
     """
@@ -50,17 +54,23 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
 
     phys_perf = 1
     result = BSDistribution()
+    lbsd = len(dist)
     if detection == DetectionType.Threshold:
-        for s, p in dist.items():
+        for idx, (s, p) in enumerate(dist.items()):
             s = s.threshold_detection()
             if min_photons is not None and s.n < min_photons:
                 phys_perf -= p
             else:
                 result[s] += p
+            if progress_callback and idx % 250000 == 0:  # Every 250000 states
+                progress = (idx + 1) / lbsd
+                exec_request = progress_callback(progress, "simulate detectors")
+                if cancel_requested(exec_request):
+                    raise RuntimeError("Cancel requested")
         result.normalize()
         return result, phys_perf
 
-    for s, p in dist.items():
+    for idx, (s, p) in enumerate(dist.items()):
         distributions = []
         for photons_in_mode, detector in zip(s, detectors):
             if detector is not None:
@@ -71,12 +81,21 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             else:
                 distributions.append(BSDistribution(BasicState([photons_in_mode])))
 
-        state_dist = BSDistribution.list_tensor_product(distributions, prob_threshold=prob_threshold)
+        state_dist = BSDistribution.list_tensor_product(distributions,
+                                prob_threshold=max(prob_threshold, prob_threshold / (10 * p) if p > 0 else prob_threshold))
+        # "magic factor" 10 like in the simulator
+
         for s_out, p_out in state_dist.items():
             if min_photons is not None and s_out.n < min_photons:
                 phys_perf -= p * p_out
             else:
                 result.add(s_out, p * p_out)
+
+        if progress_callback and idx % 100000 == 0:  # Every 100000 states
+            progress = (idx + 1) / lbsd
+            exec_request = progress_callback(progress, "simulate detectors")
+            if cancel_requested(exec_request):
+                raise RuntimeError("Cancel requested")
     result.normalize()
     return result, phys_perf
 
