@@ -543,11 +543,11 @@ class Simulator(ISimulator):
         result_sv = StateVector()
         for probampli, instate_list in decomposed_input:
             reslist = []
-            annotation = instate_list[0].get_photon_annotation(0)
             for in_s in instate_list:
                 if in_s.n == 0:
                     reslist.append(in_s)
                     continue
+                annotation = in_s.get_photon_annotation(0)
                 in_s.clear_annotations()
                 reslist.append(_inject_annotation(self._evolve[in_s], annotation))
 
