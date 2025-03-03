@@ -186,7 +186,7 @@ class Simulator(ISimulator):
         return result
 
     def _invalidate_cache(self):
-        self._evolve = {}
+        self._evolve: dict[BasicState, StateVector] = {}
         self.DEBUG_evolve_count = 0
         self.DEBUG_merge_count = 0
 
@@ -523,7 +523,9 @@ class Simulator(ISimulator):
 
     def evolve(self, input_state: BasicState | StateVector) -> StateVector:
         """
-        Evolve a state through the circuit
+        Evolve a state through the circuit.
+        If the simulator has logical selection, the performance for this input state is stored in self.logical_perf,
+        and only the states matching the logical selection are kept.
 
         :param input_state: The input fock state or state vector
         :return: The output state vector
@@ -541,11 +543,11 @@ class Simulator(ISimulator):
         result_sv = StateVector()
         for probampli, instate_list in decomposed_input:
             reslist = []
+            annotation = instate_list[0].get_photon_annotation(0)
             for in_s in instate_list:
                 if in_s.n == 0:
                     reslist.append(in_s)
                     continue
-                annotation = in_s.get_photon_annotation(0)
                 in_s.clear_annotations()
                 reslist.append(_inject_annotation(self._evolve[in_s], annotation))
 
@@ -555,7 +557,9 @@ class Simulator(ISimulator):
                 evolved_in_s = _merge_sv(evolved_in_s, sv)
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
-        result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
+
+        # result_sv is normalized here
+        result_sv, self._logical_perf = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
         return result_sv
@@ -577,28 +581,29 @@ class Simulator(ISimulator):
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
 
-        self._logical_perf = 1
         if self._heralds and not any(bs.has_annotations for sv in svd for bs in sv.keys()):
             self._setup_heralds()
+            # TODO: move this to self.evolve() to use annotations
+            #  Also, self._evolve should be reset after changing the heralds
         else:
             self._backend.clear_mask()
 
-        intermediary_logical_perf = 1
-        physical_perf = 1
+        global_perf = 0
+        physical_perf = 0
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
             if min(sv.n) >= self._min_detected_photons_filter:
                 new_sv = self.evolve(sv)
-                intermediary_logical_perf -= p * self._logical_perf
+                success_prob = p * self._logical_perf
+                global_perf += success_prob
                 if new_sv.m != 0:
-                    new_svd[new_sv] += p
-            else:
-                physical_perf -= p
+                    new_svd[new_sv] += success_prob
+                physical_perf += p
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
                 if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
-        self._logical_perf = intermediary_logical_perf
+        self._logical_perf = global_perf / physical_perf if physical_perf != 0 else 0
         if len(new_svd):
             new_svd.normalize()
         return {'results': new_svd,
@@ -612,6 +617,8 @@ class Simulator(ISimulator):
         :param dm: The density Matrix to evolve
         :return: The evolved DensityMatrix
         """
+        self._backend.clear_mask()  # TODO: do it only if mask was set
+
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
 

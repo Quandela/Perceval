@@ -45,7 +45,7 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     res_sv = copy(sv)
     if len(annotation):
-        for s, _ in res_sv:
+        for s, _ in res_sv.items():
             s.inject_annotation(annotation)
     return res_sv
 

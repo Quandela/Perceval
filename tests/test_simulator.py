@@ -400,7 +400,8 @@ def test_evolve_with_heralds():
     sim.keep_heralds(False)
     assert_sv_close(sim.evolve(input_state), StateVector("|0,1,1,0>"))
 
-    s = Source(.9)
+    brightness = .9
+    s = Source(brightness)
     svd = s.generate_distribution(input_state)
     sim.keep_heralds(True)
     keep_heralds_output = sim.evolve_svd(svd)
@@ -411,6 +412,13 @@ def test_evolve_with_heralds():
 
     for kh_state, dh_state in zip(keep_heralds_output['results'].keys(), discard_heralds_output['results'].keys()):
         assert_sv_close(kh_state, dh_state * StateVector([1, 1]))
+
+    sim.set_min_detected_photons_filter(4)
+    result = sim.evolve_svd(svd)
+    assert_svd_close(result["results"], SVDistribution(BasicState([0, 1, 1, 0])))
+    assert result["physical_perf"] == pytest.approx(brightness ** 4)
+    assert result["logical_perf"] == pytest.approx(2 / 27)
+
 
 
 def get_comparison_setup():
