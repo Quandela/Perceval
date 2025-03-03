@@ -36,9 +36,9 @@ from math import sqrt
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
     res = BSDistribution()
-    for state, pa in copy(sv):
+    for state, pa in copy(sv).items():
         state.clear_annotations()
-        res[state] += abs(pa) ** 2
+        res.add(state, abs(pa) ** 2)
     return res
 
 
@@ -55,8 +55,8 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
         return sv2
     pa_threshold = sqrt(prob_threshold)
     res = StateVector()
-    for s1, pa1 in sv1:
-        for s2, pa2 in sv2:
+    for s1, pa1 in sv1.items():
+        for s2, pa2 in sv2.items():
             pa = pa1*pa2
             if abs(pa) > pa_threshold:
                 res += s1.merge(s2)*pa

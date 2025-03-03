@@ -270,17 +270,20 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                res[bs] += p * prob0
+                prob = p * prob0
+                res[bs] += prob
+                self._logical_perf += prob
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
                 if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
+
         if len(res):
             res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, physical_perf, progress_callback: Callable = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -347,8 +350,6 @@ class Simulator(ISimulator):
         To get the probability of getting a state that is logically accepted knowing that it was physically accepted,
         we need to divide the current logical perf value by the physical perf
         """
-        if self._logical_perf > 0 and physical_perf > 0:
-            self._logical_perf /= physical_perf
         if len(res):
             res.normalize()
         return res
@@ -425,7 +426,7 @@ class Simulator(ISimulator):
 
         is_pnr = get_detection_type(detectors) == DetectionType.PNR
 
-        if self.can_use_mask(has_superposed_states, has_annotations, is_pnr):
+        if self.can_use_mask(has_annotations, is_pnr):
             self._setup_heralds()
         else:
             self._backend.clear_mask()
@@ -435,12 +436,14 @@ class Simulator(ISimulator):
         else:
             prog_cb = partial_progress_callable(progress_callback, max_val=self.detector_cb_start)
 
+        self._logical_perf = 0
         if has_superposed_states:
-            self._logical_perf = 1
             res = self._probs_svd_generic(svd, p_threshold, prog_cb)
         else:
-            self._logical_perf = 0
-            res = self._probs_svd_fast(svd, p_threshold, physical_perf, prog_cb)
+            res = self._probs_svd_fast(svd, p_threshold, prog_cb)
+
+        if self._logical_perf > 0 and physical_perf > 0:
+            self._logical_perf /= physical_perf
 
         if not len(res):
             return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
@@ -481,11 +484,9 @@ class Simulator(ISimulator):
                                    f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
-    def can_use_mask(self, has_superposed_states: bool, has_annotations: bool, is_pnr: bool) -> bool:
+    def can_use_mask(self, has_annotations: bool, is_pnr: bool) -> bool:
         return (self._heralds
                 and not has_annotations
-                and not has_superposed_states
-                # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
                 and is_pnr
                 )
 

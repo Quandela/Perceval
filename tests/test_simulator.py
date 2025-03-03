@@ -358,6 +358,30 @@ def test_probs_svd_with_heralds():
     assert results["logical_perf"] == pytest.approx(0.5 ** 2)
     assert results["results"][BasicState([2, 0, 2, 0])] == 1
 
+    sim.set_min_detected_photons_filter(0)
+    results = sim.probs_svd(SVDistribution({
+        BasicState([1, 0, 0, 0]) + BasicState([0, 0, 1, 0]): 0.4,
+        BasicState([0, 2, 0, 0]) - BasicState([2, 0, 0, 0]): 0.6,  # The photons are outputted together
+    }))
+    assert results["physical_perf"] == pytest.approx(1)
+    assert results["logical_perf"] == pytest.approx(0.5)
+    assert results["results"][BasicState([2, 0, 0, 0])] == pytest.approx(.6)
+
+    superposed_state = StateVector("|0,{_:0},{_:1},0>") + StateVector("|0,{_:1},{_:0},0>")
+    in_svd = SVDistribution({superposed_state: 1})
+    circuit = Circuit(4)
+    circuit.add(1, BS.H()).add(0, BS.H(BS.r_to_theta(1 / 3), phi_tl=-math.pi / 2, phi_bl=math.pi, phi_tr=math.pi / 2))
+    circuit.add(2, BS.H(BS.r_to_theta(1 / 3))).add(1, BS.H())
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(circuit)
+    sim.set_selection(heralds={1: 0, 2: 0})
+    res = sim.probs_svd(in_svd)
+    assert len(res['results']) == 2
+    assert res['results'][BasicState("|2,0,0,0>")] == pytest.approx(.5)
+    assert res['results'][BasicState("|0,0,0,2>")] == pytest.approx(.5)
+    assert res['logical_perf'] == pytest.approx(4 / 9)
+    assert res['physical_perf'] == pytest.approx(1)
+
 
 def test_evolve_with_heralds():
     sim = Simulator(SLOSBackend())

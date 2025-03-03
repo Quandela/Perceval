@@ -84,5 +84,5 @@ class SLAPBackend(AStrongSimulationBackend):
         res = StateVector()
         for output_state, pa in zip(self._fock_space, all_pa):
             res += output_state * pa
-        res.normalize()
+        # TODO: use mask here to be consistent with other backends
         return res
