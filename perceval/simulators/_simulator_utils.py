@@ -44,6 +44,7 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 
 
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
+    # TODO: go back to old version (perceval 0.12) when the fix is done on exqalibur's side
     if len(annotation):
         res_sv = StateVector()
         for s in sv.keys():

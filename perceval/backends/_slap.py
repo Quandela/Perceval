@@ -84,7 +84,7 @@ class SLAPBackend(AStrongSimulationBackend):
         res = StateVector()
         threshold = global_params["min_complex_component"] ** 2
         for output_state, pa in zip(self._fock_space, all_pa):
-            if abs(pa) > threshold:
+            # Utterly non-optimized. Mask management should be added in the computation
+            if abs(pa) > threshold and (self._mask is None or self._mask.match(output_state)):
                 res += output_state * pa
-        # TODO: use mask here to be consistent with other backends
         return res
