@@ -84,7 +84,6 @@ class JobGroup:
         """
         return self._name
 
-    # TODO: rename list_remote_jobs to remote_jobs need deprecated call ?
     @property
     def remote_jobs(self) -> list[RemoteJob]:
         """
@@ -151,7 +150,6 @@ class JobGroup:
         """
         return JobGroup._PERSISTENT_DATA.has_file(os.path.join(JobGroup._DIR_PATH, name + '.' + FILE_EXT_JGRP))
 
-    # TODO: What's kwargs ? Add docstring and unit test with kwargs
     def add(self, job_to_add: Job, **kwargs) -> None:
         """
         Adds information of the new RemoteJob to an existing Group.
@@ -159,6 +157,7 @@ class JobGroup:
         a dictionary of necessary information - status, id, body, metadata)
 
         :param job_to_add: a remote job to add to the list of existing job group
+        :param kwargs: parameters to pass to the remote job, at execution
         """
         if not isinstance(job_to_add, RemoteJob):
             raise TypeError(f'Only a RemoteJob can be added to a JobGroup (got {type(job_to_add)})')
@@ -348,7 +347,6 @@ class JobGroup:
         """
         return self._list_jobs_status_type([RunningStatus.ERROR, RunningStatus.CANCELED])
 
-    # TODO: rename unsend to unsent need deprecated call ?
     def list_unsent_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have not been sent to the cloud
@@ -460,7 +458,7 @@ class JobGroup:
         self._update_job_statuses()
         results = []
         for job in self._jobs:
-            if job.maybe_completed:
+            if job._job_status.maybe_completed:
                 try:
                     results.append(job.get_results())
                 except RuntimeError:
