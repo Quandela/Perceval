@@ -237,8 +237,6 @@ class FFSimulator(ISimulator):
         for r, c in components:
             proc.add(r, c)
 
-        detectors = detectors + proc.detectors[m:]
-
         # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
         heralded_dist = proc.generate_noisy_heralds()
         if len(heralded_dist):
@@ -278,7 +276,7 @@ class FFSimulator(ISimulator):
         if self._precision is not None:
             sim.set_precision(self._precision)
         sim.set_silent(True)
-        return sim.probs_svd(input_state, detectors, prog_cb)
+        return sim.probs_svd(input_state, detectors + proc.detectors[m:], prog_cb)
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""
