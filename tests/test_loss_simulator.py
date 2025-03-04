@@ -96,7 +96,7 @@ def test_lc_perf():
     p.add(1, LC(loss))
 
     p.add_herald(1, 1)
-    p.min_detected_photons_filter(2)
+    p.min_detected_photons_filter(1)
 
     p.with_input(BasicState([1]))
 
