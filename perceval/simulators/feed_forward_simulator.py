@@ -37,8 +37,6 @@ from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend
 
 from .simulator_interface import ISimulator
-from .. import get_detection_type, DetectionType
-
 
 class FFSimulator(ISimulator):
 
