@@ -265,8 +265,8 @@ class FFSimulator(ISimulator):
 
         else:
             # In that case, the new heralds are user-defined heralds that we can safely simulate.
-            # We don't want to operate selection on them
-            proc.min_detected_photons_filter(- sum_new_heralds)
+            # We can't filter more due to potential losses that would depend on the FF parts of the circuit
+            proc.min_detected_photons_filter(0)
 
         from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
