@@ -391,6 +391,8 @@ class JobGroup:
 
             self._write_to_file()  # save that we sent the job
 
+            self._write_to_file()
+
             if delay is not None:
                 while not job.status.completed:
                     time.sleep(1)

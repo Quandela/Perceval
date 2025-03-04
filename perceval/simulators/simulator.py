@@ -39,9 +39,10 @@ from scipy.sparse import csc_array, csr_array
 from perceval.backends import AStrongSimulationBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
-    DensityMatrix, post_select_distribution, post_select_statevector
+    DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
+from perceval.runtime import cancel_requested
 
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
 from ._simulate_detectors import simulate_detectors
@@ -56,6 +57,7 @@ class Simulator(ISimulator):
 
     :param backend: A probability amplitude capable backend object
     """
+    detector_cb_start = 0.9
 
     def __init__(self, backend: AStrongSimulationBackend):
         super().__init__()
@@ -272,7 +274,7 @@ class Simulator(ISimulator):
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
         if len(res):
             res.normalize()
@@ -300,17 +302,19 @@ class Simulator(ISimulator):
         cache = {}
         input_set = set([state for s in decomposed_input for state in s[1]])
         len_input_set = len(input_set)
+        prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         for idx, state in enumerate(input_set):
             self._backend.set_input_state(state)
             cache[state] = self._backend.prob_distribution()
-            if progress_callback and idx % 10 == 0:
-                progress = (idx + 1) / len_input_set * 0.5  # From 0. to 0.5
-                exec_request = progress_callback(progress, 'compute probability distributions')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+            if prog_cb and idx % 10 == 0:
+                progress = (idx + 1) / len_input_set
+                exec_request = prog_cb(progress, 'compute probability distributions')
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
+        prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
             probs_in_s = BSDistribution.list_tensor_product([cache[state] for state in bs_data],
@@ -330,10 +334,10 @@ class Simulator(ISimulator):
             for bs, p in probs_in_s.items():
                 res[bs] += p * prob0
 
-            if progress_callback and idx % 20 == 0:
-                progress = (idx + 1) / len(decomposed_input) * 0.5 + 0.5  # From 0.5 to 1
-                exec_request = progress_callback(progress, 'recombine distributions')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+            if prog_cb and idx % 20 == 0:
+                progress = (idx + 1) / len(decomposed_input)
+                exec_request = prog_cb(progress, 'recombine distributions')
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
 
         """
@@ -419,23 +423,31 @@ class Simulator(ISimulator):
 
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
-        if self.can_use_mask(has_superposed_states, has_annotations, detectors):
+        is_pnr = get_detection_type(detectors) == DetectionType.PNR
+
+        if self.can_use_mask(has_superposed_states, has_annotations, is_pnr):
             self._setup_heralds()
         else:
             self._backend.clear_mask()
 
+        if is_pnr:
+            prog_cb = progress_callback
+        else:
+            prog_cb = partial_progress_callable(progress_callback, max_val=self.detector_cb_start)
+
         if has_superposed_states:
             self._logical_perf = 1
-            res = self._probs_svd_generic(svd, p_threshold, progress_callback)
+            res = self._probs_svd_generic(svd, p_threshold, prog_cb)
         else:
             self._logical_perf = 0
-            res = self._probs_svd_fast(svd, p_threshold, physical_perf, progress_callback)
+            res = self._probs_svd_fast(svd, p_threshold, physical_perf, prog_cb)
 
         if not len(res):
             return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
 
         if detectors:
-            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter)
+            prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
+            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter, p_threshold, prog_cb)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
@@ -469,13 +481,12 @@ class Simulator(ISimulator):
                                    f"to the number of heralded photons ({n_heralded_photons})")
             self._min_detected_photons_filter = n_heralded_photons
 
-    def can_use_mask(self, has_superposed_states, has_annotations, detectors) -> bool:
+    def can_use_mask(self, has_superposed_states: bool, has_annotations: bool, is_pnr: bool) -> bool:
         return (self._heralds
                 and not has_annotations
                 and not has_superposed_states
                 # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
-
-                and get_detection_type(detectors) == DetectionType.PNR
+                and is_pnr
                 )
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
@@ -584,7 +595,7 @@ class Simulator(ISimulator):
                 physical_perf -= p
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
         self._logical_perf = intermediary_logical_perf
         if len(new_svd):

@@ -30,7 +30,11 @@
 import pytest
 import math
 
+from perceval import BSDistribution
 from perceval.components import Source
+from perceval.utils import BasicState
+from perceval.utils.conversion import samples_to_probs
+from perceval.utils.dist_metrics import tvd_dist
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_svd_close, dict2svd
 
@@ -110,3 +114,42 @@ def test_source_multiple_photons_per_mode():
     s = Source(emission_probability=ep)
     svd = s.probability_distribution(2)
     assert_svd_close(svd, dict2svd({"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2}))
+
+
+def test_source_sample():
+    nb_samples = 200
+
+    bs = BasicState("|1,1>")
+    source_1 = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
+    source_2 = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
+
+    # generate samples directly from the source
+    samples_from_source = source_1.generate_samples(nb_samples, bs)
+    assert len(samples_from_source) == nb_samples
+
+    dist_samples = samples_to_probs(samples_from_source)
+
+    # compare these samples with complete distribution
+    dist = source_2.generate_distribution(bs,0)
+    dist = BSDistribution({str(key):value for key,value in dist.items()}) # change SVD to BSD
+
+    for el in set(dist.keys()) - set(dist_samples.keys()):
+        dist_samples[el] = 0
+
+    tvd = tvd_dist(dist_samples, dist)
+    assert tvd == pytest.approx(0.0, abs=0.15)  # total variation between two distributions is less than 0.15
+
+    # number of photons in samples
+    nb_1p = 0
+    nb_2p = 0
+    nb_3p = 0
+    for sample in samples_from_source:
+        if sample.n == 1:
+            nb_1p += 1
+        elif sample.n == 2:
+            nb_2p += 1
+        elif sample.n == 3:
+            nb_3p += 1
+    assert nb_2p > nb_1p
+    assert nb_2p > nb_3p
+    assert nb_1p > nb_3p

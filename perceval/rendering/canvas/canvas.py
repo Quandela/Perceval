@@ -262,6 +262,42 @@ class Canvas(ABC):
             self.position = (points[0]+size*len(text)/2, points[1]+size)
         return f_points[0], self._inverse_Y * f_points[1]
 
+    def normalize_text(self, text: str, size: float, points: tuple[float, float], max_size: int, shift_factor: float) -> tuple[str, int, tuple[float, float]]:
+        """
+        If the text does not fit in max_size, reduce the font size or split text over several lines.
+        :param text: the text to check
+        :param size: the font size of the text
+        :param points: the position on the canvas. The text can be moved vertically when lines are added.
+        :param max_size: the maximum size that the text can take horizontally
+        :param shift_factor: to move the text vertically when adding lines
+        :return: Modified text, size and points.
+        """
+        if max_size is not None and size * len(text) > max_size:
+            font_size_factor = 1.5
+            new_size = int(max_size / len(text) * font_size_factor)
+            if new_size < size / 2:
+                size = size / 2
+                max_len = max_size/size * font_size_factor
+                # try to split text on spaces instead of reducing size
+                pos_x, pos_y = points
+                remaining = text
+                new_text = ''
+                min_index = int(max_len * 0.8)
+                max_index = int(max_len * 1.2)
+                while size * len(remaining) > max_size:
+                    index = int(max_len)
+                    if ' ' in remaining[min_index:max_index]:
+                        index = remaining[min_index:max_index].index(' ') + min_index
+                    new_text += remaining[:index] + '\n'
+                    remaining = remaining[index:]
+                    pos_y += shift_factor*size
+                new_text += remaining
+                text = new_text
+                points = (pos_x, pos_y)
+            else:
+                size = new_size
+        return text, size, points
+
     def add_shape(self, shape_fn, circuit, mode_style):
         shape_fn(circuit, self, mode_style)
 

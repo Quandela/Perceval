@@ -26,10 +26,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.components import Processor, Source, Circuit, BS, PS, PERM, catalog
+from perceval.components import Processor, catalog
 from perceval.utils.logging import get_logger, channel
 from .abstract_converter import AGateConverter
-from .converter_utils import label_cnots_in_gate_sequence
 from perceval.utils import NoiseModel
 
 import numpy as np
@@ -46,9 +45,8 @@ _CQASM_1_QUBIT_GATES = {
     "I"
 }
 
-_CQASM_2_QUBIT_GATES = {
-    "CNOT", "CZ"
-}
+_CQASM_2_QUBIT_GATES = { "CNOT", "CZ"}
+
 
 class ConversionBadVersionError(Exception):
     pass
@@ -65,16 +63,13 @@ class ConversionUnsupportedFeatureError(Exception):
 class CQASMConverter(AGateConverter):
     r"""cQASM quantum circuit to perceval processor converter.
 
-    :param catalog: a component library to use for the conversion. It must contain CNOT gates.
     :param backend_name: backend name used in the converted processor (default SLOS)
-    :param source: the source used as input for the converted processor (default perfect source).
     """
-    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
-        super().__init__(backend_name, source, noise_model)
+    def __init__(self, backend_name: str = "SLOS", noise_model: NoiseModel = None):
+        super().__init__(backend_name, noise_model)
         import cqasm.v3x as cqasm
 
         self._qubit_list = []
-        self._use_postselection = False
         self._cqasm = cqasm
 
     def count_qubits(self, ast) -> int:
@@ -101,7 +96,8 @@ class CQASMConverter(AGateConverter):
         else:
             raise ConversionUnsupportedFeatureError(f"Cannot map variable { name } to a declared qubit")
 
-    def _get_gate_inf(self, statement):
+    def _get_gate_info(self, statement):
+        # For each CQASM statement -> gate information - gate name, qubit position, parameter are returned
         gate_name = statement.name
         num_operands = len(statement.operands)
 
@@ -134,39 +130,37 @@ class CQASMConverter(AGateConverter):
 
         return gate_name, controls, targets, parameter
 
-    def _convert_statement(self, statement, gate_index, optimized_gate_sequence):
-        gate_name, controls, targets, parameter = self._get_gate_inf(statement)
+    def _get_gate_sequence(self, ast) -> list[list]:
+        # generates the gate sequence by converting ast statements
+        gate_sequence = []
+        for statement in ast.block.statements:
+            gate_name, controls, targets, parameter = self._get_gate_info(statement)
 
-        # TODO: refactor all converter code PCVL - 821
-        if gate_name == 'X90':
-            gate_name = 'rx'
-            parameter = np.pi / 2
-        elif gate_name == 'mX90':
-            gate_name = 'rx'
-            parameter = - np.pi / 2
-        elif gate_name == 'Y90':
-            gate_name = 'ry'
-            parameter = np.pi / 2
-        elif gate_name == 'mY90':
-            gate_name = 'ry'
-            parameter = - np.pi / 2
+            parameter = CQASMConverter._update_parameter_rotation_gate(gate_name, parameter)
+            # x90, mx90, y90, my90 are named gates in CQASM. Their parameter values are needed to build circuit in pcvl.
 
-        if not controls:
-            # working with 1 qubit gates
-            if gate_name.lower() in catalog:
-                circuit = self._create_catalog_1_qubit_gate(gate_name.lower(), param=parameter if parameter else None)
+            gate_name = CQASMConverter._map_gate(gate_name)
+
+            if not controls:
+                # working with 1 qubit gates
+                if gate_name.lower() in catalog:
+                    for i in range(len(targets)):
+                        gate_sequence.append([gate_name.lower(), [targets[i]], parameter])
+                else:
+                    raise ConversionUnsupportedFeatureError(f"Unsupported 1-qubit gate {gate_name}")
             else:
-                raise ConversionUnsupportedFeatureError(f"Unsupported 1-qubit gate {gate_name}")
+                if gate_name not in _CQASM_2_QUBIT_GATES:
+                    raise ConversionUnsupportedFeatureError(
+                        f"Unsupported 2-qubit gate { gate_name }")
+                for target in targets:
+                    gate_sequence.append([gate_name.lower(), [controls[0], target], parameter])
 
-            for target in targets:
-                self._converted_processor.add(target * 2, circuit)
-        else:
-            if gate_name not in _CQASM_2_QUBIT_GATES:
-                raise ConversionUnsupportedFeatureError(
-                    f"Unsupported 2-qubit gate { gate_name }")
-            for target in targets:
-                self._create_2_qubit_gates_from_catalog(optimized_gate_sequence[gate_index], controls[0] * 2,
-                                                        target * 2, self._use_postselection)
+        gate_sequence = [elem + [None] for elem in gate_sequence]  # to be consistent with other frameworks, None is used for gate unitary
+
+        return gate_sequence
+
+    def _get_qubit_names(self, ast, n_qbits):
+        return [f'{q}[{i}]' if i >= 0 else q for (q, i) in self._qubit_list]
 
     def convert(self, ast, use_postselection: bool = True) -> Processor:
         r"""Convert a cQASM quantum program into a `Processor`.
@@ -178,34 +172,13 @@ class CQASMConverter(AGateConverter):
         :return: the converted processor
         """
         if isinstance(ast, str):
-            return self._convert_from_string(ast, use_postselection)
+            ast = self._convert_from_string(ast, use_postselection)
 
         get_logger().info(f"Convert cqasm.ast ({len(self._qubit_list)} qubits, {len(ast.block.statements)} operations) to processor",
                     channel.general)
         self._collect_qubit_list(ast)
-        self._use_postselection = use_postselection
 
-        qubit_names = [
-            f'{ q }[{ i }]' if i >= 0 else q for (q, i) in self._qubit_list]
-        self._configure_processor(ast, qubit_names=qubit_names)
-
-        # for gate sequence to optimize cnots
-        gate_sequence = []
-        for statement in ast.block.statements:
-            gate_name, controls, targets, parameter = self._get_gate_inf(statement)
-            if len(targets) > 1 and gate_name == 'CNOT':
-                get_logger().debug(f"Converting a multi-target CNOT {targets} to multiple Heralded CNOTs", channel.general)
-                for i in range(len(targets)):
-                    gate_sequence.append([gate_name, controls+[targets[i]]])
-            else:
-                gate_sequence.append([gate_name, controls + targets])
-
-        optimized_gate_sequence = label_cnots_in_gate_sequence(gate_sequence)
-
-        for gate_index, statement in enumerate(ast.block.statements):
-            self._convert_statement(statement, gate_index, optimized_gate_sequence)
-        self.apply_input_state()
-        return self._converted_processor
+        return super().convert(ast, use_postselection)
 
     @classmethod
     def check_version(cls, source_string):
@@ -261,7 +234,7 @@ class CQASMConverter(AGateConverter):
         if not isinstance(ast, self._cqasm.semantic.Program):
             raise ConversionSyntaxError(f"cQASM parser error: { ast[0] }")
 
-        return self.convert(ast, use_postselection=use_postselection)
+        return ast
 
     def _v3_ast_from_v1_source(self, lines):
         r""""Converts a cQASM v1 quantum program into a cQASM v3 AST"""
@@ -368,3 +341,33 @@ class CQASMConverter(AGateConverter):
             except ValueError:
                 print("An error in parsing the cQASM v1 file.")
         return ast
+
+    @staticmethod
+    def _map_gate(gate_name: str) -> str:
+        # updates gate names to be consistent with Perceval catalog
+        if gate_name == 'X90':
+            return 'rx'
+
+        elif gate_name == 'mX90':
+            return 'rx'
+        elif gate_name == 'Y90':
+            return 'ry'
+        elif gate_name == 'mY90':
+            return 'ry'
+        else:
+            return gate_name
+
+    @staticmethod
+    def _update_parameter_rotation_gate(gate_name, parameter) -> float:
+        # Returns circuit parameter value for CQASM gates
+        if gate_name == 'X90':
+            return np.pi / 2
+
+        elif gate_name == 'mX90':
+            return - np.pi / 2
+        elif gate_name == 'Y90':
+            return np.pi / 2
+        elif gate_name == 'mY90':
+            return - np.pi / 2
+        else:
+            return parameter

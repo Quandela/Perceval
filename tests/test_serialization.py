@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect
+from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -215,6 +215,21 @@ def test_postselect_serialization(ps):
     ps_deser = deserialize(ps_ser)
     assert ps == ps_deser
 
+
+@pytest.mark.parametrize("detector", (BSLayeredPPNR(2, .6),
+                                      Detector.pnr(),
+                                      Detector.threshold(),
+                                      Detector.ppnr(4, 2)))
+def test_detector_serialization(detector):
+    serialized = serialize(detector)
+    deserialized = deserialize(serialized)
+    assert detector.name == deserialized.name, "Wrong deserialized detector name"
+    if isinstance(detector, BSLayeredPPNR):
+        assert detector._layers == deserialized._layers and detector._r == deserialized._r, \
+            "Wrong deserialized detector parameters"
+    else:
+        assert detector._wires == deserialized._wires and detector.max_detections == deserialized.max_detections, \
+            "Wrong deserialized detector parameters"
 
 def test_json():
     svd = SVDistribution()

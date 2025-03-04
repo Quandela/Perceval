@@ -49,7 +49,7 @@ def test_processor_input_fock_state(mock_warn):
 
 
 def test_processor_input_fock_state_with_loss():
-    p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
+    p = Processor("Naive", Circuit(4), NoiseModel(brightness=0.2))
     p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
         StateVector([0, 1, 1, 0]): 0.04,
@@ -60,15 +60,11 @@ def test_processor_input_fock_state_with_loss():
     assert pytest.approx(p.source_distribution) == expected
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
-    source = Source(emission_probability=0.2,
-                    multiphoton_component=0.1, multiphoton_model="indistinguishable",
-                    indistinguishability=0.9)
-    source.simplify_distribution = True
-    p = Processor("Naive", Circuit(4), source)
-    with LogChecker(mock_warn):
-        p.with_input(BasicState([0, 1, 1, 0]))
+def test_processor_input_fock_state_with_all_noise_sources():
+    nm = NoiseModel(brightness=0.2, indistinguishability=0.9, g2=0.1, g2_distinguishable=False)
+    p = Processor("Naive", Circuit(4), nm)
+    p.source.simplify_distribution = True
+    p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
                 '|0,0,2{_:0},0>': 0.0015490319977879558,
@@ -106,24 +102,6 @@ def test_processor_input_state_vector():
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
-
-
-def test_processor_source_vs_noise_model():
-    LOSS = .4
-    G2 = .06
-
-    # A Processor does not accept both a Source and a NoiseModel input
-    with pytest.raises(ValueError):
-        Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2),
-                  noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-
-    # Check that input states are the same with equivalent parameter
-    input_state = BasicState([1, 1, 1, 1])
-    p_source = Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2))
-    p_source.with_input(input_state)
-    p_noise = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-    p_noise.with_input(input_state)
-    assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
 def test_processor_probs():
@@ -323,3 +301,30 @@ def test_min_photons_reset():
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(.25)
     assert res["physical_perf"] == pytest.approx(1)
+
+
+def test_flatten_processor():
+    ansatz = catalog["qloq ansatz"]
+    group_sizes = [Encoding.QUDIT2, Encoding.QUDIT2]
+    layers = ["Y"]
+    phases = None
+    p = ansatz.build_processor(
+        group_sizes=group_sizes,
+        layers=layers,
+        phases=phases,
+        ctype="cz"
+    )
+
+    level_0_components = p.flatten(0)
+    level_1_components = p.flatten(1)
+    level_2_components = p.flatten(2)
+    level_3_components = p.flatten(3)
+    level_4_components = p.flatten(4)
+    all_components = p.flatten()
+
+    assert len(level_0_components) == 1 # 1 sub-circuit
+    assert len(level_1_components) == 15 # 13 sub-sub-circuits (8 RYQUDIT2, 4 CZ2, 1 POSTPROCESSED CZ) + 2 PERM
+    assert len(level_2_components) == 60 # 8*4 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
+    assert len(level_3_components) == 68 # 8*5 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
+    assert len(level_4_components) == 76 # 8*6 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
+    assert len(all_components) == len(level_4_components)
