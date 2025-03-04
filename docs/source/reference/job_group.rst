@@ -22,7 +22,7 @@ CNOT gate:
 >>>
 >>> p_knill = pcvl.RemoteProcessor("sim:altair")
 >>> p_knill.add(0, pcvl.catalog["heralded cnot"].build_processor())
->>> p_knill.min_detected_photons_filter(4)
+>>> p_knill.min_detected_photons_filter(2)
 >>> p_knill.with_input(pcvl.BasicState([0, 1, 0, 1]))
 >>> sampler_knill = Sampler(p_knill, max_shots_per_call=1_000_000)
 >>>
