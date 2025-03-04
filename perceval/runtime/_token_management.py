@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import os
 
-from perceval.utils.logging import get_logger, channel
+from perceval.utils.logging import get_logger, channel, deprecated
 
 from ..utils import PersistentData, FileFormat
 
@@ -101,6 +101,7 @@ class TokenProvider:
         TokenProvider._CACHED_TOKEN = token
 
 
+@deprecated(version="0.13.0", reason="Use instead RemoteConfig class method `save`")
 def save_token(token: str):
     """Save provided token into persistent data, replace any token previously saved
 
