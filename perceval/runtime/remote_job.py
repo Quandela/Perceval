@@ -196,6 +196,8 @@ class RemoteJob(Job):
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
+    # Does not do what it says. This method has several responsibilities and ties them together.
+    # TODO review how Marion split the payload generation in this class
     def set_args(self, *args, **kwargs) -> None:
         self._handle_params(args, kwargs)
         if self._delta_parameters['mapping']:

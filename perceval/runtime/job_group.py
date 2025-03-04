@@ -97,7 +97,8 @@ class JobGroup:
                       'modified_date': self.modified_date.strftime(DATE_TIME_FORMAT),
                       'job_group_data': []}
         for job in self._jobs:
-            group_data['job_group_data'].append(job.to_dict())
+            dict_job = job.to_dict()
+            group_data['job_group_data'].append(dict_job)
         return group_data
 
     def _from_dict(self, group_data: dict) -> None:
@@ -388,8 +389,6 @@ class JobGroup:
                 job.execute_async()
             else:
                 continue
-
-            self._write_to_file()  # save that we sent the job
 
             self._write_to_file()
 
