@@ -75,16 +75,19 @@ class ISimulator(ABC):
     def set_precision(self, precision: float):
         pass
 
+    def set_heralds(self, heralds: dict[int, int]):
+        self._heralds = heralds
+
     def set_selection(self,
                       min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
-                      heralds: dict = None):
+                      heralds: dict[int, int] = None):
         if min_detected_photons_filter is not None:
             self.set_min_detected_photons_filter(min_detected_photons_filter)
         if postselect is not None:
             self._postselect = postselect
         if heralds is not None:
-            self._heralds = heralds
+            self.set_heralds(heralds)
 
 
 class ASimulatorDecorator(ISimulator, ABC):

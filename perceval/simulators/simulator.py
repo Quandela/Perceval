@@ -79,6 +79,10 @@ class Simulator(ISimulator):
     def set_precision(self, precision: float):
         self.precision = precision
 
+    def set_heralds(self, heralds):
+        self._invalidate_cache()
+        super().set_heralds(heralds)
+
     def keep_heralds(self, value: bool):
         """
         Tells the simulator to keep or discard ancillary modes in output states
@@ -103,6 +107,7 @@ class Simulator(ISimulator):
         self._postselect = PostSelect()
 
     def clear_heralds(self):
+        self._invalidate_cache()
         self._heralds = {}
 
     def set_circuit(self, circuit: ACircuit, m = None):
@@ -583,8 +588,6 @@ class Simulator(ISimulator):
 
         if self._heralds and not any(bs.has_annotations for sv in svd for bs in sv.keys()):
             self._setup_heralds()
-            # TODO: move this to self.evolve() to use annotations
-            #  Also, self._evolve should be reset after changing the heralds
         else:
             self._backend.clear_mask()
 

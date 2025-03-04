@@ -420,6 +420,19 @@ def test_evolve_with_heralds():
     assert result["logical_perf"] == pytest.approx(2 / 27)
 
 
+def test_evolve_change_heralds():
+    sim = Simulator(SLOSBackend())
+    sim.set_circuit(Circuit(2).add(0, BS()))
+    heralds = {1: 0}
+    sim.set_selection(heralds=heralds)
+
+    res = sim.evolve_svd(SVDistribution(BasicState([1, 0])))
+    assert len(next(iter(res["results"]))) == 1
+
+    sim.set_selection(heralds={})
+    res = sim.evolve_svd(SVDistribution(BasicState([1, 0])))
+    assert len(next(iter(res["results"]))) == 2
+
 
 def get_comparison_setup():
     s = Source(.9)
