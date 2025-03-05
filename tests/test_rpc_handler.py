@@ -41,9 +41,7 @@ from perceval.runtime.rpc_handler import (
     _ENDPOINT_JOB_CREATE,
     _ENDPOINT_JOB_RESULT,
     _ENDPOINT_JOB_STATUS,
-    _ENDPOINT_PLATFORM_DETAILS,
-    _ENDPOINT_JOB_RERUN,
-    quote_plus
+    _ENDPOINT_JOB_RERUN
 )
 from perceval.runtime.job_status import RunningStatus
 
@@ -100,8 +98,7 @@ def test_get_job_infos():
     # Results
     results = rpc_handler.get_job_results(job_id)
     assert results == rpc_handler_responses.get_job_result_response_body_from_job_status(RunningStatus.SUCCESS)
-    assert "results" in results
-    assert "results" is not None
+    assert results.get("results") is not None
 
     assert len(responses.calls) == 3
     job_results_request = responses.calls[2].request
