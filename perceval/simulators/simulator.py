@@ -595,6 +595,7 @@ class Simulator(ISimulator):
         physical_perf = 0
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
+            # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self._min_detected_photons_filter:
                 new_sv = self.evolve(sv)
                 success_prob = p * self._logical_perf
