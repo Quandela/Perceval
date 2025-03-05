@@ -34,6 +34,7 @@ import pytest
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
+from perceval import NoiseModel
 from perceval.utils import BasicState, StateVector, SVDistribution, BSDistribution, allstate_iterator
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_sv_close, assert_svd_close
@@ -299,8 +300,8 @@ def test_sv_parse_tuple_annot():
 
 
 def test_svd_sample():
-    source = pcvl.Source(emission_probability=1, multiphoton_component=0.1, indistinguishability=0.9)
-    qpu = pcvl.Processor("Naive", comp.BS(), source)
+    noise = NoiseModel(g2=0.1, indistinguishability=0.9)
+    qpu = pcvl.Processor("Naive", comp.BS(), noise)
     qpu.with_input(BasicState([1, 0]))
     sample = qpu.source_distribution.sample(1)
     assert isinstance(sample, list)

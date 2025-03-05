@@ -167,7 +167,7 @@ class PhysSkin(ASkin):
 
         # The actual component
         canvas.add_rect((5, 10), 50 * w - 10, 50 * comp.m - 20, fill="lightgreen")
-        canvas.add_text((w * 25, 30 + 50*(comp.m-1)/2), size=10, ta="middle", text=comp.name)
+        canvas.add_text((w * 25, 30 + 50*(comp.m-1)/2), size=10, ta="middle", text=comp.name, max_size=50*w)
 
     def port_shape_in(self, port, canvas, mode_style):
         canvas.add_rect((-2, 15), 12, 50*port.m - 30, fill="lightgray")
@@ -212,7 +212,7 @@ class PhysSkin(ASkin):
         for i in range(circuit.m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*w, 0], **self.style[mode_style[i]])
         canvas.add_rect((5, 5), 50*w - 10, 50*circuit.m - 10, fill="gray")
-        canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content)
+        canvas.add_text((25*w, 25*circuit.m), size=7, ta="middle", text=content, max_size=50*w)
 
     @staticmethod
     def _reflective_side(theta, convention: cp.BSConvention) -> int:
@@ -305,7 +305,7 @@ class PhysSkin(ASkin):
         for i in range(m):
             canvas.add_mpath(["M", 0, 25 + i*50, "l", 50*m, 0], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((5, 5), 50*m-10, 50*m-10, fill="lightyellow")
-        canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name)
+        canvas.add_text((25*m, 25*m), size=10, ta="middle", text=circuit.name, max_size=50*m)
 
     def barrier_shape(self, barrier, canvas, mode_style):
         if not barrier.visible:
@@ -352,8 +352,8 @@ class PhysSkin(ASkin):
             canvas.add_mline([0, 50*idx+25, w*50, 50*idx+25], **self.style[ModeType.PHOTONIC])
         canvas.add_rect((2.5, 2.5), w*50 - 5, 50*circuit.m - 5,
                         fill=self.style_subcircuit['fill'], **self.style_subcircuit['stroke_style'])
-        title = circuit.name.upper().split(" ")
-        canvas.add_text((10, 8+8*len(title)), "\n".join(title), 8, fontstyle="bold")
+        title = circuit.name.upper()
+        canvas.add_text((10, 16), title, 8, fontstyle="bold", max_size=w*50-15)
 
     def herald_shape_in(self, herald, canvas, mode_style):
         canvas.add_mpath(ShapeFactory.half_circle_port_in(10), stroke="black", stroke_width=1, fill="white")
