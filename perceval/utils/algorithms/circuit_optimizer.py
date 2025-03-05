@@ -97,7 +97,7 @@ class CircuitOptimizer:
         :param target: The target unitary circuit or matrix
         :param template: A circuit with variable parameters (supports only beam splitters and phase shifters)
         :param empty_mode_list: list of the modes without input photon,
-                                which are ignored during optimisation as this does not alter the results
+                                which are ignored during optimisation as this does not alter the results (default [])
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):
@@ -145,7 +145,7 @@ class CircuitOptimizer:
         :param allow_error: If True, this call will not raise an error when the best fidelity is below threshold
                             Otherwise, raises an error (default False)
         :param empty_mode_list: list of the modes without input photon,
-                                which are ignored during optimisation as this does not alter the results
+                                which are ignored during optimisation as this does not alter the results (default [])
         """
         def _gen_ps(i: int):
             return PS(P(f"phL_{i}"))
@@ -164,5 +164,5 @@ class CircuitOptimizer:
             if allow_error:
                 get_logger().warn(f"Optimization converged with poor fidelity ({fidelity})", channel.general)
             else:
-                raise RuntimeError(f"Optimization did not convergence to expected threshold ({self._threshold})")
+                raise RuntimeError(f"Optimization did not converge to expected threshold ({self._threshold})")
         return result_circuit
