@@ -32,7 +32,6 @@ from collections import defaultdict
 import copy
 
 from perceval.utils import StateVector, BasicState, BSDistribution, SVDistribution, allstate_iterator
-from perceval.utils.logging import deprecated
 from perceval.components import ACircuit
 from perceval.backends import AStrongSimulationBackend, BACKEND_LIST
 from .simulator_interface import ISimulator

@@ -660,12 +660,16 @@ class AProcessor(ABC):
             get_logger().warn("Given input state has annotations, that will be ignored in the computation."
                               " To use them, consider using a StateVector.")
 
-    def _deduce_min_detected_photons(self, expected_photons: int) -> None:
-        get_logger().warn(
-            "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
-            " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
-            f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
-        self._min_detected_photons_filter = expected_photons
+
+    def check_min_detected_photons_filter(self):
+        if self._min_detected_photons_filter is None:
+            if not self.is_remote and self._source is not None and self._source.is_perfect():
+                # Automatically set the min_detected_photons_filter for perfect sources of local processors if not set
+                self._min_detected_photons_filter = self._input_state.n + list(self.heralds.values()).count(1)
+            else:
+                raise ValueError("The value of min_detected_photons is not set."
+                                 " Use the method processor.min_detected_photons_filter(value).")
+
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
@@ -685,8 +689,6 @@ class AProcessor(ABC):
 
         self._input_state = BasicState(input_list)
 
-        if self._min_detected_photons_filter is None:
-            self._deduce_min_detected_photons(expected_photons)
 
     def flatten(self, max_depth = None) -> list[tuple]:
         """

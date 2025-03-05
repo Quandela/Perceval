@@ -49,7 +49,7 @@ def test_processor_input_fock_state(mock_warn):
 
 
 def test_processor_input_fock_state_with_loss():
-    p = Processor("Naive", Circuit(4), Source(emission_probability=0.2))
+    p = Processor("Naive", Circuit(4), NoiseModel(brightness=0.2))
     p.with_input(BasicState([0, 1, 1, 0]))
     expected = {
         StateVector([0, 1, 1, 0]): 0.04,
@@ -60,15 +60,11 @@ def test_processor_input_fock_state_with_loss():
     assert pytest.approx(p.source_distribution) == expected
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
-    source = Source(emission_probability=0.2,
-                    multiphoton_component=0.1, multiphoton_model="indistinguishable",
-                    indistinguishability=0.9)
-    source.simplify_distribution = True
-    p = Processor("Naive", Circuit(4), source)
-    with LogChecker(mock_warn):
-        p.with_input(BasicState([0, 1, 1, 0]))
+def test_processor_input_fock_state_with_all_noise_sources():
+    nm = NoiseModel(brightness=0.2, indistinguishability=0.9, g2=0.1, g2_distinguishable=False)
+    p = Processor("Naive", Circuit(4), nm)
+    p.source.simplify_distribution = True
+    p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
                 '|0,0,2{_:0},0>': 0.0015490319977879558,
@@ -106,24 +102,6 @@ def test_processor_input_state_vector():
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
     assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
-
-
-def test_processor_source_vs_noise_model():
-    LOSS = .4
-    G2 = .06
-
-    # A Processor does not accept both a Source and a NoiseModel input
-    with pytest.raises(ValueError):
-        Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2),
-                  noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-
-    # Check that input states are the same with equivalent parameter
-    input_state = BasicState([1, 1, 1, 1])
-    p_source = Processor("Naive", Circuit(4), source=Source(losses=LOSS, multiphoton_component=G2))
-    p_source.with_input(input_state)
-    p_noise = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=1 - LOSS, g2=G2))
-    p_noise.with_input(input_state)
-    assert_svd_close(p_source.source_distribution, p_noise.source_distribution)
 
 
 def test_processor_probs():
