@@ -38,6 +38,7 @@ from perceval.components import ACircuit, IDetector, get_detection_type, Detecti
 from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel
+from perceval.runtime import cancel_requested
 from ._simulate_detectors import simulate_detectors_sample
 
 
@@ -307,7 +308,7 @@ class NoisySamplingSimulator:
             # Progress handling
             if progress_callback:
                 exec_request = progress_callback(len(output) / max_samples, "sampling")
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                if cancel_requested(exec_request):
                     break
 
             if idx == len(selected_inputs):
