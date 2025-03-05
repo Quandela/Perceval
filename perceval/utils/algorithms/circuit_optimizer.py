@@ -89,14 +89,15 @@ class CircuitOptimizer:
     def optimize(self,
                  target: ACircuit | Matrix,
                  template: ACircuit,
-                 empty_mode_list: list[int] = []
+                 empty_mode_list: list[int] = None
                  ) -> tuple[ACircuit, float]:
         """
         Optimize a template circuit unitary's fidelity with a target matrix or circuit.
 
         :param target: The target unitary circuit or matrix
         :param template: A circuit with variable parameters (supports only beam splitters and phase shifters)
-        :empty_mode_list: list of the modes without input photon, which are ignored during optimisation as this does not alter the results
+        :param empty_mode_list: list of the modes without input photon,
+                                which are ignored during optimisation as this does not alter the results
         :return: A tuple of the best optimized circuit and its fidelity to the target
 
         >>> def mzi(i):
@@ -116,6 +117,9 @@ class CircuitOptimizer:
         if target.is_symbolic():
             raise TypeError("Target must be numeric")
 
+        if empty_mode_list is None:
+            empty_mode_list = []
+
         optimizer = xq.CircuitOptimizer(target, serialize_binary(template), empty_mode_list)
         optimizer.set_max_eval_per_trial(self._max_eval_per_trial)
         optimizer.set_threshold(self._threshold)
@@ -127,6 +131,7 @@ class CircuitOptimizer:
                            template_component_generator_func: Callable[[int], ACircuit] = None,
                            phase_at_output: bool = True,
                            allow_error: bool = False,
+                           empty_mode_list: list[int] = None
                            ) -> ACircuit:
         """
         Optimize a rectangular circuit to reach a target unitary matrix fidelity.
@@ -139,6 +144,8 @@ class CircuitOptimizer:
                                 Otherwise, the layer is at the input (default True)
         :param allow_error: If True, this call will not raise an error when the best fidelity is below threshold
                             Otherwise, raises an error (default False)
+        :param empty_mode_list: list of the modes without input photon,
+                                which are ignored during optimisation as this does not alter the results
         """
         def _gen_ps(i: int):
             return PS(P(f"phL_{i}"))
@@ -152,7 +159,7 @@ class CircuitOptimizer:
             template_component_generator_func,
             phase_shifter_fun_gen=_gen_ps,
             phase_at_output=phase_at_output)
-        result_circuit, fidelity = self.optimize(target, template)
+        result_circuit, fidelity = self.optimize(target, template, empty_mode_list)
         if fidelity < 1 - self._threshold:
             if allow_error:
                 get_logger().warn(f"Optimization converged with poor fidelity ({fidelity})", channel.general)
