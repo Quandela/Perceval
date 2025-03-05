@@ -72,11 +72,11 @@ class SamplesProvider:
         :param progress_callback: Optional callback function with signature progress_callback(progress: float, message: str)
         """
         get_logger().debug(f"Prepare {len(self._weights)} pools of a total of {self._weights.total()} samples",
-                     channel.general)
+                           channel.general)
         for input_state, count in self._weights.items():
             count = min(count, self._max_samples)
             if input_state.n == 0:
-                self._pools[input_state] = [input_state]*count
+                self._pools[input_state] = [input_state] * count
             else:
                 self._backend.set_input_state(input_state)
                 self._pools[input_state] = self._backend.samples(count)
@@ -157,6 +157,7 @@ class SamplesProvider:
         if not len(self._pools[input_state]):
             self._compute_samples(input_state)
         return self._pools[input_state].pop()
+
 
 class NoisySamplingSimulator:
     """
@@ -317,7 +318,8 @@ class NoisySamplingSimulator:
                 else:
                     while True:  # Actually a do... while
                         generated = noisy_input[0].generate_samples(batch_size, noisy_input[1])
-                        selected_inputs, new_rejected, shots = self._filter_generated_inputs(generated, shots, max_shots)
+                        selected_inputs, new_rejected, shots = self._filter_generated_inputs(generated, shots,
+                                                                                             max_shots)
                         not_selected_physical += new_rejected
 
                         if len(selected_inputs):
@@ -374,7 +376,7 @@ class NoisySamplingSimulator:
         max_p is used to compute a threshold to ignore non-probable input states.
         """
         if self._detectors:
-            assert len(self._detectors) == svd.m,\
+            assert len(self._detectors) == svd.m, \
                 f"State length ({svd.m}) and detector count ({len(self._detectors)}) do not match"
         zpp = 0
         max_p = 0
@@ -409,6 +411,53 @@ class NoisySamplingSimulator:
             channel.general)
         return new_input, physical_perf
 
+    def _prepare_provider(self, provider: SamplesProvider,
+                          svd: SVDistribution | tuple[Source, BasicState],
+                          max_samples: int,
+                          max_shots: int,
+                          progress_callback: callable):
+        source_defined = isinstance(svd, tuple)
+        pre_physical_perf = 1
+
+        if source_defined:
+            source, bs_input = svd
+            n = bs_input.n
+            first_batch = provider.estimate_weights_from_source(source, bs_input, max_samples, max_shots,
+                                                                self._min_detected_photons_filter)
+            if not len(first_batch):
+                first_batch = None
+
+        else:
+            prepare_samples = self.compute_samples(max_samples, max_shots)
+            n = svd.n_max
+            if prepare_samples:
+                zpp, max_p = self._check_input_svd(svd)
+                svd, pre_physical_perf = self._preprocess_input_state(svd, max_p,
+                                                                      prepare_samples)  # Beware svd is now a BSD
+                if self._min_detected_photons_filter >= 2 and max_shots is not None:
+                    # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
+                    max_shots *= pre_physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
+                    prepare_samples = min(max_shots, prepare_samples)
+
+            if prepare_samples:  # Value may have changed
+                provider.estimate_weights_from_distribution(svd, prepare_samples)
+                first_batch = []
+            else:
+                first_batch = None
+
+        # Prepare pools of pre-computed samples
+        provider.prepare(progress_callback)
+
+        return first_batch, pre_physical_perf, n, max_shots, svd
+
+    @staticmethod
+    def compute_samples(max_samples: int, max_shots: int) -> int:
+        prepare_samples = max_samples
+        if max_shots is not None:
+            prepare_samples = min(max_samples, max_shots)
+
+        return prepare_samples
+
     def samples(self,
                 svd: SVDistribution | tuple[Source, BasicState],
                 max_samples: int,
@@ -430,13 +479,6 @@ class NoisySamplingSimulator:
         if not check_heralds_detectors(self._heralds, self._detectors):
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
 
-        # Choose a consistent samples limit
-        prepare_samples = max_samples
-        if max_shots is not None:
-            prepare_samples = min(max_samples, max_shots)
-        if prepare_samples == 0:
-            return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
-
         source_defined = isinstance(svd, tuple)
 
         # The best case scenario is a perfect sampling => use the "highway" code
@@ -447,33 +489,20 @@ class NoisySamplingSimulator:
             if not only_input.has_annotations:
                 get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call",
                                    channel.general)
+                # Choose a consistent samples limit
+                prepare_samples = self.compute_samples(max_samples, max_shots)
+                if prepare_samples == 0:
+                    return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
                 return self._perfect_sampling_no_selection(only_input, prepare_samples, progress_callback)
 
         provider = SamplesProvider(self._backend)
         provider.sleep_between_batches = self.sleep_between_batches
 
-        if source_defined:
-            source, bs_input = svd
-            n = bs_input.n
-            pre_physical_perf = 1
-            first_batch = provider.estimate_weights_from_source(source, bs_input, max_samples, max_shots,
-                                                                self._min_detected_photons_filter)
-            if not len(first_batch):
-                return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
+        first_batch, pre_physical_perf, n, max_shots, svd = self._prepare_provider(provider, svd, max_samples,
+                                                                                   max_shots, progress_callback)
 
-        else:
-            n = svd.n_max
-            zpp, max_p = self._check_input_svd(svd)
-            svd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)  # Beware svd is now a BSD
-            if self._min_detected_photons_filter >= 2 and max_shots is not None:
-                # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
-                max_shots *= pre_physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
-                prepare_samples = min(max_shots, prepare_samples)
-            provider.estimate_weights_from_distribution(svd, prepare_samples)
-            first_batch = []
-
-        # Prepare pools of pre-computed samples
-        provider.prepare(progress_callback)
+        if first_batch is None:
+            return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
 
         res = self._noisy_sampling(svd, provider, max_samples, max_shots, det_type, first_batch, progress_callback)
         res['physical_perf'] *= pre_physical_perf
