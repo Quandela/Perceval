@@ -30,8 +30,8 @@ from __future__ import annotations
 
 import os
 
+import perceval as pcvl
 from perceval.utils.logging import get_logger, channel, deprecated
-from .remote_config import RemoteConfig
 
 from ..utils import PersistentData, FileFormat
 
@@ -112,4 +112,4 @@ def save_token(token: str):
     token_provider.force_token(token)
     token_provider.save_token()
 
-    RemoteConfig.set_token(token)
+    pcvl.runtime.remote_config.RemoteConfig.set_token(token)
