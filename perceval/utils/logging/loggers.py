@@ -105,7 +105,7 @@ class ExqaliburLogger(ALogger):
         else:
             exq_log.initialize()
 
-        self.apply_config(LoggerConfig())
+        self._configure_logger(LoggerConfig())
         exq_log.enable_console()
 
     def _configure_logger(self, logger_config: LoggerConfig):
@@ -180,7 +180,7 @@ class ExqaliburLogger(ALogger):
 class PythonLogger(ALogger):
     def __init__(self) -> None:
         self._logger = py_log.getLogger()
-        self.apply_config(LoggerConfig())
+        self._set_log_levels(LoggerConfig())
         self._logger.addFilter(self._message_has_to_be_logged)
 
     def _get_levelno(self, level_name):
@@ -197,13 +197,16 @@ class PythonLogger(ALogger):
         else:
             return 60
 
+    def _set_log_levels(self, config: LoggerConfig):
+        self._level = {
+            name: self._get_levelno(channel["level"]) for name, channel in config[_CHANNELS].items()
+        }
+
     def apply_config(self, config: LoggerConfig):
         if not config.python_logger_is_enabled():
             warnings.warn(UserWarning(
                 "Cannot change type of logger from logger.apply_config, use perceval.utils.apply_config instead"))
-        self._level = {
-            name: self._get_levelno(channel["level"]) for name, channel in config[_CHANNELS].items()
-        }
+        self._set_log_levels(config)
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:
