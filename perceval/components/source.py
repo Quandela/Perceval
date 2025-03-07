@@ -289,7 +289,7 @@ class Source:
                 if dist_list[dist_index]:
                     photons.append(signal_state)
                 else:
-                    photons.append(BasicState([1], {0: [f"_:{self.get_tag("discernability_tag", add=True)}"]}))
+                    photons.append(BasicState([1], {0: [f"_:{self.get_tag('discernability_tag', add=True)}"]}))
                 dist_index += 1
 
             for _ in range(event[1]):
