@@ -114,7 +114,7 @@ def test_remote_config_from_file():
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access(mock_warn):
+def test_token_file_access():
     remote_config = RemoteConfigForTest()
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
