@@ -205,6 +205,8 @@ class PS(ACircuit):
     def get_variables(self):
         out = {}
         self._populate_parameters(out, "phi")
+        if self._max_error:
+            self._populate_parameters(out, "max_error")
         return out
 
     def describe(self):
