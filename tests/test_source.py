@@ -26,11 +26,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from collections import defaultdict
 
 import pytest
 import math
 
-from perceval import BSDistribution
+from perceval import BSDistribution, StateVector, filter_distribution_photon_count
 from perceval.components import Source
 from perceval.utils import BasicState
 from perceval.utils.conversion import samples_to_probs
@@ -153,3 +154,55 @@ def test_source_sample():
     assert nb_2p > nb_1p
     assert nb_2p > nb_3p
     assert nb_1p > nb_3p
+
+
+def test_source_table():
+    brightness = .875
+    g2 = .25  # Values chosen so probabilities are "round" values
+    hom = 1
+    losses = 0.1
+
+    s = Source(brightness, g2, hom, losses)
+
+    # Works because there is no HOM.
+    # Doesn't work with HOM as we sum up some g2 and HOM in the same annotations in source.generate_distribution
+    def bsd_to_prob_table(bsd) -> dict:
+        res = defaultdict(float)
+
+        for bs, p in bsd.items():
+            signal = 0
+            g2_alone = 0
+            g2_signal = 0
+
+            for m in range(bs.m):
+                trunc = bs[m:m + 1]  # keeps the annotations
+
+                if trunc.n == 1:
+                    val = int(trunc.get_photon_annotation(0).str_value("_")) if bs.has_annotations else 0
+                    if val == 0:
+                        signal += 1
+                    else:
+                        g2_alone += 1
+
+                elif trunc.n == 2:
+                    g2_signal += 1
+
+            res[(signal, g2_alone, g2_signal)] += p
+
+        return res
+
+    true_svd = s.generate_distribution(BasicState([1, 1]))
+    true_bsd = BSDistribution({sv[0]: p for sv, p in true_svd.items()})
+
+    prob_table, phys_perf, zpp = s._compute_prob_table(2)
+
+    assert prob_table == pytest.approx(bsd_to_prob_table(true_bsd))
+    assert phys_perf == pytest.approx(1)
+    assert zpp == pytest.approx(true_svd[StateVector([0, 0])])
+
+    truncated_svd, perf = filter_distribution_photon_count(true_bsd, 2)
+
+    prob_table, phys_perf, zpp = s._compute_prob_table(2, 2)
+    assert prob_table == pytest.approx(bsd_to_prob_table(truncated_svd))
+    assert phys_perf == pytest.approx(perf)
+    assert zpp == pytest.approx(true_svd[StateVector([0, 0])])

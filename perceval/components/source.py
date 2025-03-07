@@ -82,6 +82,7 @@ class Source:
 
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
                                              # time-consuming for larger distributions)
+        self._prob_table = None
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
@@ -193,6 +194,69 @@ class Source:
         if self.simplify_distribution and self.partially_distinguishable:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
+
+    def _compute_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[dict[tuple[int, int, int], float], float, float]:
+        """
+        Computes the table of probability of getting (i, j, k) events from n wanted photons where
+        i is the number of single signal photon events
+        j is the number of single g2 photon events
+        k is the number of signal + g2 photons events
+
+        Distinguishable photons are still counted as signal.
+
+        :param n: Number of photons wanted.
+        :param min_photons_filter: Minimum number of photons wanted.
+
+        :return: the physical performance and the zero-photon probability
+        """
+
+        p1to1, p2to1, p2to2 = self._get_probs()
+        p_signal = p1to1 + p2to1
+        p_g2 = p2to1
+        p_duo = p2to2
+        p0 = 1 - (p_signal + p_g2 + p_duo)
+
+        # TODO: find a direct formula that would decrease the time complexity to O(n ** 3)
+        def rec(n, min_photons_filter):
+            """
+            Complexity: O(n ** 3) in memory, O(n ** 4) in time.
+            Powers of n in the complexities decrease by 1 if there is no loss, and by 2 if there is no g2."""
+            if n == 0:
+                return {(0, 0, 0): 1}
+
+            res_nm1 = rec(n - 1, min_photons_filter - (2 if p_g2 else 1))
+            res = dict()
+            for i in range(n + 1):
+                for j in range(n + 1 - i if p_g2 else 1):
+                    for k in range(n + 1 - i - j if p_duo else 1):
+                        if i + j + 2 * k >= min_photons_filter:
+                            # TODO: remove low probability events ?
+                            res[(i, j, k)] = res_nm1.get((i - 1, j, k), 0) * p_signal \
+                                             + res_nm1.get((i, j - 1, k), 0) * p_g2 \
+                                             + res_nm1.get((i, j, k - 1), 0) * p_duo \
+                                             + res_nm1.get((i, j, k), 0) * p0
+
+            return res
+
+        prob_table = rec(n, min_photons_filter)
+        phys_perf = sum(prob_table.values())
+        if min_photons_filter:
+            for key, prob in prob_table.items():
+                prob_table[key] = prob / phys_perf
+
+        return prob_table, phys_perf, p0 ** n
+
+    def cache_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[float, float]:
+        """
+        Computes the prob_table. Removes the events having less than min_photons_filter photons.
+        Cache the result.
+
+        :return: the physical performance and the zero-photon probability
+        """
+
+        prob_table, phys_perf, zpp = self._compute_prob_table(n, min_photons_filter)
+        self._prob_table = prob_table
+        return phys_perf, zpp
 
     def generate_samples(self, max_samples: int, expected_input: BasicState) -> BSSamples:
         """
