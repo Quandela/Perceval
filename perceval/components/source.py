@@ -277,13 +277,18 @@ class Source:
 
         first_tag = self.get_tag("discernability_tag")  # Just to avoid growing up too much the complex that represents the tag
 
+        empty_bs = BasicState([0])
+        signal_state = BasicState("|{_:0}>")  # Avoids creating many times the same states
+
         # TODO: parallelize this?
         for event in events:
             photons = []
             for _ in range(event[0]):
                 # signal alone
-                annot = 0 if dist_list[dist_index] else self.get_tag("discernability_tag", add=True)
-                photons.append(BasicState([1], {0: [f"_:{annot}"]}))
+                if dist_list[dist_index]:
+                    photons.append(signal_state)
+                else:
+                    photons.append(BasicState([1], {0: [f"_:{self.get_tag("discernability_tag", add=True)}"]}))
                 dist_index += 1
 
             for _ in range(event[1]):
@@ -300,13 +305,13 @@ class Source:
                 photons.append(BasicState([2], {0: [f"_:{first_photon}", f"_:{second_photon}"]}))
                 dist_index += 1
 
-            photons += [BasicState([0])] * (expected_input.n - len(photons))
+            photons += [empty_bs] * (expected_input.n - len(photons))
             random.shuffle(photons)
 
             index = 0
             final_state = BasicState()
             for n_photons in expected_input:
-                single_mode_state = BasicState([0])
+                single_mode_state = empty_bs
                 for _ in range(n_photons):
                     single_mode_state = single_mode_state.merge(photons[index])
                     index += 1
