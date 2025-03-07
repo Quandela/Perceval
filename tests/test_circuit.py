@@ -31,7 +31,7 @@ import pytest
 from pathlib import Path
 from collections import Counter
 
-from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor, GenericInterferometer
+from perceval import Circuit, P, BasicState, pdisplay, Matrix, BackendFactory, Processor
 from perceval.rendering.pdisplay import pdisplay_circuit, pdisplay_matrix
 from perceval.rendering.format import Format
 from perceval.utils import InterferometerShape

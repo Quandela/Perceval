@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 from ._validated_params import AValidatedParam, ValidatedBool, ValidatedFloat
+from math import pi
 
 
 class NoiseModel:
@@ -42,6 +43,7 @@ class NoiseModel:
     :param g2_distinguishable: g2-generated photons indistinguishability
     :param transmittance: system-wide transmittance (warning, can interfere with the brightness parameter)
     :param phase_imprecision: maximum precision of the phase shifters (0 means infinite precision)
+    :param phase_error: maximum random noise on the phase shifters (in radian)
     """
 
     def __init__(self,
@@ -50,7 +52,8 @@ class NoiseModel:
                  g2: float = None,
                  g2_distinguishable: bool = None,
                  transmittance: float = None,
-                 phase_imprecision: float = None
+                 phase_imprecision: float = None,
+                 phase_error: float = None
                  ):
         # Source parameters
         self._params: dict[str, AValidatedParam] = {}
@@ -64,6 +67,7 @@ class NoiseModel:
 
         # Optical circuit parameter
         self._add_param(ValidatedFloat("phase_imprecision", phase_imprecision, 0, default_value=0))
+        self._add_param(ValidatedFloat("phase_error", phase_error, 0, pi, 0))
 
     def _add_param(self, param: AValidatedParam):
         self._params[param.name] = param
