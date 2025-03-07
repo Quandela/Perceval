@@ -256,9 +256,10 @@ def post_select_statevector(
 
     if heralds is None:
         heralds = {}
-    logical_perf = 1
+    logical_perf = 0
     result = StateVector()
-    for state, ampli in sv:
+    for state in sv.keys():
+        ampli = sv[state]
         heralds_ok = True
         for m, v in heralds.items():
             if state[m] != v:
@@ -267,7 +268,6 @@ def post_select_statevector(
             if not keep_heralds:
                 state = state.remove_modes(list(heralds.keys()))
             result += ampli * state
-        else:
-            logical_perf -= abs(ampli) ** 2
+            logical_perf += abs(ampli) ** 2
     result.normalize()
     return result, logical_perf
