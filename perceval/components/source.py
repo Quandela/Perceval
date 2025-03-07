@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import math
+import random
 
 from exqalibur import BSSamples
 
@@ -258,7 +259,62 @@ class Source:
         self._prob_table = prob_table
         return phys_perf, zpp
 
-    def generate_samples(self, max_samples: int, expected_input: BasicState) -> BSSamples:
+    def _generate_distinguishability(self, n: int):
+        """Generate a random list of booleans of size n such that False means that a given photon is distinguishable
+        and True means that a given photon is indistinguishable."""
+        indistinguishability = math.sqrt(self._indistinguishability)
+
+        return random.choices([True, False], k=n, weights=[indistinguishability, 1 - indistinguishability])
+
+    def _events_to_samples(self, events: list[tuple[int, int, int]], expected_input: BasicState):
+        res = BSSamples()
+        dist_index = 0
+        dist_list = self._generate_distinguishability(sum(event[0] + event[2] for event in events))
+
+        first_tag = self.get_tag("discernability_tag")  # Just to avoid growing up too much the complex that represents the tag
+
+        # TODO: parallelize this?
+        for event in events:
+            photons = []
+            for _ in range(event[0]):
+                # signal alone
+                annot = 0 if dist_list[dist_index] else self.get_tag("discernability_tag", add=True)
+                photons.append(BasicState([1], {0: [f"_:{annot}"]}))
+                dist_index += 1
+
+            for _ in range(event[1]):
+                # g2 alone
+                second_photon = self.get_tag("discernability_tag", add=True) \
+                    if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
+                photons.append(BasicState([1], {0: [f"_:{second_photon}"]}))
+
+            for _ in range(event[2]):
+                # signal + g2
+                first_photon = 0 if dist_list[dist_index] else self.get_tag("discernability_tag", add=True)
+                second_photon = self.get_tag("discernability_tag", add=True) \
+                    if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
+                photons.append(BasicState([2], {0: [f"_:{first_photon}", f"_:{second_photon}"]}))
+                dist_index += 1
+
+            photons += [BasicState([0])] * (expected_input.n - len(photons))
+            random.shuffle(photons)
+
+            index = 0
+            final_state = BasicState()
+            for n_photons in expected_input:
+                single_mode_state = BasicState([0])
+                for _ in range(n_photons):
+                    single_mode_state = single_mode_state.merge(photons[index])
+                    index += 1
+
+                final_state *= single_mode_state
+
+            res.append(final_state)
+            self._context["discernability_tag"] = first_tag
+
+        return res
+
+    def _generate_samples_no_filter(self, max_samples: int, expected_input: BasicState) -> BSSamples:
         """
         Generate samples directly from the source, without generating the source probability distribution first.
 
@@ -268,10 +324,6 @@ class Source:
             as an input. Imperfect ones won't.
         """
         samples = BSSamples()
-
-        if self.is_perfect():
-            samples.extend([expected_input] * max_samples)
-            return samples
 
         if not self.partially_distinguishable:
             bsd = self._generate_one_photon_distribution()
@@ -297,6 +349,19 @@ class Source:
                 samples[i] *= new_samples[i]
 
         return samples
+
+    def generate_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> BSSamples:
+        if self.is_perfect():
+            return BSSamples([expected_input] * max_samples)
+
+        if min_detected_photons == 0:
+            return self._generate_samples_no_filter(max_samples, expected_input)
+
+        if self._prob_table is None:
+            self.cache_prob_table(expected_input.n, min_detected_photons)
+
+        events = random.choices(list(self._prob_table.keys()), k=max_samples, weights=self._prob_table.values())
+        return self._events_to_samples(events, expected_input)
 
     def is_perfect(self) -> bool:
         return \

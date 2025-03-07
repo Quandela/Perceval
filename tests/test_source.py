@@ -31,7 +31,8 @@ from collections import defaultdict
 import pytest
 import math
 
-from perceval import BSDistribution, StateVector, filter_distribution_photon_count
+from perceval import BSDistribution, StateVector, filter_distribution_photon_count, SVDistribution, \
+    anonymize_annotations
 from perceval.components import Source
 from perceval.utils import BasicState
 from perceval.utils.conversion import samples_to_probs
@@ -117,7 +118,7 @@ def test_source_multiple_photons_per_mode():
     assert_svd_close(svd, dict2svd({"|0>": (1-ep)**2, "|1>": ep*(1-ep)*2, "|2>": ep**2}))
 
 
-def test_source_sample():
+def test_source_sample_no_filter():
     nb_samples = 200
 
     bs = BasicState("|1,1>")
@@ -134,6 +135,7 @@ def test_source_sample():
     dist = source_2.generate_distribution(bs,0)
     dist = BSDistribution({str(key):value for key,value in dist.items()}) # change SVD to BSD
 
+    # just avoid the warning in tvd_dist
     for el in set(dist.keys()) - set(dist_samples.keys()):
         dist_samples[el] = 0
 
@@ -202,7 +204,59 @@ def test_source_table():
 
     truncated_svd, perf = filter_distribution_photon_count(true_bsd, 2)
 
-    prob_table, phys_perf, zpp = s._compute_prob_table(2, 2)
+    phys_perf, zpp = s.cache_prob_table(2, 2)
+    prob_table = s._prob_table
     assert prob_table == pytest.approx(bsd_to_prob_table(truncated_svd))
     assert phys_perf == pytest.approx(perf)
     assert zpp == pytest.approx(true_svd[StateVector([0, 0])])
+
+@pytest.mark.parametrize("brightness", [1, 0.7])
+@pytest.mark.parametrize("g2", [0, 0.3])
+@pytest.mark.parametrize("hom", [1, 0.6])
+@pytest.mark.parametrize("losses", [0, 0.4])
+@pytest.mark.parametrize("multiphoton_model", ['distinguishable', 'indistinguishable'])
+def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_model):
+    nb_samples = 200
+    min_detected_photons = 2
+
+    bs = BasicState("|1,1>")
+    source_1 = Source(brightness, g2, hom, losses)
+    source_2 = Source(brightness, g2, hom, losses)
+
+    # generate samples directly from the source
+    samples_from_source = source_1.generate_samples(nb_samples, bs, min_detected_photons)
+    assert len(samples_from_source) == nb_samples
+    assert all(bs.n >= min_detected_photons for bs in samples_from_source)
+
+    dist_samples = samples_to_probs(samples_from_source)
+    dist_samples = SVDistribution(dist_samples)
+    dist_samples = anonymize_annotations(dist_samples, annot_tag="_")  # to be able to compare the distributions
+    dist_samples = BSDistribution({sv[0]: value for sv, value in dist_samples.items()})  # change SVD to BSD
+
+    # compare these samples with complete distribution
+    dist = source_2.generate_distribution(bs, 0)
+    dist = anonymize_annotations(dist, annot_tag="_")
+    dist = BSDistribution({str(key): value for key, value in dist.items()})  # change SVD to BSD
+    dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
+
+    # just avoid the warning in tvd_dist
+    for el in set(dist.keys()) - set(dist_samples.keys()):
+        dist_samples[el] = 0
+
+    tvd = tvd_dist(dist_samples, dist)
+    assert tvd == pytest.approx(0.0, abs=0.15)  # total variation between two distributions is less than 0.15
+
+    # number of photons in samples
+    nb_1p = 0
+    nb_2p = 0
+    nb_3p = 0
+    for sample in samples_from_source:
+        if sample.n == 1:
+            nb_1p += 1
+        elif sample.n == 2:
+            nb_2p += 1
+        elif sample.n == 3:
+            nb_3p += 1
+
+    assert nb_1p == 0
+    assert nb_2p > nb_3p
