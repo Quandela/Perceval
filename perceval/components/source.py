@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import math
 import random
+import time
 
 from exqalibur import BSSamples
 
@@ -313,10 +314,16 @@ class Source:
             for n_photons in expected_input:
                 single_mode_state = empty_bs
                 for _ in range(n_photons):
-                    single_mode_state = single_mode_state.merge(photons[index])
+                    if single_mode_state.n:
+                        single_mode_state = single_mode_state.merge(photons[index])
+                    else:
+                        single_mode_state = photons[index]
                     index += 1
 
-                final_state *= single_mode_state
+                if len(final_state):
+                    final_state *= single_mode_state
+                else:
+                    final_state = single_mode_state
 
             res.append(final_state)
             self._context["discernability_tag"] = first_tag
