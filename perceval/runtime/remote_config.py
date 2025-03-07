@@ -27,71 +27,85 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.runtime._token_management import TokenProvider
+import os
+from perceval.runtime._token_management import TokenProvider, _TOKEN_FILE_NAME
 from perceval.utils.persistent_data import PersistentData
 
 REMOTE_KEY = "remote"
 PROXIES_KEY = "proxies"
+TOKEN_KEY = "token"
+
+TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
 
 
-def _get_proxies():
-    config = PersistentData().load_config()
-    proxies = {}
-    if REMOTE_KEY in config:
-        proxies = config[REMOTE_KEY].get(PROXIES_KEY)
-    return proxies
+def _get_deprecated_token():
+    # check if a token is stored in the deprecated 'token' file
+    token_provider = TokenProvider()
+    if token_provider._persistent_data.has_file(_TOKEN_FILE_NAME):
+        return token_provider._from_file()
 
-def _get_token():
-    return TokenProvider().get_token()
 
 class RemoteConfig:
     """Handle the remote configuration"""
-    _proxies = _get_proxies()
-    _token = _get_token()
+    _token_env_var = TOKEN_ENV_VAR
+    _proxies = None
+    _token = None
+
+    def __init__(self):
+        self._persistent_data = PersistentData()
+
+    def _get_remote_config(self, key) -> str | dict[str, str] | None:
+        config = self._persistent_data.load_config()
+        if REMOTE_KEY in config:
+            return config[REMOTE_KEY].get(key)
+        return None
+
+    @staticmethod
+    def _get_token_from_env_var() -> str | None:
+        return os.getenv(RemoteConfig._token_env_var)
 
     @staticmethod
     def set_proxies(proxies: dict[str,str]) -> None:
-        """Set the proxies
-
-        :param proxies: The proxy dict
-        """
         RemoteConfig._proxies = proxies
 
-    @staticmethod
-    def get_proxies() -> dict[str,str]:
-        """Get the current proxies
-
-        :return: Current proxies
-        """
-        return RemoteConfig._proxies
+    def get_proxies(self) -> dict[str,str]:
+        if not RemoteConfig._proxies:
+            RemoteConfig._proxies = self._get_remote_config(PROXIES_KEY)
+        return RemoteConfig._proxies or {}
 
     @staticmethod
     def set_token(token: str) -> None:
-        """Set the token
-
-        :param token: The token
-        """
         RemoteConfig._token = token
 
-    @staticmethod
-    def get_token() -> str:
-        """Get the current token
-
-        :return: Current token
-        """
-        return RemoteConfig._token
+    def get_token(self) -> str:
+        if not RemoteConfig._token:
+            RemoteConfig._token = self._get_token_from_env_var() or self._get_remote_config(TOKEN_KEY) or _get_deprecated_token()
+        return RemoteConfig._token or ""
 
     @staticmethod
-    def save():
-        """Save the current remote configuration
-        """
-        token_provider = TokenProvider()
-        token_provider.force_token(RemoteConfig._token)
-        token_provider.save_token()
+    def set_token_env_var(env_var: str) -> None:
+        RemoteConfig._token_env_var = env_var
+        # reload the token
+        new_token = RemoteConfig._get_token_from_env_var()
+        if new_token:
+            RemoteConfig._token = new_token
 
-        persistent_data = PersistentData()
-        config = persistent_data.load_config()
+    @staticmethod
+    def get_token_env_var() -> str:
+        return RemoteConfig._token_env_var
+
+    @staticmethod
+    def clear_cache():
+        RemoteConfig._proxies = None
+        RemoteConfig._token = None
+
+    def save(self) -> None:
+        """Save the current remote configuration"""
+        config = self._persistent_data.load_config()
         if REMOTE_KEY not in config:
             config[REMOTE_KEY] = {}
+
         config[REMOTE_KEY][PROXIES_KEY] = RemoteConfig._proxies
-        persistent_data.save_config(config)
+        config[REMOTE_KEY][TOKEN_KEY] = RemoteConfig._token
+
+        self._persistent_data.save_config(config)
