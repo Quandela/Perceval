@@ -31,9 +31,13 @@ import os
 import pytest
 import platform
 
+from unittest.mock import patch
+
+import perceval as pcvl
 from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 
 from _mock_persistent_data import RemoteConfigForTest
+from _test_utils import LogChecker
 
 
 
@@ -113,9 +117,9 @@ def test_remote_config_from_file():
     assert remote_config.get_token() == ''
     assert remote_config.get_proxies() == {}
 
-
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access():
+def test_token_file_access(mock_warn):
     remote_config = RemoteConfigForTest()
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
@@ -124,9 +128,10 @@ def test_token_file_access():
 
     os.chmod(directory, 0o000)
 
-    remote_config.set_token(TOKEN_FROM_FILE)
-    remote_config.set_proxies(PROXY_FROM_FILE)
-    remote_config.save()
+    with LogChecker(mock_warn) as warn_log_checker:
+        remote_config.set_token(TOKEN_FROM_FILE)
+        remote_config.set_proxies(PROXY_FROM_FILE)
+        remote_config.save()
 
     os.chmod(directory, 0o777)
 
@@ -141,10 +146,12 @@ def test_token_file_access():
 
     os.chmod(token_file, 0o000)
 
-    temp_remote_config = RemoteConfigForTest()
-    temp_remote_config._persistent_data = persistent_data
-    assert temp_remote_config.get_token() == ''
-    assert temp_remote_config.get_proxies() == {}
+    with warn_log_checker:
+        temp_remote_config = RemoteConfigForTest()
+        temp_remote_config._persistent_data = persistent_data
+        temp_remote_config.clear_cache()
+        assert temp_remote_config.get_token() == ''
+        assert temp_remote_config.get_proxies() == {}
 
     os.chmod(token_file, 0o777)
 
