@@ -103,7 +103,6 @@ class AGateConverter(ABC):
 
     def apply_input_state(self):
         default_input_state = BasicState(self._input_list)
-        # Heralds are not taken into account
         self._converted_processor.min_detected_photons_filter(default_input_state.n)
         self._converted_processor.with_input(default_input_state)
 

@@ -38,6 +38,7 @@ from perceval.utils import BSDistribution, StateVector, SVDistribution, PostSele
 class ISimulator(ABC):
 
     def __init__(self):
+        self._keep_heralds = True
         self._silent = False
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
@@ -67,7 +68,7 @@ class ISimulator(ABC):
 
     def set_min_detected_photons_filter(self, value: int):
         """
-        Set a minimum number of detected photons in the output distribution
+        Set a minimum number of detected photons in the output distribution, counting only the non-heralded modes.
 
         :param value: The minimum photon count
         """
@@ -86,6 +87,22 @@ class ISimulator(ABC):
             self._postselect = postselect
         if heralds is not None:
             self._heralds = heralds
+
+    @property
+    def min_detected_photons_filter(self) -> int:
+        """
+        The simulated minimum number of photons that a state needs to have to be counted as valid.
+        Includes the expected photons from the heralds.
+        """
+        return self._min_detected_photons_filter + sum(self._heralds.values())
+
+    def keep_heralds(self, value: bool):
+        """
+        Tells the simulator to keep or discard ancillary modes in output states
+
+        :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
+        """
+        self._keep_heralds = value
 
 
 class ASimulatorDecorator(ISimulator, ABC):
@@ -121,18 +138,18 @@ class ASimulatorDecorator(ISimulator, ABC):
     def _postprocess_bsd(self, results: BSDistribution):
         results = self._postprocess_bsd_impl(results)
         physical_perf = 1
-        if self._min_detected_photons_filter:
-            results, physical_perf = filter_distribution_photon_count(results, self._min_detected_photons_filter)
+        if self.min_detected_photons_filter:
+            results, physical_perf = filter_distribution_photon_count(results, self.min_detected_photons_filter)
         logical_perf = 1
         if self._postselect is not None or self._heralds is not None:
             # Only at last layer since postselect and heralds are not transmitted
-            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds)
+            results, logical_perf = post_select_distribution(results, self._postselect, self._heralds, self._keep_heralds)
         return results, logical_perf, physical_perf
 
     def _postprocess_sv(self, sv: StateVector) -> StateVector:
         sv = self._postprocess_sv_impl(sv)
         if self._postselect is not None or self._heralds is not None:
-            sv, _ = post_select_statevector(sv, self._postselect, self._heralds)
+            sv, _ = post_select_statevector(sv, self._postselect, self._heralds, self._keep_heralds)
         return sv
 
     def set_circuit(self, circuit, m = None):
