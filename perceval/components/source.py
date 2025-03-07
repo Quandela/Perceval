@@ -84,6 +84,8 @@ class Source:
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
                                              # time-consuming for larger distributions)
         self._prob_table = None
+        self._prob_table_n = None
+        self._prob_table_filter = None
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
@@ -208,7 +210,7 @@ class Source:
         :param n: Number of photons wanted.
         :param min_photons_filter: Minimum number of photons wanted.
 
-        :return: the physical performance and the zero-photon probability
+        :return: the probability table, the physical performance, and the zero-photon probability
         """
 
         p1to1, p2to1, p2to2 = self._get_probs()
@@ -257,6 +259,8 @@ class Source:
 
         prob_table, phys_perf, zpp = self._compute_prob_table(n, min_photons_filter)
         self._prob_table = prob_table
+        self._prob_table_n = n
+        self._prob_table_filter = min_photons_filter
         return phys_perf, zpp
 
     def _generate_distinguishability(self, n: int):
@@ -357,7 +361,7 @@ class Source:
         if min_detected_photons == 0:
             return self._generate_samples_no_filter(max_samples, expected_input)
 
-        if self._prob_table is None:
+        if self._prob_table is None or expected_input.n != self._prob_table_n or min_detected_photons != self._prob_table_filter:
             self.cache_prob_table(expected_input.n, min_detected_photons)
 
         events = random.choices(list(self._prob_table.keys()), k=max_samples, weights=self._prob_table.values())
