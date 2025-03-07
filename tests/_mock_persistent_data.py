@@ -63,7 +63,7 @@ class TokenProviderForTest(TokenProvider):
 
     def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
         super().__init__(env_var)
-        self._persistent_data = PersistentDataForTests()
+        self._remote_config._persistent_data = PersistentDataForTests()
 
 
 class RemoteConfigForTest(RemoteConfig):

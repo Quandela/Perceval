@@ -28,8 +28,10 @@
 # SOFTWARE.
 
 import os
-from perceval.runtime._token_management import TokenProvider, _TOKEN_FILE_NAME
-from perceval.utils.persistent_data import PersistentData
+
+from perceval.utils import FileFormat
+from perceval.utils.logging import channel, get_logger
+from perceval.utils.persistent_data import PersistentData, _CONFIG_FILE_NAME
 
 REMOTE_KEY = "remote"
 PROXIES_KEY = "proxies"
@@ -37,12 +39,7 @@ TOKEN_KEY = "token"
 
 TOKEN_ENV_VAR = "PCVL_CLOUD_TOKEN"
 
-
-def _get_deprecated_token():
-    # check if a token is stored in the deprecated 'token' file
-    token_provider = TokenProvider()
-    if token_provider._persistent_data.has_file(_TOKEN_FILE_NAME):
-        return token_provider._from_file()
+DEPRECATED_TOKEN_FILENAME = "token"
 
 
 class RemoteConfig:
@@ -53,6 +50,20 @@ class RemoteConfig:
 
     def __init__(self):
         self._persistent_data = PersistentData()
+
+    def _get_deprecated_token(self):
+        # check if a token is stored in the deprecated 'token' file
+        token = None
+        if self._persistent_data.has_file(DEPRECATED_TOKEN_FILENAME):
+            get_logger().warn(
+                f"The token should now be saved into '{_CONFIG_FILE_NAME}' instead of '{DEPRECATED_TOKEN_FILENAME}'."
+                f"Use RemoteConfig class methods `set_token` then `save` to save the token into {_CONFIG_FILE_NAME}."
+                f"The file '{DEPRECATED_TOKEN_FILENAME}' is deprecated.", channel.user)
+            try:
+                token = self._persistent_data.read_file(DEPRECATED_TOKEN_FILENAME, FileFormat.TEXT)
+            except OSError:
+                get_logger().warn("Cannot read token persistent file", channel.user)
+        return token
 
     def _get_remote_config(self, key) -> str | dict[str, str] | None:
         config = self._persistent_data.load_config()
@@ -79,7 +90,7 @@ class RemoteConfig:
 
     def get_token(self) -> str:
         if not RemoteConfig._token:
-            RemoteConfig._token = self._get_token_from_env_var() or self._get_remote_config(TOKEN_KEY) or _get_deprecated_token()
+            RemoteConfig._token = self._get_token_from_env_var() or self._get_remote_config(TOKEN_KEY) or self._get_deprecated_token()
         return RemoteConfig._token or ""
 
     @staticmethod

@@ -28,16 +28,9 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import os
+from perceval.utils.logging import deprecated
 
-import perceval as pcvl
-from perceval.utils.logging import get_logger, channel, deprecated
-
-from ..utils import PersistentData, FileFormat
-
-from perceval.utils.persistent_data import _CONFIG_FILE_NAME
-
-_TOKEN_FILE_NAME = "token"
+from perceval.runtime.remote_config import RemoteConfig
 
 
 class TokenProvider:
@@ -49,33 +42,22 @@ class TokenProvider:
     - File on the disk
     """
 
-    _CACHED_TOKEN = None
-
     def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
         """
         :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
         :param file_path: Path to search for a file containing a token (default None)
         """
-        self._env_var = env_var
-        self._persistent_data = PersistentData()
+        self._remote_config = RemoteConfig()
+        self._remote_config.clear_cache()
+        self._remote_config.set_token_env_var(env_var)
+
+    @property
+    def _persistent_data(self):
+        return self._remote_config._persistent_data
 
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `_get_token_from_env_var`")
     def _from_environment_variable(self) -> str | None:
-        if not self._env_var:
-            return None
-        TokenProvider._CACHED_TOKEN = os.getenv(self._env_var)
-        return TokenProvider._CACHED_TOKEN
-
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class methods `set_token` then `save` to save "
-                                         f"the token into {_CONFIG_FILE_NAME} instead of {_TOKEN_FILE_NAME}")
-    def _from_file(self) -> str | None:
-        token = None
-        if self._persistent_data.has_file(_TOKEN_FILE_NAME):
-            try:
-                token = self._persistent_data.read_file(_TOKEN_FILE_NAME, FileFormat.TEXT)
-            except OSError:
-                get_logger().warn("Cannot read token persistent file", channel.user)
-        return token
+        return self._remote_config._get_token_from_env_var()
 
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `get_token`")
     def get_token(self) -> str | None:
@@ -83,33 +65,33 @@ class TokenProvider:
 
         :return: A token, or None if no token was found
         """
-        return TokenProvider._CACHED_TOKEN or self._from_environment_variable() or self._from_file()
+        token = self._remote_config.get_token()
+        if token != "":
+            return token
+        return None
 
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class methods `set_token` then `save`")
     def save_token(self):
         """Save the current cache token
         """
-        if self._persistent_data.is_writable():
-            self._persistent_data.write_file(_TOKEN_FILE_NAME, TokenProvider._CACHED_TOKEN, FileFormat.TEXT)
-        else:
-            get_logger().warn("Can't save token", channel.user)
+        self._remote_config.save()
 
     @staticmethod
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `clear_cache`")
     def clear_cache():
         """Clear the cached token"""
-        TokenProvider._CACHED_TOKEN = None
+        RemoteConfig.clear_cache()
 
     @property
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `get_token`")
     def cache(self) -> str | None:
-        return TokenProvider._CACHED_TOKEN
+        return self._remote_config._token
 
     @staticmethod
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `set_token`")
     def force_token(token: str):
         """Force a token to be used (and provided to callers)"""
-        TokenProvider._CACHED_TOKEN = token
+        RemoteConfig.set_token(token)
 
 
 @deprecated(version="0.13.0", reason="Use instead RemoteConfig class methods `set_token` then `save`")
@@ -121,5 +103,3 @@ def save_token(token: str):
     token_provider = TokenProvider()
     token_provider.force_token(token)
     token_provider.save_token()
-
-    pcvl.runtime.remote_config.RemoteConfig.set_token(token)
