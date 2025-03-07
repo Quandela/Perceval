@@ -45,7 +45,7 @@ class RunningStatus(Enum):
     UNKNOWN = 7
 
     @staticmethod
-    def from_server_response(res: str):
+    def from_server_response(res: str) -> RunningStatus:
         if res == 'completed':
             return RunningStatus.SUCCESS
         else:
@@ -54,6 +54,13 @@ class RunningStatus(Enum):
             except KeyError:
                 get_logger().warn(f"Unknown job running status: {res}", channel.user)
                 return RunningStatus.UNKNOWN
+
+    @staticmethod
+    def to_server_response(status: RunningStatus) -> str:
+        if status == RunningStatus.SUCCESS:
+            return 'completed'
+        else:
+            return status.name.lower()
 
 class JobStatus:
     def __init__(self):

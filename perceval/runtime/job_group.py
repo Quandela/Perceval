@@ -27,15 +27,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import json
+import time
+from datetime import datetime
+from tqdm import tqdm
+
 from perceval.runtime import Job, RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
-import os
-import json
-from datetime import datetime
-import time
-from tqdm import tqdm
 
 
 FILE_EXT_JGRP = 'jgrp'
@@ -63,7 +64,10 @@ class JobGroup:
 
     def __init__(self, name: str):
         self._name = name
-        self._group_info = dict()
+        now: datetime = datetime.now()
+        self.created_date = now
+        self.modified_date = now
+        self._jobs: list[RemoteJob] = []
         self._file_path = os.path.join(JobGroup._DIR_PATH, f"{self._name}.{FILE_EXT_JGRP}")
 
         if self._exists_on_disk(name):
@@ -71,7 +75,7 @@ class JobGroup:
                               channel.user)
             self._load_job_group()
         else:
-            self._create_job_group()
+            self._write_to_file()
 
     @property
     def name(self) -> str:
@@ -81,60 +85,55 @@ class JobGroup:
         return self._name
 
     @property
-    def created_date(self) -> datetime:
-        """
-        Date time of JobGroup creation
-        """
-        return datetime.strptime(self._group_info['created_date'], DATE_TIME_FORMAT)
-
-    @property
-    def modified_date(self) -> datetime:
-        """
-        Date time of the latest JobGroup change
-        """
-        return datetime.strptime(self._group_info['modified_date'], DATE_TIME_FORMAT)
-
-    @property
-    def list_remote_jobs(self) -> list[RemoteJob]:
+    def remote_jobs(self) -> list[RemoteJob]:
         """
         Returns a chronologically ordered list of RemoteJobs in the group.
         Jobs never sent to the cloud will be represented by None.
         """
-        list_rj = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] is not None:
-                rj = self._recreate_remote_job(job_entry)
-                list_rj.append(rj)
-            else:
-                list_rj.append(None)
+        return [job if job.was_sent else None for job in self._jobs]
 
-        return list_rj
+    def to_dict(self) -> dict:
+        group_data = {'created_date': self.created_date.strftime(DATE_TIME_FORMAT),
+                      'modified_date': self.modified_date.strftime(DATE_TIME_FORMAT),
+                      'job_group_data': []}
+        for job in self._jobs:
+            dict_job = job.to_dict()
+            group_data['job_group_data'].append(dict_job)
+        return group_data
 
-    def _create_job_group(self):
-        """
-        Saves information for a new job group on disk using PersistentData()
-        """
-        JobGroup._PERSISTENT_DATA.create_sub_directory(JGRP_DIR_NAME)  # create directory and validate permissions
+    def _from_dict(self, group_data: dict) -> None:
+        self.created_date = datetime.strptime(group_data['created_date'], DATE_TIME_FORMAT)
+        self.modified_date = datetime.strptime(group_data['modified_date'], DATE_TIME_FORMAT)
+        for job_entry in group_data['job_group_data']:
+            self._jobs.append(self._build_remote_job(job_entry))
 
-        now = datetime.now()
-        self._group_info['created_date'] = now.strftime(DATE_TIME_FORMAT)
-        self._group_info['job_group_data'] = []
-        self._write_to_file(now)
-
-    def _write_to_file(self, modified: datetime = None):
+    def _write_to_file(self) -> None:
         """
         Writes job group data to disk
         """
-        if modified is None:
-            modified = datetime.now()
-        self._group_info['modified_date'] = modified.strftime(DATE_TIME_FORMAT)
-        JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self._group_info), FileFormat.TEXT)
+        self.modified_date = datetime.now()
+        JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self.to_dict()), FileFormat.TEXT)
 
-    def _load_job_group(self):
+    def _load_job_group(self) -> None:
         """
         Creates a Job Group by loading an existing one from file
         """
-        self._group_info = json.loads(JobGroup._PERSISTENT_DATA.read_file(self._file_path, FileFormat.TEXT))
+        group_data = json.loads(JobGroup._PERSISTENT_DATA.read_file(self._file_path, FileFormat.TEXT))
+
+        self._from_dict(group_data)
+
+    @staticmethod
+    def _build_remote_job(job_entry: dict) -> RemoteJob:
+        """
+        Returns a RemoteJob object recreated using its id and platform metadata
+        """
+        platform_metadata = job_entry['metadata']
+        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
+
+        rpc_handler = RPCHandler(platform_metadata['platform'],
+                                 platform_metadata['url'], user_token)
+
+        return RemoteJob.from_dict(job_entry, rpc_handler)
 
     @staticmethod
     def list_existing() -> list[str]:
@@ -152,76 +151,38 @@ class JobGroup:
         """
         return JobGroup._PERSISTENT_DATA.has_file(os.path.join(JobGroup._DIR_PATH, name + '.' + FILE_EXT_JGRP))
 
-    def add(self, job_to_add: Job, **kwargs):
+    def add(self, job_to_add: Job, **kwargs) -> None:
         """
         Adds information of the new RemoteJob to an existing Group.
         Saves the data in a chronological order in the group (each entry is
         a dictionary of necessary information - status, id, body, metadata)
 
         :param job_to_add: a remote job to add to the list of existing job group
+        :param kwargs: parameters to pass to the remote job, at execution
         """
         if not isinstance(job_to_add, RemoteJob):
             raise TypeError(f'Only a RemoteJob can be added to a JobGroup (got {type(job_to_add)})')
 
         # Reject adding a duplicate RemoteJob
-        curr_grp_data = self._group_info['job_group_data']
-        curr_job_ids = [data['id'] for data in curr_grp_data if data['id'] is not None]
-
-        if job_to_add.id in curr_job_ids:
+        if job_to_add.id and job_to_add.id in [job.id for job in self._jobs]:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
-
-        job_info = dict()
-        job_info['id'] = job_to_add.id
-
-        if job_to_add.id is None:
-            job_info['status'] = None  # set status to None for Jobs not sent to cloud
-            job_info['body'] = job_to_add._create_payload_data(**kwargs)  # Save job payload to launch later on cloud
-        else:
-            job_info['status'] = job_to_add.status()
-
-        # save metadata to recreate remote jobs
-        job_info['metadata'] = {'headers': job_to_add._rpc_handler.headers,
-                                'platform': job_to_add._rpc_handler.name,
-                                'url': job_to_add._rpc_handler.url}
-
-        self._group_info['job_group_data'].append(job_info)  # save changes in object
+        if kwargs:
+            job_to_add.set_args(**kwargs)
+        self._jobs.append(job_to_add)
         self._write_to_file()
 
-    def _collect_job_statuses(self) -> list:
+    def _update_job_statuses(self) -> list:
         """
         Lists through all jobs in the group and returns a list of status
         If a status is changed from existing in file, that entry is
         updated with new information
         """
-        status_jobs_in_group = []
-
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] not in ['SUCCESS', None]:
-                rj = self._recreate_remote_job(job_entry)
-                job_entry['status'] = rj.status()  # update with current status
-
-            status_jobs_in_group.append(job_entry['status'])
-
-        self._write_to_file()  # rewrites the group information on disk
-
-        return status_jobs_in_group
-
-    @staticmethod
-    def _map_job_status_category(status_entry: str):
-        # status categories
-        status_success = [RunningStatus.SUCCESS]
-        status_sent = [RunningStatus.RUNNING, RunningStatus.WAITING, RunningStatus.CANCEL_REQUESTED]
-        status_other = [RunningStatus.ERROR, RunningStatus.CANCELED, RunningStatus.SUSPENDED, RunningStatus.UNKNOWN]
-
-        if status_entry is None:
-            return 'UNFIN_NOT_SENT'
-        elif RunningStatus[status_entry] in status_sent:
-            return 'UNFIN_SENT'
-        elif RunningStatus[status_entry] in status_success:
-            return 'FIN_SUCCESS'
-        elif RunningStatus[status_entry] in status_other:
-            return 'FIN_OTHER'
-        raise ValueError(f"Unspecified status of job in group with value {status_entry}. Cannot categorize")
+        for job in self._jobs:
+            if job.was_sent:
+                old_status = job._job_status.status.name
+                status = job.status()
+                if old_status != status:
+                    self._write_to_file()
 
     def progress(self) -> dict:
         """
@@ -237,35 +198,37 @@ class JobGroup:
 
         :return: dictionary of the current status of jobs
         """
+        self._update_job_statuses()
+
+        unsent_job_cnt = 0
         success_job_cnt = 0
         other_job_cnt = 0
         sent_job_cnt = 0
-        unsent_job_cnt = 0
 
-        job_statuses = self._collect_job_statuses()
-
-        for status_entry in job_statuses:
-            job_category = JobGroup._map_job_status_category(status_entry)
-            if job_category == 'UNFIN_NOT_SENT':
+        for job in self._jobs:
+            if not job.was_sent:
                 unsent_job_cnt += 1
-            elif job_category == 'UNFIN_SENT':
-                sent_job_cnt += 1
-            elif job_category == 'FIN_SUCCESS':
+                continue
+            status = job._job_status
+            if status.success:
                 success_job_cnt += 1
-            elif job_category == 'FIN_OTHER':
-                other_job_cnt += 1
+                continue
+            if status.waiting or status.running:
+                sent_job_cnt += 1
+                continue
+            other_job_cnt += 1
 
         fin_job_prog = {'successful': success_job_cnt, 'unsuccessful': other_job_cnt}
         unfin_job_prog = {'sent': sent_job_cnt, 'not sent': unsent_job_cnt}
 
         progress = dict()
-        progress['Total'] = len(self._group_info['job_group_data'])
+        progress['Total'] = len(self._jobs)
         progress['Finished'] = [other_job_cnt + success_job_cnt, fin_job_prog]
         progress['Unfinished'] = [sent_job_cnt + unsent_job_cnt, unfin_job_prog]
 
         return progress
 
-    def track_progress(self):
+    def track_progress(self) -> None:
         """
         Displays the status and progress of each job in the group using `tqdm` progress bars.
         Jobs are categorized into "Successful," "Running/Active on Cloud," and
@@ -273,7 +236,7 @@ class JobGroup:
         refreshing their statuses and updating the progress bars to provide real-time feedback
         until no "Running/Waiting" jobs remain on the Cloud.
         """
-        tot_jobs = len(self._group_info['job_group_data'])
+        tot_jobs = len(self._jobs)
 
         # define tqdm bars
         bar_format = '{desc}{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}'
@@ -284,18 +247,21 @@ class JobGroup:
                             leave=True)
 
         while True:
-            job_categories = [self._map_job_status_category(status) for status in self._collect_job_statuses()]
+            self._update_job_statuses()
+
             count_success = 0
             count_running = 0
             count_inactive = 0
 
-            for cat in job_categories:
-                if cat == 'FIN_SUCCESS':
+            for job in self._jobs:
+                status = job._job_status
+                if status.success:
                     count_success += 1
-                elif cat == 'UNFIN_SENT':
+                    continue
+                if status.waiting or status.running:
                     count_running += 1
-                else:
-                    count_inactive += 1
+                    continue
+                count_inactive += 1
 
             success_bar.n = count_success
             active_bar.n = count_running
@@ -314,20 +280,7 @@ class JobGroup:
         inactive_bar.close()
 
     @staticmethod
-    def _recreate_remote_job(job_entry: dict) -> RemoteJob:
-        """
-        Returns a RemoteJob object recreated using its id and platform metadata
-        """
-        platform_metadata = job_entry['metadata']
-        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
-
-        rpc_handler = RPCHandler(platform_metadata['platform'],
-                                 platform_metadata['url'], user_token)
-
-        return RemoteJob.from_id(job_entry['id'], rpc_handler)
-
-    @staticmethod
-    def delete_all_job_groups():
+    def delete_all_job_groups() -> None:
         """
         Delete all existing groups on disk
         """
@@ -337,7 +290,7 @@ class JobGroup:
             JobGroup._PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, each_file + '.' + FILE_EXT_JGRP))
 
     @staticmethod
-    def delete_job_group(name: str):
+    def delete_job_group(name: str) -> None:
         """
         Delete a single group by name
 
@@ -347,7 +300,7 @@ class JobGroup:
         JobGroup._PERSISTENT_DATA.delete_file(file_path)
 
     @staticmethod
-    def delete_job_groups_date(del_before_date: datetime):
+    def delete_job_groups_date(del_before_date: datetime) -> None:
         """
         Delete all saved groups created before a date.
 
@@ -357,7 +310,7 @@ class JobGroup:
         files_to_del = []  # list of files before date to delete
         for jg_name in existing_groups:
             jg = JobGroup(jg_name)
-            jg_datetime = datetime.strptime(jg._group_info['created_date'], DATE_TIME_FORMAT)
+            jg_datetime = datetime.strptime(jg.created_date, DATE_TIME_FORMAT)
             if jg_datetime < del_before_date:
                 files_to_del.append(jg_name)
 
@@ -368,88 +321,84 @@ class JobGroup:
         for f in files_to_del:
             JobGroup.delete_job_group(f)
 
-    def _list_jobs_status_type(self, statuses: list[str]) -> list[RemoteJob]:
+    def _list_jobs_status_type(self, statuses: list[RunningStatus]) -> list[RemoteJob]:
         remote_jobs = []
-        for job_entry in self._group_info['job_group_data']:
-            if job_entry['status'] in statuses:
-                remote_jobs.append(self._recreate_remote_job(job_entry))
+        self._update_job_statuses()
+        for job in self._jobs:
+            if job._job_status.status in statuses:
+                remote_jobs.append(job)
         return remote_jobs
 
     def list_successful_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have run successfully on the cloud.
         """
-        return self._list_jobs_status_type(['SUCCESS'])
+        return self._list_jobs_status_type([RunningStatus.SUCCESS])
 
     def list_active_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that are currently active on the cloud - those with a Running or
         Waiting status.
         """
-        return self._list_jobs_status_type(['RUNNING', 'WAITING'])
+        return self._list_jobs_status_type([RunningStatus.RUNNING, RunningStatus.WAITING])
 
     def list_unsuccessful_jobs(self) -> list[RemoteJob]:
         """
         Returns a list of all RemoteJobs in the group that have run unsuccessfully on the cloud - errored or canceled
         """
-        return self._list_jobs_status_type(['ERROR', 'CANCELED'])
+        return self._list_jobs_status_type([RunningStatus.ERROR, RunningStatus.CANCELED])
 
-    def count_never_sent_jobs(self) -> int:
+    def list_unsent_jobs(self) -> list[RemoteJob]:
         """
-        Returns the number of all RemoteJobs in the group that were never sent to the cloud.
+        Returns a list of all RemoteJobs in the group that have not been sent to the cloud
         """
-        return sum(job_entry['status'] is None for job_entry in self._group_info['job_group_data'])
+        return [job for job in self._jobs if not job.was_sent]
 
-    @staticmethod
-    def _recreate_unsent_remote_job(job_entry):
-        platform_metadata = job_entry['metadata']
-        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
-
-        rpc_handler = RPCHandler(platform_metadata['platform'],
-                                 platform_metadata['url'], user_token)
-        return RemoteJob(request_data=job_entry['body'], rpc_handler=rpc_handler,
-                         job_name=job_entry['body']['job_name'])
-
-    def _launch_jobs(self, rerun: bool, delay: int = None):
+    def _launch_jobs(self, rerun: bool, delay: int = None, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
         :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of to jobs on cloud
         """
+        jobs = None
+        if rerun:
+            jobs = self.list_unsuccessful_jobs()
+        else:
+            jobs = self.list_unsent_jobs()
+        job_nmb = len(jobs)
+
         if delay is not None:
             # Use tqdm to track progress if sequential
             bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
-            if rerun:
-                count = len(self.list_unsuccessful_jobs())
-            else:
-                count = self.count_never_sent_jobs()
 
-            prog = tqdm(total=count, bar_format=bar_format, desc="Successful: 0, Failed: 0")
+            prog = tqdm(total=job_nmb, bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
         count_success = 0
         count_fail = 0
+        for job_idx in range(len(self._jobs)):
+            job = self._jobs[job_idx]
 
-        for job_entry in self._group_info['job_group_data']:
-            if not rerun and job_entry['status'] is None:
-                remote_job = self._recreate_unsent_remote_job(job_entry)
-                remote_job.execute_async()
-            elif rerun and job_entry['status'] in ['ERROR', 'CANCELED']:
-                remote_job = self._recreate_remote_job(job_entry).rerun()
+            if rerun and job.is_failed:
+                job = job.rerun()
+                if replace_failed_jobs:
+                    self._jobs[job_idx] = job
+                else:
+                    self._jobs.append(job)
+            elif not rerun and not job.was_sent:
+                job.execute_async()
             else:
                 continue
-
-            job_entry['id'] = remote_job.id
-            job_entry['status'] = remote_job.status()
 
             self._write_to_file()
 
             if delay is not None:
-                while not remote_job.is_complete:
+                while not job.status.completed:
                     time.sleep(1)
 
-                category = self._map_job_status_category(remote_job.status())
-                if category == 'FIN_SUCCESS':
+                self._write_to_file()  # save that we got a job status update
+
+                if job.status.success:
                     count_success += 1
                 else:
                     count_fail += 1
@@ -457,15 +406,12 @@ class JobGroup:
                 prog.update(1)
                 prog.set_description_str(f"Successful: {count_success}, Failed: {count_fail}")
 
-                if job_entry != self._group_info['job_group_data'][-1]:
-                    time.sleep(delay)  # add delay before launching next job
+                time.sleep(delay)  # add delay before launching next job
 
         if delay is not None:
             prog.close()
 
-        self._write_to_file()
-
-    def run_sequential(self, delay: int):
+    def run_sequential(self, delay: int) -> None:
         """
         Launches the unsent jobs in the group on Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
@@ -474,16 +420,17 @@ class JobGroup:
         """
         self._launch_jobs(rerun=False, delay=delay)
 
-    def rerun_failed_sequential(self, delay: int):
+    def rerun_failed_sequential(self, delay: int, replace_failed_jobs=True) -> None:
         """
         Reruns Failed jobs in the group on the Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
 
         :param delay: number of seconds to wait between re-launching jobs on cloud
+        :param replace_failed_jobs: Whether the new job from rerun replace the failed one, defaults to True
         """
-        self._launch_jobs(rerun=True, delay=delay)
+        self._launch_jobs(rerun=True, delay=delay, replace_failed_jobs=replace_failed_jobs)
 
-    def run_parallel(self):
+    def run_parallel(self) -> None:
         """
         Launches all the unsent jobs in the group on Cloud, running them in parallel.
 
@@ -493,25 +440,30 @@ class JobGroup:
         """
         self._launch_jobs(rerun=False)
 
-    def rerun_failed_parallel(self):
+    def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
         Restart all failed jobs in the group on the Cloud, running them in parallel.
 
         If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
         is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
+
+        :param replace_failed_jobs: Whether the new job from rerun replace the failed one, defaults to True
         """
-        self._launch_jobs(rerun=True)
+        self._launch_jobs(rerun=True, replace_failed_jobs=replace_failed_jobs)
 
     def get_results(self) -> list[dict]:
         """
         Retrieve results for all jobs in the group. It aggregates results by calling the `get_results()`
         method of each job object that have completed successfully.
         """
-        job_list = self.list_remote_jobs
+        self._update_job_statuses()
         results = []
-        for j in job_list:
-            try:
-                results.append(j.get_results())
-            except Exception:
+        for job in self._jobs:
+            if job._job_status.maybe_completed:
+                try:
+                    results.append(job.get_results())
+                except RuntimeError:
+                    results.append(None)
+            else:
                 results.append(None)
         return results
