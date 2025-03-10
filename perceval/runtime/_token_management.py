@@ -28,9 +28,10 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from perceval.utils.logging import deprecated
+from perceval.utils import FileFormat
+from perceval.utils.logging import deprecated, get_logger, channel
 
-from perceval.runtime.remote_config import RemoteConfig
+from perceval.runtime.remote_config import RemoteConfig, DEPRECATED_TOKEN_FILENAME
 
 
 class TokenProvider:
@@ -75,6 +76,11 @@ class TokenProvider:
         """Save the current cache token
         """
         self._remote_config.save()
+        # also save in the old file
+        if self._persistent_data.is_writable():
+            self._persistent_data.write_file(DEPRECATED_TOKEN_FILENAME, self._remote_config._token, FileFormat.TEXT)
+        else:
+            get_logger().warn("Can't save token", channel.user)
 
     @staticmethod
     @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `clear_cache`")

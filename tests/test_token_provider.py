@@ -35,6 +35,7 @@ from unittest.mock import patch
 
 import perceval as pcvl
 from perceval.runtime.remote_config import DEPRECATED_TOKEN_FILENAME
+from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 
 from _mock_persistent_data import TokenProviderForTest
 from _test_utils import LogChecker
@@ -112,26 +113,30 @@ def test_token_file_access(mock_warn):
 
     os.chmod(directory, 0o000)
 
-    with LogChecker(mock_warn) as warn_log_checker:
+    with LogChecker(mock_warn, expected_log_number=2) as warn_log_checker:
         token_provider.force_token(TOKEN_FROM_FILE)
         token_provider.save_token()
 
     os.chmod(directory, 0o777)
 
-    token_file = os.path.join(directory, DEPRECATED_TOKEN_FILENAME)
+    old_token_file = os.path.join(directory, DEPRECATED_TOKEN_FILENAME)
+    new_token_file = os.path.join(directory, _CONFIG_FILE_NAME)
     token_provider.force_token(TOKEN_FROM_FILE)
     token_provider.save_token()
 
     token_provider.clear_cache()
     assert token_provider.get_token() == TOKEN_FROM_FILE
 
-    os.chmod(token_file, 0o000)
+    os.chmod(old_token_file, 0o000)
+    os.chmod(new_token_file, 0o000)
 
-    with warn_log_checker:
+    with LogChecker(mock_warn, expected_log_number=5):
         temp_token_provider = TokenProviderForTest()
-        temp_token_provider._persistent_data = persistent_data
+        temp_token_provider._remote_config._persistent_data = persistent_data
+        temp_token_provider.clear_cache()
         assert temp_token_provider.get_token() is None
 
-    os.chmod(token_file, 0o777)
+    os.chmod(old_token_file, 0o777)
+    os.chmod(new_token_file, 0o777)
 
     persistent_data.clear_all_data()
