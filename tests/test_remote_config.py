@@ -41,13 +41,14 @@ ENV_VAR_KEY = "DUMMY_ENV_VAR"
 TOKEN_FROM_ENV = "DUMMY_TOKEN_FROM_ENV"
 TOKEN_FROM_CACHE = "DUMMY_TOKEN_FROM_CACHE"
 TOKEN_FROM_FILE = "DUMMY_TOKEN_FROM_FILE"
-os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
 
 PROXY_FROM_CACHE = {'https': 'socks5h://USER:PWD@DUMMY_PROXY_FROM_CACHE:1080/'}
 PROXY_FROM_FILE = {'https': 'socks5h://USER:PWD@DUMMY_PROXY_FROM_FILE:1080/'}
 
 
 def test_remote_config_env_var_vs_cache():
+    os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
+
     remote_config = RemoteConfigForTest()
     assert remote_config._get_token_from_env_var() is None
     assert remote_config._token is None

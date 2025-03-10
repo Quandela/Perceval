@@ -40,17 +40,16 @@ from perceval.utils.persistent_data import _CONFIG_FILE_NAME
 from _mock_persistent_data import TokenProviderForTest
 from _test_utils import LogChecker
 
-
-
 MISSING_KEY = "MISSING_ENV_VAR"
 ENV_VAR_KEY = "DUMMY_ENV_VAR"
 TOKEN_FROM_ENV = "DUMMY_TOKEN_FROM_ENV"
 TOKEN_FROM_CACHE = "DUMMY_TOKEN_FROM_CACHE"
 TOKEN_FROM_FILE = "DUMMY_TOKEN_FROM_FILE"
-os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
 
 
 def test_token_provider_env_var_vs_cache():
+    os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
+
     provider = TokenProviderForTest(env_var=MISSING_KEY)
     assert provider._from_environment_variable() is None
     assert provider.cache is None
