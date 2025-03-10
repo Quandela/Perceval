@@ -50,6 +50,21 @@ def test_perfect_sampling(max_samples, max_shots):
         assert output_state.n == 4
 
 
+@pytest.mark.parametrize("max_samples, max_shots", [(100, None), (100, 10), (10, 100)])
+def test_perfect_sampling_source(max_samples, max_shots):
+    size = 8
+    c = Unitary(Matrix.random_unitary(size))
+    sim = NoisySamplingSimulator(Clifford2017Backend())
+    sim.set_circuit(c)
+    input_state = BasicState([1, 0]*4)
+    sampling = sim.samples((Source(), input_state), max_samples, max_shots)
+    assert sampling['physical_perf'] == 1
+    assert sampling['logical_perf'] == 1
+    assert len(sampling['results']) == max_samples if max_shots is None else min(max_samples, max_shots)
+    for output_state in sampling['results']:
+        assert output_state.n == 4
+
+
 def _build_noisy_simulator(size: int):
     c = Unitary(Matrix.random_unitary(size))
     sim = NoisySamplingSimulator(Clifford2017Backend())
@@ -62,6 +77,14 @@ def test_sample_0_samples():
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
     sampling = sim.samples(input_state, 0)
+    assert len(sampling['results']) == 0
+
+
+def test_sample_0_samples_source():
+    sim = _build_noisy_simulator(6)
+    source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
+    input_state = BasicState([1, 0] * 3)
+    sampling = sim.samples((source, input_state), 0)
     assert len(sampling['results']) == 0
 
 
@@ -82,6 +105,28 @@ def test_noisy_sampling():
 
     # test sample_count too
     sampling = sim.sample_count(input_state, 100)
+    assert sampling['physical_perf'] < 1
+    assert sampling['logical_perf'] == 1
+    assert sampling['results'].total() == 100
+
+
+def test_noisy_sampling_source():
+    sim = _build_noisy_simulator(6)
+    source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
+    input_state = BasicState([1, 0] * 3)
+    sampling = sim.samples((source, input_state), 100)
+    assert sampling['physical_perf'] == 1
+    assert sampling['logical_perf'] == 1
+    assert len(sampling['results']) == 100
+
+    sim.set_min_detected_photons_filter(2)
+    sampling = sim.samples((source, input_state), 100)
+    assert sampling['physical_perf'] < 1
+    assert sampling['logical_perf'] == 1
+    assert len(sampling['results']) == 100
+
+    # test sample_count too
+    sampling = sim.sample_count((source, input_state), 100)
     assert sampling['physical_perf'] < 1
     assert sampling['logical_perf'] == 1
     assert sampling['results'].total() == 100
