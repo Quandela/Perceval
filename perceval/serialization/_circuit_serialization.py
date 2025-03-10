@@ -70,6 +70,8 @@ class ComponentSerializer:
     def _serialize(self, ps: comp.PS):
         pb_ps = pb.PhaseShifter()
         pb_ps.phi.CopyFrom(serialize_parameter(ps._phi))
+        if ps._max_error:
+            pb_ps.max_error.CopyFrom(serialize_parameter(ps._max_error))
         self._pb.phase_shifter.CopyFrom(pb_ps)
 
     @dispatch(comp.PERM)

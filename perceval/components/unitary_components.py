@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import math
+import random
 from copy import copy
 from enum import Enum
 
@@ -187,20 +188,27 @@ class PS(ACircuit):
     """Phase shifter"""
     DEFAULT_NAME = "PS"
 
-    def __init__(self, phi):
+    def __init__(self, phi, max_error = 0):
         super().__init__(1)
-        self._phi = self._set_parameter("phi", phi, 0, 2*sp.pi)
+        self._phi = self._set_parameter("phi", phi, 0, 2*math.pi)
+        self._max_error = self._set_parameter("max_error", max_error, 0, math.pi)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
         if use_symbolic:
-            return Matrix([[sp.exp(self._phi.spv*sp.I)]], True)
+            err = self._max_error.spv*random.uniform(-1, 1)
+            phase = self._phi.spv + err
+            return Matrix([[sp.exp(phase * sp.I)]], True)
         else:
-            return Matrix([[math.cos(float(self._phi)) + 1j * math.sin(float(self._phi))]], False)
+            err = float(self._max_error)*random.uniform(-1, 1)
+            phase = float(self._phi) + err
+            return Matrix([[math.cos(phase) + 1j * math.sin(phase)]], False)
 
     def get_variables(self):
         out = {}
         self._populate_parameters(out, "phi")
+        if self._max_error:
+            self._populate_parameters(out, "max_error")
         return out
 
     def describe(self):

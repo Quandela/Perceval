@@ -26,18 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import numpy as np
 import pytest
 from unittest.mock import patch
 
 import perceval as pcvl
 from perceval import BSDistribution
-from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
+from perceval.components import Circuit, Processor, BS, PS, catalog, UnavailableModeException, Port, PortLocation, \
     PERM, Detector
-from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
+from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
 from perceval.backends import Clifford2017Backend
 
-from _test_utils import assert_svd_close, LogChecker
+from _test_utils import LogChecker
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
@@ -244,6 +244,38 @@ def test_phase_quantization():
     p0.noise = nm
     p1.noise = nm
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+
+
+def test_phase_error():
+    error: float = 0.2
+    angle: float = 1
+
+    nm = NoiseModel(phase_error=error)
+    p = Processor("SLOS", PS(phi=angle), noise=nm)
+    c = p.linear_circuit()
+    assert float(c._components[0][1].param("max_error")) == pytest.approx(error)
+    a = c.compute_unitary()[0, 0]
+    assert np.angle(a) != angle
+    assert angle-error <= np.angle(a) <= angle+error
+
+    # When a specific error is directly set on a phase shifter, the NoiseModel does not change the value
+    specific_error: float = 0.3
+    p = Processor("SLOS", PS(phi=angle, max_error=specific_error), noise=nm)
+    c = p.linear_circuit()
+    assert float(c._components[0][1].param("max_error")) == pytest.approx(specific_error)
+    a = c.compute_unitary()[0, 0]
+    assert np.angle(a) != angle
+    assert angle - specific_error <= np.angle(a) <= angle + specific_error
+
+    # Works with symbols too
+    symb_error = "err0"
+    symb_angle = "phi0"
+    p = Processor("SLOS", PS(phi=P(symb_angle), max_error=P(symb_error)), noise=nm)
+    c = p.linear_circuit()
+    err_param = c._components[0][1].param("max_error")
+    assert err_param.is_variable and str(err_param.spv) == symb_error
+    a = c.compute_unitary(use_symbolic=True)[0, 0]
+    assert 'exp(I*' in str(a) and '*err0 + phi0' in str(a)
 
 
 def test_empty_output():
