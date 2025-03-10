@@ -10,6 +10,19 @@ This section lists the major breaking changes introduced.
 Breaking changes in Perceval 0.13
 ---------------------------------
 
+Processor and Simulator :code:`min_detected_photons_filter`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There has been two modifications on the :code:`min_detected_photons_filter` methods of the :ref:`Processor` and :ref:`Simulator` objects:
+
+- The call to :code:`min_detected_photons_filter` is now mandatory for remote computation and noisy local computation.
+  Not setting it was deprecated since perceval 0.11.
+- The value passed as argument now represents the number of **non-heralded** photons, that are added internally.
+  That way, you don't have to count how many heralded photons were added by the gates.
+  Note however that for noisy simulations, passing 0 as argument does no longer guarantees that all states
+  are physically selected if there are heralds, resulting in non-perfect physical perf.
+  You can pass a negative argument such as :code:`- sum(processor.heralds.values())` to prevent any physical filtering.
+
 Source parameter has been removed from Processor and Converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

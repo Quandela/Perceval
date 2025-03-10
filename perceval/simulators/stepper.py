@@ -75,7 +75,7 @@ class Stepper(ISimulator):
         sub_input_state = {sliced_state for state in sv.keys()
                            for sliced_state in (state[min_r:max_r],)
                            if sliced_state not in self._result_dict[key]['_set']
-                           and state[:self._C.m].n >= self._min_detected_photons_filter}
+                           and state[:self._C.m].n >= self.min_detected_photons_filter}
         # get circuit probability for these input_states
         if sub_input_state:
             self._backend.set_circuit(c)
@@ -90,7 +90,7 @@ class Stepper(ISimulator):
         nsv = StateVector()
         # May be faster in c++ (impossible to use comprehension here due to successive additions)
         for state, sv_pa in sv:
-            if state[:self._C.m].n >= self._min_detected_photons_filter:  # Useless to compute if the mode will not be selected
+            if state[:self._C.m].n >= self.min_detected_photons_filter:  # Useless to compute if the mode will not be selected
                 for output_state, prob_ampli in self._result_dict[key][state[min_r:max_r]].items():
                     nsv += state.set_slice(slice(min_r, max_r), output_state) * (prob_ampli * sv_pa)
             else:
@@ -108,7 +108,7 @@ class Stepper(ISimulator):
                 res_bsd[bs] += p_res*p_sv
 
         if detectors:
-            res_bsd, _ = simulate_detectors(res_bsd, detectors, self._min_detected_photons_filter)
+            res_bsd, _ = simulate_detectors(res_bsd, detectors, self.min_detected_photons_filter)
 
         return {"results": res_bsd}
 
