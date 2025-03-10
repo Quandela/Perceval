@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import exqalibur as xq
-from perceval.utils import BasicState, BSDistribution, StateVector
+from perceval.utils import BasicState, BSDistribution, StateVector, global_params
 from perceval.components import ACircuit
 
 from ._abstract_backends import AStrongSimulationBackend
@@ -82,7 +82,9 @@ class SLAPBackend(AStrongSimulationBackend):
         istate = self._input_state
         all_pa = self._stree.all_prob_ampli(istate)
         res = StateVector()
+        threshold = global_params["min_complex_component"] ** 2
         for output_state, pa in zip(self._fock_space, all_pa):
-            res += output_state * pa
-        res.normalize()
+            # Utterly non-optimized. Mask management should be added in the computation
+            if abs(pa) > threshold and (self._mask is None or self._mask.match(output_state)):
+                res += output_state * pa
         return res
