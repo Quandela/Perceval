@@ -30,14 +30,14 @@ import uuid
 from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source, AComponent, AFFConfigurator
+from perceval.components import ACircuit, Processor, AComponent, AFFConfigurator
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
-from ._token_management import TokenProvider
+from .remote_config import RemoteConfig
 
 __process_id__ = uuid.uuid4()
 
@@ -54,11 +54,13 @@ class RemoteProcessor(AProcessor):
             name: str = None,
             token: str = None,
             url: str = QUANDELA_CLOUD_URL,
+            proxies: dict[str,str] = None,
             rpc_handler: RPCHandler = None):
         rp = RemoteProcessor(
             name=name,
             token=token,
             url=url,
+            proxies=proxies,
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
@@ -71,6 +73,7 @@ class RemoteProcessor(AProcessor):
                  name: str = None,
                  token: str = None,
                  url: str = QUANDELA_CLOUD_URL,
+                 proxies: dict[str,str] = None,
                  rpc_handler: RPCHandler = None,
                  m: int = None,
                  noise: NoiseModel = None):
@@ -92,16 +95,19 @@ class RemoteProcessor(AProcessor):
             if name is not None and name != self.name:
                 get_logger().warn(
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
+            self.proxies = rpc_handler.proxies
         else:
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             if token is None:
-                provider = TokenProvider()
-                token = provider.get_token()
+                token = RemoteConfig.get_token()
             if token is None:
                 raise ConnectionError("No token found")
+            if proxies is None:
+                proxies = RemoteConfig.get_proxies()
             self.name = name
-            self._rpc_handler = RPCHandler(self.name, url, token)
+            self.proxies = proxies
+            self._rpc_handler = RPCHandler(self.name, url, token, proxies)
 
         self._specs = {}
         self._perfs = {}

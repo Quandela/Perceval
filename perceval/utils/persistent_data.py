@@ -189,9 +189,7 @@ class PersistentData:
             file_config.update(config)
             self.write_file(_CONFIG_FILE_NAME, json.dumps(file_config), FileFormat.TEXT)
         else:
-            warnings.warn(UserWarning("Can't save token"))
-
-
+            warnings.warn(UserWarning(f"Can't save configuration to {_CONFIG_FILE_NAME} in f{self._directory}."))
 
     def clear_all_data(self):
         """Delete all persistent data except for log
