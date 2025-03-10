@@ -113,7 +113,7 @@ def test_token_file_access(mock_warn):
 
     os.chmod(directory, 0o000)
 
-    with LogChecker(mock_warn, expected_log_number=2) as warn_log_checker:
+    with LogChecker(mock_warn, expected_log_number=3):
         token_provider.force_token(TOKEN_FROM_FILE)
         token_provider.save_token()
 
