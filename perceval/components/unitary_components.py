@@ -197,10 +197,12 @@ class PS(ACircuit):
         self.assign(assign)
         if use_symbolic:
             err = self._max_error.spv*random.uniform(-1, 1)
-            return Matrix([[sp.exp((self._phi.spv + err)*sp.I)]], True)
+            phase = self._phi.spv + err
+            return Matrix([[sp.exp(phase * sp.I)]], True)
         else:
             err = float(self._max_error)*random.uniform(-1, 1)
-            return Matrix([[math.cos(float(self._phi) + err) + 1j * math.sin(float(self._phi) + err)]], False)
+            phase = float(self._phi) + err
+            return Matrix([[math.cos(phase) + 1j * math.sin(phase)]], False)
 
     def get_variables(self):
         out = {}
