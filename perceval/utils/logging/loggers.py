@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import json
+import logging
 import traceback
 import warnings
 import logging as py_log
@@ -178,24 +179,22 @@ class ExqaliburLogger(ALogger):
 
 
 class PythonLogger(ALogger):
-    def __init__(self) -> None:
-        self._logger = py_log.getLogger()
+    _level_mapping = {
+        "debug": 10,
+        "info": 20,
+        "warn": 30,
+        "error": 40,
+        "critical": 50
+    }
+
+    def __init__(self):
+        self._logger = py_log.getLogger("perceval")
         self._set_log_levels(LoggerConfig())
         self._logger.addFilter(self._message_has_to_be_logged)
 
-    def _get_levelno(self, level_name):
-        if level_name == "debug":
-            return 10
-        elif level_name == "info":
-            return 20
-        elif level_name == "warn":
-            return 30
-        elif level_name == "error":
-            return 40
-        elif level_name == "critical":
-            return 50
-        else:
-            return 60
+    @staticmethod
+    def _get_levelno(level_name):
+        return PythonLogger._level_mapping.get(level_name, 60)
 
     def _set_log_levels(self, config: LoggerConfig):
         self._level = {
@@ -210,8 +209,7 @@ class PythonLogger(ALogger):
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:
-            if record.levelno < self._level[record.channel]:
-                return False
+            return record.levelno >= self._level[record.channel]
         return True
 
     def enable_file(self):
@@ -220,27 +218,31 @@ class PythonLogger(ALogger):
     def disable_file(self):
         self.warn("This method have no effect. Use module logging to configure python logger")
 
-    def set_level(self, level: int, channel: exq_log.channel = DEFAULT_CHANNEL):
-        self._config.set_level(level, channel)
-        self._level[channel.name] = self._get_levelno(channel)
+    def set_level(self, level: exq_log.level, channel: exq_log.channel = DEFAULT_CHANNEL):
+        level_int = self._get_levelno(level.name)
+        min_level = min(self._level.values())
+        if level_int < min_level:  # If the expected level is lower than the current min of channel levels,
+            logging.basicConfig(level=level_int)  # we lower it on the ROOT Python logger
+            self._logger.setLevel(level_int)  # and in the stored Python logger instance
+        self._level[channel.name] = level_int
 
     def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        self._logger.debug(f"[debug] {msg}", extra={"channel": channel.name})
+        self._logger.debug(msg, extra={"channel": channel.name})
 
     def info(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        self._logger.info(f"[info] {msg}", extra={"channel": channel.name})
+        self._logger.info(msg, extra={"channel": channel.name})
 
     def warn(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        self._logger.warning(f"[warning] {msg}", extra={"channel": channel.name})
+        self._logger.warning(msg, extra={"channel": channel.name})
 
     def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         self._logger.error(
-            f"[error] {msg}",
+            msg,
             exc_info=exc_info,
             extra={"channel": channel.name})
 
     def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         self._logger.critical(
-            f"[critical] {msg}",
+            msg,
             exc_info=exc_info,
             extra={"channel": channel.name})
