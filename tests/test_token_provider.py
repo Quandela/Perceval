@@ -47,14 +47,14 @@ TOKEN_FROM_CACHE = "DUMMY_TOKEN_FROM_CACHE"
 TOKEN_FROM_FILE = "DUMMY_TOKEN_FROM_FILE"
 
 
-def test_token_provider_env_var_vs_cache():
+def test_token_provider_env_var_vs_cache(tmp_path):
     os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
 
-    provider = TokenProviderForTest(env_var=MISSING_KEY)
+    provider = TokenProviderForTest(tmp_path, env_var=MISSING_KEY)
     assert provider._from_environment_variable() is None
     assert provider.cache is None
 
-    provider = TokenProviderForTest(env_var=ENV_VAR_KEY)
+    provider = TokenProviderForTest(tmp_path, env_var=ENV_VAR_KEY)
     assert provider.get_token() == TOKEN_FROM_ENV
     assert provider.cache == TOKEN_FROM_ENV
 
@@ -70,8 +70,8 @@ def test_token_provider_env_var_vs_cache():
     assert provider._from_environment_variable() is None
 
 
-def test_token_provider_from_file():
-    token_provider = TokenProviderForTest()
+def test_token_provider_from_file(tmp_path):
+    token_provider = TokenProviderForTest(tmp_path)
     persistent_data = token_provider._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
@@ -103,8 +103,8 @@ def test_token_provider_from_file():
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access(mock_warn):
-    token_provider = TokenProviderForTest()
+def test_token_file_access(tmp_path, mock_warn):
+    token_provider = TokenProviderForTest(tmp_path)
     persistent_data = token_provider._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
@@ -130,7 +130,7 @@ def test_token_file_access(mock_warn):
     os.chmod(new_token_file, 0o000)
 
     with LogChecker(mock_warn, expected_log_number=4):
-        temp_token_provider = TokenProviderForTest()
+        temp_token_provider = TokenProviderForTest(tmp_path)
         temp_token_provider._remote_config._persistent_data = persistent_data
         temp_token_provider.clear_cache()
         assert temp_token_provider.get_token() is None

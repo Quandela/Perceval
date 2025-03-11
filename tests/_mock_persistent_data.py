@@ -27,31 +27,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-import uuid
-import tempfile
 
 from perceval.utils import PersistentData, LoggerConfig
 from perceval.utils.logging import ExqaliburLogger, deprecated
 from perceval.runtime._token_management import TokenProvider
 from perceval.runtime.remote_config import RemoteConfig
-
-UNIQUE_PART = uuid.uuid4()
-
-
-class PersistentDataForTests(PersistentData):
-    """
-    Overrides the directory used for persistent data to target a temporary sub-folder.
-    This allows to run tests without removing actual persistent data or risking messing up system or user directories
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._directory = os.path.join(tempfile.gettempdir(), f'perceval-container-{UNIQUE_PART}', 'perceval-quandela')
-        try:
-            self._create_directory()
-        except OSError:
-            pass
 
 
 @deprecated(version="0.13.0", reason="Use RemoteConfigForTest class instead")
@@ -61,9 +41,8 @@ class TokenProviderForTest(TokenProvider):
     This allows to run tests without removing actual persistent data or risking messing up system or user directories
     """
 
-    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
-        super().__init__(env_var)
-        self._remote_config._persistent_data = PersistentDataForTests()
+    def __init__(self, temp_dir, env_var: str = "PCVL_CLOUD_TOKEN"):
+        super().__init__(env_var, RemoteConfigForTest(temp_dir))
 
 
 class RemoteConfigForTest(RemoteConfig):
@@ -72,9 +51,8 @@ class RemoteConfigForTest(RemoteConfig):
     This allows to run tests without removing actual persistent data or risking messing up system or user directories
     """
 
-    def __init__(self):
-        super().__init__()
-        self._persistent_data = PersistentDataForTests()
+    def __init__(self, temp_dir):
+        super().__init__(PersistentData(directory=temp_dir))
 
 
 class LoggerConfigForTest(LoggerConfig):
@@ -83,10 +61,10 @@ class LoggerConfigForTest(LoggerConfig):
     This allows to run tests without removing actual persistent data or risking messing up system or user directories
     """
 
-    def __init__(self):
+    def __init__(self, temp_dir):
         super().__init__()
         self.reset()
-        self._persistent_data = PersistentDataForTests()
+        self._persistent_data = PersistentData(directory=temp_dir)
         self._load_from_persistent_data()
 
 
@@ -96,7 +74,7 @@ class ExqaliburLoggerForTest(ExqaliburLogger):
     This allows to run tests without removing actual persistent data or risking messing up system or user directories
     """
 
-    def __init__(self) -> None:
+    def __init__(self, temp_dir) -> None:
         super().__init__()
-        self._config = LoggerConfigForTest()
-        self._configure_logger()
+        self._config = LoggerConfigForTest(temp_dir)
+        self._configure_logger(self._config)

@@ -46,10 +46,10 @@ PROXY_FROM_CACHE = {'https': 'socks5h://USER:PWD@DUMMY_PROXY_FROM_CACHE:1080/'}
 PROXY_FROM_FILE = {'https': 'socks5h://USER:PWD@DUMMY_PROXY_FROM_FILE:1080/'}
 
 
-def test_remote_config_env_var_vs_cache():
+def test_remote_config_env_var_vs_cache(tmp_path):
     os.environ[ENV_VAR_KEY] = TOKEN_FROM_ENV  # Write a temporary environment variable
 
-    remote_config = RemoteConfigForTest()
+    remote_config = RemoteConfigForTest(tmp_path)
     assert remote_config._get_token_from_env_var() is None
     assert remote_config._token is None
     assert remote_config._proxies is None
@@ -74,8 +74,8 @@ def test_remote_config_env_var_vs_cache():
     assert remote_config._get_token_from_env_var() is None
 
 
-def test_remote_config_from_file():
-    remote_config = RemoteConfigForTest()
+def test_remote_config_from_file(tmp_path):
+    remote_config = RemoteConfigForTest(tmp_path)
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
@@ -115,8 +115,8 @@ def test_remote_config_from_file():
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access():
-    remote_config = RemoteConfigForTest()
+def test_token_file_access(tmp_path):
+    remote_config = RemoteConfigForTest(tmp_path)
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
         pytest.skip("Skipping this test because of an existing user config")
@@ -141,7 +141,7 @@ def test_token_file_access():
 
     os.chmod(token_file, 0o000)
 
-    temp_remote_config = RemoteConfigForTest()
+    temp_remote_config = RemoteConfigForTest(tmp_path)
     temp_remote_config._persistent_data = persistent_data
     temp_remote_config.clear_cache()
     assert temp_remote_config.get_token() == ''

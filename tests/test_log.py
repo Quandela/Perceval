@@ -41,8 +41,8 @@ DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
 
 
 @patch.object(ExqaliburLogger, "apply_config")
-def test_logger_config(mock_apply_config):
-    logger_config = LoggerConfigForTest()
+def test_logger_config(mock_apply_config, tmp_path):
+    logger_config = LoggerConfigForTest(tmp_path)
     logger_config.reset()
     logger_config.save()
     assert dict(logger_config) == DEFAULT_CONFIG

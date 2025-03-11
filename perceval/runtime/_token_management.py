@@ -44,12 +44,12 @@ class TokenProvider:
     """
 
     @deprecated(version="0.13.0", reason=f"Use RemoteConfig class instead of TokenProvider class")
-    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
+    def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN", remote_config: RemoteConfig = RemoteConfig()):
         """
         :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
         :param file_path: Path to search for a file containing a token (default None)
         """
-        self._remote_config = RemoteConfig()
+        self._remote_config = remote_config
         self._remote_config.clear_cache()
         self._remote_config.set_token_env_var(env_var)
 
