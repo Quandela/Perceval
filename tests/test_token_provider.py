@@ -112,7 +112,7 @@ def test_token_file_access(mock_warn):
 
     os.chmod(directory, 0o000)
 
-    with LogChecker(mock_warn, expected_log_number=3):
+    with LogChecker(mock_warn, expected_log_number=1):
         token_provider.force_token(TOKEN_FROM_FILE)
         token_provider.save_token()
 
@@ -129,7 +129,7 @@ def test_token_file_access(mock_warn):
     os.chmod(old_token_file, 0o000)
     os.chmod(new_token_file, 0o000)
 
-    with LogChecker(mock_warn, expected_log_number=5):
+    with LogChecker(mock_warn, expected_log_number=1):
         temp_token_provider = TokenProviderForTest()
         temp_token_provider._remote_config._persistent_data = persistent_data
         temp_token_provider.clear_cache()

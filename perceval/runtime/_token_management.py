@@ -43,6 +43,7 @@ class TokenProvider:
     - File on the disk
     """
 
+    @deprecated(version="0.13.0", reason=f"Use RemoteConfig class instead of TokenProvider class")
     def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN"):
         """
         :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
@@ -56,11 +57,9 @@ class TokenProvider:
     def _persistent_data(self):
         return self._remote_config._persistent_data
 
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `_get_token_from_env_var`")
     def _from_environment_variable(self) -> str | None:
         return self._remote_config._get_token_from_env_var()
 
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `get_token`")
     def get_token(self) -> str | None:
         """Search for a token to provide
 
@@ -71,7 +70,6 @@ class TokenProvider:
             return token
         return None
 
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class methods `set_token` then `save`")
     def save_token(self):
         """Save the current cache token
         """
@@ -83,18 +81,15 @@ class TokenProvider:
             get_logger().warn("Can't save token", channel.user)
 
     @staticmethod
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `clear_cache`")
     def clear_cache():
         """Clear the cached token"""
         RemoteConfig.clear_cache()
 
     @property
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `get_token`")
     def cache(self) -> str | None:
         return self._remote_config._token
 
     @staticmethod
-    @deprecated(version="0.13.0", reason=f"Use instead RemoteConfig class method `set_token`")
     def force_token(token: str):
         """Force a token to be used (and provided to callers)"""
         RemoteConfig.set_token(token)

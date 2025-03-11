@@ -81,6 +81,7 @@ class RemoteProcessor(AProcessor):
         :param name: Platform name
         :param token: Token value to authenticate the user
         :param url: Base URL for the Cloud API to connect to
+        :param proxies: Dictionary mapping protocol to the URL of the proxy
         :param rpc_handler: Inject an already constructed Remote Procedure Call handler (alternative init);
             when doing so, name, token and url are expected to be blank
         :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or

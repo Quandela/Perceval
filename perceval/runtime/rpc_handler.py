@@ -56,6 +56,7 @@ class RPCHandler:
         :param name: name of the plateform
         :param url: api URL to call
         :param token: token used for identification
+        :param proxies: dictionary mapping protocol to the URL of the proxy
         """
         self.name = name
         self.url = url
