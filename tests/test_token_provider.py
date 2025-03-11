@@ -103,7 +103,7 @@ def test_token_provider_from_file(tmp_path):
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access(tmp_path, mock_warn):
+def test_token_file_access(mock_warn, tmp_path):
     token_provider = TokenProviderForTest(tmp_path)
     persistent_data = token_provider._persistent_data
     if persistent_data.load_config():
