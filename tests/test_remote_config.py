@@ -120,9 +120,8 @@ def test_remote_config_from_file(tmp_path):
     assert remote_config.get_proxies() == {}
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_token_file_access(mock_warn, tmp_path):
+def test_token_file_access(tmp_path):
     remote_config = RemoteConfigForTest(tmp_path)
     persistent_data = remote_config._persistent_data
     if persistent_data.load_config():
@@ -131,7 +130,8 @@ def test_token_file_access(mock_warn, tmp_path):
 
     os.chmod(directory, 0o000)
 
-    with LogChecker(mock_warn) as warn_log_checker:
+    with pytest.warns(UserWarning):
+        # warning because config file cannot be saved
         remote_config.set_token(TOKEN_FROM_FILE)
         remote_config.set_proxies(PROXY_FROM_FILE)
         remote_config.save()
@@ -149,7 +149,8 @@ def test_token_file_access(mock_warn, tmp_path):
 
     os.chmod(token_file, 0o000)
 
-    with warn_log_checker:
+    with pytest.warns(UserWarning):
+        # warning because config file cannot be retrieved
         temp_remote_config = RemoteConfigForTest(tmp_path)
         temp_remote_config._persistent_data = persistent_data
         temp_remote_config.clear_cache()

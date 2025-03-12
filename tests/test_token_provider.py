@@ -112,7 +112,8 @@ def test_token_file_access(mock_warn, tmp_path):
 
     os.chmod(directory, 0o000)
 
-    with LogChecker(mock_warn, expected_log_number=1):
+    with pytest.warns(UserWarning) and LogChecker(mock_warn, expected_log_number=1):
+        # warnings because config file cannot be saved and TokenProvider is deprecated
         token_provider.force_token(TOKEN_FROM_FILE)
         token_provider.save_token()
 
@@ -129,7 +130,8 @@ def test_token_file_access(mock_warn, tmp_path):
     os.chmod(old_token_file, 0o000)
     os.chmod(new_token_file, 0o000)
 
-    with LogChecker(mock_warn, expected_log_number=4):
+    with pytest.warns(UserWarning) and LogChecker(mock_warn, expected_log_number=4):
+        # warnings because config file cannot be retrieved and TokenProvider is deprecated
         temp_token_provider = TokenProviderForTest(tmp_path)
         temp_token_provider._remote_config._persistent_data = persistent_data
         temp_token_provider.clear_cache()
