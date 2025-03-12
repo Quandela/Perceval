@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import sys
 
+from dataclasses import dataclass
 from multipledispatch import dispatch
 from numpy import inf
 
@@ -40,6 +41,13 @@ from perceval.utils.logging import get_logger, channel
 from .abstract_processor import AProcessor, ProcessorType
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
+from .unitary_components import PS
+
+
+@dataclass
+class _PhaseNoise:
+    quantization: float = 0
+    max_error: float = 0
 
 
 class Processor(AProcessor):
@@ -75,7 +83,7 @@ class Processor(AProcessor):
             nm = NoiseModel()
         super(Processor, type(self)).noise.fset(self, nm)
         self._source = Source.from_noise_model(nm)
-        self._phase_quantization = nm.phase_imprecision
+        self._phase_noise = _PhaseNoise(nm.phase_imprecision, nm.phase_error)
         if isinstance(self._input_state, BasicState):
             self._generate_noisy_input()
 
@@ -201,16 +209,22 @@ class Processor(AProcessor):
         :return: The resulting Circuit object
         """
         circuit = super().linear_circuit(flatten)
-        if not self._phase_quantization:
-            return circuit
-        # Apply phase quantization noise on all phase parameters in the circuit
-        get_logger().debug(f"Inject phase imprecision noise ({self._phase_quantization} in the circuit")
-        circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
-        for _, component in circuit:
-            if "phi" in component.params:
-                phi_param = component.param("phi")
-                phi_param.set_value(self._phase_quantization * round(float(phi_param) / self._phase_quantization),
-                                    force=True)
+        noise = self._phase_noise
+        if noise.quantization or noise.max_error:
+
+            # Apply phase quantization noise on all phase parameters in the circuit
+            get_logger().debug(f"Inject {noise} in the circuit")
+            circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
+            for _, component in circuit:
+                if not isinstance(component, PS):
+                    continue
+                if noise.max_error is not None:
+                    err_param = component.param("max_error")
+                    if not err_param.is_variable and float(err_param) == 0:
+                        err_param.set_value(noise.max_error, force=True)
+                if noise.quantization:
+                    phi_param = component.param("phi")
+                    phi_param.set_value(noise.quantization * round(float(phi_param) / noise.quantization), force=True)
         return circuit
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
