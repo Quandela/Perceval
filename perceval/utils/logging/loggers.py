@@ -189,6 +189,11 @@ class PythonLogger(ALogger):
 
     def __init__(self):
         self._logger = py_log.getLogger("perceval")
+        self._sh = logging.StreamHandler()
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
+        self._sh.setFormatter(formatter)
+        self._logger.addHandler(self._sh)
+
         self._set_log_levels(LoggerConfig())
         self._logger.addFilter(self._message_has_to_be_logged)
 
@@ -222,8 +227,8 @@ class PythonLogger(ALogger):
         level_int = self._get_levelno(level.name)
         min_level = min(self._level.values())
         if level_int < min_level:  # If the expected level is lower than the current min of channel levels,
-            logging.basicConfig(level=level_int)  # we lower it on the ROOT Python logger
-            self._logger.setLevel(level_int)  # and in the stored Python logger instance
+            self._logger.setLevel(level_int)  #  we lower it in the stored Python logger instance
+            self._sh.setLevel(level_int)
         self._level[channel.name] = level_int
 
     def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
