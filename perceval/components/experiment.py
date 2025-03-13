@@ -488,13 +488,13 @@ class Experiment:
         if not use_phase_noise or self.noise is None or not self.noise.phase_imprecision:
             return circuit
         # Apply phase quantization noise on all phase parameters in the circuit
-        get_logger().debug(f"Inject phase imprecision noise ({self._phase_quantization} in the circuit")
+        phase_quantization = self.noise.phase_imprecision
+        get_logger().debug(f"Inject phase imprecision noise ({phase_quantization} in the circuit")
         circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
         for _, component in circuit:
             if "phi" in component.params:
                 phi_param = component.param("phi")
-                phi_param.set_value(self._phase_quantization * round(float(phi_param) / self._phase_quantization),
-                                    force=True)
+                phi_param.set_value(phase_quantization * round(float(phi_param) / phase_quantization), force=True)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> list[tuple[tuple, AComponent]]:

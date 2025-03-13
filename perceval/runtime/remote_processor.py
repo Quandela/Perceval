@@ -225,7 +225,7 @@ class RemoteProcessor(AProcessor):
             self.check_circuit(circuit)
             payload['circuit'] = serialize(circuit)
         if self.input_state and not inputless:
-            self.check_input(self.input_state)
+            self.check_input(self.remove_heralded_modes(self.input_state))
             payload['input_state'] = serialize(self.input_state)
         if self._parameters:
             payload['parameters'] = self._parameters
@@ -269,7 +269,7 @@ class RemoteProcessor(AProcessor):
                 c.param(n).set_value(v)
         lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        lp.thresholded_output(self._thresholded_output)
+        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call
         lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0

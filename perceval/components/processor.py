@@ -73,6 +73,7 @@ class Processor(AProcessor):
         else:
             self._inputs_map = None
         self._noise_changed_observer()
+        self._input_changed_observer()
         self._simulator = None
 
     def _noise_changed_observer(self):

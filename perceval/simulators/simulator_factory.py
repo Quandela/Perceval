@@ -89,7 +89,7 @@ class SimulatorFactory:
                 heralds = circuit.heralds
                 noise = circuit.noise
                 if circuit.is_unitary:
-                    circuit = circuit.linear_circuit()
+                    circuit = circuit.linear_circuit(use_phase_noise=True)
                 else:
                     circuit = circuit.components
 
