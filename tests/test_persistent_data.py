@@ -33,8 +33,6 @@ import pytest
 
 from perceval.utils import PersistentData, FileFormat
 
-from _mock_persistent_data import PersistentDataForTests
-
 
 def test_directory():
     persistent_data = PersistentData()
@@ -42,8 +40,8 @@ def test_directory():
     assert persistent_data.directory.endswith("perceval-quandela")
 
 
-def test_basic_methods():
-    persistent_data = PersistentDataForTests()
+def test_basic_methods(tmp_path):
+    persistent_data = PersistentData(directory=tmp_path)
     persistent_data.clear_all_data()
 
     assert os.path.exists(persistent_data.directory)
@@ -86,8 +84,8 @@ def test_basic_methods():
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="chmod doesn't works on windows")
-def test_access():
-    persistent_data = PersistentDataForTests()
+def test_access(tmp_path):
+    persistent_data = PersistentData(directory=tmp_path)
     directory = persistent_data.directory
 
     os.chmod(directory, 0o000)

@@ -50,15 +50,17 @@ class RPCHandler:
 
     """
 
-    def __init__(self, name, url, token):
+    def __init__(self, name, url, token, proxies):
         """Remote Call Procedure Handler
 
         :param name: name of the plateform
         :param url: api URL to call
         :param token: token used for identification
+        :param proxies: dictionary mapping protocol to the URL of the proxy
         """
         self.name = name
         self.url = url
+        self.proxies = proxies
         self.token = token
         self.headers = {'Authorization': f'Bearer {token}'}
         self.request_timeout = 10  # default timeout
@@ -78,7 +80,7 @@ class RPCHandler:
         """fetch platform details and settings"""
         quote_name = quote_plus(self.name)
         endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
-        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
+        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         resp.raise_for_status()
         return resp.json()
 
@@ -90,7 +92,7 @@ class RPCHandler:
         :return: job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout)
+        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
         try:
             json_res = request.json()
         except Exception as e:
@@ -107,7 +109,7 @@ class RPCHandler:
         :param job_id: id of the job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         req.raise_for_status()
 
     def rerun_job(self, job_id: str) -> str:
@@ -117,7 +119,7 @@ class RPCHandler:
         :return: new job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         req.raise_for_status()
         assert _JOB_ID_KEY in req.json(), f'Missing {_JOB_ID_KEY} field in rerun response'
         return req.json()[_JOB_ID_KEY]
@@ -131,7 +133,7 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         res.raise_for_status()
         return res.json()
 
@@ -144,6 +146,6 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         res.raise_for_status()
         return res.json()

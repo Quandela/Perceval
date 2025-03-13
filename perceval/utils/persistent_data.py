@@ -50,8 +50,8 @@ class PersistentData:
     If the directory cannot be created or read/write in, a warning will inform the user
     """
 
-    def __init__(self) -> None:
-        self._directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
+    def __init__(self, directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir) -> None:
+        self._directory = directory
         try:
             self._create_directory()
         except OSError as exc:
@@ -189,9 +189,7 @@ class PersistentData:
             file_config.update(config)
             self.write_file(_CONFIG_FILE_NAME, json.dumps(file_config), FileFormat.TEXT)
         else:
-            warnings.warn(UserWarning("Can't save token"))
-
-
+            warnings.warn(UserWarning(f"Can't save configuration to {_CONFIG_FILE_NAME} in {self._directory}."))
 
     def clear_all_data(self):
         """Delete all persistent data except for log

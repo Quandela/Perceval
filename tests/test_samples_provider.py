@@ -40,18 +40,34 @@ def _svd_to_bsd(svd):
     return res
 
 
-def test_samples_provider():
-    size = 2
-    clifford = Clifford2017Backend()
-    clifford.set_circuit(Circuit(size))  # Identity circuit
+size = 2
+clifford = Clifford2017Backend()
+clifford.set_circuit(Circuit(size))  # Identity circuit
 
-    ideal_input = BasicState([1]*size)
-    noisy_input = Source.from_noise_model(
-        NoiseModel(transmittance=0.2, g2=0.05, indistinguishability=0.75)).generate_distribution(ideal_input)
-    possible_fock_input = [BasicState([0, 0]), BasicState([1, 0]), BasicState([0, 1]), BasicState([1, 1])]
+ideal_input = BasicState([1]*size)
+source = Source.from_noise_model(NoiseModel(transmittance=0.2, g2=0.05, indistinguishability=0.75))
+
+possible_fock_input = [BasicState([0, 0]), BasicState([1, 0]), BasicState([0, 1]), BasicState([1, 1])]
+
+
+def test_samples_provider_distribution():
+    noisy_input = source.generate_distribution(ideal_input)
 
     provider = SamplesProvider(clifford)
-    provider.prepare(_svd_to_bsd(noisy_input), 1000)
+    provider.estimate_weights_from_distribution(_svd_to_bsd(noisy_input), 1000)
+    provider.prepare()
+
+    assert provider._pools and provider._weights
+    for state in possible_fock_input:
+        assert state in provider._pools and state in provider._weights
+        res = provider.sample_from(state)
+        assert res == state
+
+
+def test_samples_provider_source():
+    provider = SamplesProvider(clifford)
+    provider.estimate_weights_from_source(source, ideal_input, 1000, 1000, 0)
+    provider.prepare()
 
     assert provider._pools and provider._weights
     for state in possible_fock_input:

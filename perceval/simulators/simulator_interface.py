@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
@@ -108,6 +109,15 @@ class ASimulatorDecorator(ISimulator, ABC):
     def _postprocess_sv_impl(self, sv: StateVector) -> StateVector:
         pass
 
+    @abstractmethod
+    def _prepare_detectors_impl(self, detectors: list[IDetector]) -> list[IDetector] | None:
+        pass
+
+    def _prepare_detectors(self, detectors: list[IDetector] = None) -> list[IDetector] | None:
+        if detectors is None:
+            return None
+        return self._prepare_detectors_impl(detectors)
+
     def _postprocess_bsd(self, results: BSDistribution):
         results = self._postprocess_bsd_impl(results)
         physical_perf = 1
@@ -135,6 +145,7 @@ class ASimulatorDecorator(ISimulator, ABC):
 
     def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
         probs = self._simulator.probs_svd(self._prepare_input(svd),
+                                          detectors=self._prepare_detectors(detectors),
                                           progress_callback=progress_callback)
         probs['results'], logical_perf_coeff, physical_perf_coeff = self._postprocess_bsd(probs['results'])
         probs['physical_perf'] *= physical_perf_coeff

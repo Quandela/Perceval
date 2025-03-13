@@ -35,6 +35,9 @@ import perceval.components.non_unitary_components as nu
 
 
 def deserialize_ps(serial_ps: pb.PhaseShifter) -> comp.PS:
+    max_error = deserialize_parameter(serial_ps.max_error)
+    if max_error is not None:
+        return comp.PS(deserialize_parameter(serial_ps.phi), max_error)
     return comp.PS(deserialize_parameter(serial_ps.phi))
 
 
