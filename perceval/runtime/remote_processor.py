@@ -38,7 +38,7 @@ from perceval.serialization import deserialize, serialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
-from ._token_management import TokenProvider
+from .remote_config import RemoteConfig
 
 __process_id__ = uuid.uuid4()
 
@@ -55,11 +55,13 @@ class RemoteProcessor(AProcessor):
             name: str = None,
             token: str = None,
             url: str = QUANDELA_CLOUD_URL,
+            proxies: dict[str,str] = None,
             rpc_handler: RPCHandler = None):
         rp = RemoteProcessor(
             name=name,
             token=token,
             url=url,
+            proxies=proxies,
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
@@ -72,6 +74,7 @@ class RemoteProcessor(AProcessor):
                  name: str = None,
                  token: str = None,
                  url: str = QUANDELA_CLOUD_URL,
+                 proxies: dict[str,str] = None,
                  rpc_handler: RPCHandler = None,
                  m: int = None,
                  noise: NoiseModel = None):
@@ -79,6 +82,7 @@ class RemoteProcessor(AProcessor):
         :param name: Platform name
         :param token: Token value to authenticate the user
         :param url: Base URL for the Cloud API to connect to
+        :param proxies: Dictionary mapping protocol to the URL of the proxy
         :param rpc_handler: Inject an already constructed Remote Procedure Call handler (alternative init);
             when doing so, name, token and url are expected to be blank
         :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
@@ -93,15 +97,19 @@ class RemoteProcessor(AProcessor):
             if name is not None and name != self.name:
                 get_logger().warn(
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
+            self.proxies = rpc_handler.proxies
         else:
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             if token is None:
-                provider = TokenProvider()
-                token = provider.get_token()
+                token = RemoteConfig.get_token()
             if token is None:
                 raise ConnectionError("No token found")
-            self._rpc_handler = RPCHandler(self.name, url, token)
+            if proxies is None:
+                proxies = RemoteConfig.get_proxies()
+            self.name = name
+            self.proxies = proxies
+            self._rpc_handler = RPCHandler(self.name, url, token, proxies)
 
         self._specs = {}
         self._perfs = {}
@@ -256,7 +264,7 @@ class RemoteProcessor(AProcessor):
         n = self.input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
-            photon_filter = self._min_detected_photons_filter
+            photon_filter = self._min_detected_photons_filter + sum(self.heralds.values())
             if photon_filter > n:
                 return 0
         if photon_filter < 2:

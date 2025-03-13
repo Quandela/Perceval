@@ -30,6 +30,10 @@ from __future__ import annotations
 
 import sys
 
+from dataclasses import dataclass
+from multipledispatch import dispatch
+from numpy import inf
+
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
 from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, NoiseModel
 from perceval.utils.logging import get_logger, channel
@@ -38,6 +42,13 @@ from .abstract_processor import AProcessor, ProcessorType
 from .experiment import Experiment
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
+from .unitary_components import PS
+
+
+@dataclass
+class _PhaseNoise:
+    quantization: float = 0
+    max_error: float = 0
 
 
 class Processor(AProcessor):
@@ -65,21 +76,19 @@ class Processor(AProcessor):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
         super().__init__(m_circuit)
 
+        self._has_custom_input = False
         self._init_backend(backend)
         self._previous_noise = None
-        if isinstance(self.input_state, SVDistribution):
-            # Already defined in the experiment
-            self._inputs_map: SVDistribution | None = self.input_state
-        else:
-            self._inputs_map = None
+        self._inputs_map = None
         self._noise_changed_observer()
         self._input_changed_observer()
         self._simulator = None
 
     def _noise_changed_observer(self):
         self._source = Source.from_noise_model(self.noise)
-        if isinstance(self.input_state, BasicState):
-            self._generate_noisy_input()
+        self._phase_noise = _PhaseNoise(self.noise.phase_imprecision, self.noise.phase_error)
+        if not self._has_custom_input:
+            self._inputs_map = None
         self._previous_noise = self.noise
 
     @AProcessor.noise.getter
@@ -92,9 +101,11 @@ class Processor(AProcessor):
     @property
     def source_distribution(self) -> SVDistribution | None:
         r"""
-        Retrieve the computed input distribution.
+        Retrieve the computed input distribution. Compute it if it is not cached and an input state has been provided.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
         """
+        if self._inputs_map is None and self.input_state is not None:
+            self._generate_noisy_input()
         return self._inputs_map
 
     def _circuit_change_observer(self, new_component = None):
@@ -172,7 +183,8 @@ class Processor(AProcessor):
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
+        sample_provider = self.source_distribution if self._has_custom_input else (self._source, self.input_state)
+        res = sampling_simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
@@ -191,14 +203,9 @@ class Processor(AProcessor):
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, self.detectors, progress_callback)
+        self._simulator.keep_heralds(False)
+        res = self._simulator.probs_svd(self.source_distribution, self.detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
-
-        if self.heralds:
-            postprocessed_res = BSDistribution()
-            for state, prob in res['results'].items():
-                postprocessed_res[self.remove_heralded_modes(state)] += prob
-            res['results'] = postprocessed_res
 
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res

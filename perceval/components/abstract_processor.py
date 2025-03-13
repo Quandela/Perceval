@@ -133,7 +133,7 @@ class AProcessor(ABC):
         Sets-up a state post-selection on the number of detected photons. With threshold detectors, this will
         actually filter on "click" count.
 
-        :param n: Minimum expected photons
+        :param n: Minimum expected photons. Does not take heralded modes into account.
 
         This post-selection has an impact on the output physical performance
         """
@@ -360,7 +360,7 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             if not self.is_remote and self._source is not None and self._source.is_perfect():
                 # Automatically set the min_detected_photons_filter for perfect sources of local processors if not set
-                self.min_detected_photons_filter(self.input_state.n + sum(self.heralds.values()))
+                self.min_detected_photons_filter(self._input_state.n)
             else:
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
