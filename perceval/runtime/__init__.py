@@ -33,6 +33,7 @@ from .local_job import LocalJob
 from .remote_job import RemoteJob
 from .remote_processor import RemoteProcessor
 from .session import ISession
-from ._token_management import save_token
+from ._token_management import save_token # deprecated
+from .remote_config import RemoteConfig
 from .job_group import JobGroup
 from .check_cancel import cancel_requested
