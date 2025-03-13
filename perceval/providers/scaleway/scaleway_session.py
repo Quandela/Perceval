@@ -53,6 +53,8 @@ class Session(ISession):
     :param max_duration_s: optional value, duration in seconds for a session before it automatically terminates
 
     :param url: optional value, endpoint URL of the API
+
+    :param proxies: optional value, dictionary mapping protocol to the URL of the proxy
     """
 
     def __init__(
@@ -64,11 +66,13 @@ class Session(ISession):
         max_idle_duration_s: int = 1200,
         max_duration_s: int = 3600,
         url: str = _ENDPOINT_URL,
+        proxies: dict[str,str] = None
     ) -> None:
 
         self._token = token
         self._project_id = project_id
         self._url = url
+        self._proxies = proxies
         self._platform = platform
         self._deduplication_id = deduplication_id
         self._max_idle_duration_s = self.__int_duration(
@@ -100,7 +104,7 @@ class Session(ISession):
         }
 
         endpoint = f"{self._url}{_ENDPOINT_SESSION}"
-        request = requests.post(endpoint, headers=self._headers, json=payload)
+        request = requests.post(endpoint, headers=self._headers, json=payload, proxies=self._proxies)
 
         try:
             request.raise_for_status()
@@ -118,7 +122,7 @@ class Session(ISession):
 
     def delete(self) -> None:
         endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
-        request = requests.delete(endpoint, headers=self._headers)
+        request = requests.delete(endpoint, headers=self._headers, proxies=self._proxies)
 
         request.raise_for_status()
 
@@ -139,4 +143,5 @@ class Session(ISession):
             headers=self._headers,
             name=self._platform,
             url=self._url,
+            proxies=self._proxies
         )
