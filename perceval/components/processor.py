@@ -30,12 +30,8 @@ from __future__ import annotations
 
 import sys
 
-from dataclasses import dataclass
-from multipledispatch import dispatch
-from numpy import inf
-
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
-from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, NoiseModel
+from perceval.utils import SVDistribution, BasicState, StateVector, NoiseModel
 from perceval.utils.logging import get_logger, channel
 
 from .abstract_processor import AProcessor, ProcessorType
@@ -43,13 +39,6 @@ from .experiment import Experiment
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
 from .unitary_components import PS
-
-
-@dataclass
-class _PhaseNoise:
-    quantization: float = 0
-    max_error: float = 0
-
 
 class Processor(AProcessor):
     """
@@ -76,7 +65,6 @@ class Processor(AProcessor):
             m_circuit = Experiment(m_circuit, noise=noise, name=name)
         super().__init__(m_circuit)
 
-        self._has_custom_input = False
         self._init_backend(backend)
         self._previous_noise = None
         self._inputs_map = None
@@ -84,9 +72,13 @@ class Processor(AProcessor):
         self._input_changed_observer()
         self._simulator = None
 
+    @property
+    def _has_custom_input(self):
+        return (isinstance(self.input_state, SVDistribution)
+                or (isinstance(self.input_state, BasicState) and self.input_state.has_polarization))
+
     def _noise_changed_observer(self):
         self._source = Source.from_noise_model(self.noise)
-        self._phase_noise = _PhaseNoise(self.noise.phase_imprecision, self.noise.phase_error)
         if not self._has_custom_input:
             self._inputs_map = None
         self._previous_noise = self.noise

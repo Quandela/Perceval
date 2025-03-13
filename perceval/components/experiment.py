@@ -29,12 +29,14 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import dataclass
 from typing import Self
 
 from multipledispatch import dispatch
 from numpy import inf
 
-from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, SVDistribution
+from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
+    SVDistribution
 from perceval.utils.logging import get_logger, channel, deprecated
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
@@ -44,7 +46,13 @@ from .feed_forward_configurator import AFFConfigurator
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
 from .port import Herald, PortLocation, APort, get_basic_state_from_ports
-from .unitary_components import Barrier, PERM, Unitary
+from .unitary_components import Barrier, PERM, Unitary, PS
+
+
+@dataclass
+class _PhaseNoise:
+    quantization: float = 0
+    max_error: float = 0
 
 
 class Experiment:
@@ -124,7 +132,7 @@ class Experiment:
         if new_m is not None:
             self.m = new_m
 
-    def _circuit_changed(self, component = None):
+    def _circuit_changed(self, component=None):
         for observer in self._circuit_changed_observers:
             observer(component)  # Used to notify the Processors containing this experiment of a new component
 
@@ -157,7 +165,11 @@ class Experiment:
         return self._noise
 
     @noise.setter
-    def noise(self, nm: NoiseModel):
+    def noise(self, nm: NoiseModel | None):
+        if nm is not None:
+            self._phase_noise = _PhaseNoise(self.noise.phase_imprecision, self.noise.phase_error)
+        else:
+            self._phase_noise = _PhaseNoise()
         if nm is None or isinstance(nm, NoiseModel):
             self._noise = nm
             for observer in self._noise_changed_observers:
@@ -414,7 +426,7 @@ class Experiment:
         if perm_component is not None:
             self._components.append((perm_modes, perm_component))
 
-        sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping)+component.m))
+        sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping) + component.m))
         self._components.append((sorted_modes, component))
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)
@@ -485,16 +497,22 @@ class Experiment:
         circuit = Circuit(self.circuit_size)
         for pos_m, component in self._components:
             circuit.add(pos_m, component, merge=flatten)
-        if not use_phase_noise or self.noise is None or not self.noise.phase_imprecision:
+        noise = self._phase_noise
+        if not use_phase_noise or not (noise.max_error or noise.quantization):
             return circuit
         # Apply phase quantization noise on all phase parameters in the circuit
-        phase_quantization = self.noise.phase_imprecision
-        get_logger().debug(f"Inject phase imprecision noise ({phase_quantization} in the circuit")
+        get_logger().debug(f"Inject {noise} in the circuit")
         circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
         for _, component in circuit:
-            if "phi" in component.params:
+            if not isinstance(component, PS):
+                continue
+            if noise.max_error is not None:
+                err_param = component.param("max_error")
+                if not err_param.is_variable and float(err_param) == 0:
+                    err_param.set_value(noise.max_error, force=True)
+            if noise.quantization:
                 phi_param = component.param("phi")
-                phi_param.set_value(phase_quantization * round(float(phi_param) / phase_quantization), force=True)
+                phi_param.set_value(noise.quantization * round(float(phi_param) / noise.quantization), force=True)
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> list[tuple[tuple, AComponent]]:
@@ -518,7 +536,7 @@ class Experiment:
             else:
                 if unitary_circuit.ncomponents():
                     new_comp.append((tuple(r_i for r_i in range(min_r, max_r)),
-                                    Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
+                                     Unitary(unitary_circuit.compute_unitary()[min_r:max_r, min_r:max_r])))
                     unitary_circuit = Circuit(self.circuit_size)
                     min_r = self.circuit_size
                     max_r = 0
@@ -670,7 +688,7 @@ class Experiment:
     def with_input(self, input_state: LogicalState):
         input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         if self._min_detected_photons_filter is None:
-            self._min_detected_photons_filter = input_state.n + sum(self.heralds.values())
+            self._min_detected_photons_filter = input_state.n
         self.with_input(input_state)
 
     @dispatch(BasicState)
@@ -678,15 +696,12 @@ class Experiment:
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
         input_idx = 0
-        expected_photons = 0
         # Build real input state (merging ancillas + expected input) and compute expected photon count
         for k in range(self.circuit_size):
             if k in self.heralds:
                 input_list[k] = self.heralds[k]
-                expected_photons += self.heralds[k]
             else:
                 input_list[k] = input_state[input_idx]
-                expected_photons += input_state[input_idx]
                 input_idx += 1
 
         self._input_state = BasicState(input_list)
@@ -719,7 +734,6 @@ class Experiment:
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._input_state = svd
         self._input_changed()
-
 
     def with_polarized_input(self, bs: BasicState):
         assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
