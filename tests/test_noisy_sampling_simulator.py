@@ -37,10 +37,7 @@ import pytest
 
 @pytest.mark.parametrize("max_samples, max_shots", [(100, None), (100, 10), (10, 100)])
 def test_perfect_sampling(max_samples, max_shots):
-    size = 8
-    c = Unitary(Matrix.random_unitary(size))
-    sim = NoisySamplingSimulator(Clifford2017Backend())
-    sim.set_circuit(c)
+    sim = _build_noisy_simulator(8)
     input_state = SVDistribution(BasicState([1, 0]*4))
     sampling = sim.samples(input_state, max_samples, max_shots)
     assert sampling['physical_perf'] == 1
@@ -52,10 +49,7 @@ def test_perfect_sampling(max_samples, max_shots):
 
 @pytest.mark.parametrize("max_samples, max_shots", [(100, None), (100, 10), (10, 100)])
 def test_perfect_sampling_source(max_samples, max_shots):
-    size = 8
-    c = Unitary(Matrix.random_unitary(size))
-    sim = NoisySamplingSimulator(Clifford2017Backend())
-    sim.set_circuit(c)
+    sim = _build_noisy_simulator(8)
     input_state = BasicState([1, 0]*4)
     sampling = sim.samples((Source(), input_state), max_samples, max_shots)
     assert sampling['physical_perf'] == 1

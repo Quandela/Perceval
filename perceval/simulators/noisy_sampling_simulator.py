@@ -42,7 +42,7 @@ from perceval.runtime import cancel_requested
 from ._simulate_detectors import simulate_detectors_sample
 
 
-def estimate_phys_perf(transmission: float, n: int, min_photons_filter: int):
+def _estimate_phys_perf(transmission: float, n: int, min_photons_filter: int):
     """
     Computes the physical performance for a source with g2 = 0.
     The result is lower than the real value if there is g2 and `min_photons_filter` > 1.
@@ -120,7 +120,7 @@ class SamplesProvider:
             return []
 
         # Only estimated: doesn't count g2 and detectors
-        estimated_phys_perf = estimate_phys_perf(transmission, expected_input.n, min_detected_photons_filter)
+        estimated_phys_perf = _estimate_phys_perf(transmission, expected_input.n, min_detected_photons_filter)
         n_gen = n_samples / estimated_phys_perf  # The expected number of useful samples is n_gen * P(sample.n >= filter)
 
         if n_shots is not None:
