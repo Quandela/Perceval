@@ -69,6 +69,7 @@ class Processor(AProcessor):
     """
     def __init__(self, backend: ABackend | str, m_circuit: int | ACircuit = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
+        self._has_custom_input = False
         super().__init__()
         self._init_backend(backend)
         self._init_circuit(m_circuit)
@@ -84,15 +85,17 @@ class Processor(AProcessor):
         super(Processor, type(self)).noise.fset(self, nm)
         self._source = Source.from_noise_model(nm)
         self._phase_noise = _PhaseNoise(nm.phase_imprecision, nm.phase_error)
-        if isinstance(self._input_state, BasicState):
-            self._generate_noisy_input()
+        if not self._has_custom_input:
+            self._inputs_map = None
 
     @property
     def source_distribution(self) -> SVDistribution | None:
         r"""
-        Retrieve the computed input distribution.
+        Retrieve the computed input distribution. Compute it if it is not cached and an input state has been provided.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
         """
+        if self._inputs_map is None and self._input_state is not None:
+            self._generate_noisy_input()
         return self._inputs_map
 
     @property
@@ -152,7 +155,8 @@ class Processor(AProcessor):
         an input. Imperfect ones won't.
         """
         super().with_input(input_state)
-        self._generate_noisy_input()
+        self._inputs_map = None
+        self._has_custom_input = False
 
     @dispatch(StateVector)
     def with_input(self, sv: StateVector):
@@ -181,6 +185,7 @@ class Processor(AProcessor):
                     raise ValueError(
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._inputs_map = svd
+        self._has_custom_input = True
 
     def _circuit_changed(self):
         # Override parent's method to reset the internal simulator as soon as the component list changes
@@ -190,6 +195,7 @@ class Processor(AProcessor):
         assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
         self._input_state = bs
         self._inputs_map = SVDistribution(bs)
+        self._has_custom_input = True
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)
@@ -243,7 +249,8 @@ class Processor(AProcessor):
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        res = sampling_simulator.samples(self._inputs_map, max_samples, max_shots, progress_callback)
+        sample_provider = self.source_distribution if self._has_custom_input else (self._source, self._input_state)
+        res = sampling_simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
 
@@ -262,7 +269,7 @@ class Processor(AProcessor):
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
-        res = self._simulator.probs_svd(self._inputs_map, self._detectors, progress_callback)
+        res = self._simulator.probs_svd(self.source_distribution, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
 
         if self.heralds:
