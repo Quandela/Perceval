@@ -85,6 +85,8 @@ class Parameter:
         r""""Returns True for a non-fixed parameter"""
         return self._symbol is not None
 
+    def __bool__(self) -> bool:
+        return self.is_variable or float(self) != 0
 
     def __float__(self):
         r"""Convert the parameter to float, will fail if the parameter has no defined value
