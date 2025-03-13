@@ -167,7 +167,7 @@ class Experiment:
     @noise.setter
     def noise(self, nm: NoiseModel | None):
         if nm is not None:
-            self._phase_noise = _PhaseNoise(self.noise.phase_imprecision, self.noise.phase_error)
+            self._phase_noise = _PhaseNoise(nm.phase_imprecision, nm.phase_error)
         else:
             self._phase_noise = _PhaseNoise()
         if nm is None or isinstance(nm, NoiseModel):
