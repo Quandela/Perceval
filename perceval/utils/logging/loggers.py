@@ -36,12 +36,12 @@ import logging as py_log
 from abc import ABC, abstractmethod
 from os import path
 
-from exqalibur import logging as exq_log
+from exqalibur import logging as xq_log
 
 from ..persistent_data import PersistentData
 from .config import LoggerConfig, _CHANNELS, _ENABLE_FILE
 
-DEFAULT_CHANNEL = exq_log.channel.user
+DEFAULT_CHANNEL = xq_log.channel.user
 
 
 class ALogger(ABC):
@@ -58,27 +58,27 @@ class ALogger(ABC):
         pass
 
     @abstractmethod
-    def set_level(self, level: int, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def set_level(self, level: int, channel: xq_log.channel = DEFAULT_CHANNEL):
         pass
 
     @abstractmethod
-    def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def debug(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
         pass
 
     @abstractmethod
-    def info(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def info(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
         pass
 
     @abstractmethod
-    def warn(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def warn(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
         pass
 
     @abstractmethod
-    def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
+    def error(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         pass
 
     @abstractmethod
-    def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
+    def critical(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         pass
 
     def log_resources(self, my_dict: dict):
@@ -89,7 +89,7 @@ class ALogger(ABC):
 
         :param my_dict: resources dictionary to log
         """
-        self.info(json.dumps(my_dict), exq_log.channel.resources)
+        self.info(json.dumps(my_dict), xq_log.channel.resources)
 
 
 class ExqaliburLogger(ALogger):
@@ -102,17 +102,17 @@ class ExqaliburLogger(ALogger):
         ExqaliburLogger._ALREADY_INITIALIZED = True
         persistent_data = PersistentData()
         if persistent_data.is_writable():
-            exq_log.initialize(self.get_log_file_path())
+            xq_log.initialize(self.get_log_file_path())
         else:
-            exq_log.initialize()
+            xq_log.initialize()
 
         self._configure_logger(LoggerConfig())
-        exq_log.enable_console()
+        xq_log.enable_console()
 
     def _configure_logger(self, logger_config: LoggerConfig):
         if _CHANNELS in logger_config:
-            channels = list(exq_log.channel.__members__)
-            levels = list(exq_log.level.__members__)
+            channels = list(xq_log.channel.__members__)
+            levels = list(xq_log.level.__members__)
             for channel, level in logger_config[_CHANNELS].items():
                 level = level['level']
                 if channel not in channels:
@@ -121,9 +121,9 @@ class ExqaliburLogger(ALogger):
                 if level not in levels:
                     warnings.warn(UserWarning(f"Unknown level {level}"))
                     return
-                exq_log.set_level(
-                    exq_log.level.__members__[level],
-                    exq_log.channel.__members__[channel])
+                xq_log.set_level(
+                    xq_log.level.__members__[level],
+                    xq_log.channel.__members__[channel])
 
     def apply_config(self, config: LoggerConfig):
         if config.python_logger_is_enabled():
@@ -136,63 +136,56 @@ class ExqaliburLogger(ALogger):
 
     def enable_file(self):
         print(f"starting to write logs in {self.get_log_file_path()}")
-        exq_log.enable_file()
+        xq_log.enable_file()
 
     def disable_file(self):
         self.warn("Log to file is being stopped!")
-        exq_log.disable_file()
+        xq_log.disable_file()
 
     def set_level(
             self,
-            level: exq_log.level,
-            channel: exq_log.channel = DEFAULT_CHANNEL) -> None:
+            level: xq_log.level,
+            channel: xq_log.channel = DEFAULT_CHANNEL) -> None:
         self.info(f"Set log level to '{level.name}' for channel '{channel.name}'", channel.general)
-        exq_log.set_level(level, channel)
+        xq_log.set_level(level, channel)
 
-    def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        exq_log.debug(str(msg), channel)
+    def debug(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
+        xq_log.debug(str(msg), channel)
 
-    def info(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        exq_log.info(str(msg), channel)
+    def info(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
+        xq_log.info(str(msg), channel)
 
-    def warn(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
-        exq_log.warn(str(msg), channel)
+    def warn(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
+        xq_log.warn(str(msg), channel)
 
     def _format_exception(self, exc_info=None) -> str:
         if not exc_info:
             return ""
         return '\n' + ''.join(traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
 
-    def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
+    def error(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         msg = str(msg)
         if exc_info:
             msg += self._format_exception(exc_info)
             traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
-        exq_log.error(str(msg), channel)
+        xq_log.error(str(msg), channel)
 
-    def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
+    def critical(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         msg = str(msg)
         if exc_info:
             msg += self._format_exception(exc_info)
             traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
-        exq_log.critical(str(msg), channel)
+        xq_log.critical(str(msg), channel)
 
 
 class PythonLogger(ALogger):
-    _level_mapping = {
-        "debug": py_log.DEBUG,
-        "info": py_log.INFO,
-        "warn": py_log.WARNING,
-        "error": py_log.ERROR,
-        "critical": py_log.CRITICAL,
-        "off": 60
-    }
+    _level_ratio = 10  # Ratio between Python levels and exqalibur levels
 
     def __init__(self, logger: py_log.Logger = None):
-        self._levels = {
-            "general": PythonLogger._level_mapping["off"],
-            "user": PythonLogger._level_mapping["warn"],
-            "resources": PythonLogger._level_mapping["off"]
+        self._levels = {  # Default values
+            xq_log.channel.general.name: xq_log.level.off.value * self._level_ratio,
+            xq_log.channel.user.name: xq_log.level.warn.value * self._level_ratio,
+            xq_log.channel.resources.name: xq_log.level.off.value * self._level_ratio
         }
 
         if logger is None:  # Create our own Python logger
@@ -202,17 +195,17 @@ class PythonLogger(ALogger):
             self._sh.setFormatter(formatter)
             self._logger.addHandler(self._sh)
             self._configure_levels(LoggerConfig())
-        else:  # Get an external logger and work with it
+        else:  # Work with an external logger
             self._logger = logger
             self._sh = None
             init_level = logger.getEffectiveLevel()
-            self.set_level(init_level, exq_log.channel.general)
+            self.set_level(init_level, xq_log.channel.general)
 
         self._logger.addFilter(self._message_has_to_be_logged)
 
     @staticmethod
-    def _get_levelno(level_name):
-        return PythonLogger._level_mapping.get(level_name, 60)
+    def _get_levelno(level_name: str):
+        return xq_log.level.__members__.get(level_name, xq_log.level.off).value * PythonLogger._level_ratio
 
     def _configure_levels(self, config: LoggerConfig):
         self._levels = {
@@ -236,7 +229,7 @@ class PythonLogger(ALogger):
     def disable_file(self):
         self.warn("This method have no effect. Use module logging to configure python logger")
 
-    def set_level(self, level: exq_log.level, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def set_level(self, level: xq_log.level, channel: xq_log.channel = DEFAULT_CHANNEL):
         if not isinstance(level, int):
             level = self._get_levelno(level.name)
         min_level = min(self._levels.values())
@@ -246,22 +239,22 @@ class PythonLogger(ALogger):
                 self._sh.setLevel(level)
         self._levels[channel.name] = level
 
-    def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def debug(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
         self._logger.debug(msg, extra={"channel": channel.name})
 
-    def info(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def info(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
         self._logger.info(msg, extra={"channel": channel.name})
 
-    def warn(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
+    def warn(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL):
         self._logger.warning(msg, extra={"channel": channel.name})
 
-    def error(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
+    def error(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         self._logger.error(
             msg,
             exc_info=exc_info,
             extra={"channel": channel.name})
 
-    def critical(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL, exc_info=None):
+    def critical(self, msg: str, channel: xq_log.channel = DEFAULT_CHANNEL, exc_info=None):
         self._logger.critical(
             msg,
             exc_info=exc_info,
