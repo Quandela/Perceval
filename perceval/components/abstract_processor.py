@@ -198,7 +198,7 @@ class AProcessor(ABC):
     def copy(self, subs: dict | list = None):
         get_logger().debug(f"Copy processor {self.name}", channel.general)
         new_proc = copy.copy(self)
-        new_proc.experiment = copy.copy(self.experiment)
+        new_proc.experiment = self.experiment.copy()
         return new_proc
 
     def set_circuit(self, circuit: ACircuit) -> AProcessor:
