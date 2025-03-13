@@ -37,6 +37,7 @@ from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
 from perceval.components import ACircuit, TD, LC, Processor
 from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST
+from .. import Experiment
 from ..components.feed_forward_configurator import AFFConfigurator
 
 
@@ -72,19 +73,22 @@ class SimulatorFactory:
         noise = None
         m = None
 
+        if isinstance(circuit, Processor):
+            if backend is None:
+                # If no backend was chosen, the backend type set in the Processor is used
+                backend = circuit.backend
+            source = circuit.source
+            circuit = circuit.experiment
+
         if not isinstance(circuit, ACircuit):
             convert_to_circuit = True
-            if isinstance(circuit, Processor):
+            if isinstance(circuit, Experiment):
                 m = circuit.circuit_size
-                # If no backend was chosen, the backend type set in the Processor is used
-                if backend is None:
-                    backend = circuit.backend
-                min_detected_photons = circuit.parameters.get('min_detected_photons')
+                min_detected_photons = circuit.min_photons_filter
                 post_select = circuit.post_select_fn
                 heralds = circuit.heralds
-                source = circuit.source
                 noise = circuit.noise
-                if circuit._is_unitary:
+                if circuit.is_unitary:
                     circuit = circuit.linear_circuit()
                 else:
                     circuit = circuit.components

@@ -29,6 +29,7 @@
 
 from .abstract_component import AComponent
 from .abstract_processor import AProcessor, ProcessorType
+from .experiment import Experiment
 from .linear_circuit import Circuit, ACircuit
 from .generic_interferometer import GenericInterferometer
 from .processor import Processor
