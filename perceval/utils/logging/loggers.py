@@ -180,29 +180,42 @@ class ExqaliburLogger(ALogger):
 
 class PythonLogger(ALogger):
     _level_mapping = {
-        "debug": 10,
-        "info": 20,
-        "warn": 30,
-        "error": 40,
-        "critical": 50
+        "debug": py_log.DEBUG,
+        "info": py_log.INFO,
+        "warn": py_log.WARNING,
+        "error": py_log.ERROR,
+        "critical": py_log.CRITICAL,
+        "off": 60
     }
 
-    def __init__(self):
-        self._logger = py_log.getLogger("perceval")
-        self._sh = logging.StreamHandler()
-        formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
-        self._sh.setFormatter(formatter)
-        self._logger.addHandler(self._sh)
+    def __init__(self, logger: py_log.Logger = None):
+        self._levels = {
+            "general": PythonLogger._level_mapping["off"],
+            "user": PythonLogger._level_mapping["warn"],
+            "resources": PythonLogger._level_mapping["off"]
+        }
 
-        self._set_log_levels(LoggerConfig())
+        if logger is None:  # Create our own Python logger
+            self._logger = py_log.getLogger("perceval")
+            self._sh = logging.StreamHandler()
+            formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
+            self._sh.setFormatter(formatter)
+            self._logger.addHandler(self._sh)
+            self._configure_levels(LoggerConfig())
+        else:  # Get an external logger and work with it
+            self._logger = logger
+            self._sh = None
+            init_level = logger.getEffectiveLevel()
+            self.set_level(init_level, exq_log.channel.general)
+
         self._logger.addFilter(self._message_has_to_be_logged)
 
     @staticmethod
     def _get_levelno(level_name):
         return PythonLogger._level_mapping.get(level_name, 60)
 
-    def _set_log_levels(self, config: LoggerConfig):
-        self._level = {
+    def _configure_levels(self, config: LoggerConfig):
+        self._levels = {
             name: self._get_levelno(channel["level"]) for name, channel in config[_CHANNELS].items()
         }
 
@@ -210,11 +223,11 @@ class PythonLogger(ALogger):
         if not config.python_logger_is_enabled():
             warnings.warn(UserWarning(
                 "Cannot change type of logger from logger.apply_config, use perceval.utils.apply_config instead"))
-        self._set_log_levels(config)
+        self._configure_levels(config)
 
     def _message_has_to_be_logged(self, record) -> bool:
         if "channel" in record.__dict__:
-            return record.levelno >= self._level[record.channel]
+            return record.levelno >= self._levels[record.channel]
         return True
 
     def enable_file(self):
@@ -224,12 +237,14 @@ class PythonLogger(ALogger):
         self.warn("This method have no effect. Use module logging to configure python logger")
 
     def set_level(self, level: exq_log.level, channel: exq_log.channel = DEFAULT_CHANNEL):
-        level_int = self._get_levelno(level.name)
-        min_level = min(self._level.values())
-        if level_int < min_level:  # If the expected level is lower than the current min of channel levels,
-            self._logger.setLevel(level_int)  #  we lower it in the stored Python logger instance
-            self._sh.setLevel(level_int)
-        self._level[channel.name] = level_int
+        if not isinstance(level, int):
+            level = self._get_levelno(level.name)
+        min_level = min(self._levels.values())
+        if level < min_level:  # If the expected level is lower than the current min of channel levels,
+            self._logger.setLevel(level)  #  we lower it in the stored Python logger instance
+            if self._sh is not None:
+                self._sh.setLevel(level)
+        self._levels[channel.name] = level
 
     def debug(self, msg: str, channel: exq_log.channel = DEFAULT_CHANNEL):
         self._logger.debug(msg, extra={"channel": channel.name})
