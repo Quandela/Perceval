@@ -295,7 +295,7 @@ def test_mask_distinguishability():
     p.add_herald(1, 1)
     p.add_herald(2, 1)
 
-    p.min_detected_photons_filter(2)
+    p.min_detected_photons_filter(0)
     input_state = BasicState([0])
     p.with_input(input_state)
 
@@ -309,7 +309,7 @@ def test_mask_detectors():
     p.add(0, Detector.threshold())
     p.add_herald(0, 1)  # Since using a threshold, expected is at least 1
 
-    p.min_detected_photons_filter(1)
+    p.min_detected_photons_filter(0)
     p.with_input(BasicState([1]))
 
     res = p.probs()

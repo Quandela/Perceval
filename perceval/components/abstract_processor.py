@@ -129,7 +129,7 @@ class AProcessor(ABC):
         Sets-up a state post-selection on the number of detected photons. With thresholded detectors, this will
         actually filter on "click" count.
 
-        :param n: Minimum expected photons
+        :param n: Minimum expected photons. Does not take heralded modes into account.
 
         This post-selection has an impact on the output physical performance
         """
@@ -644,7 +644,7 @@ class AProcessor(ABC):
     def _with_logical_input(self, input_state: LogicalState):
         input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         if self._min_detected_photons_filter is None:
-            self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
+            self._min_detected_photons_filter = input_state.n
         self.with_input(input_state)
 
     def check_input(self, input_state: BasicState):
@@ -665,7 +665,7 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             if not self.is_remote and self._source is not None and self._source.is_perfect():
                 # Automatically set the min_detected_photons_filter for perfect sources of local processors if not set
-                self._min_detected_photons_filter = self._input_state.n + list(self.heralds.values()).count(1)
+                self._min_detected_photons_filter = self._input_state.n
             else:
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
@@ -676,15 +676,12 @@ class AProcessor(ABC):
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
         input_idx = 0
-        expected_photons = 0
         # Build real input state (merging ancillas + expected input) and compute expected photon count
         for k in range(self.circuit_size):
             if k in self.heralds:
                 input_list[k] = self.heralds[k]
-                expected_photons += self.heralds[k]
             else:
                 input_list[k] = input_state[input_idx]
-                expected_photons += input_state[input_idx]
                 input_idx += 1
 
         self._input_state = BasicState(input_list)

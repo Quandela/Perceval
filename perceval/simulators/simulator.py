@@ -65,7 +65,6 @@ class Simulator(ISimulator):
         self._invalidate_cache()
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
-        self._keep_heralds = True
 
     @property
     def precision(self):
@@ -78,14 +77,6 @@ class Simulator(ISimulator):
 
     def set_precision(self, precision: float):
         self.precision = precision
-
-    def keep_heralds(self, value: bool):
-        """
-        Tells the simulator to keep or discard ancillary modes in output states
-
-        :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
-        """
-        self._keep_heralds = value
 
     @property
     def logical_perf(self):
@@ -360,7 +351,7 @@ class Simulator(ISimulator):
         phys_perf = 1
         # We need to work on a copy. Let's do a first trim as copy
         for sv, p in svd.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
+            if max(sv.n) >= self.min_detected_photons_filter:
                 max_p = max(p, max_p)
             else:
                 phys_perf -= p
@@ -382,7 +373,7 @@ class Simulator(ISimulator):
                 for split_sv, ps in new_svd.items():
                     prob = p * ps
                     # split_sv.n is a set so we can't use [0]
-                    if max(split_sv.n) >= self._min_detected_photons_filter:
+                    if max(split_sv.n) >= self.min_detected_photons_filter:
                         to_add[split_sv] += prob
                     else:
                         phys_perf -= prob
@@ -447,7 +438,7 @@ class Simulator(ISimulator):
 
         if detectors:
             prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
-            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter, p_threshold, prog_cb)
+            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter, p_threshold, prog_cb)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
@@ -473,13 +464,6 @@ class Simulator(ISimulator):
             else:
                 mask_str += " "
         self._backend.set_mask(mask_str)
-
-        # Check that heralds and physical filter are consistent
-        if self._min_detected_photons_filter < n_heralded_photons:
-            if not self._silent:
-                get_logger().debug(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
-                                   f"to the number of heralded photons ({n_heralded_photons})")
-            self._min_detected_photons_filter = n_heralded_photons
 
     def can_use_mask(self, has_superposed_states: bool, has_annotations: bool, is_pnr: bool) -> bool:
         return (self._heralds
@@ -509,7 +493,7 @@ class Simulator(ISimulator):
 
             vec = u_evolve_in_row[[row_idx]]
             prob = abs((vec @ dm.mat @ vec.conj().T)[0, 0])
-            if fs.n >= self._min_detected_photons_filter:
+            if fs.n >= self.min_detected_photons_filter:
                 res_bsd[fs] += prob
             else:
                 physical_perf -= prob
@@ -586,7 +570,7 @@ class Simulator(ISimulator):
         physical_perf = 1
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
-            if min(sv.n) >= self._min_detected_photons_filter:
+            if min(sv.n) >= self.min_detected_photons_filter:
                 new_sv = self.evolve(sv)
                 intermediary_logical_perf -= p * self._logical_perf
                 if new_sv.m != 0:

@@ -269,14 +269,9 @@ class Processor(AProcessor):
             self._simulator.set_precision(precision)
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
+        self._simulator.keep_heralds(False)
         res = self._simulator.probs_svd(self.source_distribution, self._detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
-
-        if self.heralds:
-            postprocessed_res = BSDistribution()
-            for state, prob in res['results'].items():
-                postprocessed_res[self.remove_heralded_modes(state)] += prob
-            res['results'] = postprocessed_res
 
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
         return res

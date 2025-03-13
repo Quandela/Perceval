@@ -283,7 +283,7 @@ class RemoteProcessor(AProcessor):
         n = self._input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
-            photon_filter = self._min_detected_photons_filter
+            photon_filter = self._min_detected_photons_filter + sum(self.heralds.values())
             if photon_filter > n:
                 return 0
         if photon_filter < 2:
