@@ -184,7 +184,7 @@ class Experiment:
     def set_postselection(self, postselect: PostSelect):
         r"""
         Set a logical post-selection function. Along with the heralded modes, this function has an impact
-        on the logical performance of the processor
+        on the logical performance of the processor holding this experiment
 
         :param postselect: Sets a post-selection function. Its signature must be `func(s: BasicState) -> bool`.
             If None is passed as parameter, removes the previously defined post-selection function.
@@ -211,7 +211,7 @@ class Experiment:
         r"""
         Removes all components and replace them by the given circuit.
 
-        :param circuit: The circuit to start the processor with
+        :param circuit: The circuit to start the experiment with
         :return: Self to allow direct chain this with .add()
         """
         if self._n_moi == 0:
@@ -224,24 +224,25 @@ class Experiment:
 
     def add(self, mode_mapping, component, keep_port: bool = True) -> Self:
         """
-        Add a component to the processor (unitary or non-unitary).
+        Add a component to the experiment (unitary or non-unitary).
 
-        :param mode_mapping: Describe how the new component is connected to the existing processor. Can be:
+        :param mode_mapping: Describe how the new component is connected to the existing experiment. Can be:
 
          * an int: composition uses consecutive modes starting from `mode_mapping`
          * a list or a dict: describes the full mapping of length the input mode count of `component`
 
-        :param component: The component to append to the processor. Can be:
+        :param component: The component to append to the experiment. Can be:
 
          * A unitary circuit
          * A non-unitary component
          * A processor
+         * An experiment
          * A detector
 
         :param keep_port: if True, saves `self`'s output ports on modes impacted by the new component, otherwise removes them.
 
         Adding a component on non-ordered, non-consecutive modes computes the right permutation (PERM component) which
-        fits into the existing processor and the new component.
+        fits into the existing experiment and the new component.
 
         Example:
 
@@ -252,7 +253,7 @@ class Experiment:
         """
         if self.m == 0:
             self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
-            get_logger().debug(f"Number of modes of interest defaulted to {self.m} in processor {self.name}",
+            get_logger().debug(f"Number of modes of interest defaulted to {self.m} in experiment {self.name}",
                                channel.general)
 
         connector = ModeConnector(self, component, mode_mapping)
@@ -332,10 +333,10 @@ class Experiment:
                 f"Post-selection conditions cannot compose with modes {impacted_modes}"
 
     def _compose_experiment(self, connector: ModeConnector, experiment: Experiment, keep_port: bool):
-        get_logger().debug(f"Compose processor {self.name} with {experiment.name}", channel.general)
+        get_logger().debug(f"Compose experiment {self.name} with {experiment.name}", channel.general)
         self._is_unitary = self._is_unitary and experiment._is_unitary
         self._has_td = self._has_td or experiment._has_td
-        if experiment.heralds:  # and not processor.parameters:  # TODO: understand the presence of parameters here
+        if experiment.heralds:
             # adding the same experiment component again renders incorrect heralds if not copied
             # This concerns our gate based processors from catalog which has no input params
             get_logger().debug("  Force copy during experiment compose", channel.general)
@@ -364,7 +365,7 @@ class Experiment:
         new_components = []
         if perm_component is not None:
             get_logger().debug(
-                f"  Add {perm_component.perm_vector} permutation before processor compose", channel.general)
+                f"  Add {perm_component.perm_vector} permutation before experiment compose", channel.general)
             if len(self._components) > 0 and isinstance(self._components[-1][1], PERM):
                 # Simplify composition by merging two consecutive PERM components
                 l_perm_r = self._components[-1][0]
@@ -380,7 +381,7 @@ class Experiment:
         if perm_component is not None:
             perm_inv = perm_component.copy()
             perm_inv.inverse(h=True)
-            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after processor compose", channel.general)
+            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
             new_components.append((perm_modes, perm_inv))
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
@@ -416,7 +417,7 @@ class Experiment:
     def _add_component(self, mode_mapping, component, keep_port: bool):
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
-            # Remove output ports used to connect the new processor
+            # Remove output ports used to connect the new experiment
             for i in mode_mapping:
                 port = self.get_output_port(i)
                 if port is not None:
@@ -466,14 +467,14 @@ class Experiment:
     @property
     def m(self) -> int:
         """
-        :return: Number of modes of interest (MOI) defined in the processor
+        :return: Number of modes of interest (MOI) defined in the experiment
         """
         return self._n_moi
 
     @m.setter
     def m(self, value: int):
         if self._n_moi != 0:
-            raise RuntimeError(f"The number of modes of this processor was already set (to {self._n_moi})")
+            raise RuntimeError(f"The number of modes of this experiment was already set (to {self._n_moi})")
         if not isinstance(value, int) or value < 1:
             raise ValueError(f"The number of modes should be a strictly positive integer (got {value})")
         self._n_moi = value
@@ -516,7 +517,7 @@ class Experiment:
         return circuit
 
     def non_unitary_circuit(self, flatten: bool = False) -> list[tuple[tuple, AComponent]]:
-        if self._has_td:  # Inherited from the parent processor in this case
+        if self._has_td:  # Inherited from the parent experiment in this case
             return self.components
 
         comp = _flatten(self)
@@ -668,7 +669,7 @@ class Experiment:
         return pos
 
     def check_input(self, input_state: BasicState):
-        r"""Check if a basic state input matches with the current processor configuration"""
+        r"""Check if a basic state input matches with the current experiment configuration"""
         assert self.m is not None, "A circuit has to be set before the input state"
         expected_input_length = self.m
         assert len(input_state) == expected_input_length, \
@@ -710,7 +711,7 @@ class Experiment:
     @dispatch(StateVector)
     def with_input(self, sv: StateVector):
         r"""
-        Setting directly state vector as input of a processor, use SVDistribution input
+        Setting directly state vector as input of a experiment, use SVDistribution input
 
         :param sv: the state vector
         """
@@ -742,7 +743,7 @@ class Experiment:
 
     def flatten(self, max_depth=None) -> list[tuple]:
         """
-        List all the components in the processor where recursive circuits have been flattened.
+        List all the components in the experiment where recursive circuits have been flattened.
 
         :param max_depth: The maximum depth of recursion. The remaining sub-circuits at this depth are listed as a component.
         """
