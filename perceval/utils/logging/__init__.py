@@ -65,13 +65,13 @@ def deprecated(*decorator_args, **decorator_kwargs):
     return decorator_deprecated
 
 
-def use_python_logger():
+def use_python_logger(logger = None):
     global _logger
-    if isinstance(_logger, PythonLogger):
+    if isinstance(_logger, PythonLogger) and _logger._logger == logger:
         return
     if _logger is not None:
-        _logger.info("Changing to Python logger", channel.general)
-    _logger = PythonLogger()
+        _logger.info("Switching to Python logger", channel.general)
+    _logger = PythonLogger(logger)
     sys.excepthook = _my_excepthook
 
 
@@ -80,7 +80,7 @@ def use_perceval_logger():
     if isinstance(_logger, ExqaliburLogger):
         return
     if _logger is not None:
-        _logger.info("Changing to exqalibur logger", channel.general)
+        _logger.info("Switching to exqalibur logger", channel.general)
     _logger = ExqaliburLogger()
     _logger.initialize()
     sys.excepthook = _my_excepthook
