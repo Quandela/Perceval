@@ -348,15 +348,15 @@ class NoisySamplingSimulator:
             channel.general)
         return new_input, physical_perf
 
-    def _compute_samples_with_perf(self, prepare_samples: int, physical_perf: float, zpp : float, max_shots: int) -> int:
+    def _compute_samples_with_perf(self, prepare_samples: int, physical_perf: float, zpp: float, max_shots: int) \
+            -> tuple[int, int]:
         if self._min_detected_photons_filter >= 2 and max_shots is not None:
             # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
             max_shots *= physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
             max_shots = math.ceil(max_shots)
             prepare_samples = min(max_shots, prepare_samples)
 
-        return prepare_samples
-
+        return prepare_samples, max_shots
 
     def _prepare_provider(self, provider: SamplesProvider,
                           svd: SVDistribution | tuple[Source, BasicState],
@@ -376,7 +376,8 @@ class NoisySamplingSimulator:
                 source, bs_input = svd
                 n = bs_input.n
                 pre_physical_perf, zpp = source.cache_prob_table(n, self._min_detected_photons_filter)
-                prepare_samples = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp, max_shots)
+                prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
+                                                                             max_shots)
 
                 sample_generator = lambda i: source.generate_samples(i, bs_input, self._min_detected_photons_filter)
 
@@ -386,7 +387,8 @@ class NoisySamplingSimulator:
                 n = svd.n_max
                 zpp, max_p = self._check_input_svd(svd)
                 trimmed_bsd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
-                prepare_samples = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp, max_shots)
+                prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
+                                                                             max_shots)
 
                 sample_generator = lambda i: trimmed_bsd.sample(i, non_null=False)
 
@@ -445,15 +447,16 @@ class NoisySamplingSimulator:
         provider = SamplesProvider(self._backend)
         provider.sleep_between_batches = self.sleep_between_batches
 
-        first_batch, pre_physical_perf, n, prepare_samples, sample_generator = self._prepare_provider(provider, svd,
-                                                                                                      max_samples,
-                                                                                                      max_shots,
-                                                                                                      progress_callback)
+        first_batch, pre_physical_perf, n, max_selected_shots, sample_generator = self._prepare_provider(provider, svd,
+                                                                                                         max_samples,
+                                                                                                         max_shots,
+                                                                                                         progress_callback)
 
         if sample_generator is None:
             return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
 
-        res = self._noisy_sampling(sample_generator, provider, max_samples, prepare_samples, det_type, first_batch, progress_callback)
+        res = self._noisy_sampling(sample_generator, provider, max_samples, max_selected_shots, det_type, first_batch,
+                                   progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': n, 'max_samples': max_samples, 'max_shots': max_shots})
