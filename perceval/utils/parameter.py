@@ -70,6 +70,7 @@ class Parameter:
         self._pid = Parameter._id
         self._is_expression = is_expression
         self._original = None
+        self._params = {self}
         Parameter._id += 1
 
     @property
@@ -85,7 +86,6 @@ class Parameter:
     def is_variable(self) -> bool:
         r""""Returns True for a non-fixed parameter"""
         return self._symbol is not None
-
 
     def __float__(self):
         r"""Convert the parameter to float, will fail if the parameter has no defined value
@@ -215,104 +215,8 @@ class Parameter:
         return self._pid
 
     def __mul__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}*{other.name})", {self} | other.params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}*{other.name})", {self, other})
-        elif isinstance(other, (int, float)):
-            return Expression(f"({other}*{self.name})", {self})
-        raise TypeError("Unsupported parameter operation.")
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __add__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}+{other.name})", {self} | other.params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}+{other.name})", {self, other})
-        elif isinstance(other, (int, float)):
-            return Expression(f"({self.name}+{other})", {self})
-        raise TypeError("Unsupported parameter operation.")
-
-    def __radd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}-{other.formula})", {self} | other.params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}-{other.name})", {self, other})
-        elif isinstance(other, (int, float)):
-            return Expression(f"({self.name}-{other})", {self})
-        raise TypeError("Unsupported parameter operation.")
-
-    def __rsub__(self, other):
-        if isinstance(other, (int, float)):
-            return Expression(f"({other}-{self.name})", {self})
-        raise TypeError("Unsupported operation.")
-
-    def __truediv__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}/{other.name})", {self} | other._params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}/{other.name})", {self, other})
-        elif isinstance(other, (int, float)):
-            return Expression(f"({self.name}/{other})", {self})
-        raise TypeError("Unsupported parameter operation.")
-
-    def __pow__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}^{other.name})", {self} | other._params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}^{other.name})", {self, other})
-        elif isinstance(other, (int, float)):
-            return Expression(f"({self.name}^{other})", {self})
-        raise TypeError("Unsupported parameter operation.")
-
-    def __neg__(self):
-        # Ensure using __neg__ twice in a row returns the original parameter
-        if self._original is not None:
-            return self._original
-
-        if isinstance(self, Expression):
-            expr = Expression(f"(-{self.name})", self._params)
-        else:
-            expr = Expression(f"(-{self.name})", {self})
-        expr._original = self
-        return expr
-
-class Expression(Parameter):
-    """
-    This class allows arithmetic manipulation of the Parameter class.
-    A logical string is passed and the parameters with a corresponding name are created.
-    Alternatively, one can specify the pre-defined parameters.
-
-    :param name: string specifying equation, acts as name of Expression parameter.
-    :param parameters: specifies the identities of existing parameters present in the expression name
-    """
-    def __init__(self, name: str, parameters: set[Parameter] = None):
-        try:
-            e = sp.S(name)
-            self.name = f"({e})"
-        except Exception as err:
-            raise ValueError(f"{name} is not an expression: {err}")
-        if not isinstance(e, sp.Expr):
-            raise ValueError (f"{name} is not an expression")
-
-        # Create set containing all parent parameters
-        self._params = set() if parameters is None else set(parameters)
-        super().__init__(self.name, is_expression=True, periodic=False)
-        self._symbol = sp.S(name)
-
-    def __repr__(self):
-        return f"Expression({self.name[1:-1]}, parameters={self._params})"
-
-    def __mul__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}*{other.name})", other._params | self._params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}*{other.name})", {other} | self._params)
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}*{other.name})", self._merge_param_sets(other))
         elif isinstance(other, (int, float)):
             return Expression(f"({other}*{self.name})", self._params)
         raise TypeError("Unsupported parameter operation.")
@@ -321,10 +225,8 @@ class Expression(Parameter):
         return self.__mul__(other)
 
     def __add__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}+{other.name})", other._params | self._params)
-        elif isinstance(other, (Parameter, P)):
-            return Expression(f"({self.name}+{other.name})", {other} | self._params)
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}+{other.name})", self._merge_param_sets(other))
         elif isinstance(other, (int, float)):
             return Expression(f"({self.name}+{other})", self._params)
         raise TypeError("Unsupported parameter operation.")
@@ -333,10 +235,8 @@ class Expression(Parameter):
         return self.__add__(other)
 
     def __sub__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}-{other.name})", other._params | self._params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}-{other.name})", {other} | self._params)
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}-{other.name})", self._merge_param_sets(other))
         elif isinstance(other, (int, float)):
             return Expression(f"({self.name}-{other})", self._params)
         raise TypeError("Unsupported parameter operation.")
@@ -347,24 +247,66 @@ class Expression(Parameter):
         raise TypeError("Unsupported operation.")
 
     def __truediv__(self, other):
-        if isinstance(other, Expression):
-            return Expression(f"({self.name}/{other.name})", other._params | self._params)
-        elif isinstance(other, Parameter):
-            return Expression(f"({self.name}/{other.name})", {other} | self._params)
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}/{other.name})", self._merge_param_sets(other))
         elif isinstance(other, (int, float)):
             return Expression(f"({self.name}/{other})", self._params)
         raise TypeError("Unsupported parameter operation.")
 
     def __pow__(self, other):
-        if isinstance(other, (int, float)):
-            return Expression(f"{self.name}^{other}", self._params)
-        raise TypeError("Unsupported operation.")
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}^{other.name})", self._merge_param_sets(other))
+        elif isinstance(other, (int, float)):
+            return Expression(f"({self.name}^{other})", self._params)
+        raise TypeError("Unsupported parameter operation.")
+
+    def __neg__(self):
+        # Ensure using __neg__ twice in a row returns the original parameter
+        if self._original is not None:
+            return self._original
+        expr = Expression(f"(-{self.name})", self._params)
+        expr._original = self
+        return expr
+
+    def _merge_param_sets(self, other):
+        return self._params | other._params
+
+
+class Expression(Parameter):
+    """
+    This class allows arithmetic manipulation of the Parameter class.
+
+    :param name: string specifying equation, acts as name of Expression parameter.
+    :param parameters: set of Parameter instances used in the expression
+    """
+    def __init__(self, name: str, parameters: set[Parameter]):
+        try:
+            e = sp.S(name)
+            self.name = f"({e})"
+        except Exception as err:
+            raise ValueError(f"{name} is not an expression: {err}")
+        if not isinstance(e, sp.Expr):
+            raise ValueError (f"{name} is not an expression")
+        super().__init__(self.name, is_expression=True, periodic=False)
+
+        # Create set containing all parent parameters
+        self._params = set(parameters)
+        self._check_parameters(set(fs.name for fs in e.free_symbols))
+        self._symbol = sp.S(name)
+
+    def _check_parameters(self, free_symbol_names):
+        pcvl_param_names = set(p.name for p in self._params)
+        if free_symbol_names != pcvl_param_names:
+            raise RuntimeError(f"Missing parameters: {free_symbol_names - pcvl_param_names}")
+
+    def __repr__(self):
+        return f"Expression({self.name[1:-1]}, parameters={self._params})"
 
     def __float__(self):
         """Updates Expression with respect to any changes made to parent Parameters"""
         if any(not param.defined for param in self._params):
             raise ValueError("Expression is symbolic, cannot compute its numerical value")
-        return sp.S(self.name).subs({param.name : param._value for param in self._params})
+        return float(self.spv.subs({param.name : param._value for param in self._params}))
 
     @property
     def parameters(self) -> list[Parameter]:
