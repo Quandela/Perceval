@@ -26,7 +26,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from sklearn.decomposition import FastICA
 
 from perceval.runtime.remote_processor import RemoteProcessor, TRANSMITTANCE_KEY
 from perceval.components.abstract_processor import AProcessor
