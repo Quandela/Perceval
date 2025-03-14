@@ -69,7 +69,6 @@ class Parameter:
         self._periodic = periodic
         self._pid = Parameter._id
         self._is_expression = is_expression
-        self._expressions = []
         self._original = None
         Parameter._id += 1
 
@@ -137,7 +136,6 @@ class Parameter:
         if self.fixed and not force:
             raise RuntimeError("cannot set fixed parameter", v, self._value)
         self._value = v
-        self._notify_expressions()
 
     def fix_value(self, v):
         r"""Fix the value of a non-fixed parameter
@@ -146,13 +144,11 @@ class Parameter:
         """
         self._symbol = None
         self._value = self._check_value(v, self._min, self._max, self._periodic)
-        self._notify_expressions()
 
     def reset(self):
         r"""Reset the value of a non-fixed parameter"""
         if self._symbol:
             self._value = None
-            self._notify_expressions()
 
     @property
     def defined(self) -> bool:
@@ -218,14 +214,6 @@ class Parameter:
         r"""Unique identifier for the parameter"""
         return self._pid
 
-    def _add_expression(self, expression_callback):
-        """Adds a function to be called whenever the parameter changes"""
-        self._expressions.append(expression_callback)
-
-    def _notify_expressions(self):
-        for callback in self._expressions:
-            callback()
-
     def __mul__(self, other):
         if isinstance(other, Expression):
             return Expression(f"({self.name}*{other.name})", {self} | other.params)
@@ -266,7 +254,7 @@ class Parameter:
 
     def __truediv__(self, other):
         if isinstance(other, Expression):
-            return Expression(f"({self.name}/{other.name})", {self} | other.params)
+            return Expression(f"({self.name}/{other.name})", {self} | other._params)
         elif isinstance(other, Parameter):
             return Expression(f"({self.name}/{other.name})", {self, other})
         elif isinstance(other, (int, float)):
@@ -275,7 +263,7 @@ class Parameter:
 
     def __pow__(self, other):
         if isinstance(other, Expression):
-            return Expression(f"({self.name}^{other.name})", {self} | other.params)
+            return Expression(f"({self.name}^{other.name})", {self} | other._params)
         elif isinstance(other, Parameter):
             return Expression(f"({self.name}^{other.name})", {self, other})
         elif isinstance(other, (int, float)):
@@ -303,7 +291,7 @@ class Expression(Parameter):
     :param name: string specifying equation, acts as name of Expression parameter.
     :param parameters: specifies the identities of existing parameters present in the expression name
     """
-    def __init__(self, name: str, parameters = None):
+    def __init__(self, name: str, parameters: set[Parameter] = None):
         try:
             e = sp.S(name)
             self.name = f"({e})"
@@ -314,23 +302,11 @@ class Expression(Parameter):
 
         # Create set containing all parent parameters
         self._params = set() if parameters is None else set(parameters)
-
-        # Substitute parameter values into expression
-        if all(param.defined for param in self._params):
-            value = e.subs({param.name : param._value for param in self._params})
-        else:
-            value = None
-        super().__init__(self.name, value, is_expression=True, periodic=False)
-        del self._expressions
+        super().__init__(self.name, is_expression=True, periodic=False)
         self._symbol = sp.S(name)
 
-        # Force value change when parent parameters change values
-        for param in self._params:
-            param._add_expression(self._update_value)
-        self._update_value()
-
     def __repr__(self):
-        return f"Expression({self.name[1:-1]}, value={self._value})"
+        return f"Expression({self.name[1:-1]}, parameters={self._params})"
 
     def __mul__(self, other):
         if isinstance(other, Expression):
@@ -384,12 +360,11 @@ class Expression(Parameter):
             return Expression(f"{self.name}^{other}", self._params)
         raise TypeError("Unsupported operation.")
 
-    def _update_value(self):
+    def __float__(self):
         """Updates Expression with respect to any changes made to parent Parameters"""
         if any(not param.defined for param in self._params):
-            self._value = None
-        else:
-            self._value = sp.S(self.name).subs({param.name : param._value for param in self._params})
+            raise ValueError("Expression is symbolic, cannot compute its numerical value")
+        return sp.S(self.name).subs({param.name : param._value for param in self._params})
 
     @property
     def parameters(self) -> list[Parameter]:
