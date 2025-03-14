@@ -26,14 +26,37 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from perceval.serialization import _schema_circuit_pb2 as pb
+from perceval.components import BSLayeredPPNR, Detector
 
-from .job_status import JobStatus, RunningStatus
-from .job import Job
-from .local_job import LocalJob
-from .remote_job import RemoteJob
-from .remote_processor import RemoteProcessor
-from .session import ISession
-from ._token_management import save_token # deprecated
-from .remote_config import RemoteConfig
-from .job_group import JobGroup
-from .check_cancel import cancel_requested
+
+def serialize_bs_layer(detector: BSLayeredPPNR):
+    pb_d = pb.BSLayeredPPNR()
+    pb_d.name = detector.name
+    pb_d.bs_layers = detector._layers
+    pb_d.reflectivity = detector._r
+    return pb_d
+
+
+def deserialize_bs_layer(pb_d: pb.BSLayeredPPNR) -> BSLayeredPPNR:
+    detector = BSLayeredPPNR(pb_d.bs_layers, pb_d.reflectivity)
+    detector.name = pb_d.name
+    return detector
+
+
+def serialize_detector(detector: Detector):
+    pb_d = pb.Detector()
+    pb_d.name = detector.name
+    if detector._wires is not None:
+        pb_d.n_wires = detector._wires
+    if detector.max_detections is not None:
+        pb_d.max_detections = detector.max_detections
+    return pb_d
+
+
+def deserialize_detector(pb_d: pb.Detector) -> Detector:
+    n_wires = pb_d.n_wires or None
+    max_detections = pb_d.max_detections or None
+    detector = Detector(n_wires, max_detections)
+    detector.name = pb_d.name
+    return detector

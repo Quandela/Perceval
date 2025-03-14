@@ -56,6 +56,7 @@ def _get_remote_processor(requests_mock, m: int = 8):
 def test_payload_basics(requests_mock):
     """test payload basics infos"""
     rp = _get_remote_processor(requests_mock)
+    rp.min_detected_photons_filter(4)
     data = rp.prepare_job_payload(COMMAND_NAME)
     name = get_rpc_handler(requests_mock).name
     assert 'platform_name' in data and data['platform_name'] == name
@@ -69,6 +70,7 @@ def test_payload_basics(requests_mock):
     assert 'input_state' not in payload  # No input state was passed
 
     input_state = BasicState([1, 0] * 4)
+    rp.min_detected_photons_filter(4)
     rp.with_input(input_state)
     new_payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert (
@@ -83,6 +85,7 @@ def test_payload_parameters(requests_mock):
     params = {f'param{i}': f'value{i}' for i in range(n_params)}
     rp.set_parameters(params)
 
+    rp.min_detected_photons_filter(0)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'parameters' in payload
     for i in range(n_params):
@@ -93,6 +96,7 @@ def test_payload_parameters(requests_mock):
 def test_payload_heralds(requests_mock):
     """test payload with heralds"""
     rp = _get_remote_processor(requests_mock)
+    rp.min_detected_photons_filter(0)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'heralds' not in payload
 
@@ -107,6 +111,7 @@ def test_payload_heralds(requests_mock):
 def test_payload_postselect(requests_mock):
     """test payload with postselect"""
     rp = _get_remote_processor(requests_mock)
+    rp.min_detected_photons_filter(0)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'postselect' not in payload
 
@@ -120,9 +125,6 @@ def test_payload_postselect(requests_mock):
 def test_payload_min_detected_photons(requests_mock):
     """test payload with min_detected_photons"""
     rp = _get_remote_processor(requests_mock)
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'parameters' not in payload
-
     rp.min_detected_photons_filter(2)
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
     assert 'min_detected_photons' in payload['parameters']
@@ -141,6 +143,7 @@ def test_payload_cnot(requests_mock):
     assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
 
     input_state = BasicState([1, 0] * 4)
+    rp.min_detected_photons_filter(4)
     rp.with_input(input_state)
 
     payload = rp.prepare_job_payload(COMMAND_NAME)['payload']

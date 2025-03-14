@@ -129,7 +129,7 @@ class AProcessor(ABC):
         Sets-up a state post-selection on the number of detected photons. With thresholded detectors, this will
         actually filter on "click" count.
 
-        :param n: Minimum expected photons
+        :param n: Minimum expected photons. Does not take heralded modes into account.
 
         This post-selection has an impact on the output physical performance
         """
@@ -644,7 +644,7 @@ class AProcessor(ABC):
     def _with_logical_input(self, input_state: LogicalState):
         input_state = get_basic_state_from_ports(list(self._in_ports.keys()), input_state)
         if self._min_detected_photons_filter is None:
-            self._min_detected_photons_filter = input_state.n + list(self.heralds.values()).count(1)
+            self._min_detected_photons_filter = input_state.n
         self.with_input(input_state)
 
     def check_input(self, input_state: BasicState):
@@ -660,33 +660,32 @@ class AProcessor(ABC):
             get_logger().warn("Given input state has annotations, that will be ignored in the computation."
                               " To use them, consider using a StateVector.")
 
-    def _deduce_min_detected_photons(self, expected_photons: int) -> None:
-        get_logger().warn(
-            "Setting a value for min_detected_photons will soon be mandatory, please change your scripts accordingly." +
-            " Use the method processor.min_detected_photons_filter(value) before any call of processor.with_input(input)." +
-            f" The current deduced value of min_detected_photons is {expected_photons}", channel.user)
-        self._min_detected_photons_filter = expected_photons
+
+    def check_min_detected_photons_filter(self):
+        if self._min_detected_photons_filter is None:
+            if not self.is_remote and self._source is not None and self._source.is_perfect():
+                # Automatically set the min_detected_photons_filter for perfect sources of local processors if not set
+                self._min_detected_photons_filter = self._input_state.n
+            else:
+                raise ValueError("The value of min_detected_photons is not set."
+                                 " Use the method processor.min_detected_photons_filter(value).")
+
 
     @dispatch(BasicState)
     def with_input(self, input_state: BasicState) -> None:
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
         input_idx = 0
-        expected_photons = 0
         # Build real input state (merging ancillas + expected input) and compute expected photon count
         for k in range(self.circuit_size):
             if k in self.heralds:
                 input_list[k] = self.heralds[k]
-                expected_photons += self.heralds[k]
             else:
                 input_list[k] = input_state[input_idx]
-                expected_photons += input_state[input_idx]
                 input_idx += 1
 
         self._input_state = BasicState(input_list)
 
-        if self._min_detected_photons_filter is None:
-            self._deduce_min_detected_photons(expected_photons)
 
     def flatten(self, max_depth = None) -> list[tuple]:
         """

@@ -26,18 +26,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import numpy as np
 import pytest
 from unittest.mock import patch
 
 import perceval as pcvl
 from perceval import BSDistribution
-from perceval.components import Circuit, Processor, BS, Source, catalog, UnavailableModeException, Port, PortLocation, \
+from perceval.components import Circuit, Processor, BS, PS, catalog, UnavailableModeException, Port, PortLocation, \
     PERM, Detector
-from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel
+from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
 from perceval.backends import Clifford2017Backend
 
-from _test_utils import assert_svd_close, LogChecker
+from _test_utils import LogChecker
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
@@ -60,13 +60,11 @@ def test_processor_input_fock_state_with_loss():
     assert pytest.approx(p.source_distribution) == expected
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_processor_input_fock_state_with_all_noise_sources(mock_warn):
+def test_processor_input_fock_state_with_all_noise_sources():
     nm = NoiseModel(brightness=0.2, indistinguishability=0.9, g2=0.1, g2_distinguishable=False)
     p = Processor("Naive", Circuit(4), nm)
     p.source.simplify_distribution = True
-    with LogChecker(mock_warn):
-        p.with_input(BasicState([0, 1, 1, 0]))
+    p.with_input(BasicState([0, 1, 1, 0]))
 
     expected = {'|0,0,0,0>': 16 / 25,
                 '|0,0,2{_:0},0>': 0.0015490319977879558,
@@ -248,6 +246,38 @@ def test_phase_quantization():
     assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
 
 
+def test_phase_error():
+    error: float = 0.2
+    angle: float = 1
+
+    nm = NoiseModel(phase_error=error)
+    p = Processor("SLOS", PS(phi=angle), noise=nm)
+    c = p.linear_circuit()
+    assert float(c._components[0][1].param("max_error")) == pytest.approx(error)
+    a = c.compute_unitary()[0, 0]
+    assert np.angle(a) != angle
+    assert angle-error <= np.angle(a) <= angle+error
+
+    # When a specific error is directly set on a phase shifter, the NoiseModel does not change the value
+    specific_error: float = 0.3
+    p = Processor("SLOS", PS(phi=angle, max_error=specific_error), noise=nm)
+    c = p.linear_circuit()
+    assert float(c._components[0][1].param("max_error")) == pytest.approx(specific_error)
+    a = c.compute_unitary()[0, 0]
+    assert np.angle(a) != angle
+    assert angle - specific_error <= np.angle(a) <= angle + specific_error
+
+    # Works with symbols too
+    symb_error = "err0"
+    symb_angle = "phi0"
+    p = Processor("SLOS", PS(phi=P(symb_angle), max_error=P(symb_error)), noise=nm)
+    c = p.linear_circuit()
+    err_param = c._components[0][1].param("max_error")
+    assert err_param.is_variable and str(err_param.spv) == symb_error
+    a = c.compute_unitary(use_symbolic=True)[0, 0]
+    assert 'exp(I*' in str(a) and '*err0 + phi0' in str(a)
+
+
 def test_empty_output():
     p = Processor("SLOS", 4)
     p.add(0, PERM([1, 0]))
@@ -265,7 +295,7 @@ def test_mask_distinguishability():
     p.add_herald(1, 1)
     p.add_herald(2, 1)
 
-    p.min_detected_photons_filter(2)
+    p.min_detected_photons_filter(0)
     input_state = BasicState([0])
     p.with_input(input_state)
 
@@ -279,7 +309,7 @@ def test_mask_detectors():
     p.add(0, Detector.threshold())
     p.add_herald(0, 1)  # Since using a threshold, expected is at least 1
 
-    p.min_detected_photons_filter(1)
+    p.min_detected_photons_filter(0)
     p.with_input(BasicState([1]))
 
     res = p.probs()
