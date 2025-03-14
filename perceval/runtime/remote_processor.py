@@ -30,14 +30,14 @@ import uuid
 from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source, AComponent, AFFConfigurator
+from perceval.components import ACircuit, Processor, AComponent, AFFConfigurator
 from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
-from ._token_management import TokenProvider
+from .remote_config import RemoteConfig
 
 __process_id__ = uuid.uuid4()
 
@@ -45,7 +45,6 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
-DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
@@ -55,11 +54,13 @@ class RemoteProcessor(AProcessor):
             name: str = None,
             token: str = None,
             url: str = QUANDELA_CLOUD_URL,
+            proxies: dict[str,str] = None,
             rpc_handler: RPCHandler = None):
         rp = RemoteProcessor(
             name=name,
             token=token,
             url=url,
+            proxies=proxies,
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
@@ -72,6 +73,7 @@ class RemoteProcessor(AProcessor):
                  name: str = None,
                  token: str = None,
                  url: str = QUANDELA_CLOUD_URL,
+                 proxies: dict[str,str] = None,
                  rpc_handler: RPCHandler = None,
                  m: int = None,
                  noise: NoiseModel = None):
@@ -79,6 +81,7 @@ class RemoteProcessor(AProcessor):
         :param name: Platform name
         :param token: Token value to authenticate the user
         :param url: Base URL for the Cloud API to connect to
+        :param proxies: Dictionary mapping protocol to the URL of the proxy
         :param rpc_handler: Inject an already constructed Remote Procedure Call handler (alternative init);
             when doing so, name, token and url are expected to be blank
         :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
@@ -93,16 +96,19 @@ class RemoteProcessor(AProcessor):
             if name is not None and name != self.name:
                 get_logger().warn(
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
+            self.proxies = rpc_handler.proxies
         else:
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             if token is None:
-                provider = TokenProvider()
-                token = provider.get_token()
+                token = RemoteConfig.get_token()
             if token is None:
                 raise ConnectionError("No token found")
+            if proxies is None:
+                proxies = RemoteConfig.get_proxies()
             self.name = name
-            self._rpc_handler = RPCHandler(self.name, url, token)
+            self.proxies = proxies
+            self._rpc_handler = RPCHandler(self.name, url, token, proxies)
 
         self._specs = {}
         self._perfs = {}
@@ -163,12 +169,6 @@ class RemoteProcessor(AProcessor):
             return self._specs['constraints']
         return {}
 
-    def set_parameter(self, key: str, value: any):
-        super().set_parameter(key, value)
-        if key in DEPRECATED_NOISE_PARAMS:
-            get_logger().warn(
-                f"DeprecationWarning: '{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead. version=0.11", channel.user)
-
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
@@ -222,6 +222,8 @@ class RemoteProcessor(AProcessor):
 
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
                             ) -> dict[str, any]:
+        self.check_min_detected_photons_filter()
+
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),
@@ -278,11 +280,10 @@ class RemoteProcessor(AProcessor):
             transmittance = DEFAULT_TRANSMITTANCE
             get_logger().warn(
                 f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
-        losses = 1 - transmittance
         n = self._input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
-            photon_filter = self._min_detected_photons_filter
+            photon_filter = self._min_detected_photons_filter + sum(self.heralds.values())
             if photon_filter > n:
                 return 0
         if photon_filter < 2:
@@ -293,7 +294,7 @@ class RemoteProcessor(AProcessor):
         if param_values:
             for n, v in param_values.items():
                 c.param(n).set_value(v)
-        lp = Processor("SLOS", c, Source(losses=losses))
+        lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
         lp.thresholded_output(self._thresholded_output)
         lp.with_input(self._input_state)

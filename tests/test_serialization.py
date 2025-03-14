@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect
+from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, PS
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -75,17 +75,18 @@ def test_symbol_serialization():
 
 def _check_circuits_eq(c_a, c_b):
     assert c_a.ncomponents() == c_b.ncomponents()
-    for nc in range(len(c_a._components)):
-        input_idx, input_comp = c_a._components[nc]
-        output_idx, output_comp = c_b._components[nc]
+    for (input_idx, input_comp), (output_idx, output_comp) in zip(c_a._components, c_b._components):
         assert isinstance(input_comp, type(output_comp))
         assert list(input_idx) == list(output_idx)
-        assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
+        if isinstance(input_comp, PS):
+            assert input_comp.describe() == output_comp.describe()
+        else:
+            assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
 
 
 def _build_test_circuit():
-    c1 = Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
-         // comp.Unitary(Matrix.random_unitary(3))
+    c1 = (Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215, max_error=0.33) // comp.PERM([2, 0, 1])
+          // (1, comp.PBS()) // comp.Unitary(Matrix.random_unitary(3)))
     c2 = Circuit(2) // comp.BS.H(theta=0.36, phi_tl=1.94, phi_br=5.8817, phi_bl=0.0179) // comp.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
     c1.add(0, comp.Barrier(2, visible=True))
@@ -201,7 +202,7 @@ def test_noise_model_serialization():
     assert empty_nm == empty_nm_deser
 
     nm = NoiseModel(brightness=0.1, indistinguishability=0.2, g2=0.3, g2_distinguishable=True, transmittance=0.4,
-                    phase_imprecision=0.5)
+                    phase_imprecision=0.5, phase_error=0.08)
     nm_ser = serialize(nm)
     nm_deser = deserialize(nm_ser)
     assert nm == nm_deser
@@ -215,6 +216,21 @@ def test_postselect_serialization(ps):
     ps_deser = deserialize(ps_ser)
     assert ps == ps_deser
 
+
+@pytest.mark.parametrize("detector", (BSLayeredPPNR(2, .6),
+                                      Detector.pnr(),
+                                      Detector.threshold(),
+                                      Detector.ppnr(4, 2)))
+def test_detector_serialization(detector):
+    serialized = serialize(detector)
+    deserialized = deserialize(serialized)
+    assert detector.name == deserialized.name, "Wrong deserialized detector name"
+    if isinstance(detector, BSLayeredPPNR):
+        assert detector._layers == deserialized._layers and detector._r == deserialized._r, \
+            "Wrong deserialized detector parameters"
+    else:
+        assert detector._wires == deserialized._wires and detector.max_detections == deserialized.max_detections, \
+            "Wrong deserialized detector parameters"
 
 def test_json():
     svd = SVDistribution()

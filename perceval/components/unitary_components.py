@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import math
+import random
 from copy import copy
 from enum import Enum
 
@@ -158,34 +159,34 @@ class BS(ACircuit):
         phi_tl = float(self._phi_tl) if self._phi_tl.defined else self._phi_tl
         phi_tr = float(self._phi_tr) if self._phi_tr.defined else self._phi_tr
         phi_br = float(self._phi_br) if self._phi_br.defined else self._phi_br
-        
+
         if v:
             self._phi_bl.set_value(phi_bl, force=True) if self._phi_bl.defined else None
             self._phi_tr.set_value(phi_tr, force=True) if self._phi_tr.defined else None
             self._phi_tl.set_value(phi_tl, force=True) if self._phi_tl.defined else None
             self._phi_br.set_value(phi_br, force=True) if self._phi_br.defined else None
-        
+
             # For Rx BS, vertical inversion does not impact theta parameter
             if self._convention == BSConvention.Ry:
                 if self._theta.defined:
                     self._theta.set_value(-theta, force=True)
                 else:
-                    expr = -theta 
+                    expr = -theta
                     self._theta = self._set_parameter("theta", expr, 0, 4*sp.pi)
-                    
+
             elif self._convention == BSConvention.H:
                 if self._theta.defined:
                     self._theta.set_value(2*math.pi - float(self._theta), force=True)
                 else:
                     self._theta = self._set_parameter("theta", 2*math.pi - theta, 0, 4*sp.pi)
-        
+
         if h:
             for param in [self._phi_tl, self._phi_bl, self._phi_tr, self._phi_br]:
                 if param.defined:
                     param.set_value(-float(param), force=True)
                 else:
                     param = self._set_parameter(param.name, -param, 0, 4*sp.pi)
-            
+
             # For H BS, horizontal inversion does not impact theta parameter
             if self._convention == BSConvention.Rx or self._convention == BSConvention.Ry:
                 if self._theta.defined:
@@ -202,20 +203,27 @@ class PS(ACircuit):
     """Phase shifter"""
     DEFAULT_NAME = "PS"
 
-    def __init__(self, phi):
+    def __init__(self, phi, max_error = 0):
         super().__init__(1)
-        self._phi = self._set_parameter("phi", phi, 0, 2*sp.pi)
+        self._phi = self._set_parameter("phi", phi, 0, 2*math.pi)
+        self._max_error = self._set_parameter("max_error", max_error, 0, math.pi)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
         self.assign(assign)
         if use_symbolic:
-            return Matrix([[sp.exp(self._phi.spv*sp.I)]], True)
+            err = self._max_error.spv*random.uniform(-1, 1)
+            phase = self._phi.spv + err
+            return Matrix([[sp.exp(phase * sp.I)]], True)
         else:
-            return Matrix([[math.cos(float(self._phi)) + 1j * math.sin(float(self._phi))]], False)
+            err = float(self._max_error)*random.uniform(-1, 1)
+            phase = float(self._phi) + err
+            return Matrix([[math.cos(phase) + 1j * math.sin(phase)]], False)
 
     def get_variables(self):
         out = {}
         self._populate_parameters(out, "phi")
+        if self._max_error:
+            self._populate_parameters(out, "max_error")
         return out
 
     def describe(self):

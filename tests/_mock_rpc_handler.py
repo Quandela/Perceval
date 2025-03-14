@@ -61,7 +61,7 @@ REMOTE_JOB_RESULTS = BSDistribution(
 
 def get_rpc_handler(requests_mock, url='http://test'):
     """return a fake rpc handler"""
-    mock = MockRPCHandler(name='mocked:platform', url=url, token='no-token')
+    mock = MockRPCHandler(name='mocked:platform', url=url, token='no-token', proxies={})
     mock.set_mock(requests_mock)
     return mock
 
