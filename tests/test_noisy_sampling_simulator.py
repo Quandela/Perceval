@@ -30,7 +30,7 @@
 from perceval.simulators import NoisySamplingSimulator
 from perceval.backends import Clifford2017Backend
 from perceval.components import Unitary, Source, BS, Detector
-from perceval.utils import Matrix, BasicState, SVDistribution, PostSelect
+from perceval.utils import Matrix, BasicState, SVDistribution
 
 import pytest
 
