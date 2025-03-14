@@ -413,7 +413,7 @@ def test_evolve_with_heralds():
     for kh_state, dh_state in zip(keep_heralds_output['results'].keys(), discard_heralds_output['results'].keys()):
         assert_sv_close(kh_state, dh_state * StateVector([1, 1]))
 
-    sim.set_min_detected_photons_filter(4)
+    sim.set_min_detected_photons_filter(2)
     result = sim.evolve_svd(svd)
     assert_svd_close(result["results"], SVDistribution(BasicState([0, 1, 1, 0])))
     assert result["physical_perf"] == pytest.approx(brightness ** 4)
