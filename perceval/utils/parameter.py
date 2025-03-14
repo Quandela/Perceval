@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 import random
-import re
 import sympy as sp
 
 
@@ -218,11 +217,11 @@ class Parameter:
     def pid(self):
         r"""Unique identifier for the parameter"""
         return self._pid
-    
+
     def _add_expression(self, expression_callback):
         """Adds a function to be called whenever the parameter changes"""
         self._expressions.append(expression_callback)
-        
+
     def _notify_expressions(self):
         for callback in self._expressions:
             callback()
@@ -264,7 +263,7 @@ class Parameter:
         if isinstance(other, (int, float)):
             return Expression(f"({other}-{self.name})", {self})
         raise TypeError("Unsupported operation.")
-    
+
     def __truediv__(self, other):
         if isinstance(other, Expression):
             return Expression(f"({self.name}/{other.name})", {self} | other.params)
@@ -273,7 +272,7 @@ class Parameter:
         elif isinstance(other, (int, float)):
             return Expression(f"({self.name}/{other})", {self})
         raise TypeError("Unsupported parameter operation.")
-    
+
     def __pow__(self, other):
         if isinstance(other, Expression):
             return Expression(f"({self.name}^{other.name})", {self} | other.params)
@@ -282,12 +281,12 @@ class Parameter:
         elif isinstance(other, (int, float)):
             return Expression(f"({self.name}^{other})", {self})
         raise TypeError("Unsupported parameter operation.")
-    
+
     def __neg__(self):
         # Ensure using __neg__ twice in a row returns the original parameter
         if self._original is not None:
             return self._original
-        
+
         if isinstance(self, Expression):
             expr = Expression(f"(-{self.name})", self._params)
         else:
@@ -297,25 +296,25 @@ class Parameter:
 
 class Expression(Parameter):
     """
-    This class allows arithmetic manipulation of the Parameter class. 
+    This class allows arithmetic manipulation of the Parameter class.
     A logical string is passed and the parameters with a corresponding name are created.
     Alternatively, one can specify the pre-defined parameters.
-    
+
     :param name: string specifying equation, acts as name of Expression parameter.
-    :param parameters: specifies the identities of existing parameters present in the expression name 
+    :param parameters: specifies the identities of existing parameters present in the expression name
     """
     def __init__(self, name: str, parameters = None):
         try:
             e = sp.S(name)
             self.name = f"({e})"
         except Exception as err:
-            raise ValueError("%s is not an expression: %s", name, str(err))
-        assert isinstance(e, sp.Expr), "%s is not an expression" % name
-        
+            raise ValueError(f"{name} is not an expression: {err}")
+        if not isinstance(e, sp.Expr):
+            raise ValueError (f"{name} is not an expression")
+
         # Create set containing all parent parameters
         self._params = set() if parameters is None else set(parameters)
-        self._create_missing_parameters()
-        
+
         # Substitute parameter values into expression
         if all(param.defined for param in self._params):
             value = e.subs({param.name : param._value for param in self._params})
@@ -324,12 +323,12 @@ class Expression(Parameter):
         super().__init__(self.name, value, is_expression=True, periodic=False)
         del self._expressions
         self._symbol = sp.S(name)
-        
+
         # Force value change when parent parameters change values
         for param in self._params:
             param._add_expression(self._update_value)
         self._update_value()
-        
+
     def __repr__(self):
         return f"Expression({self.name[1:-1]}, value={self._value})"
 
@@ -370,7 +369,7 @@ class Expression(Parameter):
         if isinstance(other, (int, float)):
             return Expression(f"({other}-{self.name})", self._params)
         raise TypeError("Unsupported operation.")
-    
+
     def __truediv__(self, other):
         if isinstance(other, Expression):
             return Expression(f"({self.name}/{other.name})", other._params | self._params)
@@ -379,19 +378,12 @@ class Expression(Parameter):
         elif isinstance(other, (int, float)):
             return Expression(f"({self.name}/{other})", self._params)
         raise TypeError("Unsupported parameter operation.")
-    
+
     def __pow__(self, other):
         if isinstance(other, (int, float)):
             return Expression(f"{self.name}^{other}", self._params)
         raise TypeError("Unsupported operation.")
-    
-    def _create_missing_parameters(self) -> set:
-        r"""Creates parameters not specified in Expression name"""
-        param_names = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', self.name)
-        for name in param_names:
-            if name not in [p.name for p in self._params]:
-                self._params.add(P(name))
-        
+
     def _update_value(self):
         """Updates Expression with respect to any changes made to parent Parameters"""
         if any(not param.defined for param in self._params):
