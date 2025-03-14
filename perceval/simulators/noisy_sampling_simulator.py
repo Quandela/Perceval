@@ -32,6 +32,7 @@ import math
 import time
 import sys
 from collections import defaultdict
+from typing import Callable
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
@@ -40,19 +41,6 @@ from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDis
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime import cancel_requested
 from ._simulate_detectors import simulate_detectors_sample
-
-
-def _estimate_phys_perf(transmission: float, n: int, min_photons_filter: int):
-    """
-    Computes the physical performance for a source with g2 = 0.
-    The result is lower than the real value if there is g2 and `min_photons_filter` > 1.
-
-    :param transmission: the transmission of the source. Corresponds to the product of the brightness and the transmittance
-    :param n: the number of photons in the input state
-    :param min_photons_filter: the minimum number of photons required for a state to be physically selected
-    """
-    return sum(math.comb(n, k) * transmission ** k * (1 - transmission) ** (n - k)
-               for k in range(min_photons_filter, n + 1))
 
 
 class SamplesProvider:
@@ -97,47 +85,28 @@ class SamplesProvider:
         :param noisy_input: The trimmed input distribution after selecting the states having enough photons
         :param n_samples: The total number of samples to generate
         """
-        for noisy_s, prob in noisy_input.items():
-            ns = min(math.ceil(prob * n_samples), self._max_samples)
-            for bs in noisy_s.separate_state(keep_annotations=False):
-                if self._weights[bs] + ns < self._max_samples:
-                    self._weights.add(bs, ns)
-                else:
-                    self._weights.add(bs, self._max_samples - self._weights[bs])
+        if n_samples:
+            for noisy_s, prob in noisy_input.items():
+                ns = min(math.ceil(prob * n_samples), self._max_samples)
+                for bs in noisy_s.separate_state(keep_annotations=False):
+                    if self._weights[bs] + ns < self._max_samples:
+                        self._weights.add(bs, ns)
+                    else:
+                        self._weights.add(bs, self._max_samples - self._weights[bs])
 
-    def estimate_weights_from_source(self, source: Source,
-                                     expected_input: BasicState,
-                                     n_samples: int,
-                                     n_shots: int | None,
-                                     min_detected_photons_filter: int) -> list[BasicState] | BSSamples:
+    def estimate_weights_from_source(self, sample_generator: Callable[[int], BSSamples],
+                                     n_samples: int) -> list[BasicState] | BSSamples:
         """
         Decide how much of each input we will generate when the pool becomes empty based on
         a batch of samples generated from the source and the total number of samples.
         """
-        transmission = source._emission_probability * (1 - source._losses)
-        if transmission == 0 and min_detected_photons_filter >= 1:
-            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
-            return []
-
-        # Only estimated: doesn't count g2 and detectors
-        estimated_phys_perf = _estimate_phys_perf(transmission, expected_input.n, min_detected_photons_filter)
-        n_gen = n_samples / estimated_phys_perf  # The expected number of useful samples is n_gen * P(sample.n >= filter)
-
-        if n_shots is not None:
-            n_gen2 = n_shots
-            if min_detected_photons_filter > 0:  # No selection if 0
-                zpp = (1 - transmission) ** expected_input.n
-                n_gen2 = n_shots / (1 - zpp)  # The expected number of shots is n_gen2 * P(sample is a shot)
-            n_gen = min(n_gen, n_gen2)
-
         # Generates a batch from the source to estimate the weights. These will also be the first simulated samples
-        input_samples = source.generate_samples(math.ceil(n_gen), expected_input)
+        input_samples = sample_generator(n_samples)
 
         for sample in input_samples:
-            if sample.n >= min_detected_photons_filter:
-                for state in sample.separate_state(keep_annotations=False):
-                    if self._weights[state] < self._max_samples:
-                        self._weights.add(state, 1)
+            for state in sample.separate_state(keep_annotations=False):
+                if self._weights[state] < self._max_samples:
+                    self._weights.add(state, 1)
 
         return input_samples
 
@@ -264,28 +233,9 @@ class NoisySamplingSimulator:
             "logical_perf": 1
         }
 
-    def _filter_generated_inputs(self, generated_inputs: list[BasicState] | BSSamples,
-                                 shots: int, max_shots: int = None) -> tuple[list[BasicState], int, int]:
-        not_selected_physical = 0
-        selected_inputs = []
-        for state in generated_inputs:
-            if state.n == 0 and self._min_detected_photons_filter > 0:
-                # 0 photons states are not taken into account for counting shots
-                not_selected_physical += 1
-            elif state.n < self._min_detected_photons_filter:
-                not_selected_physical += 1
-                shots += 1
-                if max_shots is not None and shots + len(selected_inputs) >= max_shots:
-                    break
-            else:
-                # Must be considered as already shot, but will be counted later
-                selected_inputs.append(state)
-
-        return selected_inputs, not_selected_physical, shots
-
     def _noisy_sampling(
             self,
-            noisy_input: BSDistribution | tuple[Source, BasicState],
+            sample_generator: Callable[[int], BSSamples],
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
@@ -296,12 +246,9 @@ class NoisySamplingSimulator:
         output = BSSamples()
         idx = 0
         not_selected = 0
-        if isinstance(noisy_input, BSDistribution):
-            selected_inputs = first_batch
-            not_selected_physical = 0
-            shots = 0
-        else:
-            selected_inputs, not_selected_physical, shots = self._filter_generated_inputs(first_batch, 0, max_shots)
+        selected_inputs = first_batch
+        not_selected_physical = 0
+        shots = 0
         batch_size = min(max_samples, max_shots) if max_shots is not None else max_samples
         while len(output) < max_samples and (max_shots is None or shots < max_shots):
 
@@ -314,21 +261,10 @@ class NoisySamplingSimulator:
             if idx == len(selected_inputs):
                 # Generate new inputs
                 idx = 0
-                if isinstance(noisy_input, BSDistribution):
-                    selected_inputs = noisy_input.sample(batch_size, non_null=False)
-                else:
-                    while True:  # Actually a do... while
-                        generated = noisy_input[0].generate_samples(batch_size, noisy_input[1])
-                        selected_inputs, new_rejected, shots = self._filter_generated_inputs(generated, shots,
-                                                                                             max_shots)
-                        not_selected_physical += new_rejected
-
-                        if len(selected_inputs):
-                            break
-
-            if not len(selected_inputs):
-                # max_shots has been reached during generation
-                break
+                nb_gen = min(batch_size, max_samples - len(output))
+                if max_shots is not None:
+                    nb_gen = min(nb_gen, max_shots - shots)
+                selected_inputs = sample_generator(nb_gen)
 
             selected_bs = selected_inputs[idx]
             idx += 1
@@ -412,44 +348,54 @@ class NoisySamplingSimulator:
             channel.general)
         return new_input, physical_perf
 
+    def _compute_samples_with_perf(self, prepare_samples: int, physical_perf: float, zpp : float, max_shots: int) -> int:
+        if self._min_detected_photons_filter >= 2 and max_shots is not None:
+            # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
+            max_shots *= physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
+            max_shots = math.ceil(max_shots)
+            prepare_samples = min(max_shots, prepare_samples)
+
+        return prepare_samples
+
+
     def _prepare_provider(self, provider: SamplesProvider,
                           svd: SVDistribution | tuple[Source, BasicState],
                           max_samples: int,
                           max_shots: int,
                           progress_callback: callable):
-        source_defined = isinstance(svd, tuple)
         pre_physical_perf = 1
+        prepare_samples = self.compute_samples(max_samples, max_shots)
+        first_batch = []
+        sample_generator = None
+        n = 0
 
-        if source_defined:
-            source, bs_input = svd
-            n = bs_input.n
-            first_batch = provider.estimate_weights_from_source(source, bs_input, max_samples, max_shots,
-                                                                self._min_detected_photons_filter)
-            if not len(first_batch):
-                first_batch = None
+        source_defined = isinstance(svd, tuple)
 
-        else:
-            prepare_samples = self.compute_samples(max_samples, max_shots)
-            n = svd.n_max
-            if prepare_samples:
-                zpp, max_p = self._check_input_svd(svd)
-                svd, pre_physical_perf = self._preprocess_input_state(svd, max_p,
-                                                                      prepare_samples)  # Beware svd is now a BSD
-                if self._min_detected_photons_filter >= 2 and max_shots is not None:
-                    # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
-                    max_shots *= pre_physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
-                    prepare_samples = min(max_shots, prepare_samples)
+        if prepare_samples:
+            if source_defined:
+                source, bs_input = svd
+                n = bs_input.n
+                pre_physical_perf, zpp = source.cache_prob_table(n, self._min_detected_photons_filter)
+                prepare_samples = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp, max_shots)
 
-            if prepare_samples:  # Value may have changed
-                provider.estimate_weights_from_distribution(svd, prepare_samples)
-                first_batch = []
+                sample_generator = lambda i: source.generate_samples(i, bs_input, self._min_detected_photons_filter)
+
+                first_batch = provider.estimate_weights_from_source(sample_generator, prepare_samples)
+
             else:
-                first_batch = None
+                n = svd.n_max
+                zpp, max_p = self._check_input_svd(svd)
+                trimmed_bsd, pre_physical_perf = self._preprocess_input_state(svd, max_p, prepare_samples)
+                prepare_samples = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp, max_shots)
 
-        # Prepare pools of pre-computed samples
-        provider.prepare(progress_callback)
+                sample_generator = lambda i: trimmed_bsd.sample(i, non_null=False)
 
-        return first_batch, pre_physical_perf, n, max_shots, svd
+                provider.estimate_weights_from_distribution(trimmed_bsd, prepare_samples)
+
+            # Prepare pools of pre-computed samples
+            provider.prepare(progress_callback)
+
+        return first_batch, pre_physical_perf, n, max_shots, sample_generator if prepare_samples else None
 
     @staticmethod
     def compute_samples(max_samples: int, max_shots: int) -> int:
@@ -499,13 +445,15 @@ class NoisySamplingSimulator:
         provider = SamplesProvider(self._backend)
         provider.sleep_between_batches = self.sleep_between_batches
 
-        first_batch, pre_physical_perf, n, max_shots, svd = self._prepare_provider(provider, svd, max_samples,
-                                                                                   max_shots, progress_callback)
+        first_batch, pre_physical_perf, n, prepare_samples, sample_generator = self._prepare_provider(provider, svd,
+                                                                                                      max_samples,
+                                                                                                      max_shots,
+                                                                                                      progress_callback)
 
-        if first_batch is None:
+        if sample_generator is None:
             return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
 
-        res = self._noisy_sampling(svd, provider, max_samples, max_shots, det_type, first_batch, progress_callback)
+        res = self._noisy_sampling(sample_generator, provider, max_samples, prepare_samples, det_type, first_batch, progress_callback)
         res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': n, 'max_samples': max_samples, 'max_shots': max_shots})

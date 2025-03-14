@@ -373,6 +373,11 @@ class Source:
         if min_detected_photons == 0:
             return self._generate_samples_no_filter(max_samples, expected_input)
 
+        transmission = self._emission_probability * (1 - self._losses)
+        if transmission == 0 and min_detected_photons >= 1:
+            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
+            return BSSamples()
+
         if self._prob_table is None or expected_input.n != self._prob_table_n or min_detected_photons != self._prob_table_filter:
             self.cache_prob_table(expected_input.n, min_detected_photons)
 
