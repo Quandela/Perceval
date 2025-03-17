@@ -171,21 +171,20 @@ class BS(ACircuit):
                 if self._theta.defined:
                     self._theta.set_value(-theta, force=True)
                 else:
-                    expr = -theta
-                    self._theta = self._set_parameter("theta", expr, 0, 4*sp.pi)
+                    self._theta = -theta
 
             elif self._convention == BSConvention.H:
                 if self._theta.defined:
                     self._theta.set_value(2*math.pi - float(self._theta), force=True)
                 else:
-                    self._theta = self._set_parameter("theta", 2*math.pi - theta, 0, 4*sp.pi)
+                    self._theta = 2*math.pi - theta
 
         if h:
             for param in [self._phi_tl, self._phi_bl, self._phi_tr, self._phi_br]:
                 if param.defined:
                     param.set_value(-float(param), force=True)
                 else:
-                    param = self._set_parameter(param.name, -param, 0, 4*sp.pi)
+                    self._set_parameter(param.name, -param, 0, 4*sp.pi)
 
             # For H BS, horizontal inversion does not impact theta parameter
             if self._convention == BSConvention.Rx or self._convention == BSConvention.Ry:
@@ -233,7 +232,7 @@ class PS(ACircuit):
     def inverse(self, v=False, h=False):
         if h:
             if self._phi.is_symbolic:
-                self._phi = self._set_parameter("phi", -self._phi, 0, 4*sp.pi)
+                self._phi = -self._phi
             else:
                 self._phi.set_value(-float(self._phi), force=True)
 

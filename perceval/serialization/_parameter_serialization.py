@@ -28,6 +28,7 @@
 # SOFTWARE.
 from __future__ import annotations
 
+import sympy as sp
 from perceval.utils import Parameter, Expression
 from perceval.serialization import _schema_circuit_pb2 as pb
 
@@ -59,4 +60,4 @@ def deserialize_parameter(serial_param: pb.Parameter):
     elif t == 'symbol':
         return Parameter(serial_param.symbol)
     elif t == 'expression':
-        return Expression(serial_param.expression)
+        return sp.S(serial_param.expression)
