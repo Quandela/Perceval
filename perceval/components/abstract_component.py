@@ -183,8 +183,11 @@ class AParametrizedComponent(AComponent):
                 v = p._value
                 if isinstance(v, sp.Expr):
                     out_parameters[pname] = str(v)
-                elif default_value is None or abs(v - float(default_value)) > 1e-6:
-                    out_parameters[pname] = v
+                else:
+                    if p._is_expression:
+                        v = float(p)  # Re-evaluate the expression value
+                    if default_value is None or abs(v - float(default_value)) > 1e-6:
+                        out_parameters[pname] = v
         else:
             out_parameters[pname] = self._params[pname].name
 

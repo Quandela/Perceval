@@ -141,7 +141,7 @@ class Parameter:
             raise RuntimeError("cannot set fixed parameter", v, self._value)
         self._value = v
 
-    def fix_value(self, v):
+    def fix_value(self, v: float):
         r"""Fix the value of a non-fixed parameter
 
         :param v: the value
@@ -174,7 +174,7 @@ class Parameter:
     def fixed(self) -> bool:
         r"""Return True if the parameter is fixed
         """
-        return self._symbol is None and not self._is_expression
+        return self._symbol is None
 
     def __repr__(self):
         return "Parameter(name='%s', value=%s%s%s)" % (str(self.name), str(self._value),
@@ -325,6 +325,12 @@ class Expression(Parameter):
     def is_periodic(self) -> bool:
         """Expressions are not considered periodic"""
         return False
+
+    @property
+    def defined(self) -> bool:
+        r"""Return True if the parameter has a value (fixed or non fixed)
+        """
+        return all([p._value is not None for p in self._params])
 
 
 P = Parameter

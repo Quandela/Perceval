@@ -425,9 +425,10 @@ class Circuit(ACircuit):
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
-                if p.name in self._params and p._pid != self._params[p.name]._pid:
-                    raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
-                self._params[p.name] = p
+                for internal_p in p._params:
+                    if internal_p.name in self._params and internal_p._pid != self._params[internal_p.name]._pid:
+                        raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
+                    self._params[internal_p.name] = internal_p
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
@@ -477,7 +478,7 @@ class Circuit(ACircuit):
                 range = [self._m - 1 - p for p in range]
             if v or h:
                 component.inverse(v=v, h=h)
-                
+
                 for p_name, param in component._params.items():
                     if not param.fixed:
                         # Check if inverted parameter is in circuit
@@ -487,9 +488,9 @@ class Circuit(ACircuit):
                             # Set component parameter to existing Expression
                             component._set_parameter(p_name, expr, None, None)
                         else:
-                            self._params[p_name] = param 
+                            self._params[p_name] = param
                             _new_params.append(param)
-                
+
                 for param in component.get_parameters(expressions=True):
                     self._params[param.name] = param
             _new_components.append((range, component))
