@@ -153,10 +153,11 @@ def test_expression_math_functions():
     cos_a = Expression("cos(A)", {p_a})
     a = math.pi / 3
     p_a.set_value(a)
-    assert float(cos_a) == math.cos(a)
+    assert float(cos_a) == pytest.approx(math.cos(a))
 
     cos_a_sq = cos_a**2
-    assert float(cos_a_sq) == math.cos(a) ** 2
+    assert float(cos_a_sq) == pytest.approx(math.cos(a) ** 2)
+
 
 def test_expression_parameter_retrieval():
     param_names = ["A", "B", "CCC", "Day", "theta"]

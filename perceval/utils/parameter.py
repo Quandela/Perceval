@@ -41,13 +41,11 @@ class Parameter:
     :param value: optional value, when the value is provided at initialization, the parameter is considered as `fixed`
     :param min_v: minimal value that the parameter can take, is used in circuit optimization
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
-    :param is_expression: for symbolic parameter, the value is an expression to evaluate with context values
     """
     _id = 0
 
     def __init__(self, name: str, value: float = None,
-                 min_v: float = None, max_v: float = None, periodic=True,
-                 is_expression: bool = False):
+                 min_v: float = None, max_v: float = None, periodic=True):
         if min_v is not None:
             self._min = float(min_v)
         else:
@@ -68,10 +66,13 @@ class Parameter:
         self.name = name
         self._periodic = periodic
         self._pid = Parameter._id
-        self._is_expression = is_expression
         self._original = None
         self._params = {self}
         Parameter._id += 1
+
+    @property
+    def _is_expression(self):
+        return False
 
     @property
     def spv(self) -> sp.Expr:
@@ -290,12 +291,16 @@ class Expression(Parameter):
             raise ValueError(f"{name} is not an expression: {err}")
         if not isinstance(e, sp.Expr):
             raise ValueError (f"{name} is not an expression")
-        super().__init__(self.name, is_expression=True, periodic=False)
+        super().__init__(self.name, periodic=False)
 
         # Create set containing all parent parameters
         self._params = set(parameters)
         self._check_parameters(set(fs.name for fs in e.free_symbols))
         self._symbol = sp.S(name)
+
+    @property
+    def _is_expression(self):
+        return True
 
     def _check_parameters(self, free_symbol_names):
         pcvl_param_names = set(p.name for p in self._params)
