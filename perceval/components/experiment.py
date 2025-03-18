@@ -488,13 +488,13 @@ class Experiment:
         """
         return self._n_moi + self._n_heralds
 
-    def linear_circuit(self, flatten: bool = False, use_phase_noise=False) -> Circuit:
+    def unitary_circuit(self, flatten: bool = False, use_phase_noise=False) -> Circuit:
         """
-        Creates a linear circuit from internal components, if all internal components are unitary.
+        Creates a unitary circuit from internal components, if all internal components are unitary.
         :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
         """
         if not self._is_unitary:
-            raise RuntimeError("Cannot retrieve a linear circuit because some components are non-unitary")
+            raise RuntimeError("Cannot retrieve a unitary circuit because some components are non-unitary")
         circuit = Circuit(self.circuit_size)
         for pos_m, component in self._components:
             circuit.add(pos_m, component, merge=flatten)

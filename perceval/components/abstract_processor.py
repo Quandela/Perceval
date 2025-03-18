@@ -84,10 +84,6 @@ class AProcessor(ABC):
         self.experiment.name = name
 
     @property
-    def detectors_injected(self):
-        return self.experiment.detectors_injected
-
-    @property
     @abstractmethod
     def type(self) -> ProcessorType:
         pass
@@ -123,10 +119,6 @@ class AProcessor(ABC):
     @property
     def _min_detected_photons_filter(self):
         return self.experiment.min_photons_filter
-
-    @property
-    def _is_unitary(self):
-        return self.experiment.is_unitary
 
     def min_detected_photons_filter(self, n: int):
         r"""
@@ -283,7 +275,7 @@ class AProcessor(ABC):
         Creates a linear circuit from internal components, if all internal components are unitary.
         :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
         """
-        return self.experiment.linear_circuit(flatten=flatten)
+        return self.experiment.unitary_circuit(flatten=flatten)
 
     def non_unitary_circuit(self, flatten: bool = False) -> list[tuple[tuple, AComponent]]:
         return self.experiment.non_unitary_circuit(flatten=flatten)
@@ -312,15 +304,6 @@ class AProcessor(ABC):
     def remove_port(self, m, location: PortLocation = PortLocation.IN_OUT):
         self.experiment.remove_port(m, location)
         return self
-
-    def is_mode_connectible(self, mode: int) -> bool:
-        return self.experiment.is_mode_connectible(mode)
-
-    def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
-        """
-        :return: True if all modes in mode_range are free of ports, for a given location (input, output or both)
-        """
-        return self.experiment.are_modes_free(mode_range, location)
 
     def get_input_port(self, mode):
         return self.experiment.get_input_port(mode)
