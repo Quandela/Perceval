@@ -33,6 +33,7 @@ import math
 import numpy
 import os
 import warnings
+
 with warnings.catch_warnings():
     warnings.filterwarnings(
         action='ignore',
@@ -47,7 +48,7 @@ import sympy as sp
 from tabulate import tabulate
 
 from perceval.algorithm import Analyzer, AProcessTomography
-from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator,
+from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator, Experiment,
                                  non_unitary_components as nl)
 from .circuit import DisplayConfig, create_renderer, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
@@ -111,6 +112,17 @@ def pdisplay_circuit(
 
 
 def pdisplay_processor(processor: AProcessor,
+                       output_format: Format = Format.TEXT,
+                       recursive: bool = False,
+                       compact: bool = False,
+                       precision: float = 1e-6,
+                       nsimplify: bool = True,
+                       skin: ASkin = None,
+                       **opts):
+    return pdisplay_experiment(processor.experiment, output_format, recursive, compact, precision, nsimplify, skin, **opts)
+
+
+def pdisplay_experiment(processor: Experiment,
                        output_format: Format = Format.TEXT,
                        recursive: bool = False,
                        compact: bool = False,
@@ -480,6 +492,11 @@ def _pdisplay(circuit, **kwargs):
 @dispatch(AProcessor)
 def _pdisplay(processor, **kwargs):
     return pdisplay_processor(processor, **kwargs)
+
+
+@dispatch(Experiment)
+def _pdisplay(experiment, **kwargs):
+    return pdisplay_experiment(experiment, **kwargs)
 
 
 @dispatch(Matrix)

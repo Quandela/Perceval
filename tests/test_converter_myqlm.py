@@ -266,11 +266,11 @@ def test_circuit_parametrized_gates():
     converter = MyQLMConverter()
     pc = converter.convert(circuit, use_postselection=True)
 
-    assert len(pc._components) == 4
-    assert isinstance(pc._components[0][1]._components[0][1], comp.PS)
-    assert isinstance(pc._components[1][1]._components[0][1], comp.BS)
+    assert len(pc.components) == 4
+    assert isinstance(pc.components[0][1]._components[0][1], comp.PS)
+    assert isinstance(pc.components[1][1]._components[0][1], comp.BS)
 
-    assert isinstance(pc._components[2][1]._components[0][1], comp.PS)
-    assert isinstance(pc._components[2][1]._components[0][1], comp.PS)
+    assert isinstance(pc.components[2][1]._components[0][1], comp.PS)
+    assert isinstance(pc.components[2][1]._components[0][1], comp.PS)
 
-    assert isinstance(pc._components[3][1]._components[0][1], comp.BS)
+    assert isinstance(pc.components[3][1]._components[0][1], comp.BS)

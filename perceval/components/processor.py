@@ -30,30 +30,19 @@ from __future__ import annotations
 
 import sys
 
-from dataclasses import dataclass
-from multipledispatch import dispatch
-from numpy import inf
-
 from perceval.backends import ABackend, ASamplingBackend, BACKEND_LIST
-from perceval.utils import SVDistribution, BSDistribution, BasicState, StateVector, LogicalState, NoiseModel
+from perceval.utils import SVDistribution, BasicState, StateVector, NoiseModel
 from perceval.utils.logging import get_logger, channel
 
 from .abstract_processor import AProcessor, ProcessorType
+from .experiment import Experiment
 from .linear_circuit import ACircuit, Circuit
 from .source import Source
 from .unitary_components import PS
 
-
-@dataclass
-class _PhaseNoise:
-    quantization: float = 0
-    max_error: float = 0
-
-
 class Processor(AProcessor):
     """
-    Generic definition of processor as a noise model + components (both unitary and non-unitary) + ports
-    + optional post-processing logic
+    Generic definition of processor as an experiment + simulation backend
 
     :param backend: Name or instance of a simulation backend
     :param m_circuit: can either be:
@@ -64,29 +53,42 @@ class Processor(AProcessor):
         * a circuit: the input circuit to start with. Other components can still be added afterwards with `add()`
             >>> p = Processor("SLOS", BS() // PS() // BS())
 
+        * an experiment:
+            >>> p = Processor("SLOS", Experiment(BS(), NoiseModel(0.8)))
+
     :param noise: a NoiseModel containing noise parameters (defaults to no noise)
     :param name: a textual name for the processor (defaults to "Local processor")
     """
-    def __init__(self, backend: ABackend | str, m_circuit: int | ACircuit = None,
+    def __init__(self, backend: ABackend | str, m_circuit: int | ACircuit | Experiment = None,
                  noise: NoiseModel = None, name: str = "Local processor"):
-        self._has_custom_input = False
-        super().__init__()
+        if not isinstance(m_circuit, Experiment):
+            m_circuit = Experiment(m_circuit, noise=noise, name=name)
+        super().__init__(m_circuit)
+
         self._init_backend(backend)
-        self._init_circuit(m_circuit)
-        self.noise = noise
-        self.name = name
-        self._inputs_map: SVDistribution | None = None
+        self._previous_noise = None
+        self._inputs_map = None
+        self._noise_changed_observer()
+        self._input_changed_observer()
         self._simulator = None
 
-    @AProcessor.noise.setter
-    def noise(self, nm: NoiseModel | None):
-        if nm is None:
-            nm = NoiseModel()
-        super(Processor, type(self)).noise.fset(self, nm)
-        self._source = Source.from_noise_model(nm)
-        self._phase_noise = _PhaseNoise(nm.phase_imprecision, nm.phase_error)
+    @property
+    def _has_custom_input(self):
+        return (isinstance(self.input_state, SVDistribution)
+                or (isinstance(self.input_state, BasicState) and self.input_state.has_polarization))
+
+    def _noise_changed_observer(self):
+        self._source = Source.from_noise_model(self.noise)
         if not self._has_custom_input:
             self._inputs_map = None
+        self._previous_noise = self.noise
+
+    @AProcessor.noise.getter
+    def noise(self):
+        noise = super(Processor, type(self)).noise.fget(self)
+        if noise is None:
+            return NoiseModel()
+        return noise
 
     @property
     def source_distribution(self) -> SVDistribution | None:
@@ -94,9 +96,12 @@ class Processor(AProcessor):
         Retrieve the computed input distribution. Compute it if it is not cached and an input state has been provided.
         :return: the input SVDistribution if `with_input` was called previously, otherwise None.
         """
-        if self._inputs_map is None and self._input_state is not None:
+        if self._inputs_map is None and self.input_state is not None:
             self._generate_noisy_input()
         return self._inputs_map
+
+    def _circuit_change_observer(self, new_component = None):
+        self._simulator = None
 
     @property
     def source(self):
@@ -104,13 +109,6 @@ class Processor(AProcessor):
         :return: The photonic source
         """
         return self._source
-
-    def _init_circuit(self, m_circuit: ACircuit | int):
-        if isinstance(m_circuit, ACircuit):
-            self.m = m_circuit.m
-            self.add(0, m_circuit)
-        elif m_circuit is not None:
-            self.m = m_circuit  # number of modes of interest
 
     def _init_backend(self, backend):
         if isinstance(backend, str):
@@ -127,83 +125,28 @@ class Processor(AProcessor):
     def is_remote(self) -> bool:
         return False
 
-    @dispatch(LogicalState)
-    def with_input(self, input_state: LogicalState) -> None:
-        r"""
-        Set up the processor input with a LogicalState. Computes the input probability distribution.
-
-        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
-        encoding.
-        """
-        self._with_logical_input(input_state)
-
     def _generate_noisy_input(self):
-        self._inputs_map = self._source.generate_distribution(self._input_state)
+        self._inputs_map = self._source.generate_distribution(self.input_state)
 
     def generate_noisy_heralds(self) -> SVDistribution:
         heralds_perfect_state = BasicState([v for k, v in sorted(self.heralds.items())])
         return self._source.generate_distribution(heralds_perfect_state)
 
-    @dispatch(BasicState)
-    def with_input(self, input_state: BasicState) -> None:
-        """
-        Simulates plugging the photonic source on certain modes and turning it on.
-        Computes the input probability distribution
-
-        :param input_state: Expected input BasicState of length `self.m` (heralded modes are managed automatically)
-        The properties of the source will alter the input state. A perfect source always delivers the expected state as
-        an input. Imperfect ones won't.
-        """
-        super().with_input(input_state)
-        self._inputs_map = None
-        self._has_custom_input = False
-
-    @dispatch(StateVector)
-    def with_input(self, sv: StateVector):
-        r"""
-        Setting directly state vector as input of a processor, use SVDistribution input
-
-        :param sv: the state vector
-        """
-        return self.with_input(SVDistribution(sv))
-
-    @dispatch(SVDistribution)
-    def with_input(self, svd: SVDistribution):
-        r"""
-        Processor input can be set 100% manually via a state vector distribution, bypassing the source.
-
-        :param svd: The input SVDistribution which won't be changed in any way by the source.
-        Every state vector size has to be equal to `self.circuit_size`
-        """
-        assert self.m is not None, "A circuit has to be set before the input distribution"
-        self._input_state = svd
-        expected_photons = inf
-        for sv in svd:
-            for state in sv.keys():
-                expected_photons = min(expected_photons, state.n)
-                if state.m != self.circuit_size:
-                    raise ValueError(
-                        f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
-        self._inputs_map = svd
-        self._has_custom_input = True
-
-    def _circuit_changed(self):
-        # Override parent's method to reset the internal simulator as soon as the component list changes
-        self._simulator = None
+    def _input_changed_observer(self):
+        if isinstance(self.input_state, BasicState):
+            if self.input_state.has_polarization:
+                self._inputs_map = SVDistribution(self.input_state)
+            else:
+                self._generate_noisy_input()
+        elif isinstance(self.input_state, SVDistribution):
+            self._inputs_map = self.input_state
 
     def with_polarized_input(self, bs: BasicState):
-        assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
-        self._input_state = bs
-        self._inputs_map = SVDistribution(bs)
-        self._has_custom_input = True
+        self.experiment.with_polarized_input(bs)
 
     def clear_input_and_circuit(self, new_m=None):
         super().clear_input_and_circuit(new_m)
         self._inputs_map = None
-
-    def _compose_processor(self, connector, processor, keep_port: bool):
-        assert isinstance(processor, Processor), "can not mix types of processors"
-        super(Processor, self)._compose_processor(connector, processor, keep_port)
 
     def linear_circuit(self, flatten: bool = False) -> Circuit:
         """
@@ -214,24 +157,7 @@ class Processor(AProcessor):
         :raises RuntimeError: If any component is non-unitary
         :return: The resulting Circuit object
         """
-        circuit = super().linear_circuit(flatten)
-        noise = self._phase_noise
-        if noise.quantization or noise.max_error:
-
-            # Apply phase quantization noise on all phase parameters in the circuit
-            get_logger().debug(f"Inject {noise} in the circuit")
-            circuit = circuit.copy()  # Copy the whole circuit in order to keep the initial phase values in self
-            for _, component in circuit:
-                if not isinstance(component, PS):
-                    continue
-                if noise.max_error is not None:
-                    err_param = component.param("max_error")
-                    if not err_param.is_variable and float(err_param) == 0:
-                        err_param.set_value(noise.max_error, force=True)
-                if noise.quantization:
-                    phi_param = component.param("phi")
-                    phi_param.set_value(noise.quantization * round(float(phi_param) / noise.quantization), force=True)
-        return circuit
+        return self.experiment.unitary_circuit(flatten=flatten, use_phase_noise=True)
 
     def samples(self, max_samples: int, max_shots: int = None, progress_callback=None) -> dict:
         self.check_min_detected_photons_filter()
@@ -245,11 +171,11 @@ class Processor(AProcessor):
             postselect=self.post_select_fn,
             heralds=self.heralds)
         sampling_simulator.keep_heralds(False)
-        sampling_simulator.set_detectors(self._detectors)
+        sampling_simulator.set_detectors(self.detectors)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
             f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} sampling", channel.general)
-        sample_provider = self.source_distribution if self._has_custom_input else (self._source, self._input_state)
+        sample_provider = self.source_distribution if self._has_custom_input else (self._source, self.input_state)
         res = sampling_simulator.samples(sample_provider, max_samples, max_shots, progress_callback)
         get_logger().info("Local sampling complete!", channel.general)
         return res
@@ -262,7 +188,7 @@ class Processor(AProcessor):
             from perceval.simulators import SimulatorFactory  # Avoids a circular import
             self._simulator = SimulatorFactory.build(self)
         else:
-            self._simulator.set_circuit(self.linear_circuit() if self._is_unitary else self.components, self.circuit_size)
+            self._simulator.set_circuit(self.linear_circuit() if self.experiment.is_unitary else self.components, self.circuit_size)
             self._simulator.set_min_detected_photons_filter(self._min_detected_photons_filter)
 
         if precision is not None:
@@ -270,7 +196,7 @@ class Processor(AProcessor):
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
         self._simulator.keep_heralds(False)
-        res = self._simulator.probs_svd(self.source_distribution, self._detectors, progress_callback)
+        res = self._simulator.probs_svd(self.source_distribution, self.detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
 
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
@@ -299,14 +225,14 @@ class Processor(AProcessor):
             'm': self.circuit_size,
             'method': method
         }
-        if isinstance(self._input_state, BasicState):
-            my_dict['n'] = self._input_state.n
-        elif isinstance(self._input_state, StateVector):
-            my_dict['n'] = max(self._input_state.n)
-        elif isinstance(self._input_state, SVDistribution):
-            my_dict['n'] = self._input_state.n_max
+        if isinstance(self.input_state, BasicState):
+            my_dict['n'] = self.input_state.n
+        elif isinstance(self.input_state, StateVector):
+            my_dict['n'] = max(self.input_state.n)
+        elif isinstance(self.input_state, SVDistribution):
+            my_dict['n'] = self.input_state.n_max
         else:
-            get_logger().error(f"Cannot get n for type {type(self._input_state)}", channel.general)
+            get_logger().error(f"Cannot get n for type {type(self.input_state).__name__}", channel.general)
         if extra_parameters:
             my_dict.update(extra_parameters)
         if self.noise != NoiseModel():
