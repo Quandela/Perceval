@@ -130,10 +130,10 @@ class Parameter:
         return self._check_value(v, self._min, self._max, self._periodic)
 
     def set_value(self, v: float, force: bool = False):
-        r"""Define the value of a non-fixed parameter
+        """Define the numerical value of a Parameter
 
-        :param v: the value
-        :param force: enable to set a fixed parameter
+        :param v: the numerical value
+        :param force: enable to change the value of a fixed parameter
         :raise: `RuntimeError` if the parameter is fixed
         """
         v = self._check_value(v, self._min, self._max, self._periodic)
@@ -142,9 +142,9 @@ class Parameter:
         self._value = v
 
     def fix_value(self, v: float):
-        r"""Fix the value of a non-fixed parameter
+        """Fix the value of a non-fixed Parameter. The Parameter is not variable afterwards.
 
-        :param v: the value
+        :param v: the numerical value
         """
         self._symbol = None
         self._value = self._check_value(v, self._min, self._max, self._periodic)
