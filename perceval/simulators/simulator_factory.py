@@ -35,10 +35,8 @@ from .delay_simulator import DelaySimulator
 from .loss_simulator import LossSimulator
 from .polarization_simulator import PolarizationSimulator
 from ._simulator_utils import _unitary_components_to_circuit
-from perceval.components import ACircuit, TD, LC, Processor
+from perceval.components import ACircuit, TD, LC, Processor, Experiment, AFFConfigurator
 from perceval.backends import ABackend, SLOSBackend, BACKEND_LIST
-from .. import Experiment
-from ..components.feed_forward_configurator import AFFConfigurator
 
 
 class SimulatorFactory:

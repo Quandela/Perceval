@@ -161,7 +161,6 @@ class AProcessor(ABC):
         pass
 
     def remove_heralded_modes(self, s: BasicState) -> BasicState:
-        # TODO: see what to do with this method
         if self.heralds:
             s = s.remove_modes(list(self.heralds.keys()))
         return s
