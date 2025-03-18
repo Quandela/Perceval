@@ -225,7 +225,6 @@ class Sampler(AAlgorithm):
         default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
-            self._processor._simulator = None  # Reset any possible cached parameter
             self._apply_iteration(default_it | it)
             precision = None if self._max_shots is None else min(1e-6, 1 / self._max_shots)
             results['results_list'].append(self._processor.probs(precision))
@@ -248,7 +247,6 @@ class Sampler(AAlgorithm):
         default_it = self._it_default_parameters()
         results = {'results_list': []}
         for idx, it in enumerate(self._iterator):
-            self._processor._simulator = None  # Reset any possible cached parameter
             self._apply_iteration(default_it | it)
             results['results_list'].append(self._processor.samples(self._max_samples, self._max_shots))
             results['results_list'][-1]['iteration'] = it
