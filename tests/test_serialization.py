@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, PS
+from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, PS, TD, LC
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -99,6 +99,16 @@ def test_circuit_serialization():
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize(serialized_c1)
     _check_circuits_eq(c1, deserialized_c1)
+
+
+def test_non_unitary_serialization():
+    t = TD(1)
+    t_2 = deserialize(serialize(t))
+    assert float(t_2._dt) == float(t._dt)
+
+    l = LC(0.7)
+    l_2 = deserialize(serialize(l))
+    assert float(l_2._loss) == float(l._loss)
 
 
 def test_circuit_serialization_backward_compat():

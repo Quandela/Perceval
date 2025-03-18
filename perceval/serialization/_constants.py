@@ -33,6 +33,7 @@ ZIP_PREFIX = f"{PCVL_PREFIX}zip{SEP}"
 
 MATRIX_TAG = "Matrix"
 CIRCUIT_TAG = "ACircuit"
+COMPONENT_TAG = "Component"
 BS_TAG = "BasicState"
 SV_TAG = "StateVector"
 SVD_TAG = "SVDistribution"

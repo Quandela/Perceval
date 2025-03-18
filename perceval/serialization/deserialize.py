@@ -33,7 +33,7 @@ from os import path
 import json
 from zlib import decompress
 
-from perceval.components import Circuit, BSLayeredPPNR, Detector
+from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
 from ._constants import (
@@ -51,7 +51,7 @@ from ._constants import (
     NOISE_TAG,
     POSTSELECT_TAG,
     BS_LAYERED_DETECTOR_TAG,
-    DETECTOR_TAG,
+    DETECTOR_TAG, COMPONENT_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
@@ -96,6 +96,16 @@ def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
         builder.add(pb_c)
     return builder.retrieve()
 
+def deserialize_component(pb_c: pb.Component) -> AComponent:
+    if not isinstance(pb_c, pb.Component):
+        pb_binary_repr = pb_c
+        pb_c = pb.Component()
+        if isinstance(pb_binary_repr, bytes):
+            pb_c.ParseFromString(pb_binary_repr)
+        else:
+            pb_c.ParseFromString(b64decode(pb_binary_repr))
+
+    return CircuitBuilder.deserialize(pb_c)
 
 def circuit_from_file(filepath: str) -> Circuit:
     """
@@ -184,6 +194,7 @@ DESERIALIZER = {
     POSTSELECT_TAG: deserialize_postselect,
     DETECTOR_TAG: deserialize_detector,
     BS_LAYERED_DETECTOR_TAG: deserialize_bs_layered_detector,
+    COMPONENT_TAG: deserialize_component,
 }
 
 
@@ -243,7 +254,8 @@ class CircuitBuilder:
         'half_wave_plate': _cd.deserialize_hwp,
         'time_delay': _cd.deserialize_dt,
         'polarization_rotator': _cd.deserialize_pr,
-        'polarized_beam_splitter': _cd.deserialize_pbs
+        'polarized_beam_splitter': _cd.deserialize_pbs,
+        'loss_channel': _cd.deserialize_lc,
     }
 
     def __init__(self, m: int, name: str):
@@ -252,6 +264,14 @@ class CircuitBuilder:
         self._circuit = Circuit(m=m, name=name)
 
     def add(self, serial_comp):
+        component = self.deserialize(serial_comp)
+        self._circuit.add(serial_comp.starting_mode, component, merge=False)
+
+    def retrieve(self):
+        return self._circuit
+
+    @staticmethod
+    def deserialize(serial_comp):
         component = None
         t = serial_comp.WhichOneof('type')
         serial_sub_comp = getattr(serial_comp, t)
@@ -260,11 +280,10 @@ class CircuitBuilder:
             func = CircuitBuilder.deserialize_fn[t]
             component = func(serial_sub_comp)
         elif t == "barrier":
-            component = _cd.deserialize_barrier(serial_comp.n_mode, serial_sub_comp)  # Special case: need an additional info
+            component = _cd.deserialize_barrier(serial_comp.n_mode,
+                                                serial_sub_comp)  # Special case: need an additional info
 
         if component is None:
             raise NotImplementedError(f'Component could not be deserialized (type = {t})')
-        self._circuit.add(serial_comp.starting_mode, component, merge=False)
 
-    def retrieve(self):
-        return self._circuit
+        return component

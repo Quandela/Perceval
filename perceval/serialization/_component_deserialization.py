@@ -81,7 +81,11 @@ def deserialize_hwp(serial_hwp) -> comp.HWP:
 
 
 def deserialize_dt(serial_dt) -> nu.TD:
-    return comp.TD(deserialize_parameter(serial_dt.dt))
+    return nu.TD(deserialize_parameter(serial_dt.dt))
+
+
+def deserialize_lc(serial_lc) -> nu.LC:
+    return nu.LC(deserialize_parameter(serial_lc.loss))
 
 
 def deserialize_pr(serial_pr) -> comp.PR:

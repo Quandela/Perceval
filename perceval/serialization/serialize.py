@@ -33,9 +33,9 @@ from zlib import compress as zlib_compress
 from ._constants import *
 from ._detector_serialization import serialize_bs_layer, serialize_detector
 from ._matrix_serialization import serialize_matrix
-from ._circuit_serialization import serialize_circuit
+from ._circuit_serialization import serialize_circuit, serialize_component
 from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
-from perceval.components import ACircuit, BSLayeredPPNR, Detector
+from perceval.components import ACircuit, BSLayeredPPNR, Detector, AComponent
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
     simple_float, NoiseModel, PostSelect
 from base64 import b64encode
@@ -62,6 +62,15 @@ def _handle_compression(serialized_obj: str, do_compress: bool) -> str:
     serialized_string_compressed = zlib_compress(serialized_obj.encode('utf-8'))  # Compress byte to byte
     serialized_string_compressed_byt2str = b64encoding(serialized_string_compressed)  # base64 to string
     return ZIP_PREFIX + serialized_string_compressed_byt2str
+
+
+@dispatch(AComponent, compress=(list, bool))
+def serialize(component: AComponent, compress=True) -> str:
+    tag = COMPONENT_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(
+        f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_component(component).SerializeToString()),
+        do_compress=compress)
 
 
 @dispatch(ACircuit, compress=(list, bool))

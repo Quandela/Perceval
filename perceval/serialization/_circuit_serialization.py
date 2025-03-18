@@ -30,7 +30,7 @@
 from multipledispatch import dispatch
 
 from perceval.serialization import _schema_circuit_pb2 as pb
-from perceval.components import ACircuit, Circuit
+from perceval.components import ACircuit, Circuit, AComponent
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
 from perceval.serialization._matrix_serialization import serialize_matrix
@@ -41,7 +41,7 @@ class ComponentSerializer:
     def __init__(self):
         self._pb = None
 
-    def serialize(self, r: int, c: ACircuit):
+    def serialize(self, r: int, c: AComponent):
         self._pb = pb.Component()
         self._pb.starting_mode = r
         self._pb.n_mode = c.m
@@ -120,6 +120,12 @@ class ComponentSerializer:
         pb_td.dt.CopyFrom(serialize_parameter(td._dt))
         self._pb.time_delay.CopyFrom(pb_td)
 
+    @dispatch(nu.LC)
+    def _serialize(self, lc: nu.LC):
+        pb_lc = pb.LossChannel()
+        pb_lc.loss.CopyFrom(serialize_parameter(lc._loss))
+        self._pb.loss_channel.CopyFrom(pb_lc)
+
     @dispatch(comp.PR)
     def _serialize(self, pr: comp.PR):
         pb_pr = pb.PolarizationRotator()
@@ -150,3 +156,7 @@ def serialize_circuit(circuit: ACircuit) -> pb.Circuit:
     for r, c in circuit._components:
         pb_circuit.components.extend([comp_serializer.serialize(r[0], c)])
     return pb_circuit
+
+
+def serialize_component(component: AComponent) -> pb.Component:
+    return ComponentSerializer().serialize(0, component)
