@@ -640,7 +640,7 @@ class Experiment:
                 return port
         return None
 
-    @deprecated(version=0.12, reason="Add detectors as components")
+    @deprecated(version=0.12, reason="Add detectors as components")  # TODO (PCVL-935)
     def thresholded_output(self, value: bool):
         r"""
         Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
@@ -652,7 +652,7 @@ class Experiment:
         self._detectors = [Detector.threshold() if self._thresholded_output else None] * len(self._detectors)
 
     @property
-    @deprecated(version=0.12, reason="Use `detection_type` property instead")
+    @deprecated(version=0.12, reason="Use `detection_type` property instead")  # TODO (PCVL-935)
     def is_threshold(self) -> bool:
         return self._thresholded_output
 

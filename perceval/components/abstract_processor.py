@@ -49,7 +49,7 @@ class ProcessorType(Enum):
 class AProcessor(ABC):
     def __init__(self, experiment = None):
         self.experiment = experiment or Experiment()
-        # TODO: remove the next line when we send experiments on the cloud
+        # TODO: remove the next line when we send experiments on the cloud (PCVL-934)
         self._parameters: dict[str, any] = {}
         self._set_min_photons_parameter()
 
@@ -328,7 +328,7 @@ class AProcessor(ABC):
     def get_output_port(self, mode):
         return self.experiment.get_output_port(mode)
 
-    # TODO: remove this deprecated method
+    # TODO: remove this deprecated method (PCVL-935)
     def thresholded_output(self, value: bool):
         r"""
         Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
@@ -338,7 +338,7 @@ class AProcessor(ABC):
         """
         self.experiment.thresholded_output(value)
 
-    # TODO: remove this deprecated method
+    # TODO: remove this deprecated method (PCVL-935)
     @property
     def is_threshold(self) -> bool:
         return self.experiment.is_threshold

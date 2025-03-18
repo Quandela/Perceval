@@ -277,7 +277,7 @@ class RemoteProcessor(AProcessor):
                 c.param(n).set_value(v)
         lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call
+        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call (PCVL-935)
         lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
