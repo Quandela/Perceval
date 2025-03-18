@@ -72,7 +72,6 @@ class Experiment:
     def __init__(self, m_circuit: int | ACircuit = None, noise: NoiseModel = None, name: str = "Experiment"):
         self._input_state = None
         self.name: str = name
-        self._parameters: dict[str, any] = {}
 
         self._thresholded_output: bool = False  # Deprecated, avoid using this field
         self._min_detected_photons_filter: int | None = None

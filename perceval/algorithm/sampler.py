@@ -297,7 +297,7 @@ class Sampler(AAlgorithm):
 
         return {"circuit_params": {k: v._value for k, v in self._processor.get_circuit_parameters().items()},
                 "input_state": input_state,
-                "min_detected_photons": self._processor.parameters.get("min_detected_photons", None),
+                "min_detected_photons": self._processor.experiment.min_photons_filter,
                 "max_samples": self._max_samples,
                 "max_shots": self._max_shots,
                 "noise": self._processor.noise
