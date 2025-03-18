@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from __future__ import annotations
 import math
 import random
 from copy import copy
@@ -36,14 +36,13 @@ import numpy as np
 import sympy as sp
 
 from .linear_circuit import ACircuit, Circuit
-from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter
+from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter, Expression
 
 
 class BSConvention(Enum):
     Rx = 0
     Ry = 1
     H = 2
-
 
 class BS(ACircuit):
     """Beam splitter"""
@@ -80,17 +79,25 @@ class BS(ACircuit):
         return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.Ry)
 
     @staticmethod
-    def r_to_theta(r):
+    def r_to_theta(r: float | Parameter) -> float | Parameter:
         """Compute theta given a reflectivity value
+
+        :param r: reflectivity value (can be variable)
         """
-        return 2*math.acos(math.sqrt(float(r)))
+        if isinstance(r, Parameter):
+            return Expression(f"2*acos(sqrt({r.name}))", r._params)
+        return 2*math.acos(math.sqrt(r))
 
     @staticmethod
-    def theta_to_r(theta):
+    def theta_to_r(theta: float | Parameter) -> float | Parameter:
+        """
+        Compute reflectivity given a theta value
+
+        :param theta: theta angle (can be variable)
+        """
         if isinstance(theta, Parameter) and not theta.defined:
-            return sp.cos(theta.spv/2)**2
-        else:
-            return math.cos(float(theta)/2)**2
+            return Expression(f"cos({theta.name}/2)**2", theta._params)
+        return math.cos(float(theta)/2)**2
 
     @property
     def reflectivity(self):

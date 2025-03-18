@@ -321,11 +321,13 @@ def test_circuit_with_expression_serialization():
 
     assert "A" in c_deser.params and "B" in c_deser.params
 
-    c_deser.param("A").set_value(0.2)
-    c_deser.param("B").set_value(0.8)
+    a_value = 0.2
+    b_value = 0.8
+    c_deser.param("A").set_value(a_value)
+    c_deser.param("B").set_value(b_value)
 
     assert float(c_deser._components[1][1].param('theta')) == pytest.approx(0.2 + 0.8)
 
-    u = c_deser.compute_unitary()
-    assert numpy.allclose(u, [[ 0.80830707 + 0.34174675j, -0.09524715 + 0.46986895j],
-                              [-0.09524715 + 0.46986895j, 0.87758256 + 0.j]])
+    p_a.set_value(a_value)
+    p_b.set_value(b_value)
+    assert numpy.allclose(c_deser.compute_unitary(), c.compute_unitary())
