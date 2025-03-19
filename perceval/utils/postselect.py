@@ -258,8 +258,7 @@ def post_select_statevector(
         heralds = {}
     logical_perf = 0
     result = StateVector()
-    for state in sv.keys():
-        ampli = sv[state]
+    for state, ampli in sv.unnormalized_iterator():
         heralds_ok = True
         for m, v in heralds.items():
             if state[m] != v:

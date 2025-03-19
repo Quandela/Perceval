@@ -31,7 +31,7 @@ from abc import ABC, abstractmethod
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector, global_params
+from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
 from perceval.utils.logging import deprecated
 
 
@@ -166,11 +166,8 @@ class AStrongSimulationBackend(ABackend):
 
     def evolve(self) -> StateVector:
         res = StateVector()
-        threshold = global_params["min_complex_component"] ** 2
         for output_state in self._get_iterator(self._input_state):
-            pa = self.prob_amplitude(output_state)
-            if abs(pa) >= threshold:
-                res += output_state * pa
+            res += output_state * self.prob_amplitude(output_state)
         return res
 
 

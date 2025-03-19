@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from ._abstract_backends import AStrongSimulationBackend
-from perceval.utils import Matrix, BasicState, BSDistribution, StateVector, global_params
+from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 
 import exqalibur as xq
@@ -222,9 +222,6 @@ class SLOSBackend(AStrongSimulationBackend):
         c = self._state_mapping[istate].coefs.reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
-        threshold = global_params["min_complex_component"] ** 2
         for output_state, pa in zip(self._get_iterator(self._input_state), c):
-            pa = (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
-            if abs(pa) >= threshold:
-                res += output_state * pa
+            res += output_state * (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
         return res

@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import exqalibur as xq
-from perceval.utils import BasicState, BSDistribution, StateVector, global_params
+from perceval.utils import BasicState, BSDistribution, StateVector
 from perceval.components import ACircuit
 
 from ._abstract_backends import AStrongSimulationBackend
@@ -38,12 +38,12 @@ class SLAPBackend(AStrongSimulationBackend):
 
     def __init__(self):
         super().__init__()
-        self._stree = xq.SLOSTree()
+        self._slap = xq.SLAP()
         self._fock_space = None
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
-        self._stree.set_unitary(self._umat)
+        self._slap.set_unitary(self._umat)
 
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
@@ -52,12 +52,12 @@ class SLAPBackend(AStrongSimulationBackend):
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
         istate = self._input_state
-        all_pa = self._stree.all_prob_ampli(istate)
+        all_pa = self._slap.all_prob_ampli(istate)
         return all_pa[self._fock_space.find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
         istate = self._input_state
-        all_probs = self._stree.all_prob(istate)
+        all_probs = self._slap.all_prob(istate)
 
         if self._mask is not None:  # Utterly non-optimized. Mask management should be added in the computation
             all_probs = [p for p, fs in zip(all_probs, self._fock_space) if self._mask.match(fs)]
@@ -76,15 +76,14 @@ class SLAPBackend(AStrongSimulationBackend):
             self.set_input_state(input_state)
         else:
             input_state = self._input_state
-        return self._stree.all_prob(input_state)
+        return self._slap.all_prob(input_state)
 
     def evolve(self) -> StateVector:
         istate = self._input_state
-        all_pa = self._stree.all_prob_ampli(istate)
+        all_pa = self._slap.all_prob_ampli(istate)
         res = StateVector()
-        threshold = global_params["min_complex_component"] ** 2
         for output_state, pa in zip(self._fock_space, all_pa):
             # Utterly non-optimized. Mask management should be added in the computation
-            if abs(pa) > threshold and (self._mask is None or self._mask.match(output_state)):
+            if self._mask is None or self._mask.match(output_state):
                 res += output_state * pa
         return res
