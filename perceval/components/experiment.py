@@ -400,6 +400,16 @@ class Experiment:
             if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
                 self.add_port(port_mode, port, PortLocation.INPUT)
 
+        # Check port composition
+        for m_out, m_in in mode_mapping.items():
+            out_port = self.get_output_port(m_out)
+            in_port = experiment.get_input_port(m_in)
+            if out_port is not None and in_port is not None and out_port.encoding != in_port.encoding:
+                get_logger().warn(f"The encoding of the output ports of {self.name} is {out_port.encoding} "
+                                  f"whereas the encoding of input ports of {experiment.name} is {in_port.encoding}."
+                                  f"The composition of {self.name} with {experiment.name} won't work correctly.")
+                break
+
         # Retrieve post process function from the other experiment
         if experiment._postselect is not None:
             c_first = perm_modes[0]

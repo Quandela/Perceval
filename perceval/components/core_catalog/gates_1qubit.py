@@ -162,7 +162,9 @@ class AParamItem(ASingleQubitGate, ABC):
         param = kwargs.get(self.param_key, 0.0)
         param = self._handle_param(param)
         name = self.repr_name
-        if isinstance(param, Number):
+        if isinstance(param, int):
+            name = f"{self.repr_name}({param})"
+        elif isinstance(param, Number):
             name = f"{self.repr_name}({param:.3})"
         elif isinstance(param, P):
             name = f"{self.repr_name}({param.name})"
