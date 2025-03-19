@@ -36,6 +36,7 @@ from zlib import decompress
 from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
+from ._component_deserialization import deserialize_herald, deserialize_port
 from ._constants import (
     SEP,
     PCVL_PREFIX,
@@ -51,7 +52,7 @@ from ._constants import (
     NOISE_TAG,
     POSTSELECT_TAG,
     BS_LAYERED_DETECTOR_TAG,
-    DETECTOR_TAG, COMPONENT_TAG,
+    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
@@ -195,6 +196,8 @@ DESERIALIZER = {
     DETECTOR_TAG: deserialize_detector,
     BS_LAYERED_DETECTOR_TAG: deserialize_bs_layered_detector,
     COMPONENT_TAG: deserialize_component,
+    HERALD_TAG: deserialize_herald,
+    PORT_TAG: deserialize_port,
 }
 
 

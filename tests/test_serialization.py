@@ -31,7 +31,8 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, PS, TD, LC
+from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, PS, TD, LC, Port, \
+    Encoding, Herald
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -104,10 +105,12 @@ def test_circuit_serialization():
 def test_non_unitary_serialization():
     t = TD(1)
     t_2 = deserialize(serialize(t))
+    assert t is not t_2
     assert float(t_2._dt) == float(t._dt)
 
     l = LC(0.7)
     l_2 = deserialize(serialize(l))
+    assert l is not l_2
     assert float(l_2._loss) == float(l._loss)
 
 
@@ -126,6 +129,26 @@ def test_circuit_serialization_backward_compat():
             deserialize(serial_c)
         except Exception as e:
             pytest.fail(f"Circuit serial representation generated with Perceval {perceval_version} failed: {e}")
+
+def test_port_serialization():
+    p = Port(Encoding.DUAL_RAIL, name = "test")
+    p_2 = deserialize(serialize(p))
+    assert p is not p_2
+    assert p.name == p_2.name
+    assert p.encoding == p_2.encoding
+
+    # h = Herald(2, name = "test")
+    # h_2 = deserialize(serialize(h))
+    # assert h is not h_2
+    # assert h.user_given_name == h_2.user_given_name
+    # assert h.expected == h_2.expected
+    #
+    # h = Herald(0)  # Same without user-given name
+    # h_2 = deserialize(serialize(h))
+    # assert h is not h_2
+    # assert h.user_given_name == h_2.user_given_name
+    # assert h._name == h_2._name
+    # assert h.expected == h_2.expected
 
 
 def test_basicstate_serialization():
