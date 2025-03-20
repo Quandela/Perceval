@@ -110,7 +110,7 @@ CNOT q[0], q[1]
     assert pc.circuit_size == 6
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
-    assert len(pc._components) == 2
+    assert len(pc.components) == 2
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "Heralded CNOT"
     r = pc.probs()['results']
@@ -129,7 +129,7 @@ CNOT q[1], q[0]
     assert pc.circuit_size == 6
     assert pc.m == 4
     assert pc.source_distribution[StateVector('|1,0,1,0,1,1>')] == 1
-    assert len(pc._components) == 4  # should be  BS.H // PERM // CNOT // PERM
+    assert len(pc.components) == 4  # should be  BS.H // PERM // CNOT // PERM
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "PERM"
     assert pc.components[2][1].name == "Heralded CNOT"
@@ -147,7 +147,7 @@ CNOT q[0], q[1]
     bsd_out = pc.probs()['results']
     assert pc.circuit_size == 6
     assert pc.source_distribution[StateVector('|1,0,1,0,0,0>')] == 1
-    assert len(pc._components) == 2
+    assert len(pc.components) == 2
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "PostProcessed CNOT"
     assert len(bsd_out) == 2
@@ -160,7 +160,7 @@ CNOT q[0], q[1]
 H q[0]
 """
     pc = CQASMConverter().convert(cqasm_program, use_postselection=True)
-    assert isinstance(pc._components[-1][1]._components[0][1], BS)
+    assert isinstance(pc.components[-1][1]._components[0][1], BS)
 
 
 def test_converter_qubit_names():
@@ -245,7 +245,7 @@ def test_converter_from_file():
     assert pc.circuit_size == 10
     assert len(pc.heralds) == 4
     assert pc.m == 6
-    assert len(pc._components) == 12
+    assert len(pc.components) == 12
     r = pc.probs()['results']
     assert np.allclose(r[BasicState("|1, 0, 1, 0, 1, 0>")], 0.2, atol=0.01)
     assert np.allclose(r[BasicState("|1, 0, 1, 0, 0, 1>")], 0.2, atol=0.01)
@@ -259,7 +259,7 @@ def test_converter_from_ast():
     ast = converter._cqasm.Analyzer().analyze_string("version 3\nqubit q\nH q")
     pc = converter.convert(ast)
     assert pc.circuit_size == 2
-    assert len(pc._components) == 1
+    assert len(pc.components) == 1
 
 
 # Tests for v1 converter
@@ -283,7 +283,7 @@ qubits 2
     pc = CQASMConverter().convert(cqasm_program, use_postselection=False)
     assert pc.circuit_size == 6
     assert pc.m == 4
-    assert len(pc._components) == 2
+    assert len(pc.components) == 2
     assert pc.components[0][1].name == "H"
     assert pc.components[1][1].name == "Heralded CNOT"
 
@@ -309,7 +309,7 @@ qubits 11
     pc = CQASMConverter().convert(source, use_postselection=False)
     assert pc.circuit_size == 24
     assert pc.m == 22
-    assert len(pc._components) == 5
+    assert len(pc.components) == 5
 
 
 def test_converter_v1_controls_g2():

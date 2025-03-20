@@ -40,9 +40,10 @@ from scipy.sparse import csc_array, csr_array
 from perceval.backends import AStrongSimulationBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
-    DensityMatrix, post_select_distribution, post_select_statevector
+    DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
+from perceval.runtime import cancel_requested
 
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
 from ._simulate_detectors import simulate_detectors
@@ -57,6 +58,7 @@ class Simulator(ISimulator):
 
     :param backend: A probability amplitude capable backend object
     """
+    detector_cb_start = 0.9
 
     def __init__(self, backend: AStrongSimulationBackend):
         super().__init__()
@@ -78,6 +80,10 @@ class Simulator(ISimulator):
 
     def set_precision(self, precision: float):
         self.precision = precision
+
+    def set_heralds(self, heralds):
+        self._invalidate_cache()
+        super().set_heralds(heralds)
 
     def keep_heralds(self, value: bool):
         """
@@ -103,6 +109,7 @@ class Simulator(ISimulator):
         self._postselect = PostSelect()
 
     def clear_heralds(self):
+        self._invalidate_cache()
         self._heralds = {}
 
     def set_circuit(self, circuit: ACircuit, m = None):
@@ -186,7 +193,7 @@ class Simulator(ISimulator):
         return result
 
     def _invalidate_cache(self):
-        self._evolve = {}
+        self._evolve: dict[BasicState, StateVector] = {}
         self.DEBUG_evolve_count = 0
         self.DEBUG_merge_count = 0
 
@@ -270,17 +277,20 @@ class Simulator(ISimulator):
 
             """Then, add the resulting distribution for a single input to the global distribution"""
             for bs, p in _to_bsd(result_sv).items():
-                res[bs] += p * prob0
+                prob = p * prob0
+                res[bs] += prob
+                self._logical_perf += prob
 
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(decomposed_input), 'probs')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
+
         if len(res):
             res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, physical_perf, progress_callback: Callable = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -304,6 +314,7 @@ class Simulator(ISimulator):
         cache = {}
         input_set = set((state, min(s[2], state.n + n_heralds)) for s in decomposed_input for state in s[1])
         len_input_set = len(input_set)
+        prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         previous_n = None
         for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
             if n != previous_n and n != 0:
@@ -313,14 +324,15 @@ class Simulator(ISimulator):
 
             self._backend.set_input_state(state)
             cache[(state, n)] = self._backend.prob_distribution()
-            if progress_callback and idx % 10 == 0:
-                progress = (idx + 1) / len_input_set * 0.5  # From 0. to 0.5
-                exec_request = progress_callback(progress, 'compute probability distributions')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+            if prog_cb and idx % 10 == 0:
+                progress = (idx + 1) / len_input_set
+                exec_request = prog_cb(progress, 'compute probability distributions')
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
+        prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
             probs_in_s = BSDistribution.list_tensor_product([cache[(state, min(n, state.n + n_heralds))] for state in bs_data],
@@ -340,10 +352,10 @@ class Simulator(ISimulator):
             for bs, p in probs_in_s.items():
                 res[bs] += p * prob0
 
-            if progress_callback and idx % 20 == 0:
-                progress = (idx + 1) / len(decomposed_input) * 0.5 + 0.5  # From 0.5 to 1
-                exec_request = progress_callback(progress, 'recombine distributions')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+            if prog_cb and idx % 20 == 0:
+                progress = (idx + 1) / len(decomposed_input)
+                exec_request = prog_cb(progress, 'recombine distributions')
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
 
         """
@@ -353,8 +365,6 @@ class Simulator(ISimulator):
         To get the probability of getting a state that is logically accepted knowing that it was physically accepted,
         we need to divide the current logical perf value by the physical perf
         """
-        if self._logical_perf > 0 and physical_perf > 0:
-            self._logical_perf /= physical_perf
         if len(res):
             res.normalize()
         return res
@@ -366,7 +376,7 @@ class Simulator(ISimulator):
         phys_perf = 1
         # We need to work on a copy. Let's do a first trim as copy
         for sv, p in svd.items():
-            if max(sv.n) >= self._min_detected_photons_filter:
+            if max(sv.n) >= self.min_detected_photons_filter:
                 max_p = max(p, max_p)
             else:
                 phys_perf -= p
@@ -388,7 +398,7 @@ class Simulator(ISimulator):
                 for split_sv, ps in new_svd.items():
                     prob = p * ps
                     # split_sv.n is a set so we can't use [0]
-                    if max(split_sv.n) >= self._min_detected_photons_filter:
+                    if max(split_sv.n) >= self.min_detected_photons_filter:
                         to_add[split_sv] += prob
                     else:
                         phys_perf -= prob
@@ -429,20 +439,35 @@ class Simulator(ISimulator):
 
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
+        is_pnr = get_detection_type(detectors) == DetectionType.PNR
+
+        # TODO: fix this
+        if self.can_use_mask(has_annotations, is_pnr):
+            self._setup_heralds()
+        else:
+            self._backend.clear_mask()
         self.init_use_mask(has_superposed_states, detectors)
 
-        if has_superposed_states:
-            self._logical_perf = 1
-            res = self._probs_svd_generic(svd, p_threshold, progress_callback)
+        if is_pnr:
+            prog_cb = progress_callback
         else:
-            self._logical_perf = 0
-            res = self._probs_svd_fast(svd, p_threshold, physical_perf, progress_callback)
+            prog_cb = partial_progress_callable(progress_callback, max_val=self.detector_cb_start)
+
+        self._logical_perf = 0
+        if has_superposed_states:
+            res = self._probs_svd_generic(svd, p_threshold, prog_cb)
+        else:
+            res = self._probs_svd_fast(svd, p_threshold, prog_cb)
+
+        if self._logical_perf > 0 and physical_perf > 0:
+            self._logical_perf /= physical_perf
 
         if not len(res):
             return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
 
         if detectors:
-            res, phys_perf = simulate_detectors(res, detectors, self._min_detected_photons_filter, p_threshold)
+            prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
+            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter, p_threshold, prog_cb)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
@@ -469,12 +494,11 @@ class Simulator(ISimulator):
                 mask_str += " "
         self._backend.set_mask(mask_str, n)
 
-        # Check that heralds and physical filter are consistent
-        if self._min_detected_photons_filter < n_heralded_photons:
-            if not self._silent:
-                get_logger().debug(f"Increased minimum detected photon filter from {self._min_detected_photons_filter}"
-                                   f"to the number of heralded photons ({n_heralded_photons})")
-            self._min_detected_photons_filter = n_heralded_photons
+    # TODO: merge this better
+    def can_use_mask(self, has_annotations: bool, is_pnr: bool) -> bool:
+        return (self._heralds
+                and not has_annotations
+                and is_pnr)
 
     def init_use_mask(self, has_superposed_states, detectors) -> None:
         self._can_use_mask = (self._heralds
@@ -510,7 +534,7 @@ class Simulator(ISimulator):
 
             vec = u_evolve_in_row[[row_idx]]
             prob = abs((vec @ dm.mat @ vec.conj().T)[0, 0])
-            if fs.n >= self._min_detected_photons_filter:
+            if fs.n >= self.min_detected_photons_filter:
                 res_bsd[fs] += prob
             else:
                 physical_perf -= prob
@@ -523,7 +547,9 @@ class Simulator(ISimulator):
 
     def evolve(self, input_state: BasicState | StateVector) -> StateVector:
         """
-        Evolve a state through the circuit
+        Evolve a state through the circuit.
+        If the simulator has logical selection, the performance for this input state is stored in self.logical_perf,
+        and only the states matching the logical selection are kept.
 
         :param input_state: The input fock state or state vector
         :return: The output state vector
@@ -555,7 +581,9 @@ class Simulator(ISimulator):
                 evolved_in_s = _merge_sv(evolved_in_s, sv)
                 self.DEBUG_merge_count += 1
             result_sv += evolved_in_s * probampli
-        result_sv, _ = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
+
+        # result_sv is normalized here
+        result_sv, self._logical_perf = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
         return result_sv
@@ -577,28 +605,28 @@ class Simulator(ISimulator):
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
 
-        self._logical_perf = 1
         if self._heralds and not any(bs.has_annotations for sv in svd for bs in sv.keys()):
             self._setup_heralds()
         else:
             self._backend.clear_mask()
 
-        intermediary_logical_perf = 1
-        physical_perf = 1
+        global_perf = 0
+        physical_perf = 0
         new_svd = SVDistribution()
         for idx, (sv, p) in enumerate(svd.items()):
-            if min(sv.n) >= self._min_detected_photons_filter:
+            # It is intended to reject if any of the component doesn't have enough photons
+            if min(sv.n) >= self.min_detected_photons_filter:
                 new_sv = self.evolve(sv)
-                intermediary_logical_perf -= p * self._logical_perf
+                success_prob = p * self._logical_perf
+                global_perf += success_prob
                 if new_sv.m != 0:
-                    new_svd[new_sv] += p
-            else:
-                physical_perf -= p
+                    new_svd[new_sv] += success_prob
+                physical_perf += p
             if progress_callback:
                 exec_request = progress_callback((idx + 1) / len(svd), 'evolve_svd')
-                if exec_request is not None and 'cancel_requested' in exec_request and exec_request['cancel_requested']:
+                if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
-        self._logical_perf = intermediary_logical_perf
+        self._logical_perf = global_perf / physical_perf if physical_perf != 0 else 0
         if len(new_svd):
             new_svd.normalize()
         return {'results': new_svd,
@@ -612,6 +640,8 @@ class Simulator(ISimulator):
         :param dm: The density Matrix to evolve
         :return: The evolved DensityMatrix
         """
+        self._backend.clear_mask()  # TODO: do it only if mask was set (PCVL-853)
+
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
 

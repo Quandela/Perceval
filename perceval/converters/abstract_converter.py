@@ -26,15 +26,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from perceval.components import Port, Circuit, Processor, Source, catalog
+from perceval import AProcessor
+from perceval.components import Port, Circuit, Processor, catalog
 from perceval.utils import P, BasicState, Encoding, global_params, PostSelect, NoiseModel
 from perceval.utils.algorithms.optimize import optimize
 from perceval.utils.algorithms.norm import frobenius
 import perceval.components.unitary_components as comp
-from perceval.utils.logging import get_logger
 from perceval.converters.converter_utils import label_cnots_in_gate_sequence
 
 
@@ -51,18 +52,10 @@ class AGateConverter(ABC):
     Converter class for gate based Circuits to perceval processor
     """
 
-    def __init__(self, backend_name: str = "SLOS", source: Source = None, noise_model: NoiseModel = None):
-        self._converted_processor = None
+    def __init__(self, backend_name: str = "SLOS", noise_model: NoiseModel = None):
+        self._converted_processor: AProcessor | None = None  # TODO: replace by Experiment?
         self._input_list = None  # input state in list
         self._noise_model = noise_model
-        if source is not None:
-            get_logger().warn('DeprecationWarning: Call with deprecated argument "source", '
-                              'please use "noise_model=NoiseModel()" instead')
-            self._noise_model = NoiseModel(transmittance=1-source._losses,
-                                           brightness=source._emission_probability,
-                                           g2=source._multiphoton_component,
-                                           indistinguishability=source._indistinguishability,
-                                           g2_distinguishable=(source._multiphoton_model=='distinguishable'))
         self._backend_name = backend_name
 
         # Define function handler to create complex components
@@ -112,6 +105,7 @@ class AGateConverter(ABC):
 
     def apply_input_state(self):
         default_input_state = BasicState(self._input_list)
+        self._converted_processor.min_detected_photons_filter(default_input_state.n)
         self._converted_processor.with_input(default_input_state)
 
     def convert(self, gate_circuit, use_postselection: bool = True) -> Processor:
@@ -195,8 +189,8 @@ class AGateConverter(ABC):
         SWAP
         """
         # Save and clear current post-selection data from the converted processor before adding the next gate
-        if self._converted_processor._postselect is not None:
-            post_select_curr = self._converted_processor._postselect
+        if self._converted_processor.post_select_fn is not None:
+            post_select_curr = self._converted_processor.post_select_fn
         else:
             post_select_curr = PostSelect()  # save empty if I need to merge incoming PostSelect to it
         self._converted_processor.clear_postselection()  # clear current post-selection
@@ -205,14 +199,12 @@ class AGateConverter(ABC):
         if gate_name in ["POSTPROCESSED CNOT", "HERALDED CNOT"]:
             if use_postselection and gate_name == "POSTPROCESSED CNOT":
                 cnot_processor = self.create_ppcnot_processor()
-                cnot_ps = cnot_processor._postselect
-
-                cnot_processor.clear_postselection()  # clear after saving post select information
-                post_select_curr.merge(cnot_ps)  # merge the incoming gate post-selection with the current
             else:
                 cnot_processor = self.create_hcnot_processor()
 
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
+            if self._converted_processor.post_select_fn is not None:
+                post_select_curr.merge(self._converted_processor.post_select_fn)
 
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN

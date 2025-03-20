@@ -152,6 +152,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/utils
    reference/source
    reference/simulator
+   reference/noise_model
    reference/processor
    reference/postselect
    reference/pdisplay

@@ -26,8 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from perceval.components import PERM, AProcessor, Barrier
+from perceval.components import PERM, Experiment, Barrier
 
 
 class ComponentHeraldInfo:
@@ -46,7 +45,7 @@ class ComponentHeraldInfo:
             self.output_heralds[mode_index] = herald_mode
 
 
-def collect_herald_info(processor: AProcessor, recursive: bool):
+def collect_herald_info(processor: Experiment, recursive: bool):
     """
     Return a dictionary mapping a component to a HeraldInfo object.
 
@@ -61,9 +60,9 @@ def collect_herald_info(processor: AProcessor, recursive: bool):
     recursive is True, for blocks when recursive is False.
     """
     if recursive:
-        component_list = processor.flatten()
+        component_list = processor.flatten(max_depth=1)
     else:
-        component_list = processor._components
+        component_list = processor.components
 
     herald_info = {}
     for herald_mode in processor.heralds.keys():

@@ -87,7 +87,7 @@ def test_basic_circuit_double_h():
     qc.h(0)
     pc = convertor.convert(qc)
     assert pc.source_distribution[StateVector('|1,0>')] == 1
-    assert len(pc._components) == 2
+    assert len(pc.components) == 2
 
 
 def test_basic_circuit_s():
