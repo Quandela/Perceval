@@ -30,7 +30,7 @@
 from perceval.simulators import NoisySamplingSimulator
 from perceval.backends import Clifford2017Backend
 from perceval.components import Unitary, Source, BS, Detector
-from perceval.utils import Matrix, BasicState, SVDistribution, PostSelect
+from perceval.utils import Matrix, BasicState, SVDistribution
 
 import pytest
 
@@ -109,7 +109,7 @@ def test_noisy_sampling_source():
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = BasicState([1, 0] * 3)
     sampling = sim.samples((source, input_state), 100)
-    assert sampling['physical_perf'] == 1
+    assert sampling['physical_perf'] == pytest.approx(1)
     assert sampling['logical_perf'] == 1
     assert len(sampling['results']) == 100
 
