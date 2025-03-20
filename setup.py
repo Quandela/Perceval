@@ -26,7 +26,7 @@ def getRemoteRoot():
     # Some git error, leave path unchanged
     return None
 
-def addRemoteRootToImages(content, root):    
+def addRemoteRootToImages(content, root):
     image_source_patterns = [
         r'<\s*img\s+.*src\s*=\s*"([^"]*)".*>',  # <img src="link">
         r"<\s*img\s+.*src\s*=\s*'([^']*)'.*>",  # <img src='link'>
@@ -80,7 +80,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.6.4',
+    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.7.0',
                       'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'requests<3',
                       'networkx~=3.1', 'latexcodec<4', 'platformdirs<5', 'tqdm',
                       "typing_extensions; python_version == '3.9'"  # TODO: remove when dropping 3.9
