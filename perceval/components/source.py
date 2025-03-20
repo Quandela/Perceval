@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections import defaultdict
 
 from exqalibur import BSSamples
 
@@ -219,29 +220,27 @@ class Source:
         p_duo = p2to2
         p0 = 1 - (p_signal + p_g2 + p_duo)
 
-        # TODO: find a direct formula that would decrease the time complexity to O(n ** 3)
-        def rec(n, min_photons_filter):
-            """
-            Complexity: O(n ** 3) in memory, O(n ** 4) in time.
-            Powers of n in the complexities decrease by 1 if there is no loss, and by 2 if there is no g2."""
-            if n == 0:
-                return {(0, 0, 0): 1}
+        factorial_table = {0: 1}
+        def cache_factorial(m):
+            if m not in factorial_table:
+                factorial_table[m] = m * cache_factorial(m - 1)
+            return factorial_table[m]
 
-            res_nm1 = rec(n - 1, min_photons_filter - (2 if p_g2 else 1))
-            res = dict()
-            for i in range(n + 1):
-                for j in range(n + 1 - i if p_g2 else 1):
-                    for k in range(n + 1 - i - j if p_duo else 1):
-                        if i + j + 2 * k >= min_photons_filter:
-                            # TODO: remove low probability events ?
-                            res[(i, j, k)] = res_nm1.get((i - 1, j, k), 0) * p_signal \
-                                             + res_nm1.get((i, j - 1, k), 0) * p_g2 \
-                                             + res_nm1.get((i, j, k - 1), 0) * p_duo \
-                                             + res_nm1.get((i, j, k), 0) * p0
+        prob_table = {}
 
-            return res
+        fac_n = cache_factorial(n)  # Fills the table for all needed values
+        for i in range(n + 1):
+            fac_i = factorial_table[i]
+            for j in range(n + 1 - i if p_g2 else 1):
+                fac_j = factorial_table[j]
+                for k in range(n + 1 - i - j if p_duo else 1):
+                    fac_k = factorial_table[k]
+                    if i + j + 2 * k >= min_photons_filter:
+                        # TODO: remove low probability events ?
+                        n0 = n - i - j - k
+                        prob_table[(i, j, k)] = (fac_n * p_signal ** i * p_g2 ** j * p_duo ** k * p0 ** n0
+                                                 / (fac_i * fac_j * fac_k * factorial_table[n0]))
 
-        prob_table = rec(n, min_photons_filter)
         phys_perf = sum(prob_table.values())
         if min_photons_filter:
             for key, prob in prob_table.items():
@@ -279,6 +278,7 @@ class Source:
 
         empty_bs = BasicState([0])
         signal_state = BasicState("|{_:0}>")  # Avoids creating many times the same states
+        expected_input_list = list(expected_input)
 
         # TODO: parallelize this?
         for event in events:
@@ -310,7 +310,7 @@ class Source:
 
             index = 0
             final_state = BasicState()
-            for n_photons in expected_input:
+            for n_photons in expected_input_list:
                 single_mode_state = empty_bs
                 for _ in range(n_photons):
                     if single_mode_state.n:
