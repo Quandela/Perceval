@@ -44,13 +44,19 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1asrc/perceval_circuit.proto\x12\x0fperceval.schema\"<\n\rComplexDouble\x12\x12\n\nreal_value\x18\x01 \x01(\x01\x12\x17\n\x0fimaginary_value\x18\x02 \x01(\x01\"\x94\x01\n\tParameter\x12\x14\n\nreal_value\x18\x01 \x01(\x01H\x00\x12\x10\n\x06symbol\x18\x02 \x01(\tH\x00\x12\x14\n\nexpression\x18\x03 \x01(\tH\x00\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x33\n\x0f\x65xpr_parameters\x18\x05 \x03(\x0b\x32\x1a.perceval.schema.ParameterB\x06\n\x04type\"<\n\x0cMatrixDouble\x12,\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1e.perceval.schema.ComplexDouble\":\n\x0eMatrixSymbolic\x12(\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1a.perceval.schema.Parameter\"\x93\x01\n\x06Matrix\x12\x0c\n\x04rows\x18\x01 \x01(\x05\x12\x0c\n\x04\x63ols\x18\x02 \x01(\x05\x12\x30\n\x07numeric\x18\x03 \x01(\x0b\x32\x1d.perceval.schema.MatrixDoubleH\x00\x12\x33\n\x08symbolic\x18\x04 \x01(\x0b\x32\x1f.perceval.schema.MatrixSymbolicH\x00\x42\x06\n\x04\x64\x61ta\"\xfa\x06\n\tComponent\x12\x15\n\rstarting_mode\x18\x01 \x01(\x05\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x10\n\x08offset_x\x18\x03 \x01(\x01\x12\x12\n\nannotation\x18\x04 \x01(\t\x12+\n\x07\x63ircuit\x18\n \x01(\x0b\x32\x18.perceval.schema.CircuitH\x00\x12\x36\n\rphase_shifter\x18\x0b \x01(\x0b\x32\x1d.perceval.schema.PhaseShifterH\x00\x12\x36\n\rbeam_splitter\x18\x0c \x01(\x0b\x32\x1d.perceval.schema.BeamSplitterH\x00\x12\x33\n\x0bpermutation\x18\x0e \x01(\x0b\x32\x1c.perceval.schema.PermutationH\x00\x12+\n\x07unitary\x18\x0f \x01(\x0b\x32\x18.perceval.schema.UnitaryH\x00\x12\x30\n\nwave_plate\x18\x10 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x35\n\x0fhalf_wave_plate\x18\x11 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x38\n\x12quarter_wave_plate\x18\x12 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x44\n\x14polarization_rotator\x18\x13 \x01(\x0b\x32$.perceval.schema.PolarizationRotatorH\x00\x12\x30\n\ntime_delay\x18\x14 \x01(\x0b\x32\x1a.perceval.schema.TimeDelayH\x00\x12I\n\x17polarized_beam_splitter\x18\x15 \x01(\x0b\x32&.perceval.schema.PolarizedBeamSplitterH\x00\x12+\n\x07\x62\x61rrier\x18\x16 \x01(\x0b\x32\x18.perceval.schema.BarrierH\x00\x12\x34\n\x0closs_channel\x18\x17 \x01(\x0b\x32\x1c.perceval.schema.LossChannelH\x00\x12%\n\x04port\x18\x18 \x01(\x0b\x32\x15.perceval.schema.PortH\x00\x12)\n\x06herald\x18\x19 \x01(\x0b\x32\x17.perceval.schema.HeraldH\x00\x42\x06\n\x04type\"f\n\x0cPhaseShifter\x12\'\n\x03phi\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12-\n\tmax_error\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"\xcc\x02\n\x0c\x42\x65\x61mSplitter\x12<\n\nconvention\x18\x01 \x01(\x0e\x32(.perceval.schema.BeamSplitter.Convention\x12)\n\x05theta\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_tl\x18\x03 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_bl\x18\x04 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_tr\x18\x05 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_br\x18\x06 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"#\n\nConvention\x12\x06\n\x02Rx\x10\x00\x12\x06\n\x02Ry\x10\x01\x12\x05\n\x01H\x10\x02\"\x17\n\x15PolarizedBeamSplitter\"W\n\x07Unitary\x12$\n\x03mat\x18\x01 \x01(\x0b\x32\x17.perceval.schema.Matrix\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x18\n\x10use_polarization\x18\x03 \x01(\x08\"#\n\x0bPermutation\x12\x14\n\x0cpermutations\x18\x01 \x03(\x05\"_\n\tWavePlate\x12)\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12\'\n\x03xsi\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"@\n\x13PolarizationRotator\x12)\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"3\n\tTimeDelay\x12&\n\x02\x64t\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"7\n\x0bLossChannel\x12(\n\x04loss\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"\x1a\n\x07\x42\x61rrier\x12\x0f\n\x07visible\x18\x01 \x01(\x08\"k\n\x07\x43ircuit\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x12\n\nannotation\x18\x03 \x01(\t\x12.\n\ncomponents\x18\x04 \x03(\x0b\x32\x1a.perceval.schema.Component\"F\n\rBSLayeredPPNR\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x11\n\tbs_layers\x18\x02 \x01(\x05\x12\x14\n\x0creflectivity\x18\x03 \x01(\x01\"A\n\x08\x44\x65tector\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07n_wires\x18\x02 \x01(\x05\x12\x16\n\x0emax_detections\x18\x03 \x01(\x05\"&\n\x04Port\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08\x65ncoding\x18\x02 \x01(\x05\"A\n\x06Herald\x12\x1a\n\x12\x61utogenerated_name\x18\x01 \x01(\x08\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05value\x18\x03 \x01(\x05\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1asrc/perceval_circuit.proto\x12\x0fperceval.schema\"<\n\rComplexDouble\x12\x12\n\nreal_value\x18\x01 \x01(\x01\x12\x17\n\x0fimaginary_value\x18\x02 \x01(\x01\"\x94\x01\n\tParameter\x12\x14\n\nreal_value\x18\x01 \x01(\x01H\x00\x12\x10\n\x06symbol\x18\x02 \x01(\tH\x00\x12\x14\n\nexpression\x18\x03 \x01(\tH\x00\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x33\n\x0f\x65xpr_parameters\x18\x05 \x03(\x0b\x32\x1a.perceval.schema.ParameterB\x06\n\x04type\"<\n\x0cMatrixDouble\x12,\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1e.perceval.schema.ComplexDouble\":\n\x0eMatrixSymbolic\x12(\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x1a.perceval.schema.Parameter\"\x93\x01\n\x06Matrix\x12\x0c\n\x04rows\x18\x01 \x01(\x05\x12\x0c\n\x04\x63ols\x18\x02 \x01(\x05\x12\x30\n\x07numeric\x18\x03 \x01(\x0b\x32\x1d.perceval.schema.MatrixDoubleH\x00\x12\x33\n\x08symbolic\x18\x04 \x01(\x0b\x32\x1f.perceval.schema.MatrixSymbolicH\x00\x42\x06\n\x04\x64\x61ta\"\xa8\x06\n\tComponent\x12\x15\n\rstarting_mode\x18\x01 \x01(\x05\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x10\n\x08offset_x\x18\x03 \x01(\x01\x12\x12\n\nannotation\x18\x04 \x01(\t\x12+\n\x07\x63ircuit\x18\n \x01(\x0b\x32\x18.perceval.schema.CircuitH\x00\x12\x36\n\rphase_shifter\x18\x0b \x01(\x0b\x32\x1d.perceval.schema.PhaseShifterH\x00\x12\x36\n\rbeam_splitter\x18\x0c \x01(\x0b\x32\x1d.perceval.schema.BeamSplitterH\x00\x12\x33\n\x0bpermutation\x18\x0e \x01(\x0b\x32\x1c.perceval.schema.PermutationH\x00\x12+\n\x07unitary\x18\x0f \x01(\x0b\x32\x18.perceval.schema.UnitaryH\x00\x12\x30\n\nwave_plate\x18\x10 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x35\n\x0fhalf_wave_plate\x18\x11 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x38\n\x12quarter_wave_plate\x18\x12 \x01(\x0b\x32\x1a.perceval.schema.WavePlateH\x00\x12\x44\n\x14polarization_rotator\x18\x13 \x01(\x0b\x32$.perceval.schema.PolarizationRotatorH\x00\x12\x30\n\ntime_delay\x18\x14 \x01(\x0b\x32\x1a.perceval.schema.TimeDelayH\x00\x12I\n\x17polarized_beam_splitter\x18\x15 \x01(\x0b\x32&.perceval.schema.PolarizedBeamSplitterH\x00\x12+\n\x07\x62\x61rrier\x18\x16 \x01(\x0b\x32\x18.perceval.schema.BarrierH\x00\x12\x34\n\x0closs_channel\x18\x17 \x01(\x0b\x32\x1c.perceval.schema.LossChannelH\x00\x42\x06\n\x04type\"f\n\x0cPhaseShifter\x12\'\n\x03phi\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12-\n\tmax_error\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"\xcc\x02\n\x0c\x42\x65\x61mSplitter\x12<\n\nconvention\x18\x01 \x01(\x0e\x32(.perceval.schema.BeamSplitter.Convention\x12)\n\x05theta\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_tl\x18\x03 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_bl\x18\x04 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_tr\x18\x05 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12*\n\x06phi_br\x18\x06 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"#\n\nConvention\x12\x06\n\x02Rx\x10\x00\x12\x06\n\x02Ry\x10\x01\x12\x05\n\x01H\x10\x02\"\x17\n\x15PolarizedBeamSplitter\"W\n\x07Unitary\x12$\n\x03mat\x18\x01 \x01(\x0b\x32\x17.perceval.schema.Matrix\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x18\n\x10use_polarization\x18\x03 \x01(\x08\"#\n\x0bPermutation\x12\x14\n\x0cpermutations\x18\x01 \x03(\x05\"_\n\tWavePlate\x12)\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\x12\'\n\x03xsi\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"@\n\x13PolarizationRotator\x12)\n\x05\x64\x65lta\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"3\n\tTimeDelay\x12&\n\x02\x64t\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"7\n\x0bLossChannel\x12(\n\x04loss\x18\x01 \x01(\x0b\x32\x1a.perceval.schema.Parameter\"\x1a\n\x07\x42\x61rrier\x12\x0f\n\x07visible\x18\x01 \x01(\x08\"k\n\x07\x43ircuit\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06n_mode\x18\x02 \x01(\x05\x12\x12\n\nannotation\x18\x03 \x01(\t\x12.\n\ncomponents\x18\x04 \x03(\x0b\x32\x1a.perceval.schema.Component\"F\n\rBSLayeredPPNR\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x11\n\tbs_layers\x18\x02 \x01(\x05\x12\x14\n\x0creflectivity\x18\x03 \x01(\x01\"A\n\x08\x44\x65tector\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07n_wires\x18\x02 \x01(\x05\x12\x16\n\x0emax_detections\x18\x03 \x01(\x05\"r\n\tIDetector\x12.\n\x04ppnr\x18\x01 \x01(\x0b\x32\x1e.perceval.schema.BSLayeredPPNRH\x00\x12-\n\x08\x64\x65tector\x18\x02 \x01(\x0b\x32\x19.perceval.schema.DetectorH\x00\x42\x06\n\x04type\"&\n\x04Port\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08\x65ncoding\x18\x02 \x01(\x05\"A\n\x06Herald\x12\x1a\n\x12\x61utogenerated_name\x18\x01 \x01(\x08\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05value\x18\x03 \x01(\x05\"a\n\x05\x41Port\x12%\n\x04port\x18\x01 \x01(\x0b\x32\x15.perceval.schema.PortH\x00\x12)\n\x06herald\x18\x02 \x01(\x0b\x32\x17.perceval.schema.HeraldH\x00\x42\x06\n\x04type\"\xdf\x04\n\nExperiment\x12\x13\n\x0binput_state\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x13\n\x0bnoise_model\x18\x03 \x01(\t\x12\x13\n\x0bpost_select\x18\x04 \x01(\t\x12@\n\x0binput_ports\x18\x05 \x03(\x0b\x32+.perceval.schema.Experiment.InputPortsEntry\x12\x42\n\x0coutput_ports\x18\x06 \x03(\x0b\x32,.perceval.schema.Experiment.OutputPortsEntry\x12=\n\tdetectors\x18\x07 \x03(\x0b\x32*.perceval.schema.Experiment.DetectorsEntry\x12\x0e\n\x06n_mode\x18\x08 \x01(\x05\x12.\n\ncomponents\x18\t \x03(\x0b\x32\x1a.perceval.schema.Component\x12\x1a\n\x12min_photons_filter\x18\n \x01(\x05\x1aI\n\x0fInputPortsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12%\n\x05value\x18\x02 \x01(\x0b\x32\x16.perceval.schema.APort:\x02\x38\x01\x1aJ\n\x10OutputPortsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12%\n\x05value\x18\x02 \x01(\x0b\x32\x16.perceval.schema.APort:\x02\x38\x01\x1aL\n\x0e\x44\x65tectorsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12)\n\x05value\x18\x02 \x01(\x0b\x32\x1a.perceval.schema.IDetector:\x02\x38\x01\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'src.perceval_circuit_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
+  _EXPERIMENT_INPUTPORTSENTRY._options = None
+  _EXPERIMENT_INPUTPORTSENTRY._serialized_options = b'8\001'
+  _EXPERIMENT_OUTPUTPORTSENTRY._options = None
+  _EXPERIMENT_OUTPUTPORTSENTRY._serialized_options = b'8\001'
+  _EXPERIMENT_DETECTORSENTRY._options = None
+  _EXPERIMENT_DETECTORSENTRY._serialized_options = b'8\001'
   _COMPLEXDOUBLE._serialized_start=47
   _COMPLEXDOUBLE._serialized_end=107
   _PARAMETER._serialized_start=110
@@ -62,37 +68,49 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _MATRIX._serialized_start=383
   _MATRIX._serialized_end=530
   _COMPONENT._serialized_start=533
-  _COMPONENT._serialized_end=1423
-  _PHASESHIFTER._serialized_start=1425
-  _PHASESHIFTER._serialized_end=1527
-  _BEAMSPLITTER._serialized_start=1530
-  _BEAMSPLITTER._serialized_end=1862
-  _BEAMSPLITTER_CONVENTION._serialized_start=1827
-  _BEAMSPLITTER_CONVENTION._serialized_end=1862
-  _POLARIZEDBEAMSPLITTER._serialized_start=1864
-  _POLARIZEDBEAMSPLITTER._serialized_end=1887
-  _UNITARY._serialized_start=1889
-  _UNITARY._serialized_end=1976
-  _PERMUTATION._serialized_start=1978
-  _PERMUTATION._serialized_end=2013
-  _WAVEPLATE._serialized_start=2015
-  _WAVEPLATE._serialized_end=2110
-  _POLARIZATIONROTATOR._serialized_start=2112
-  _POLARIZATIONROTATOR._serialized_end=2176
-  _TIMEDELAY._serialized_start=2178
-  _TIMEDELAY._serialized_end=2229
-  _LOSSCHANNEL._serialized_start=2231
-  _LOSSCHANNEL._serialized_end=2286
-  _BARRIER._serialized_start=2288
-  _BARRIER._serialized_end=2314
-  _CIRCUIT._serialized_start=2316
-  _CIRCUIT._serialized_end=2423
-  _BSLAYEREDPPNR._serialized_start=2425
-  _BSLAYEREDPPNR._serialized_end=2495
-  _DETECTOR._serialized_start=2497
-  _DETECTOR._serialized_end=2562
-  _PORT._serialized_start=2564
-  _PORT._serialized_end=2602
-  _HERALD._serialized_start=2604
-  _HERALD._serialized_end=2669
+  _COMPONENT._serialized_end=1341
+  _PHASESHIFTER._serialized_start=1343
+  _PHASESHIFTER._serialized_end=1445
+  _BEAMSPLITTER._serialized_start=1448
+  _BEAMSPLITTER._serialized_end=1780
+  _BEAMSPLITTER_CONVENTION._serialized_start=1745
+  _BEAMSPLITTER_CONVENTION._serialized_end=1780
+  _POLARIZEDBEAMSPLITTER._serialized_start=1782
+  _POLARIZEDBEAMSPLITTER._serialized_end=1805
+  _UNITARY._serialized_start=1807
+  _UNITARY._serialized_end=1894
+  _PERMUTATION._serialized_start=1896
+  _PERMUTATION._serialized_end=1931
+  _WAVEPLATE._serialized_start=1933
+  _WAVEPLATE._serialized_end=2028
+  _POLARIZATIONROTATOR._serialized_start=2030
+  _POLARIZATIONROTATOR._serialized_end=2094
+  _TIMEDELAY._serialized_start=2096
+  _TIMEDELAY._serialized_end=2147
+  _LOSSCHANNEL._serialized_start=2149
+  _LOSSCHANNEL._serialized_end=2204
+  _BARRIER._serialized_start=2206
+  _BARRIER._serialized_end=2232
+  _CIRCUIT._serialized_start=2234
+  _CIRCUIT._serialized_end=2341
+  _BSLAYEREDPPNR._serialized_start=2343
+  _BSLAYEREDPPNR._serialized_end=2413
+  _DETECTOR._serialized_start=2415
+  _DETECTOR._serialized_end=2480
+  _IDETECTOR._serialized_start=2482
+  _IDETECTOR._serialized_end=2596
+  _PORT._serialized_start=2598
+  _PORT._serialized_end=2636
+  _HERALD._serialized_start=2638
+  _HERALD._serialized_end=2703
+  _APORT._serialized_start=2705
+  _APORT._serialized_end=2802
+  _EXPERIMENT._serialized_start=2805
+  _EXPERIMENT._serialized_end=3412
+  _EXPERIMENT_INPUTPORTSENTRY._serialized_start=3185
+  _EXPERIMENT_INPUTPORTSENTRY._serialized_end=3258
+  _EXPERIMENT_OUTPUTPORTSENTRY._serialized_start=3260
+  _EXPERIMENT_OUTPUTPORTSENTRY._serialized_end=3334
+  _EXPERIMENT_DETECTORSENTRY._serialized_start=3336
+  _EXPERIMENT_DETECTORSENTRY._serialized_end=3412
 # @@protoc_insertion_point(module_scope)

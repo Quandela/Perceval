@@ -34,6 +34,7 @@ ZIP_PREFIX = f"{PCVL_PREFIX}zip{SEP}"
 MATRIX_TAG = "Matrix"
 CIRCUIT_TAG = "ACircuit"
 COMPONENT_TAG = "Component"
+EXPERIMENT_TAG = "Experiment"
 HERALD_TAG = "Herald"
 PORT_TAG = "Port"
 BS_TAG = "BasicState"
@@ -46,3 +47,5 @@ NOISE_TAG = "NoiseModel"
 POSTSELECT_TAG = "PostSelect"
 BS_LAYERED_DETECTOR_TAG = "BSLayeredDetector"
 DETECTOR_TAG = "Detector"
+
+VALUE_NOT_SET = 0x0fffffff  # Maximum writable value

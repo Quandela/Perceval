@@ -552,7 +552,7 @@ def _default_output_format(o):
         if isinstance(o, Matrix):
             return Format.LATEX
         return Format.HTML
-    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, AProcessTomography, nl.TD, nl.LC))):
+    elif in_ide() and (isinstance(o, (ACircuit, AProcessor, DensityMatrix, AProcessTomography, nl.TD, nl.LC, Experiment))):
         return Format.MPLOT
     return Format.TEXT
 
