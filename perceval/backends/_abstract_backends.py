@@ -168,7 +168,6 @@ class AStrongSimulationBackend(ABackend):
         res = StateVector()
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
-        res.normalize()
         return res
 
 

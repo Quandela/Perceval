@@ -30,24 +30,26 @@ from collections import defaultdict
 
 from perceval.utils import BasicState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
-from copy import copy
 from math import sqrt
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
     res = BSDistribution()
-    for state, pa in copy(sv):
+    for state, pa in sv.unnormalized_iterator():
         state.clear_annotations()
-        res[state] += abs(pa) ** 2
+        res.add(state, abs(pa) ** 2)
     return res
 
 
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
-    res_sv = copy(sv)
     if len(annotation):
-        for s, _ in res_sv:
+        res_sv = StateVector()
+        for s in sv.keys():
+            pa = sv[s]
             s.inject_annotation(annotation)
-    return res_sv
+            res_sv += pa * s
+        return res_sv
+    return sv
 
 
 def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> StateVector:
@@ -55,9 +57,9 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
         return sv2
     pa_threshold = sqrt(prob_threshold)
     res = StateVector()
-    for s1, pa1 in sv1:
-        for s2, pa2 in sv2:
-            pa = pa1*pa2
+    for s1, pa1 in sv1.unnormalized_iterator():
+        for s2, pa2 in sv2.unnormalized_iterator():
+            pa = pa1 * pa2
             if abs(pa) > pa_threshold:
                 res += s1.merge(s2)*pa
     return res
