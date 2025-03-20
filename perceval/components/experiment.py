@@ -404,10 +404,11 @@ class Experiment:
         for m_out, m_in in mode_mapping.items():
             out_port = self.get_output_port(m_out)
             in_port = experiment.get_input_port(m_in)
-            if out_port is not None and in_port is not None and out_port.encoding != in_port.encoding:
-                get_logger().warn(f"The encoding of the output ports of {self.name} is {out_port.encoding} "
-                                  f"whereas the encoding of input ports of {experiment.name} is {in_port.encoding}."
-                                  f"The composition of {self.name} with {experiment.name} won't work correctly.")
+            if (out_port is not None and in_port is not None
+                    and (out_port.encoding != in_port.encoding or self._out_ports[out_port] != experiment._in_ports[in_port])):
+                get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
+                                  f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
+                                  f"will lead to unexpected results.")
                 break
 
         # Retrieve post process function from the other experiment
