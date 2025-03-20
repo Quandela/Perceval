@@ -113,31 +113,31 @@ class RemoteJob(Job):
         rj.status()
         return rj
 
-    @staticmethod
-    def from_dict(my_dict: dict, rpc_handler):
-        rj = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
-        rj._id = my_dict['id']
-        if my_dict['status'] is not None:
-            rj._job_status.status = RunningStatus[my_dict['status']]
-        return rj
-
-    def to_dict(self):
-        job_info = dict()
-        job_info['id'] = self.id
-
-        if self.was_sent:
-            job_info['status'] = str(self._job_status)
-        else:
-            job_info['status'] = None  # set status to None for Jobs not sent to cloud
-        job_info['body'] = self._create_payload_data()  # Save job payload to launch later on cloud
-
-        # save metadata to recreate remote jobs
-        # TODO: from/to_dict directly in rpc_handler
-        job_info['metadata'] = {'headers': self._rpc_handler.headers,
-                                'platform': self._rpc_handler.name,
-                                'url': self._rpc_handler.url}
-
-        return job_info
+    # @staticmethod
+    # def from_dict(my_dict: dict, rpc_handler):
+    #     rj = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
+    #     rj._id = my_dict['id']
+    #     if my_dict['status'] is not None:
+    #         rj._job_status.status = RunningStatus[my_dict['status']]
+    #     return rj
+    #
+    # def to_dict(self):
+    #     job_info = dict()
+    #     job_info['id'] = self.id
+    #
+    #     if self.was_sent:
+    #         job_info['status'] = str(self._job_status)
+    #     else:
+    #         job_info['status'] = None  # set status to None for Jobs not sent to cloud
+    #     job_info['body'] = self._create_payload_data()  # Save job payload to launch later on cloud
+    #
+    #     # save metadata to recreate remote jobs
+    #     # TODO: from/to_dict directly in rpc_handler
+    #     job_info['metadata'] = {'headers': self._rpc_handler.headers,
+    #                             'platform': self._rpc_handler.name,
+    #                             'url': self._rpc_handler.url}
+    #
+    #     return job_info
 
     def _handle_status_error(self, error):
         """
@@ -166,7 +166,7 @@ class RemoteJob(Job):
 
     @property
     def status(self) -> JobStatus:
-        if not self.was_sent or self._job_status.completed:  # status will never change, no need to get it
+        if not self.was_sent or self._job_status.completed:  # static status - retrieving from the cloud unnecessary.
             return self._job_status
 
         now = time.time()
@@ -196,9 +196,8 @@ class RemoteJob(Job):
             time.sleep(self._refresh_progress_delay)
         return self.get_results()
 
-    # Does not do what it says. This method has several responsibilities and ties them together.
-    # TODO review how Marion split the payload generation in this class
-    def set_args(self, *args, **kwargs) -> None:
+    def _create_payload_data(self, *args, **kwargs) -> dict:
+        # creates the payload for the job and returns the prepared job data
         self._handle_params(args, kwargs)
         if self._delta_parameters['mapping']:
             if self._job_context is None:
@@ -209,9 +208,6 @@ class RemoteJob(Job):
         kwargs['job_context'] = self._job_context
         self._request_data['job_name'] = self._name
         self._request_data['payload'].update(kwargs)
-
-    def _create_payload_data(self, *args, **kwargs):
-        self.set_args(*args, **kwargs)
         self._check_max_shots_samples_validity()
         return self._request_data
 
@@ -255,10 +251,15 @@ class RemoteJob(Job):
             raise RuntimeError(
                 f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
 
-        job_dict = self.to_dict()
+        # job_dict = self.to_dict()  # TODO: the only place other JOB group where it is used, we need better idea than what i do in the following
+        # TODO: we could import such private methods from serialization,
+        #  we could actually have remotejob serialized/deserialize as public methods but there seems to be no other use for it
+        from perceval.serialization._job_group_serialization import _serialize_remote_job, _deserialize_remote_job
+        job_dict = _serialize_remote_job(self)
         job_dict['id'] = self._rpc_handler.rerun_job(self._id)
         job_dict['status'] = RunningStatus.WAITING.name
-        return RemoteJob.from_dict(job_dict, self._rpc_handler)
+        # return RemoteJob.from_dict(job_dict, self._rpc_handler)
+        return _deserialize_remote_job(job_dict, self._rpc_handler)
 
     def _get_results(self) -> None:
         if self._results and self.status.completed:

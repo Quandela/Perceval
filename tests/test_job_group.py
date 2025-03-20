@@ -39,7 +39,7 @@ from perceval.runtime.rpc_handler import RPCHandler
 from perceval.components import catalog
 from perceval.algorithm import Sampler
 from perceval.utils import BasicState
-
+from perceval.serialization._job_group_serialization import serialize_job_group
 from _mock_rpc_handler import RPCHandlerResponsesBuilder, CloudEndpoint
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
@@ -55,7 +55,7 @@ RPC_HANDLER = RPCHandler(PLATFORM_NAME, URL, TOKEN)
 def test_init(mock_write_file):
     jg = JobGroup(TEST_JG_NAME)
     assert jg.name == TEST_JG_NAME
-    assert len(jg.remote_jobs) == 0  # empty job group
+    assert len(jg) == 0  # empty job group
     assert mock_write_file.call_count == 1
 
 
@@ -106,7 +106,7 @@ def test_add(mock_write_file):
         expected_write_call_count += 1
         assert mock_write_file.call_count == expected_write_call_count
 
-    assert len(jg.remote_jobs) == 10
+    assert len(jg) == 10
 
     remote_job_dict = {
         'id': None,
@@ -120,7 +120,9 @@ def test_add(mock_write_file):
             'url': RPC_HANDLER.url}
     }
 
-    for i, job_info in enumerate(jg.to_dict()['job_group_data']):
+    job_group_dict = serialize_job_group(jg)
+    for i, job_info in enumerate(job_group_dict['job_group_data']):
+    # for i, job_info in enumerate(jg.to_dict()['job_group_data']):
         remote_job_dict['body']['job_name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
@@ -158,7 +160,7 @@ def test_classic_run(mock_write_file):
         expected_write_call_count += 1
 
     assert mock_write_file.call_count == expected_write_call_count
-    assert len(jg.remote_jobs) == rj_nmb
+    assert len(jg) == rj_nmb
     assert len(responses.calls) == 0
 
     group_progress = jg.progress()
@@ -216,7 +218,9 @@ def test_classic_run(mock_write_file):
     expected_write_call_count += 1
     assert mock_write_file.call_count == expected_write_call_count
 
-    new_jg._from_dict(jg.to_dict())
+    job_group_dict = serialize_job_group(jg)
+    # new_jg._from_dict(jg.to_dict())
+    new_jg._from_dict(job_group_dict)
 
     # No call on load
     assert len(responses.calls) == rj_nmb * 2
@@ -252,10 +256,9 @@ def test_save_on_error(mock_write_file):
         jg = JobGroup(TEST_JG_NAME)
         jg._from_dict(last_saved_jg_dict)
 
-        remote_jobs = jg.remote_jobs
-        assert remote_jobs[0].was_sent
-        assert remote_jobs[0].is_success
-        assert remote_jobs[1] is None
+        assert jg[0].was_sent
+        assert jg[0].is_success
+        assert not jg[1].was_sent
 
 
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')

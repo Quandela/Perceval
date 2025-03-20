@@ -37,13 +37,24 @@ from perceval.runtime import Job, RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
-
+# from perceval.serialization import serialize
+from perceval.serialization._job_group_serialization import serialize_job_group, _build_remote_job
 
 FILE_EXT_JGRP = 'jgrp'
 JGRP_DIR_NAME = "job_group"
 DATE_TIME_FORMAT = "%Y%m%d_%H%M%S"
 
 
+# TODO : verify launch - sequential and data on disk
+# TODO : launch parallel - writing to disk on fail/cancel with launch parallel. Everything else seem to work fine
+# TODO : add some that will fail delibertely and check that launch saved the others - maybe some warning as it exits on fail
+
+# TODO: test track progress
+# TODO: from_dict and to_dict in both rj and jg
+# TODO: discuss if tests for delete/write methods can be written -> using mocks maybe - would they be robust?
+# TODO: not save body when rj.status == success
+
+# TODO: save job name in job group serialize/deserialize. Noname can appear when deser- choose to do rubbish then
 class JobGroup:
     """
     JobGroup handles a collection of remote jobs.
@@ -68,6 +79,8 @@ class JobGroup:
         self.created_date = now
         self.modified_date = now
         self._jobs: list[RemoteJob] = []
+        # TODO: saving as rj is keeping body inherently,
+        #  need to update method to remove body from success states jobs
         self._file_path = os.path.join(JobGroup._DIR_PATH, f"{self._name}.{FILE_EXT_JGRP}")
 
         if self._exists_on_disk(name):
@@ -76,6 +89,12 @@ class JobGroup:
             self._load_job_group()
         else:
             self._write_to_file()
+
+    def __len__(self):
+        return len(self._jobs)
+
+    def __getitem__(self, index):
+        return self._jobs[index]
 
     @property
     def name(self) -> str:
@@ -88,38 +107,40 @@ class JobGroup:
     def remote_jobs(self) -> list[RemoteJob]:
         """
         Returns a chronologically ordered list of RemoteJobs in the group.
-        Jobs never sent to the cloud will be represented by None.
         """
-        return [job if job.was_sent else None for job in self._jobs]
+        # TODO: I cant see the usage anymore - discuss? n remove??
+        # return [job if job.was_sent else None for job in self._jobs]
+        return [job for job in self._jobs]
 
-    def to_dict(self) -> dict:
-        group_data = {'created_date': self.created_date.strftime(DATE_TIME_FORMAT),
-                      'modified_date': self.modified_date.strftime(DATE_TIME_FORMAT),
-                      'job_group_data': []}
-        for job in self._jobs:
-            dict_job = job.to_dict()
-            group_data['job_group_data'].append(dict_job)
-        return group_data
+    # def to_dict(self) -> dict:
+    #     group_data = {'created_date': self.created_date.strftime(DATE_TIME_FORMAT),
+    #                   'modified_date': self.modified_date.strftime(DATE_TIME_FORMAT),
+    #                   'job_group_data': []}
+    #     for job in self._jobs:
+    #         dict_job = job.to_dict()
+    #         group_data['job_group_data'].append(dict_job)
+    #     return group_data
 
     def _from_dict(self, group_data: dict) -> None:
         self.created_date = datetime.strptime(group_data['created_date'], DATE_TIME_FORMAT)
         self.modified_date = datetime.strptime(group_data['modified_date'], DATE_TIME_FORMAT)
         for job_entry in group_data['job_group_data']:
-            self._jobs.append(self._build_remote_job(job_entry))
+            # self._jobs.append(self._build_remote_job(job_entry))
+            self._jobs.append(_build_remote_job(job_entry))
 
     def _write_to_file(self) -> None:
         """
         Writes job group data to disk
         """
         self.modified_date = datetime.now()
-        JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self.to_dict()), FileFormat.TEXT)
+        # JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self.to_dict()), FileFormat.TEXT)
+        JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(serialize_job_group(self)), FileFormat.TEXT)
 
     def _load_job_group(self) -> None:
         """
         Creates a Job Group by loading an existing one from file
         """
         group_data = json.loads(JobGroup._PERSISTENT_DATA.read_file(self._file_path, FileFormat.TEXT))
-
         self._from_dict(group_data)
 
     @staticmethod
@@ -167,15 +188,14 @@ class JobGroup:
         if job_to_add.id and job_to_add.id in [job.id for job in self._jobs]:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
         if kwargs:
-            job_to_add.set_args(**kwargs)
+            job_to_add._create_payload_data(**kwargs)
+            # job_to_add.set_args(**kwargs)
         self._jobs.append(job_to_add)
         self._write_to_file()
 
-    def _update_job_statuses(self) -> list:
+    def _update_job_statuses(self):
         """
-        Lists through all jobs in the group and returns a list of status
-        If a status is changed from existing in file, that entry is
-        updated with new information
+        Iterates over jobs in the group and updates their statuses on disk if a change is detected.
         """
         for job in self._jobs:
             if job.was_sent:
@@ -284,10 +304,8 @@ class JobGroup:
         """
         Delete all existing groups on disk
         """
-        jgrp_dir_path = JobGroup._DIR_PATH
-        list_groups = JobGroup.list_existing()
-        for each_file in list_groups:
-            JobGroup._PERSISTENT_DATA.delete_file(os.path.join(jgrp_dir_path, each_file + '.' + FILE_EXT_JGRP))
+        for each_file in JobGroup.list_existing():
+            JobGroup.delete_job_group(each_file)
 
     @staticmethod
     def delete_job_group(name: str) -> None:
@@ -306,12 +324,10 @@ class JobGroup:
 
         :param del_before_date: datetime of the oldest job group to keep. Anterior groups will be deleted.
         """
-        existing_groups = JobGroup.list_existing()
         files_to_del = []  # list of files before date to delete
-        for jg_name in existing_groups:
-            jg = JobGroup(jg_name)
-            jg_datetime = datetime.strptime(jg.created_date, DATE_TIME_FORMAT)
-            if jg_datetime < del_before_date:
+
+        for jg_name in JobGroup.list_existing():
+            if JobGroup(jg_name).created_date < del_before_date:
                 files_to_del.append(jg_name)
 
         if not files_to_del:
@@ -325,8 +341,10 @@ class JobGroup:
         remote_jobs = []
         self._update_job_statuses()
         for job in self._jobs:
-            if job._job_status.status in statuses:
-                remote_jobs.append(job)
+            if job.was_sent and job._job_status.status in statuses:
+                    remote_jobs.append(job)
+
+        print('toto')
         return remote_jobs
 
     def list_successful_jobs(self) -> list[RemoteJob]:
@@ -340,6 +358,7 @@ class JobGroup:
         Returns a list of all RemoteJobs in the group that are currently active on the cloud - those with a Running or
         Waiting status.
         """
+        # TODO : find bug n fix, i found that this listed not sent jobs to me on fri 14mar after launch parallel test
         return self._list_jobs_status_type([RunningStatus.RUNNING, RunningStatus.WAITING])
 
     def list_unsuccessful_jobs(self) -> list[RemoteJob]:
@@ -361,17 +380,11 @@ class JobGroup:
         :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of to jobs on cloud
         """
-        jobs = None
-        if rerun:
-            jobs = self.list_unsuccessful_jobs()
-        else:
-            jobs = self.list_unsent_jobs()
-        job_nmb = len(jobs)
+        job_nmb = len(self.list_unsuccessful_jobs()) if rerun else len(self.list_unsent_jobs())
 
         if delay is not None:
             # Use tqdm to track progress if sequential
             bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
-
             prog = tqdm(total=job_nmb, bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
         count_success = 0
