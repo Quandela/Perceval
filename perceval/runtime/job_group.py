@@ -44,12 +44,6 @@ STATUS_REFRESH_DELAY = 5
 DATE_TIME_FORMAT = "%Y%m%d_%H%M%S"
 
 
-# TODO : launch parallel - writing to disk on fail/cancel with launch parallel. Everything else seem to work fine
-# TODO : add some that will fail delibertely and check that launch saved the others - maybe some warning as it exits on fail
-
-# TODO: not save body when rj.status == success
-
-# TODO: save job name in job group serialize/deserialize. Noname can appear when deser- choose to do rubbish then
 class JobGroup:
     """
     JobGroup handles a collection of remote jobs.
@@ -74,8 +68,6 @@ class JobGroup:
         self.created_date = now
         self.modified_date = now
         self._jobs: list[RemoteJob] = []
-        # TODO: saving as rj is keeping body inherently,
-        #  need to update method to remove body from success states jobs
         self._file_path = os.path.join(JobGroup._DIR_PATH, f"{self._name}.{FILE_EXT_JGRP}")
 
         if self._exists_on_disk(name):

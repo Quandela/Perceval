@@ -174,7 +174,7 @@ def test_classic_run(mock_write_file):
     jg.run_parallel()
     expected_write_call_count += rj_nmb
 
-    assert len(responses.calls) == rj_nmb
+    assert len(responses.calls) == rj_nmb  # TODO: verify why the change in number of calls
     assert all([CloudEndpoint.from_response(call.response) == CloudEndpoint.CreateJob for call in responses.calls])
     assert mock_write_file.call_count == expected_write_call_count
 
@@ -248,6 +248,7 @@ def test_save_on_error(mock_write_file):
                 jg.run_sequential(0.1)
 
         last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
+        # TODO: here I saw 'WAITING' instead of "SUCCESS - need to investigate behaviour of responses to fix the test
         jg = JobGroup(TEST_JG_NAME)
         jg._deserialize(last_saved_jg_dict)
 
@@ -320,4 +321,5 @@ def test_rerun(mock_write_file):
                              'Finished': [3, {'successful': 3, 'unsuccessful': 0}],
                              'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
 
-# TODO: add payload well saved/load with complex job (iteration parameter et tout)
+# TODO: add a test with payload well saved/load with complex job? maybe with iteration parameter?
+# TODO: also to check success doesnot save body
