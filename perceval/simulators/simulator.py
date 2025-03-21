@@ -28,6 +28,7 @@
 # SOFTWARE.
 from __future__ import annotations
 
+import math
 import sys
 from collections import defaultdict
 
@@ -268,7 +269,7 @@ class Simulator(ISimulator):
             )
         ]
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
-        n_heralds = sum(self._heralds.values())
+        n_heralds = self._get_n_heralds()
 
         decomposed_input = [(prob, [(pa, _annot_state_mapping(st)) for st, pa in sv], next(iter(sv.n)))
                             for sv, prob in input_dist.items()]  # sv.n has only one element
@@ -326,7 +327,7 @@ class Simulator(ISimulator):
            ]
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
-        n_heralds = sum(self._heralds.values())
+        n_heralds = self._get_n_heralds()
 
         decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False), sv[0].n) for sv, prob in input_dist.items()]
 
@@ -519,6 +520,10 @@ class Simulator(ISimulator):
         elif self._backend._masks_str is not None:
             self._backend.clear_mask()
 
+    def _get_n_heralds(self):
+        # (- math.inf) avoids computing several times the same state if we can't use masks
+        return sum(self._heralds.values()) if self._can_use_mask else - math.inf
+
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
         gives the output probability distribution, after evolving some density matrix through the simulator
@@ -550,31 +555,10 @@ class Simulator(ISimulator):
                 'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf * logical_perf_coeff}
 
-    def evolve(self, input_state: BasicState | StateVector) -> StateVector:
-        """
-        Evolve a state through the circuit.
-        If the simulator has logical selection, the performance for this input state is stored in self.logical_perf,
-        and only the states matching the logical selection are kept.
-
-        :param input_state: The input fock state or state vector
-        :return: The output state vector
-        """
-        if not isinstance(input_state, StateVector):
-            input_state = StateVector(input_state)
-
-        # TODO: oskour ils ont pas tous le même nombre de photons
-
-        # Decay input to a list of basic states without annotations and evolve each of them
-        decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state]
-        input_list = [copy(state) for t in decomposed_input for state in t[1]]
-        for state in input_list:
-            state.clear_annotations()
-
-        # TODO: evolve the cache all at once for it to sort the states
-        self._evolve_cache(set(input_list))
-
+    def _evolve_no_compute(self, decomposed_input, input_state, n_heralds: int):
+        """Uses the cached results to compute the evolution of the state described in decomposed_input"""
         result_sv = StateVector()
-        for probampli, instate_list in decomposed_input:
+        for probampli, instate_list, n in decomposed_input:
             reslist = []
             for in_s in instate_list:
                 if in_s.n == 0:
@@ -582,7 +566,7 @@ class Simulator(ISimulator):
                     continue
                 annotation = in_s.get_photon_annotation(0)
                 in_s.clear_annotations()
-                reslist.append(_inject_annotation(self._evolve[in_s], annotation))
+                reslist.append(_inject_annotation(self._evolve[(in_s, min(n, in_s.n + n_heralds))], annotation))
 
             # Recombine results for one basic state input
             evolved_in_s = reslist.pop(0)
@@ -592,9 +576,37 @@ class Simulator(ISimulator):
             result_sv += evolved_in_s * probampli
 
         # result_sv is normalized here
-        result_sv, self._logical_perf = post_select_statevector(result_sv, self._postselect, self._heralds, self._keep_heralds)
-        self.log_resources(sys._getframe().f_code.co_name, {
+        result_sv, self._logical_perf = post_select_statevector(result_sv, self._postselect, self._heralds,
+                                                                self._keep_heralds)
+        self.log_resources("evolve", {
             'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
+        return result_sv
+
+    def _prepare_decomposed_input(self, input_state: SVDistribution, n_heralds: int):
+        """Decay input to a list of basic states without annotations and evolve each of them"""
+        decomposed_input = [(pa, st.separate_state(keep_annotations=True), max(sv.n)) for sv in input_state
+                            for st, pa in sv]
+        input_list = [(copy(state), min(t[2], state.n + n_heralds)) for t in decomposed_input for state in t[1]]
+        for state, _ in input_list:
+            state.clear_annotations()
+
+        self._evolve_cache_with_n(set(input_list))
+
+        return decomposed_input
+
+    def evolve(self, input_state: BasicState | StateVector) -> StateVector:
+        """
+        Evolve a state through the circuit.
+        If the simulator has logical selection, the performance for this input state is stored in self.logical_perf,
+        and only the states matching the logical selection are kept.
+
+        :param input_state: The input fock state or state vector
+        :return: The output state vector
+        """
+        n_heralds = self._get_n_heralds()
+        decomposed_input = self._prepare_decomposed_input(SVDistribution(input_state), n_heralds)
+
+        result_sv = self._evolve_no_compute(decomposed_input, input_state, n_heralds)
         return result_sv
 
     def evolve_svd(self,
@@ -614,10 +626,10 @@ class Simulator(ISimulator):
         if not isinstance(svd, SVDistribution):
             return SVDistribution(self.evolve(svd))
 
-        if self._heralds and not any(bs.has_annotations for sv in svd for bs in sv.keys()):
-            self._setup_heralds()
-        else:
-            self._backend.clear_mask()
+        self.init_use_mask(True)  # No detectors when using evolve
+
+        n_heralds = self._get_n_heralds()
+        self._prepare_decomposed_input(svd, n_heralds)
 
         global_perf = 0
         physical_perf = 0
@@ -625,7 +637,8 @@ class Simulator(ISimulator):
         for idx, (sv, p) in enumerate(svd.items()):
             # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self.min_detected_photons_filter:
-                new_sv = self.evolve(sv)
+                decomposed_input = [(pa, st.separate_state(keep_annotations=True), max(sv.n)) for st, pa in sv]
+                new_sv = self._evolve_no_compute(decomposed_input, sv, n_heralds)
                 success_prob = p * self._logical_perf
                 global_perf += success_prob
                 if new_sv.m != 0:
@@ -649,7 +662,8 @@ class Simulator(ISimulator):
         :param dm: The density Matrix to evolve
         :return: The evolved DensityMatrix
         """
-        self._backend.clear_mask()  # TODO: do it only if mask was set (PCVL-853)
+        if self._backend._masks_str is not None:
+            self._backend.clear_mask()
 
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be of DensityMatrix type, {type(dm)} was given")
