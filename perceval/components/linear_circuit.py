@@ -328,6 +328,7 @@ class Circuit(ACircuit):
     def __getitem__(self, idx) -> ACircuit:
         """
         Direct access to components - using __getitem__ operator
+
         :param idx: index of the component as (row, col)
         :return: the component
         """
@@ -486,13 +487,13 @@ class Circuit(ACircuit):
     def compute_unitary(self,
                         use_symbolic: bool = False,
                         assign: dict = None,
-                        use_polarization: bool | None = None) -> Matrix:
+                        use_polarization: bool = None) -> Matrix:
         r"""Compute the unitary matrix corresponding to the circuit
 
-        :param assign:
-        :param use_symbolic:
-        :param use_polarization:
-        :return:
+        :param use_symbolic: True to compute a symbolic matrix, False to compute a numerical matrix (default False)
+        :param assign: optional mapping between parameter names and their corresponding values
+        :param use_polarization: ask for polarized circuit to double size unitary matrix
+        :return: The circuit unitary matrix
         """
         self.assign(assign)
         if use_polarization is None:
@@ -505,6 +506,7 @@ class Circuit(ACircuit):
         return u
 
     def copy(self, subs: dict | list = None):
+        """Return a deep copy of the current circuit"""
         nc = copy.deepcopy(self)
         nc._params = {}
         nc._components = []

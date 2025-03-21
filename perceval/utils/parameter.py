@@ -41,33 +41,29 @@ class Parameter:
     :param value: optional value, when the value is provided at initialization, the parameter is considered as `fixed`
     :param min_v: minimal value that the parameter can take, is used in circuit optimization
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
+    :param periodic: True if the parameter is periodic, False otherwise (default True)
     """
     _id = 0
 
     def __init__(self, name: str, value: float = None,
-                 min_v: float = None, max_v: float = None, periodic=True):
-        if min_v is not None:
-            self._min = float(min_v)
-        else:
-            self._min = None
-        if max_v is not None:
-            self._max = float(max_v)
-        else:
-            self._max = None
-        if value is None:
+                 min_v: float = None, max_v: float = None, periodic: bool = True):
+        self._min = None if min_v is None else float(min_v)
+        self._max = None if max_v is None else float(max_v)
+        if value is None:  # Without a numerical value, create the symbol named after the parameter name
             self._symbol = sp.symbols(name, real=True)
             self._value = None
         else:
+            self._symbol = None
             if not isinstance(value, sp.Expr):
                 self._value = self._check_value(value, self._min, self._max, periodic)
             else:
                 self._value = value
-            self._symbol = None
+
         self.name = name
         self._periodic = periodic
         self._pid = Parameter._id
         self._original = None
-        self._params = {self}
+        self._params = {self}  # set of sub parameters
         Parameter._id += 1
 
     @property
@@ -76,8 +72,7 @@ class Parameter:
 
     @property
     def spv(self) -> sp.Expr:
-        r"""The current value of the parameter defined as a sympy expression
-        """
+        """The current value of the parameter defined as a sympy expression"""
         if self._value is not None:
             return sp.S(self._value)
         else:
@@ -85,7 +80,7 @@ class Parameter:
 
     @property
     def is_variable(self) -> bool:
-        r""""Returns True for a non-fixed parameter"""
+        """Returns True for a non-fixed parameter"""
         return self._symbol is not None
 
     def __bool__(self) -> bool:
@@ -96,14 +91,14 @@ class Parameter:
         """
         return float(self._value)
 
-    def evalf(self, subs: dict = None):
+    def evalf(self, subs: dict = None) -> float:
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """
         if subs is None or not isinstance(self._value, sp.Expr):
             return float(self._value)
         return self._value.evalf(subs=subs)
 
-    def is_symbolic(self):
+    def is_symbolic(self) -> bool:
         return self._value is None or isinstance(self._value, sp.Expr)
 
     def random(self):
@@ -202,14 +197,12 @@ class Parameter:
     @property
     def max(self) -> float:
         r"""The maximal value of the parameter
-
         """
         return self._max
 
     @max.setter
     def max(self, m: bool):
         r"""Set the maximal value of the parameter
-
         """
         self._max = m
 
@@ -278,10 +271,20 @@ class Parameter:
 
 class Expression(Parameter):
     """
+    Symbolic math expression
     This class allows arithmetic manipulation of the Parameter class.
 
+    Example:
+    >>> p_a = Parameter("A")
+    >>> p_b = Parameter("B")
+    >>> sum_ab = Expression("A**2 + B", {p_a, p_b})
+    >>> p_a.set_value(2)
+    >>> p_b.set_value(3)
+    >>> print(float(sum_ab))
+    7.0
+
     :param name: string specifying equation, acts as name of Expression parameter.
-    :param parameters: set of Parameter instances used in the expression
+    :param parameters: set of sub parameter instances used in the expression
     """
     def __init__(self, name: str, parameters: set[Parameter]):
         try:
@@ -308,7 +311,7 @@ class Expression(Parameter):
             raise RuntimeError(f"Missing parameters: {free_symbol_names - pcvl_param_names}")
 
     def __repr__(self):
-        return f"Expression({self.name[1:-1]}, parameters={self._params})"
+        return f"Expression('{self.name[1:-1]}', parameters={self._params})"
 
     def __float__(self):
         """Updates Expression with respect to any changes made to parent Parameters"""
@@ -318,7 +321,7 @@ class Expression(Parameter):
 
     @property
     def parameters(self) -> list[Parameter]:
-        """Returns list of parent parameters in alphabetical order"""
+        """Returns list of sub parameters in alphabetical order"""
         return sorted(self._params, key=lambda obj: obj.name)
 
     @property
