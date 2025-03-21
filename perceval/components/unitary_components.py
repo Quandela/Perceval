@@ -239,7 +239,7 @@ class PS(ACircuit):
     def inverse(self, v=False, h=False):
         if h:
             if self._phi.is_symbolic:
-                self._phi = -self._phi
+                self._phi = self._set_parameter("phi", -self._phi, None, None)
             else:
                 self._phi.set_value(-float(self._phi), force=True)
 
