@@ -33,7 +33,7 @@ from collections.abc import Iterable
 import sympy as sp
 import copy
 
-from perceval.utils.parameter import Parameter
+from perceval.utils.parameter import Parameter, Expression
 
 
 class AComponent(ABC):
@@ -104,13 +104,29 @@ class AParametrizedComponent(AComponent):
         """Returns a `Parameter` object from its name"""
         return self._params[param_name]
 
-    def get_parameters(self, all_params: bool = False) -> list[Parameter]:
+    def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
         :return: the list of parameters
+        :expressions: if True, returns Expressions and parameters embedded in circuit components.
+            If False, returns the raw parameters that make up the expressions only. Default `False`.
         """
-        return [v for v in self._params.values() if all_params or not v.fixed]
+        param_list = []
+        for param in self._params.values():
+            if all_params or not param.fixed:
+                if isinstance(param, Expression):
+                    if expressions:
+                        if param not in param_list:
+                            param_list.append(param)
+                    else:
+                        for p in param.parameters:
+                            if p not in param_list:
+                                param_list.append(p)
+                else:
+                    if param not in param_list:
+                        param_list.append(param)
+        return param_list
 
     def reset_parameters(self) -> None:
         for v in self._params.values():
@@ -123,7 +139,7 @@ class AParametrizedComponent(AComponent):
                        max_v: float,
                        periodic: bool = True) -> Parameter:
         """
-        Define a new parameter for the circuit, it can be an existing parameter that we recycle updating
+        Define a parameter for the circuit, it can be an existing parameter that we recycle updating
         min/max value or a parameter defined by a value that we create on the fly
 
         :param name: parameter name
@@ -167,8 +183,11 @@ class AParametrizedComponent(AComponent):
                 v = p._value
                 if isinstance(v, sp.Expr):
                     out_parameters[pname] = str(v)
-                elif default_value is None or abs(v - float(default_value)) > 1e-6:
-                    out_parameters[pname] = v
+                else:
+                    if p._is_expression:
+                        v = float(p)  # Re-evaluate the expression value
+                    if default_value is None or abs(v - float(default_value)) > 1e-6:
+                        out_parameters[pname] = v
         else:
             out_parameters[pname] = self._params[pname].name
 

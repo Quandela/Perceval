@@ -12,7 +12,6 @@ False
 
 .. autoclass:: perceval.utils.matrix.Matrix
    :members:
-
    .. automethod:: __new__
 
 
@@ -20,4 +19,11 @@ Parameter
 =========
 
 .. autoclass:: perceval.utils.parameter.Parameter
+   :members:
+
+
+Expression
+==========
+
+.. autoclass:: perceval.utils.parameter.Expression
    :members:
