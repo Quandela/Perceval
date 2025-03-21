@@ -39,7 +39,6 @@ from perceval.runtime.rpc_handler import RPCHandler
 from perceval.components import catalog
 from perceval.algorithm import Sampler
 from perceval.utils import BasicState
-from perceval.serialization._job_group_serialization import serialize_job_group
 from _mock_rpc_handler import RPCHandlerResponsesBuilder, CloudEndpoint
 
 TEST_JG_NAME = 'UnitTest_Job_Group'
@@ -80,7 +79,7 @@ def test_load(mock_write_file: MagicMock):
         'modified_date': '20250219_103020',
         'job_group_data': [remote_job_dict, remote_job_dict]}
 
-    jg._from_dict(jg_dict)
+    jg._deserialize(jg_dict)
     jg._write_to_file()
 
     last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
@@ -120,9 +119,7 @@ def test_add(mock_write_file):
             'url': RPC_HANDLER.url}
     }
 
-    job_group_dict = serialize_job_group(jg)
-    for i, job_info in enumerate(job_group_dict['job_group_data']):
-    # for i, job_info in enumerate(jg.to_dict()['job_group_data']):
+    for i, job_info in enumerate(jg._serialize()['job_group_data']):
         remote_job_dict['body']['job_name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
@@ -218,9 +215,7 @@ def test_classic_run(mock_write_file):
     expected_write_call_count += 1
     assert mock_write_file.call_count == expected_write_call_count
 
-    job_group_dict = serialize_job_group(jg)
-    # new_jg._from_dict(jg.to_dict())
-    new_jg._from_dict(job_group_dict)
+    new_jg._deserialize(jg._serialize())
 
     # No call on load
     assert len(responses.calls) == rj_nmb * 2
@@ -254,11 +249,12 @@ def test_save_on_error(mock_write_file):
 
         last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
         jg = JobGroup(TEST_JG_NAME)
-        jg._from_dict(last_saved_jg_dict)
+        jg._deserialize(last_saved_jg_dict)
 
-        assert jg[0].was_sent
-        assert jg[0].is_success
-        assert not jg[1].was_sent
+        remote_jobs = jg.remote_jobs
+        assert remote_jobs[0].was_sent
+        assert remote_jobs[0].is_success
+        assert not remote_jobs[1].was_sent
 
 
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
