@@ -42,16 +42,19 @@ provide real-time updates on job execution. To run jobs sequentially with a give
 
 >>> import perceval as pcvl
 >>>
->>> jg = JobGroup("compare_knill_and_ralph_cnot")  # Loads prepared experiment data
+>>> jg = pcvl.JobGroup("compare_knill_and_ralph_cnot")  # Loads prepared experiment data
 >>> jg.run_sequential(0)  # Will send the 2nd job to the Cloud as soon as the first one is complete
 
 Other methods - :code:`jg.run_parallel()`, :code:`jg.rerun_failed_parallel()`, and :code:`jg.rerun_failed_sequential(delay)`.
+
+.. note:: The :code:`jg.run_parallel()` method tries to start all jobs in the group on Cloud.
+An error will occur if it exceeds the limitations defined by the pricing plan (see `Quandela Cloud <https://cloud.quandela.com/pricing>`_).
 
 A third script can then prepared to analyze results:
 
 >>> import perceval as pcvl
 >>>
->>> jg = JobGroup("compare_knill_and_ralph_cnot")
+>>> jg = pcvl.JobGroup("compare_knill_and_ralph_cnot")
 >>> results = jg.get_results()
 >>> ralph_res = results[0]
 >>> knill_res = results[1]
@@ -61,6 +64,14 @@ Ralph CNOT is 490.01059 times better than Knill CNOT, but needs a measurement to
 
 .. note:: If the connection token you use in a :code:`JobGroup` expires or gets revoked, said :code:`JobGroup` will not
           be usable anymore. Stay tuned for further improvements on this feature, fixing this issue.
+
+.. warning::
+   JobGroups store their job data in the persistent data directory.
+   As these files can grow quite large, you will have to explicitely erase the ones you don't want to keep.
+   Use the commands:
+   * :code:`JobGroup.delete_job_group(name)`
+   * :code:`JobGroup.delete_job_groups_date(del_before_date: datetime)`
+   * :code:`JobGroup.delete_all_job_groups(name)`
 
 Class reference
 ---------------

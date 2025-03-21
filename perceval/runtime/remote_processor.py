@@ -99,14 +99,15 @@ class RemoteProcessor(AProcessor):
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
             self.proxies = rpc_handler.proxies
         else:
+            remote = RemoteConfig()
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             if token is None:
-                token = RemoteConfig.get_token()
-            if token is None:
+                token = remote.get_token()
+            if not token:
                 raise ConnectionError("No token found")
             if proxies is None:
-                proxies = RemoteConfig.get_proxies()
+                proxies = remote.get_proxies()
             self.name = name
             self.proxies = proxies
             self._rpc_handler = RPCHandler(self.name, url, token, proxies)
