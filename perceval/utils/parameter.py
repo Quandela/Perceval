@@ -275,13 +275,12 @@ class Expression(Parameter):
     This class allows arithmetic manipulation of the Parameter class.
 
     Example:
-    >>> p_a = Parameter("A")
-    >>> p_b = Parameter("B")
-    >>> sum_ab = Expression("A**2 + B", {p_a, p_b})
-    >>> p_a.set_value(2)
-    >>> p_b.set_value(3)
-    >>> print(float(sum_ab))
-    7.0
+        >>> p_a = Parameter("A")
+        >>> p_b = Parameter("B")
+        >>> sum_ab = Expression("A**2 + B", {p_a, p_b})
+        >>> p_a.set_value(2)
+        >>> p_b.set_value(3)
+        >>> print(float(sum_ab))  # Prints 7.0
 
     :param name: string specifying equation, acts as name of Expression parameter.
     :param parameters: set of sub parameter instances used in the expression
