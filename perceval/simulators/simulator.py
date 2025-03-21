@@ -193,7 +193,7 @@ class Simulator(ISimulator):
         return result
 
     def _invalidate_cache(self):
-        self._evolve: dict[BasicState, StateVector] = {}
+        self._evolve: dict[BasicState | tuple[BasicState, int], StateVector] = {}
         self.DEBUG_evolve_count = 0
         self.DEBUG_merge_count = 0
 
@@ -202,6 +202,21 @@ class Simulator(ISimulator):
             if state not in self._evolve:
                 self._backend.set_input_state(state)
                 self._evolve[state] = self._backend.evolve()
+                self.DEBUG_evolve_count += 1
+
+    def _evolve_cache_with_n(self, input_list: set[tuple[BasicState, int]]):
+        previous_n = None
+        for state, n in sorted(input_list, key=lambda x: x[1]):
+            if (state, n) not in self._evolve:
+                if n != previous_n and n != 0:
+                    previous_n = n
+                    # The backend init the mask when setting the state and when setting the mask if there is an input state,
+                    # no need to do it twice
+                    self._backend._input_state = None
+                    self.use_mask(n)
+
+                self._backend.set_input_state(state)
+                self._evolve[(state, n)] = self._backend.evolve()
                 self.DEBUG_evolve_count += 1
 
     def _merge_probability_dist(self, input_list) -> BSDistribution:
@@ -253,20 +268,25 @@ class Simulator(ISimulator):
             )
         ]
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
-        decomposed_input = [(prob, [(pa, _annot_state_mapping(st)) for st, pa in sv]) for sv, prob in input_dist.items()]
-        input_set = set([state for s in decomposed_input for t in s[1] for state in t[1].values()])
-        self._evolve_cache(input_set)
+        n_heralds = sum(self._heralds.values())
+
+        decomposed_input = [(prob, [(pa, _annot_state_mapping(st)) for st, pa in sv], next(iter(sv.n)))
+                            for sv, prob in input_dist.items()]  # sv.n has only one element
+
+        # If sv.n >= state.n + n_heralds, we get all the Fock space in the result
+        input_set = set([(state, min(s[2], state.n + n_heralds)) for s in decomposed_input for t in s[1] for state in t[1].values()])
+        self._evolve_cache_with_n(input_set)
 
         """Reconstruct output probability distribution"""
         res = BSDistribution()
-        for idx, (prob0, sv_data) in enumerate(decomposed_input):
+        for idx, (prob0, sv_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
             result_sv = StateVector()
             for probampli, instate_list in sv_data:
                 prob_sv = abs(probampli) ** 2
                 evolved_in_s = StateVector()
                 for annot, in_s in instate_list.items():
-                    cached_res = _inject_annotation(self._evolve[in_s], annot)
+                    cached_res = _inject_annotation(self._evolve[(in_s, min(n, in_s.n + n_heralds))], annot)
                     evolved_in_s = _merge_sv(evolved_in_s, cached_res,
                                              prob_threshold=p_threshold / (10 * prob_sv * prob0))
                     if len(evolved_in_s) == 0:
@@ -312,6 +332,7 @@ class Simulator(ISimulator):
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
+        # If sv.n >= state.n + n_heralds, we get all the Fock space in the result
         input_set = set((state, min(s[2], state.n + n_heralds)) for s in decomposed_input for state in s[1])
         len_input_set = len(input_set)
         prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
@@ -319,6 +340,8 @@ class Simulator(ISimulator):
         for idx, (state, n) in enumerate(sorted(input_set, key=lambda x: x[1])):
             if n != previous_n and n != 0:
                 previous_n = n
+                # The backend init the mask when setting the state and when setting the mask if there is an input state,
+                # no need to do it twice
                 self._backend._input_state = None
                 self.use_mask(n)
 
@@ -441,12 +464,7 @@ class Simulator(ISimulator):
 
         is_pnr = get_detection_type(detectors) == DetectionType.PNR
 
-        # TODO: fix this
-        if self.can_use_mask(has_annotations, is_pnr):
-            self._setup_heralds()
-        else:
-            self._backend.clear_mask()
-        self.init_use_mask(has_superposed_states, detectors)
+        self.init_use_mask(is_pnr)
 
         if is_pnr:
             prog_cb = progress_callback
@@ -481,7 +499,6 @@ class Simulator(ISimulator):
     def _setup_heralds(self, n=None):
         # Set up a mask corresponding to heralds:
         mask_str = ""
-        n_heralded_photons = 0
         for i in range(self._backend._circuit.m):
             if i in self._heralds:
                 herald_expectation = self._heralds[i]
@@ -489,29 +506,17 @@ class Simulator(ISimulator):
                     raise ValueError("Cannot simulate an herald expecting more than 32 detected photons")
                 # Encodes expected photon count from 0x30 to 0x4F ASCII characters
                 mask_str += f"{chr(0x30 + herald_expectation)}"
-                n_heralded_photons += herald_expectation
             else:
                 mask_str += " "
         self._backend.set_mask(mask_str, n)
 
-    # TODO: merge this better
-    def can_use_mask(self, has_annotations: bool, is_pnr: bool) -> bool:
-        return (self._heralds
-                and not has_annotations
-                and is_pnr)
-
-    def init_use_mask(self, has_superposed_states, detectors) -> None:
-        self._can_use_mask = (self._heralds
-                and not has_superposed_states
-                # TODO: use masks with superposed states when logical perf computation is ready (PCVL-851)
-
-                and get_detection_type(detectors) == DetectionType.PNR
-                )
+    def init_use_mask(self, is_pnr) -> None:
+        self._can_use_mask = self._heralds and is_pnr
 
     def use_mask(self, n=None):
         if self._can_use_mask:
             self._setup_heralds(n)
-        else:
+        elif self._backend._masks_str is not None:
             self._backend.clear_mask()
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
@@ -557,11 +562,15 @@ class Simulator(ISimulator):
         if not isinstance(input_state, StateVector):
             input_state = StateVector(input_state)
 
+        # TODO: oskour ils ont pas tous le même nombre de photons
+
         # Decay input to a list of basic states without annotations and evolve each of them
         decomposed_input = [(pa, st.separate_state(keep_annotations=True)) for st, pa in input_state]
         input_list = [copy(state) for t in decomposed_input for state in t[1]]
         for state in input_list:
             state.clear_annotations()
+
+        # TODO: evolve the cache all at once for it to sort the states
         self._evolve_cache(set(input_list))
 
         result_sv = StateVector()
