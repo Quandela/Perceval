@@ -28,7 +28,6 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import math
 import sys
 
 from copy import copy
@@ -68,6 +67,7 @@ class Simulator(ISimulator):
         self._logical_perf: float = 1
         self._rel_precision: float = 1e-6  # Precision relative to the highest probability of interest in probs_svd
         self._keep_heralds = True
+        self._n_heralds = 0
 
     @property
     def precision(self):
@@ -83,6 +83,7 @@ class Simulator(ISimulator):
 
     def set_heralds(self, heralds):
         self._invalidate_cache()
+        self._n_heralds = sum(heralds.values())
         super().set_heralds(heralds)
 
     def keep_heralds(self, value: bool):
@@ -111,6 +112,7 @@ class Simulator(ISimulator):
     def clear_heralds(self):
         self._invalidate_cache()
         self._heralds = {}
+        self._n_heralds = 0
 
     def set_circuit(self, circuit: ACircuit, m = None):
         """Set a circuit for simulation.
@@ -268,13 +270,11 @@ class Simulator(ISimulator):
             )
         ]
         where {annot_xy*: bs_xy*,..} is a mapping between an annotation and a pure basic state"""
-        n_heralds = self._get_n_heralds()
-
         decomposed_input = [(prob, [(pa, _annot_state_mapping(st)) for st, pa in sv], next(iter(sv.n)))
                             for sv, prob in input_dist.items()]  # sv.n has only one element
 
         # If sv.n >= state.n + n_heralds, we get all the Fock space in the result
-        input_set = set([(state, min(s[2], state.n + n_heralds)) for s in decomposed_input for t in s[1] for state in t[1].values()])
+        input_set = set([(state, self._best_n(s[2], state.n)) for s in decomposed_input for t in s[1] for state in t[1].values()])
         self._evolve_cache_with_n(input_set)
 
         """Reconstruct output probability distribution"""
@@ -286,7 +286,7 @@ class Simulator(ISimulator):
                 prob_sv = abs(probampli) ** 2
                 evolved_in_s = StateVector()
                 for annot, in_s in instate_list.items():
-                    cached_res = _inject_annotation(self._evolve[(in_s, min(n, in_s.n + n_heralds))], annot)
+                    cached_res = _inject_annotation(self._evolve[(in_s, self._best_n(n, in_s.n))], annot)
                     evolved_in_s = _merge_sv(evolved_in_s, cached_res,
                                              prob_threshold=p_threshold / (10 * prob_sv * prob0))
                     if len(evolved_in_s) == 0:
@@ -326,14 +326,11 @@ class Simulator(ISimulator):
            ]
            where [bs_x,] is the list of the un-annotated separated basic state (result of bs_x.separate_state())
         """
-        n_heralds = self._get_n_heralds()
-
         decomposed_input = [(prob, sv[0].separate_state(keep_annotations=False), sv[0].n) for sv, prob in input_dist.items()]
 
         """Create a cache with strong simulation of all unique input"""
         cache = {}
-        # If sv.n >= state.n + n_heralds, we get all the Fock space in the result
-        input_set = set((state, min(s[2], state.n + n_heralds)) for s in decomposed_input for state in s[1])
+        input_set = set((state, self._best_n(s[2], state.n)) for s in decomposed_input for state in s[1])
         len_input_set = len(input_set)
         prog_cb = partial_progress_callable(progress_callback, max_val=0.5)  # From 0. to 0.5
         previous_n = None
@@ -358,7 +355,7 @@ class Simulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution.list_tensor_product([cache[(state, min(n, state.n + n_heralds))] for state in bs_data],
+            probs_in_s = BSDistribution.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
                                                             merge_modes=True,
                                                             prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
@@ -519,9 +516,14 @@ class Simulator(ISimulator):
         elif self._backend._masks_str is not None:
             self._backend.clear_mask()
 
-    def _get_n_heralds(self):
-        # (- math.inf) avoids computing several times the same state if we can't use masks
-        return sum(self._heralds.values()) if self._can_use_mask else - math.inf
+    def _best_n(self, n_ext: int, n_own: int) -> int:
+        """Computes the number of photons to use in the mask for a given state to simulate.
+        If n_ext >= n_own + n_heralds, we get all the Fock space in the result.
+
+        :param n_ext: Number of photons of the state containing the state to simulate.
+        :param n_own: Number of photons in the state to simulate.
+        """
+        return min(n_ext, n_own + self._n_heralds) if self._can_use_mask else n_own + self._n_heralds
 
     def probs_density_matrix(self, dm: DensityMatrix) -> dict:
         """
@@ -554,7 +556,7 @@ class Simulator(ISimulator):
                 'physical_perf': physical_perf,
                 'logical_perf': self._logical_perf * logical_perf_coeff}
 
-    def _evolve_no_compute(self, decomposed_input, input_state, n_heralds: int):
+    def _evolve_no_compute(self, decomposed_input, input_state):
         """Uses the cached results to compute the evolution of the state described in decomposed_input"""
         result_sv = StateVector()
         for probampli, instate_list, n in decomposed_input:
@@ -565,7 +567,7 @@ class Simulator(ISimulator):
                     continue
                 annotation = in_s.get_photon_annotation(0)
                 in_s.clear_annotations()
-                reslist.append(_inject_annotation(self._evolve[(in_s, min(n, in_s.n + n_heralds))], annotation))
+                reslist.append(_inject_annotation(self._evolve[(in_s, self._best_n(n, in_s.n))], annotation))
 
             # Recombine results for one basic state input
             evolved_in_s = reslist.pop(0)
@@ -581,11 +583,11 @@ class Simulator(ISimulator):
             'n': input_state.n if isinstance(input_state.n, int) else max(input_state.n)})
         return result_sv
 
-    def _prepare_decomposed_input(self, input_state: SVDistribution, n_heralds: int):
+    def _prepare_decomposed_input(self, input_state: SVDistribution):
         """Decay input to a list of basic states without annotations and evolve each of them"""
         decomposed_input = [(pa, st.separate_state(keep_annotations=True), max(sv.n)) for sv in input_state
                             for st, pa in sv]
-        input_list = [(copy(state), min(t[2], state.n + n_heralds)) for t in decomposed_input for state in t[1]]
+        input_list = [(copy(state), self._best_n(t[2], state.n)) for t in decomposed_input for state in t[1]]
         for state, _ in input_list:
             state.clear_annotations()
 
@@ -602,10 +604,9 @@ class Simulator(ISimulator):
         :param input_state: The input fock state or state vector
         :return: The output state vector
         """
-        n_heralds = self._get_n_heralds()
-        decomposed_input = self._prepare_decomposed_input(SVDistribution(input_state), n_heralds)
+        decomposed_input = self._prepare_decomposed_input(SVDistribution(input_state))
 
-        result_sv = self._evolve_no_compute(decomposed_input, input_state, n_heralds)
+        result_sv = self._evolve_no_compute(decomposed_input, input_state)
         return result_sv
 
     def evolve_svd(self,
@@ -627,8 +628,7 @@ class Simulator(ISimulator):
 
         self.init_use_mask(True)  # No detectors when using evolve
 
-        n_heralds = self._get_n_heralds()
-        self._prepare_decomposed_input(svd, n_heralds)
+        self._prepare_decomposed_input(svd)
 
         global_perf = 0
         physical_perf = 0
@@ -637,7 +637,7 @@ class Simulator(ISimulator):
             # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self.min_detected_photons_filter:
                 decomposed_input = [(pa, st.separate_state(keep_annotations=True), max(sv.n)) for st, pa in sv]
-                new_sv = self._evolve_no_compute(decomposed_input, sv, n_heralds)
+                new_sv = self._evolve_no_compute(decomposed_input, sv)
                 success_prob = p * self._logical_perf
                 global_perf += success_prob
                 if new_sv.m != 0:
