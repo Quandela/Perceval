@@ -171,7 +171,7 @@ def serialize_herald(herald: Herald) -> pb.Herald:
     return pb_herald
 
 
-def serialize_port(port: Port):
+def serialize_port(port: Port) -> pb.Port:
     pb_port = pb.Port()
     pb_port.name = port.name
     pb_port.encoding = port.encoding.value

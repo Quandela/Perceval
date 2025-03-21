@@ -333,7 +333,7 @@ class ExperimentBuilder:
                 experiment.add_port(i, port, location=location)
             elif with_herald and isinstance(port, Herald):
                 # TODO: this supposes that the initial heralds were all added using "add_herald" so they are on both side
-                #  repairing this requires modifying "add_port"
+                #  repairing this requires modifying "add_port" (PCVL-936)
                 experiment.add_herald(i, port.expected, port.user_given_name)
 
     def resolve(self):
@@ -369,7 +369,7 @@ class ExperimentBuilder:
             experiment.add(serial_comp.starting_mode, component)
 
         # TODO: Detector deserialization needed before component deserialization if there are feed-forward configurators
-        #  However, we can't add photonic components after adding a detector
+        #  However, we can't add photonic components after adding a detector (PCVL-799)
         for i, serial_detector in self._pb_e.detectors.items():
             t = serial_detector.WhichOneof('type')
             serial_sub_comp = getattr(serial_detector, t)
