@@ -114,31 +114,30 @@ class RemoteJob(Job):
         return rj
 
     @staticmethod
-    def _deserialize(my_dict: dict, rpc_handler):
-        if my_dict['status'] is 'SUCCESS':
-            return RemoteJob.from_id(my_dict['id'], rpc_handler)
+    def _from_dict(my_dict: dict, rpc_handler):
+        if my_dict['status'] == 'SUCCESS':
+            body = None
+            name = ""
         else:
-            rj = RemoteJob(my_dict['body'], rpc_handler, my_dict['body']['job_name'])
-            rj._id = my_dict['id']
-            if my_dict['status'] is not None:
-                rj._job_status.status = RunningStatus[my_dict['status']]
-            return rj
+            body = my_dict['body']
+            name = my_dict['body']['job_name']
+        rj = RemoteJob(body, rpc_handler, name)
+        rj._id = my_dict['id']
+        if my_dict['status'] is not None:
+            rj._job_status.status = RunningStatus[my_dict['status']]
+        return rj
 
-    def _serialize(self):
+    def _to_dict(self):
         job_info = dict()
         job_info['id'] = self.id
-
-        if self.was_sent:
-            job_info['status'] = str(self._job_status)
-        else:
-            job_info['status'] = None  # set status to None for Jobs not sent to cloud
+        job_info['status'] = str(self._job_status) if self.was_sent else None
 
         # save metadata to recreate remote jobs
         job_info['metadata'] = {'headers': self._rpc_handler.headers,
                                 'platform': self._rpc_handler.name,
                                 'url': self._rpc_handler.url}
 
-        if not self.is_success:
+        if not self._job_status.success:
             # Save the job payload for later use in the cloud unless the status is 'success'.
             job_info['body'] = self._create_payload_data()
 
@@ -256,10 +255,10 @@ class RemoteJob(Job):
             raise RuntimeError(
                 f"Cannot rerun current job because job status is: {self.status} (should be either CANCELED or ERROR)")
 
-        job_dict = self._serialize()
+        job_dict = self._to_dict()
         job_dict['id'] = self._rpc_handler.rerun_job(self._id)
         job_dict['status'] = RunningStatus.WAITING.name
-        return RemoteJob._deserialize(job_dict, self._rpc_handler)
+        return RemoteJob._from_dict(job_dict, self._rpc_handler)
 
     def _get_results(self) -> None:
         if self._results and self.status.completed:

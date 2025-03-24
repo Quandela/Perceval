@@ -97,19 +97,19 @@ class JobGroup:
         """
         return [job for job in self._jobs]
 
-    def _serialize(self) -> dict:
+    def _to_json(self) -> dict:
         group_data = {'created_date': self.created_date.strftime(DATE_TIME_FORMAT),
                       'modified_date': self.modified_date.strftime(DATE_TIME_FORMAT),
                       'job_group_data': []}
         for job in self._jobs:
-            dict_job = job._serialize()
+            dict_job = job._to_dict()
             group_data['job_group_data'].append(dict_job)
         return group_data
 
-    def _deserialize(self, group_data: dict) -> None:
-        self.created_date = datetime.strptime(group_data['created_date'], DATE_TIME_FORMAT)
-        self.modified_date = datetime.strptime(group_data['modified_date'], DATE_TIME_FORMAT)
-        for job_entry in group_data['job_group_data']:
+    def _from_json(self, json_data: dict) -> None:
+        self.created_date = datetime.strptime(json_data['created_date'], DATE_TIME_FORMAT)
+        self.modified_date = datetime.strptime(json_data['modified_date'], DATE_TIME_FORMAT)
+        for job_entry in json_data['job_group_data']:
             self._jobs.append(self._build_remote_job(job_entry))
 
     def _write_to_file(self) -> None:
@@ -117,14 +117,14 @@ class JobGroup:
         Writes job group data to disk
         """
         self.modified_date = datetime.now()
-        JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self._serialize()), FileFormat.TEXT)
+        JobGroup._PERSISTENT_DATA.write_file(self._file_path, json.dumps(self._to_json()), FileFormat.TEXT)
 
     def _load_job_group(self) -> None:
         """
         Creates a Job Group by loading an existing one from file
         """
         group_data = json.loads(JobGroup._PERSISTENT_DATA.read_file(self._file_path, FileFormat.TEXT))
-        self._deserialize(group_data)
+        self._from_json(group_data)
 
     @staticmethod
     def _build_remote_job(job_entry: dict) -> RemoteJob:
@@ -137,7 +137,7 @@ class JobGroup:
         rpc_handler = RPCHandler(platform_metadata['platform'],
                                  platform_metadata['url'], user_token)
 
-        return RemoteJob._deserialize(job_entry, rpc_handler)
+        return RemoteJob._from_dict(job_entry, rpc_handler)
 
     @staticmethod
     def list_existing() -> list[str]:
@@ -172,7 +172,6 @@ class JobGroup:
             raise ValueError(f"Duplicate job detected : job id {job_to_add.id} exists in the group.")
         if kwargs:
             job_to_add._create_payload_data(**kwargs)
-            # job_to_add.set_args(**kwargs)
         self._jobs.append(job_to_add)
         self._write_to_file()
 
@@ -354,7 +353,7 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, rerun: bool, delay: int = None, replace_failed_jobs: bool = False) -> None:
+    def _launch_jobs(self, rerun: bool, delay: float = None, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
@@ -405,7 +404,7 @@ class JobGroup:
         if delay is not None:
             prog.close()
 
-    def run_sequential(self, delay: int | float) -> None:
+    def run_sequential(self, delay: float) -> None:
         """
         Launches the unsent jobs in the group on Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.

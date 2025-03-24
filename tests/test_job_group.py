@@ -79,7 +79,7 @@ def test_load(mock_write_file: MagicMock):
         'modified_date': '20250219_103020',
         'job_group_data': [remote_job_dict, remote_job_dict]}
 
-    jg._deserialize(jg_dict)
+    jg._from_json(jg_dict)
     jg._write_to_file()
 
     last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
@@ -119,7 +119,7 @@ def test_add(mock_write_file):
             'url': RPC_HANDLER.url}
     }
 
-    for i, job_info in enumerate(jg._serialize()['job_group_data']):
+    for i, job_info in enumerate(jg._to_json()['job_group_data']):
         remote_job_dict['body']['job_name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
@@ -174,7 +174,7 @@ def test_classic_run(mock_write_file):
     jg.run_parallel()
     expected_write_call_count += rj_nmb
 
-    assert len(responses.calls) == rj_nmb  # TODO: verify why the change in number of calls
+    assert len(responses.calls) == rj_nmb
     assert all([CloudEndpoint.from_response(call.response) == CloudEndpoint.CreateJob for call in responses.calls])
     assert mock_write_file.call_count == expected_write_call_count
 
@@ -215,7 +215,7 @@ def test_classic_run(mock_write_file):
     expected_write_call_count += 1
     assert mock_write_file.call_count == expected_write_call_count
 
-    new_jg._deserialize(jg._serialize())
+    new_jg._from_json(jg._to_json())
 
     # No call on load
     assert len(responses.calls) == rj_nmb * 2
@@ -250,7 +250,7 @@ def test_save_on_error(mock_write_file):
         last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
         # TODO: here I saw 'WAITING' instead of "SUCCESS - need to investigate behaviour of responses to fix the test
         jg = JobGroup(TEST_JG_NAME)
-        jg._deserialize(last_saved_jg_dict)
+        jg._from_json(last_saved_jg_dict)
 
         remote_jobs = jg.remote_jobs
         assert remote_jobs[0].was_sent
