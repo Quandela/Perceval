@@ -71,7 +71,8 @@ def test_load(mock_write_file: MagicMock):
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
-            'url': RPC_HANDLER.url}
+            'url': RPC_HANDLER.url,
+            'proxies': RPC_HANDLER.proxies}
     }
 
     jg_dict = {
@@ -88,7 +89,7 @@ def test_load(mock_write_file: MagicMock):
         if key == 'modified_date':
             assert jg_dict[key] < value
         else:
-            assert jg_dict[key] == value
+            assert jg_dict[key] == value, f"Failed for key {key}: {jg_dict[key]} != {value}"
 
 
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
@@ -116,7 +117,8 @@ def test_add(mock_write_file):
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
-            'url': RPC_HANDLER.url}
+            'url': RPC_HANDLER.url,
+            'proxies': RPC_HANDLER.proxies}
     }
 
     for i, job_info in enumerate(jg._to_json()['job_group_data']):

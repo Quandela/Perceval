@@ -135,7 +135,8 @@ class RemoteJob(Job):
         # save metadata to recreate remote jobs
         job_info['metadata'] = {'headers': self._rpc_handler.headers,
                                 'platform': self._rpc_handler.name,
-                                'url': self._rpc_handler.url}
+                                'url': self._rpc_handler.url,
+                                'proxies': self._rpc_handler.proxies}
 
         if not self._job_status.success:
             # Save the job payload for later use in the cloud unless the status is 'success'.

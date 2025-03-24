@@ -46,22 +46,19 @@ _JOB_ID_KEY = 'job_id'
 class RPCHandler:
     """Remote Call Procedure Handler
 
-    A class to call the API
+    A class to call the web API
 
+    :param name: name of the target platform
+    :param url: API URL to call
+    :param token: token used for authentication
+    :param proxies: dictionary mapping protocol to the URL of the proxy
     """
 
-    def __init__(self, name, url, token, proxies):
-        """Remote Call Procedure Handler
-
-        :param name: name of the plateform
-        :param url: api URL to call
-        :param token: token used for identification
-        :param proxies: dictionary mapping protocol to the URL of the proxy
-        """
+    def __init__(self, name, url, token, proxies = None):
         self.name = name
         self.url = url
         self.proxies = proxies
-        self.token = token
+        self.token = token or dict()
         self.headers = {'Authorization': f'Bearer {token}'}
         self.request_timeout = 10  # default timeout
 

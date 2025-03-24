@@ -131,12 +131,9 @@ class JobGroup:
         """
         Returns a RemoteJob object recreated using its id and platform metadata
         """
-        platform_metadata = job_entry['metadata']
-        user_token = platform_metadata['headers']['Authorization'].split(' ')[1]
-
-        rpc_handler = RPCHandler(platform_metadata['platform'],
-                                 platform_metadata['url'], user_token)
-
+        metadata = job_entry['metadata']
+        user_token = metadata['headers']['Authorization'].split(' ')[1]
+        rpc_handler = RPCHandler(metadata['platform'], metadata['url'], user_token, metadata.get('proxies'))
         return RemoteJob._from_dict(job_entry, rpc_handler)
 
     @staticmethod
