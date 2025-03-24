@@ -52,13 +52,7 @@ class PersistentData:
 
     def __init__(self, directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir) -> None:
         self._directory = directory
-        try:
-            self._create_directory()
-        except OSError as exc:
-            warnings.warn(UserWarning(f"{exc}"))
-            return
-        if not self.is_writable() or not self.is_readable():
-            warnings.warn(UserWarning(f"Cannot read or write in {self._directory}"))
+        self._directory_created = False
 
     def is_writable(self) -> bool:
         """Return if the directory is writable
@@ -77,8 +71,15 @@ class PersistentData:
     def _create_directory(self) -> None:
         """Create the persistent data root directory if it doesn't exist
         """
-        if not os.path.exists(self._directory):
-            os.makedirs(self._directory)
+        try:
+            if not os.path.exists(self._directory):
+                os.makedirs(self._directory)
+            self._directory_created = True
+        except OSError as exc:
+            warnings.warn(UserWarning(f"{exc}"))
+            return
+        if not self.is_writable() or not self.is_readable():
+            warnings.warn(UserWarning(f"Cannot read or write in {self._directory}"))
 
     def get_folder_size(self) -> int:
         """Get the directory data size
@@ -125,6 +126,8 @@ class PersistentData:
         :param filename: name of the file to write in (with extension)
         :param data: data to write
         """
+        if not self._directory_created:
+            self._create_directory()
         if file_format != FileFormat.BINARY and file_format != FileFormat.TEXT:
             raise NotImplementedError(f"format {format} is not supported")
         if self.is_writable():
@@ -151,7 +154,6 @@ class PersistentData:
         file_path = self.get_full_path(filename)
         if not os.path.exists(file_path):
             raise FileNotFoundError(file_path)
-        data = None
 
         if file_format == FileFormat.BINARY:
             with open(file_path, "r+b") as file:
@@ -184,6 +186,8 @@ class PersistentData:
 
         :param config: config to save
         """
+        if not self._directory_created:
+            self._create_directory()
         if self.is_writable():
             file_config = self.load_config()
             file_config.update(config)
@@ -211,6 +215,9 @@ class PersistentData:
         Creates a sub folder in persistent data directory if non-existent
         """
         dir_path = os.path.join(self.directory, relative_path)
+
+        if not self._directory_created:
+            self._create_directory()
 
         try:
             if not os.path.exists(dir_path):

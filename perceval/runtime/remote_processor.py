@@ -101,12 +101,15 @@ class RemoteProcessor(AProcessor):
         else:
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
+            remote = RemoteConfig()
+            if name is None:
+                raise ValueError("Parameter 'name' must have a value")
             if token is None:
-                token = RemoteConfig.get_token()
-            if token is None:
+                token = remote.get_token()
+            if not token:
                 raise ConnectionError("No token found")
             if proxies is None:
-                proxies = RemoteConfig.get_proxies()
+                proxies = remote.get_proxies()
             self.name = name
             self.proxies = proxies
             self._rpc_handler = RPCHandler(self.name, url, token, proxies)
@@ -317,7 +320,7 @@ class RemoteProcessor(AProcessor):
     def log_resources(self, command: str, extra_parameters: dict):
         """Log resources of the remote processor
 
-        :param method: name of the method used
+        :param command: name of the method used
         :param extra_parameters: extra parameters to log
         """
         extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}

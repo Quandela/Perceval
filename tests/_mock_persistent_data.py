@@ -61,11 +61,8 @@ class LoggerConfigForTest(LoggerConfig):
     This allows to run tests without removing actual persistent data or risking messing up system or user directories
     """
 
-    def __init__(self, temp_dir):
-        super().__init__()
-        self.reset()
-        self._persistent_data = PersistentData(directory=temp_dir)
-        self._load_from_persistent_data()
+    def __init__(self, *args):
+        super().__init__(PersistentData(*args))
 
 
 class ExqaliburLoggerForTest(ExqaliburLogger):
@@ -74,7 +71,5 @@ class ExqaliburLoggerForTest(ExqaliburLogger):
     This allows to run tests without removing actual persistent data or risking messing up system or user directories
     """
 
-    def __init__(self, temp_dir) -> None:
-        super().__init__()
-        self._config = LoggerConfigForTest(temp_dir)
-        self._configure_logger(self._config)
+    def __init__(self, *args) -> None:
+        super().__init__(PersistentData(*args))

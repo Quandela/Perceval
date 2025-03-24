@@ -82,7 +82,6 @@ def use_perceval_logger():
     if _logger is not None:
         _logger.info("Switching to exqalibur logger", channel.general)
     _logger = ExqaliburLogger()
-    _logger.initialize()
     sys.excepthook = _my_excepthook
 
 

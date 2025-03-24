@@ -28,12 +28,13 @@
 # SOFTWARE.
 
 import json
+import os
 from unittest.mock import patch
 
 import perceval as pcvl
 from perceval.utils.logging import ExqaliburLogger, PythonLogger, level, channel
 
-from _mock_persistent_data import LoggerConfigForTest
+from _mock_persistent_data import LoggerConfigForTest, ExqaliburLoggerForTest
 from _mock_rpc_handler import get_rpc_handler
 
 DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
@@ -141,7 +142,7 @@ def test_log_resources(mock_info, requests_mock):
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources_simulator(mock_info, requests_mock):
+def test_log_resources_simulator(mock_info):
     pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
@@ -178,7 +179,7 @@ def test_log_resources_simulator(mock_info, requests_mock):
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
+def test_log_resources_noisy_sampling_simulator(mock_info):
     pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
@@ -204,3 +205,33 @@ def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
     assert my_dict[M] == circuit.m
     assert my_dict[METHOD] == 'samples'
     assert my_dict['max_samples'] == max_samples
+
+
+
+def test_write_log_file(tmp_path):
+    logger_config = LoggerConfigForTest(tmp_path)
+    logger_config.enable_file()
+    logger_config.set_level(level.info, channel.general)
+    logger_config.set_level(level.info, channel.resources)
+    logger_config.set_level(level.info, channel.user)
+
+    logger = ExqaliburLoggerForTest(tmp_path)
+    logger.apply_config(logger_config)
+
+    assert len(os.listdir(tmp_path)) == 0
+
+    # effective files creation
+    logger_config.save()
+    logger.enable_file()
+
+    logger.warn('log from test_write_log_file')
+
+
+
+def test_read_log_file(tmp_path):
+    with open(os.path.join(tmp_path, '..', 'test_write_log_file0', 'logs', 'perceval.log'), 'r') as f:
+        log_file_content = f.read()
+
+    last_line = log_file_content.split('\n')[-2]
+
+    assert 'log from test_write_log_file' in last_line

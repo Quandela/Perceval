@@ -43,10 +43,10 @@ class LoggerConfig(dict):
     """This class represent the logger configuration as a dictionary and can be used to save it into persistent data.
     On class initialization, the configuration will be loaded from persistent data.
     """
-    def __init__(self):
+    def __init__(self, persistent_data: PersistentData = PersistentData()):
         super().__init__()
         self.reset()
-        self._persistent_data = PersistentData()
+        self._persistent_data = persistent_data
         self._load_from_persistent_data()
 
     def _init_channel(self, channel: exqalibur_logging.channel, level: exqalibur_logging.level = exqalibur_logging.level.off):

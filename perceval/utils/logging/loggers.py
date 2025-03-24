@@ -93,20 +93,10 @@ class ALogger(ABC):
 
 
 class ExqaliburLogger(ALogger):
-    _ALREADY_INITIALIZED = False
 
-    def initialize(self):
-        if ExqaliburLogger._ALREADY_INITIALIZED:
-            return
-
-        ExqaliburLogger._ALREADY_INITIALIZED = True
-        persistent_data = PersistentData()
-        if persistent_data.is_writable():
-            xq_log.initialize(self.get_log_file_path())
-        else:
-            xq_log.initialize()
-
-        self._configure_logger(LoggerConfig())
+    def __init__(self, persistent_data: PersistentData = PersistentData()):
+        self._persistent_data = persistent_data
+        self._configure_logger(LoggerConfig(persistent_data))
         xq_log.enable_console()
 
     def _configure_logger(self, logger_config: LoggerConfig):
@@ -132,9 +122,13 @@ class ExqaliburLogger(ALogger):
         self._configure_logger(config)
 
     def get_log_file_path(self):
-        return path.join(PersistentData().directory, "logs", "perceval.log")
+        return path.join(self._persistent_data.directory, "logs", "perceval.log")
 
     def enable_file(self):
+        if self._persistent_data.is_writable():
+            xq_log.initialize(log_filepath=self.get_log_file_path())
+        else:
+            xq_log.initialize()
         print(f"starting to write logs in {self.get_log_file_path()}")
         xq_log.enable_file()
 
