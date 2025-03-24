@@ -34,11 +34,11 @@ import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
 
 
-def deserialize_ps(serial_ps: pb.PhaseShifter) -> comp.PS:
-    max_error = deserialize_parameter(serial_ps.max_error)
+def deserialize_ps(serial_ps: pb.PhaseShifter, known_params: dict = None) -> comp.PS:
+    max_error = deserialize_parameter(serial_ps.max_error, known_params)
     if max_error is not None:
-        return comp.PS(deserialize_parameter(serial_ps.phi), max_error)
-    return comp.PS(deserialize_parameter(serial_ps.phi))
+        return comp.PS(deserialize_parameter(serial_ps.phi, known_params), max_error)
+    return comp.PS(deserialize_parameter(serial_ps.phi, known_params))
 
 
 def _convert_bs_convention(ser_convention):
@@ -49,50 +49,51 @@ def _convert_bs_convention(ser_convention):
     return comp.BSConvention.Rx
 
 
-def deserialize_bs(serial_bs: pb.BeamSplitter) -> comp.BS:
+def deserialize_bs(serial_bs: pb.BeamSplitter, known_params: dict = None) -> comp.BS:
     conv = _convert_bs_convention(serial_bs.convention)
-    return comp.BS(theta=deserialize_parameter(serial_bs.theta),
-                   phi_tl=deserialize_parameter(serial_bs.phi_tl),
-                   phi_bl=deserialize_parameter(serial_bs.phi_bl),
-                   phi_tr=deserialize_parameter(serial_bs.phi_tr),
-                   phi_br=deserialize_parameter(serial_bs.phi_br),
+    return comp.BS(theta=deserialize_parameter(serial_bs.theta, known_params),
+                   phi_tl=deserialize_parameter(serial_bs.phi_tl, known_params),
+                   phi_bl=deserialize_parameter(serial_bs.phi_bl, known_params),
+                   phi_tr=deserialize_parameter(serial_bs.phi_tr, known_params),
+                   phi_br=deserialize_parameter(serial_bs.phi_br, known_params),
                    convention=conv)
 
 
-def deserialize_perm(serial_perm) -> comp.PERM:
+def deserialize_perm(serial_perm, _) -> comp.PERM:
     return comp.PERM([x for x in serial_perm.permutations])
 
 
-def deserialize_unitary(serial_unitary) -> comp.Unitary:
+def deserialize_unitary(serial_unitary, _) -> comp.Unitary:
     m = deserialize_pb_matrix(serial_unitary.mat)
     return comp.Unitary(U=m)
 
 
-def deserialize_wp(serial_wp) -> comp.WP:
-    return comp.WP(deserialize_parameter(serial_wp.delta), deserialize_parameter(serial_wp.xsi))
+def deserialize_wp(serial_wp, known_params: dict = None) -> comp.WP:
+    return comp.WP(deserialize_parameter(serial_wp.delta, known_params),
+                   deserialize_parameter(serial_wp.xsi, known_params))
 
 
-def deserialize_qwp(serial_qwp) -> comp.QWP:
-    return comp.QWP(deserialize_parameter(serial_qwp.xsi))
+def deserialize_qwp(serial_qwp, known_params: dict = None) -> comp.QWP:
+    return comp.QWP(deserialize_parameter(serial_qwp.xsi, known_params))
 
 
-def deserialize_hwp(serial_hwp) -> comp.HWP:
-    return comp.HWP(deserialize_parameter(serial_hwp.xsi))
+def deserialize_hwp(serial_hwp, known_params: dict = None) -> comp.HWP:
+    return comp.HWP(deserialize_parameter(serial_hwp.xsi, known_params))
 
 
-def deserialize_dt(serial_dt) -> nu.TD:
-    return nu.TD(deserialize_parameter(serial_dt.dt))
+def deserialize_dt(serial_dt, known_params: dict = None) -> nu.TD:
+    return nu.TD(deserialize_parameter(serial_dt.dt, known_params))
 
 
-def deserialize_lc(serial_lc) -> nu.LC:
-    return nu.LC(deserialize_parameter(serial_lc.loss))
+def deserialize_lc(serial_lc, known_params: dict = None) -> nu.LC:
+    return nu.LC(deserialize_parameter(serial_lc.loss, known_params))
 
 
-def deserialize_pr(serial_pr) -> comp.PR:
-    return comp.PR(deserialize_parameter(serial_pr.delta))
+def deserialize_pr(serial_pr, known_params: dict = None) -> comp.PR:
+    return comp.PR(deserialize_parameter(serial_pr.delta, known_params))
 
 
-def deserialize_pbs(_) -> comp.PBS:
+def deserialize_pbs(_, __) -> comp.PBS:
     return comp.PBS()
 
 

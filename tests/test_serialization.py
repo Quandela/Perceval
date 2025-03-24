@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, PS, TD, LC, Port, \
+from perceval import Matrix, E, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, \
     Encoding, Herald, Experiment, catalog, IDetector
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
@@ -397,3 +397,30 @@ def test_compress():
     d_only_basicstate = serialize(d, compress=["BasicState"])  # Compress only BasicState objects
     assert d_only_basicstate["input_state"].startswith(zip_prefix)
     assert not d_only_basicstate["circuit"].startswith(zip_prefix)
+
+
+def test_circuit_with_expression_serialization():
+    p_a = P("A")
+    p_b = P("B")
+    sum_ab = E("A + B", {p_a, p_b})
+
+    c = Circuit(2)
+    c.add(0, PS(phi=p_a))
+    c.add(0, BS(theta=sum_ab))
+    c.add(0, PS(phi=p_a))
+
+    c_ser = serialize(c)
+    c_deser = deserialize(c_ser)
+
+    assert "A" in c_deser.params and "B" in c_deser.params
+
+    a_value = 0.2
+    b_value = 0.8
+    c_deser.param("A").set_value(a_value)
+    c_deser.param("B").set_value(b_value)
+
+    assert float(c_deser._components[1][1].param('theta')) == pytest.approx(0.2 + 0.8)
+
+    p_a.set_value(a_value)
+    p_b.set_value(b_value)
+    assert numpy.allclose(c_deser.compute_unitary(), c.compute_unitary())

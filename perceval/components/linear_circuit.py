@@ -328,6 +328,7 @@ class Circuit(ACircuit):
     def __getitem__(self, idx) -> ACircuit:
         """
         Direct access to components - using __getitem__ operator
+
         :param idx: index of the component as (row, col)
         :return: the component
         """
@@ -425,9 +426,10 @@ class Circuit(ACircuit):
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
-                if p.name in self._params and p._pid != self._params[p.name]._pid:
-                    raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
-                self._params[p.name] = p
+                for internal_p in p._params:
+                    if internal_p.name in self._params and internal_p._pid != self._params[internal_p.name]._pid:
+                        raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
+                    self._params[internal_p.name] = internal_p
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
@@ -476,19 +478,22 @@ class Circuit(ACircuit):
                 range = [self._m - 1 - p for p in range]
             if v or h:
                 component.inverse(v=v, h=h)
+
+                for param in component.get_parameters(expressions=True):
+                    self._params[param.name] = param
             _new_components.append((range, component))
         self._components = _new_components
 
     def compute_unitary(self,
                         use_symbolic: bool = False,
                         assign: dict = None,
-                        use_polarization: bool | None = None) -> Matrix:
+                        use_polarization: bool = None) -> Matrix:
         r"""Compute the unitary matrix corresponding to the circuit
 
-        :param assign:
-        :param use_symbolic:
-        :param use_polarization:
-        :return:
+        :param use_symbolic: True to compute a symbolic matrix, False to compute a numerical matrix (default False)
+        :param assign: optional mapping between parameter names and their corresponding values
+        :param use_polarization: ask for polarized circuit to double size unitary matrix
+        :return: The circuit unitary matrix
         """
         self.assign(assign)
         if use_polarization is None:
@@ -501,6 +506,7 @@ class Circuit(ACircuit):
         return u
 
     def copy(self, subs: dict | list = None):
+        """Return a deep copy of the current circuit"""
         nc = copy.deepcopy(self)
         nc._params = {}
         nc._components = []
