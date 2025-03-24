@@ -225,12 +225,25 @@ def test_write_log_file(tmp_path):
     logger.enable_file()
 
     logger.warn('log from test_write_log_file')
+    logger.warn(str(tmp_path))
+    logger.warn(str(os.listdir(tmp_path)))
 
+    # reading log file
+    with open(os.path.join(tmp_path, 'logs', 'perceval.log'), 'r') as f:
+        log_file_content = f.read()
+
+    print(log_file_content)
+
+    last_line = log_file_content.split('\n')[-2]
+
+    assert 'log from test_write_log_file' in last_line
 
 
 def test_read_log_file(tmp_path):
     with open(os.path.join(tmp_path, '..', 'test_write_log_file0', 'logs', 'perceval.log'), 'r') as f:
         log_file_content = f.read()
+
+    print(log_file_content)
 
     last_line = log_file_content.split('\n')[-2]
 
