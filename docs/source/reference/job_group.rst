@@ -14,7 +14,7 @@ group will make sure all data can be retrieved from a single location.
 
    * :code:`JobGroup.delete_job_group(name)`
    * :code:`JobGroup.delete_job_groups_date(del_before_date: datetime)`
-   * :code:`JobGroup.delete_all_job_groups(name)`
+   * :code:`JobGroup.delete_all_job_groups()`
 
 Usage example
 -------------
