@@ -36,7 +36,7 @@ from zlib import decompress
 from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
-from ._component_deserialization import deserialize_herald, deserialize_port
+from ._port_deserialization import deserialize_herald, deserialize_port
 from ._constants import (
     SEP,
     PCVL_PREFIX,
