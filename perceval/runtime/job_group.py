@@ -177,10 +177,10 @@ class JobGroup:
         Iterates over jobs in the group and updates their statuses on disk if a change is detected.
         """
         for job in self._jobs:
-            if job.was_sent:
-                old_status = job._job_status.status.name
-                status = job.status()
-                if old_status != status:
+            if job.was_sent and not job._job_status.completed:
+                old_status = job._job_status.status
+                current_status = job.status.status  # /!\ May refresh the status with an HTTP request
+                if old_status != current_status:
                     self._write_to_file()
 
     def progress(self) -> dict:
