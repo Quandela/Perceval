@@ -35,8 +35,6 @@ from ._detector_serialization import serialize_bs_layer, serialize_detector
 from ._matrix_serialization import serialize_matrix
 from ._circuit_serialization import serialize_circuit
 from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
-# from ._job_group_serialization import serialize_job_group
-# from perceval.runtime import JobGroup  TODO: need help with fixing this circular import
 from perceval.components import ACircuit, BSLayeredPPNR, Detector
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
     simple_float, NoiseModel, PostSelect
@@ -165,17 +163,6 @@ def serialize(obj: Detector, do_compress=False):
     return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_detector(obj).SerializeToString()),
                                do_compress=compress)
 
-
-# @dispatch(JobGroup, compress=(list, bool))
-# def serialize(job_group: JobGroup, compress=False) -> str:
-#     # tag = MATRIX_TAG
-#     # compress = _handle_compress_parameter(compress, tag)
-#     # return _handle_compression(f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_matrix(m).SerializeToString()),
-#     #                            do_compress=compress)
-#     # TODO : what about compression?
-#     # TODO: deserialize seems to be a loop currently - need help
-#     # TODO: should we use serialize to file instead then for writing to disk?
-#     return serialize_job_group(job_group)
 
 @dispatch(dict, compress=(list, bool))
 def serialize(obj, compress=False) -> dict:
