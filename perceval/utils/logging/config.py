@@ -36,7 +36,7 @@ _LOGGING = "logging"
 _CHANNELS = "channels"
 _ENABLE_FILE = "enable_file"
 _USE_PYTHON_LOGGER = "use_python_logger"
-_CHANNEL_NAMES = ["user", "general", "resources"]
+_CHANNEL_NAMES = list(exqalibur_logging.channel.__members__.keys())
 
 
 class LoggerConfig(dict):

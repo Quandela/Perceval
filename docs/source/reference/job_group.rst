@@ -5,6 +5,17 @@ The :code:`JobGroup` class is designed to help manage jobs client-side by storin
 Large experiments can be easily cut in chunks and even ran during multiple days, over multiple Python sessions, the job
 group will make sure all data can be retrieved from a single location.
 
+.. warning::
+   JobGroups store their job data in the persistent data directory.
+
+   As these files can grow quite large, you will have to explicitely erase the ones you don't want to keep.
+
+   JobGroup provides the following commands:
+
+   * :code:`JobGroup.delete_job_group(name)`
+   * :code:`JobGroup.delete_job_groups_date(del_before_date: datetime)`
+   * :code:`JobGroup.delete_all_job_groups()`
+
 Usage example
 -------------
 
@@ -22,7 +33,7 @@ CNOT gate:
 >>>
 >>> p_knill = pcvl.RemoteProcessor("sim:altair")
 >>> p_knill.add(0, pcvl.catalog["heralded cnot"].build_processor())
->>> p_knill.min_detected_photons_filter(4)
+>>> p_knill.min_detected_photons_filter(2)
 >>> p_knill.with_input(pcvl.BasicState([0, 1, 0, 1]))
 >>> sampler_knill = Sampler(p_knill, max_shots_per_call=1_000_000)
 >>>
@@ -42,16 +53,18 @@ provide real-time updates on job execution. To run jobs sequentially with a give
 
 >>> import perceval as pcvl
 >>>
->>> jg = JobGroup("compare_knill_and_ralph_cnot")  # Loads prepared experiment data
+>>> jg = pcvl.JobGroup("compare_knill_and_ralph_cnot")  # Loads prepared experiment data
 >>> jg.run_sequential(0)  # Will send the 2nd job to the Cloud as soon as the first one is complete
 
 Other methods - :code:`jg.run_parallel()`, :code:`jg.rerun_failed_parallel()`, and :code:`jg.rerun_failed_sequential(delay)`.
+
+.. note:: The :code:`jg.run_parallel()` method tries to start all jobs in the group on Cloud. An error will occur if it exceeds the limitations defined by the pricing plan (see `Quandela Cloud <https://cloud.quandela.com/pricing>`_).
 
 A third script can then prepared to analyze results:
 
 >>> import perceval as pcvl
 >>>
->>> jg = JobGroup("compare_knill_and_ralph_cnot")
+>>> jg = pcvl.JobGroup("compare_knill_and_ralph_cnot")
 >>> results = jg.get_results()
 >>> ralph_res = results[0]
 >>> knill_res = results[1]

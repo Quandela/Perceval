@@ -26,9 +26,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from perceval import AProcessor
 from perceval.components import Port, Circuit, Processor, catalog
 from perceval.utils import P, BasicState, Encoding, global_params, PostSelect, NoiseModel
 from perceval.utils.algorithms.optimize import optimize
@@ -51,7 +53,7 @@ class AGateConverter(ABC):
     """
 
     def __init__(self, backend_name: str = "SLOS", noise_model: NoiseModel = None):
-        self._converted_processor = None
+        self._converted_processor: AProcessor | None = None  # TODO: replace by Experiment?
         self._input_list = None  # input state in list
         self._noise_model = noise_model
         self._backend_name = backend_name
@@ -103,7 +105,6 @@ class AGateConverter(ABC):
 
     def apply_input_state(self):
         default_input_state = BasicState(self._input_list)
-        # Heralds are not taken into account
         self._converted_processor.min_detected_photons_filter(default_input_state.n)
         self._converted_processor.with_input(default_input_state)
 
@@ -188,8 +189,8 @@ class AGateConverter(ABC):
         SWAP
         """
         # Save and clear current post-selection data from the converted processor before adding the next gate
-        if self._converted_processor._postselect is not None:
-            post_select_curr = self._converted_processor._postselect
+        if self._converted_processor.post_select_fn is not None:
+            post_select_curr = self._converted_processor.post_select_fn
         else:
             post_select_curr = PostSelect()  # save empty if I need to merge incoming PostSelect to it
         self._converted_processor.clear_postselection()  # clear current post-selection
@@ -202,8 +203,8 @@ class AGateConverter(ABC):
                 cnot_processor = self.create_hcnot_processor()
 
             self._converted_processor.add(_create_mode_map(c_idx, c_data), cnot_processor)
-            if self._converted_processor._postselect is not None:
-                post_select_curr.merge(self._converted_processor._postselect)
+            if self._converted_processor.post_select_fn is not None:
+                post_select_curr.merge(self._converted_processor.post_select_fn)
 
         elif gate_name in ["CSIGN", "CZ"]:
             # Controlled Z in myqlm is named CSIGN

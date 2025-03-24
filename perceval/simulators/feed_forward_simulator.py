@@ -28,6 +28,7 @@
 # SOFTWARE.
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
@@ -36,7 +37,6 @@ from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend
 
 from .simulator_interface import ISimulator
-
 
 class FFSimulator(ISimulator):
 
@@ -124,7 +124,7 @@ class FFSimulator(ISimulator):
 
                 if self._post_process_state(state):
                     prob *= default_norm_factor
-                    res[state[:input_state.m]] = prob
+                    res[self._remove_heralds(state[:input_state.m])] = prob
                     global_perf += prob
 
                 if prog_cb is not None:
@@ -140,7 +140,7 @@ class FFSimulator(ISimulator):
                     # Does not use the list of modes as circuits can have different sizes
                     components[i] = (config.config_modes(r)[0], sub_circuits[sub_i])
 
-                new_heralds = {i: state[i] for i in measured_modes}
+                new_heralds = {i: state[i] for i in measured_modes if i not in self._heralds}
                 new_prog_cb = partial_progress_callable(prog_cb, j / len(default_res), (j + 1) / len(default_res))
 
                 sub_res = self._simulate(input_state, components, detectors, new_prog_cb,
@@ -156,7 +156,7 @@ class FFSimulator(ISimulator):
 
                 for st, p in sub_res["results"].items():
                     # No need for post_process here: results are already post-processed by the sub simulator
-                    res[st[:input_state.m]] = p * norm_factor
+                    res[self._remove_heralds(st[:input_state.m])] = p * norm_factor
 
                 simulated_measures.add(measured_state)
 
@@ -240,9 +240,11 @@ class FFSimulator(ISimulator):
         if len(heralded_dist):
             input_state *= heralded_dist
 
+        sum_new_heralds = 0
         if new_heralds is not None:
             for r, v in new_heralds.items():
                 proc.add_port(r, Herald(v), PortLocation.OUTPUT)
+                sum_new_heralds += v
 
         if filter_states:
 
@@ -251,9 +253,20 @@ class FFSimulator(ISimulator):
                     proc.add_port(r, Herald(v), PortLocation.OUTPUT)
 
             if self._postselect.has_condition:
-                proc.set_postselection(self._postselect)
+                if proc.post_select_fn is not None:
+                    postselect = copy.copy(self._postselect)
+                    postselect.merge(proc.post_select_fn)
+                else:
+                    postselect = self._postselect
+                proc.set_postselection(postselect)
 
-        proc.min_detected_photons_filter(self._min_detected_photons_filter if filter_states else 0)
+            # We need to retrieve the new heralds as they are actually counting user photons
+            proc.min_detected_photons_filter(self._min_detected_photons_filter - sum_new_heralds)
+
+        else:
+            # In that case, the new heralds are user-defined heralds that we can safely simulate.
+            # We can't filter more due to potential losses that would depend on the FF parts of the circuit
+            proc.min_detected_photons_filter(0)
 
         from .simulator_factory import SimulatorFactory  # Avoids a circular import
 
@@ -265,18 +278,18 @@ class FFSimulator(ISimulator):
 
     def _post_process_state(self, bs: BasicState) -> bool:
         """Returns True if the state checks all requirements of the simulator"""
-        if self._min_detected_photons_filter is not None and bs.n < self._min_detected_photons_filter:
+        if bs.n < self.min_detected_photons_filter:
             return False
 
-        heralds = self._heralds or {}
-
-        for m, v in heralds.items():
+        for m, v in self._heralds.items():
             if bs[m] != v:
                 return False
-        if self._postselect is None or self._postselect(bs):
-            return True
+        return self._postselect(bs)
 
-        return False
+    def _remove_heralds(self, state: BasicState) -> BasicState:
+        if not self._keep_heralds:
+            return state.remove_modes(list(self._heralds.keys()))
+        return state
 
     def probs(self, input_state: BasicState) -> BSDistribution:
         """

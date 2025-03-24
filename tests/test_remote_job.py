@@ -103,14 +103,14 @@ def test_mock_remote_with_gates(catalog_item):
 
     assert p.heralds == rp.heralds
     assert p.post_select_fn == rp.post_select_fn
-    assert p._noise == rp._noise
-    assert noise == rp._noise
+    assert p.noise == rp.noise
+    assert noise == rp.noise
 
     for input_state in [pcvl.BasicState(state) for state in [[0, 1, 0, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 0, 1, 0]]]:
         p.with_input(input_state)
         rp.with_input(input_state)
 
-        assert p._input_state == rp._input_state
+        assert p.input_state == rp.input_state
 
 
 @pytest.mark.skip(reason="need a token and a worker available")

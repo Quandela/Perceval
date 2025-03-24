@@ -52,10 +52,11 @@ class JobStatus(Enum):
 class RPCHandler:
     """RPCHandler Scaleway"""
 
-    def __init__(self, project_id, headers, url, name) -> None:
+    def __init__(self, project_id, headers, url, name, proxies) -> None:
         self._project_id = project_id
         self._headers = headers
         self._url = url
+        self._proxies = proxies
         self._name = name
         self._session_id = None
 
@@ -76,7 +77,7 @@ class RPCHandler:
 
     def fetch_platform_details(self) -> dict:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
-        resp = requests.get(endpoint, headers=self._headers)
+        resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
 
         resp.raise_for_status()
         resp_dict = resp.json()
@@ -103,7 +104,7 @@ class RPCHandler:
         }
 
         endpoint = f"{self._url}{_ENDPOINT_JOB}"
-        request = requests.post(endpoint, headers=self._headers, json=scw_payload)
+        request = requests.post(endpoint, headers=self._headers, json=scw_payload, proxies=self._proxies)
 
         try:
             request.raise_for_status()
@@ -117,7 +118,7 @@ class RPCHandler:
 
     def cancel_job(self, job_id: str) -> None:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
-        request = requests.post(endpoint, headers=self._headers)
+        request = requests.post(endpoint, headers=self._headers, proxies=self._proxies)
         request.raise_for_status()
 
     def rerun_job(self, job_id: str) -> str:
@@ -132,7 +133,7 @@ class RPCHandler:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
-        resp = requests.get(endpoint, headers=self._headers)
+        resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
         resp.raise_for_status()
 
         resp_dict = resp.json()
@@ -164,7 +165,7 @@ class RPCHandler:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/results"
 
         # requests may throw an IO Exception, let the user deal with it
-        resp = requests.get(endpoint, headers=self._headers)
+        resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
         resp.raise_for_status()
 
         resp_dict = resp.json()
@@ -186,7 +187,7 @@ class RPCHandler:
                 url = first_result.get("url", None)
 
                 if url is not None:
-                    resp = requests.get(url)
+                    resp = requests.get(url, proxies=self._proxies)
                     resp.raise_for_status()
 
                     result_payload = resp.text

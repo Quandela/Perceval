@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from perceval import Detector, SVDistribution
 from perceval.simulators.delay_simulator import _retrieve_mode_count, DelaySimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends import SLOSBackend
@@ -83,6 +83,27 @@ def test_delay_simulation():
     assert len(sv.keys()) == 2
     assert BasicState([0, 1]) in sv.keys()
     assert BasicState([0, 2]) in sv.keys()
+
+
+def test_delay_detectors_simulation():
+    backend = SLOSBackend()
+    simulator = DelaySimulator(Simulator(backend))
+    input_circ = [((0, 1), BS()), ((0,), TD(1)), ((0, 1), BS())]
+    simulator.set_circuit(input_circ)
+
+    detectors = [Detector.threshold(), Detector.threshold()]
+
+    assert simulator._prepare_detectors(detectors) == 2 * [None] + detectors + [None],\
+        "Wrong translation of detectors in delay simulator"
+
+    res = simulator.probs_svd(SVDistribution(BasicState([1, 0])), detectors)
+
+    expected = BSDistribution()
+    expected[BasicState([0, 0])] = 0.25
+    expected[BasicState([1, 0])] = 0.25 + 0.125
+    expected[BasicState([0, 1])] = 0.25 + 0.125
+
+    assert pytest.approx(res["results"]) == expected
 
 
 def test_invalid_delay():

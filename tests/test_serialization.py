@@ -31,7 +31,7 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector
+from perceval import Matrix, E, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, BS, PS
 from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
@@ -75,17 +75,18 @@ def test_symbol_serialization():
 
 def _check_circuits_eq(c_a, c_b):
     assert c_a.ncomponents() == c_b.ncomponents()
-    for nc in range(len(c_a._components)):
-        input_idx, input_comp = c_a._components[nc]
-        output_idx, output_comp = c_b._components[nc]
+    for (input_idx, input_comp), (output_idx, output_comp) in zip(c_a._components, c_b._components):
         assert isinstance(input_comp, type(output_comp))
         assert list(input_idx) == list(output_idx)
-        assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
+        if isinstance(input_comp, PS):
+            assert input_comp.describe() == output_comp.describe()
+        else:
+            assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
 
 
 def _build_test_circuit():
-    c1 = Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
-         // comp.Unitary(Matrix.random_unitary(3))
+    c1 = (Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215, max_error=0.33) // comp.PERM([2, 0, 1])
+          // (1, comp.PBS()) // comp.Unitary(Matrix.random_unitary(3)))
     c2 = Circuit(2) // comp.BS.H(theta=0.36, phi_tl=1.94, phi_br=5.8817, phi_bl=0.0179) // comp.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
     c1.add(0, comp.Barrier(2, visible=True))
@@ -201,7 +202,7 @@ def test_noise_model_serialization():
     assert empty_nm == empty_nm_deser
 
     nm = NoiseModel(brightness=0.1, indistinguishability=0.2, g2=0.3, g2_distinguishable=True, transmittance=0.4,
-                    phase_imprecision=0.5)
+                    phase_imprecision=0.5, phase_error=0.08)
     nm_ser = serialize(nm)
     nm_deser = deserialize(nm_ser)
     assert nm == nm_deser
@@ -303,3 +304,30 @@ def test_compress():
     d_only_basicstate = serialize(d, compress=["BasicState"])  # Compress only BasicState objects
     assert d_only_basicstate["input_state"].startswith(zip_prefix)
     assert not d_only_basicstate["circuit"].startswith(zip_prefix)
+
+
+def test_circuit_with_expression_serialization():
+    p_a = P("A")
+    p_b = P("B")
+    sum_ab = E("A + B", {p_a, p_b})
+
+    c = Circuit(2)
+    c.add(0, PS(phi=p_a))
+    c.add(0, BS(theta=sum_ab))
+    c.add(0, PS(phi=p_a))
+
+    c_ser = serialize(c)
+    c_deser = deserialize(c_ser)
+
+    assert "A" in c_deser.params and "B" in c_deser.params
+
+    a_value = 0.2
+    b_value = 0.8
+    c_deser.param("A").set_value(a_value)
+    c_deser.param("B").set_value(b_value)
+
+    assert float(c_deser._components[1][1].param('theta')) == pytest.approx(0.2 + 0.8)
+
+    p_a.set_value(a_value)
+    p_b.set_value(b_value)
+    assert numpy.allclose(c_deser.compute_unitary(), c.compute_unitary())

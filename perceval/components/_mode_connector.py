@@ -53,16 +53,19 @@ class InvalidMappingException(Exception):
 class ModeConnector:
     """
     Resolves a mapping, supporting multiple syntaxes, to connect two objects.
-    The left object must be a Processor
-    The right object can be a Processor, a (unitary or non-unitary) component
+    The left object must be an Experiment
+    The right object can be a Processor, an Experiment, a (unitary or non-unitary) component
     """
 
     def __init__(self, left_processor, right_obj, mapping):
         """
-        :param left_processor: any abstract processor on which to plug `right_obj`
+        :param left_processor: any experiment on which to plug `right_obj`
         :param right_obj: the component or processor to plug on the left of `left_processor`
         :param mapping: the user mapping defining the plugging rules (see resolve method doc for more info)
         """
+        from .abstract_processor import AProcessor
+        if isinstance(left_processor, AProcessor):
+            left_processor = left_processor.experiment
         self._lp = left_processor
         self._ro = right_obj  # Can either be a component or a processor
         self._r_is_component = isinstance(right_obj, AComponent)  # False means it is a Processor

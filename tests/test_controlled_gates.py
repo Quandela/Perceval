@@ -109,7 +109,7 @@ def test_ccz_and_toffoli_phases_and_modulus():
 
     # Testing truth table of Toffoli (redundant with above test)
     toffoli = catalog['toffoli'].build_processor()
-    state_dict = {get_basic_state_from_ports(toffoli._out_ports, state): str(
+    state_dict = {get_basic_state_from_ports(toffoli.experiment._out_ports, state): str(
         state) for state in generate_all_logical_states(3)}
     a_toffoli = Analyzer(toffoli, input_states=state_dict)
     a_toffoli.compute(expected={"000": "000", "001": "001", "010": "010", "011": "011",

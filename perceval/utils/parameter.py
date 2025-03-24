@@ -41,40 +41,38 @@ class Parameter:
     :param value: optional value, when the value is provided at initialization, the parameter is considered as `fixed`
     :param min_v: minimal value that the parameter can take, is used in circuit optimization
     :param max_v: maximal value that the parameter can take, is used in circuit optimization
-    :param is_expression: for symbolic parameter, the value is an expression to evaluate with context values
+    :param periodic: True if the parameter is periodic, False otherwise (default True)
     """
     _id = 0
 
     def __init__(self, name: str, value: float = None,
-                 min_v: float = None, max_v: float = None, periodic=True,
-                 is_expression: bool = False):
-        if min_v is not None:
-            self._min = float(min_v)
-        else:
-            self._min = None
-        if max_v is not None:
-            self._max = float(max_v)
-        else:
-            self._max = None
-        if value is None:
+                 min_v: float = None, max_v: float = None, periodic: bool = True):
+        self._min = None if min_v is None else float(min_v)
+        self._max = None if max_v is None else float(max_v)
+        if value is None:  # Without a numerical value, create the symbol named after the parameter name
             self._symbol = sp.symbols(name, real=True)
             self._value = None
         else:
+            self._symbol = None
             if not isinstance(value, sp.Expr):
                 self._value = self._check_value(value, self._min, self._max, periodic)
             else:
                 self._value = value
-            self._symbol = None
+
         self.name = name
         self._periodic = periodic
         self._pid = Parameter._id
-        self._is_expression = is_expression
+        self._original = None
+        self._params = {self}  # set of sub parameters
         Parameter._id += 1
 
     @property
+    def _is_expression(self):
+        return False
+
+    @property
     def spv(self) -> sp.Expr:
-        r"""The current value of the parameter defined as a sympy expression
-        """
+        """The current value of the parameter defined as a sympy expression"""
         if self._value is not None:
             return sp.S(self._value)
         else:
@@ -82,23 +80,25 @@ class Parameter:
 
     @property
     def is_variable(self) -> bool:
-        r""""Returns True for a non-fixed parameter"""
+        """Returns True for a non-fixed parameter"""
         return self._symbol is not None
 
+    def __bool__(self) -> bool:
+        return self.is_variable or float(self) != 0
 
     def __float__(self):
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """
         return float(self._value)
 
-    def evalf(self, subs: dict = None):
+    def evalf(self, subs: dict = None) -> float:
         r"""Convert the parameter to float, will fail if the parameter has no defined value
         """
         if subs is None or not isinstance(self._value, sp.Expr):
             return float(self._value)
         return self._value.evalf(subs=subs)
 
-    def is_symbolic(self):
+    def is_symbolic(self) -> bool:
         return self._value is None or isinstance(self._value, sp.Expr)
 
     def random(self):
@@ -125,10 +125,10 @@ class Parameter:
         return self._check_value(v, self._min, self._max, self._periodic)
 
     def set_value(self, v: float, force: bool = False):
-        r"""Define the value of a non-fixed parameter
+        """Define the numerical value of a Parameter
 
-        :param v: the value
-        :param force: enable to set a fixed parameter
+        :param v: the numerical value
+        :param force: enable to change the value of a fixed parameter
         :raise: `RuntimeError` if the parameter is fixed
         """
         v = self._check_value(v, self._min, self._max, self._periodic)
@@ -136,10 +136,10 @@ class Parameter:
             raise RuntimeError("cannot set fixed parameter", v, self._value)
         self._value = v
 
-    def fix_value(self, v):
-        r"""Fix the value of a non-fixed parameter
+    def fix_value(self, v: float):
+        """Fix the value of a non-fixed Parameter. The Parameter is not variable afterwards.
 
-        :param v: the value
+        :param v: the numerical value
         """
         self._symbol = None
         self._value = self._check_value(v, self._min, self._max, self._periodic)
@@ -169,7 +169,7 @@ class Parameter:
     def fixed(self) -> bool:
         r"""Return True if the parameter is fixed
         """
-        return self._symbol is None and not self._is_expression
+        return self._symbol is None
 
     def __repr__(self):
         return "Parameter(name='%s', value=%s%s%s)" % (str(self.name), str(self._value),
@@ -197,14 +197,12 @@ class Parameter:
     @property
     def max(self) -> float:
         r"""The maximal value of the parameter
-
         """
         return self._max
 
     @max.setter
     def max(self, m: bool):
         r"""Set the maximal value of the parameter
-
         """
         self._max = m
 
@@ -213,15 +211,129 @@ class Parameter:
         r"""Unique identifier for the parameter"""
         return self._pid
 
+    def __mul__(self, other):
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}*{other.name})", self._merge_param_sets(other))
+        elif isinstance(other, (int, float)):
+            return Expression(f"({other}*{self.name})", self._params)
+        raise TypeError("Unsupported parameter operation.")
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __add__(self, other):
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}+{other.name})", self._merge_param_sets(other))
+        elif isinstance(other, (int, float)):
+            return Expression(f"({self.name}+{other})", self._params)
+        raise TypeError("Unsupported parameter operation.")
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}-{other.name})", self._merge_param_sets(other))
+        elif isinstance(other, (int, float)):
+            return Expression(f"({self.name}-{other})", self._params)
+        raise TypeError("Unsupported parameter operation.")
+
+    def __rsub__(self, other):
+        if isinstance(other, (int, float)):
+            return Expression(f"({other}-{self.name})", self._params)
+        raise TypeError("Unsupported operation.")
+
+    def __truediv__(self, other):
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}/{other.name})", self._merge_param_sets(other))
+        elif isinstance(other, (int, float)):
+            return Expression(f"({self.name}/{other})", self._params)
+        raise TypeError("Unsupported parameter operation.")
+
+    def __pow__(self, other):
+        if isinstance(other, Parameter):
+            return Expression(f"({self.name}^{other.name})", self._merge_param_sets(other))
+        elif isinstance(other, (int, float)):
+            return Expression(f"({self.name}^{other})", self._params)
+        raise TypeError("Unsupported parameter operation.")
+
+    def __neg__(self):
+        # Ensure using __neg__ twice in a row returns the original parameter
+        if self._original is not None:
+            return self._original
+        expr = Expression(f"(-{self.name})", self._params)
+        expr._original = self
+        return expr
+
+    def _merge_param_sets(self, other):
+        return self._params | other._params
+
 
 class Expression(Parameter):
-    def __init__(self, expression: str):
+    """
+    Symbolic math expression
+    This class allows arithmetic manipulation of the Parameter class.
+
+    Example:
+        >>> p_a = Parameter("A")
+        >>> p_b = Parameter("B")
+        >>> sum_ab = Expression("A**2 + B", {p_a, p_b})
+        >>> p_a.set_value(2)
+        >>> p_b.set_value(3)
+        >>> print(float(sum_ab))  # Prints 7.0
+
+    :param name: string specifying equation, acts as name of Expression parameter.
+    :param parameters: set of sub parameter instances used in the expression
+    """
+    def __init__(self, name: str, parameters: set[Parameter]):
         try:
-            e = sp.S(expression)
-        except sp.SympifyError as err:
-            raise ValueError("%s is not an expression: %s", expression, str(err))
-        assert isinstance(e, sp.Expr), "%s is not an expression" % expression
-        super().__init__("_%d" % Parameter._id, e, is_expression=True)
+            e = sp.S(name)
+            self.name = f"({e})"
+        except Exception as err:
+            raise ValueError(f"{name} is not an expression: {err}")
+        if not isinstance(e, sp.Expr):
+            raise ValueError (f"{name} is not an expression")
+        super().__init__(self.name, periodic=False)
+
+        # Create set containing all parent parameters
+        self._params = set(parameters)
+        self._check_parameters(set(fs.name for fs in e.free_symbols))
+        self._symbol = sp.S(name)
+
+    @property
+    def _is_expression(self):
+        return True
+
+    def _check_parameters(self, free_symbol_names):
+        pcvl_param_names = set(p.name for p in self._params)
+        if free_symbol_names != pcvl_param_names:
+            raise RuntimeError(f"Missing parameters: {free_symbol_names - pcvl_param_names}")
+
+    def __repr__(self):
+        return f"Expression('{self.name[1:-1]}', parameters={self._params})"
+
+    def __float__(self):
+        """Updates Expression with respect to any changes made to parent Parameters"""
+        if any(not param.defined for param in self._params):
+            raise ValueError("Expression is symbolic, cannot compute its numerical value")
+        return float(self.spv.subs({param.name : param._value for param in self._params}))
+
+    @property
+    def parameters(self) -> list[Parameter]:
+        """Returns list of sub parameters in alphabetical order"""
+        return sorted(self._params, key=lambda obj: obj.name)
+
+    @property
+    def is_periodic(self) -> bool:
+        """Expressions are not considered periodic"""
+        return False
+
+    @property
+    def defined(self) -> bool:
+        r"""Return True if the parameter has a value (fixed or non fixed)
+        """
+        return all([p._value is not None for p in self._params])
+
 
 P = Parameter
 E = Expression

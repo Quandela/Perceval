@@ -83,7 +83,7 @@ def matrix_from_file(filepath: str) -> Matrix:
         return deserialize_matrix(f.read())
 
 
-def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
+def deserialize_circuit(pb_circ: str | bytes | pb.Circuit, known_params: dict = None) -> Circuit:
     if not isinstance(pb_circ, pb.Circuit):
         pb_binary_repr = pb_circ
         pb_circ = pb.Circuit()
@@ -91,7 +91,7 @@ def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
             pb_circ.ParseFromString(pb_binary_repr)
         else:
             pb_circ.ParseFromString(b64decode(pb_binary_repr))
-    builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name)
+    builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name, known_params)
     for pb_c in pb_circ.components:
         builder.add(pb_c)
     return builder.retrieve()
@@ -246,10 +246,11 @@ class CircuitBuilder:
         'polarized_beam_splitter': _cd.deserialize_pbs
     }
 
-    def __init__(self, m: int, name: str):
+    def __init__(self, m: int, name: str, params: dict):
         if not name:
             name = None
         self._circuit = Circuit(m=m, name=name)
+        self._params = params or dict()
 
     def add(self, serial_comp):
         component = None
@@ -258,7 +259,7 @@ class CircuitBuilder:
         # find the correct deserialization function and use it
         if t in CircuitBuilder.deserialize_fn:
             func = CircuitBuilder.deserialize_fn[t]
-            component = func(serial_sub_comp)
+            component = func(serial_sub_comp, self._params)
         elif t == "barrier":
             component = _cd.deserialize_barrier(serial_comp.n_mode, serial_sub_comp)  # Special case: need an additional info
 

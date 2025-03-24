@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 import pytest
-from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, NoiseModel
+from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, NoiseModel, Detector, SVDistribution
 from perceval.algorithm import Sampler
 from perceval.simulators.loss_simulator import LossSimulator
 from perceval.simulators.simulator import Simulator
@@ -51,6 +51,22 @@ def test_lc_minimal():
     simu.set_min_detected_photons_filter(0)
     res = simu.probs(BasicState([2]))
     assert pytest.approx(res) == expected_svd
+
+
+def test_lc_detectors():
+    components = [((0,), LC(loss))]
+    expected_svd = BSDistribution()
+    expected_svd[BasicState([0])] = loss ** 2
+    expected_svd[BasicState([1])] = 1 - loss ** 2
+    simu = LossSimulator(Simulator(SLOSBackend()))
+    simu.set_circuit(components)
+    simu.set_min_detected_photons_filter(0)
+
+    detector = Detector.threshold()
+    assert simu._prepare_detectors([detector]) == [detector, None]
+
+    res = simu.probs_svd(SVDistribution(BasicState([2])), [detector])
+    assert pytest.approx(res["results"]) == expected_svd
 
 
 def test_lc_commutative():
@@ -96,7 +112,7 @@ def test_lc_perf():
     p.add(1, LC(loss))
 
     p.add_herald(1, 1)
-    p.min_detected_photons_filter(2)
+    p.min_detected_photons_filter(1)
 
     p.with_input(BasicState([1]))
 
