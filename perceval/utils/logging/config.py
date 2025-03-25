@@ -46,7 +46,7 @@ class LoggerConfig(dict):
     def __init__(self, persistent_data: PersistentData = None):
         super().__init__()
         self.reset()
-        self._persistent_data = persistent_data if persistent_data is not None else PersistentData()
+        self._persistent_data = persistent_data or PersistentData()
         self._load_from_persistent_data()
 
     def _init_channel(self, channel: exqalibur_logging.channel, level: exqalibur_logging.level = exqalibur_logging.level.off):

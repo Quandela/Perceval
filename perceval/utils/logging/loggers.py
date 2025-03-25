@@ -95,7 +95,7 @@ class ALogger(ABC):
 class ExqaliburLogger(ALogger):
 
     def __init__(self, persistent_data: PersistentData = None):
-        self._persistent_data = persistent_data if persistent_data is not None else PersistentData()
+        self._persistent_data = persistent_data or PersistentData()
         self._configure_logger(LoggerConfig(persistent_data))
         xq_log.enable_console()
 

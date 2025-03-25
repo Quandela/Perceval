@@ -49,7 +49,7 @@ class RemoteConfig:
     _token = None
 
     def __init__(self, persistent_data: PersistentData = None):
-        self._persistent_data = persistent_data if persistent_data is not None else PersistentData()
+        self._persistent_data = persistent_data or PersistentData()
 
     def _get_deprecated_token(self):
         # check if a token is stored in the deprecated 'token' file
