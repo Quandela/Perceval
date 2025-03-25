@@ -102,8 +102,6 @@ class RemoteProcessor(AProcessor):
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             remote = RemoteConfig()
-            if name is None:
-                raise ValueError("Parameter 'name' must have a value")
             if token is None:
                 token = remote.get_token()
             if not token:
