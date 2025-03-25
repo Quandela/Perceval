@@ -32,10 +32,11 @@ from zlib import compress as zlib_compress
 
 from ._constants import *
 from ._detector_serialization import serialize_bs_layer, serialize_detector
+from ._experiment_serialization import serialize_experiment
 from ._matrix_serialization import serialize_matrix
-from ._circuit_serialization import serialize_circuit
+from ._circuit_serialization import serialize_circuit, serialize_component, serialize_herald, serialize_port
 from ._state_serialization import serialize_state, serialize_statevector, serialize_bssamples
-from perceval.components import ACircuit, BSLayeredPPNR, Detector
+from perceval.components import ACircuit, BSLayeredPPNR, Detector, AComponent, Herald, Port, Experiment
 from perceval.utils import Matrix, BasicState, SVDistribution, BSDistribution, BSCount, BSSamples, StateVector, \
     simple_float, NoiseModel, PostSelect
 from base64 import b64encode
@@ -64,6 +65,15 @@ def _handle_compression(serialized_obj: str, do_compress: bool) -> str:
     return ZIP_PREFIX + serialized_string_compressed_byt2str
 
 
+@dispatch(AComponent, compress=(list, bool))
+def serialize(component: AComponent, compress=True) -> str:
+    tag = COMPONENT_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(
+        f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_component(component).SerializeToString()),
+        do_compress=compress)
+
+
 @dispatch(ACircuit, compress=(list, bool))
 def serialize(circuit: ACircuit, compress=True) -> str:
     tag = CIRCUIT_TAG
@@ -71,6 +81,31 @@ def serialize(circuit: ACircuit, compress=True) -> str:
     return _handle_compression(
         f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_circuit(circuit).SerializeToString()),
         do_compress=compress)
+
+
+@dispatch(Experiment, compress=(list, bool))
+def serialize(experiment: Experiment, compress=True) -> str:
+    tag = EXPERIMENT_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(
+        f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_experiment(experiment).SerializeToString()),
+        do_compress=compress)
+
+
+@dispatch(Herald, compress=(list, bool))
+def serialize(herald: Herald, compress=True) -> str:
+    tag = HERALD_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(
+        f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_herald(herald).SerializeToString()), do_compress=compress)
+
+
+@dispatch(Port, compress=(list, bool))
+def serialize(port: Port, compress=True) -> str:
+    tag = PORT_TAG
+    compress = _handle_compress_parameter(compress, tag)
+    return _handle_compression(
+        f"{PCVL_PREFIX}{tag}{SEP}" + b64encoding(serialize_port(port).SerializeToString()), do_compress=compress)
 
 
 @dispatch(Matrix, compress=(list, bool))
