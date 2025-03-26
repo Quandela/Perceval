@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import Self
 
 from multipledispatch import dispatch
 from numpy import inf
@@ -206,7 +205,7 @@ class Experiment:
             new_proc._components.append((r, c.copy(subs=subs)))
         return new_proc
 
-    def set_circuit(self, circuit: ACircuit) -> Self:
+    def set_circuit(self, circuit: ACircuit):
         r"""
         Removes all components and replace them by the given circuit.
 
@@ -221,7 +220,7 @@ class Experiment:
             self._components.append((r, c))
         return self
 
-    def add(self, mode_mapping, component, keep_port: bool = True) -> Self:
+    def add(self, mode_mapping, component, keep_port: bool = True):
         """
         Add a component to the experiment (unitary or non-unitary).
 
@@ -456,7 +455,7 @@ class Experiment:
         self._mode_type[mode] = ModeType.HERALD
         self._circuit_changed()
 
-    def add_herald(self, mode: int, expected: int, name: str = None) -> Self:
+    def add_herald(self, mode: int, expected: int, name: str = None):
         r"""
         Add a heralded mode
 
@@ -607,7 +606,7 @@ class Experiment:
                 return True
         return False
 
-    def remove_port(self, m, location: PortLocation = PortLocation.IN_OUT) -> Self:
+    def remove_port(self, m, location: PortLocation = PortLocation.IN_OUT):
         if location in (PortLocation.IN_OUT, PortLocation.INPUT):
             if not self._find_and_remove_port_from_list(m, self._in_ports):
                 raise UnavailableModeException(m, f"Port is not at location '{location.name}'")
