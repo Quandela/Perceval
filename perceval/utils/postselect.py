@@ -33,7 +33,10 @@ from perceval.utils.logging import deprecated
 import exqalibur as xq
 
 from .statevector import BSDistribution, StateVector
-from typing import TypeAlias
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
 
