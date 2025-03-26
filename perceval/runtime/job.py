@@ -135,7 +135,7 @@ class Job(ABC):
 
         try:
             return self._get_results()
-        except KeyError:
+        except (KeyError, TypeError):
             if job_status.failed:
                 raise RuntimeError(f'The job failed: {job_status.stop_message}')
             else:

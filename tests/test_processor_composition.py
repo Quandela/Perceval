@@ -29,11 +29,13 @@
 
 import math
 import pytest
+
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
                                  FFConfigurator, FFCircuitProvider, Unitary, Barrier)
 from perceval.utils import Matrix, P, LogicalState
 from perceval.runtime import RemoteProcessor
-from _mock_rpc_handler import get_rpc_handler
+
+from _mock_rpc_handler import get_rpc_handler_for_tests
 
 
 def test_processor_composition():
@@ -110,16 +112,16 @@ def test_processor_add_detector():
         p.add(0, Detector.pnr())  # Cannot add a detector after a detector
 
 
-def test_remote_processor_creation(requests_mock):
-    rp = RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=8)
+def test_remote_processor_creation():
+    rp = RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=8)
     rp.add(0, BS())
 
 
-def test_processor_composition_ports(requests_mock):
+def test_processor_composition_ports():
     ls = LogicalState([0, 0])
     cnot = catalog['postprocessed cnot'].build_processor()
 
-    rp = RemoteProcessor(rpc_handler=get_rpc_handler(requests_mock), m=4)
+    rp = RemoteProcessor(rpc_handler=get_rpc_handler_for_tests(), m=4)
     rp.min_detected_photons_filter(2)
     rp.add(0, cnot)
     rp.with_input(ls)

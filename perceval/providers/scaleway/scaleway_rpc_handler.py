@@ -50,13 +50,13 @@ class JobStatus(Enum):
 
 
 class RPCHandler:
-    """RPCHandler Scaleway"""
+    """RPCHandler for Scaleway Cloud provider"""
 
-    def __init__(self, project_id, headers, url, name, proxies) -> None:
+    def __init__(self, project_id, headers: dict, url: str, name: str, proxies: dict = None):
         self._project_id = project_id
         self._headers = headers
         self._url = url
-        self._proxies = proxies
+        self._proxies = proxies or dict()
         self._name = name
         self._session_id = None
 
@@ -71,6 +71,10 @@ class RPCHandler:
     @property
     def headers(self) -> dict:
         return self._headers
+
+    @property
+    def proxies(self) -> dict:
+        return self._proxies
 
     def set_session_id(self, session_id) -> None:
         self._session_id = session_id
@@ -127,7 +131,7 @@ class RPCHandler:
         :param job_id: job id to rerun
         :return: new job id
         """
-        raise NotImplementedError("rerun_job method is not implemented for Scaleway RPC Handler")
+        raise NotImplementedError("rerun_job method is not implemented for Scaleway RPCHandler")
 
     def get_job_status(self, job_id: str) -> dict:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
@@ -207,8 +211,8 @@ class RPCHandler:
     def __build_endpoint(self, endpoint) -> str:
         return f"{self._url}{endpoint}"
 
-    def __to_date(self, date: str | None) -> float | None:
-        if not date or date == "":
+    def __to_date(self, date: str) -> float | None:
+        if not date:
             return None
 
         # Compat for python 3.10

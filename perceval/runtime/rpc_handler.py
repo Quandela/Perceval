@@ -46,22 +46,19 @@ _JOB_ID_KEY = 'job_id'
 class RPCHandler:
     """Remote Call Procedure Handler
 
-    A class to call the API
+    A class to call the web API
 
+    :param name: name of the target platform
+    :param url: API URL to call
+    :param token: token used for authentication
+    :param proxies: dictionary mapping protocol to the URL of the proxy
     """
 
-    def __init__(self, name, url, token, proxies):
-        """Remote Call Procedure Handler
-
-        :param name: name of the plateform
-        :param url: api URL to call
-        :param token: token used for identification
-        :param proxies: dictionary mapping protocol to the URL of the proxy
-        """
+    def __init__(self, name, url, token, proxies = None):
         self.name = name
         self.url = url
         self.proxies = proxies
-        self.token = token
+        self.token = token or dict()
         self.headers = {'Authorization': f'Bearer {token}'}
         self.request_timeout = 10  # default timeout
 
@@ -84,7 +81,7 @@ class RPCHandler:
         resp.raise_for_status()
         return resp.json()
 
-    def create_job(self, payload):
+    def create_job(self, payload) -> str:
         """create a job
 
         :param payload: the payload to send
@@ -103,7 +100,7 @@ class RPCHandler:
 
         return json_res[_JOB_ID_KEY]
 
-    def cancel_job(self, job_id: str):
+    def cancel_job(self, job_id: str) -> None:
         """cancel a job
 
         :param job_id: id of the job
@@ -124,7 +121,7 @@ class RPCHandler:
         assert _JOB_ID_KEY in req.json(), f'Missing {_JOB_ID_KEY} field in rerun response'
         return req.json()[_JOB_ID_KEY]
 
-    def get_job_status(self, job_id: str):
+    def get_job_status(self, job_id: str) -> dict:
         """get the status of a job
 
         :param job_id: if of the job
@@ -137,7 +134,7 @@ class RPCHandler:
         res.raise_for_status()
         return res.json()
 
-    def get_job_results(self, job_id: str):
+    def get_job_results(self, job_id: str) -> dict:
         """get job results
 
         :param job_id: id of the job

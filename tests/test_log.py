@@ -34,7 +34,7 @@ import perceval as pcvl
 from perceval.utils.logging import ExqaliburLogger, PythonLogger, level, channel
 
 from _mock_persistent_data import LoggerConfigForTest
-from _mock_rpc_handler import get_rpc_handler
+from _mock_rpc_handler import get_rpc_handler_for_tests
 
 DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
                   'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
@@ -96,7 +96,7 @@ METHOD = 'method'
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources(mock_info, requests_mock):
+def test_log_resources(mock_info):
     pcvl.utils.logging._logger.set_level(level.info, channel.resources)
 
     # prepare test parameters
@@ -121,13 +121,13 @@ def test_log_resources(mock_info, requests_mock):
     assert my_dict[METHOD] == 'probs'
 
     remote_processor = pcvl.RemoteProcessor.from_local_processor(
-        proc_slos, rpc_handler=get_rpc_handler(requests_mock)
+        proc_slos, rpc_handler=get_rpc_handler_for_tests()
     )
     remote_processor.with_input(input_state)
     remote_processor.prepare_job_payload('probs')
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
     assert SOURCE not in my_dict
-    assert my_dict['platform'] == 'mocked:platform'
+    assert my_dict['platform'] == remote_processor._rpc_handler.name
     assert my_dict[NOISE] == noise_model.__dict__()
     assert my_dict[LAYER] == 'RemoteProcessor'
     assert my_dict[N] == input_state.n
@@ -141,7 +141,7 @@ def test_log_resources(mock_info, requests_mock):
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources_simulator(mock_info, requests_mock):
+def test_log_resources_simulator(mock_info):
     pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
@@ -178,7 +178,7 @@ def test_log_resources_simulator(mock_info, requests_mock):
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
+def test_log_resources_noisy_sampling_simulator(mock_info):
     pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
