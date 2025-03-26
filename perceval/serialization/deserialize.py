@@ -277,6 +277,11 @@ class CircuitBuilder:
         'polarized_beam_splitter': _cd.deserialize_pbs,
         'loss_channel': _cd.deserialize_lc
     }
+    deserialize_fn_m = {  # Deserialization functions requiring m value
+        'barrier': _cd.deserialize_barrier,
+        'ff_configurator': _cd.deserialize_ff_configurator,
+        'ff_circuit_provider': _cd.deserialize_ff_circuit_provider,
+    }
 
     def __init__(self, m: int, name: str, params: dict):
         if not name:
@@ -300,11 +305,9 @@ class CircuitBuilder:
         if t in CircuitBuilder.deserialize_fn:
             func = CircuitBuilder.deserialize_fn[t]
             component = func(serial_sub_comp, params)
-        elif t == "barrier":
-            component = _cd.deserialize_barrier(serial_comp.n_mode,
-                                                serial_sub_comp)  # Special case: need an additional info
-        elif t == "ff_configurator":
-            component = _cd.deserialize_ff_configurator(serial_comp.n_mode, serial_sub_comp)
+        elif t in CircuitBuilder.deserialize_fn_m:
+            func = CircuitBuilder.deserialize_fn_m[t]
+            component = func(serial_comp.n_mode, serial_sub_comp, params)
 
         if component is None:
             raise NotImplementedError(f'Component could not be deserialized (type = {t})')
@@ -369,6 +372,7 @@ class ExperimentBuilder:
             experiment.min_detected_photons_filter(min_photons_filter)
 
         detectors: list[IDetector | None] = [None] * experiment.m
+        injected_detectors: list[bool] = [False] * experiment.m
         for i, serial_detector in self._pb_e.detectors.items():
             t = serial_detector.WhichOneof('type')
             serial_sub_comp = getattr(serial_detector, t)
@@ -382,7 +386,9 @@ class ExperimentBuilder:
             component = CircuitBuilder.deserialize(serial_comp, self._params)
             if isinstance(component, AFFConfigurator):
                 for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m):
-                    experiment._components.append(((i,), detectors[i]))
+                    if not injected_detectors[i]:
+                        experiment._components.append(((i,), detectors[i]))
+                        injected_detectors[i] = True
                 experiment._components.append((tuple(i for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m)), component))
             else:
                 experiment.add(serial_comp.starting_mode, component)

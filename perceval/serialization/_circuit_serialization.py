@@ -161,6 +161,29 @@ class ComponentSerializer:
             pb_ffc.configs[str(state)].CopyFrom(pb_vars)
         self._pb.ff_configurator.CopyFrom(pb_ffc)
 
+    @dispatch(FFCircuitProvider)
+    def _serialize(self, ffcp: FFCircuitProvider):
+        from ._experiment_serialization import serialize_experiment
+        pb_ffcp = pb.FFCircuitProvider()
+        pb_ffcp.name = ffcp.name
+        pb_ffcp.offset = ffcp._offset
+        pb_ffcp.block_circuit_size = ffcp._blocked_circuit_size
+
+        dc = ffcp.default_circuit
+        if isinstance(dc, ACircuit):
+            pb_ffcp.circuit.CopyFrom(serialize_circuit(dc))
+        else:
+            pb_ffcp.experiment.CopyFrom(serialize_experiment(dc))
+
+        for state, circ in ffcp._map.items():
+            pb_coe = pb.CircuitOrExperiment()
+            if isinstance(circ, ACircuit):
+                pb_coe.circuit.CopyFrom(serialize_circuit(circ))
+            else:
+                pb_coe.experiment.CopyFrom(serialize_experiment(circ))
+            pb_ffcp.config_circ[str(state)].CopyFrom(pb_coe)
+        self._pb.ff_circuit_provider.CopyFrom(pb_ffcp)
+
     @dispatch(Circuit)
     def _serialize(self, circuit: Circuit):
         pb_circ = serialize_circuit(circuit)
