@@ -37,11 +37,14 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import perceval as pcvl
+from perceval.components import ACircuit, PS, IDetector, AFFConfigurator, FFConfigurator, FFCircuitProvider, \
+    BSLayeredPPNR, Detector, Experiment, Circuit
 from perceval.utils import StateVector, SVDistribution
 from perceval.utils.logging import channel
 from perceval.rendering import Format
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
+
 
 TEST_IMG_DIR = Path(__file__).resolve().parent / 'imgs'
 
@@ -90,7 +93,75 @@ def assert_svd_close(lhsvd, rhsvd):
         assert found_in_rh, f"sv not found {lh_sv}"
 
 
-def  dict2svd(d: dict):
+def assert_circuits_eq(c_a: Circuit, c_b: Circuit):
+    assert c_a.ncomponents() == c_b.ncomponents()
+    assert_component_list_eq(c_a._components, c_b._components)
+
+
+def assert_component_list_eq(comp_a, comp_b):
+    assert len(comp_a) == len(comp_b)
+    for (input_idx, input_comp), (output_idx, output_comp) in zip(comp_a, comp_b):
+        assert isinstance(input_comp, type(output_comp))
+        assert list(input_idx) == list(output_idx)
+
+        if isinstance(input_comp, AFFConfigurator):
+            assert input_comp.name == output_comp.name
+            assert input_comp._blocked_circuit_size == output_comp._blocked_circuit_size
+            assert input_comp._offset == output_comp._offset
+            assert_circuits_eq(input_comp.default_circuit, output_comp.default_circuit)
+            if isinstance(input_comp, FFConfigurator):
+                assert input_comp._configs == output_comp._configs
+            elif isinstance(input_comp, FFCircuitProvider):
+                for state, coe in input_comp._map.items():
+                    assert state in output_comp._map
+                    if isinstance(coe, ACircuit):
+                        assert_circuits_eq(coe, output_comp._map[state])
+                    else:
+                        assert_experiment_equals(coe, output_comp._map[state])
+
+        elif isinstance(input_comp, IDetector):
+            assert_detector_eq(input_comp, output_comp)
+
+        elif isinstance(input_comp, PS) or not isinstance(input_comp, ACircuit):
+            assert input_comp.describe() == output_comp.describe()
+
+        else:
+            assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
+
+
+def assert_detector_list_eq(detect_a: list[IDetector], detect_b: list[IDetector]):
+    assert len(detect_a) == len(detect_b)
+    for da, db in zip(detect_a, detect_b):
+        assert isinstance(da, type(db))
+        if da is not None:
+            assert_detector_eq(da, db)
+
+
+def assert_detector_eq(left_detector: IDetector, right_detector: IDetector):
+    assert left_detector.name == right_detector.name
+    if isinstance(left_detector, BSLayeredPPNR):
+        assert left_detector._r == right_detector._r
+        assert left_detector._layers == right_detector._layers
+    elif isinstance(left_detector, Detector):
+        assert left_detector.max_detections == right_detector.max_detections
+        assert left_detector._wires == right_detector._wires
+
+
+def assert_experiment_equals(experiment1: Experiment, experiment2: Experiment):
+    assert experiment1.m == experiment2.m
+    assert experiment1.name == experiment2.name
+    assert experiment1.noise == experiment2.noise
+    assert experiment1.input_state == experiment2.input_state
+    assert experiment1.min_photons_filter == experiment2.min_photons_filter
+    assert_component_list_eq(experiment1.components, experiment2.components)
+    assert experiment1.in_port_names == experiment2.in_port_names
+    assert experiment1.out_port_names == experiment2.out_port_names
+    assert experiment1.post_select_fn == experiment2.post_select_fn
+    assert_detector_list_eq(experiment1.detectors, experiment2.detectors)
+    assert experiment1.heralds == experiment2.heralds
+
+
+def dict2svd(d: dict):
     return SVDistribution({StateVector(k): v for k, v in d.items()})
 
 
