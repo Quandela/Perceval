@@ -77,13 +77,14 @@ class AStrongSimulationBackend(ABackend):
 
     def __init__(self):
         super().__init__()
+        self._mask_n = None
         self._cache_iterator: dict = dict()
         self._masks_str: list[str] | None = None
         self._mask: xq.FSMask | None = None
 
-    def set_mask(self, masks: str | list[str]):
+    def set_mask(self, masks: str | list[str], n = None):
         """
-        Sets new masks, replacing the former ones if they exist.
+        Sets new masks, replacing the former ones if they exist. Clear possible cached data that depend on the mask.
         Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
         computation time.
 
@@ -91,6 +92,8 @@ class AStrongSimulationBackend(ABackend):
             condition on one mode. Digits are fixing the number of photons whereas spaces or "*" are accepting any
             number of detections. e.g. using "****00" as a mask limits the simulation to output states ending in two
             empty modes.
+        :param n: The number of photons to instantiate the mask with.
+            This corresponds to the total number of photons in your non-separated state.
         """
         self.clear_mask()
         if isinstance(masks, str):
@@ -100,13 +103,14 @@ class AStrongSimulationBackend(ABackend):
             m = m.replace("*", " ")
             assert len(m) == mask_length, "Inconsistent mask lengths"
         self._masks_str = masks
+        self._mask_n = n
         self._init_mask()
 
     def _init_mask(self):
         if self._masks_str is not None and self._input_state is not None:
             instate = self._input_state
             assert len(self._masks_str[0]) == instate.m, "Mask and input state lengths have to be the same"
-            self._mask = xq.FSMask(instate.m, instate.n, self._masks_str)
+            self._mask = xq.FSMask(instate.m, self._mask_n or instate.n, self._masks_str)
 
     def clear_mask(self):
         """
@@ -114,6 +118,7 @@ class AStrongSimulationBackend(ABackend):
         """
         self._masks_str = None
         self._mask = None
+        self._mask_n = None
         self.clear_iterator_cache()
 
     def set_input_state(self, input_state: BasicState):
