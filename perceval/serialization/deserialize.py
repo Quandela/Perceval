@@ -33,7 +33,8 @@ from os import path
 import json
 from zlib import decompress
 
-from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald
+from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald, \
+    IDetector, AFFConfigurator
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
 from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
 from ._port_deserialization import deserialize_herald, deserialize_port
@@ -274,7 +275,7 @@ class CircuitBuilder:
         'time_delay': _cd.deserialize_dt,
         'polarization_rotator': _cd.deserialize_pr,
         'polarized_beam_splitter': _cd.deserialize_pbs,
-        'loss_channel': _cd.deserialize_lc,
+        'loss_channel': _cd.deserialize_lc
     }
 
     def __init__(self, m: int, name: str, params: dict):
@@ -302,6 +303,8 @@ class CircuitBuilder:
         elif t == "barrier":
             component = _cd.deserialize_barrier(serial_comp.n_mode,
                                                 serial_sub_comp)  # Special case: need an additional info
+        elif t == "ff_configurator":
+            component = _cd.deserialize_ff_configurator(serial_comp.n_mode, serial_sub_comp)
 
         if component is None:
             raise NotImplementedError(f'Component could not be deserialized (type = {t})')
@@ -365,20 +368,29 @@ class ExperimentBuilder:
         if min_photons_filter != VALUE_NOT_SET:
             experiment.min_detected_photons_filter(min_photons_filter)
 
-        # Needed before adding the heralds
-        for serial_comp in self._pb_e.components:
-            component = CircuitBuilder.deserialize(serial_comp, self._params)
-            experiment.add(serial_comp.starting_mode, component)
-
-        # TODO: Detector deserialization needed before component deserialization if there are feed-forward configurators
-        #  However, we can't add photonic components after adding a detector (PCVL-799)
+        detectors: list[IDetector | None] = [None] * experiment.m
         for i, serial_detector in self._pb_e.detectors.items():
             t = serial_detector.WhichOneof('type')
             serial_sub_comp = getattr(serial_detector, t)
             # find the correct deserialization function and use it
             func = self.deserialize_detector_fn[t]
             detector = func(serial_sub_comp)
-            experiment.add(i, detector)
+            detectors[i] = detector
+
+        # Needed before adding the heralds
+        for serial_comp in self._pb_e.components:
+            component = CircuitBuilder.deserialize(serial_comp, self._params)
+            if isinstance(component, AFFConfigurator):
+                for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m):
+                    experiment._components.append(((i,), detectors[i]))
+                experiment._components.append((tuple(i for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m)), component))
+            else:
+                experiment.add(serial_comp.starting_mode, component)
+
+        # Add detectors
+        for i, d in enumerate(detectors):
+            if d is not None:
+                experiment.add(i, d)
 
         self.deserialize_ports(experiment, self._pb_e.input_ports, PortLocation.INPUT, True)
         self.deserialize_ports(experiment, self._pb_e.output_ports, PortLocation.OUTPUT, False)

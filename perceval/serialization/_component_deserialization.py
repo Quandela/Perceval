@@ -32,6 +32,8 @@ from perceval.serialization._parameter_serialization import deserialize_paramete
 from perceval.serialization._matrix_serialization import deserialize_pb_matrix
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
+from perceval.components.feed_forward_configurator import FFConfigurator, FFCircuitProvider
+from perceval.utils import BasicState
 
 
 def deserialize_ps(serial_ps: pb.PhaseShifter, known_params: dict = None) -> comp.PS:
@@ -99,3 +101,16 @@ def deserialize_pbs(_, __) -> comp.PBS:
 
 def deserialize_barrier(m: int, serial_barrier) -> comp.Barrier:
     return comp.Barrier(m, serial_barrier.visible)
+
+
+def deserialize_ff_configurator(m: int, serial_ffc, known_params: dict = None) -> FFConfigurator:
+    from .deserialize import deserialize_circuit
+    default_config = {k: v for k, v in serial_ffc.default_config.mapping.items()}
+    ffc = FFConfigurator(m, serial_ffc.offset, deserialize_circuit(serial_ffc.controlled_circuit, known_params),
+                         default_config)
+    if serial_ffc.block_circuit_size:
+        ffc.block_circuit_size()
+    for state_str, config in serial_ffc.configs.items():
+        ffc.add_configuration(BasicState(state_str), config.mapping)
+
+    return ffc

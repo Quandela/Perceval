@@ -31,9 +31,11 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, E, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, \
-    Encoding, Herald, Experiment, catalog, IDetector
-from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
+
+from perceval.components import ACircuit, Circuit, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, Herald, Experiment, \
+    catalog, IDetector, FFConfigurator, FFCircuitProvider
+from perceval.utils import Matrix, E, P, BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector, \
+    NoiseModel, PostSelect, Encoding
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
@@ -84,23 +86,37 @@ def _check_comp_list_eq(comp_a, comp_b):
     for (input_idx, input_comp), (output_idx, output_comp) in zip(comp_a, comp_b):
         assert isinstance(input_comp, type(output_comp))
         assert list(input_idx) == list(output_idx)
-        if isinstance(input_comp, PS) or not isinstance(input_comp, ACircuit):
+
+        if isinstance(input_comp, FFConfigurator):
+            assert input_comp.name == output_comp.name
+            assert input_comp._blocked_circuit_size == output_comp._blocked_circuit_size
+            assert input_comp._offset == output_comp._offset
+            _check_circuits_eq(input_comp.default_circuit, output_comp.default_circuit)
+            assert input_comp._configs == output_comp._configs
+        elif isinstance(input_comp, IDetector):
+            _check_detector_eq(input_comp, output_comp)
+        elif isinstance(input_comp, PS) or not isinstance(input_comp, ACircuit):
             assert input_comp.describe() == output_comp.describe()
         else:
             assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
 
-def _check_detect_list_eq(detect_a: list[IDetector], detect_b: list[IDetector]):
+
+def _check_detector_list_eq(detect_a: list[IDetector], detect_b: list[IDetector]):
     assert len(detect_a) == len(detect_b)
     for da, db in zip(detect_a, detect_b):
         assert isinstance(da, type(db))
         if da is not None:
-            assert da.name == db.name
-            if isinstance(da, BSLayeredPPNR):
-                assert da._r == db._r
-                assert da._layers == db._layers
-            elif isinstance(da, Detector):
-                assert da.max_detections == db.max_detections
-                assert da._wires == db._wires
+            _check_detector_eq(da, db)
+
+
+def _check_detector_eq(left_detector: IDetector, right_detector: IDetector):
+    assert left_detector.name == right_detector.name
+    if isinstance(left_detector, BSLayeredPPNR):
+        assert left_detector._r == right_detector._r
+        assert left_detector._layers == right_detector._layers
+    elif isinstance(left_detector, Detector):
+        assert left_detector.max_detections == right_detector.max_detections
+        assert left_detector._wires == right_detector._wires
 
 
 def _build_test_circuit():
@@ -294,7 +310,7 @@ def assert_experiment_equals(experiment1, experiment2):
     assert experiment1.in_port_names == experiment2.in_port_names
     assert experiment1.out_port_names == experiment2.out_port_names
     assert experiment1.post_select_fn == experiment2.post_select_fn
-    _check_detect_list_eq(experiment1.detectors, experiment2.detectors)
+    _check_detector_list_eq(experiment1.detectors, experiment2.detectors)
     assert experiment1.heralds == experiment2.heralds
 
 
@@ -317,6 +333,13 @@ def test_experiment_serialization():
 
     e.add(0, Detector.ppnr(24, 4))
     e.add(1, Detector.threshold())
+
+    mzi = catalog['mzi phase last'].build_circuit()
+    ffc = FFConfigurator(2, 0, mzi, {"phi_a": 0, "phi_b": 0})
+    ffc.add_configuration((0, 1), {"phi_a": 3, "phi_b": 0})
+    ffc.add_configuration((1, 0), {"phi_a": 0, "phi_b": 3})
+    e.add(0, ffc)
+
     e.add(2, Detector.pnr())
     e.add(3, BSLayeredPPNR(2))
 
