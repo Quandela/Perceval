@@ -250,7 +250,6 @@ def test_save_on_error(mock_write_file):
                 jg.run_sequential(0.1)
 
         last_saved_jg_dict = json.loads(mock_write_file.call_args_list[-1][0][1])
-        # TODO: here I saw 'WAITING' instead of "SUCCESS - need to investigate behaviour of responses to fix the test
         jg = JobGroup(TEST_JG_NAME)
         jg._from_json(last_saved_jg_dict)
 
@@ -322,6 +321,3 @@ def test_rerun(mock_write_file):
     assert jg.progress() == {'Total': 5,
                              'Finished': [3, {'successful': 3, 'unsuccessful': 0}],
                              'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
-
-# TODO: add a test with payload well saved/load with complex job? maybe with iteration parameter?
-# TODO: also to check success doesnot save body
