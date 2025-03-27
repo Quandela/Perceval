@@ -333,10 +333,8 @@ class ExperimentBuilder:
             port = func(serial_sub_comp)
             if isinstance(port, Port):
                 experiment.add_port(i, port, location=location)
-            elif with_herald and isinstance(port, Herald):
-                # TODO: this supposes that the initial heralds were all added using "add_herald" so they are on both side
-                #  repairing this requires modifying "add_port" (PCVL-936)
-                experiment.add_herald(i, port.expected, port.user_given_name)
+            elif isinstance(port, Herald):
+                experiment.add_herald(i, port.expected, port.user_given_name, location)
 
     def resolve(self):
         name = self._pb_e.name
@@ -380,8 +378,8 @@ class ExperimentBuilder:
             detector = func(serial_sub_comp)
             experiment.add(i, detector)
 
-        self.deserialize_ports(experiment, self._pb_e.input_ports, PortLocation.INPUT, True)
-        self.deserialize_ports(experiment, self._pb_e.output_ports, PortLocation.OUTPUT, False)
+        self.deserialize_ports(experiment, self._pb_e.input_ports, PortLocation.OUTPUT, True)
+        self.deserialize_ports(experiment, self._pb_e.output_ports, PortLocation.INPUT, False)
 
         # Blocks adding new components --> Needed after adding the components
         post_select_str = self._pb_e.post_select

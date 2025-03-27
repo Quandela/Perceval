@@ -259,6 +259,10 @@ class AProcessor(ABC):
         """
         return self.experiment.m
 
+    @property
+    def m_in(self) -> int:
+        return self.experiment.m_in
+
     @m.setter
     def m(self, value: int):
         self.experiment.m = value
@@ -333,6 +337,10 @@ class AProcessor(ABC):
     @property
     def heralds(self):
         return self.experiment.heralds
+
+    @property
+    def in_heralds(self):
+        return self.experiment.in_heralds
 
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""

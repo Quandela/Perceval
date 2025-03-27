@@ -68,11 +68,11 @@ class ModeConnector:
             left_processor = left_processor.experiment
         self._lp = left_processor
         self._ro = right_obj  # Can either be a component or a processor
-        self._r_is_component = isinstance(right_obj, AComponent)  # False means it is a Processor
+        self._r_is_component = isinstance(right_obj, AComponent)  # False means it is an Experiment
         self._map = mapping
         self._l_port_names = None
         self._r_port_names = None
-        self._n_modes_to_connect = right_obj.m
+        self._n_modes_to_connect = right_obj.m if self._r_is_component else right_obj.m_in
 
     def _mapping_type_checks(self):
         assert isinstance(self._map, dict), f"Mapping should be a Python dictionary, got {type(self._map)}"
@@ -222,6 +222,20 @@ class ModeConnector:
             get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
             return 0
         other_herald_pos = list(self._ro.heralds.keys())
+        new_mode_index = self._lp.circuit_size
+        for pos in other_herald_pos:
+            mapping[new_mode_index] = pos
+            new_mode_index += 1
+        return new_mode_index - self._lp.circuit_size
+
+    def add_heralded_in_modes(self, mapping):
+        """
+        Add heralded mode mapping to an existing mapping
+        """
+        if self._r_is_component:
+            get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
+            return 0
+        other_herald_pos = list(self._ro.in_heralds.keys())
         new_mode_index = self._lp.circuit_size
         for pos in other_herald_pos:
             mapping[new_mode_index] = pos
