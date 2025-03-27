@@ -31,9 +31,12 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, E, P, ACircuit, Circuit, NoiseModel, PostSelect, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, \
-    Encoding, Herald, Experiment, catalog, IDetector
-from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
+
+from _test_utils import assert_circuits_eq, assert_experiment_equals
+from perceval.components import ACircuit, Circuit, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, Herald, Experiment, \
+    catalog, FFConfigurator, FFCircuitProvider
+from perceval.utils import Matrix, E, P, BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector, \
+    NoiseModel, PostSelect, Encoding
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
@@ -74,35 +77,6 @@ def test_symbol_serialization():
     assert theta._symbol == theta_deserialized._symbol
 
 
-def _check_circuits_eq(c_a, c_b):
-    assert c_a.ncomponents() == c_b.ncomponents()
-    _check_comp_list_eq(c_a._components, c_b._components)
-
-
-def _check_comp_list_eq(comp_a, comp_b):
-    assert len(comp_a) == len(comp_b)
-    for (input_idx, input_comp), (output_idx, output_comp) in zip(comp_a, comp_b):
-        assert isinstance(input_comp, type(output_comp))
-        assert list(input_idx) == list(output_idx)
-        if isinstance(input_comp, PS) or not isinstance(input_comp, ACircuit):
-            assert input_comp.describe() == output_comp.describe()
-        else:
-            assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
-
-def _check_detect_list_eq(detect_a: list[IDetector], detect_b: list[IDetector]):
-    assert len(detect_a) == len(detect_b)
-    for da, db in zip(detect_a, detect_b):
-        assert isinstance(da, type(db))
-        if da is not None:
-            assert da.name == db.name
-            if isinstance(da, BSLayeredPPNR):
-                assert da._r == db._r
-                assert da._layers == db._layers
-            elif isinstance(da, Detector):
-                assert da.max_detections == db.max_detections
-                assert da._wires == db._wires
-
-
 def _build_test_circuit():
     c1 = (Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215, max_error=0.33) // comp.PERM([2, 0, 1])
           // (1, comp.PBS()) // comp.Unitary(Matrix.random_unitary(3)))
@@ -117,7 +91,7 @@ def test_circuit_serialization():
     c1 = _build_test_circuit()
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize(serialized_c1)
-    _check_circuits_eq(c1, deserialized_c1)
+    assert_circuits_eq(c1, deserialized_c1)
 
 
 def test_non_unitary_serialization():
@@ -284,20 +258,6 @@ def test_detector_serialization(detector):
             "Wrong deserialized detector parameters"
 
 
-def assert_experiment_equals(experiment1, experiment2):
-    assert experiment1.m == experiment2.m
-    assert experiment1.name == experiment2.name
-    assert experiment1.noise == experiment2.noise
-    assert experiment1.input_state == experiment2.input_state
-    assert experiment1.min_photons_filter == experiment2.min_photons_filter
-    _check_comp_list_eq(experiment1.components, experiment2.components)
-    assert experiment1.in_port_names == experiment2.in_port_names
-    assert experiment1.out_port_names == experiment2.out_port_names
-    assert experiment1.post_select_fn == experiment2.post_select_fn
-    _check_detect_list_eq(experiment1.detectors, experiment2.detectors)
-    assert experiment1.heralds == experiment2.heralds
-
-
 def test_experiment_serialization():
     # Empty experiment
     e = Experiment()
@@ -317,6 +277,21 @@ def test_experiment_serialization():
 
     e.add(0, Detector.ppnr(24, 4))
     e.add(1, Detector.threshold())
+
+    mzi = catalog['mzi phase last'].build_circuit()
+    ffc = FFConfigurator(2, 0, mzi, {"phi_a": 0, "phi_b": 0}, "ffc name")
+    ffc.add_configuration((0, 1), {"phi_a": 3, "phi_b": 0})
+    ffc.add_configuration((1, 0), {"phi_a": 0, "phi_b": 3})
+    e.add(0, ffc)
+
+    ffcp = FFCircuitProvider(1, 0, Circuit(2) // BS.H(), "ffcp name")
+    ffcp.add_configuration((0,), Circuit(2) // BS.Rx())
+    subexp = Experiment(2)
+    subexp.add(0, BS.Ry())
+    ffcp.add_configuration((1,), subexp)
+
+    e.add(1, ffcp)
+
     e.add(2, Detector.pnr())
     e.add(3, BSLayeredPPNR(2))
 
@@ -347,7 +322,7 @@ def test_binary_serialization():
     bin_serialization = serialize_binary(c_before)
     assert isinstance(bin_serialization, bytes)
     c_after = deserialize_circuit(bin_serialization)
-    _check_circuits_eq(c_before, c_after)
+    assert_circuits_eq(c_before, c_after)
     with pytest.raises(TypeError):
         deserialize(bin_serialization)
 

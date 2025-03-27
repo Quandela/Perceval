@@ -55,10 +55,10 @@ class AFFConfigurator(AComponent, ABC):
 
     def __init__(self, m: int, offset: int, default_circuit: ACircuit, name: str = None):
         super().__init__(m, name)
-        self._offset = offset
+        self._offset: int = offset
         self.default_circuit = default_circuit
         self._max_circuit_size = default_circuit.m
-        self._blocked_circuit_size = False
+        self._blocked_circuit_size: bool = False
 
     def block_circuit_size(self):
         """Call this to prevent adding circuits bigger than the current maximum size"""
@@ -156,8 +156,12 @@ class FFCircuitProvider(AFFConfigurator):
         else:
             if circuit.m != self._max_circuit_size:
                 raise RuntimeError(f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)")
-        self._map[state] = circuit
 
+        from .abstract_processor import AProcessor
+        if isinstance(circuit, AProcessor):
+            circuit = circuit.experiment
+
+        self._map[state] = circuit
         return self
 
     def configure(self, measured_state: BasicState) -> ACircuit:
@@ -181,9 +185,9 @@ class FFConfigurator(AFFConfigurator):
         (the number of empty modes is abs(`offset`) - 1,
         so an offset of -1 means that there is no empty modes between the configurator and the circuit).
         All circuits are considered to have the size of the biggest possible circuit in this configurator.
-    :param controlled_circuit: A circuit containing symbolic parameters whose value will be changed depending on the 
+    :param controlled_circuit: A circuit containing symbolic parameters whose value will be changed depending on the
         measured state.
-    :param default_config: A dictionary mapping the parameters of the circuit and their value to use in case a measured 
+    :param default_config: A dictionary mapping the parameters of the circuit and their value to use in case a measured
         state does not befall into one of the declared cases.
     """
 
@@ -197,8 +201,9 @@ class FFConfigurator(AFFConfigurator):
             raise TypeError(f"controlled_circuit must be of type ACircuit")
         self._controlled = controlled_circuit
         self._linked_vars = self._controlled.vars
-        self._configs = {}
+        self._configs: dict[BasicState, dict[str, float]] = {}
         self._check_configuration(default_config)
+        self._default_config = default_config
         default_circuit = controlled_circuit.copy()
         default_circuit.assign(default_config)
         super().__init__(m, offset, default_circuit, name)
