@@ -421,6 +421,8 @@ class BSDistribution(ProbabilityDistribution):
             return BSDistribution()
         if len(distributions) == 1:
             return distributions[0]
+        if any(not len(dist) for dist in distributions):
+            return BSDistribution()
 
         res = BSDistribution()
 

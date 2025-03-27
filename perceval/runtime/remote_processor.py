@@ -99,6 +99,7 @@ class RemoteProcessor(AProcessor):
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
             self.proxies = rpc_handler.proxies
         else:
+            remote = RemoteConfig()
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             remote = RemoteConfig()

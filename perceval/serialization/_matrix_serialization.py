@@ -79,7 +79,7 @@ def _deserialize_symbolic(pb_mat):
     array = []
     row = []
     for param in pb_mat.symbolic.data:
-        row.append(deserialize_parameter(param).spv)
+        row.append(deserialize_parameter(param))
         if len(row) == ncols:
             array.append(row)
             row = []

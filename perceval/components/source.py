@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import math
+import random
 
 from exqalibur import BSSamples
 
@@ -82,6 +83,9 @@ class Source:
 
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
                                              # time-consuming for larger distributions)
+        self._prob_table = None
+        self._prob_table_n = None
+        self._prob_table_filter = None
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
@@ -194,7 +198,137 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
-    def generate_samples(self, max_samples: int, expected_input: BasicState) -> BSSamples:
+    def _compute_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[dict[tuple[int, int, int], float], float, float]:
+        """
+        Computes the table of probability of getting (i, j, k) events from n wanted photons where
+        i is the number of single signal photon events
+        j is the number of single g2 photon events
+        k is the number of signal + g2 photons events
+
+        Distinguishable photons are still counted as signal.
+
+        :param n: Number of photons wanted.
+        :param min_photons_filter: Minimum number of photons wanted.
+
+        :return: the probability table, the physical performance, and the zero-photon probability
+        """
+
+        p1to1, p2to1, p2to2 = self._get_probs()
+        p_signal = p1to1 + p2to1
+        p_g2 = p2to1
+        p_duo = p2to2
+        p0 = 1 - (p_signal + p_g2 + p_duo)
+
+        factorial_table = {0: 1}
+        def cache_factorial(m):
+            if m not in factorial_table:
+                factorial_table[m] = m * cache_factorial(m - 1)
+            return factorial_table[m]
+
+        prob_table = {}
+
+        fac_n = cache_factorial(n)  # Fills the table for all needed values
+        for i in range(n + 1):
+            fac_i = factorial_table[i]
+            for j in range(n + 1 - i if p_g2 else 1):
+                fac_j = factorial_table[j]
+                for k in range(n + 1 - i - j if p_duo else 1):
+                    fac_k = factorial_table[k]
+                    if i + j + 2 * k >= min_photons_filter:
+                        # TODO: remove low probability events ?
+                        n0 = n - i - j - k
+                        prob_table[(i, j, k)] = (fac_n * p_signal ** i * p_g2 ** j * p_duo ** k * p0 ** n0
+                                                 / (fac_i * fac_j * fac_k * factorial_table[n0]))
+
+        phys_perf = sum(prob_table.values())
+        if min_photons_filter:
+            for key, prob in prob_table.items():
+                prob_table[key] = prob / phys_perf
+
+        return prob_table, phys_perf, p0 ** n
+
+    def cache_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[float, float]:
+        """
+        Computes the prob_table. Removes the events having less than min_photons_filter photons.
+        Cache the result.
+
+        :return: the physical performance and the zero-photon probability
+        """
+
+        prob_table, phys_perf, zpp = self._compute_prob_table(n, min_photons_filter)
+        self._prob_table = prob_table
+        self._prob_table_n = n
+        self._prob_table_filter = min_photons_filter
+        return phys_perf, zpp
+
+    def _generate_distinguishability(self, n: int):
+        """Generate a random list of booleans of size n such that False means that a given photon is distinguishable
+        and True means that a given photon is indistinguishable."""
+        indistinguishability = math.sqrt(self._indistinguishability)
+
+        return random.choices([True, False], k=n, weights=[indistinguishability, 1 - indistinguishability])
+
+    def _events_to_samples(self, events: list[tuple[int, int, int]], expected_input: BasicState):
+        res = BSSamples()
+        dist_index = 0
+        dist_list = self._generate_distinguishability(sum(event[0] + event[2] for event in events))
+
+        first_tag = self.get_tag("discernability_tag")  # Just to avoid growing up too much the complex that represents the tag
+
+        empty_bs = BasicState([0])
+        signal_state = BasicState("|{_:0}>")  # Avoids creating many times the same states
+        expected_input_list = list(expected_input)
+
+        # TODO: parallelize this?
+        for event in events:
+            photons = []
+            for _ in range(event[0]):
+                # signal alone
+                if dist_list[dist_index]:
+                    photons.append(signal_state)
+                else:
+                    photons.append(BasicState([1], {0: [f"_:{self.get_tag('discernability_tag', add=True)}"]}))
+                dist_index += 1
+
+            for _ in range(event[1]):
+                # g2 alone
+                second_photon = self.get_tag("discernability_tag", add=True) \
+                    if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
+                photons.append(BasicState([1], {0: [f"_:{second_photon}"]}))
+
+            for _ in range(event[2]):
+                # signal + g2
+                first_photon = 0 if dist_list[dist_index] else self.get_tag("discernability_tag", add=True)
+                second_photon = self.get_tag("discernability_tag", add=True) \
+                    if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
+                photons.append(BasicState([2], {0: [f"_:{first_photon}", f"_:{second_photon}"]}))
+                dist_index += 1
+
+            photons += [empty_bs] * (expected_input.n - len(photons))
+            random.shuffle(photons)
+
+            index = 0
+            final_state = BasicState()
+            for n_photons in expected_input_list:
+                single_mode_state = empty_bs
+                for _ in range(n_photons):
+                    if single_mode_state.n:
+                        single_mode_state = single_mode_state.merge(photons[index])
+                    else:
+                        single_mode_state = photons[index]
+                    index += 1
+
+                if len(final_state):
+                    final_state *= single_mode_state
+                else:
+                    final_state = single_mode_state
+
+            res.append(final_state)
+            self._context["discernability_tag"] = first_tag
+
+        return res
+
+    def _generate_samples_no_filter(self, max_samples: int, expected_input: BasicState) -> BSSamples:
         """
         Generate samples directly from the source, without generating the source probability distribution first.
 
@@ -204,10 +338,6 @@ class Source:
             as an input. Imperfect ones won't.
         """
         samples = BSSamples()
-
-        if self.is_perfect():
-            samples.extend([expected_input] * max_samples)
-            return samples
 
         if not self.partially_distinguishable:
             bsd = self._generate_one_photon_distribution()
@@ -233,6 +363,24 @@ class Source:
                 samples[i] *= new_samples[i]
 
         return samples
+
+    def generate_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> BSSamples:
+        if self.is_perfect():
+            return BSSamples([expected_input] * max_samples)
+
+        if min_detected_photons == 0:
+            return self._generate_samples_no_filter(max_samples, expected_input)
+
+        transmission = self._emission_probability * (1 - self._losses)
+        if transmission == 0 and min_detected_photons >= 1:
+            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
+            return BSSamples()
+
+        if self._prob_table is None or expected_input.n != self._prob_table_n or min_detected_photons != self._prob_table_filter:
+            self.cache_prob_table(expected_input.n, min_detected_photons)
+
+        events = random.choices(list(self._prob_table.keys()), k=max_samples, weights=self._prob_table.values())
+        return self._events_to_samples(events, expected_input)
 
     def is_perfect(self) -> bool:
         return \
