@@ -156,8 +156,12 @@ class FFCircuitProvider(AFFConfigurator):
         else:
             if circuit.m != self._max_circuit_size:
                 raise RuntimeError(f"Circuit size mismatch (got {circuit.m}, expected {self._max_circuit_size} modes)")
-        self._map[state] = circuit
 
+        from .abstract_processor import AProcessor
+        if isinstance(circuit, AProcessor):
+            circuit = circuit.experiment
+
+        self._map[state] = circuit
         return self
 
     def configure(self, measured_state: BasicState) -> ACircuit:

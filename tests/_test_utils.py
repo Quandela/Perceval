@@ -36,12 +36,11 @@ from functools import wraps
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import perceval as pcvl
 from perceval.components import ACircuit, PS, IDetector, AFFConfigurator, FFConfigurator, FFCircuitProvider, \
-    BSLayeredPPNR, Detector, Experiment, Circuit
+    BSLayeredPPNR, Detector, Experiment, Circuit, AProcessor, AComponent
 from perceval.utils import StateVector, SVDistribution
 from perceval.utils.logging import channel
-from perceval.rendering import Format
+from perceval.rendering import Format, pdisplay_to_file
 from perceval.rendering.circuit import ASkin, PhysSkin
 from perceval.algorithm import AProcessTomography
 
@@ -212,9 +211,9 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
     skin = skin_type(compact)
 
     if isinstance(c, AProcessTomography):
-        pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT)
-    elif isinstance(c, pcvl.AComponent) or isinstance(c, pcvl.components.ACircuit) or isinstance(c, pcvl.AProcessor):
-        pcvl.pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
+        pdisplay_to_file(c, img_path, output_format=Format.MPLOT)
+    elif isinstance(c, (AComponent, AProcessor)):
+        pdisplay_to_file(c, img_path, output_format=Format.MPLOT,
                               recursive=recursive, skin=skin)
     else:
         raise NotImplementedError(f"_save_or_check not implemented for {type(c)}")
@@ -229,7 +228,7 @@ def _save_or_check(c, tmp_path, circuit_name, save_figs, recursive=False, compac
         if isinstance(c, AProcessTomography):
             ok, msg = _check_qpt(img_path, TEST_IMG_DIR /
                                  Path(circuit_name + ".svg"))
-        elif isinstance(c, pcvl.AComponent) or isinstance(c, pcvl.components.ACircuit) or isinstance(c, pcvl.AProcessor):
+        elif isinstance(c, (AComponent, AProcessor)):
             ok, msg = _check_circuit(img_path, TEST_IMG_DIR /
                                      Path(circuit_name + ".svg"))
         else:
