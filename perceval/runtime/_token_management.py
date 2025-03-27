@@ -47,7 +47,7 @@ class TokenProvider:
     def __init__(self, env_var: str = "PCVL_CLOUD_TOKEN", remote_config: RemoteConfig = RemoteConfig()):
         """
         :param env_var: Environment variable name to search for a token (default PCVL_CLOUD_TOKEN)
-        :param remote_config: The associated remote config
+        :param remote_config: The associated remote configuration
         """
         self._remote_config = remote_config
         self._remote_config.clear_cache()
