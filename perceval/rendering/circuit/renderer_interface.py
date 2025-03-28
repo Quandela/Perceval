@@ -155,7 +155,7 @@ class ICircuitRenderer(ABC):
         """
 
     @abstractmethod
-    def display_input_photons(self, input_pos) -> None:
+    def display_input_photons(self, input_pos, mode_style: list[ModeType]) -> None:
         """
         Display photons on input modes
         """

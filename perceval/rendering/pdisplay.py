@@ -190,7 +190,7 @@ def pdisplay_experiment(processor: Experiment,
         renderer.add_in_port(port_range[0], port)
 
     if isinstance(processor._input_state, BasicState):
-        renderer.display_input_photons(processor._input_state)
+        renderer.display_input_photons(processor._input_state, original_mode_style)
         # In this case add mono-mode ports on all modes containing none
         empty_raw_port = Port(Encoding.RAW, "")
         for i in range(processor.circuit_size):

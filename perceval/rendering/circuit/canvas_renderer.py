@@ -83,12 +83,12 @@ class CanvasRenderer(ICircuitRenderer):
     def get_circuit_size(self, circuit: ACircuit, recursive: bool = False) -> tuple[int, int]:
         return self._skin.get_size(circuit, recursive)
 
-    def display_input_photons(self, input_pos: BasicState) -> None:
+    def display_input_photons(self, input_pos: BasicState, mode_style: list[ModeType]) -> None:
         """
         Display half-cup showing the number of expected photons at the beginning of any mode
         """
         for k in range(input_pos.m):
-            if self._mode_style[k] != ModeType.HERALD:
+            if mode_style[k] != ModeType.HERALD:
                 self._canvas.set_offset(
                     (-CanvasRenderer.AFFIX_ALL_SIZE * 1.5, CanvasRenderer.AFFIX_ALL_SIZE * 2 * k), 0, 0)
                 self._canvas.add_mline([
