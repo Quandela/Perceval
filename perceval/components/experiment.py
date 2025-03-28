@@ -336,7 +336,7 @@ class Experiment:
         get_logger().debug(f"Compose experiment {self.name} with {experiment.name}", channel.general)
         self._is_unitary = self._is_unitary and experiment._is_unitary
         self._has_td = self._has_td or experiment._has_td
-        if experiment.heralds:
+        if experiment is self or experiment.heralds:
             # adding the same experiment component again renders incorrect heralds if not copied
             # This concerns our gate based processors from catalog which has no input params
             get_logger().debug("  Force copy during experiment compose", channel.general)
