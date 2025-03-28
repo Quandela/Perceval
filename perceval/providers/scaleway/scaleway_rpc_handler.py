@@ -50,12 +50,13 @@ class JobStatus(Enum):
 
 
 class RPCHandler:
-    """RPCHandler Scaleway"""
+    """RPCHandler for Scaleway Cloud provider"""
 
-    def __init__(self, project_id, headers, url, name) -> None:
+    def __init__(self, project_id, headers: dict, url: str, name: str, proxies: dict = None):
         self._project_id = project_id
         self._headers = headers
         self._url = url
+        self._proxies = proxies or dict()
         self._name = name
         self._session_id = None
 
@@ -71,12 +72,16 @@ class RPCHandler:
     def headers(self) -> dict:
         return self._headers
 
+    @property
+    def proxies(self) -> dict:
+        return self._proxies
+
     def set_session_id(self, session_id) -> None:
         self._session_id = session_id
 
     def fetch_platform_details(self) -> dict:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
-        resp = requests.get(endpoint, headers=self._headers)
+        resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
 
         resp.raise_for_status()
         resp_dict = resp.json()
@@ -103,7 +108,7 @@ class RPCHandler:
         }
 
         endpoint = f"{self._url}{_ENDPOINT_JOB}"
-        request = requests.post(endpoint, headers=self._headers, json=scw_payload)
+        request = requests.post(endpoint, headers=self._headers, json=scw_payload, proxies=self._proxies)
 
         try:
             request.raise_for_status()
@@ -117,7 +122,7 @@ class RPCHandler:
 
     def cancel_job(self, job_id: str) -> None:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
-        request = requests.post(endpoint, headers=self._headers)
+        request = requests.post(endpoint, headers=self._headers, proxies=self._proxies)
         request.raise_for_status()
 
     def rerun_job(self, job_id: str) -> str:
@@ -126,13 +131,13 @@ class RPCHandler:
         :param job_id: job id to rerun
         :return: new job id
         """
-        raise NotImplementedError("rerun_job method is not implemented for Scaleway RPC Handler")
+        raise NotImplementedError("rerun_job method is not implemented for Scaleway RPCHandler")
 
     def get_job_status(self, job_id: str) -> dict:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
-        resp = requests.get(endpoint, headers=self._headers)
+        resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
         resp.raise_for_status()
 
         resp_dict = resp.json()
@@ -164,7 +169,7 @@ class RPCHandler:
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/results"
 
         # requests may throw an IO Exception, let the user deal with it
-        resp = requests.get(endpoint, headers=self._headers)
+        resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
         resp.raise_for_status()
 
         resp_dict = resp.json()
@@ -186,7 +191,7 @@ class RPCHandler:
                 url = first_result.get("url", None)
 
                 if url is not None:
-                    resp = requests.get(url)
+                    resp = requests.get(url, proxies=self._proxies)
                     resp.raise_for_status()
 
                     result_payload = resp.text
@@ -206,8 +211,8 @@ class RPCHandler:
     def __build_endpoint(self, endpoint) -> str:
         return f"{self._url}{endpoint}"
 
-    def __to_date(self, date: str | None) -> float | None:
-        if not date or date == "":
+    def __to_date(self, date: str) -> float | None:
+        if not date:
             return None
 
         # Compat for python 3.10

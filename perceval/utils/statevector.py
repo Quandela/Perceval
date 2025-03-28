@@ -250,27 +250,42 @@ class SVDistribution(ProbabilityDistribution):
         return new_dist
 
     @staticmethod
-    def list_tensor_product(distributions: list[SVDistribution], prob_threshold: float = 0) -> SVDistribution:
-        """Efficient tensor product for a list of distributions"""
+    def list_tensor_product(distributions: list[SVDistribution],
+                            prob_threshold: float = 0) -> SVDistribution:
+        """
+        Efficient tensor product for a list of StateVector Distribution.
+        Performs a single tensor product using `k` for loops where `k` is the number of distributions.
+        Any void distribution in the list implies a void product.
+
+        :param distributions: list of distributions to perform tensor product on
+        :param prob_threshold: filter states that have a probability below this threshold
+
+        :return: The resulting distribution
+        """
         if len(distributions) == 0:
             return SVDistribution()
+        if len(distributions) == 1:
+            return distributions[0]
 
-        if any(len(dist) == 0 for dist in distributions):
-            get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
-            distributions = [dist for dist in distributions if len(dist) > 0]
+        res = SVDistribution()
 
-        while len(distributions) > 1:
-            state_counts = [len(dist) for dist in distributions]
+        def _inner_tensor_product(dist: list[dict[StateVector, float]], current_state: StateVector, current_prob: float):
+            if len(dist) == 0:
+                res[current_state] += current_prob
+                return
 
-            # Find the index of lowest product with a sliding window and performs the tensor product with these.
-            products = [state_counts[i] * state_counts[i + 1] for i in range(len(state_counts) - 1)]
-            index = min(range(len(products)), key=products.__getitem__)
+            svd = dist[0]
+            for sv, p in svd.items():
+                prob = current_prob * p
+                if prob < prob_threshold:
+                    continue
+                _inner_tensor_product(dist[1:], current_state * sv, prob)
 
-            dist = SVDistribution.tensor_product(distributions[index], distributions[index + 1], prob_threshold)
-            distributions[index] = dist
-            distributions.pop(index + 1)
-
-        return distributions[0]
+        # First, easy trim. Slightly faster.
+        distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold}
+                         for dist in distributions]
+        _inner_tensor_product(distributions, StateVector(), 1)
+        return res
 
 
 @dispatch(StateVector, annot_tag=str)
@@ -392,61 +407,47 @@ class BSDistribution(ProbabilityDistribution):
                             prob_threshold: float = 0) -> BSDistribution:
         """
         Efficient tensor product for a list of BasicState Distribution.
-         Can modify the distributions in place if merge_modes is False by adding empty modes.
-         Performs `len(distributions) - 1` tensor products
-         """
-        if any(len(dist) == 0 for dist in distributions):
-            get_logger().warn("Empty distribution in tensor product. Ignoring it", channel.user)
-            distributions = [dist for dist in distributions if len(dist) > 0]
+        Performs a single tensor product using `k` for loops where `k` is the number of distributions.
+        Any void distribution in the list implies a void product.
+
+        :param distributions: list of distributions to perform tensor product on
+        :param merge_modes: whether to merge the states of the distributions
+        :param prob_threshold: filter states that have a probability below this threshold
+
+        :return: The resulting distribution
+        """
 
         if len(distributions) == 0:
             return BSDistribution()
+        if len(distributions) == 1:
+            return distributions[0]
+        if any(not len(dist) for dist in distributions):
+            return BSDistribution()
 
-        if not merge_modes:
-            # Expanding the modes before allows performing the products in any order,
-            # as the tensor product is commutative if merge_modes is True
-            BSDistribution._expand_modes(distributions)
+        res = BSDistribution()
 
-        while len(distributions) > 1:
-            state_counts = [len(dist) for dist in distributions]  # strictly positive integers
+        def _inner_tensor_product(dist: list[dict[BasicState, float]], current_state: BasicState, current_prob: float):
+            if len(dist) == 0:
+                res[current_state] += current_prob
+                return
 
-            # Find the two smallest distributions and merge them
-            idx_a = 0
-            val_a = state_counts[idx_a]  # Smallest
-            idx_b = 1
-            val_b = state_counts[idx_b]  # Second smallest
-            if val_b < val_a:
-                val_a, val_b = val_b, val_a
-                idx_a, idx_b = idx_b, idx_a
-            for i, val in enumerate(state_counts[2:], 2):
-                if val_a == 1 and val_b == 1:
-                    break
-                if val < val_a:
-                    val_b, idx_b = val_a, idx_a
-                    val_a = val
-                    idx_a = i
-                elif val < val_b:
-                    val_b = val
-                    idx_b = i
+            bsd = dist[0]
+            for bs, p in bsd.items():
+                prob = current_prob * p
+                if prob < prob_threshold:
+                    continue
+                if merge_modes:
+                    state = bs.merge(current_state)
+                else:
+                    state = current_state * bs
+                _inner_tensor_product(dist[1:], state, prob)
 
-            dist = BSDistribution.tensor_product(distributions[idx_a], distributions[idx_b], True, prob_threshold)
-            distributions[idx_a] = dist
-            distributions.pop(idx_b)
-
-        return distributions[0]
-
-    @staticmethod
-    def _expand_modes(distributions: list[BSDistribution]):
-        """Add empty modes on the left and right of the distributions
-         so their number of modes is the initial total number of modes"""
-        current_m = 0
-        total_m = sum(dist.m for dist in distributions)
-        for i, dist in enumerate(distributions):
-            m = dist.m
-            dist = BSDistribution(BasicState(current_m * [0])) * dist
-            dist *= BSDistribution(BasicState((total_m - dist.m) * [0]))
-            distributions[i] = dist
-            current_m += m
+        start_state = BasicState(distributions[0].m) if merge_modes else BasicState()
+        # First, easy trim. Slightly faster.
+        distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold}
+                         for dist in distributions]
+        _inner_tensor_product(distributions, start_state, 1)
+        return res
 
     @property
     def m(self) -> int:

@@ -31,8 +31,12 @@ import pytest
 import random
 import sympy as sp
 import numpy
-from perceval import Matrix, P, ACircuit, Circuit, NoiseModel, PostSelect
-from perceval.utils.statevector import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector
+
+from _test_utils import assert_circuits_eq, assert_experiment_equals
+from perceval.components import ACircuit, Circuit, BSLayeredPPNR, Detector, BS, PS, TD, LC, Port, Herald, Experiment, \
+    catalog, FFConfigurator, FFCircuitProvider
+from perceval.utils import Matrix, E, P, BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, StateVector, \
+    NoiseModel, PostSelect, Encoding
 from perceval.serialization import serialize, deserialize, serialize_binary, deserialize_circuit, deserialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter, deserialize_parameter
 import perceval.components.unitary_components as comp
@@ -73,19 +77,9 @@ def test_symbol_serialization():
     assert theta._symbol == theta_deserialized._symbol
 
 
-def _check_circuits_eq(c_a, c_b):
-    assert c_a.ncomponents() == c_b.ncomponents()
-    for nc in range(len(c_a._components)):
-        input_idx, input_comp = c_a._components[nc]
-        output_idx, output_comp = c_b._components[nc]
-        assert isinstance(input_comp, type(output_comp))
-        assert list(input_idx) == list(output_idx)
-        assert (input_comp.compute_unitary() == output_comp.compute_unitary()).all()
-
-
 def _build_test_circuit():
-    c1 = Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215) // comp.PERM([2, 0, 1]) // (1, comp.PBS()) \
-         // comp.Unitary(Matrix.random_unitary(3))
+    c1 = (Circuit(3) // comp.BS(theta=1.814) // comp.PS(phi=0.215, max_error=0.33) // comp.PERM([2, 0, 1])
+          // (1, comp.PBS()) // comp.Unitary(Matrix.random_unitary(3)))
     c2 = Circuit(2) // comp.BS.H(theta=0.36, phi_tl=1.94, phi_br=5.8817, phi_bl=0.0179) // comp.PERM([1, 0])
     c1.add(1, c2, merge=False).add(0, comp.HWP(xsi=0.23)).add(1, comp.QWP(xsi=0.17)).add(2, comp.WP(0.4, 0.5))
     c1.add(0, comp.Barrier(2, visible=True))
@@ -97,7 +91,19 @@ def test_circuit_serialization():
     c1 = _build_test_circuit()
     serialized_c1 = serialize(c1)
     deserialized_c1 = deserialize(serialized_c1)
-    _check_circuits_eq(c1, deserialized_c1)
+    assert_circuits_eq(c1, deserialized_c1)
+
+
+def test_non_unitary_serialization():
+    t = TD(1)
+    t_2 = deserialize(serialize(t))
+    assert t is not t_2
+    assert float(t_2._dt) == float(t._dt)
+
+    l = LC(0.7)
+    l_2 = deserialize(serialize(l))
+    assert l is not l_2
+    assert float(l_2._loss) == float(l._loss)
 
 
 def test_circuit_serialization_backward_compat():
@@ -115,6 +121,26 @@ def test_circuit_serialization_backward_compat():
             deserialize(serial_c)
         except Exception as e:
             pytest.fail(f"Circuit serial representation generated with Perceval {perceval_version} failed: {e}")
+
+def test_port_serialization():
+    p = Port(Encoding.DUAL_RAIL, name = "test")
+    p_2 = deserialize(serialize(p))
+    assert p is not p_2
+    assert p.name == p_2.name
+    assert p.encoding == p_2.encoding
+
+    h = Herald(2, name = "test")
+    h_2 = deserialize(serialize(h))
+    assert h is not h_2
+    assert h.user_given_name == h_2.user_given_name
+    assert h.expected == h_2.expected
+
+    h = Herald(0)  # Same without user-given name
+    h_2 = deserialize(serialize(h))
+    assert h is not h_2
+    assert h.user_given_name == h_2.user_given_name
+    assert h._name == h_2._name
+    assert h.expected == h_2.expected
 
 
 def test_basicstate_serialization():
@@ -201,7 +227,7 @@ def test_noise_model_serialization():
     assert empty_nm == empty_nm_deser
 
     nm = NoiseModel(brightness=0.1, indistinguishability=0.2, g2=0.3, g2_distinguishable=True, transmittance=0.4,
-                    phase_imprecision=0.5)
+                    phase_imprecision=0.5, phase_error=0.08)
     nm_ser = serialize(nm)
     nm_deser = deserialize(nm_ser)
     assert nm == nm_deser
@@ -214,6 +240,64 @@ def test_postselect_serialization(ps):
     ps_ser = serialize(ps)
     ps_deser = deserialize(ps_ser)
     assert ps == ps_deser
+
+
+@pytest.mark.parametrize("detector", (BSLayeredPPNR(2, .6),
+                                      Detector.pnr(),
+                                      Detector.threshold(),
+                                      Detector.ppnr(4, 2)))
+def test_detector_serialization(detector):
+    serialized = serialize(detector)
+    deserialized = deserialize(serialized)
+    assert detector.name == deserialized.name, "Wrong deserialized detector name"
+    if isinstance(detector, BSLayeredPPNR):
+        assert detector._layers == deserialized._layers and detector._r == deserialized._r, \
+            "Wrong deserialized detector parameters"
+    else:
+        assert detector._wires == deserialized._wires and detector.max_detections == deserialized.max_detections, \
+            "Wrong deserialized detector parameters"
+
+
+def test_experiment_serialization():
+    # Empty experiment
+    e = Experiment()
+    ser_e = serialize(e)
+    e_2 = deserialize(ser_e)
+    assert_experiment_equals(e, e_2)
+
+    # Fully complete experiment
+    e = Experiment(4, NoiseModel(.4, .5, .6), name="test")
+
+    e.min_detected_photons_filter(2)
+
+    # Includes components, heralds, postselection, ports
+    e.add(0, catalog["postprocessed cnot"].build_processor())
+    e.add(0, LC(.1))  # With non-unitary component
+    e.with_input(BasicState([1, 0, 1, 0]))
+
+    e.add(0, Detector.ppnr(24, 4))
+    e.add(1, Detector.threshold())
+
+    mzi = catalog['mzi phase last'].build_circuit()
+    ffc = FFConfigurator(2, 0, mzi, {"phi_a": 0, "phi_b": 0}, "ffc name")
+    ffc.add_configuration((0, 1), {"phi_a": 3, "phi_b": 0})
+    ffc.add_configuration((1, 0), {"phi_a": 0, "phi_b": 3})
+    e.add(0, ffc)
+
+    ffcp = FFCircuitProvider(1, 0, Circuit(2) // BS.H(), "ffcp name")
+    ffcp.add_configuration((0,), Circuit(2) // BS.Rx())
+    subexp = Experiment(2)
+    subexp.add(0, BS.Ry())
+    ffcp.add_configuration((1,), subexp)
+
+    e.add(1, ffcp)
+
+    e.add(2, Detector.pnr())
+    e.add(3, BSLayeredPPNR(2))
+
+    ser_e = serialize(e)
+    e_2 = deserialize(ser_e)
+    assert_experiment_equals(e, e_2)
 
 
 def test_json():
@@ -238,7 +322,7 @@ def test_binary_serialization():
     bin_serialization = serialize_binary(c_before)
     assert isinstance(bin_serialization, bytes)
     c_after = deserialize_circuit(bin_serialization)
-    _check_circuits_eq(c_before, c_after)
+    assert_circuits_eq(c_before, c_after)
     with pytest.raises(TypeError):
         deserialize(bin_serialization)
 
@@ -288,3 +372,30 @@ def test_compress():
     d_only_basicstate = serialize(d, compress=["BasicState"])  # Compress only BasicState objects
     assert d_only_basicstate["input_state"].startswith(zip_prefix)
     assert not d_only_basicstate["circuit"].startswith(zip_prefix)
+
+
+def test_circuit_with_expression_serialization():
+    p_a = P("A")
+    p_b = P("B")
+    sum_ab = E("A + B", {p_a, p_b})
+
+    c = Circuit(2)
+    c.add(0, PS(phi=p_a))
+    c.add(0, BS(theta=sum_ab))
+    c.add(0, PS(phi=p_a))
+
+    c_ser = serialize(c)
+    c_deser = deserialize(c_ser)
+
+    assert "A" in c_deser.params and "B" in c_deser.params
+
+    a_value = 0.2
+    b_value = 0.8
+    c_deser.param("A").set_value(a_value)
+    c_deser.param("B").set_value(b_value)
+
+    assert float(c_deser._components[1][1].param('theta')) == pytest.approx(0.2 + 0.8)
+
+    p_a.set_value(a_value)
+    p_b.set_value(b_value)
+    assert numpy.allclose(c_deser.compute_unitary(), c.compute_unitary())

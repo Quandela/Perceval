@@ -28,9 +28,10 @@
 # SOFTWARE.
 import pytest
 
+from perceval import NoiseModel
 from perceval.algorithm.sampler import Sampler
 import perceval as pcvl
-from perceval.components import BS, PS, Processor, Source, catalog
+from perceval.components import BS, PS, Processor, catalog
 
 
 # To speed up the tests, lower the sample count required to compute a probability distribution
@@ -40,9 +41,9 @@ Sampler.PROBS_SIMU_SAMPLE_COUNT = 1000
 @pytest.mark.parametrize("backend_name", ["SLOS", "CliffordClifford2017"])  # MPS cannot be used with >2-modes components
 def test_sampler_standard(backend_name):
     TRANSMITTANCE = 0.9
-    imperfect_source = Source(emission_probability=TRANSMITTANCE)
+    noise_model = NoiseModel(brightness=TRANSMITTANCE)
     p = catalog['postprocessed cnot'].build_processor(backend=backend_name)
-    p.source = imperfect_source
+    p.noise = noise_model
     p.min_detected_photons_filter(0)
     p.with_input(pcvl.BasicState([1, 0, 1, 0]))
     sampler = Sampler(p)

@@ -26,18 +26,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 import uuid
-from multipledispatch import dispatch
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, Source, AComponent, AFFConfigurator
-from perceval.utils import BasicState, LogicalState, PMetadata, PostSelect, NoiseModel
+from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector
+from perceval.utils import BasicState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
-from ._token_management import TokenProvider
+from .remote_config import RemoteConfig
 
 __process_id__ = uuid.uuid4()
 
@@ -45,7 +46,6 @@ QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
 DEFAULT_TRANSMITTANCE = 0.06
-DEPRECATED_NOISE_PARAMS = ("HOM", "g2", "phase_imprecision", "transmittance")
 
 
 class RemoteProcessor(AProcessor):
@@ -55,11 +55,13 @@ class RemoteProcessor(AProcessor):
             name: str = None,
             token: str = None,
             url: str = QUANDELA_CLOUD_URL,
+            proxies: dict[str,str] = None,
             rpc_handler: RPCHandler = None):
         rp = RemoteProcessor(
             name=name,
             token=token,
             url=url,
+            proxies=proxies,
             rpc_handler=rpc_handler)
         rp.noise = processor.noise
         rp.add(0, processor)
@@ -72,6 +74,7 @@ class RemoteProcessor(AProcessor):
                  name: str = None,
                  token: str = None,
                  url: str = QUANDELA_CLOUD_URL,
+                 proxies: dict[str,str] = None,
                  rpc_handler: RPCHandler = None,
                  m: int = None,
                  noise: NoiseModel = None):
@@ -79,6 +82,7 @@ class RemoteProcessor(AProcessor):
         :param name: Platform name
         :param token: Token value to authenticate the user
         :param url: Base URL for the Cloud API to connect to
+        :param proxies: Dictionary mapping protocol to the URL of the proxy
         :param rpc_handler: Inject an already constructed Remote Procedure Call handler (alternative init);
             when doing so, name, token and url are expected to be blank
         :param m: Initialize the processor to a given size (number of modes). If not set here, the first component or
@@ -86,23 +90,27 @@ class RemoteProcessor(AProcessor):
         :param noise: a NoiseModel containing noise parameters (defaults to no noise)
                       simulated noise is ignored when working on a physical Quantum Processing Unit
         """
-        super().__init__()
+        super().__init__(Experiment(m, noise=noise, name=name))
         if rpc_handler is not None:  # When a rpc_handler object is passed, name, token and url are expected to be None
             self._rpc_handler = rpc_handler
-            self.name = rpc_handler.name
+            self.name = rpc_handler.name  # Here, we are mixing the experiment name and the Processor name
             if name is not None and name != self.name:
                 get_logger().warn(
                     f"Initialised a RemoteProcessor with two different platform names ({self.name} vs {name})", channel.user)
+            self.proxies = rpc_handler.proxies
         else:
+            remote = RemoteConfig()
             if name is None:
                 raise ValueError("Parameter 'name' must have a value")
             if token is None:
-                provider = TokenProvider()
-                token = provider.get_token()
-            if token is None:
+                token = remote.get_token()
+            if not token:
                 raise ConnectionError("No token found")
+            if proxies is None:
+                proxies = remote.get_proxies()
             self.name = name
-            self._rpc_handler = RPCHandler(self.name, url, token)
+            self.proxies = proxies
+            self._rpc_handler = RPCHandler(self.name, url, token, proxies)
 
         self._specs = {}
         self._perfs = {}
@@ -110,18 +118,25 @@ class RemoteProcessor(AProcessor):
         self._available_circuit_parameters = {}
         self.fetch_data()
         get_logger().info(f"Connected to Cloud platform {self.name}", channel.general)
-        if m is not None:
-            self.m = m
 
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
-        self.noise = noise
 
-    @AProcessor.noise.setter
-    def noise(self, nm):
-        super(RemoteProcessor, type(self)).noise.fset(self, nm)
-        if nm and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
+    def _circuit_change_observer(self, new_component: Experiment | AComponent = None):
+        if new_component is not None:
+            if isinstance(new_component, Experiment):
+                if not new_component.is_unitary:
+                    raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+                if new_component.has_feedforward:
+                    raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
+
+            elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
+                raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
+
+    def _noise_changed_observer(self):
+        if self.noise and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
             get_logger().warn(
-                f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored", channel.user)
+                f"{self.name} is not a simulator but an actual QPU: user defined noise parameters will be ignored",
+                channel.user)
 
     @property
     def is_remote(self) -> bool:
@@ -163,19 +178,13 @@ class RemoteProcessor(AProcessor):
             return self._specs['constraints']
         return {}
 
-    def set_parameter(self, key: str, value: any):
-        super().set_parameter(key, value)
-        if key in DEPRECATED_NOISE_PARAMS:
-            get_logger().warn(
-                f"DeprecationWarning: '{key}' parameter is deprecated. Use `remote_processor.noise = NoiseModel(...)` instead. version=0.11", channel.user)
-
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
             raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
         if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
             raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
-        if self._input_state is not None and self._input_state.m != circuit.m:
-            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self._input_state.m})")
+        if self.input_state is not None and self.input_state.m != circuit.m:
+            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self.input_state.m})")
 
     def set_circuit(self, circuit: ACircuit):
         self.check_circuit(circuit)
@@ -189,20 +198,6 @@ class RemoteProcessor(AProcessor):
     def type(self) -> ProcessorType:
         return self._type
 
-    @dispatch(LogicalState)
-    def with_input(self, input_state: LogicalState) -> None:
-        """
-        Set up the processor input with a LogicalState. Computes the input probability distribution.
-
-        :param input_state: A LogicalState of length the input port count. Enclosed values have to match with ports
-        encoding.
-        """
-        self._with_logical_input(input_state)
-
-    @dispatch(BasicState)
-    def with_input(self, input_state: BasicState) -> None:
-        super().with_input(input_state)
-
     def check_input(self, input_state: BasicState) -> None:
         super().check_input(input_state)
         n_heralds = sum(self.heralds.values())
@@ -213,8 +208,8 @@ class RemoteProcessor(AProcessor):
         if 'min_photon_count' in self.constraints and n_photons < self.constraints['min_photon_count']:
             raise RuntimeError(
                 f"Not enough photons in input state ({n_photons} < {self.constraints['min_photon_count']})")
-        if self._n_moi is not None and input_state.m != self._n_moi:
-            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self._n_moi})")
+        if self.m is not None and input_state.m != self.m:
+            raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self.m})")
 
     @property
     def available_commands(self) -> list[str]:
@@ -222,6 +217,9 @@ class RemoteProcessor(AProcessor):
 
     def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
                             ) -> dict[str, any]:
+        self.check_min_detected_photons_filter()
+        self._set_min_photons_parameter()
+
         j = {
             'platform_name': self.name,
             'pcvl_version': PMetadata.short_version(),
@@ -232,44 +230,30 @@ class RemoteProcessor(AProcessor):
             **kwargs
         }
         if not circuitless:
-            circuit = self.linear_circuit()
+            circuit = self.linear_circuit()  # Raises RuntimeError if there are non-unitary components
             self.check_circuit(circuit)
             payload['circuit'] = serialize(circuit)
-        if self._input_state and not inputless:
-            payload['input_state'] = serialize(self._input_state)
+        if self.input_state and not inputless:
+            self.check_input(self.remove_heralded_modes(self.input_state))
+            payload['input_state'] = serialize(self.input_state)
         if self._parameters:
             payload['parameters'] = self._parameters
-        if self._postselect is not None:
-            if isinstance(self._postselect, PostSelect):
-                payload['postselect'] = serialize(self._postselect)
+        if self.post_select_fn is not None:
+            if isinstance(self.post_select_fn, PostSelect):
+                payload['postselect'] = serialize(self.post_select_fn)
             else:
                 get_logger().warn(
-                    f"Ignored post-selection since it was a {type(self._postselect)}, expected PostSelect", channel.user)
+                    f"Ignored post-selection since it was a {type(self.post_select_fn)}, expected PostSelect", channel.user)
         if self.heralds:
             payload['heralds'] = self.heralds
-        if self._noise is not None:
-            payload['noise'] = serialize(self._noise)
+        if self.noise is not None:
+            payload['noise'] = serialize(self.noise)
         j['payload'] = payload
         self.log_resources(command, self._parameters)
         return j
 
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
-
-    def _add_component(self, mode_mapping, component: AComponent, keep_port: bool):
-        if not isinstance(component, ACircuit):
-            raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
-        super()._add_component(mode_mapping, component, keep_port)
-
-    def _add_ffconfig(self, modes, component: AFFConfigurator):
-        raise NotImplementedError("Feed-forward was not implemented for RemoteProcessors")
-
-    def _compose_processor(self, connector, processor: AProcessor, keep_port: bool):
-        if not processor._is_unitary:
-            raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
-        if processor._has_feedforward:
-            raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
-        super()._compose_processor(connector, processor, keep_port)
 
     def _compute_sample_of_interest_probability(self, param_values: dict = None) -> float:
         if TRANSMITTANCE_KEY in self._perfs:
@@ -278,11 +262,10 @@ class RemoteProcessor(AProcessor):
             transmittance = DEFAULT_TRANSMITTANCE
             get_logger().warn(
                 f"No transmittance was found for {self.name}, using default {DEFAULT_TRANSMITTANCE}", channel.user)
-        losses = 1 - transmittance
-        n = self._input_state.n
+        n = self.input_state.n
         photon_filter = n
         if self._min_detected_photons_filter is not None:
-            photon_filter = self._min_detected_photons_filter
+            photon_filter = self._min_detected_photons_filter + sum(self.heralds.values())
             if photon_filter > n:
                 return 0
         if photon_filter < 2:
@@ -293,10 +276,10 @@ class RemoteProcessor(AProcessor):
         if param_values:
             for n, v in param_values.items():
                 c.param(n).set_value(v)
-        lp = Processor("SLOS", c, Source(losses=losses))
+        lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        lp.thresholded_output(self._thresholded_output)
-        lp.with_input(self._input_state)
+        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call (PCVL-935)
+        lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
         for state, prob in probs['results'].items():
@@ -345,8 +328,8 @@ class RemoteProcessor(AProcessor):
             'm': self.circuit_size,
             'command': command
         }
-        if self._input_state:
-            my_dict['n'] = self._input_state.n
+        if self.input_state:
+            my_dict['n'] = self.input_state.n
         if self.noise:
             my_dict['noise'] = self.noise.__dict__()
         if extra_parameters:

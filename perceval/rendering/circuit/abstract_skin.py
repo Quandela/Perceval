@@ -30,6 +30,7 @@
 from abc import ABC, abstractmethod
 from multipledispatch import dispatch
 
+from perceval import Experiment
 from perceval.components import ACircuit, AFFConfigurator, AProcessor, PERM, AComponent, TD, LC
 from perceval.utils import format_parameters, ModeType
 
@@ -78,13 +79,13 @@ class ASkin(ABC):
             w[r] = [end_w] * comp.m
         return max(w), c.m
 
-    @dispatch(AProcessor, bool)
-    def get_size(self, p: AProcessor, recursive: bool = False) -> tuple[int, int]:
+    @dispatch(Experiment, bool)
+    def get_size(self, p: Experiment, recursive: bool = False) -> tuple[int, int]:
         height = p.m
         # w represents the graph of the circuit.
         # Each value being the output of the rightmost component on the corresponding mode
         w = [0] * p.circuit_size
-        for modes, comp in p._components:
+        for modes, comp in p.components:
             if not isinstance(comp, PERM):
                 height = max(height, comp.m + modes[0])
 

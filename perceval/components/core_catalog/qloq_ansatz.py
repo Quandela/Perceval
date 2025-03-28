@@ -28,7 +28,6 @@
 # SOFTWARE.
 
 from __future__ import annotations
-from numbers import Number
 
 from perceval.components.component_catalog import CatalogItem
 from ._helpers import generate_chained_controlled_ops, generalized_cz, apply_rotations_to_qubits
@@ -179,11 +178,6 @@ class QLOQAnsatz(CatalogItem):
                 f"there must be enough phases for the circuit {parameter_nb} (got {len(phases)})"
         else:
             phases = self._generate_phases(parameter_nb)
-
-        if not all(layer == "Y" for layer in layers):
-            # TODO: remove this assert when Parameter expressions are ready (PCVL-866)
-            assert all(isinstance(phase, Number) for phase in phases), \
-                "phases must be given as numerical values when using X or Z layer"
 
         phases = [self._handle_param(phase) for phase in phases]
         group_sizes = [size.logical_length for size in group_sizes]

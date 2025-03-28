@@ -33,9 +33,11 @@ from os import path
 import json
 from zlib import decompress
 
-from perceval.components import Circuit
+from perceval.components import Circuit, BSLayeredPPNR, Detector, AComponent, Experiment, PortLocation, Port, Herald, \
+    IDetector, AFFConfigurator
 from perceval.utils import Matrix, BSDistribution, SVDistribution, BasicState, BSCount, NoiseModel, PostSelect
-from perceval.serialization import _matrix_serialization, deserialize_state
+from perceval.serialization import _matrix_serialization, deserialize_state, _detector_serialization
+from ._port_deserialization import deserialize_herald, deserialize_port
 from ._constants import (
     SEP,
     PCVL_PREFIX,
@@ -50,6 +52,8 @@ from ._constants import (
     CIRCUIT_TAG,
     NOISE_TAG,
     POSTSELECT_TAG,
+    BS_LAYERED_DETECTOR_TAG,
+    DETECTOR_TAG, COMPONENT_TAG, HERALD_TAG, PORT_TAG, VALUE_NOT_SET, EXPERIMENT_TAG,
 )
 from ._state_serialization import deserialize_statevector, deserialize_bssamples
 from . import _component_deserialization as _cd
@@ -81,7 +85,7 @@ def matrix_from_file(filepath: str) -> Matrix:
         return deserialize_matrix(f.read())
 
 
-def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
+def deserialize_circuit(pb_circ: str | bytes | pb.Circuit, known_params: dict = None) -> Circuit:
     if not isinstance(pb_circ, pb.Circuit):
         pb_binary_repr = pb_circ
         pb_circ = pb.Circuit()
@@ -89,7 +93,7 @@ def deserialize_circuit(pb_circ: str | bytes | pb.Circuit) -> Circuit:
             pb_circ.ParseFromString(pb_binary_repr)
         else:
             pb_circ.ParseFromString(b64decode(pb_binary_repr))
-    builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name)
+    builder = CircuitBuilder(pb_circ.n_mode, pb_circ.name, known_params)
     for pb_c in pb_circ.components:
         builder.add(pb_c)
     return builder.retrieve()
@@ -103,6 +107,31 @@ def circuit_from_file(filepath: str) -> Circuit:
         raise FileNotFoundError(f'No file at path {filepath}')
     with open(filepath, 'rb') as f:
         return deserialize_circuit(f.read())
+
+
+def deserialize_component(pb_c: pb.Component, known_params: dict = None) -> AComponent:
+    if not isinstance(pb_c, pb.Component):
+        pb_binary_repr = pb_c
+        pb_c = pb.Component()
+        if isinstance(pb_binary_repr, bytes):
+            pb_c.ParseFromString(pb_binary_repr)
+        else:
+            pb_c.ParseFromString(b64decode(pb_binary_repr))
+
+    return CircuitBuilder.deserialize(pb_c, known_params)
+
+
+def deserialize_experiment(pb_e: pb.Experiment, known_params: dict = None) -> Experiment:
+    if not isinstance(pb_e, pb.Experiment):
+        pb_binary_repr = pb_e
+        pb_e = pb.Experiment()
+        if isinstance(pb_binary_repr, bytes):
+            pb_e.ParseFromString(pb_binary_repr)
+        else:
+            pb_e.ParseFromString(b64decode(pb_binary_repr))
+
+    builder = ExperimentBuilder(pb_e, known_params)
+    return builder.resolve()
 
 
 def deserialize_svdistribution(serial_svd) -> SVDistribution:
@@ -146,6 +175,28 @@ def deserialize_postselect(serial_ps: str) -> PostSelect:
     return PostSelect(serial_ps)
 
 
+def deserialize_bs_layered_detector(pb_detect: str | bytes | pb.BSLayeredPPNR) -> BSLayeredPPNR:
+    if not isinstance(pb_detect, pb.BSLayeredPPNR):
+        pb_binary_repr = pb_detect
+        pb_detect = pb.BSLayeredPPNR()
+        if isinstance(pb_binary_repr, bytes):
+            pb_detect.ParseFromString(pb_binary_repr)
+        else:
+            pb_detect.ParseFromString(b64decode(pb_binary_repr))
+    return _detector_serialization.deserialize_bs_layer(pb_detect)
+
+
+def deserialize_detector(pb_detect: str | bytes | pb.Detector) -> Detector:
+    if not isinstance(pb_detect, pb.Detector):
+        pb_binary_repr = pb_detect
+        pb_detect = pb.Detector()
+        if isinstance(pb_binary_repr, bytes):
+            pb_detect.ParseFromString(pb_binary_repr)
+        else:
+            pb_detect.ParseFromString(b64decode(pb_binary_repr))
+    return _detector_serialization.deserialize_detector(pb_detect)
+
+
 # Known deserializer functions
 DESERIALIZER = {
     BS_TAG: BasicState,
@@ -157,7 +208,13 @@ DESERIALIZER = {
     MATRIX_TAG: deserialize_matrix,
     CIRCUIT_TAG: deserialize_circuit,
     NOISE_TAG: deserialize_noise_model,
-    POSTSELECT_TAG: deserialize_postselect
+    POSTSELECT_TAG: deserialize_postselect,
+    DETECTOR_TAG: deserialize_detector,
+    BS_LAYERED_DETECTOR_TAG: deserialize_bs_layered_detector,
+    COMPONENT_TAG: deserialize_component,
+    HERALD_TAG: deserialize_herald,
+    PORT_TAG: deserialize_port,
+    EXPERIMENT_TAG: deserialize_experiment,
 }
 
 
@@ -217,28 +274,136 @@ class CircuitBuilder:
         'half_wave_plate': _cd.deserialize_hwp,
         'time_delay': _cd.deserialize_dt,
         'polarization_rotator': _cd.deserialize_pr,
-        'polarized_beam_splitter': _cd.deserialize_pbs
+        'polarized_beam_splitter': _cd.deserialize_pbs,
+        'loss_channel': _cd.deserialize_lc
+    }
+    deserialize_fn_m = {  # Deserialization functions requiring m value
+        'barrier': _cd.deserialize_barrier,
+        'ff_configurator': _cd.deserialize_ff_configurator,
+        'ff_circuit_provider': _cd.deserialize_ff_circuit_provider,
     }
 
-    def __init__(self, m: int, name: str):
+    def __init__(self, m: int, name: str, params: dict):
         if not name:
             name = None
         self._circuit = Circuit(m=m, name=name)
+        self._params = params or dict()
 
     def add(self, serial_comp):
+        component = self.deserialize(serial_comp, self._params)
+        self._circuit.add(serial_comp.starting_mode, component, merge=False)
+
+    def retrieve(self):
+        return self._circuit
+
+    @staticmethod
+    def deserialize(serial_comp, params):
         component = None
         t = serial_comp.WhichOneof('type')
         serial_sub_comp = getattr(serial_comp, t)
         # find the correct deserialization function and use it
         if t in CircuitBuilder.deserialize_fn:
             func = CircuitBuilder.deserialize_fn[t]
-            component = func(serial_sub_comp)
-        elif t == "barrier":
-            component = _cd.deserialize_barrier(serial_comp.n_mode, serial_sub_comp)  # Special case: need an additional info
+            component = func(serial_sub_comp, params)
+        elif t in CircuitBuilder.deserialize_fn_m:
+            func = CircuitBuilder.deserialize_fn_m[t]
+            component = func(serial_comp.n_mode, serial_sub_comp, params)
 
         if component is None:
             raise NotImplementedError(f'Component could not be deserialized (type = {t})')
-        self._circuit.add(serial_comp.starting_mode, component, merge=False)
 
-    def retrieve(self):
-        return self._circuit
+        return component
+
+
+class ExperimentBuilder:
+    deserialize_port_fn = {
+        "port": deserialize_port,
+        "herald": deserialize_herald,
+    }
+
+    deserialize_detector_fn = {
+        "detector": deserialize_detector,
+        "ppnr": deserialize_bs_layered_detector,
+    }
+
+    def __init__(self, pb_e: pb.Experiment, params: dict):
+        self._pb_e = pb_e
+        self._params = params or dict()
+
+    def deserialize_ports(self, experiment, serialized_port_map, location: PortLocation, with_herald: bool):
+        for i, serial_port in sorted(serialized_port_map.items()):  # Sorted needed for the heralds autogenerated names
+            t = serial_port.WhichOneof('type')
+            serial_sub_comp = getattr(serial_port, t)
+            # find the correct deserialization function and use it
+            func = self.deserialize_port_fn[t]
+            port = func(serial_sub_comp)
+            if isinstance(port, Port):
+                experiment.add_port(i, port, location=location)
+            elif with_herald and isinstance(port, Herald):
+                # TODO: this supposes that the initial heralds were all added using "add_herald" so they are on both side
+                #  repairing this requires modifying "add_port" (PCVL-936)
+                experiment.add_herald(i, port.expected, port.user_given_name)
+
+    def resolve(self):
+        name = self._pb_e.name
+        m = self._pb_e.n_mode
+
+        if not name:
+            name = None
+        if m == 0:
+            m = None
+        experiment = Experiment(m_circuit=m, name=name)
+
+        noise_model_str = self._pb_e.noise_model
+        if noise_model_str:
+            experiment.noise = deserialize(noise_model_str)
+
+        # Includes the heralded modes --> needed before adding the heralds
+        input_state_str = self._pb_e.input_state
+        if input_state_str:
+            input_state = deserialize(input_state_str)
+            if not isinstance(input_state, BasicState) or not input_state.has_polarization:
+                experiment.with_input(input_state)
+            else:
+                experiment.with_polarized_input(input_state)
+
+        min_photons_filter = self._pb_e.min_photons_filter
+        if min_photons_filter != VALUE_NOT_SET:
+            experiment.min_detected_photons_filter(min_photons_filter)
+
+        detectors: list[IDetector | None] = [None] * experiment.m
+        injected_detectors: list[bool] = [False] * experiment.m
+        for i, serial_detector in self._pb_e.detectors.items():
+            t = serial_detector.WhichOneof('type')
+            serial_sub_comp = getattr(serial_detector, t)
+            # find the correct deserialization function and use it
+            func = self.deserialize_detector_fn[t]
+            detector = func(serial_sub_comp)
+            detectors[i] = detector
+
+        # Needed before adding the heralds
+        for serial_comp in self._pb_e.components:
+            component = CircuitBuilder.deserialize(serial_comp, self._params)
+            if isinstance(component, AFFConfigurator):
+                for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m):
+                    if not injected_detectors[i]:
+                        experiment._components.append(((i,), detectors[i]))
+                        injected_detectors[i] = True
+                experiment._components.append((tuple(i for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m)), component))
+            else:
+                experiment.add(serial_comp.starting_mode, component)
+
+        # Add detectors
+        for i, d in enumerate(detectors):
+            if d is not None:
+                experiment.add(i, d)
+
+        self.deserialize_ports(experiment, self._pb_e.input_ports, PortLocation.INPUT, True)
+        self.deserialize_ports(experiment, self._pb_e.output_ports, PortLocation.OUTPUT, False)
+
+        # Blocks adding new components --> Needed after adding the components
+        post_select_str = self._pb_e.post_select
+        if post_select_str:
+            experiment.set_postselection(deserialize(post_select_str))
+
+        return experiment

@@ -224,7 +224,7 @@ when we try to create a bell state with a Post-Selected CNOT:
    :scale: 10 %
    :align: center
 
-And below, the result of te same circuit, but with a noisy ``Source``. We can see the presence of FockStates with a smaller number of photons.
+And below, the result of the same circuit, but with a noisy ``Source``. We can see the presence of FockStates with a smaller number of photons.
 
 .. figure:: _static/img/bell_noisy.svg
    :scale: 10 %

@@ -29,7 +29,7 @@
 
 from .simulator_interface import ASimulatorDecorator
 from ._simulator_utils import _retrieve_mode_count, _unitary_components_to_circuit
-from perceval.components import ACircuit, PERM, TD
+from perceval.components import ACircuit, PERM, TD, IDetector
 from perceval.utils import BasicState, BSDistribution, StateVector, global_params
 
 from enum import Enum
@@ -43,6 +43,7 @@ class _CType(Enum):
 
 def _count_total_delay(component_list: list) -> int:
     return int(sum([c.get_variables()["t"] if isinstance(c, TD) else 0 for _, c in component_list]))
+
 
 def _compute_depth(component_list: list, mode_count: int) -> int:
     depth = 1
@@ -82,9 +83,9 @@ class DelaySimulator(ASimulatorDecorator):
 
     def _prepare_input(self, input_state):
         expanded_input = input_state ** self._depth
-        return expanded_input * BasicState([0] * (self._expanded_m - self._depth*self._original_m))
+        return expanded_input * BasicState([0] * (self._expanded_m - self._depth * self._original_m))
 
-    def _prepare_circuit(self, circuit, m = None):
+    def _prepare_circuit(self, circuit, m=None):
         if m is None:
             self._original_m = _retrieve_mode_count(circuit)
         else:
@@ -93,6 +94,11 @@ class DelaySimulator(ASimulatorDecorator):
         expanded_circuit, expanded_mode_count = self._expand_td(circuit)
         self._expanded_m = expanded_mode_count
         return expanded_circuit
+
+    def _prepare_detectors_impl(self, detectors: list[IDetector]):
+        return [None] * ((self._depth - 1) * self._original_m) \
+            + detectors \
+            + [None] * (self._expanded_m - self._depth * self._original_m)
 
     def _mode_range(self) -> tuple[int, int]:
         return (self._depth - 1) * self._original_m, self._depth * self._original_m
@@ -112,7 +118,7 @@ class DelaySimulator(ASimulatorDecorator):
         for out_state, probampli in results:
             if abs(probampli) > global_params['min_complex_component']:
                 reduced_out_state = out_state[m[0]:m[1]]
-                output += probampli*reduced_out_state
+                output += probampli * reduced_out_state
         return output
 
     def _expand_td(self, component_list: list):

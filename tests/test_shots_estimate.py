@@ -41,6 +41,7 @@ class _MockRemoteProcessor(RemoteProcessor):
         self._perfs = {
             TRANSMITTANCE_KEY: 6  # in percent
         }
+        self._thresholded_output = False
 
 
 def test_shots_estimate_trivial_filter_values():

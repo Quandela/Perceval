@@ -46,20 +46,19 @@ _JOB_ID_KEY = 'job_id'
 class RPCHandler:
     """Remote Call Procedure Handler
 
-    A class to call the API
+    A class to call the web API
 
+    :param name: name of the target platform
+    :param url: API URL to call
+    :param token: token used for authentication
+    :param proxies: dictionary mapping protocol to the URL of the proxy
     """
 
-    def __init__(self, name, url, token):
-        """Remote Call Procedure Handler
-
-        :param name: name of the plateform
-        :param url: api URL to call
-        :param token: token used for identification
-        """
+    def __init__(self, name, url, token, proxies = None):
         self.name = name
         self.url = url
-        self.token = token
+        self.proxies = proxies
+        self.token = token or dict()
         self.headers = {'Authorization': f'Bearer {token}'}
         self.request_timeout = 10  # default timeout
 
@@ -78,11 +77,11 @@ class RPCHandler:
         """fetch platform details and settings"""
         quote_name = quote_plus(self.name)
         endpoint = self.build_endpoint(_ENDPOINT_PLATFORM_DETAILS, quote_name)
-        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
+        resp = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         resp.raise_for_status()
         return resp.json()
 
-    def create_job(self, payload):
+    def create_job(self, payload) -> str:
         """create a job
 
         :param payload: the payload to send
@@ -90,7 +89,7 @@ class RPCHandler:
         :return: job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CREATE)
-        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout)
+        request = requests.post(endpoint, headers=self.headers, json=payload, timeout=self.request_timeout, proxies=self.proxies)
         try:
             json_res = request.json()
         except Exception as e:
@@ -101,13 +100,13 @@ class RPCHandler:
 
         return json_res[_JOB_ID_KEY]
 
-    def cancel_job(self, job_id: str):
+    def cancel_job(self, job_id: str) -> None:
         """cancel a job
 
         :param job_id: id of the job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         req.raise_for_status()
 
     def rerun_job(self, job_id: str) -> str:
@@ -117,12 +116,12 @@ class RPCHandler:
         :return: new job id
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
-        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout)
+        req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         req.raise_for_status()
         assert _JOB_ID_KEY in req.json(), f'Missing {_JOB_ID_KEY} field in rerun response'
         return req.json()[_JOB_ID_KEY]
 
-    def get_job_status(self, job_id: str):
+    def get_job_status(self, job_id: str) -> dict:
         """get the status of a job
 
         :param job_id: if of the job
@@ -131,11 +130,11 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_STATUS, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         res.raise_for_status()
         return res.json()
 
-    def get_job_results(self, job_id: str):
+    def get_job_results(self, job_id: str) -> dict:
         """get job results
 
         :param job_id: id of the job
@@ -144,6 +143,6 @@ class RPCHandler:
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RESULT, job_id)
 
         # requests may throw an IO Exception, let the user deal with it
-        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout)
+        res = requests.get(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         res.raise_for_status()
         return res.json()

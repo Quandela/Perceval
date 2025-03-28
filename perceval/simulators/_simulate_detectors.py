@@ -34,6 +34,7 @@ from perceval.utils import BSDistribution, BasicState
 
 
 def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None,
+                       prob_threshold: float = 0,
                        progress_callback: Callable = None) -> tuple[BSDistribution, float]:
     """
     Simulates the effect of imperfect detectors on a theoretical distribution.
@@ -41,6 +42,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     :param dist: A theoretical distribution of detections, as would Photon Number Resolving (PNR) detectors detect.
     :param detectors: A List of detectors
     :param min_photons: Minimum detected photons filter value (when None, does not apply this physical filter)
+    :param prob_threshold: Filter states that have a probability below this threshold
     :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
     :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
@@ -69,19 +71,27 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
         return result, phys_perf
 
     for idx, (s, p) in enumerate(dist.items()):
-        state_distrib = BSDistribution()
+        distributions = []
         for photons_in_mode, detector in zip(s, detectors):
             if detector is not None:
-                state_distrib *= detector.detect(photons_in_mode)
+                d = detector.detect(photons_in_mode)
+                if isinstance(d, BasicState):
+                    d = BSDistribution(d)
+                distributions.append(d)
             else:
-                state_distrib *= BasicState([photons_in_mode])
-        for s_out, p_out in state_distrib.items():
+                distributions.append(BSDistribution(BasicState([photons_in_mode])))
+
+        state_dist = BSDistribution.list_tensor_product(distributions,
+                                prob_threshold=max(prob_threshold, prob_threshold / (10 * p) if p > 0 else prob_threshold))
+        # "magic factor" 10 like in the simulator
+
+        for s_out, p_out in state_dist.items():
             if min_photons is not None and s_out.n < min_photons:
                 phys_perf -= p * p_out
             else:
                 result.add(s_out, p * p_out)
 
-        if progress_callback and idx % 250000 == 0:  # Every 250000 states
+        if progress_callback and idx % 100000 == 0:  # Every 100000 states
             progress = (idx + 1) / lbsd
             exec_request = progress_callback(progress, "simulate detectors")
             if cancel_requested(exec_request):

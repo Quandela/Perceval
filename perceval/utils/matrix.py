@@ -38,8 +38,6 @@ from collections.abc import Iterator
 import numpy as np
 import sympy as sp
 
-from perceval.utils.logging import get_logger, channel
-
 class Matrix(ABC):
     """
         This parent class is the gateway :class:`MatrixN` or :class:`MatrixS` - based on ``use_symbolic``,
@@ -141,20 +139,14 @@ class Matrix(ABC):
         pass
 
     @staticmethod
-    def random_unitary(n: int, parameters: np.ndarray | list | None = None) -> MatrixN:
+    def random_unitary(n: int) -> MatrixN:
         r"""static method generating a random unitary matrix
 
         :param n: size of the Matrix
-        :param parameters: :math:`2n^2` random parameters to use a generator
         :return: a numeric Matrix
         """
-        if parameters is not None:
-            get_logger().warn(
-                "DeprecationWarning: use parametrized_unitary(n, parameters) instead to create a parametrized unitary matrix, version=0.11", channel.user)
-            return Matrix.parametrized_unitary(n, parameters)
-        else:
-            u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
-            return Matrix._unitarize_matrix(n, u)
+        u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
+        return Matrix._unitarize_matrix(n, u)
 
     @staticmethod
     def parametrized_unitary(n: int, parameters: np.ndarray | list) -> MatrixN:

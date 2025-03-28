@@ -34,15 +34,15 @@ import perceval as pcvl
 from perceval.utils.logging import ExqaliburLogger, PythonLogger, level, channel
 
 from _mock_persistent_data import LoggerConfigForTest
-from _mock_rpc_handler import get_rpc_handler
+from _mock_rpc_handler import get_rpc_handler_for_tests
 
 DEFAULT_CONFIG = {'use_python_logger': False, 'enable_file': False,
                   'channels': {'general': {'level': 'off'}, 'resources': {'level': 'off'}, 'user': {'level': 'warn'}}}
 
 
 @patch.object(ExqaliburLogger, "apply_config")
-def test_logger_config(mock_apply_config):
-    logger_config = LoggerConfigForTest()
+def test_logger_config(mock_apply_config, tmp_path):
+    logger_config = LoggerConfigForTest(tmp_path)
     logger_config.reset()
     logger_config.save()
     assert dict(logger_config) == DEFAULT_CONFIG
@@ -96,33 +96,21 @@ METHOD = 'method'
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources(mock_info, requests_mock):
+def test_log_resources(mock_info):
     pcvl.utils.logging._logger.set_level(level.info, channel.resources)
 
     # prepare test parameters
     input_state = pcvl.BasicState("|1,1,0,0>")
     circuit = pcvl.Circuit(4)
     noise_model = pcvl.NoiseModel(brightness=0.2, indistinguishability=0.75, g2=0.05)
-    source = pcvl.Source.from_noise_model(noise_model)
     max_samples = 500
     min_detected_photons_filter = 2
 
-    proc_slos = pcvl.Processor('SLOS', circuit, source=source)
+    proc_slos = pcvl.Processor('SLOS', circuit, noise_model)
     proc_slos.min_detected_photons_filter(min_detected_photons_filter)
     proc_slos.with_input(input_state)
     proc_slos.probs()
 
-    # Processor
-    my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
-    assert my_dict[SOURCE] == source.__dict__()
-    assert my_dict[LAYER] == 'Processor'
-    assert my_dict[BACKEND] == 'SLOS'
-    assert my_dict[N] == input_state.n
-    assert my_dict[M] == circuit.m
-    assert my_dict[METHOD] == 'probs'
-
-    proc_slos.noise = noise_model
-    proc_slos.probs()
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
     assert SOURCE not in my_dict
     assert my_dict[NOISE] == noise_model.__dict__()
@@ -133,13 +121,13 @@ def test_log_resources(mock_info, requests_mock):
     assert my_dict[METHOD] == 'probs'
 
     remote_processor = pcvl.RemoteProcessor.from_local_processor(
-        proc_slos, rpc_handler=get_rpc_handler(requests_mock)
+        proc_slos, rpc_handler=get_rpc_handler_for_tests()
     )
     remote_processor.with_input(input_state)
     remote_processor.prepare_job_payload('probs')
     my_dict = _get_last_dict_logged(mock_info.mock_calls[-1].args[0])
     assert SOURCE not in my_dict
-    assert my_dict['platform'] == 'mocked:platform'
+    assert my_dict['platform'] == remote_processor._rpc_handler.name
     assert my_dict[NOISE] == noise_model.__dict__()
     assert my_dict[LAYER] == 'RemoteProcessor'
     assert my_dict[N] == input_state.n
@@ -149,11 +137,11 @@ def test_log_resources(mock_info, requests_mock):
     proc_clicli = pcvl.Processor('CliffordClifford2017', pcvl.Circuit(4), noise=noise_model)
     proc_clicli.min_detected_photons_filter(min_detected_photons_filter)
     proc_clicli.with_input(input_state)
-    proc_clicli.samples(max_samples)
+    proc_clicli.samples(max_samples)  # TODO: complete the test ?
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources_simulator(mock_info, requests_mock):
+def test_log_resources_simulator(mock_info):
     pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters
@@ -190,7 +178,7 @@ def test_log_resources_simulator(mock_info, requests_mock):
 
 
 @patch.object(ExqaliburLogger, "info")
-def test_log_resources_noisy_sampling_simulator(mock_info, requests_mock):
+def test_log_resources_noisy_sampling_simulator(mock_info):
     pcvl.get_logger().set_level(level.info, channel.resources)
 
     # prepare test parameters

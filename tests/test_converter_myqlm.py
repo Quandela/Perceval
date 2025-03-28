@@ -48,7 +48,6 @@ def test_basic_circuit_h():
     convertor = MyQLMConverter()
     qprog = Program()  # Create a Program
     qbits = qprog.qalloc(1)  # Allocate some qbits
-    print(qbits, type(qbits))
     qprog.apply(H, qbits[0])  # Apply H gate
     myqlmc = qprog.to_circ()  # Export this program into a quantum circuit
 
@@ -239,3 +238,39 @@ def test_converter_noon_state():
     assert pc.m == 2 * len(qbits)
     output_distribution = sampler.probs()["results"]
     pcvl.pdisplay(output_distribution, precision=1e-2, max_v=4)
+
+
+def test_circuit_measure():
+    prog = Program()  # AQASM program in myqlm
+    qbits = prog.qalloc(2)
+    for qb in qbits:
+        H(qb)
+    CNOT(qbits[0], qbits[1])
+    prog.measure(qbits[1])
+
+    circuit = prog.to_circ()
+    converter = MyQLMConverter()
+    with pytest.raises(AssertionError):
+        converter.convert(circuit, use_postselection=True)
+
+
+def test_circuit_parametrized_gates():
+    prog = Program()
+    qbits = prog.qalloc(4)
+    PH(1.22)(qbits[0])
+    RY(3.14)(qbits[1])
+    RZ(3.14)(qbits[2])
+    RX(-3.14)(qbits[3])
+    circuit = prog.to_circ()
+
+    converter = MyQLMConverter()
+    pc = converter.convert(circuit, use_postselection=True)
+
+    assert len(pc.components) == 4
+    assert isinstance(pc.components[0][1]._components[0][1], comp.PS)
+    assert isinstance(pc.components[1][1]._components[0][1], comp.BS)
+
+    assert isinstance(pc.components[2][1]._components[0][1], comp.PS)
+    assert isinstance(pc.components[2][1]._components[0][1], comp.PS)
+
+    assert isinstance(pc.components[3][1]._components[0][1], comp.BS)
