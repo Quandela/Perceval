@@ -146,10 +146,15 @@ def pdisplay_experiment(processor: Experiment,
         **opts)
 
     herald_info = {}
-    if len(processor.heralds):
-        for k in processor.heralds.keys():
+    if len(processor.in_heralds):
+        for k in processor.in_heralds.keys():
             renderer.set_mode_style(k, ModeType.HERALD)
         herald_info = collect_herald_info(processor, recursive)
+
+    elif len(processor.heralds):
+        herald_info = collect_herald_info(processor, recursive)
+
+    original_mode_style = renderer._mode_style.copy()
 
     for rendering_pass in [pre_renderer, renderer]:
         if not rendering_pass:
@@ -206,7 +211,7 @@ def pdisplay_experiment(processor: Experiment,
                 i not in processor.detectors_injected and processor._detectors[i] is not None:
             renderer.add_out_port(i, Port(Encoding.RAW, ""))
 
-    renderer.add_mode_index()
+    renderer.add_mode_index(original_mode_style)
     return renderer.draw()
 
 

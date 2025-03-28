@@ -198,7 +198,7 @@ class TextRenderer(ICircuitRenderer):
         for nl in range(len(self._h)):
             self._h[nl] = ' ' * offset_diff + self._h[nl]
 
-    def add_mode_index(self):
+    def add_mode_index(self, input_mode_style = None):
         offset = len(str(self._nsize)) + 1
         self._set_offset(offset)
         for k in range(self._nsize):

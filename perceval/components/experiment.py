@@ -734,7 +734,7 @@ class Experiment:
         input_idx = 0
         # Build real input state (merging ancillas + expected input) and compute expected photon count
         for k in range(self.circuit_size):
-            if k in self.heralds:
+            if k in self.in_heralds:
                 input_list[k] = self.in_heralds[k]
             else:
                 input_list[k] = input_state[input_idx]

@@ -98,7 +98,7 @@ class CanvasRenderer(ICircuitRenderer):
                 h = Herald(input_pos[k])
                 self._canvas.add_shape(self._skin.get_shape(h, PortLocation.INPUT), h, None)
 
-    def add_mode_index(self):
+    def add_mode_index(self, input_mode_style = None):
         self._canvas.set_offset(
             (CanvasRenderer.AFFIX_ALL_SIZE + max(self._chart) * CanvasRenderer.SCALE, 0),
             CanvasRenderer.AFFIX_ALL_SIZE,
@@ -111,12 +111,14 @@ class CanvasRenderer(ICircuitRenderer):
                     self._n_font_size,
                     ta="right")
 
+        input_mode_style = input_mode_style or self._mode_style
+
         self._canvas.set_offset(
             (0, 0),
             CanvasRenderer.AFFIX_ALL_SIZE,
             CanvasRenderer.SCALE * (self._nsize + 1))
         for k in range(self._nsize):
-            if self._mode_style[k] != ModeType.HERALD:
+            if input_mode_style[k] != ModeType.HERALD:
                 self._canvas.add_text(
                     (
                         0,
