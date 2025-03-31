@@ -30,7 +30,7 @@ import functools
 import sys
 from exqalibur import logging as xq_log
 
-from .config import LoggerConfig, _USE_PYTHON_LOGGER
+from .config import LoggerConfig
 from .loggers import ExqaliburLogger, PythonLogger
 
 

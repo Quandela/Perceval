@@ -34,7 +34,7 @@ from perceval.components.linear_circuit import ACircuit, Circuit
 from perceval.utils.logging import get_logger, channel
 
 
-def simplify(circuit: list | ACircuit, m: int=None, display: bool = False) -> list | Circuit:
+def simplify(circuit: list | ACircuit, m: int=None, display: bool=False) -> list | Circuit:
     r"""
     Tries to simplify a circuit when simplifications are possible
 
@@ -64,7 +64,7 @@ def simplify(circuit: list | ACircuit, m: int=None, display: bool = False) -> li
     return final_circuit_comp
 
 
-def _simplify_comp(components, m :int=None, display: bool = False):
+def _simplify_comp(components, m: int=None, display: bool=False):
     # Simplify the circuit according to the last added component
     [_, c] = components[-1]
 
@@ -282,7 +282,7 @@ def _evaluate_perm(left_perm_list, right_perm_list, display):
         return len(left_perm_list) + len(right_perm_list)
 
 
-def _simplify_perm(components, m :int = None, display :bool = False):
+def _simplify_perm(components, m: int = None, display: bool = False):
     [r, c] = components.pop()
 
     end_components = components
@@ -315,13 +315,13 @@ def _simplify_perm(components, m :int = None, display :bool = False):
         new_r, new_c_perm = reduce_perm(new_r, new_c_perm)
 
         get_logger().debug(f" Simplifying {perm} with a successive PERM component of perm vector "
-                     f"= {left_perm}", channel.general)
+                           f"= {left_perm}", channel.general)
 
         if len(new_r):
             end_components.append([new_r, comp.PERM(new_c_perm)])
 
     elif found_other_perm and len(adjacent_modes) > 1:  # Non-successive permutations and things to do
-        get_logger().debug(f" Simplifying with non-successive permutation components", channel.general)
+        get_logger().debug(" Simplifying with non-successive permutation components", channel.general)
 
         # Simulates an unraveling on a smaller circuit with only the permutations
         # First, we extend our permutations to the entire circuit
@@ -366,7 +366,7 @@ def _simplify_perm(components, m :int = None, display :bool = False):
 
 
 # Phase shifter simplification
-def _simplify_PS(components, m :int = None, display :bool = False):
+def _simplify_PS(components, m: int = None, display: bool = False):
 
     PS_found_n_simplified = False
     [_, c] = components[-1]

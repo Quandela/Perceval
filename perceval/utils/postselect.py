@@ -40,6 +40,7 @@ except ImportError:
 
 PostSelect: TypeAlias = xq.PostSelect
 
+
 @deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
     """ Check if two PostSelect instances are independent.

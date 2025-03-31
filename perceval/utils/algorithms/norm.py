@@ -87,4 +87,4 @@ def frobenius_inner_product(A: np.ndarray, B: np.ndarray, skip_colums: list[int]
     # the i-th diagonal element C_ii is the product of i-th column of A and B
     # C_ii = sum(conj(a_ki).b_ki, k=0..N)
     # as we want to skip cols from A and B, we omit their indices when computing the trace
-    return sum([ C.diagonal()[i] for i in range(C.shape[1]) if i not in skip_colums ])
+    return sum([C.diagonal()[i] for i in range(C.shape[1]) if i not in skip_colums])
