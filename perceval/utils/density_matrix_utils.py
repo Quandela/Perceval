@@ -28,8 +28,6 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import sys
-
 import numpy as np
 from scipy.sparse import csr_array
 from scipy.sparse import sparray
@@ -77,7 +75,7 @@ def statevector_to_array(sv: StateVector, index: dict):
     :param sv: a StateVector
     :param index: a dictionary with BasicStates as keys and indices as values
     """
-    vector = np.zeros(len(index),  dtype=complex)
+    vector = np.zeros(len(index), dtype=complex)
     for key, value in sv:
         vector[index[key]] += value
     return vector

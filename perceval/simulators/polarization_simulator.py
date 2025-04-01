@@ -54,10 +54,10 @@ class PolarizationSimulator(ASimulatorDecorator):
             spatial_input = SVDistribution(spatial_input)
         return spatial_input
 
-    def set_circuit(self, circuit, m = None):
+    def set_circuit(self, circuit, m=None):
         self._prepare_circuit(circuit)
 
-    def _prepare_circuit(self, circuit, m = None):
+    def _prepare_circuit(self, circuit, m=None):
         self._upol = circuit.compute_unitary(use_polarization=True)
 
     def _prepare_detectors_impl(self, detectors: list[IDetector]):
