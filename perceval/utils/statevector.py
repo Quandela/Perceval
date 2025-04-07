@@ -31,9 +31,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from exqalibur import FockState
 from multipledispatch import dispatch
-from typing import Any, Generator
+from typing import Generator
 try:
     from typing import TypeAlias
 except ImportError:
@@ -50,7 +49,20 @@ BSDistribution: TypeAlias = xq.BSDistribution
 SVDistribution: TypeAlias = xq.SVDistribution
 
 
-def allstate_iterator(input_state: BasicState | StateVector, mask: xq.FSMask = None) -> Generator[FockState]:
+def allstate_array(input_state: BasicState, mask: xq.FSMask = None) -> xq.FSArray:
+    m = input_state.m
+    n = input_state.n
+    if mask is not None:
+        output_array = xq.FSArray(m, n, mask)
+    else:
+        output_array = xq.FSArray(m, n)
+
+    output_array.generate()
+
+    return output_array
+
+
+def allstate_iterator(input_state: BasicState | StateVector, mask: xq.FSMask = None) -> Generator[xq.FockState]:
     """Iterator on all possible output states compatible with mask generating StateVector
 
     :param input_state: a given input state vector
