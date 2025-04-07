@@ -304,7 +304,8 @@ def test_cnot_ppcnot_vs_hcnot_sim():
     valid_bsd.normalize()
 
     tot_diff = 0  # sum of absolute difference between the probs of the two computations
-    for index, (key, value) in enumerate(valid_bsd.items()):
+    for index, key in enumerate(basic_states):
+        value = valid_bsd[key]
         bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
         tot_diff += abs(value - EXPECTED_QISK_SIM_PROBS_DATA[bit_form])
 

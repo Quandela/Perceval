@@ -413,8 +413,8 @@ class Simulator(ISimulator):
         to_add = SVDistribution()
         for sv, p in trimmed_svd.items():
             if len(sv) != 1 and len(sv.n) != 1:
-                to_remove.add(sv)
                 new_svd = _split_by_photon_count(sv)
+                to_remove.add(sv)
                 for split_sv, ps in new_svd.items():
                     prob = p * ps
                     # split_sv.n is a set so we can't use [0]

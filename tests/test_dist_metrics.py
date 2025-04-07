@@ -26,11 +26,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from unittest.mock import patch
 
 from perceval.utils.dist_metrics import tvd_dist, kl_divergence
 from perceval.utils import BSDistribution, BasicState
+import perceval as pcvl
 from copy import copy
 
+from tests._test_utils import LogChecker
 
 bs1 = BasicState([0, 1, 0])
 bs2 = BasicState([0, 0, 0])
@@ -47,7 +50,8 @@ def test_tvd_identical_dist():
     assert tvd_dist(target_bsd, bsd_to_comp) == 0
 
 
-def test_tvd_disjoint_dist():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_tvd_disjoint_dist(mock_warn):
     target_bsd = BSDistribution()
     target_bsd[bs1] = 0.5
     target_bsd[bs2] = 0.5
@@ -56,15 +60,18 @@ def test_tvd_disjoint_dist():
     bsd_to_comp[bs3] = 1
     bsd_to_comp[bs4] = 0
 
-    assert tvd_dist(target_bsd, bsd_to_comp) == 1.0
+    with LogChecker(mock_warn):
+        assert tvd_dist(target_bsd, bsd_to_comp) == 1.0
 
 
-def test_tvd_one_empty_dist():
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
+def test_tvd_one_empty_dist(mock_warn):
     target_bsd = BSDistribution()
     target_bsd[bs1] = 0.3
     target_bsd[bs2] = 0.7
 
-    assert tvd_dist(target_bsd, BSDistribution()) == 0.5
+    with LogChecker(mock_warn):
+        assert tvd_dist(target_bsd, BSDistribution()) == 0.5
 
 
 def test_kl_div_identical_dist():

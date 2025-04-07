@@ -67,7 +67,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
                 exec_request = progress_callback(progress, "simulate detectors")
                 if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
-        result.normalize()
+        if len(result):
+            result.normalize()
         return result, phys_perf
 
     for idx, (s, p) in enumerate(dist.items()):
@@ -96,7 +97,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             exec_request = progress_callback(progress, "simulate detectors")
             if cancel_requested(exec_request):
                 raise RuntimeError("Cancel requested")
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, phys_perf
 
 

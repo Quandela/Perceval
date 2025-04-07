@@ -66,7 +66,8 @@ def post_select_distribution(
     :return: A tuple containing post-selected BSDistribution and logical performance
     """
     if not (postselect.has_condition or heralds):
-        bsd.normalize()
+        if len(bsd):
+            bsd.normalize()
         return bsd, 1
 
     if heralds is None:
@@ -84,7 +85,8 @@ def post_select_distribution(
             result[state] = prob
         else:
             logical_perf -= prob
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, logical_perf
 
 
@@ -103,7 +105,8 @@ def post_select_statevector(
     :return:  A tuple containing the post-selected StateVector and logical performance
     """
     if not (postselect.has_condition or heralds):
-        sv.normalize()
+        if len(sv):
+            sv.normalize()
         return sv, 1
 
     if heralds is None:
@@ -120,5 +123,6 @@ def post_select_statevector(
                 state = state.remove_modes(list(heralds.keys()))
             result += ampli * state
             logical_perf += abs(ampli) ** 2
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, logical_perf

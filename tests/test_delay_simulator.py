@@ -35,6 +35,8 @@ from perceval.utils import BasicState, BSDistribution, PostSelect
 
 import pytest
 
+from tests._test_utils import assert_bsd_close
+
 
 def test_retrieve_mode_count():
     comp_list = [((0,1), None), ((1,2,3), None), ((0,1), None), ((0,1), None), ((0,), None)]
@@ -69,7 +71,7 @@ def test_delay_simulation():
     expected[BasicState([2, 0])] = 0.125
     expected[BasicState([0, 2])] = 0.125
 
-    assert pytest.approx(res) == expected
+    assert_bsd_close(res, expected)
 
     simulator.set_selection(postselect=PostSelect('[1]>0'))
 
@@ -77,7 +79,7 @@ def test_delay_simulation():
     expected = BSDistribution()
     expected[BasicState([0, 1])] = 0.666666666666667
     expected[BasicState([0, 2])] = 0.333333333333333
-    assert pytest.approx(heralded_res) == expected
+    assert_bsd_close(heralded_res, expected)
 
     sv = simulator.evolve(BasicState([1, 0]))
     assert len(sv.keys()) == 2
@@ -103,7 +105,7 @@ def test_delay_detectors_simulation():
     expected[BasicState([1, 0])] = 0.25 + 0.125
     expected[BasicState([0, 1])] = 0.25 + 0.125
 
-    assert pytest.approx(res["results"]) == expected
+    assert_bsd_close(res["results"], expected)
 
 
 def test_invalid_delay():

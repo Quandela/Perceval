@@ -37,7 +37,7 @@ from perceval.components import Circuit, Processor, BS, PS, catalog, Unavailable
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
 from perceval.backends import Clifford2017Backend
 
-from _test_utils import LogChecker
+from _test_utils import LogChecker, assert_svd_close, assert_bsd_close
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
@@ -45,7 +45,7 @@ def test_processor_input_fock_state(mock_warn):
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     with LogChecker(mock_warn, expected_log_number=0):
         p.with_input(BasicState([0, 1, 1, 0]))
-    assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
+    assert_svd_close(p.source_distribution, SVDistribution({StateVector([0, 1, 1, 0]): 1}))
 
 
 def test_processor_input_fock_state_with_loss():
@@ -57,7 +57,7 @@ def test_processor_input_fock_state_with_loss():
         StateVector([0, 0, 1, 0]): 0.16,
         StateVector([0, 0, 0, 0]): 0.64
     }
-    assert pytest.approx(p.source_distribution) == expected
+    assert_svd_close(p.source_distribution, expected)
 
 
 def test_processor_input_fock_state_with_all_noise_sources():
@@ -96,12 +96,12 @@ def test_processor_input_state_vector():
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
-    assert p.source_distribution == {sv: 1}
+    assert_svd_close(p.source_distribution, {sv: 1})
 
     p = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=.4, g2=.06))  # Init with noise
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
-    assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
+    assert_svd_close(p.source_distribution, {sv: 1})  # The source does NOT affect SV inputs
 
 
 def test_processor_probs():
@@ -235,15 +235,16 @@ def test_phase_quantization():
     p0.with_input(BasicState([1, 1]))
     p1.with_input(BasicState([1, 1]))
     p2.with_input(BasicState([1, 1]))
-    assert p0.probs()["results"] != pytest.approx(p1.probs()["results"])
-    assert p1.probs()["results"] == pytest.approx(p2.probs()["results"])
+    with pytest.raises(AssertionError):
+        assert_bsd_close(p0.probs()["results"], p1.probs()["results"])
+    assert_bsd_close(p1.probs()["results"], p2.probs()["results"])
 
     p1.noise = NoiseModel()
-    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+    assert_bsd_close(p0.probs()["results"], p1.probs()["results"])
 
     p0.noise = nm
     p1.noise = nm
-    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+    assert_bsd_close(p0.probs()["results"], p1.probs()["results"])
 
 
 def test_phase_error():
