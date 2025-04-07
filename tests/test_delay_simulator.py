@@ -82,7 +82,7 @@ def test_delay_simulation():
     assert_bsd_close(heralded_res, expected)
 
     sv = simulator.evolve(BasicState([1, 0]))
-    assert len(sv.keys()) == 2
+    assert len(sv) == 2
     assert BasicState([0, 1]) in sv.keys()
     assert BasicState([0, 2]) in sv.keys()
 
