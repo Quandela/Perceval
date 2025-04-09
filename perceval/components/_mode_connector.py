@@ -92,7 +92,7 @@ class ModeConnector:
         if self._r_is_component:
             return list(range(self._n_modes_to_connect))
         r_list = list(range(self._ro.circuit_size))
-        return [x for x in r_list if x not in self._ro.heralds.keys()]
+        return [x for x in r_list if x not in self._ro.in_heralds.keys()]
 
     def resolve(self) -> dict[int, int]:
         """
@@ -215,20 +215,6 @@ class ModeConnector:
         return res
 
     def add_heralded_modes(self, mapping):
-        """
-        Add heralded mode mapping to an existing mapping
-        """
-        if self._r_is_component:
-            get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
-            return 0
-        other_herald_pos = list(self._ro.heralds.keys())
-        new_mode_index = self._lp.circuit_size
-        for pos in other_herald_pos:
-            mapping[new_mode_index] = pos
-            new_mode_index += 1
-        return new_mode_index - self._lp.circuit_size
-
-    def add_heralded_in_modes(self, mapping):
         """
         Add heralded mode mapping to an existing mapping
         """

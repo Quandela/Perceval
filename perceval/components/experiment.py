@@ -100,7 +100,7 @@ class Experiment:
         self._in_mode_type: list[ModeType] = []
         self._out_mode_type: list[ModeType] = []
 
-        self._m: int = 0  # Number of modes
+        self._m: int = 0  # Circuit size
 
     @property
     def is_unitary(self) -> bool:
@@ -352,18 +352,19 @@ class Experiment:
                 if port is not None:
                     del self._out_ports[port]
 
+        is_symmetrical = experiment.in_heralds.keys() == experiment.heralds.keys()
+
         # Compute new herald positions
         n_new_heralds = connector.add_heralded_modes(mode_mapping)
-        self._out_mode_type += [ModeType.HERALD] * n_new_heralds
-        for m_herald in experiment.heralds:
+        self._in_mode_type += [ModeType.HERALD] * n_new_heralds  # New input heralds are always put at the bottom
+        self._m += n_new_heralds
+
+        for m_herald in experiment.in_heralds:
+            self._out_mode_type += [experiment._out_mode_type[m_herald]]
+            # TODO: The behaviour for the detectors is wrong (PCVL-944)
             self._detectors += [experiment._detectors[m_herald]]
 
-        n_new_heralds = connector.add_heralded_in_modes(mode_mapping)
-        self._in_mode_type += [ModeType.HERALD] * n_new_heralds
-
-        self._m += len(experiment.in_heralds)
-
-        # Add PERM, component, PERM^-1
+        # Add PERM, component, (PERM^-1 if is_symmetrical)
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
         if perm_component is not None:
@@ -382,17 +383,26 @@ class Experiment:
             pos = [x + min(mode_mapping) for x in pos]
             new_components.append((pos, c))
         if perm_component is not None:
-            perm_inv = perm_component.copy()
-            perm_inv.inverse(h=True)
-            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
-            new_components.append((perm_modes, perm_inv))
+            if is_symmetrical:
+                perm_inv = perm_component.copy()
+                perm_inv.inverse(h=True)
+                get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
+                new_components.append((perm_modes, perm_inv))
+            else:
+                # We need to apply the permutation on the detectors and mode types
+                self._out_mode_type = perm_component.apply_list(perm_modes, self._out_mode_type)
+                self._detectors = perm_component.apply_list(perm_modes, self._detectors)
+
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
 
         # Retrieve ports from the other experiment
         # Output ports
         for port, port_range in experiment._out_ports.items():
-            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            if is_symmetrical:
+                port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+            else:
+                port_mode = list(mode_mapping.keys())[port_range[0]]
             if isinstance(port, Herald):
                 self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
             else:
@@ -411,7 +421,10 @@ class Experiment:
         # Check port composition
         for m_out, m_in in mode_mapping.items():
             out_port = self.get_output_port(m_out)
-            in_port = experiment.get_input_port(m_in)
+            if is_symmetrical:
+                in_port = experiment.get_input_port(m_in)
+            else:
+                in_port = experiment.get_input_port(mode_mapping[m_in])
             if (out_port is not None and in_port is not None
                     and (out_port.encoding != in_port.encoding or self._out_ports[out_port] != experiment._in_ports[in_port])):
                 get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
