@@ -122,8 +122,14 @@ class ModeConnector:
             map_begin = self._map
             self._map = {}
             r_list = self._get_ordered_rmodes()
+            herald_offset = 0
+            lp_heralds = self._lp.heralds
             for i in range(self._n_modes_to_connect):
-                self._map[map_begin + i] = r_list[i]
+                pos = map_begin + i + herald_offset
+                while pos in lp_heralds:
+                    herald_offset += 1
+                    pos += 1
+                self._map[pos] = r_list[i]
             self._check_consistency()
             return self._map
 
