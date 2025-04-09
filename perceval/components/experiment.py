@@ -248,6 +248,9 @@ class Experiment:
         >>> e.add(0, BS())  # Modes (0, 1) connected to (0, 1) of the added beam splitter
         >>> e.add([2,5], BS())  # Modes (2, 5) of the experiment's output connected to (0, 1) of the added beam splitter
         >>> e.add({2:0, 5:1}, BS())  # Same as above
+
+        If the added component is a processor or an experiment with modes having heralds only on one side,
+        no permutation will be added at the end, and the "in-between" modes will be pushed to the bottom.
         """
         if self.m == 0:
             self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
