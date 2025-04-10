@@ -396,6 +396,16 @@ class Experiment:
                 self._out_mode_type = perm_component.apply_list(perm_modes, self._out_mode_type)
                 self._detectors = perm_component.apply_list(perm_modes, self._detectors)
 
+                self_ports = self._out_ports.copy()
+                self._out_ports = {}
+                for port, port_range in self_ports.items():
+                    port_mode = mode_mapping.get(port_range[0], port_range[0])
+                    if isinstance(port, Herald):
+                        self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
+                    else:
+                        if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                            self.add_port(port_mode, port, PortLocation.OUTPUT)
+
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
 
@@ -405,7 +415,7 @@ class Experiment:
             if is_symmetrical:
                 port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
             else:
-                port_mode = list(mode_mapping.keys())[port_range[0]]
+                port_mode = mode_mapping.get(port_range[0], port_range[0])
             if isinstance(port, Herald):
                 self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
             else:
@@ -427,7 +437,7 @@ class Experiment:
             if is_symmetrical:
                 in_port = experiment.get_input_port(m_in)
             else:
-                in_port = experiment.get_input_port(mode_mapping[m_in])
+                in_port = experiment.get_input_port(mode_mapping.get(m_in, m_in))
             if (out_port is not None and in_port is not None
                     and (out_port.encoding != in_port.encoding or self._out_ports[out_port] != experiment._in_ports[in_port])):
                 get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
