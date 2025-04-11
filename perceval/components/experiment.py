@@ -347,6 +347,11 @@ class Experiment:
         mode_mapping = connector.resolve()
         get_logger().debug(f"  Resolved mode mapping to {mode_mapping} during experiment compose", channel.general)
 
+        is_symmetrical = experiment.in_heralds.keys() == experiment.heralds.keys()
+
+        # Compute new herald positions
+        n_new_heralds = connector.add_heralded_modes(mode_mapping)
+
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new experiment
@@ -355,10 +360,6 @@ class Experiment:
                 if port is not None:
                     del self._out_ports[port]
 
-        is_symmetrical = experiment.in_heralds.keys() == experiment.heralds.keys()
-
-        # Compute new herald positions
-        n_new_heralds = connector.add_heralded_modes(mode_mapping)
         self._in_mode_type += [ModeType.HERALD] * n_new_heralds  # New input heralds are always put at the bottom
         self._m += n_new_heralds
 
@@ -398,6 +399,7 @@ class Experiment:
 
                 self_ports = self._out_ports.copy()
                 self._out_ports = {}
+                self._anon_herald_num = 0
                 for port, port_range in self_ports.items():
                     port_mode = port_range[0]
                     if port_mode in perm_modes:
@@ -449,12 +451,15 @@ class Experiment:
                                   f"will lead to unexpected results.")
                 break
 
+        if self._postselect is not None and perm_component is not None and not is_symmetrical:
+            c_first = perm_modes[0]
+            self._postselect.apply_permutation(perm_component.perm_vector, c_first)
+
         # Retrieve post process function from the other experiment
-        # TODO: fix this for asymmetric processors
         if experiment._postselect is not None:
             c_first = perm_modes[0]
             other_postselect = copy.copy(experiment._postselect)
-            if perm_component is not None:
+            if perm_component is not None and is_symmetrical:
                 other_postselect.apply_permutation(perm_inv.perm_vector, c_first)
             other_postselect.shift_modes(c_first)
             if not (self._postselect is None or other_postselect is None
