@@ -399,7 +399,9 @@ class Experiment:
                 self_ports = self._out_ports.copy()
                 self._out_ports = {}
                 for port, port_range in self_ports.items():
-                    port_mode = mode_mapping.get(port_range[0], port_range[0])
+                    port_mode = port_range[0]
+                    if port_mode in perm_modes:
+                        port_mode = perm_modes[0] + perm_component.perm_vector[port_mode - perm_modes[0]]
                     if isinstance(port, Herald):
                         self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
                     else:
@@ -415,7 +417,9 @@ class Experiment:
             if is_symmetrical:
                 port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
             else:
-                port_mode = mode_mapping.get(port_range[0], port_range[0])
+                port_mode = port_range[0]
+                if port_mode in perm_modes:
+                    port_mode = perm_modes[0] + perm_component.perm_vector[port_mode - perm_modes[0]]
             if isinstance(port, Herald):
                 self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
             else:
@@ -446,6 +450,7 @@ class Experiment:
                 break
 
         # Retrieve post process function from the other experiment
+        # TODO: fix this for asymmetric processors
         if experiment._postselect is not None:
             c_first = perm_modes[0]
             other_postselect = copy.copy(experiment._postselect)
