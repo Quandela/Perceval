@@ -419,7 +419,7 @@ class Experiment:
             else:
                 port_mode = port_range[0]
                 if port_mode in perm_modes:
-                    port_mode = perm_modes[0] + perm_component.perm_vector[port_mode - perm_modes[0]]
+                    port_mode = perm_modes[0] + perm_component.perm_vector.index(port_mode - perm_modes[0])
             if isinstance(port, Herald):
                 self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
             else:
