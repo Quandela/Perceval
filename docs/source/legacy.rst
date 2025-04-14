@@ -28,6 +28,10 @@ This has several consequences:
 Also, note that:
 
 - StateVectors inserted in SVDistribution are no longer normalized at insertion.
+- Using the tensor product with an empty distribution now always returns an empty distribution.
+  To keep the same behaviour as before (the result was the non-empty distribution),
+  replace the empty distribution by a distribution containing a void state (:code:`BSDistribution(BasicState())`) for tensor product
+  or a 0-photon state (:code:`BSDistribution(BasicState(m))`) for a merge.
 
 StateVector
 ^^^^^^^^^^^

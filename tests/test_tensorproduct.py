@@ -107,7 +107,7 @@ def test_bsd_tensor_product():
 
     assert_bsd_close(BSDistribution.list_tensor_product([bsd_1, bsd_2, bsd_3]), bsd_1 * bsd_2 * bsd_3)
 
-    product = BSDistribution()
+    product = BSDistribution(BasicState(bsd_1.m))
     for bsd in [bsd_1, bsd_2, bsd_3]:
         product = BSDistribution.tensor_product(product, bsd, merge_modes=True)
 
