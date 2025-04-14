@@ -429,18 +429,6 @@ class PERM(Unitary):
         })
         return nsv
 
-
-    def apply_list(self, r, l: list):
-        min_r = r[0]
-        max_r = r[-1] + 1
-
-        permutation = self.perm_vector
-        inv = np.empty_like(permutation)
-        inv[permutation] = np.arange(len(inv), dtype=inv.dtype)
-
-        return l[:min_r] + [l[i + min_r] for i in inv] + l[max_r:]
-
-
     def break_in_2_mode_perms(self):
         """
         Breaks any n-mode PERM into an equivalent circuit with only 2 mode PERMs

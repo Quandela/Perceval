@@ -253,3 +253,20 @@ class ModeConnector:
         if perm_vect == list(range(len(perm_modes))):
             return perm_modes, None  # No need for a permutation, modes are already sorted
         return perm_modes, PERM(perm_vect)
+
+    def select_lists(self, mode_mapping: dict[int, int], l: list, r: list):
+        res = [None] * self._le.circuit_size
+        mode_0 = min(mode_mapping)
+
+        for i, o in enumerate(l):
+            if i in mode_mapping:
+                mode = mode_mapping[i] + mode_0
+            else:
+                mode = i
+            res[mode] = o
+
+        for i, o in enumerate(r):
+            mode = mode_0 + i
+            res[mode] = o
+
+        return res

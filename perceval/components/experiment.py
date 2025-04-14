@@ -363,10 +363,10 @@ class Experiment:
         self._in_mode_type += [ModeType.HERALD] * n_new_heralds  # New input heralds are always put at the bottom
         self._m += n_new_heralds
 
-        for m_herald in experiment.in_heralds:
-            self._out_mode_type += [experiment._out_mode_type[m_herald]]
-            # TODO: The behaviour for the detectors is wrong (PCVL-944)
-            self._detectors += [experiment._detectors[m_herald]]
+        if is_symmetrical:
+            self._out_mode_type += [ModeType.HERALD] * n_new_heralds
+            for m_herald in experiment.heralds:
+                self._detectors += [experiment._detectors[m_herald]]
 
         # Add PERM, component, (PERM^-1 if is_symmetrical)
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
@@ -386,47 +386,47 @@ class Experiment:
         for pos, c in experiment.components:
             pos = [x + min(mode_mapping) for x in pos]
             new_components.append((pos, c))
-        if perm_component is not None:
+        if perm_component is not None and is_symmetrical:
             if is_symmetrical:
                 perm_inv = perm_component.copy()
                 perm_inv.inverse(h=True)
                 get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
                 new_components.append((perm_modes, perm_inv))
-            else:
-                # We need to apply the permutation on the detectors and mode types
-                self._out_mode_type = perm_component.apply_list(perm_modes, self._out_mode_type)
-                self._detectors = perm_component.apply_list(perm_modes, self._detectors)
+        elif not is_symmetrical:
+            # We need to apply the permutation on the detectors and mode types
+            self._out_mode_type = connector.select_lists(mode_mapping, self._out_mode_type, experiment._out_mode_type)
+            self._detectors = connector.select_lists(mode_mapping, self._detectors, experiment._detectors)
 
-                self_ports = self._out_ports.copy()
-                self._out_ports = {}
-                self._anon_herald_num = 0
-                for port, port_range in self_ports.items():
-                    port_mode = port_range[0]
-                    if port_mode in perm_modes:
-                        port_mode = perm_modes[0] + perm_component.perm_vector[port_mode - perm_modes[0]]
-                    if isinstance(port, Herald):
-                        self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
-                    else:
-                        if self.are_modes_free(range(port_mode, port_mode + port.m)):
-                            self.add_port(port_mode, port, PortLocation.OUTPUT)
+            self_ports = [None] * self.circuit_size
+            for port, port_range in self._out_ports.items():
+                self_ports[port_range[0]] = port
+
+            other_ports = [None] * experiment.circuit_size
+            for port, port_range in experiment._out_ports.items():
+                other_ports[port_range[0]] = port
+
+            self._out_ports = {}
+            out_ports = connector.select_lists(mode_mapping, self_ports, other_ports)
+            for port_mode, port in enumerate(out_ports):
+                if isinstance(port, Herald):
+                    self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
+                elif port is not None:
+                    if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                        self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
 
         # Retrieve ports from the other experiment
         # Output ports
-        for port, port_range in experiment._out_ports.items():
-            if is_symmetrical:
+        if is_symmetrical:
+            for port, port_range in experiment._out_ports.items():
                 port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
-            else:
-                port_mode = port_range[0]
-                if port_mode in perm_modes:
-                    port_mode = perm_modes[0] + perm_component.perm_vector.index(port_mode - perm_modes[0])
-            if isinstance(port, Herald):
-                self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
-            else:
-                if self.are_modes_free(range(port_mode, port_mode + port.m)):
-                    self.add_port(port_mode, port, PortLocation.OUTPUT)
+                if isinstance(port, Herald):
+                    self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
+                else:
+                    if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                        self.add_port(port_mode, port, PortLocation.OUTPUT)
 
         # Input ports
         for port, port_range in experiment._in_ports.items():

@@ -378,8 +378,8 @@ class ExperimentBuilder:
             detector = func(serial_sub_comp)
             experiment.add(i, detector)
 
-        self.deserialize_ports(experiment, self._pb_e.input_ports, PortLocation.INPUT)
         self.deserialize_ports(experiment, self._pb_e.output_ports, PortLocation.OUTPUT)
+        self.deserialize_ports(experiment, self._pb_e.input_ports, PortLocation.INPUT)
 
         # Blocks adding new components --> Needed after adding the components
         post_select_str = self._pb_e.post_select
