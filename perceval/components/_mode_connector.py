@@ -54,19 +54,19 @@ class ModeConnector:
     """
     Resolves a mapping, supporting multiple syntaxes, to connect two objects.
     The left object must be an Experiment
-    The right object can be a Processor, an Experiment, a (unitary or non-unitary) component
+    The right object can be an Experiment or a (unitary or non-unitary) component
     """
 
-    def __init__(self, left_processor, right_obj, mapping):
+    def __init__(self, left_experiment, right_obj, mapping):
         """
-        :param left_processor: any experiment on which to plug `right_obj`
+        :param left_experiment: any experiment on which to plug `right_obj`
         :param right_obj: the component or processor to plug on the left of `left_processor`
         :param mapping: the user mapping defining the plugging rules (see resolve method doc for more info)
         """
         from .abstract_processor import AProcessor
-        if isinstance(left_processor, AProcessor):
-            left_processor = left_processor.experiment
-        self._lp = left_processor
+        if isinstance(left_experiment, AProcessor):
+            left_experiment = left_experiment.experiment
+        self._le = left_experiment
         self._ro = right_obj  # Can either be a component or a processor
         self._r_is_component = isinstance(right_obj, AComponent)  # False means it is an Experiment
         self._map = mapping
@@ -123,10 +123,10 @@ class ModeConnector:
             self._map = {}
             r_list = self._get_ordered_rmodes()
             herald_offset = 0
-            lp_heralds = self._lp.heralds
+            le_heralds = self._le.heralds
             for i in range(self._n_modes_to_connect):
                 pos = map_begin + i + herald_offset
-                while pos in lp_heralds:
+                while pos in le_heralds:
                     herald_offset += 1
                     pos += 1
                 self._map[pos] = r_list[i]
@@ -181,7 +181,7 @@ class ModeConnector:
         if min_out < 0:
             raise UnavailableModeException(min_out)
         for m_out, m_in in self._map.items():
-            if not self._lp.is_mode_connectible(m_out):
+            if not self._le.is_mode_connectible(m_out):
                 raise UnavailableModeException(m_out)
         m_in = self._map.values()
         if len(m_in) != len(list(dict.fromkeys(m_in))):  # suppress duplicates and check length
@@ -192,7 +192,7 @@ class ModeConnector:
         Resolves mode indexes from an output port name of the left processor
         """
         if self._l_port_names is None:
-            self._l_port_names = self._lp.out_port_names
+            self._l_port_names = self._le.out_port_names
         count = self._l_port_names.count(name)
         if count == 0:
             return None
@@ -228,11 +228,11 @@ class ModeConnector:
             get_logger().warn("Right object is not a processor, thus doesn't contain heralded modes", channel.user)
             return 0
         other_herald_pos = list(self._ro.in_heralds.keys())
-        new_mode_index = self._lp.circuit_size
+        new_mode_index = self._le.circuit_size
         for pos in other_herald_pos:
             mapping[new_mode_index] = pos
             new_mode_index += 1
-        return new_mode_index - self._lp.circuit_size
+        return new_mode_index - self._le.circuit_size
 
     @staticmethod
     def generate_permutation(mode_mapping: dict[int, int]):

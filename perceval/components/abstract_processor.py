@@ -242,7 +242,7 @@ class AProcessor(ABC):
         Add a heralded mode
 
         :param mode: Mode index of the herald
-        :param expected: number of expected photon as input AND output on the given mode (must be 0 or 1)
+        :param expected: number of expected photon as input and/or output on the given mode
         :param name: Herald port name. If none is passed, the name is auto-generated
         :param location: Port location of the herald (input, output or both)
         """
@@ -256,12 +256,16 @@ class AProcessor(ABC):
     @property
     def m(self) -> int:
         """
-        :return: Number of modes of interest (MOI) defined in the processor
+        :return: The number of modes that are free (non-heralded) on the output
         """
         return self.experiment.m
 
     @property
     def m_in(self) -> int:
+        """
+        :return: The number of modes that are free (non-heralded) on the input,
+                that must be specified when using self.with_input()
+        """
         return self.experiment.m_in
 
     @m.setter
@@ -337,10 +341,16 @@ class AProcessor(ABC):
 
     @property
     def heralds(self):
+        """
+        :return: A dictionary {mode: expected_count} describing the heralds on the output
+        """
         return self.experiment.heralds
 
     @property
     def in_heralds(self):
+        """
+        :return: A dictionary {mode: expected_count} describing the heralds on the input
+        """
         return self.experiment.in_heralds
 
     def check_input(self, input_state: BasicState):
