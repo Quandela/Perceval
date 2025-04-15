@@ -368,6 +368,19 @@ class Experiment:
             for m_herald in experiment.heralds:
                 self._detectors += [experiment._detectors[m_herald]]
 
+        # Check port composition
+        for m_out, m_in in mode_mapping.items():
+            out_port = self.get_output_port(m_out)
+            in_port = experiment.get_input_port(m_in)
+            if (out_port is not None and in_port is not None
+                    and (out_port.encoding != in_port.encoding or self._out_ports[out_port] !=
+                         experiment._in_ports[in_port])):
+                get_logger().warn(
+                    f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
+                    f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
+                    f"will lead to unexpected results.")
+                break
+
         # Add PERM, component, (PERM^-1 if is_symmetrical)
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
@@ -436,20 +449,6 @@ class Experiment:
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
                     self.add_port(port_mode, port, PortLocation.INPUT)
-
-        # Check port composition
-        for m_out, m_in in mode_mapping.items():
-            out_port = self.get_output_port(m_out)
-            if is_symmetrical:
-                in_port = experiment.get_input_port(m_in)
-            else:
-                in_port = experiment.get_input_port(mode_mapping.get(m_in, m_in))
-            if (out_port is not None and in_port is not None
-                    and (out_port.encoding != in_port.encoding or self._out_ports[out_port] != experiment._in_ports[in_port])):
-                get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
-                                  f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
-                                  f"will lead to unexpected results.")
-                break
 
         if self._postselect is not None and perm_component is not None and not is_symmetrical:
             c_first = perm_modes[0]
