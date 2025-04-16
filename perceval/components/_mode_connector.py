@@ -60,7 +60,7 @@ class ModeConnector:
     def __init__(self, left_experiment, right_obj, mapping):
         """
         :param left_experiment: any experiment on which to plug `right_obj`
-        :param right_obj: the component or processor to plug on the left of `left_processor`
+        :param right_obj: the component or processor to plug on the right of `left_experiment`
         :param mapping: the user mapping defining the plugging rules (see resolve method doc for more info)
         """
         from .abstract_processor import AProcessor
