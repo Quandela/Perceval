@@ -377,9 +377,10 @@ class Experiment:
             if (out_port is not None and in_port is not None
                     and (out_port.encoding != in_port.encoding or
                          [mode_mapping.get(i, i) for i in self._out_ports[out_port]] != experiment._in_ports[in_port])):
-                get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
-                                  f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
-                                  f"will lead to unexpected results.")
+                get_logger().warn(
+                    f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
+                    f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
+                    f"will lead to unexpected results.")
                 break
 
         # Add PERM, component, (PERM^-1 if is_symmetrical)
