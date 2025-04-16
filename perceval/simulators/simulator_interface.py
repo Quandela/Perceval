@@ -155,7 +155,7 @@ class ASimulatorDecorator(ISimulator, ABC):
             sv, _ = post_select_statevector(sv, self._postselect, self._heralds, self._keep_heralds)
         return sv
 
-    def set_circuit(self, circuit, m = None):
+    def set_circuit(self, circuit, m=None):
         self._simulator.set_circuit(self._prepare_circuit(circuit, m))
 
     def probs(self, input_state) -> BSDistribution:

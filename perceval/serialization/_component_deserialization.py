@@ -32,6 +32,8 @@ from perceval.serialization._parameter_serialization import deserialize_paramete
 from perceval.serialization._matrix_serialization import deserialize_pb_matrix
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
+from perceval.components.feed_forward_configurator import FFConfigurator, FFCircuitProvider
+from perceval.utils import BasicState
 
 
 def deserialize_ps(serial_ps: pb.PhaseShifter, known_params: dict = None) -> comp.PS:
@@ -97,5 +99,37 @@ def deserialize_pbs(_, __) -> comp.PBS:
     return comp.PBS()
 
 
-def deserialize_barrier(m: int, serial_barrier) -> comp.Barrier:
+def deserialize_barrier(m: int, serial_barrier, _) -> comp.Barrier:
     return comp.Barrier(m, serial_barrier.visible)
+
+
+def deserialize_ff_configurator(m: int, serial_ffc, known_params: dict = None) -> FFConfigurator:
+    from .deserialize import deserialize_circuit
+    default_config = dict(serial_ffc.default_config.mapping)
+    ffc = FFConfigurator(m, serial_ffc.offset, deserialize_circuit(serial_ffc.controlled_circuit, known_params),
+                         default_config, serial_ffc.name or None)
+    for state_str, config in serial_ffc.configs.items():
+        config_dict = dict(config.mapping)
+        ffc.add_configuration(BasicState(state_str), config_dict)
+    if serial_ffc.block_circuit_size:
+        ffc.block_circuit_size()
+
+    return ffc
+
+
+def deserialize_ff_circuit_provider(m: int, serial_ffcp, known_params: dict = None) -> FFCircuitProvider:
+    from .deserialize import deserialize_circuit, deserialize_experiment
+    if serial_ffcp.WhichOneof('default_circuit') == "circuit":
+        default_circ = deserialize_circuit(serial_ffcp.circuit, known_params)
+    else:
+        default_circ = deserialize_experiment(serial_ffcp.experiment, known_params)
+    ffcp = FFCircuitProvider(m, serial_ffcp.offset, default_circ, serial_ffcp.name or None)
+    for state_str, serial_circ in serial_ffcp.config_circ.items():
+        if serial_circ.WhichOneof('type') == "circuit":
+            circ = deserialize_circuit(serial_circ.circuit, known_params)
+        else:
+            circ = deserialize_experiment(serial_circ.experiment, known_params)
+        ffcp.add_configuration(BasicState(state_str), circ)
+    if serial_ffcp.block_circuit_size:
+        ffcp.block_circuit_size()
+    return ffcp

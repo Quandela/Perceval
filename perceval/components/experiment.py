@@ -270,6 +270,8 @@ class Experiment:
         elif isinstance(component, AFFConfigurator):
             self._add_ffconfig(mode_mapping, component)
         elif isinstance(component, Barrier):
+            if isinstance(mode_mapping, int):
+                mode_mapping = tuple(range(mode_mapping, mode_mapping + component.m))
             self._components.append((mode_mapping, component))
         elif isinstance(component, AComponent):
             self._add_component(connector.resolve(), component, keep_port)
@@ -299,12 +301,12 @@ class Experiment:
         if modes_add_detectors and modes_add_detectors[0] > 0:  # Barrier above detectors
             ports = tuple(range(0, modes_add_detectors[0]))
             self._components.append((ports, Barrier(len(ports), visible=True)))
-        for m in modes_add_detectors:
-            self.detectors_injected.append(m)
-            self._components.append(((m,), self._detectors[m]))
         if modes_add_detectors and modes_add_detectors[-1] < self.m - 1:  # Barrier below detectors
             ports = tuple(range(modes_add_detectors[-1] + 1, self.m))
             self._components.append((ports, Barrier(len(ports), visible=True)))
+        for m in modes_add_detectors:
+            self.detectors_injected.append(m)
+            self._components.append(((m,), self._detectors[m]))
         self._components.append((modes, component))
         self._has_feedforward = True
         self._is_unitary = False
@@ -373,12 +375,11 @@ class Experiment:
             out_port = self.get_output_port(m_out)
             in_port = experiment.get_input_port(m_in)
             if (out_port is not None and in_port is not None
-                    and (out_port.encoding != in_port.encoding or self._out_ports[out_port] !=
-                         experiment._in_ports[in_port])):
-                get_logger().warn(
-                    f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
-                    f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
-                    f"will lead to unexpected results.")
+                    and (out_port.encoding != in_port.encoding or
+                         [mode_mapping.get(i, i) for i in self._out_ports[out_port]] != experiment._in_ports[in_port])):
+                get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
+                                  f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
+                                  f"will lead to unexpected results.")
                 break
 
         # Add PERM, component, (PERM^-1 if is_symmetrical)

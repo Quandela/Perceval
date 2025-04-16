@@ -208,6 +208,10 @@ class RemoteProcessor(AProcessor):
         if 'min_photon_count' in self.constraints and n_photons < self.constraints['min_photon_count']:
             raise RuntimeError(
                 f"Not enough photons in input state ({n_photons} < {self.constraints['min_photon_count']})")
+        if ('support_multi_photon' in self.constraints and not self.constraints['support_multi_photon']
+                and not all(mode_photon_cnt <= 1 for mode_photon_cnt in input_state)):
+            raise RuntimeError(f"Input state ({input_state}) is not permitted. QPU/QPU simulators accept more than "
+                               f"1 photon per mode:{self.constraints['support_multi_photon']})")
         if self.m is not None and input_state.m != self.m:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self.m})")
 

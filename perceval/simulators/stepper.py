@@ -57,7 +57,7 @@ class Stepper(ISimulator):
         self._result_dict = defaultdict(lambda: {'_set': set()})
         self._compiled_input = None
 
-    def set_circuit(self, circuit: ACircuit, m = None):
+    def set_circuit(self, circuit: ACircuit, m=None):
         self._C = circuit
         self._clear_cache()
 

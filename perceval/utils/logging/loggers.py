@@ -39,7 +39,7 @@ from os import path
 from exqalibur import logging as xq_log
 
 from ..persistent_data import PersistentData
-from .config import LoggerConfig, _CHANNELS, _ENABLE_FILE
+from .config import LoggerConfig, _CHANNELS
 
 DEFAULT_CHANNEL = xq_log.channel.user
 

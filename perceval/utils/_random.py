@@ -44,7 +44,7 @@ def random_seed(seed: int = None):
     random.seed(seed)
     np.random.seed(seed)
     if seed is None:
-        get_logger().info(f"Reset RNG to a time-based random seed", channel.general)
+        get_logger().info("Reset RNG to a time-based random seed", channel.general)
         xq.set_seed(random.randint(0, 4294967295))  # 0 to 2**32-1
     else:
         get_logger().info(f"Set seed {seed} to RNG", channel.general)

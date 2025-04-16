@@ -79,7 +79,7 @@ def optimize(c: ACircuit,
         temperature = 1.0
         res = scpy_optimize.basinhopping(lambda x: _min_fnc(c, params, x, v, f, sign), init_params,
                                          niter=niter,
-                                         T= temperature,
+                                         T=temperature,
                                          callback=lambda _, f, accept: _stop_criterion(f, target_opt, precision, accept))
         if best is None or res.fun < best:
             best = res.fun

@@ -33,6 +33,7 @@ from perceval.serialization import _schema_circuit_pb2 as pb
 from perceval.components import ACircuit, Circuit, AComponent, Herald, Port
 import perceval.components.unitary_components as comp
 import perceval.components.non_unitary_components as nu
+from perceval.components import FFConfigurator, FFCircuitProvider
 from perceval.serialization._matrix_serialization import serialize_matrix
 from perceval.serialization._parameter_serialization import serialize_parameter
 
@@ -137,6 +138,51 @@ class ComponentSerializer:
         pb_barrier = pb.Barrier()
         pb_barrier.visible = barrier.visible
         self._pb.barrier.CopyFrom(pb_barrier)
+
+    @dispatch(FFConfigurator)
+    def _serialize(self, ffconfigurator: FFConfigurator):
+        pb_ffc = pb.FFConfigurator()
+        pb_ffc.name = ffconfigurator.name
+        pb_ffc.offset = ffconfigurator._offset
+        pb_ffc.block_circuit_size = ffconfigurator._blocked_circuit_size
+
+        pb_controlled = serialize_circuit(ffconfigurator._controlled)
+        pb_ffc.controlled_circuit.CopyFrom(pb_controlled)
+
+        pb_default_config = pb.VariableValues()
+        for name, value in ffconfigurator._default_config.items():
+            pb_default_config.mapping[name] = value
+        pb_ffc.default_config.CopyFrom(pb_default_config)
+
+        for state, mapping in ffconfigurator._configs.items():
+            pb_vars = pb.VariableValues()
+            for name, value in mapping.items():
+                pb_vars.mapping[name] = value
+            pb_ffc.configs[str(state)].CopyFrom(pb_vars)
+        self._pb.ff_configurator.CopyFrom(pb_ffc)
+
+    @dispatch(FFCircuitProvider)
+    def _serialize(self, ffcp: FFCircuitProvider):
+        from ._experiment_serialization import serialize_experiment
+        pb_ffcp = pb.FFCircuitProvider()
+        pb_ffcp.name = ffcp.name
+        pb_ffcp.offset = ffcp._offset
+        pb_ffcp.block_circuit_size = ffcp._blocked_circuit_size
+
+        dc = ffcp.default_circuit
+        if isinstance(dc, ACircuit):
+            pb_ffcp.circuit.CopyFrom(serialize_circuit(dc))
+        else:
+            pb_ffcp.experiment.CopyFrom(serialize_experiment(dc))
+
+        for state, circ in ffcp._map.items():
+            pb_coe = pb.CircuitOrExperiment()
+            if isinstance(circ, ACircuit):
+                pb_coe.circuit.CopyFrom(serialize_circuit(circ))
+            else:
+                pb_coe.experiment.CopyFrom(serialize_experiment(circ))
+            pb_ffcp.config_circ[str(state)].CopyFrom(pb_coe)
+        self._pb.ff_circuit_provider.CopyFrom(pb_ffcp)
 
     @dispatch(Circuit)
     def _serialize(self, circuit: Circuit):
