@@ -1,8 +1,6 @@
 Detector
 ========
 
-.. autoenum:: perceval.components.detector.DetectionType
-
 .. autoclass:: perceval.components.detector.Detector
    :members:
    :inherited-members:
@@ -12,5 +10,7 @@ Detector
    :members:
    :inherited-members:
    :exclude-members: is_composite
+
+.. autoenum:: perceval.components.detector.DetectionType
 
 .. autofunction:: perceval.components.detector.get_detection_type
