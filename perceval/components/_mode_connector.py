@@ -254,7 +254,14 @@ class ModeConnector:
             return perm_modes, None  # No need for a permutation, modes are already sorted
         return perm_modes, PERM(perm_vect)
 
-    def select_lists(self, mode_mapping: dict[int, int], l: list, r: list):
+    def compose_lists(self, mode_mapping: dict[int, int], l: list, r: list):
+        """
+        Takes a list of object from the left experiment and the right experiment, as well as the mode mapping.
+        Applies the mapping to the list of the left experiment
+        then adds the members of the list of the right experiment
+        so that the resulting list should be given to the composed experiment
+        (in the case no inverse permutation is added afterward)
+        """
         res = [None] * self._le.circuit_size
         mode_0 = min(mode_mapping)
 

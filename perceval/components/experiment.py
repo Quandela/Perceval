@@ -409,8 +409,8 @@ class Experiment:
                 new_components.append((perm_modes, perm_inv))
         elif not is_symmetrical:
             # We need to apply the permutation on the detectors and mode types
-            self._out_mode_type = connector.select_lists(mode_mapping, self._out_mode_type, experiment._out_mode_type)
-            self._detectors = connector.select_lists(mode_mapping, self._detectors, experiment._detectors)
+            self._out_mode_type = connector.compose_lists(mode_mapping, self._out_mode_type, experiment._out_mode_type)
+            self._detectors = connector.compose_lists(mode_mapping, self._detectors, experiment._detectors)
 
             self_ports = [None] * self.circuit_size
             for port, port_range in self._out_ports.items():
@@ -421,7 +421,7 @@ class Experiment:
                 other_ports[port_range[0]] = port
 
             self._out_ports = {}
-            out_ports = connector.select_lists(mode_mapping, self_ports, other_ports)
+            out_ports = connector.compose_lists(mode_mapping, self_ports, other_ports)
             for port_mode, port in enumerate(out_ports):
                 if isinstance(port, Herald):
                     self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
