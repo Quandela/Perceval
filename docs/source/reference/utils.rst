@@ -17,7 +17,7 @@ It also comes with utility methods to create unitary matrices
 
 >>> random_unitary = pcvl.Matrix.random_unitary(6)  # 6*6
 >>> deterministic_unitary = pcvl.Matrix.parametrized_unitary(list(range(8)))  # 2*2 (requires 2*m**2 parameters)
->>> from_array_unitary = pcvl.Matrix.get_unitary_extension(numpy_2d_array)  # Not the same size as the original array
+>>> from_array_unitary = pcvl.Matrix.get_unitary_extension(numpy_2d_array)  # Size (row+col) * (row+col)
 
 .. autoclass:: perceval.utils.matrix.Matrix
    :members:
