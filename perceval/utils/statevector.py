@@ -47,6 +47,9 @@ from .globals import global_params
 from .qmath import exponentiation_by_squaring
 
 BasicState: TypeAlias = xq.FockState
+FockStateIndex: TypeAlias = xq.FockStateIndex
+FockStateCode: TypeAlias = xq.FockStateCode
+FockStateCodeInv: TypeAlias = xq.FockStateCodeInv
 BSCount: TypeAlias = xq.BSCount
 BSSamples: TypeAlias = xq.BSSamples
 StateVector: TypeAlias = xq.StateVector
@@ -86,7 +89,7 @@ def max_photon_state_iterator(m: int, n_max: int):
             yield output_state
 
 
-def tensorproduct(states: list[StateVector | BasicState]) -> StateVector | BasicState:
+def tensorproduct(states: list[StateVector | BasicState | FockStateIndex | FockStateCode | FockStateCodeInv]) -> StateVector | BasicState | FockStateIndex | FockStateCode | FockStateCodeInv:
     r""" Computes states[0] * states[1] * ...
     """
     if len(states) == 1:
@@ -500,3 +503,120 @@ def filter_distribution_photon_count(bsd: BSDistribution, min_photons_filter: in
     if len(res):
         res.normalize()
     return res, perf
+
+
+class BSIDistribution(ProbabilityDistribution):
+    r"""Time-Independent probabilistic distribution of Fock States Indices
+    """
+    FS_TYPE = FockStateIndex
+
+    def __init__(self, d: FS_TYPE | None = None):
+        super().__init__()
+        self._m = None
+        if d is not None:
+            self[d] = 1
+
+    def __setitem__(self, key, value):
+        assert isinstance(key, self.FS_TYPE), "BSDistribution key must be a FockStateIndex"
+
+        # number of modes verification
+        if self._m is None:
+            self._m = key.m
+        if self._m != key.m:
+            raise ValueError(f"Number of modes is not consistent ({self._m} vs {key.m}). {self} vs {key}")
+        super().__setitem__(key, value)
+
+    def __getitem__(self, key) -> float:
+        assert isinstance(key, self.FS_TYPE), "BSDistribution key must be a FockStateIndex"
+        return super().__getitem__(key)
+
+    def __mul__(self, other) -> BSIDistribution:
+        if isinstance(other, BSIDistribution):
+            pass
+        elif isinstance(other, self.FS_TYPE):
+            other = BSIDistribution(other)
+        else:
+            return NotImplemented
+        return BSIDistribution.tensor_product(self, other)
+
+    def __rmul__(self, other):
+        if isinstance(other, BSIDistribution):
+            pass
+        elif isinstance(other, self.FS_TYPE):
+            other = BSIDistribution(other)
+        else:
+            return NotImplemented
+        return BSIDistribution.tensor_product(other, self)
+
+    @staticmethod
+    def tensor_product(bsd1: BSIDistribution,
+                       bsd2: BSIDistribution,
+                       merge_modes: bool = False,
+                       prob_threshold: float = 0) -> BSIDistribution:
+        """
+        Compute the tensor product of two BasicState Distribution
+        """
+        if len(bsd1) == 0:
+            return bsd2
+        new_dist = BSIDistribution()
+        for bs1, proba1 in bsd1.items():
+            for bs2, proba2 in bsd2.items():
+                if proba1 * proba2 < prob_threshold:
+                    continue
+                if merge_modes:
+                    bs = bs1.merge(bs2)
+                else:
+                    bs = bs1 * bs2
+                new_dist[bs] += proba1 * proba2
+        return new_dist
+
+    @staticmethod
+    def list_tensor_product(distributions: list[BSIDistribution],
+                            merge_modes: bool = False,
+                            prob_threshold: float = 0) -> BSIDistribution:
+        """
+        Efficient tensor product for a list of BasicState Distribution.
+        Performs a single tensor product using `k` for loops where `k` is the number of distributions.
+        Any void distribution in the list implies a void product.
+
+        :param distributions: list of distributions to perform tensor product on
+        :param merge_modes: whether to merge the states of the distributions
+        :param prob_threshold: filter states that have a probability below this threshold
+
+        :return: The resulting distribution
+        """
+        if len(distributions) == 0:
+            return BSIDistribution()
+        if len(distributions) == 1:
+            return distributions[0]
+        if any(not len(dist) for dist in distributions):
+            return BSIDistribution()
+
+        res = BSIDistribution()
+
+        def _inner_tensor_product(dist: list[dict[BSIDistribution.FS_TYPE, float]], current_state: BSIDistribution.FS_TYPE, current_prob: float):
+            if len(dist) == 0:
+                res[current_state] += current_prob
+                return
+
+            bsd = dist[0]
+            for bs, p in bsd.items():
+                prob = current_prob * p
+                if prob < prob_threshold:
+                    continue
+                if merge_modes: # TODO : to be optimised by intermediate state
+                    state = bs.merge(current_state)
+                else:
+                    state = current_state * bs
+                _inner_tensor_product(dist[1:], state, prob)
+
+        start_state = BSIDistribution.FS_TYPE(distributions[0].m) if merge_modes else BSIDistribution.FS_TYPE()
+        # First, easy trim. Slightly faster.
+        distributions = [{state: prob for state, prob in dist.items() if prob > prob_threshold}
+                         for dist in distributions]
+        _inner_tensor_product(distributions, start_state, 1)
+        return res
+
+    @property
+    def m(self) -> int:
+        return self._m

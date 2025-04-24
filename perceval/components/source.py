@@ -31,10 +31,12 @@ from __future__ import annotations
 import math
 import random
 
+from itertools import repeat
+
 from exqalibur import BSSamples
 
 from perceval.utils import (SVDistribution, StateVector, BasicState, anonymize_annotations, NoiseModel, global_params,
-                            BSDistribution)
+                            BSDistribution, BSIDistribution)
 from perceval.utils.logging import get_logger, channel
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -86,6 +88,8 @@ class Source:
         self._prob_table = None
         self._prob_table_n = None
         self._prob_table_filter = None
+
+        self._single_photon_dist_cache: BSIDistribution | None = None
 
     @staticmethod
     def from_noise_model(noise: NoiseModel):
@@ -405,3 +409,56 @@ class Source:
                 'brightness': self._emission_probability,
                 'indistinguishability': self._indistinguishability,
                 'g2_distinguishable': self._multiphoton_model == DISTINGUISHABLE_KEY}
+
+
+    @classmethod
+    def _add_st(cls, plist: BSIDistribution, signal: int, probability: float):
+        # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
+        # parameter `plist`
+        if probability > 0:
+            plist[BSIDistribution.FS_TYPE((signal,))] = probability
+
+    # TODO: we can cache this so it is reused for all photons
+    def _generate_one_photon_distribution_st(self):
+        (p1to1, p2to1, p2to2) = self._get_probs()
+        p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)  # 2 * p2to1 because of symmetry
+
+        dist = BSIDistribution()
+        self._add_st(dist, 0, p0)
+
+        # Just avoids annotations for now
+        self._add_st(dist, 2, p2to2)
+        self._add_st(dist, 1, p1to1 + 2 * p2to1)
+
+        self._single_photon_dist_cache = dist
+
+    def probability_distribution_st(self, nphotons: int = 1, prob_threshold: float = 0) -> BSIDistribution:
+        r"""returns SVDistribution on 1 mode associated to the source
+        :param nphotons: Require `nphotons` in the mode (default 1).
+        :param prob_threshold: Probability threshold under which the resulting state is filtered out.
+        """
+        # Note: we could cache this as the result for n photons in a single mode is now small
+        if nphotons == 0 or self.is_perfect():
+            return BSIDistribution(BSIDistribution.FS_TYPE((nphotons,)))
+
+        if self._single_photon_dist_cache is None:
+            self._generate_one_photon_distribution_st()
+
+        return BSIDistribution.list_tensor_product([self._single_photon_dist_cache for _ in repeat(None, nphotons)],
+            merge_modes=True, prob_threshold=prob_threshold)
+
+    def generate_state_distribution(self, expected_input: BasicState, prob_threshold: float = None) -> BSIDistribution:
+        """
+        Simulates plugging the photonic source on certain modes and turning it on.
+        Computes the input probability distribution
+        :param expected_input: Expected input BasicState
+            The properties of the source will alter the input state. A perfect source always delivers the expected state
+            as an input. Imperfect ones won't.
+        :param prob_threshold: Probability threshold under which the resulting state is filtered out. By default,
+            `global_params['min_p']` value is used.
+        """
+        prob_threshold = global_params['min_p'] if prob_threshold is None else prob_threshold
+        get_logger().debug(f"Apply 'Source' noise model to {expected_input}", channel.general)
+
+        distributions = [self.probability_distribution_st(photon_count, prob_threshold) for photon_count in expected_input]
+        return BSIDistribution.list_tensor_product(distributions, prob_threshold=prob_threshold)

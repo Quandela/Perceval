@@ -31,7 +31,7 @@ from .matrix import Matrix, MatrixN, MatrixS, matrix_double
 from .format import simple_float, simple_complex, format_parameters
 from .parameter import Parameter, P, Expression, E
 from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
+from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, BSIDistribution, \
     tensorproduct, allstate_iterator, anonymize_annotations, max_photon_state_iterator, filter_distribution_photon_count
 from .logical_state import LogicalState, generate_all_logical_states
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
