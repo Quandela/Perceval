@@ -36,11 +36,11 @@ from numpy import inf
 
 from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
     SVDistribution
-from perceval.utils.logging import get_logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
-from .detector import IDetector, Detector, DetectionType, get_detection_type
+from .detector import IDetector, DetectionType, get_detection_type
 from .feed_forward_configurator import AFFConfigurator
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
@@ -72,7 +72,6 @@ class Experiment:
         self._input_state = None
         self.name: str = name
 
-        self._thresholded_output: bool = False  # Deprecated, avoid using this field
         self._min_detected_photons_filter: int | None = None
 
         self._circuit_changed_observers: list[callable] = []
@@ -711,22 +710,6 @@ class Experiment:
             if mode in mode_range:
                 return port
         return None
-
-    @deprecated(version=0.12, reason="Add detectors as components")  # TODO (PCVL-935)
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        self._thresholded_output = value
-        self._detectors = [Detector.threshold() if self._thresholded_output else None] * len(self._detectors)
-
-    @property
-    @deprecated(version=0.12, reason="Use `detection_type` property instead")  # TODO (PCVL-935)
-    def is_threshold(self) -> bool:
-        return self._thresholded_output
 
     @property
     def detection_type(self) -> DetectionType:
