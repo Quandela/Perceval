@@ -67,5 +67,5 @@ def build_catalog_rst(path: str):
         if item.article_ref:
             out += f'Scientific article reference: {item.article_ref}\n\n'
 
-    with open(path, 'w') as file:
+    with open(path, 'w', encoding="utf-8") as file:
         file.write(out)
