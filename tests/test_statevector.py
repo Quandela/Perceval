@@ -336,9 +336,9 @@ def test_svd_anonymize_annots_superposition():
         StateVector("|{_:0},{_:0},{_:1}>") + StateVector("|{_:0},{_:2},{_:1}>"): 0.1,
         StateVector("|{_:3},{_:4},{_:4}>"): 0.1,
         StateVector("|{_:0},{_:0},{_:1}>") + StateVector("|{_:0},{_:4},{_:1}>"): 0.1,
-        BasicState("|{_:4},{_:4},{_:2}>"): 0.1,
-        BasicState("|{_:1},{_:3},{_:3}>"): 0.1,
-        BasicState("|{_:0},{_:2},{_:3}>"): 0.5,
+        StateVector("|{_:4},{_:4},{_:2}>"): 0.1,
+        StateVector("|{_:1},{_:3},{_:3}>"): 0.1,
+        StateVector("|{_:0},{_:2},{_:3}>"): 0.5,
     })
     svd2 = pcvl.anonymize_annotations(svd)
     assert_svd_close(svd2, SVDistribution(

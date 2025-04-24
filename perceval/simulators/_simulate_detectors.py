@@ -67,7 +67,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
                 exec_request = progress_callback(progress, "simulate detectors")
                 if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
-        result.normalize()
+        if len(result):
+            result.normalize()
         return result, phys_perf
 
     for idx, (s, p) in enumerate(dist.items()):
@@ -96,7 +97,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             exec_request = progress_callback(progress, "simulate detectors")
             if cancel_requested(exec_request):
                 raise RuntimeError("Cancel requested")
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, phys_perf
 
 
@@ -119,8 +121,11 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
     if detection == DetectionType.Threshold:
         return sample.threshold_detection()
 
-    state_distrib = BSDistribution()
+    out_state = BasicState()
     for photons_in_mode, detector in zip(sample, detectors):
-        state_distrib *= detector.detect(photons_in_mode)
-    out_state = state_distrib.sample(1, non_null=False)[0]
+        state_distrib = detector.detect(photons_in_mode)
+        if isinstance(state_distrib, BSDistribution):
+            state_distrib = state_distrib.sample(1, non_null=False)[0]
+        out_state *= state_distrib
+
     return out_state

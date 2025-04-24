@@ -33,6 +33,7 @@ from perceval import SLOSBackend, BasicState, BSDistribution, NoiseModel, PostSe
 from perceval.algorithm import Sampler
 from perceval.components import BS, Circuit, FFCircuitProvider, Detector, PERM, Processor, catalog
 from perceval.simulators import FFSimulator
+from tests._test_utils import assert_bsd_close
 
 backend = SLOSBackend()
 sim = FFSimulator(backend)
@@ -42,7 +43,6 @@ detector = Detector.pnr()
 
 
 def test_basic_circuit():
-
     sim.set_circuit([((0, 1), cnot)])
 
     assert sim.probs(BasicState([1, 0, 1, 0]))[BasicState([1, 0, 1, 0])] == pytest.approx(1.)
@@ -65,10 +65,11 @@ def test_cascade():
     sim.set_circuit(circuit_list)
     input_state = BasicState((n + 1) * [1, 0])
 
-    assert sim.probs(input_state) == pytest.approx(BSDistribution({
-        input_state: .5,
-        BasicState((n + 1) * [0, 1]): .5
-    })), "Incorrect simulated distribution"
+    assert_bsd_close(sim.probs(input_state),
+                     BSDistribution({
+                         input_state: .5,
+                         BasicState((n + 1) * [0, 1]): .5
+                     })), "Incorrect simulated distribution"
 
 
 def test_with_processor():
@@ -84,7 +85,7 @@ def test_with_processor():
 
     sampler = Sampler(proc)
 
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 1])))
+    assert_bsd_close(sampler.probs()["results"], BSDistribution(BasicState([0, 1, 0, 1])))
 
 
 def test_with_herald():
@@ -102,7 +103,7 @@ def test_with_herald():
 
     sampler = Sampler(proc)
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         BasicState([1, 0, 1, 0]): .5,
         BasicState([0, 1, 0, 1]): .5,
     }))
@@ -125,7 +126,7 @@ def test_with_postselect():
 
     sampler = Sampler(proc)
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         BasicState([0, 1, 0, 1, 0]): .5,
         BasicState([0, 0, 1, 0, 1]): .5,
     }))
@@ -152,7 +153,7 @@ def test_min_photons_filter():
     sampler = Sampler(proc)
     expected_perf = .75
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         input_state: .5 / expected_perf,
         BasicState([0, 1, 2, 0]): .25 / expected_perf
     }))
@@ -174,7 +175,7 @@ def test_physical_perf():
 
     sampler = Sampler(proc)
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         BasicState([1, 0, 1, 0]): 0.5,
         BasicState([0, 1, 0, 1]): 0.5
     }))
@@ -198,7 +199,7 @@ def test_physical_perf():
 
     sampler = Sampler(proc)
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         BasicState([1, 0, 1]): 1.,
     }))
 
@@ -209,7 +210,7 @@ def test_with_proc():
     proc = Processor("SLOS", 6)
 
     cfg = FFCircuitProvider(2, 0, Circuit(4)).add_configuration((0, 1), catalog['postprocessed cnot'].build_processor())
-    cnot_perf = 1/9
+    cnot_perf = 1 / 9
     proc.add(0, BS())
     proc.add(0, detector)
     proc.add(1, detector)
@@ -220,7 +221,7 @@ def test_with_proc():
 
     sampler = Sampler(proc)
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         BasicState([1, 0, 0, 1, 0, 1]): .5 / (.5 + .5 * cnot_perf),
         BasicState([0, 1, 0, 1, 1, 0]): .5 * cnot_perf / (.5 + .5 * cnot_perf),
     }))
@@ -245,7 +246,7 @@ def test_with_proc():
 
     sampler = Sampler(proc)
     res = sampler.probs()
-    assert res["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(res["results"], BSDistribution({
         BasicState([1, 0, 0, 1, 0, 1]): .5 / (.5 + .5 * cnot_perf),
         BasicState([0, 1, 0, 1, 1, 0]): .5 * cnot_perf / (.5 + .5 * cnot_perf),
     }))
@@ -266,7 +267,7 @@ def test_non_adjacent_config():
     proc.add(0, cnot)
 
     sampler = Sampler(proc)
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 0, 0, 1])))
+    assert_bsd_close(sampler.probs()["results"], BSDistribution(BasicState([0, 1, 0, 0, 0, 1])))
 
     # Negative offset
     proc = Processor("SLOS", 4)
@@ -281,7 +282,7 @@ def test_non_adjacent_config():
 
     sampler = Sampler(proc)
 
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution(BasicState([0, 1, 0, 1])))
+    assert_bsd_close(sampler.probs()["results"], BSDistribution(BasicState([0, 1, 0, 1])))
 
 
 def test_with_state_vector():
@@ -297,7 +298,7 @@ def test_with_state_vector():
     proc.with_input(input_state)
     sampler = Sampler(proc)
 
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(sampler.probs()["results"], BSDistribution({
         BasicState([1, 0, 1, 0]): .5,
         BasicState([0, 1, 0, 1]): .5
     }))
@@ -321,7 +322,7 @@ def test_with_annotated_state_vector():
     proc.with_input(input_state)
     sampler = Sampler(proc)
 
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(sampler.probs()["results"], BSDistribution({
         BasicState([2, 0, 1, 0, 0]): .375,
         BasicState([0, 2, 0, 0, 1]): .375,
         BasicState([1, 1, 0, 1, 0]): .25
@@ -353,7 +354,7 @@ def test_config_with_config():
 
     sampler = Sampler(proc)
 
-    assert sampler.probs()["results"] == pytest.approx(BSDistribution({
+    assert_bsd_close(sampler.probs()["results"], BSDistribution({
         BasicState([1, 0, 1, 0, 1, 0, 1, 0]): .5,
         BasicState([0, 1, 0, 1, 0, 1, 0, 1]): .5
     }))

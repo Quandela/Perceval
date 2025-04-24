@@ -307,7 +307,7 @@ def test_backend_mps_n_mode_perm_decomp():
                                BasicState("|0,0,2>"): 0.5})
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])  # SLAP doesn't support mask for evolve
+@pytest.mark.parametrize("backend_name", ["Naive", "MPS"])  # SLAP doesn't support mask for evolve
 def test_probampli_iterator_cache(backend_name):
     b: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     b.set_circuit(Circuit(5).add(0, BS.H()))

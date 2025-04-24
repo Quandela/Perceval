@@ -7,11 +7,49 @@ consistent code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 1.0
+---------------------------------
+
+BSDistribution and SVDistribution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These classes have been moved to Exqalibur with a C++ implementation.
+As such, they are no longer Python dictionaries and may not support some advanced dict features.
+This has several consequences:
+
+- You can no longer instantiate BSDistributions and SVDistributions using a dictionary with mixed type keys,
+  nor with non-BasicState or non-StateVector keys.
+- BSDistribution and SVDistribution can no longer be compared to regular dict (for example by using :code:`==`).
+- Modifying keys without copying them can lead to unexpected behaviour (Python has some protections for that).
+- The order of insertion is no longer preserved.
+- :code:`keys()` and :code:`values()` methods now return an iterator,
+  so methods like :code:`len` no longer work on their result.
+
+Also, note that:
+
+- StateVectors inserted in SVDistribution are no longer normalized at insertion.
+- Using the tensor product with an empty distribution now always returns an empty distribution.
+  To keep the same behaviour as before (the result was the non-empty distribution),
+  replace the empty distribution by a distribution containing a void state (:code:`BSDistribution(BasicState())`) for tensor product
+  or a 0-photon state (:code:`BSDistribution(BasicState(m))`) for a merge.
+
+StateVector
+^^^^^^^^^^^
+
+The method :code:`StateVector.keys()` now returns an iterator on the keys instead of a BSSamples.
+This avoids doing unnecessary copy.
+
+Please note that due to this change:
+
+- Keys must now be copied before being modified when iterating on :code:`StateVector.keys()`.
+- :code:`StateVector.keys()` no longer has list methods such as :code:`len`, :code:`__getitem__`...
+
+
 Breaking changes in Perceval 0.13
 ---------------------------------
 
 Processor and Simulator :code:`min_detected_photons_filter`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There has been two modifications on the :code:`min_detected_photons_filter` methods of the :ref:`Processor` and :ref:`Simulator` objects:
 

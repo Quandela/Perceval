@@ -54,7 +54,7 @@ from .circuit import DisplayConfig, create_renderer, ASkin
 from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
+from perceval.utils.statevector import StateVector, BSCount, BSDistribution, SVDistribution
 from perceval.runtime import JobGroup
 
 from .format import Format
@@ -267,7 +267,7 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_state_distrib(sv: StateVector | ProbabilityDistribution | BSCount,
+def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | BSCount,
                            output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
     """
     :meta private:
@@ -509,7 +509,7 @@ def _pdisplay(analyzer, **kwargs):
     return pdisplay_analyzer(analyzer, **kwargs)
 
 
-@dispatch((StateVector, ProbabilityDistribution))
+@dispatch((StateVector, BSDistribution, SVDistribution))
 def _pdisplay(distrib, **kwargs):
     # Work on a copy, in order to not force normalization simply because of a display call
     normalized_dist = copy.copy(distrib)
