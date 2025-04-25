@@ -107,14 +107,19 @@ def test_processor_input_state_vector():
 def test_processor_probs():
     qpu = Processor("Naive", BS())
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
-    qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
+    for m in range(qpu.circuit_size):
+        qpu.add(m, Detector.threshold())  # With threshold detectors, the simulation will only detect |1,0> and |0,1>
     qpu.min_detected_photons_filter(2)
     probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
 
-    qpu.thresholded_output(False)  # With perfect detection, we get our results back
+    detectors = qpu.detectors
+    for i in range(len(detectors)):
+        detectors[i] = None  # Ugly reset of detectors
+
+    # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[BasicState("|2,0>")]) == 0.5

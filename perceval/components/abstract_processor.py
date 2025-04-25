@@ -320,21 +320,6 @@ class AProcessor(ABC):
     def get_output_port(self, mode):
         return self.experiment.get_output_port(mode)
 
-    # TODO: remove this deprecated method (PCVL-935)
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        self.experiment.thresholded_output(value)
-
-    # TODO: remove this deprecated method (PCVL-935)
-    @property
-    def is_threshold(self) -> bool:
-        return self.experiment.is_threshold
-
     @property
     def detection_type(self) -> DetectionType:
         return self.experiment.detection_type

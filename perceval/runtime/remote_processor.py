@@ -42,6 +42,8 @@ from .remote_config import RemoteConfig
 
 __process_id__ = uuid.uuid4()
 
+from perceval.components import Detector
+
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
 TRANSMITTANCE_KEY = "Transmittance (%)"
@@ -141,19 +143,6 @@ class RemoteProcessor(AProcessor):
     @property
     def is_remote(self) -> bool:
         return True
-
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1. Some QPU and simulators can only perform threshold detection.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        if value is False:
-            assert not ("detector" in self._specs and self._specs["detector"] == "threshold"), \
-                "given processor can only perform threshold detection"
-        self.set_parameter("thresholded", value)
-        super().thresholded_output(value)
 
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
@@ -282,7 +271,9 @@ class RemoteProcessor(AProcessor):
                 c.param(n).set_value(v)
         lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call (PCVL-935)
+        if self._thresholded_output:
+            for m in range(lp.circuit_size):
+                lp.add(m, Detector.threshold())
         lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
