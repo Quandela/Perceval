@@ -104,15 +104,12 @@ class _Path:
 
 
 class SLOSBackend(AStrongSimulationBackend):
-    def __init__(self, mask=None, n=None, use_symbolic=False):
+    def __init__(self, mask=None, use_symbolic=False):
         super().__init__()
         self._reset()
         self._symb = use_symbolic
         if mask is not None:
             self.set_mask(mask)
-        if n is not None:
-            get_logger().warn(
-                f"DeprecationWarning: 'n' parameter is now ignored and deprecated. version=0.12", channel.user)
 
     @property
     def name(self) -> str:

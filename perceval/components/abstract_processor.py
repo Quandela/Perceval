@@ -237,15 +237,16 @@ class AProcessor(ABC):
     def detectors(self):
         return self.experiment.detectors
 
-    def add_herald(self, mode: int, expected: int, name: str = None) -> AProcessor:
+    def add_herald(self, mode: int, expected: int, name: str = None, location: PortLocation = PortLocation.IN_OUT) -> AProcessor:
         r"""
         Add a heralded mode
 
         :param mode: Mode index of the herald
-        :param expected: number of expected photon as input AND output on the given mode (must be 0 or 1)
+        :param expected: number of expected photon as input and/or output on the given mode
         :param name: Herald port name. If none is passed, the name is auto-generated
+        :param location: Port location of the herald (input, output or both)
         """
-        self.experiment.add_herald(mode, expected, name)
+        self.experiment.add_herald(mode, expected, name, location)
         return self
 
     @property
@@ -255,9 +256,17 @@ class AProcessor(ABC):
     @property
     def m(self) -> int:
         """
-        :return: Number of modes of interest (MOI) defined in the processor
+        :return: The number of modes that are free (non-heralded) on the output
         """
         return self.experiment.m
+
+    @property
+    def m_in(self) -> int:
+        """
+        :return: The number of modes that are free (non-heralded) on the input,
+                that must be specified when using self.with_input()
+        """
+        return self.experiment.m_in
 
     @m.setter
     def m(self, value: int):
@@ -311,28 +320,23 @@ class AProcessor(ABC):
     def get_output_port(self, mode):
         return self.experiment.get_output_port(mode)
 
-    # TODO: remove this deprecated method (PCVL-935)
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        self.experiment.thresholded_output(value)
-
-    # TODO: remove this deprecated method (PCVL-935)
-    @property
-    def is_threshold(self) -> bool:
-        return self.experiment.is_threshold
-
     @property
     def detection_type(self) -> DetectionType:
         return self.experiment.detection_type
 
     @property
     def heralds(self):
+        """
+        :return: A dictionary {mode: expected_count} describing the heralds on the output
+        """
         return self.experiment.heralds
+
+    @property
+    def in_heralds(self):
+        """
+        :return: A dictionary {mode: expected_count} describing the heralds on the input
+        """
+        return self.experiment.in_heralds
 
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current processor configuration"""
@@ -342,7 +346,7 @@ class AProcessor(ABC):
         if self._min_detected_photons_filter is None:
             if not self.is_remote and self._source is not None and self._source.is_perfect():
                 # Automatically set the min_detected_photons_filter for perfect sources of local processors if not set
-                self.min_detected_photons_filter(self.input_state.n)
+                self.min_detected_photons_filter(self.input_state.n - sum(self.heralds.values()))
             else:
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")

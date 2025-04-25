@@ -36,11 +36,11 @@ from numpy import inf
 
 from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
     SVDistribution
-from perceval.utils.logging import get_logger, channel, deprecated
+from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
 from ._mode_connector import ModeConnector, UnavailableModeException
 from .abstract_component import AComponent, AParametrizedComponent
-from .detector import IDetector, Detector, DetectionType, get_detection_type
+from .detector import IDetector, DetectionType, get_detection_type
 from .feed_forward_configurator import AFFConfigurator
 from .linear_circuit import Circuit, ACircuit
 from .non_unitary_components import TD
@@ -72,7 +72,6 @@ class Experiment:
         self._input_state = None
         self.name: str = name
 
-        self._thresholded_output: bool = False  # Deprecated, avoid using this field
         self._min_detected_photons_filter: int | None = None
 
         self._circuit_changed_observers: list[callable] = []
@@ -93,14 +92,14 @@ class Experiment:
         self._has_td: bool = False
         self._has_feedforward = False
 
-        self._n_heralds: int = 0
         self._anon_herald_num: int = 0  # This is not a herald count!
         self._components: list[tuple[tuple, AComponent]] = []  # Any type of components, not only unitary ones
         self._detectors: list[IDetector] = []
         self.detectors_injected: list[int] = []  # List of modes where detectors are already in the circuit
-        self._mode_type: list[ModeType] = []
+        self._in_mode_type: list[ModeType] = []
+        self._out_mode_type: list[ModeType] = []
 
-        self._n_moi: int = 0  # Number of modes of interest (moi)
+        self._m: int = 0  # Circuit size
 
     @property
     def is_unitary(self) -> bool:
@@ -119,7 +118,7 @@ class Experiment:
             self.m = m_circuit.m
             self.add(0, m_circuit)
         elif m_circuit is not None:
-            self.m = m_circuit  # number of modes of interest
+            self.m = m_circuit  # number of modes
 
     def clear_input_and_circuit(self, new_m=None):
         get_logger().debug(f"Clear input and circuit in experiment {self.name}", channel.general)
@@ -212,7 +211,7 @@ class Experiment:
         :param circuit: The circuit to start the experiment with
         :return: Self to allow direct chain this with .add()
         """
-        if self._n_moi == 0:
+        if self._m == 0:
             self.m = circuit.m
         assert circuit.m == self.circuit_size, "Circuit doesn't have the right number of modes"
         self._components = []
@@ -248,18 +247,20 @@ class Experiment:
         >>> e.add(0, BS())  # Modes (0, 1) connected to (0, 1) of the added beam splitter
         >>> e.add([2,5], BS())  # Modes (2, 5) of the experiment's output connected to (0, 1) of the added beam splitter
         >>> e.add({2:0, 5:1}, BS())  # Same as above
+
+        If the added component is a processor or an experiment with modes having heralds only on one side,
+        no permutation will be added at the end, and the "in-between" modes will be pushed to the bottom.
         """
         if self.m == 0:
             self.m = component.m + mode_mapping if isinstance(mode_mapping, int) else max(mode_mapping) + 1
             get_logger().debug(f"Number of modes of interest defaulted to {self.m} in experiment {self.name}",
                                channel.general)
 
-        connector = ModeConnector(self, component, mode_mapping)
         from perceval import AProcessor  # This is ugly but necessary to keep the user interface
         if isinstance(component, AProcessor):
             component = component.experiment
 
-        self._circuit_changed(component)
+        connector = ModeConnector(self, component, mode_mapping)
 
         if isinstance(component, Experiment):
             self._compose_experiment(connector, component, keep_port)
@@ -275,6 +276,8 @@ class Experiment:
             self._add_component(connector.resolve(), component, keep_port)
         else:
             raise RuntimeError(f"Cannot add {type(component)} object to a Processor")
+
+        self._circuit_changed(component)
         return self
 
     def _add_ffconfig(self, modes, component: AFFConfigurator):
@@ -284,12 +287,12 @@ class Experiment:
         # Check composition consistency
         if min(modes) < 0 or max(modes) >= self.m:
             raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {modes})")
-        if any([self._mode_type[i] != ModeType.CLASSICAL for i in modes]):
+        if any([self._out_mode_type[i] != ModeType.CLASSICAL for i in modes]):
             raise UnavailableModeException(modes, "Cannot add a classical component on non-classical modes")
         photonic_modes = component.config_modes(modes)
         if min(photonic_modes) < 0 or max(photonic_modes) >= self.m:
             raise ValueError(f"Mode numbers must be in [0; {self.m - 1}] (got {photonic_modes})")
-        if any([self._mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
+        if any([self._out_mode_type[i] != ModeType.PHOTONIC for i in photonic_modes]):
             raise UnavailableModeException(photonic_modes, "Cannot add a configured circuit on non-photonic modes")
 
         modes_add_detectors = [m for m in modes if m not in self.detectors_injected]
@@ -315,11 +318,11 @@ class Experiment:
         if not isinstance(mode, int):
             raise TypeError(f"When adding a detector, the mode number must be an integer (got {type(mode)})")
 
-        if self._mode_type[mode] == ModeType.CLASSICAL:
+        if self._out_mode_type[mode] == ModeType.CLASSICAL:
             raise UnavailableModeException(mode, "Mode is not photonic, cannot plug a detector.")
         self._detectors[mode] = detector
-        if self._mode_type[mode] == ModeType.PHOTONIC:
-            self._mode_type[mode] = ModeType.CLASSICAL
+        if self._out_mode_type[mode] == ModeType.PHOTONIC:
+            self._out_mode_type[mode] = ModeType.CLASSICAL
 
     @property
     def detectors(self):
@@ -345,6 +348,11 @@ class Experiment:
         mode_mapping = connector.resolve()
         get_logger().debug(f"  Resolved mode mapping to {mode_mapping} during experiment compose", channel.general)
 
+        is_symmetrical = experiment.in_heralds.keys() == experiment.heralds.keys()
+
+        # Compute new herald positions
+        n_new_heralds = connector.add_heralded_modes(mode_mapping)
+
         self._validate_postselect_composition(mode_mapping)
         if not keep_port:
             # Remove output ports used to connect the new experiment
@@ -353,14 +361,28 @@ class Experiment:
                 if port is not None:
                     del self._out_ports[port]
 
-        # Compute new herald positions
-        n_new_heralds = connector.add_heralded_modes(mode_mapping)
-        self._n_heralds += n_new_heralds
-        self._mode_type += [ModeType.HERALD] * n_new_heralds
-        for m_herald in experiment.heralds:
-            self._detectors += [experiment._detectors[m_herald]]
+        self._in_mode_type += [ModeType.HERALD] * n_new_heralds  # New input heralds are always put at the bottom
+        self._m += n_new_heralds
 
-        # Add PERM, component, PERM^-1
+        if is_symmetrical:
+            self._out_mode_type += [ModeType.HERALD] * n_new_heralds
+            for m_herald in experiment.heralds:
+                self._detectors += [experiment._detectors[m_herald]]
+
+        # Check port composition
+        for m_out, m_in in mode_mapping.items():
+            out_port = self.get_output_port(m_out)
+            in_port = experiment.get_input_port(m_in)
+            if (out_port is not None and in_port is not None
+                    and (out_port.encoding != in_port.encoding or
+                         [mode_mapping.get(i, i) for i in self._out_ports[out_port]] != experiment._in_ports[in_port])):
+                get_logger().warn(
+                    f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
+                    f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
+                    f"will lead to unexpected results.")
+                break
+
+        # Add PERM, component, (PERM^-1 if is_symmetrical)
         perm_modes, perm_component = connector.generate_permutation(mode_mapping)
         new_components = []
         if perm_component is not None:
@@ -378,46 +400,66 @@ class Experiment:
         for pos, c in experiment.components:
             pos = [x + min(mode_mapping) for x in pos]
             new_components.append((pos, c))
-        if perm_component is not None:
-            perm_inv = perm_component.copy()
-            perm_inv.inverse(h=True)
-            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
-            new_components.append((perm_modes, perm_inv))
+        if perm_component is not None and is_symmetrical:
+            if is_symmetrical:
+                perm_inv = perm_component.copy()
+                perm_inv.inverse(h=True)
+                get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
+                new_components.append((perm_modes, perm_inv))
+        elif not is_symmetrical:
+            # We need to apply the permutation on the detectors and mode types
+            self._out_mode_type = connector.compose_lists(mode_mapping, self._out_mode_type, experiment._out_mode_type)
+            self._detectors = connector.compose_lists(mode_mapping, self._detectors, experiment._detectors)
+
+            self_ports = [None] * self.circuit_size
+            for port, port_range in self._out_ports.items():
+                self_ports[port_range[0]] = port
+
+            other_ports = [None] * experiment.circuit_size
+            for port, port_range in experiment._out_ports.items():
+                other_ports[port_range[0]] = port
+
+            self._out_ports = {}
+            out_ports = connector.compose_lists(mode_mapping, self_ports, other_ports)
+            for port_mode, port in enumerate(out_ports):
+                if isinstance(port, Herald):
+                    self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
+                elif port is not None:
+                    if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                        self.add_port(port_mode, port, PortLocation.OUTPUT)
+
         new_components = simplify(new_components, self.circuit_size)
         self._components += new_components
 
         # Retrieve ports from the other experiment
         # Output ports
-        for port, port_range in experiment._out_ports.items():
-            port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
-            if isinstance(port, Herald):
-                self._add_herald(port_mode, port.expected, port.user_given_name)
-            else:
-                if self.are_modes_free(range(port_mode, port_mode + port.m)):
-                    self.add_port(port_mode, port, PortLocation.OUTPUT)
+        if is_symmetrical:
+            for port, port_range in experiment._out_ports.items():
+                port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
+                if isinstance(port, Herald):
+                    self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.OUTPUT)
+                else:
+                    if self.are_modes_free(range(port_mode, port_mode + port.m)):
+                        self.add_port(port_mode, port, PortLocation.OUTPUT)
+
         # Input ports
         for port, port_range in experiment._in_ports.items():
             port_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(port_range[0])]
-            if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
-                self.add_port(port_mode, port, PortLocation.INPUT)
+            if isinstance(port, Herald):
+                self.add_herald(port_mode, port.expected, port.user_given_name, PortLocation.INPUT)
+            else:
+                if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
+                    self.add_port(port_mode, port, PortLocation.INPUT)
 
-        # Check port composition
-        for m_out, m_in in mode_mapping.items():
-            out_port = self.get_output_port(m_out)
-            in_port = experiment.get_input_port(m_in)
-            if (out_port is not None and in_port is not None
-                    and (out_port.encoding != in_port.encoding or
-                         [mode_mapping.get(i, i) for i in self._out_ports[out_port]] != experiment._in_ports[in_port])):
-                get_logger().warn(f"The composition of {self.name} ({out_port.encoding} on modes {self._out_ports[out_port]}) "
-                                  f"with {experiment.name} ({in_port.encoding} on modes {experiment._in_ports[in_port]}) "
-                                  f"will lead to unexpected results.")
-                break
+        if self._postselect is not None and perm_component is not None and not is_symmetrical:
+            c_first = perm_modes[0]
+            self._postselect.apply_permutation(perm_component.perm_vector, c_first)
 
         # Retrieve post process function from the other experiment
         if experiment._postselect is not None:
             c_first = perm_modes[0]
             other_postselect = copy.copy(experiment._postselect)
-            if perm_component is not None:
+            if perm_component is not None and is_symmetrical:
                 other_postselect.apply_permutation(perm_inv.perm_vector, c_first)
             other_postselect.shift_modes(c_first)
             if not (self._postselect is None or other_postselect is None
@@ -444,32 +486,34 @@ class Experiment:
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)
 
-    def _add_herald(self, mode, expected, name=None):
-        """
-        This internal implementation neither increases the herald count nor decreases the mode of interest count
-        """
-        if not self.are_modes_free([mode], PortLocation.IN_OUT):
-            raise UnavailableModeException(mode, "Another port overlaps")
-        if name is None:
-            name = self._anon_herald_num
-            self._anon_herald_num += 1
-        self._in_ports[Herald(expected, name)] = [mode]
-        self._out_ports[Herald(expected, name)] = [mode]
-        self._mode_type[mode] = ModeType.HERALD
+    def _add_herald(self, mode, herald: Herald, location: PortLocation = PortLocation.IN_OUT):
+        if location == PortLocation.INPUT or location == PortLocation.IN_OUT:
+            self._in_ports[herald] = [mode]
+            self._in_mode_type[mode] = ModeType.HERALD
+
+        if location == PortLocation.OUTPUT or location == PortLocation.IN_OUT:
+            self._out_ports[herald] = [mode]
+            self._out_mode_type[mode] = ModeType.HERALD
         self._circuit_changed()
 
-    def add_herald(self, mode: int, expected: int, name: str = None):
+    def add_herald(self, mode: int, expected: int, name: str = None, location: PortLocation = PortLocation.IN_OUT):
         r"""
         Add a heralded mode
 
         :param mode: Mode index of the herald
         :param expected: number of expected photon as input AND output on the given mode (must be 0 or 1)
         :param name: Herald port name. If none is passed, the name is auto-generated
+        :param location: Port location of the herald (input, output or both)
         """
-        assert expected == 0 or expected == 1, "expected must be 0 or 1"
-        self._add_herald(mode, expected, name)
-        self._n_moi -= 1
-        self._n_heralds += 1
+        if not self.are_modes_free([mode], location):
+            raise UnavailableModeException(mode, "Another port overlaps")
+
+        if name is None:
+            name = self._anon_herald_num
+            self._anon_herald_num += 1
+
+        herald = Herald(expected, name)
+        self._add_herald(mode, herald, location)
         return self
 
     @property
@@ -479,26 +523,35 @@ class Experiment:
     @property
     def m(self) -> int:
         """
-        :return: Number of modes of interest (MOI) defined in the experiment
+        :return: Number of modes of interest (MOI) defined in the experiment for the output
         """
-        return self._n_moi
+        return self._m - len(self.heralds)
+
+    @property
+    def m_in(self):
+        """
+        :return: Number of modes of interest (MOI) defined in the experiment for the input
+        """
+        return self._m - len(self.in_heralds)
 
     @m.setter
     def m(self, value: int):
-        if self._n_moi != 0:
-            raise RuntimeError(f"The number of modes of this experiment was already set (to {self._n_moi})")
+        """This is actually a setter for the circuit size"""
+        if self._m != 0:
+            raise RuntimeError(f"The number of modes of this experiment was already set (to {self._m})")
         if not isinstance(value, int) or value < 1:
             raise ValueError(f"The number of modes should be a strictly positive integer (got {value})")
-        self._n_moi = value
+        self._m = value
         self._detectors = [None] * value
-        self._mode_type = [ModeType.PHOTONIC] * value
+        self._in_mode_type = [ModeType.PHOTONIC] * value
+        self._out_mode_type = [ModeType.PHOTONIC] * value
 
     @property
     def circuit_size(self) -> int:
         r"""
         :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
         """
-        return self._n_moi + self._n_heralds
+        return self._m
 
     def unitary_circuit(self, flatten: bool = False, use_phase_noise=False) -> Circuit:
         """
@@ -590,6 +643,12 @@ class Experiment:
         port_range = list(range(m, m + port.m))
         assert port.supports_location(location), f"Port is not compatible with location '{location.name}'"
 
+        if isinstance(port, Herald):
+            if not self.are_modes_free([m], location):
+                raise UnavailableModeException(m, "Another port overlaps")
+            self._add_herald(m, port, location)
+            return self
+
         if location == PortLocation.IN_OUT or location == PortLocation.INPUT:
             if not self.are_modes_free(port_range, PortLocation.INPUT):
                 raise UnavailableModeException(port_range, "Another port overlaps")
@@ -624,7 +683,7 @@ class Experiment:
             return False
         if mode >= self.circuit_size:
             return False
-        return self._mode_type[mode] == ModeType.PHOTONIC
+        return self._out_mode_type[mode] == ModeType.PHOTONIC
 
     def are_modes_free(self, mode_range, location: PortLocation = PortLocation.OUTPUT) -> bool:
         """
@@ -652,38 +711,22 @@ class Experiment:
                 return port
         return None
 
-    @deprecated(version=0.12, reason="Add detectors as components")  # TODO (PCVL-935)
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        self._thresholded_output = value
-        self._detectors = [Detector.threshold() if self._thresholded_output else None] * len(self._detectors)
-
-    @property
-    @deprecated(version=0.12, reason="Use `detection_type` property instead")  # TODO (PCVL-935)
-    def is_threshold(self) -> bool:
-        return self._thresholded_output
-
     @property
     def detection_type(self) -> DetectionType:
         return get_detection_type(self._detectors)
 
     @property
-    def heralds(self):
-        pos = {}
-        for port, port_range in self._out_ports.items():
-            if isinstance(port, Herald):
-                pos[port_range[0]] = port.expected
-        return pos
+    def heralds(self) -> dict[int, int]:
+        return {port_range[0]: port.expected for port, port_range in self._out_ports.items() if isinstance(port, Herald)}
+
+    @property
+    def in_heralds(self) -> dict[int, int]:
+        return {port_range[0]: port.expected for port, port_range in self._in_ports.items() if isinstance(port, Herald)}
 
     def check_input(self, input_state: BasicState):
         r"""Check if a basic state input matches with the current experiment configuration"""
-        assert self.m is not None, "A circuit has to be set before the input state"
-        expected_input_length = self.m
+        assert self.m_in, "A circuit has to be set before the input state"
+        expected_input_length = self.m_in
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
         if input_state.has_polarization:
@@ -711,8 +754,8 @@ class Experiment:
         input_idx = 0
         # Build real input state (merging ancillas + expected input) and compute expected photon count
         for k in range(self.circuit_size):
-            if k in self.heralds:
-                input_list[k] = self.heralds[k]
+            if k in self.in_heralds:
+                input_list[k] = self.in_heralds[k]
             else:
                 input_list[k] = input_state[input_idx]
                 input_idx += 1
