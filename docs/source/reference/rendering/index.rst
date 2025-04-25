@@ -1,0 +1,5 @@
+perceval.rendering
+^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+   pdisplay

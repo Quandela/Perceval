@@ -142,28 +142,18 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 .. toctree::
    :caption: Code Reference
    :maxdepth: 2
-   :hidden:
 
+   reference/components/index
+   reference/rendering/index
+   reference/runtime/index
+   reference/simulators/index
+   reference/utils/index
+   reference/utils_algorithms/index
+   reference/exqalibur/index
    reference/statevector
-   reference/polarization
-   reference/circuit
-   reference/catalog
-   reference/circuit_optimizer
-   reference/utils
-   reference/source
-   reference/simulator
-   reference/noise_model
-   reference/processor
-   reference/postselect
-   reference/pdisplay
    reference/logging
    reference/qiskit_converter
-   reference/stategenerator
    reference/scaleway_session
-   reference/density_matrix
-   reference/feed_forward_configurator
-   reference/job_group
-   reference/detector
 
 .. toctree::
    :caption: Community
