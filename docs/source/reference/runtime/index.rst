@@ -1,5 +1,5 @@
-perceval.runtime
-^^^^^^^^^^^^^^^^
+runtime
+^^^^^^^
 
 .. toctree::
    job_group

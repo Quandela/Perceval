@@ -135,8 +135,8 @@ class AParametrizedComponent(AComponent):
     def _set_parameter(self,
                        name: str,
                        p: Parameter | float,
-                       min_v: float,
-                       max_v: float,
+                       min_v: float | None,
+                       max_v: float | None,
                        periodic: bool = True) -> Parameter:
         """
         Define a parameter for the circuit, it can be an existing parameter that we recycle updating

@@ -273,6 +273,11 @@ class ACircuit(AParametrizedComponent, ABC):
 
     @abstractmethod
     def describe(self) -> str:
+        """
+        Describe the component as the Python code that generates it.
+
+        :return: code generating the component
+        """
         pass
 
 

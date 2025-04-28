@@ -1,5 +1,5 @@
-perceval.simulators
-^^^^^^^^^^^^^^^^^^^
+simulators
+^^^^^^^^^^
 
 .. toctree::
    simulator

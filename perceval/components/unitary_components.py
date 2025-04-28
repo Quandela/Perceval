@@ -30,7 +30,7 @@ from __future__ import annotations
 import math
 import random
 from copy import copy
-from enum import Enum
+from enum import IntEnum
 
 import numpy as np
 import sympy as sp
@@ -39,16 +39,32 @@ from .linear_circuit import ACircuit, Circuit
 from perceval.utils import Matrix, format_parameters, BasicState, StateVector, Parameter, Expression
 
 
-class BSConvention(Enum):
+class BSConvention(IntEnum):
+    """Beam splitter conventions"""
     Rx = 0
     Ry = 1
     H = 2
 
+
 class BS(ACircuit):
-    """Beam splitter"""
+    """Beam Splitter
+
+    Beam splitters couple two spatial modes together, acting on :math:`\\ket{1,0}` and :math:`\\ket{0,1}`.
+
+    :param theta: `theta` parameter
+    :param phi_tl: top-left phase parameter
+    :param phi_bl: bottom-left phase parameter
+    :param phi_tr: top-right phase parameter
+    :param phi_br: bottom-right phase parameter
+    """
     DEFAULT_NAME = "BS"
 
-    def __init__(self, theta=sp.pi/2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0,
+    def __init__(self,
+                 theta: Parameter | float = sp.pi/2,
+                 phi_tl: Parameter | float = 0,
+                 phi_bl: Parameter | float = 0,
+                 phi_tr: Parameter | float = 0,
+                 phi_br: Parameter | float = 0,
                  convention: BSConvention = BSConvention.Rx):
         super().__init__(2)
         self._convention = convention
@@ -60,40 +76,57 @@ class BS(ACircuit):
 
     @property
     def name(self):
-        return f'{self.DEFAULT_NAME}({self._convention.name})'
+        return f'{self.DEFAULT_NAME}.{self._convention.name}'
 
     @property
     def convention(self):
+        """Beam splitter convention"""
         return self._convention
 
     @staticmethod
     def H(theta=sp.pi/2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
+        """
+        Convenient named constructor for a Beam Splitter following Hadamard convention.
+        Its parameters are the same as the main constructor.
+        """
         return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.H)
 
     @staticmethod
     def Rx(theta=sp.pi / 2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
+        """
+        Convenient named constructor for a Beam Splitter following Rotation X convention.
+        Its parameters are the same as the main constructor.
+        """
         return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.Rx)
 
     @staticmethod
     def Ry(theta=sp.pi / 2, phi_tl=0, phi_bl=0, phi_tr=0, phi_br=0):
+        """
+        Convenient named constructor for a Beam Splitter following Rotation Y convention.
+        Its parameters are the same as the main constructor.
+        """
         return BS(theta, phi_tl, phi_bl, phi_tr, phi_br, convention=BSConvention.Ry)
 
     @staticmethod
-    def r_to_theta(r: float | Parameter) -> float | Parameter:
-        """Compute theta given a reflectivity value
+    def r_to_theta(r: float | Parameter) -> float | Expression:
+        """Compute theta given a reflectivity value.
+        Supports symbolic computing.
 
         :param r: reflectivity value (can be variable)
+        :return: theta value or symbolic expression
         """
         if isinstance(r, Parameter):
             return Expression(f"2*acos(sqrt({r.name}))", r._params)
         return 2*math.acos(math.sqrt(r))
 
     @staticmethod
-    def theta_to_r(theta: float | Parameter) -> float | Parameter:
+    def theta_to_r(theta: float | Parameter) -> float | Expression:
         """
-        Compute reflectivity given a theta value
+        Compute reflectivity given a theta value.
+        Supports symbolic computing.
 
         :param theta: theta angle (can be variable)
+        :return: reflectivity value or symbolic expression
         """
         if isinstance(theta, Parameter) and not theta.defined:
             return Expression(f"cos({theta.name}/2)**2", theta._params)
@@ -101,6 +134,10 @@ class BS(ACircuit):
 
     @property
     def reflectivity(self):
+        """Beam Splitter reflectivity
+
+        :return: reflectivity of the current Beam Splitter
+        """
         return self.theta_to_r(self._theta)
 
     def _compute_unitary(self, assign=None, use_symbolic=False):
@@ -155,7 +192,7 @@ class BS(ACircuit):
         self._populate_parameters(out, "phi_br", 0)
         return out
 
-    def describe(self):
+    def describe(self) -> str:
         parameters = self.get_variables()
         params_str = format_parameters(parameters, separator=', ')
         return f"BS.{self._convention.name}({params_str})"
@@ -206,10 +243,19 @@ class BS(ACircuit):
 
 
 class PS(ACircuit):
-    """Phase shifter"""
+    """Phase shifter
+
+    A phase shifter adds a phase :math:`\\phi` on a spatial mode, which corresponds to a Z rotation in the Bloch sphere.
+
+    :param phi: Phase angle
+    :param max_error: Maximum random error to apply. The error is uniformly drawn in
+                      :math:`[\\phi - max_{error}, \\phi + max_{error}]`.
+                      A global phase error noise parameter can also be set in the `NoiseModel` for all the phase
+                      shifters of a given `Experiment`.
+    """
     DEFAULT_NAME = "PS"
 
-    def __init__(self, phi, max_error = 0):
+    def __init__(self, phi: Parameter | float, max_error: Parameter | float = 0):
         super().__init__(1)
         self._phi = self._set_parameter("phi", phi, 0, 2*math.pi)
         self._max_error = self._set_parameter("max_error", max_error, 0, math.pi)
@@ -245,11 +291,19 @@ class PS(ACircuit):
 
 
 class WP(ACircuit):
-    """Wave plate"""
+    """
+    A wave plate acts on the polarisation modes of a single spatial mode.
+    This component acts on polarised photons. See also: `Polarisation`
+
+    :param delta: parameter proportional to the thickness of the waveplate
+    :param xsi: angle of the waveplate's optical axis in the :math:`\\left\\{\\ket{H}, \\ket{V}\\right\\}` plane.
+                Especially important is the case that :math:`\\delta=\\pi/2`, known as a half-wave plate, which rotates
+                linear polarisations in the :math:`\\left\\{\\ket{H}, \\ket{V}\\right\\}` plane.
+    """
     DEFAULT_NAME = "WP"
     _supports_polarization = True
 
-    def __init__(self, delta, xsi):
+    def __init__(self, delta: float | Parameter, xsi: float | Parameter):
         super().__init__(1)
         self._delta = self._set_parameter("delta", delta, -sp.pi, sp.pi)
         self._xsi = self._set_parameter("xsi", xsi, -sp.pi, sp.pi)
@@ -292,7 +346,10 @@ class WP(ACircuit):
 
 
 class HWP(WP):
-    """Half wave plate"""
+    """Half wave plate
+
+    This component acts on polarized photons. See also: `Polarization`
+    """
     DEFAULT_NAME = "HWP"
 
     def __init__(self, xsi):
@@ -303,7 +360,10 @@ class HWP(WP):
 
 
 class QWP(WP):
-    """Quarter wave plate"""
+    """Quarter wave plate
+
+    This component acts on polarized photons. See also: `Polarization`
+    """
     DEFAULT_NAME = "QWP"
 
     def __init__(self, xsi):
@@ -314,11 +374,22 @@ class QWP(WP):
 
 
 class PR(ACircuit):
-    """Polarization rotator"""
+    """
+    A polarisation rotator is an optical device that rotates the polarization axis of a linearly polarized light beam by
+    an angle of choice.
+    Such devices can be based on the Faraday effect, on bi-refringence, or on total internal reflection.
+    Rotators of linearly polarized light have found widespread applications in modern optics since laser beams tend to
+    be linearly polarized. It is often necessary to rotate the original polarization to its orthogonal alternative.
+    This component acts on polarized photons. See also: `Polarization`
+
+    See https://en.wikipedia.org/wiki/Polarization_rotator for more details.
+
+    :param delta: Rotation angle
+    """
     _supports_polarization = True
     DEFAULT_NAME = "PR"
 
-    def __init__(self, delta):
+    def __init__(self, delta: float | Parameter):
         super().__init__(1)
         self._delta = self._set_parameter("delta", delta, -sp.pi, sp.pi)
 
@@ -347,7 +418,12 @@ class PR(ACircuit):
 
 
 class Unitary(ACircuit):
-    """Generic component defined by a unitary matrix"""
+    """Generic component defined by a unitary matrix
+
+    :param U: numeric matrix. Does not support symbolic computation.
+    :param name: Custom name for the component it represents (default is "Unitary").
+    :param use_polarization: True if the unitary represents a polarized component.
+    """
     DEFAULT_NAME = "Unitary"
 
     def __init__(self, U: Matrix, name: str = None, use_polarization: bool = False):
@@ -383,10 +459,17 @@ class Unitary(ACircuit):
 
 
 class PERM(Unitary):
-    """Permutation"""
+    """Permutation
+
+    A swap between any number of consecutive spatial modes.
+
+    :param perm: Vector of mode index defining the permutation.
+
+    >>> permutation = PERM([2, 3, 1, 0])  # respectively swaps mode 0 to 2, 1 to 3, 2 to 1 and 3 to 0.
+    """
     DEFAULT_NAME = "PERM"
 
-    def __init__(self, perm):
+    def __init__(self, perm: list[int]):
         assert isinstance(perm, list), "Permutation component requires a list parameter"
         assert (min(perm) == 0 and
                 max(perm)+1 == len(perm) == len(set(perm)) == len([n for n in perm if isinstance(n, int)])),\
@@ -405,11 +488,18 @@ class PERM(Unitary):
 
     @property
     def perm_vector(self):
+        """Return the permutation vector"""
         nz = np.nonzero(self._u)
         m_list = nz[1].tolist()
         return [m_list.index(i) for i in nz[0]]
 
-    def apply(self, r, sv):
+    def apply(self, r: tuple[int, ...], sv: BasicState | StateVector):
+        """
+        Apply the permutation to a state
+
+        :param r: Range of consecutive modes where the permutation occurs
+        :sv: State on which the permutation is applied
+        """
         if isinstance(sv, BasicState):
             sv = StateVector(sv)
 
@@ -431,9 +521,9 @@ class PERM(Unitary):
 
     def break_in_2_mode_perms(self):
         """
-        Breaks any n-mode PERM into an equivalent circuit with only 2 mode PERMs
+        Breaks any n-mode permutation into an equivalent circuit made of only 2-mode permutations.
 
-        :return: An equivalent Circuit with only 2 mode PERM components
+        :return: An equivalent Circuit made of only 2-mode permutations
         """
 
         perm_vec_req = self.perm_vector
@@ -456,7 +546,17 @@ class PERM(Unitary):
 
 
 class PBS(Unitary):
-    """Polarized beam spliter"""
+    """
+    A polarising beam splitter converts a superposition of polarisation modes in a single spatial mode to the
+    corresponding equal-polarisation superposition of two spatial modes, and vice versa, and so in this sense allows us
+    to translate between polarisation and spatial modes. The unitary matrix associated to a polarising beam splitter
+    acting on the tensor product of the spatial mode and the polarisation mode is:
+
+    :math:`\\left[\\begin{matrix}0 & 0 & 1 & 0\\\\0 & 1 & 0 & 0\\\\1 & 0 & 0 & 0\\\\0 & 0 & 0 & 1\\end{matrix}\\right]`
+
+
+    This component acts on polarized photons. See also: `Polarization`
+    """
     _supports_polarization = True
     DEFAULT_NAME = "PBS"
 
@@ -473,7 +573,12 @@ class PBS(Unitary):
 
 
 class Barrier(ACircuit):
-    """Behaves like an identity unitary, visually represented as a barrier."""
+    """ A barrier is a visual component which has no effect on photons (it behaves as an identity unitary).
+    It may be used to separate or align multiple components in a given `Circuit`.
+
+    :param m: Number of consecutive modes it covers
+    :param visible: The barrier is rendered if True, and is invisible otherwise
+    """
     DEFAULT_NAME = "I"
 
     def __init__(self, m: int, visible: bool = True):

@@ -24,7 +24,7 @@ interface to control them through the concept of *backends*.
 
 Perceval is conceived as an object-oriented modular Python framework organized around the following elements:
 
-* Tools to :ref:`build linear optical circuits <Circuits>` from a collection of pre-defined :ref:`components <Components>`
+* Tools to :ref:`build linear optical circuits <Circuits>` from a collection of pre-defined :ref:`components <Unitary Components>`
 * Powerful :ref:`computing backends <Computing Backends>` implemented in C++
 * A variety of technical utilities to manipulate:
    - :ref:`Fock states, state vectors and state vector distributions <States>`,
@@ -67,7 +67,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    states
    polarization
    backends
-   components
    tools
    algorithms
    providers
@@ -141,7 +140,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
 .. toctree::
    :caption: Code Reference
-   :maxdepth: 2
+   :maxdepth: 3
 
    reference/components/index
    reference/rendering/index
