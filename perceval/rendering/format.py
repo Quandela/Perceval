@@ -31,6 +31,10 @@ from enum import Enum
 
 
 class Format(Enum):
+    """
+    Enum class used to specify the output format of pdisplay.
+    The possible formats depend on the object to represent.
+    """
     TEXT = 1
     MPLOT = 2
     HTML = 3
