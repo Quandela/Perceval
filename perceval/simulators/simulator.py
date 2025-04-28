@@ -79,9 +79,18 @@ class Simulator(ISimulator):
         self._rel_precision = value
 
     def set_precision(self, precision: float):
+        """
+        Set the precision of the simulator.
+        When using probs_svd, states having a probability inferior to the precision times the highest probability
+        will be discarded.
+        """
         self.precision = precision
 
     def set_heralds(self, heralds):
+        """
+        Set the output heralds of the simulator. Any output that does not match the heralds will be discarded.
+        Only used in probs, probs_svd, evolve, evolve_svd
+        """
         self._invalidate_cache()
         self._n_heralds = sum(heralds.values())
         super().set_heralds(heralds)
@@ -529,6 +538,12 @@ class Simulator(ISimulator):
         """
         gives the output probability distribution, after evolving some density matrix through the simulator
         :param dm: the input DensityMatrix
+
+        :return: A dictionary of the form { "results": BSDistribution, "physical_perf": float, "logical_perf": float }
+
+            * results is the post-selected output state distribution
+            * physical_perf is the performance computed from the detected photon filter
+            * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(dm, DensityMatrix):
             raise TypeError(f"dm must be a DensityMatrix object, {type(dm)} was given")
