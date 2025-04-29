@@ -454,7 +454,7 @@ class Experiment:
         # Detectors
         if is_symmetrical:
             for m in range(experiment.circuit_size):
-                # The heralded modes detectors have already been added at the bottom
+                # The heralded modes detectors have already been added at the bottom modes
                 d = experiment.detectors[m]
                 if m not in experiment.heralds and d is not None:
                     new_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(m)]
