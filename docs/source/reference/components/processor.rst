@@ -2,7 +2,7 @@ Processor and RemoteProcessor
 =============================
 
 Processors and RemoteProcessors expose the same behaviour in many ways, and most of the time,
-when a Processor is needed, it can be replaced with a RemoteProcessor
+when a Processor is needed, it can be replaced with a RemoteProcessor.
 
 Creating Processors
 ^^^^^^^^^^^^^^^^^^^
@@ -14,7 +14,7 @@ A processor describes an optical experiment with a computation method (backend).
 >>> p.m
 4
 
-A processor can be created empty with a given number of modes, or using a circuit.
+A processor can be created empty with a given number of modes, or using a circuit, or an :code:`Experiment`.
 
 >>> p = pcvl.Processor("SLOS", pcvl.BS())  # Creates a 2-modes Processor with a single beam splitter as component
 

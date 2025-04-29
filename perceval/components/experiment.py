@@ -59,7 +59,7 @@ class Experiment:
     This class represents an optical table containing:
 
     - A circuit and/or components that represent the operations that will operate on photons.
-        Can contain non-unitary components
+      Can contain non-unitary components
     - The input state for the experiment.
     - Detectors to detect photons.
     - Ports to define groups of modes

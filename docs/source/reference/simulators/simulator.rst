@@ -6,6 +6,10 @@ output probabilities or amplitudes for photonic experiment.
 
 It adds logic that allows computing with objects that are more complex than non-annotated BasicStates,
 contrarily to the backend it build upon to do its computations.
+
+Note that the :code:`Simulator` aims at computing exact probabilities,
+so it requires a backend able to compute probability amplitudes, such as :ref:`SLOS`, :ref:`SLAP`, :ref:`Naive`... (see :ref:`Computing Backends`)
+
 If possible, it will also automatically use masks on the backend to reduce the computation time and memory.
 
 Also, contrarily to :code:`Experiment` or :code:`Processor`,
@@ -14,10 +18,10 @@ it relies on being given complete information from the start and cannot be used 
 The basic :code:`Simulator` is only able to perform computation with non-polarized unitary circuits.
 For polarized circuits, see the :code:`PolarizationSimulator`.
 For non-unitary circuits, see the :code:`DelaySimulator`, :code:`LossSimulator`, and :code:`FFSimulator`.
-More generally, if you need another simulator than this one due to your circuit's components, see :code:`SimulatorFactory`.
+More generally, if you are unsure about which simulator to use, see :code:`SimulatorFactory`.
 
-Using a simulator
-^^^^^^^^^^^^^^^^^^^^
+Using a Simulator
+^^^^^^^^^^^^^^^^^
 
 .. code-block::
 
