@@ -32,10 +32,10 @@ from perceval.utils.logging import deprecated
 
 import exqalibur as xq
 
-from .statevector import BSDistribution, StateVector, BSIDistribution
+from .statevector import BSDistribution, StateVector
 
 try:
-    from typing import TypeAlias
+    from typing import TypeAlias, Any
 except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
@@ -54,10 +54,10 @@ def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
 
 
 def post_select_distribution(
-        bsd: BSIDistribution,
+        bsd,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True) -> tuple[BSIDistribution, float]:
+        keep_heralds: bool = True) -> tuple[Any, float]:
     """Post select a BSDistribution
 
     :param bsd: BSDistribution to post select
@@ -75,7 +75,7 @@ def post_select_distribution(
     if heralds is None:
         heralds = {}
     logical_perf = 1
-    result = BSIDistribution()
+    result = type(bsd)()
     for state, prob in bsd.items():
         heralds_ok = True
         for m, v in heralds.items():

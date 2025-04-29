@@ -27,9 +27,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval import NoiseModel, BasicState, Processor, Experiment, BS, BSIDistribution, Simulator, \
-    SLOSBackend, Circuit, Source
-from perceval.utils.statevector import FockStateIndex, FockStateCode, FockStateCodeInv, SVDistribution, StateVector
+from perceval import NoiseModel, BasicState, Processor, Experiment, BS, Simulator, \
+    SLOSBackend, Circuit, Source, FSIDistribution, FSCDistribution
+from perceval.utils.statevector import FockStateIndex, FockStateCode, FockStateCodeInv, SVDistribution, StateVector, \
+    FSCIDistribution
 
 from perceval.utils import BasicState, post_select_distribution
 
@@ -45,8 +46,14 @@ import time
 memory_mo = dict()
 time_ms = dict()
 
+FSD_MAP = {
+    FockStateIndex : FSIDistribution,
+    FockStateCode : FSCDistribution,
+    FockStateCodeInv : FSCIDistribution
+}
+
 # for n in range(4,13):
-for n in [12]:
+for n in [9]:
     memory_mo[n] = dict()
     time_ms[n] = dict()
 
@@ -59,13 +66,13 @@ for n in [12]:
 
     state = [1 for k in range(n)]
     input_state = BasicState(state)
-    source = Source(0.9, 0.03, 1.0)
+    source = Source(0.9, 0.03, 0.6)
     svd = generate_distribution(source, input_state)
 
     print('beginning loop over types of FS')
     for fs_type in [FockStateIndex, FockStateCode, FockStateCodeInv]:
-    # for fs_type in [FockStateCodeInv]:
-        BSIDistribution.FS_TYPE = fs_type
+        simulator.FS_TYPE = fs_type
+        simulator.FSD_TYPE = FSD_MAP[fs_type]
         use_mem_maps = [False]
 
         time_ms[n][fs_type] = dict()
