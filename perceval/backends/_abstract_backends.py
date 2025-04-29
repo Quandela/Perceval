@@ -32,7 +32,6 @@ import exqalibur as xq
 
 from perceval.components import ACircuit
 from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
-from perceval.utils.logging import deprecated
 from perceval.utils.statevector import allstate_array
 
 
@@ -175,11 +174,3 @@ class AStrongSimulationBackend(ABackend):
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
         return res
-
-
-class AProbAmpliBackend(AStrongSimulationBackend, ABC):
-    """Deprecated: this class was renamed to AStrongSimulationBackend"""
-
-    @deprecated(version="0.12.0", reason="AProbAmpliBackend was renamed to AStrongSimulationBackend")
-    def __init__(self):
-        super().__init__()

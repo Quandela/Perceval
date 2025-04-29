@@ -10,6 +10,18 @@ This section lists the major breaking changes introduced.
 Breaking changes in Perceval 1.0
 ---------------------------------
 
+Removal of deprecated methods and classes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following methods and classes have been removed or definitely modified as they were deprecated:
+
+- :code:`TokenProvider` (since 0.13, replaced by :code:`RemoteConfig`)
+- :code:`AProbAmpliBackend` (since 0.12, replaced by :code:`AStrongSimulationBackend`)
+- :code:`postselect_independent` (since 0.12, replaced by :code:`PostSelect` method :code:`is_independent_with`)
+- The :code:`n` parameter of SLOS backend (since 0.12, now automatically chosen when using :code:`set_input_state`)
+- :code:`thresholded_output` method of :code:`Processor` and :code:`RemoteProcessor`
+  (since 0.12, replaced by adding several :code:`Detector.threshold()`)
+
 BSDistribution and SVDistribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
