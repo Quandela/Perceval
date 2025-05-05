@@ -85,9 +85,10 @@ Indeed, a boolean can be set to obtain a more compact display (if the circuit is
   :align: center
   :width: 50%
 
-By default the skin will be ``PhysSkin``, if you want to use another skin by default, you can save your configuration into your Perceval persistent configuration.
+By default the skin will be ``PhysSkin``, if you want to use another skin by default, you can save your configuration
+into your Perceval persistent configuration.
 
-To save configuration for your choice of skin by default, you require the ``DisplayConfig`` object.
+To save configuration for your choice of skin by default, you require the :ref:`DisplayConfig` object.
 
 The possible kwargs when displaying a :code:`Circuit` are
 

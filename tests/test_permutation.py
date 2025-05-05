@@ -30,7 +30,7 @@
 import perceval as pcvl
 import perceval.components.unitary_components as comp
 from perceval.components import Circuit
-from perceval.components.comp_utils import decompose_perms
+from perceval.components._decompose_perms import decompose_perms
 import perceval.algorithm as algo
 import numpy as np
 import pytest

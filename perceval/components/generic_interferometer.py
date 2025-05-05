@@ -205,8 +205,8 @@ class GenericInterferometer(Circuit):
 
         :param param_list: List of numerical values for the parameters
         :param top_left_pos: Starting position of the insertion (column#, row#). Position is handled MZI-wise (i.e.
-        (0,0) starts inserting values on the top-left-most MZI of the interferometer whereas (1,0) starts on top of the
-        2nd MZI column). The optional phase layer is ignored in the position handling.
+           (0,0) starts inserting values on the top-left-most MZI of the interferometer whereas (1,0) starts on top of
+           the 2nd MZI column). The optional phase layer is ignored in the position handling.
         :param m: Mode count on where to insert the parameter values
         """
         col, lin = top_left_pos
