@@ -136,6 +136,8 @@ class PersistentData:
                 elif file_format == FileFormat.TEXT:
                     with open(file_path, "wt", encoding="UTF-8") as file:
                         file.write(data)
+                else:
+                    warnings.warn(UserWarning(f"Can't save {filename}, unknown file format {file_format}."))
             except OSError:
                 warnings.warn(UserWarning(f"Can't save {filename}"))
         else:
@@ -223,6 +225,8 @@ class PersistentData:
 
         if not PersistentData._is_subdir_readable(dir_path):
             raise PermissionError(f"Read permission denied for sub-directory {relative_path}")
+
+        return dir_path
 
     @staticmethod
     def _is_subdir_writable(path_sub_dir):
