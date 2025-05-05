@@ -28,7 +28,7 @@
 # SOFTWARE.
 
 from perceval import NoiseModel, BasicState, Processor, Experiment, BS, Simulator, \
-    SLOSBackend, Circuit, Source, FSIDistribution, FSCDistribution
+    SLOSBackend, Circuit, Source, FSIDistribution, FSCDistribution, Matrix, Unitary
 from perceval.utils.statevector import FockStateIndex, FockStateCode, FockStateCodeInv, SVDistribution, StateVector, \
     FSCIDistribution
 
@@ -59,9 +59,8 @@ for n in [9]:
 
     # second test : at the end of simulator
     simulator = Simulator(SLOSBackend())
-    circuit = Circuit(n)
-    circuit.add(0, BS())
-    circuit.add(1, BS())
+    circuit = Unitary(Matrix.random_unitary(n))
+
     simulator.set_circuit(circuit)
 
     state = [1 for k in range(n)]
@@ -71,6 +70,8 @@ for n in [9]:
 
     print('beginning loop over types of FS')
     for fs_type in [FockStateIndex, FockStateCode, FockStateCodeInv]:
+        source.FS_TYPE = fs_type
+        source.FSD_TYPE = FSD_MAP[fs_type]
         simulator.FS_TYPE = fs_type
         simulator.FSD_TYPE = FSD_MAP[fs_type]
         use_mem_maps = [False]

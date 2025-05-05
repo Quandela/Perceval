@@ -363,7 +363,7 @@ class Simulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = self.FSD_TYPE().list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
+            probs_in_s = self.FSD_TYPE.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
                                                             merge_modes=True,
                                                             prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
