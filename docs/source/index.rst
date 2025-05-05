@@ -140,7 +140,8 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
 .. toctree::
    :caption: Code Reference
-   :maxdepth: 3
+   :maxdepth: 2
+   :hidden:
 
    reference/components/index
    reference/rendering/index
