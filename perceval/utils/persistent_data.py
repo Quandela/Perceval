@@ -208,9 +208,12 @@ class PersistentData:
         """
         return self._directory
 
-    def create_sub_directory(self, relative_path):
+    def create_sub_directory(self, relative_path: str) -> str:
         """
         Creates a sub folder in persistent data directory if non-existent
+
+        :param relative_path: the folders path to create relative to self.directory
+        :return: full absolute path
         """
         dir_path = os.path.join(self.directory, relative_path)
 
