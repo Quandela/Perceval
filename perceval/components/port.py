@@ -147,7 +147,7 @@ def _to_fock(encoding: Encoding, qubit_state: list[int]) -> list[int]:
     if any(q not in [0, 1] for q in qubit_state):
         raise ValueError("Qubit value should be 0 or 1")
 
-    if encoding == Encoding.RAW or encoding == Encoding.TIME:
+    if encoding == Encoding.RAW:
         return [int(qubit_state[0])]
     elif encoding == Encoding.DUAL_RAIL:
         return [0, 1] if qubit_state[0] else [1, 0]
