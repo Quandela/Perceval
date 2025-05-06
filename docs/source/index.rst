@@ -64,7 +64,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    basics
    usage
    circuits
-   states
    polarization
    backends
    tools

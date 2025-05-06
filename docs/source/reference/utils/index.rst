@@ -2,11 +2,13 @@ perceval.utils
 ^^^^^^^^^^^^^^
 
 .. toctree::
-   density_matrix
-   expression
    matrix
-   noise_model
    parameter
-   polarization
-   stategenerator
+   expression
+   states
+   conversion
+   density_matrix
    logical_state
+   noise_model
+   stategenerator
+   polarization
