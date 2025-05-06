@@ -9,3 +9,4 @@ perceval.utils
    parameter
    polarization
    stategenerator
+   logical_state
