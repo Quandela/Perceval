@@ -1,13 +1,8 @@
-Processor and RemoteProcessor
-=============================
+Processor
+=========
 
-Processors and RemoteProcessors expose the same behaviour in many ways, and most of the time,
-when a Processor is needed, it can be replaced with a RemoteProcessor.
-
-Creating Processors
-^^^^^^^^^^^^^^^^^^^
-
-A processor describes an optical experiment with a computation method (backend).
+Processor is a mean to run a quantum algorithm locally (i.e. on the user's computer) using a simulation back-end.
+It contains a linear optics :ref:`Experiment` which can be defined in several ways:
 
 >>> import perceval as pcvl
 >>> p = pcvl.Processor("SLOS", 4, name="my proc")  # Creates a 4-modes Processor named "my proc" that will be simulated using SLOS
@@ -18,16 +13,17 @@ A processor can be created empty with a given number of modes, or using a circui
 
 >>> p = pcvl.Processor("SLOS", pcvl.BS())  # Creates a 2-modes Processor with a single beam splitter as component
 
-Method :code:`add`
-------------------
+Processor composition
+---------------------
 
-Just like circuits, components, circuits and processors can be added to processors using the :code:`add` method
+Components, circuits and experiments can be added to processors using the :meth:`add` method
 (note however that :code:`//` doesn't work for processors).
-When adding a Processor, only the backend from the left processor is kept.
+When another :code:`Processor` is added, only the enclosed :ref:`Experiment` is copied which means that the
+right handside back-end is omitted, and only the one from the left processor is kept.
 
 >>> p.add(0, pcvl.PS(3.14))  # Add a phase shifter on mode 0
 
-However, unlike circuits, non-linear components can also be added to Processors
+However, unlike :ref:`Circuit`, non-linear components can also be added to Processors
 
 >>> p.add(1, pcvl.TD(1))  # Adds a time-delay on mode 1
 
@@ -41,6 +37,13 @@ the inverse permutation is not added since it doesn't exist, so modes might move
 
 >>> p.add([1, 0], pcvl.BS(theta=0.7))  # Left mode 1 will connect to right mode 0, and left mode 0 will connect to right mode 1
 >>> p.add({1: 0, 0: 1}, pcvl.BS(theta=0.7))  # Same as above
+
+Composition is a powerful tool to achieve complex processors:
+
+.. figure:: ../../_static/img/complex-processor.png
+    :align: center
+
+    A processor composed of a Hadamard gate and two heralded CNOT gates.
 
 Detectors can also be added to a Processor using the same syntax
 
@@ -178,6 +181,11 @@ if the modes overlap one of the nodes of the post-selection (they should be enti
 If the user knows what they are doing,
 they can remove the post-selection using :code:`p.clear_postselection()` then apply it again.
 
+.. note::
+   Processor and :ref:`RemoteProcessor` expose the same behaviour in many ways, and most of the time,
+   when a Processor is needed, it can be replaced with a RemoteProcessor, making the processor to write switch from
+   local to remote computation back and forth as easy as possible.
+
 Computation
 ^^^^^^^^^^^
 
@@ -186,7 +194,7 @@ Depending on the backend that was specified at the beginning, a Processor can pe
 >>> p = pcvl.Processor("SLOS", 4)
 >>> p.available_commands
 ["probs"]
->>> p = pcvl.Processor("Clifford", 3)
+>>> p = pcvl.Processor("CliffordClifford2017", 3)
 >>> p.available_commands
 ["samples"]
 
@@ -204,52 +212,3 @@ BSDistribution(float, {|1,0>: 0.5, |0,1>: 0.5})
 .. autoclass:: perceval.components.processor.Processor
    :members:
    :inherited-members:
-
-RemoteProcessor specificities
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Creation
---------
-
-RemoteProcessors describe the same kind of experiments than regular Processors,
-but are executed remotely by a cloud platform (possibly by a real QPU).
-
-RemoteProcessors are created slightly differently than normal Processors.
-
->>> rp = pcvl.RemoteProcessor("sim:slos", token=..., m=3, noise=pcvl.NoiseModel(0.9))  # m is an optional kwarg here
-
-If :code:`m` is not specified, it is inferred from the first added component.
-They can also be created by converting a local Processor, keeping all defined objects (input state, filter, ports...).
-
->>> rp = pcvl.RemoteProcessor.from_local_processor(p, "sim:slos", token=...)
-
-From there, all composition rules are the same, and local processors can be added to remote processors.
-
-Input state
------------
-
-Only non-polarized BasicState and LogicalState input are accepted for RemoteProcessors.
-
-Computation
------------
-
-Primitives to obtain results (probs, samples) can't be used with RemoteProcessor.
-Instead, the user must use the Sampler algorithm to get what they want.
-
-Misc
-----
-
-Some platforms expose specs that must be fulfilled in order for a Job to be able to be completed.
-These include (but are not limited to) the number of photons, the number of modes, the number of photons per mode...
-They can be retrieved using the property :code:`rp.specs` or :code:`rp.constraints`
-
-The performances of the source can also be retrieved using the property :code:`rp.performance`.
-
-The needed resources in terms of samples or shots can be estimated by a RemoteProcessor
-
->>> rp.estimate_required_shots(nb_samples = 10000)
-
-Note that this uses a partially noisy local simulation, so it can be expensive to compute.
-
-.. autoclass:: perceval.runtime.remote_processor.RemoteProcessor
-   :members:

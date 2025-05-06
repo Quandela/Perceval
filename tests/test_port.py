@@ -27,19 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import math
 import pytest
 
-import perceval as pcvl
-from perceval import BasicState
-from perceval.components.port import *
-from perceval.components.unitary_components import PS, BS
-from perceval.utils import Encoding
+from perceval.components.port import Port, Herald, get_basic_state_from_ports
+from perceval.utils import Encoding, LogicalState, BasicState
 
 
 def test_basic_state_conversion():
     ports = [Herald(1), Port(Encoding.DUAL_RAIL, "belle"), Port(Encoding.RAW, "bulle"),
-             Herald(1), Herald(0), Port(Encoding.TIME, "rebelle"), Herald(1)]
+             Herald(1), Herald(0), Port(Encoding.RAW, "rebelle"), Herald(1)]
 
     assert BasicState([0, 1, 0, 1]) == get_basic_state_from_ports(ports, LogicalState([1, 0, 1]))
     with pytest.raises(ValueError):

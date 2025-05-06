@@ -58,7 +58,7 @@ class RemoteJob(Job):
     def __init__(self, request_data, rpc_handler, job_name, delta_parameters=None, job_context=None,
                  command_param_names=None, refresh_progress_delay: int = 3):
         r"""
-        :param request_data: prepared data for the job. It is extended by an async_execute() call before being sent.
+        :param request_data: prepared data for the job. It is extended by an execute_async() call before being sent.
             It is expected to be prepared by a RemoteProcessor. It must have the following structure:
             {
               'platform_name': '...',
@@ -76,8 +76,8 @@ class RemoteJob(Job):
         :param delta_parameters: parameters to add/remove dynamically
         :param job_context: Data on the job execution context (conversion required on results, etc.)
         :param command_param_names: List of parameter names for the command call (in order to resolve *args in
-            async_execute() call). This parameter is optional (default = empty list). However, without it, only **kwargs
-            are available in the async_execute() call
+            execute_async() call). This parameter is optional (default = empty list). However, without it, only **kwargs
+            are available in the execute_async() call
         :param refresh_progress_delay: wait time when running in sync mode between each refresh
         """
         super().__init__(delta_parameters=delta_parameters, command_param_names=command_param_names)

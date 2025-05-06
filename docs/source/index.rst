@@ -68,7 +68,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    polarization
    backends
    tools
-   algorithms
    providers
    legacy
 
@@ -140,8 +139,10 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
 
 .. toctree::
    :caption: Code Reference
-   :maxdepth: 3
+   :maxdepth: 2
+   :hidden:
 
+   reference/algorithm/index
    reference/components/index
    reference/rendering/index
    reference/runtime/index

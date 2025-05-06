@@ -1,4 +1,4 @@
-Feed forward Configurators
+Feed-forward Configurators
 ==========================
 
 Configurators are the way to perform a feed-forward computation.

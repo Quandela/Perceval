@@ -35,7 +35,7 @@ from ._abstract_backends import AStrongSimulationBackend
 from perceval.utils import BasicState
 from perceval.components import ACircuit
 from perceval.components.unitary_components import PERM, Barrier
-from perceval.components.comp_utils import decompose_perms
+from perceval.components._decompose_perms import decompose_perms
 
 
 class MPSBackend(AStrongSimulationBackend):
