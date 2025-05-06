@@ -47,7 +47,7 @@ like loss of photons, noise, time delays, and more. Ideal simulators should take
 The Backends
 ------------
 
-Perceval has 7 different built-in back-ends with the support of optimized C++ library.
+Perceval has 6 different built-in back-ends with the support of optimized C++ library.
 
 Comparison Table
 ^^^^^^^^^^^^^^^^
@@ -64,13 +64,11 @@ Comparison Table
      - :ref:`SLOS`
      - :ref:`Naive`
      - :ref:`NaiveApprox`
-     - :ref:`Stepper`
      - :ref:`MPS`
      - :ref:`SLAP`
    * - Sampling Efficiency
      - :math:`\mathrm{O}(n2^n+poly(m,n))`
      - :math:`\mathrm{O}(mC_n^{n+m-1})`
-     - *N/A* [1]_
      - *N/A* [1]_
      - *N/A* [1]_
      - *N/A* [1]_
@@ -81,7 +79,6 @@ Comparison Table
      - :math:`\mathrm{O}(n2^n)`
      - :math:`\mathrm{O}(n)`
      - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
-     - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
      - :math:`\mathrm{O}(n2^n)`
    * - Full Distribution Efficiency
      - *N/A*
@@ -89,11 +86,9 @@ Comparison Table
      - :math:`\mathrm{O}(n2^nC_n^{n+m-1})`
      - :math:`\mathrm{O}(nC_n^{n+m-1})`
      - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
-     - :math:`\mathrm{O}(N_cC_n^{n+m-1})`
      - :math:`\mathrm{O}(\begin{equation} 2n\times \sum_{k=1}^n  \binom{n-1}{k-1} \times \binom{m+k-1}{m-1} \label{eq:complex} \end{equation})`
    * - Probability Amplitude
      - **No**
-     - **Yes**
      - **Yes**
      - **Yes**
      - **Yes**
@@ -104,22 +99,12 @@ Comparison Table
      - **Yes**
      - **No**
      - **No**
-     - **Yes**
-     - **No**
-     - **No**
-   * - Support of Time-Circuit
-     - **No**
-     - **No**
-     - **No**
-     - **No**
-     - **Yes**
      - **No**
      - **No**
    * - Practical Limits
      - :math:`n\approx30`
      - :math:`n,m<20`
      - :math:`n\approx30`
-     -
      -
      -
      -
@@ -226,16 +211,6 @@ states :cite:p:`schollwock2011density`, :cite:p:`oh2021classical`.
 As the Stepper, MPS backend does the computation on each component of the circuits one-by-one, and not on the whole unitary, but has the unique feature of performing approximate state evolution.
 The states are represented by tensors, which are then updated at each component.
 These tensors can be seen as a big set of matrices, and the approximation is done by choosing the dimension of these matrices, called the *bond* dimension.
-
-Stepper
-^^^^^^^
-
-This simulator takes a totally different approach. Without computing the circuit's overall unitary matrix first,
-it applies the unitary matrix associated with the components in each layer of the circuit one-by-one,
-simulating the evolution of the statevector. The complexity of this backend is therefore proportional to the
-number of components. It enables simple debugging of circuits by exposing intermediate states.
-
-The `Stepper` formerly a `backend` is a `simulator` since Perceval 0.9.
 
 .. rubric:: Footnotes
 
