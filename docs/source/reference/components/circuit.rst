@@ -53,19 +53,19 @@ even without having to store them somewhere.
 2.53
 
 .. note::
-  The :code:`assign` argument of :meth:`compute_unitary()` does exactly that.
+  The :code:`assign` argument of :meth:`compute_unitary()` does exactly that if you want to compute the unitary with values.
+  Beware however that this has the side-effect of changing the values of the parameters even outside :meth:`compute_unitary()`.
+  You can remove the values for the variable parameters to get back sympy expressions using the circuit's :meth:`reset_parameters()` method.
 
 The names of the parameters can be obtained using the :meth:`params` property.
 Note that this includes the fixed parameters if there are any.
 
 To get the :code:`Parameter` itself, there are three ways:
 
-- use the :meth:`param` method that allows using one parameter name to get it.
-- use the :meth:`get_parameters` method that gives all the parameters defined by the arguments
+- use the :meth:`param()` method that allows using one parameter name to get it.
+- use the :meth:`get_parameters()` method that gives all the parameters defined by the arguments
   (variable or all, with or without expressions). This is the preferred method for getting all parameters.
 - use the :meth:`vars` property to get a dictionary mapping the name of the variable parameters and their instances.
-
-
 
 .. autoclass:: perceval.components.linear_circuit.Circuit
    :members:
