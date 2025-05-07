@@ -35,11 +35,12 @@ import numpy as np
 from .statevector import BSDistribution, BSCount, BSSamples
 
 
-def _deduce_count(count: int, **kwargs) -> int:
+def _deduce_count(**kwargs) -> int:
+    count = kwargs.get("count")
     if count is not None:
         return count
-    max_shots = kwargs.get("max_shots", None)
-    max_samples = kwargs.get("max_samples", None)
+    max_shots = kwargs.get("max_shots")
+    max_samples = kwargs.get("max_samples")
     if max_shots is not None and max_samples is not None:
         return min(max_samples, max_shots)  # Not accurate in terms of shot limit
     count = max_shots or max_samples
@@ -50,26 +51,46 @@ def _deduce_count(count: int, **kwargs) -> int:
 
 # Conversion functions (samples <=> probs <=> sample_count)
 def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
+    """
+    Convert a chronological measured sample list to a state count
+
+    :param sample_list: the list to convert
+    :return: the state count
+    """
     return BSCount(Counter(sample_list))
 
 
 def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
+    """
+    Convert a chronological measured sample list to a state distribution
+
+    :param sample_list: the list to convert
+    :return: the state distribution
+    """
     return sample_count_to_probs(samples_to_sample_count(sample_list))
 
 
-def probs_to_sample_count(probs: BSDistribution, count: int = None, **kwargs) -> BSCount:
-    count = _deduce_count(count, **kwargs)
+def probs_to_sample_count(probs: BSDistribution, **kwargs) -> BSCount:
+    """
+    Convert a measured state probability distribution to a state count.
+
+    This conversion artificially adds random sampling noise, following a normal law, to the result.
+
+    :param probs: the distribution to convert
+    :return: the state count
+    """
+    count = _deduce_count(**kwargs)
     if count < 1:
         return BSCount()
     perturbed_dist = {state: max(prob + np.random.normal(scale=(prob * (1 - prob) / count) ** .5), 0)
                       for state, prob in probs.items()}
     prob_sum = sum(perturbed_dist.values())
     if prob_sum == 0:
-        return samples_to_sample_count(probs_to_samples(probs, count))
+        return samples_to_sample_count(probs_to_samples(probs, count=count))
     fac = 1 / prob_sum
     perturbed_dist = {key: fac * prob for key, prob in perturbed_dist.items()}  # Renormalisation
     if max(perturbed_dist.values()) * count < 1:
-        return samples_to_sample_count(probs_to_samples(probs, count))
+        return samples_to_sample_count(probs_to_samples(probs, count=count))
 
     results = BSCount()
     for state in perturbed_dist:
@@ -87,26 +108,40 @@ def probs_to_sample_count(probs: BSDistribution, count: int = None, **kwargs) ->
     return results
 
 
-def probs_to_samples(probs: BSDistribution, count: int = None, **kwargs) -> BSSamples:
-    count = _deduce_count(count, **kwargs)
+def probs_to_samples(probs: BSDistribution, **kwargs) -> BSSamples:
+    """
+    Convert a measured state probability distribution to a chronological list of  samples
+
+    :param probs: the distribution to convert
+    :return: the sample list
+    """
+    count = _deduce_count(**kwargs)
     return probs.sample(count)
 
 
 def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
+    """
+    Convert a state count to a state probability distribution
+
+    :param sample_count: the state count
+    :return: the state probability distribution
+    """
     bsd = BSDistribution()
     for state, count in sample_count.items():
-        if count == 0:
-            continue
-        if count < 0:
-            raise RuntimeError(f"A sample count must be positive (got {count})")
-        bsd[state] = count
+        bsd.add(state, count)
     bsd.normalize()
     return bsd
 
 
-def sample_count_to_samples(sample_count: BSCount, count: int = None, **kwargs) -> BSSamples:
+def sample_count_to_samples(sample_count: BSCount, **kwargs) -> BSSamples:
+    """
+    Convert a state count to a chronological list of samples, by randomly sampling on the count
+
+    :param sample_count: the state count
+    :return: the sample list
+    """
     try:
-        count = _deduce_count(count, **kwargs)
+        count = _deduce_count(**kwargs)
     except RuntimeError:
-        count = sum([v for v in sample_count.values()])
+        count = sum(tuple(sample_count.values()))
     return sample_count_to_probs(sample_count).sample(count)
