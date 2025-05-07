@@ -26,7 +26,7 @@ They can be used in two ways:
     >>> for i, encoding in enumerate(encodings):
     >>>     e.add_port(m, pcvl.Port(encoding, f"{i}"))
     >>>     m += encoding.fock_length
-    >>> ls = pcvl.LogicalState("101")
+    >>> ls = pcvl.LogicalState([1, 0, 1])
     >>> e.with_input(ls)
     >>> print(e.input_state)
     |0,1,0,1,0,0>

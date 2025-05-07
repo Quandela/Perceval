@@ -34,6 +34,7 @@ import random
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from typing import Generator
 
 import numpy as np
 import sympy as sp
@@ -117,8 +118,8 @@ class ACircuit(AParametrizedComponent, ABC):
     def __ifloordiv__(self, component: ACircuit | tuple[int, ACircuit]) -> Circuit:
         r"""Shortcut for ``.add``
 
-        >>> c //= b       # equivalent to: `c.add((0:b.n),b)`
-        >>> c //= (i, b)  # equivalent to: `c.add((i:i+b.n), b)`
+        >>> c //= b       # equivalent to: `c.add((0:b.m),b)`
+        >>> c //= (i, b)  # equivalent to: `c.add((i:i+b.m), b)`
 
         :param component: the component to add, or a tuple (first_port, component)
 
@@ -298,9 +299,13 @@ class Circuit(ACircuit):
     def is_composite(self):
         return True
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[tuple[tuple[int, ...], ACircuit]]:
         """
-        Iterator on a circuit, recursively returns components applying in circuit order
+        Iterator on a circuit, recursively returns modes and components in the order they were added to the circuit.
+        Flattens the circuit if there are sub-circuits.
+
+        :return: generator of tuples (r, c) where r is the tuple containing the modes of the component in ascending order,
+         and c is the component itself.
         """
         for r, c in self._components:
             for range_comp, comp in c:
@@ -468,6 +473,14 @@ class Circuit(ACircuit):
         return u
 
     def inverse(self, v=False, h=False):
+        """
+        Inverts a circuit in place, depending on the values of ``h`` and ``v``.
+
+        :param h: Stands for horizontal. If True, the circuit will be reversed such that its final unitary matrix
+         is the inverse of the original one.
+        :param v: Stands for vertical. If True, the circuit will be reversed such that the mode 0 becomes the mode :math:`m-1`,
+         the mode 1 becomes the mode :math:`m - 2`...
+        """
         _new_components = []
         _components = self._components
         if h:
@@ -594,7 +607,9 @@ class Circuit(ACircuit):
         return None
 
     def depths(self):
-        r"""Return depth of the circuit for each mode"""
+        """
+        :return: the depth of the circuit for each mode
+        """
         the_depths = [0] * self.m
         for r, c in self._components:
             c_depths = c.depths()
@@ -603,7 +618,9 @@ class Circuit(ACircuit):
         return the_depths
 
     def ncomponents(self):
-        r"""Return number of actual components in the circuit"""
+        """
+        :return: number of actual components in the circuit
+        """
         n = 0
         for _, c in self._components:
             n += c.ncomponents()

@@ -61,7 +61,7 @@ class AComponent(ABC):
 
     def is_composite(self) -> bool:
         """
-        Returns True if the component is itself composed of subcomponents
+        :return: True if the component is itself composed of subcomponents
         """
         return False
 
@@ -74,10 +74,20 @@ class AParametrizedComponent(AComponent):
 
     @property
     def vars(self) -> dict[str, Parameter]:
+        """
+        :return: A dictionary mapping parameter names to parameters for all variable parameters of the circuit
+        """
         return {p.name: p for p in self._params.values() if not p.fixed}
 
     def assign(self,
-               assign: dict = None):
+               assign: dict[str, float | int] = None):
+        """
+        Assign values to parameters referenced in assign
+
+        :param assign: A dictionary mapping parameter_name -> value.
+         Set the value to the parameter whose name is parameter_name for each key of the dictionary.
+        :raise KeyError: If parameter_name is not an existing variable parameter name of the circuit.
+        """
         if assign is None:
             return
         vs = self.vars
@@ -97,7 +107,9 @@ class AParametrizedComponent(AComponent):
 
     @property
     def params(self) -> Iterable[str]:
-        """Returns a list of all variable parameter names in the component"""
+        """
+        :return: a list of all variable parameter names in the component
+        """
         return self._params.keys()
 
     def param(self, param_name: str) -> Parameter:
