@@ -276,10 +276,12 @@ class JobStatus:
 
     @property
     def running_time(self) -> int:
-
         if self._duration:
             return self._duration
-        raise RuntimeError("The job hasn't been stopped and has no duration yet")
+        if not self.completed:
+            raise RuntimeError("The job hasn't been stopped and has no duration yet")
+        self._duration = int(self._completed_time - self._running_time_start)
+        return self._duration
 
     def __str__(self) -> str:
         return self._status.name
