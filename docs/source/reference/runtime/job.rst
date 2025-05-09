@@ -43,13 +43,19 @@ When a job is canceled, it may contain partial results. To retrieve them, call :
 >>> job = remote_processor.resume_job("job_id")  # You can find job IDs on Quandela Cloud's website
 >>> print(job.id)  # The ID field is also available in every remote job object
 
+* At any time, the user can retrieve a :ref:`JobStatus` to retrieve several job metadata:
+
+>>> job_status = job.status
+
 
 LocalJob
 ========
 
 .. autoclass:: perceval.runtime.local_job.LocalJob
+   :inherited-members: name, get_results, __call__
 
 RemoteJob
 =========
 
 .. autoclass:: perceval.runtime.remote_job.RemoteJob
+   :inherited-members: name, get_results, __call__
