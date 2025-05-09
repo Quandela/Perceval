@@ -30,7 +30,7 @@
 import math
 import pytest
 
-from perceval import PortLocation, PostSelect
+from perceval import PortLocation
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
                                  FFConfigurator, FFCircuitProvider, Unitary, Barrier)
 from perceval.utils import Matrix, P, LogicalState
@@ -218,3 +218,20 @@ def test_asymmetrical_composition():
 
     assert p.in_heralds == {2: 1, 3: 2}
     assert p.heralds == {0: 0, 3: 3}
+
+
+def test_detector_composition():
+    detector_2 = Detector.ppnr(2)
+    detector_3 = Detector.ppnr(3)
+    detector_4 = Detector.ppnr(4)
+
+    p = Processor("SLOS", 3)
+    p.add(1, detector_2)
+
+    p2 = Processor("SLOS", 2)
+    p2.add(0, detector_3)
+    p2.add(1, detector_4)
+
+    p.add({2: 0, 0: 1}, p2)
+
+    assert p.detectors == [detector_4, detector_2, detector_3]
