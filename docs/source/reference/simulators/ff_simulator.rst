@@ -1,11 +1,11 @@
 FFSimulator
 ===========
 
-The :code:`FFSimulator` is a simulator dedicated to simulate feed-forward circuits.
+The :code:`FFSimulator` is a simulator dedicated to simulate feed-forward experiments.
 
-Like the :code:`Simulator`, it needs a probability amplitude capable backend to be able to perform simulations.
-However, the :code:`FFSimulator` is also able to compute circuits having :code:`FFConfigurator` or :code:`FFCircuitProvider`
-but is unable to compute probability amplitudes.
+Like the :code:`Simulator`, it needs a strong simulation backend to be able to perform simulations.
+However, the :code:`FFSimulator` is also able to compute circuits having :ref:`FFConfigurator` or
+:ref:`FFCircuitProvider` but is unable to compute probability amplitudes.
 
 Thus, only the :code:`probs_svd` and :code:`probs` computation methods are available.
 

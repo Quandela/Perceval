@@ -1,5 +1,5 @@
-perceval.utils.algorithms
-^^^^^^^^^^^^^^^^^^^^^^^^^
+utils.algorithms
+^^^^^^^^^^^^^^^^
 
 .. toctree::
    circuit_optimizer

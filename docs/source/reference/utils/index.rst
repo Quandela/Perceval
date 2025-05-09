@@ -1,5 +1,5 @@
-perceval.utils
-^^^^^^^^^^^^^^
+utils
+^^^^^
 
 .. toctree::
    matrix
