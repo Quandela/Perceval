@@ -97,12 +97,12 @@ class JobStatus:
     def __init__(self):
         self._status: RunningStatus = RunningStatus.WAITING
         self._init_time_start = time()
-        self._running_time_start = None
-        self._duration = None
-        self._completed_time = None
+        self._running_time_start: float | None = None
+        self._duration: float | None = None
+        self._completed_time: float | None = None
         self._running_progress: float = 0
         self._running_phase: str | None = None
-        self._stop_message = None
+        self._stop_message: str | None = None
         self._waiting_progress: int | None = None
         self._last_progress_time: float = 0
 
@@ -143,7 +143,7 @@ class JobStatus:
         """
         self._status = cause
         self._completed_time = time()
-        self._duration = int(self._completed_time - self._init_time_start)
+        self._duration = self._completed_time - self._init_time_start
         if cause == RunningStatus.SUCCESS:
             self._running_progress = 1
         self._stop_message = mesg
@@ -164,7 +164,7 @@ class JobStatus:
             sleep(0.001)
         self._last_progress_time = now
 
-    def update_times(self, creation_datetime: float, start_time: float, duration: int):
+    def update_times(self, creation_datetime: float, start_time: float, duration: float):
         """
         Set the important times from external information
 
@@ -196,7 +196,7 @@ class JobStatus:
         return self._running_time_start
 
     @property
-    def duration(self) -> int:
+    def duration(self) -> float:
         """
         :return: the duration of the job (in seconds)
         """
@@ -275,13 +275,12 @@ class JobStatus:
         return self._running_progress
 
     @property
-    def running_time(self) -> int:
+    def running_time(self) -> float:
         if self._duration:
             return self._duration
         if not self.completed:
-            raise RuntimeError("The job hasn't been stopped and has no duration yet")
-        self._duration = int(self._completed_time - self._running_time_start)
-        return self._duration
+            return time() - self._running_time_start
+        return self._completed_time - self._running_time_start
 
     def __str__(self) -> str:
         return self._status.name

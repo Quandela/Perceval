@@ -39,7 +39,7 @@ from perceval.utils.logging import get_logger, channel
 from .rpc_handler import RPCHandler
 
 
-def _extract_job_times(response: dict):
+def _extract_job_times(response: dict) -> tuple[float, float, float]:
     creation_datetime = response.get('creation_datetime')
     start_datetime = response.get('start_time')
     duration = response.get('duration')
@@ -48,7 +48,7 @@ def _extract_job_times(response: dict):
     if start_datetime is not None:
         start_datetime = float(start_datetime)
     if duration is not None:
-        duration = int(duration)
+        duration = float(duration)
     return creation_datetime, duration, start_datetime
 
 
