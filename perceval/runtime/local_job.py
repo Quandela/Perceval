@@ -36,7 +36,7 @@ from .job_status import JobStatus, RunningStatus
 
 
 class LocalJob(Job):
-    """
+    r"""
     Handle a computation task locally (i.e. on the computer running Perceval)
 
     :param fn: Function to be called by the job when run, aka "the task"

@@ -53,7 +53,7 @@ def _extract_job_times(response: dict) -> tuple[float, float, float]:
 
 
 class RemoteJob(Job):
-    """
+    r"""
     Handle a computation task remotely (i.e. through a Cloud provider) by sending a request body of the form:
 
     .. code-block::
