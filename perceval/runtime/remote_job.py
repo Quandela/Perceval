@@ -217,7 +217,7 @@ class RemoteJob(Job):
 
         .. note:: This method has exactly the same effect as __call__.
 
-        .. warning:: A remote job natural way od running is asynchronous. This call will actually run the task
+        .. warning:: A remote job natural way of running is asynchronous. This call will actually run the task
                      asynchronously with a waiting loop to reproduce the behaviour of the synchronous call.
 
         :param args: arguments to pass to the task function

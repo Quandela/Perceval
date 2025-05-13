@@ -143,7 +143,7 @@ class AStrongSimulationBackend(ABackend):
         Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
         instead, if required).
         """
-        if self._circuit and circuit.m != self._circuit:
+        if self._circuit and circuit.m != self._circuit.m:
             self.clear_iterator_cache()
         super().set_circuit(circuit)
 
