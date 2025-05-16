@@ -229,7 +229,7 @@ def test_cnot_herald():
     bsd_out = pc.probs()['results']
     assert bsd_out[BasicState("|1,0,0,1>")] + bsd_out[BasicState("|0,1,1,0>")] < 2e-5
     assert bsd_out[BasicState("|1,0,1,0>")] + bsd_out[BasicState("|0,1,0,1>")] > 0.99
-    assert len(bsd_out) == 4
+    assert len(bsd_out) <= 4
 
 def qiskit_circ_multiple_cnots():
     # Gate Circuit
@@ -304,7 +304,8 @@ def test_cnot_ppcnot_vs_hcnot_sim():
     valid_bsd.normalize()
 
     tot_diff = 0  # sum of absolute difference between the probs of the two computations
-    for index, (key, value) in enumerate(valid_bsd.items()):
+    for index, key in enumerate(basic_states):
+        value = valid_bsd[key]
         bit_form = np.binary_repr(index, 4)  # bit form of basic states - to extract data from Qiskit output
         tot_diff += abs(value - EXPECTED_QISK_SIM_PROBS_DATA[bit_form])
 

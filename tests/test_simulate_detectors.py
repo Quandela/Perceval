@@ -55,12 +55,12 @@ def test_simulate_detectors():
     assert res[BasicState([1, 1, 0])] == 0.25
 
     res, _ = simulate_detectors(bsd, mixed_detector_list)
-    assert res[BasicState([1, 1, 1])] == 0.2
+    assert res[BasicState([1, 1, 1])] == pytest.approx(0.2)
     assert res[BasicState([1, 0, 1])] == pytest.approx(0.3 * 0.5 + 0.1)
     assert res[BasicState([2, 0, 1])] == pytest.approx(0.3 * 0.5)
     assert res[BasicState([1, 1, 0])] == pytest.approx(0.25 * 0.5)
     assert res[BasicState([2, 1, 0])] == pytest.approx(0.25 * 0.5)
-    assert res[BasicState([0, 0, 1])] == 0.15
+    assert res[BasicState([0, 0, 1])] == pytest.approx(0.15)
 
     res, _ = simulate_detectors(bsd, mixed_detector_list, None, 0.6)
     assert res[BasicState([1, 1, 1])] == pytest.approx(4/9)

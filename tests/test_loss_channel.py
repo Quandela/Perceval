@@ -27,10 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
 from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, SVDistribution, NoiseModel
 from perceval.algorithm import Sampler
-
+from tests._test_utils import assert_bsd_close
 
 U = Matrix.random_unitary(2)
 loss = .3
@@ -53,7 +52,7 @@ def test_lc_minimal():
     expected_svd[BasicState([1])] = 2 * loss * (1 - loss)
     expected_svd[BasicState([2])] = (1 - loss) ** 2
     res = p.probs()["results"]
-    assert pytest.approx(res) == expected_svd
+    assert_bsd_close(res, expected_svd)
 
 
 def test_lc_commutative():
@@ -64,7 +63,7 @@ def test_lc_commutative():
           .add(0, Unitary(U)))
     cg.with_input(input_state)
     cg.min_detected_photons_filter(0)
-    assert pytest.approx(cg.probs()["results"]) == cd.probs()["results"]
+    assert_bsd_close(cg.probs()["results"], cd.probs()["results"])
 
 
 def test_lc_source_losses_equivalence():
@@ -75,7 +74,7 @@ def test_lc_source_losses_equivalence():
 
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]
-    assert pytest.approx(real_out) == cd.probs()["results"]
+    assert_bsd_close(real_out, cd.probs()["results"])
 
 
 def test_lc_empty_modes():
@@ -85,7 +84,7 @@ def test_lc_empty_modes():
 
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]
-    assert pytest.approx(real_out) == BSDistribution(
+    assert_bsd_close(real_out, BSDistribution(
         {BasicState([0, 1]): loss,
          BasicState([1, 1]): 1 - loss}
-    )
+    ))

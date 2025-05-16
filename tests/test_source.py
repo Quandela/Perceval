@@ -133,7 +133,7 @@ def test_source_sample_no_filter():
 
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs,0)
-    dist = BSDistribution({str(key):value for key,value in dist.items()}) # change SVD to BSD
+    dist = BSDistribution({key[0]:value for key,value in dist.items()}) # change SVD to BSD
 
     # just avoid the warning in tvd_dist
     for el in set(dist.keys()) - set(dist_samples.keys()):
@@ -238,7 +238,7 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs, 0)
     dist = anonymize_annotations(dist, annot_tag="_")
-    dist = BSDistribution({str(key): value for key, value in dist.items()})  # change SVD to BSD
+    dist = BSDistribution({key[0]: value for key, value in dist.items()})  # change SVD to BSD
     dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
 
     # just avoid the warning in tvd_dist

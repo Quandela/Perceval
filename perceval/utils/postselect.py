@@ -31,8 +31,9 @@ from __future__ import annotations
 import exqalibur as xq
 
 from .statevector import BSDistribution, StateVector
+
 try:
-    from typing import TypeAlias
+    from typing import TypeAlias, Any
 except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
@@ -40,10 +41,10 @@ PostSelect: TypeAlias = xq.PostSelect
 
 
 def post_select_distribution(
-        bsd: BSDistribution,
+        bsd,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True) -> tuple[BSDistribution, float]:
+        keep_heralds: bool = True) -> tuple[Any, float]:
     """Post select a BSDistribution
 
     :param bsd: BSDistribution to post select
@@ -54,13 +55,14 @@ def post_select_distribution(
     :return: A tuple containing post-selected BSDistribution and logical performance
     """
     if not (postselect.has_condition or heralds):
-        bsd.normalize()
+        if len(bsd):
+            bsd.normalize()
         return bsd, 1
 
     if heralds is None:
         heralds = {}
     logical_perf = 1
-    result = BSDistribution()
+    result = type(bsd)()
     for state, prob in bsd.items():
         heralds_ok = True
         for m, v in heralds.items():
@@ -72,7 +74,8 @@ def post_select_distribution(
             result[state] = prob
         else:
             logical_perf -= prob
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, logical_perf
 
 
@@ -91,7 +94,8 @@ def post_select_statevector(
     :return:  A tuple containing the post-selected StateVector and logical performance
     """
     if not (postselect.has_condition or heralds):
-        sv.normalize()
+        if len(sv):
+            sv.normalize()
         return sv, 1
 
     if heralds is None:
@@ -108,5 +112,6 @@ def post_select_statevector(
                 state = state.remove_modes(list(heralds.keys()))
             result += ampli * state
             logical_perf += abs(ampli) ** 2
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, logical_perf
