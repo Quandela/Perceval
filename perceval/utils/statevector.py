@@ -49,9 +49,9 @@ BSCount: TypeAlias = xq.BSCount
 BSSamples: TypeAlias = xq.BSSamples
 StateVector: TypeAlias = xq.StateVector
 BSDistribution: TypeAlias = xq.BSDistribution
-FSIDistribution: TypeAlias = xq.FSIDistribution
-FSCDistribution: TypeAlias = xq.FSCDistribution
-FSCIDistribution: TypeAlias = xq.FSCIDistribution
+FSIDistribution: TypeAlias = xq.FockStateIndexDistribution
+FSCDistribution: TypeAlias = xq.FockStateCodeDistribution
+FSCIDistribution: TypeAlias = xq.FockStateCodeInvDistribution
 SVDistribution: TypeAlias = xq.SVDistribution
 
 

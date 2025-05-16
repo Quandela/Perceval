@@ -53,7 +53,7 @@ FSD_MAP = {
 }
 
 # for n in range(4,13):
-for n in [9]:
+for n in [7]:
     memory_mo[n] = dict()
     time_ms[n] = dict()
 
@@ -75,43 +75,49 @@ for n in [9]:
         simulator.FS_TYPE = fs_type
         simulator.FSD_TYPE = FSD_MAP[fs_type]
         use_mem_maps = [False]
+        use_intermediate_state = [False]
 
         time_ms[n][fs_type] = dict()
         if fs_type == FockStateIndex:
-            # use_mem_maps = [True]
             use_mem_maps = [True,False]
+            use_intermediate_state = [True,False]
 
         for mem_maps in use_mem_maps:
             FockStateIndex.use_memory_maps(mem_maps)
+            time_ms[n][fs_type][mem_maps] = dict()
 
-            # first test : source generation
-            # source = NoiseModel(.9, 1, 0.03)
-            # p = Processor("SLOS", Experiment(BS(), noise=source))
-            #
-            #
-            # start = time.perf_counter()
-            # result = generate_distribution(p.source, input_state)
-            # stop = time.perf_counter()
+            for intermediate_state in use_intermediate_state:
+                FockStateIndex.use_intermediate_state(intermediate_state)
 
-            # second test : at the end of simulator
-            start = time.perf_counter()
-            res = simulator.probs_svd(svd)
-            # input_state = BasicState("|{_:0},{_:0},{_:0},{_:0},{_:0},{_:0},{_:1},{_:2},{_:3},{_:4},{_:5},{_:6}>")
-            # res = simulator.probs(input_state)
-            stop = time.perf_counter()
+                # first test : source generation
+                # source = NoiseModel(.9, 1, 0.03)
+                # p = Processor("SLOS", Experiment(BS(), noise=source))
+                #
+                #
+                # start = time.perf_counter()
+                # result = generate_distribution(p.source, input_state)
+                # stop = time.perf_counter()
+
+                # second test : at the end of simulator
+                start = time.perf_counter()
+                res = simulator.probs_svd(svd)
+                # input_state = BasicState("|{_:0},{_:0},{_:0},{_:0},{_:0},{_:0},{_:1},{_:2},{_:3},{_:4},{_:5},{_:6}>")
+                # res = simulator.probs(input_state)
+                stop = time.perf_counter()
 
             # input("Stop to check memory...")
 
-            time_ms[n][fs_type][mem_maps] = (stop - start) * 1000
-            print('time duration:', time_ms[n][fs_type][mem_maps])
-            # print('results:', res)
+                time_ms[n][fs_type][mem_maps][intermediate_state] = (stop - start) * 1000
+                print('time duration:', time_ms[n][fs_type][mem_maps][intermediate_state])
+                # print('results:', res)
 
 
 with open('results_benchmark_fsi.csv', 'w') as f:
-    f.write('n;FockStateIndex (with mem maps);FockStateIndex (without mem maps);FockStateCode;FockStateCodeInv\n')
+    f.write('n;FockStateIndex (with mem maps, with int state);FockStateIndex (with mem maps, without int state);FockStateIndex (without mem maps, with int state);FockStateIndex (without mem maps, without int state);FockStateCode;FockStateCodeInv\n')
     for n in time_ms:
         line = f'{n};'
         for fs_type in time_ms[n]:
             for mem_maps in time_ms[n][fs_type]:
-                line += f'{time_ms[n][fs_type][mem_maps]};'
+                for intermediate_state in time_ms[n][fs_type][mem_maps]:
+                    line += f'{time_ms[n][fs_type][mem_maps][intermediate_state]};'
         f.write(line + '\n')
