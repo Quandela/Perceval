@@ -28,6 +28,7 @@
 # SOFTWARE.
 
 import networkx as nx
+import numpy as np
 
 from .statevector import BasicState, StateVector
 from .qmath import distinct_permutations
@@ -193,3 +194,54 @@ class StateGenerator:
         for state in distinct_permutations(array):
             dicke_state += BasicState(f"|{','.join(state)}>")
         return dicke_state
+
+    @staticmethod
+    def zero_padded_state(n: int, m: int = None) -> BasicState:
+        """
+        Get a |111...10...0> state with n photons and m modes. Ignores the encoding.
+
+        :param n: Number of photons
+        :param m: Number of modes. Default :math:`n`
+        :return: BasicState of the shape |111...10...0>
+        """
+        if m is None:
+            return BasicState(n * [1])
+        assert n <= m, "Cannot generate a zero-padded state with more photons than modes"
+        return BasicState(n * [1] + (m - n) * [0])
+
+    @staticmethod
+    def periodic_state(n: int, m: int = None) -> BasicState:
+        """
+        Get a state consisting of repeating |10>. Pads the end of the state with zero photon modes.
+        Ignores the encoding.
+
+        :param n: Number of photons
+        :param m: Number of modes. Default :math:`2n` (no padding at the end)
+        :return: BasicState of the shape |1010...000>
+        """
+        state = BasicState([1, 0] * n)
+        if m is not None:
+            assert 2 * n <= m, "Cannot generate a periodic state with a number of modes less that twice the number of photons"
+            state *= BasicState([0]) ** (m - state.m)
+        return state
+
+    @staticmethod
+    def evenly_spaced_state(n: int, m: int) -> BasicState:
+        """
+        Get a state where photons are evenly spaced. Ignores the encoding.
+
+        :param n: Number of photons
+        :param m: Number of modes.
+        :return: BasicState where the photons are the most spread as possible in the modes.
+        """
+        res = [0] * m
+        if n == 1:
+            # Special case: put the photon in the middle
+            res[m // 2] = 1
+        else:
+            # 1e-5 induces a very small bias but avoids getting m in the positions, which would be out of range
+            positions = np.linspace(0, m - 1e-5, n, dtype=int)
+            for pos in positions:
+                res[pos] += 1
+
+        return BasicState(res)
