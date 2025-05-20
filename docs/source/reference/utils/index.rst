@@ -12,3 +12,4 @@ utils
    noise_model
    stategenerator
    polarization
+   persistent_data

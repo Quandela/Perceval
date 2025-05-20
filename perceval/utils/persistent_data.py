@@ -40,9 +40,11 @@ _CONFIG_FILE_NAME = "config.json"
 SUB_DIRECTORIES = ['logs', 'job_group']
 
 class PersistentData:
-    """PersistentData handle perceval persistent data
+    r"""
+    PersistentData is a class that stores data on the drive to save data between launches of perceval.
     On init, it creates a directory (if it doesn't exist) for storing perceval persistent data
-    Directory depends of the os:
+    Default directory depends on the os:
+
     * Linux: '/home/my_user/.local/share/perceval-quandela'
     * Windows: 'C:\\Users\\my_user\\AppData\\Local\\quandela\\perceval-quandela'
     * Darwin: '/Users/my_user/Library/Application Support/perceval-quandela'
@@ -50,7 +52,9 @@ class PersistentData:
     If the directory cannot be created or read/write in, a warning will inform the user
     """
 
-    def __init__(self, directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir) -> None:
+    def __init__(self, directory = None):
+        if directory is None:
+            directory = PlatformDirs(PMetadata.package_name(), PMetadata.author()).user_data_dir
         self._directory = directory
         try:
             self._create_directory()
@@ -167,7 +171,7 @@ class PersistentData:
         return data
 
     def load_config(self) -> dict:
-        """Load config from persistent data
+        """Load perceval config from persistent data
 
         :return: config
         """
