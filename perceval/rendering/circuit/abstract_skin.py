@@ -37,16 +37,19 @@ from perceval.utils import format_parameters, ModeType
 
 class ASkin(ABC):
     """
-    Abstract skin
-    -------------
     A skin is required in the use of pdisplay for the following formats:
-    - Format.HTML
-    - Format.MPLOT
+    * Format.HTML
+    * Format.MPLOT
+    * Format.LATEX
 
     A skin has three major responsibilities:
-    - measuring the display size of a component / composite circuit
-    - providing shape functions to draw individual components
-    - exposing style data (stroke style, colors, etc.)
+    * measuring the display size of a component / composite circuit
+    * providing shape functions to draw individual components
+    * exposing style data (stroke style, colors, etc.)
+
+    :param photonic_style: photonic mode style, containing stroke specifications
+    :param style_subcircuit: subcircuit style specifications
+    :param compact_display: whether to display some large components in a more compact way, to use less screen space
     """
 
     def __init__(self, photonic_style: dict, style_subcircuit: dict, compact_display: bool = False):
@@ -111,11 +114,27 @@ class ASkin(ABC):
 
     @abstractmethod
     def get_width(self, c) -> int:
-        """Returns the width of component c"""
+        """Returns the width of a component
+
+        :param c: the component to measure
+        """
 
     @abstractmethod
     def get_shape(self, c) -> callable:
-        """Returns the shape function of component c"""
+        """Returns a callable able to draw the shape of a given component on a canvas
+
+        :param c: the component to draw
+        """
+
+    @abstractmethod
+    def default_shape(self, c, canvas, mode_style):
+        """
+        Define a fallback shape for unknown components
+
+        :param c: the component to draw
+        :param canvas: the canvas on which to draw
+        :param mode_style: the style for all modes
+        """
 
     def _get_display_content(self, circuit: ACircuit) -> str:
         return format_parameters(circuit.get_variables(), self.precision, self.nsimplify)

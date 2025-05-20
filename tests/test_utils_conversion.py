@@ -93,7 +93,7 @@ def test_probs_to_sample_count(count):
     bsd[b1] = 0.25
     bsd[b2] = 0.15
     bsd[b3] = 0.59
-    output = probs_to_sample_count(bsd, count)
+    output = probs_to_sample_count(bsd, max_samples=count)
     assert sum(output.values()) == count
     if count > 100:  # Need enough samples to be accurate
         assert output[b0] < output[b2]
@@ -120,7 +120,7 @@ def test_probs_to_samples():
     bsd[b1] = 0.25
     bsd[b2] = 0.15
     bsd[b3] = 0.5
-    output = probs_to_samples(bsd, 1000)
+    output = probs_to_samples(bsd, max_samples=1000)
     assert len(output) == 1000
 
 

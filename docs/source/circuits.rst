@@ -49,7 +49,7 @@ In Perceval a *circuit* represents a setup of optical components, used
 to guide and act on photons.
 
 A circuit has a fixed number of *spatial modes* (sometimes also called
-*paths* or *ports*) :math:`m`, which is the same for input as for output
+*paths*) :math:`m`, which is the same for input as for output
 spatial modes.
 
 Simple examples of circuits are common optical devices such as beam
@@ -111,8 +111,8 @@ To instantiate a circuit, simply pass the number of modes as an argument:
 
 .. warning::
 
-  Ports are using `0-based numbering <https://en.wikipedia.org/wiki/Zero-based_numbering>`_ - so port 0 is
-  corresponding to the first line, ... port :math:`(m-1)` is corresponding to the :math:`m`-th line.
+  Modes are using `0-based numbering <https://en.wikipedia.org/wiki/Zero-based_numbering>`_ - so mode 0 is
+  corresponding to the first line, ... mode :math:`(m-1)` is corresponding to the :math:`m`-th line.
 
 
 Circuit library
@@ -125,6 +125,8 @@ Perceval provides a library of predefined components, located in ``perceval.comp
 This library contain simple circuits stored in a few sub-packages. For instance:
 
 * ``unitary_components`` provides circuits which can be represented by a unitary matrix.
+  :code:`Circuit` can only be composed of such components,
+  so any :code:`Circuit` can also be represented by a unitary matrix.
 * ``non_unitary_components`` provides other types of circuit, such as time delays.
 
 Circuit Rendering
@@ -257,18 +259,6 @@ Some additional parameters can simplify the decomposition:
 * finally, you can also pass simpler unitary blocks - for instance a simple beamsplitter without phase, however in these
   cases, you might not obtain any solution in the decomposition
 
-Accessing components in a circuit
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-It is possible to access directly a component from a circuit using `row` and `column` indices - note that a same
-component may have different column indices for the different rows it spans over:
-
->>> c = Circuit(2) // comp.BS.H() // comp.PS(P("phi1")) // comp.BS.Rx() // comp.PS(P("phi2"))
->>> print (c[1, 1].describe())
-BS(convention=BSConvention.Rx)
->>> print (c[0, 2].describe())
-BS(convention=BSConvention.Rx)
-
 Circuit simplification
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -303,7 +293,7 @@ Then components of the circuit are added with the ``add`` primitive:
 
 Where:
 
-* The first parameter is either the *port range* (here ports 0 and 1), or the upper where the component should be added.
+* The first parameter is either the *port range* (here modes 0 and 1), or the upper mode where the component should be added.
   The previous declaration is equivalent to:
 
   >>> c.add(0, comp.BS())
@@ -364,8 +354,7 @@ This can be particularly useful to get a better visual organization of large cir
 Unitary Matrices
 ----------------
 
-Except for circuits using :ref:`Time Delay`, any circuit can be converted into its unitary matrix. Depending if your
-circuit is using :ref:`Parameters` or not, the unitary matrix will be symbolic or numeric.
+Any circuit can be converted into its unitary matrix.
 
 >>> chip4mode = pcvl.Circuit(m=4, name="QChip")
 >>> phis = [pcvl.Parameter("phi1"), pcvl.Parameter("phi2"),
@@ -375,11 +364,20 @@ circuit is using :ref:`Parameters` or not, the unitary matrix will be symbolic o
 ...  .add(0, comp.PS(phis[0])).add(2, comp.PS(phis[2])).add((0, 1), comp.BS())
 ...  .add((2, 3), comp.BS()).add(0, comp.PS(phis[1])).add(2, comp.PS(phis[3]))
 ...  .add((0, 1), comp.BS()).add((2, 3), comp.BS()))
->>> pcvl.pdisplay(chip4mode.U)
+>>> pcvl.pdisplay(chip4mode.U)  # The matrix will always be symbolic when using circuit.U
 
 :math:`\left[\begin{matrix}\frac{\sqrt{2} \left(- e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} i \left(- e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{2}} + 1\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{2}} + 1\right)}{4}\\\frac{\sqrt{2} i \left(e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{1}} + e^{i \left(\phi_{1} + \phi_{2}\right)}\right)}{4} & \frac{\sqrt{2} \left(1 - e^{i \phi_{2}}\right)}{4} & \frac{\sqrt{2} i \left(1 - e^{i \phi_{2}}\right)}{4}\\\frac{\sqrt{2} i \left(- e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} \left(- e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & - \frac{\sqrt{2} \left(e^{i \phi_{4}} + 1\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{4}} + 1\right)}{4}\\- \frac{\sqrt{2} \left(e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} i \left(e^{i \phi_{3}} + e^{i \left(\phi_{3} + \phi_{4}\right)}\right)}{4} & \frac{\sqrt{2} i \left(1 - e^{i \phi_{4}}\right)}{4} & \frac{\sqrt{2} \left(1 - e^{i \phi_{4}}\right)}{4}\end{matrix}\right]`
 
-See :meth:`perceval.components.circuit.Circuit.compute_unitary` for more information.
+..note::
+  For a finer control on the computed unitary,
+  especially for numeric unitary that is much faster to compute than symbolic unitary when all parameters are defined,
+  the :meth:`perceval.components.circuit.Circuit.compute_unitary` can be used.
+
+  >>> pcvl.pdisplay(chip4mode.compute_unitary(assign={"phi1": 0, "phi2": 1, "phi3": 2, "phi4": 3}))
+  ⎡-0.162528+0.297505*I  -0.297505-0.162528*I  -0.297505+0.544579*I  -0.544579-0.297505*I⎤
+  ⎢-0.297505+0.544579*I  -0.544579-0.297505*I  0.162528-0.297505*I   0.297505+0.162528*I ⎥
+  ⎢0.660516+0.24742*I    0.24742-0.660516*I    -0.003538-0.049893*I  -0.049893+0.003538*I⎥
+  ⎣0.04684+0.017546*I    0.017546-0.04684*I    0.049893+0.703569*I   0.703569-0.049893*I ⎦
 
 Circuit Rewriting
 -----------------

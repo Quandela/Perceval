@@ -421,9 +421,10 @@ class NoisySamplingSimulator:
         :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
         :param progress_callback: A progress callback
         :return: A dictionary of the form { "results": BSSamples, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output state distribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+        - results is the post-selected output state sample stream
+        - physical_perf is the performance computed from the detected photon filter
+        - logical_perf is the performance computed from the post-selection
         """
         if not check_heralds_detectors(self._heralds, self._detectors):
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
@@ -467,6 +468,20 @@ class NoisySamplingSimulator:
                      max_samples: int,
                      max_shots: int = None,
                      progress_callback: callable = None) -> dict:
+        """
+        Run a noisy sampling simulation and retrieve the results
+
+        :param svd: The noisy input, expressed as a mixed state,
+         or a tuple containing the source and the perfect input state
+        :param max_samples: Max expected samples of interest in the results
+        :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
+        :param progress_callback: A progress callback
+        :return: A dictionary of the form { "results": BSCount, "physical_perf": float, "logical_perf": float }
+
+        - results is the post-selected output state sample count
+        - physical_perf is the performance computed from the detected photon filter
+        - logical_perf is the performance computed from the post-selection
+        """
         sampling = self.samples(svd, max_samples, max_shots, progress_callback)
         sampling['results'] = samples_to_sample_count(sampling['results'])
         return sampling

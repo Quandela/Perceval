@@ -43,7 +43,10 @@ DEPRECATED_TOKEN_FILENAME = "token"
 
 
 class RemoteConfig:
-    """Handle the remote configuration"""
+    """Handle the remote configuration.
+
+    :param persistent_data: The persistent data access to use. In a standard environment, always use the default.
+    """
     _token_env_var = TOKEN_ENV_VAR
     _proxies = None
     _token = None
@@ -76,25 +79,56 @@ class RemoteConfig:
         return os.getenv(RemoteConfig._token_env_var)
 
     @staticmethod
-    def set_proxies(proxies: dict[str,str]) -> None:
+    def set_proxies(proxies: dict[str, str]) -> None:
+        """
+        Set the proxy configuration.
+
+        Usage example:
+
+        >>> rc = RemoteConfig()
+        >>> rc.set_proxies({"http": "http://user:pass@192.168.0.1",
+        ...                 "https": "http://user:pass@192.168.0.1:8080"
+        ...                })
+
+        :param proxies: proxy configuration in the form of a dictionary which maps protocols to URLs
+        """
         RemoteConfig._proxies = proxies
 
-    def get_proxies(self) -> dict[str,str]:
+    def get_proxies(self) -> dict[str, str]:
+        """Get the proxy configuration as a mapping of protocols to URLs."""
         if not RemoteConfig._proxies:
             RemoteConfig._proxies = self._get_remote_config(PROXIES_KEY)
         return RemoteConfig._proxies or {}
 
     @staticmethod
     def set_token(token: str) -> None:
+        """Set a user authentication token in the configuration cache. It is not saved on disk before the `save` method
+        is called.
+
+        :param token: The token
+        """
         RemoteConfig._token = token
 
     def get_token(self) -> str:
+        f"""Search a valid token from the environment, put it in cache and return it.
+
+        The priority for the token search is as follows:
+        * A token already in cache (e.g. set by the user or already found in a previous call)
+        * The value of the "{TOKEN_ENV_VAR}" environment variable
+        * The value in Perceval persistent configuration
+
+        :return: The token
+        """
         if not RemoteConfig._token:
             RemoteConfig._token = self._get_token_from_env_var() or self._get_remote_config(TOKEN_KEY) or self._get_deprecated_token()
         return RemoteConfig._token or ""
 
     @staticmethod
     def set_token_env_var(env_var: str) -> None:
+        f"""Change the name of the environment variable storing a token. Default is {TOKEN_ENV_VAR}.
+
+        :param env_var: name of the new environment variable to search for
+        """
         RemoteConfig._token_env_var = env_var
         # reload the token
         new_token = RemoteConfig._get_token_from_env_var()
@@ -103,15 +137,19 @@ class RemoteConfig:
 
     @staticmethod
     def get_token_env_var() -> str:
+        """Get the name of the environment variable storing a token."""
         return RemoteConfig._token_env_var
 
     @staticmethod
     def clear_cache():
+        """Delete the RemoteConfig cache."""
         RemoteConfig._proxies = None
         RemoteConfig._token = None
 
     def save(self) -> None:
-        """Save the current remote configuration"""
+        """Save the current remote configuration on disk.
+        After this, the configuration is persistent and can be found in other Perceval sessions (even in different
+        virtual envs)."""
         config = self._persistent_data.load_config()
         if REMOTE_KEY not in config:
             config[REMOTE_KEY] = {}

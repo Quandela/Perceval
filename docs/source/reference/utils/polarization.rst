@@ -1,5 +1,5 @@
-Polarization Object
-===================
+Polarization
+============
 
 .. automodule:: perceval.utils.polarization
    :members:

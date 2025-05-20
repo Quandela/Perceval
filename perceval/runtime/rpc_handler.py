@@ -103,17 +103,17 @@ class RPCHandler:
     def cancel_job(self, job_id: str) -> None:
         """cancel a job
 
-        :param job_id: id of the job
+        :param job_id: id of the job to cancel
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_CANCEL, job_id)
         req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)
         req.raise_for_status()
 
     def rerun_job(self, job_id: str) -> str:
-        """Rerun a job
+        """Rerun a job as a another freshly created job
 
         :param job_id: job id to rerun
-        :return: new job id
+        :return: id of the new job
         """
         endpoint = self.build_endpoint(_ENDPOINT_JOB_RERUN, job_id)
         req = requests.post(endpoint, headers=self.headers, timeout=self.request_timeout, proxies=self.proxies)

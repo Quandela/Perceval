@@ -58,7 +58,7 @@ from .utils import *
 from .rendering import *
 from .runtime import *
 from .error_mitigation import photon_recycling
-from .simulators import Simulator, SimulatorFactory, DelaySimulator, LossSimulator, PolarizationSimulator
+from .simulators import Simulator, SimulatorFactory, FFSimulator, NoisySamplingSimulator, Stepper
 
 
 def register_plugin(name, silent=False):
