@@ -39,7 +39,8 @@ except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
-
+# Temporary implementation of __deepcopy__ until exqalibur release
+PostSelect.__deepcopy__ = lambda self, memo : self.__copy__()
 
 @deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
 def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:

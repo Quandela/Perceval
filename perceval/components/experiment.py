@@ -199,7 +199,7 @@ class Experiment:
 
     def copy(self, subs: dict | list = None):
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
-        new_proc = copy.copy(self)
+        new_proc = copy.deepcopy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))
