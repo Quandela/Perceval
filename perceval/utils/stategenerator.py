@@ -198,7 +198,7 @@ class StateGenerator:
     @staticmethod
     def zero_padded_state(n: int, m: int = None) -> BasicState:
         """
-        Get a |111...10...0> state with n photons and m modes. Ignores the encoding.
+        Generate a |111...10...0> BasicState with n photons and m modes. The result is independent of the encoding.
 
         :param n: Number of photons
         :param m: Number of modes. Default :math:`n`
@@ -212,8 +212,8 @@ class StateGenerator:
     @staticmethod
     def periodic_state(n: int, m: int = None) -> BasicState:
         """
-        Get a state consisting of repeating |10>. Pads the end of the state with zero photon modes.
-        Ignores the encoding.
+        Generate a BasicState consisting of repeating |10> n times. Pads the end of the state with zero photon modes.
+        The result is independent of the encoding.
 
         :param n: Number of photons
         :param m: Number of modes. Default :math:`2n` (no padding at the end)
@@ -221,18 +221,18 @@ class StateGenerator:
         """
         state = BasicState([1, 0] * n)
         if m is not None:
-            assert 2 * n <= m, "Cannot generate a periodic state with a number of modes less that twice the number of photons"
+            assert 2 * n <= m, "Cannot generate a periodic state with a number of modes less than twice the number of photons"
             state *= BasicState([0]) ** (m - state.m)
         return state
 
     @staticmethod
     def evenly_spaced_state(n: int, m: int) -> BasicState:
         """
-        Get a state where photons are evenly spaced. Ignores the encoding.
+        Generate a BasicState where photons are evenly spaced. The result is independent of the encoding.
 
         :param n: Number of photons
         :param m: Number of modes.
-        :return: BasicState where the photons are the most spread as possible in the modes.
+        :return: BasicState where the photons are as spread out as possible in the modes.
         """
         res = [0] * m
         if n == 1:
