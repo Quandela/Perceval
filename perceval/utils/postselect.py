@@ -40,6 +40,7 @@ except ImportError:
 
 PostSelect: TypeAlias = xq.PostSelect
 # Temporary implementation of __deepcopy__ until exqalibur release
+# PCVL-969
 PostSelect.__deepcopy__ = lambda self, memo : self.__copy__()
 
 @deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
