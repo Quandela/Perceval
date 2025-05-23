@@ -36,31 +36,41 @@ from ._abstract_backends import AStrongSimulationBackend
 
 class SLAPBackend(AStrongSimulationBackend):
 
-    def __init__(self):
+    def __init__(self, mask=None):
         super().__init__()
         self._slap = xq.SLAP()
-        self._fock_space = None
+        if mask is not None:
+            self.set_mask(mask)
 
     def set_circuit(self, circuit: ACircuit):
         super().set_circuit(circuit)  # Computes circuit unitary as _umat
         self._slap.set_unitary(self._umat)
 
+    def set_mask(self, masks: str | list[str], n = None):
+        super().set_mask(masks, n)
+        if self._mask:
+            self._slap.set_mask(self._mask)
+        else:
+            self._slap.reset_mask()
+
     def set_input_state(self, input_state: BasicState):
         super().set_input_state(input_state)
-        if self._fock_space is None or self._fock_space.m != input_state.m or self._fock_space.n != input_state.n:
-            self._fock_space = xq.FSArray(input_state.m, input_state.n)
+        if self._mask:
+            self._slap.set_mask(self._mask)
+        else:
+            self._slap.reset_mask()
 
     def prob_amplitude(self, output_state: BasicState) -> complex:
         istate = self._input_state
         all_pa = self._slap.all_prob_ampli(istate)
-        return all_pa[self._fock_space.find(output_state)]
+        if self._mask:
+            return all_pa[xq.FSArray(self._input_state.m, self._input_state.n, self._mask).find(output_state)]
+        else:
+            return all_pa[xq.FSArray(self._input_state.m, self._input_state.n).find(output_state)]
 
     def prob_distribution(self) -> BSDistribution:
         istate = self._input_state
         all_probs = self._slap.all_prob(istate)
-
-        if self._mask is not None:  # Utterly non-optimized. Mask management should be added in the computation
-            all_probs = [p for p, fs in zip(all_probs, self._fock_space) if self._mask.match(fs)]
 
         bsd = BSDistribution()
         for output_state, probability in zip(self._get_iterator(istate), all_probs):
@@ -82,8 +92,6 @@ class SLAPBackend(AStrongSimulationBackend):
         istate = self._input_state
         all_pa = self._slap.all_prob_ampli(istate)
         res = StateVector()
-        for output_state, pa in zip(self._fock_space, all_pa):
-            # Utterly non-optimized. Mask management should be added in the computation
-            if self._mask is None or self._mask.match(output_state):
-                res += output_state * pa
+        for output_state, pa in zip(self._get_iterator(self._input_state), all_pa):
+            res += output_state * pa
         return res
