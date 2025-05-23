@@ -33,7 +33,7 @@ from perceval.algorithm import Sampler
 from perceval.simulators.loss_simulator import LossSimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends._slos import SLOSBackend
-from tests._test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close
 
 U = Matrix.random_unitary(2)
 loss = .3

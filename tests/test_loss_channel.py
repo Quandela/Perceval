@@ -29,7 +29,7 @@
 
 from perceval import Processor, Unitary, LC, Matrix, BSDistribution, BasicState, SVDistribution, NoiseModel
 from perceval.algorithm import Sampler
-from tests._test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close
 
 U = Matrix.random_unitary(2)
 loss = .3

@@ -33,7 +33,7 @@ from perceval import SLOSBackend, BasicState, BSDistribution, NoiseModel, PostSe
 from perceval.algorithm import Sampler
 from perceval.components import BS, Circuit, FFCircuitProvider, Detector, PERM, Processor, catalog
 from perceval.simulators import FFSimulator
-from tests._test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close
 
 backend = SLOSBackend()
 sim = FFSimulator(backend)
