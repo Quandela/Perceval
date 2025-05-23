@@ -186,7 +186,7 @@ def test_backend_cnot(backend_name):
 
 
 @pytest.mark.parametrize("backend_name", ["SLOS", "SLAP"])
-def test_slos_cnot_with_mask(backend_name):
+def test_cnot_with_mask(backend_name):
     backend = BackendFactory.get_backend(backend_name)
     backend.set_mask(["    00"])
     cnot = catalog["postprocessed cnot"].build_circuit()
@@ -309,7 +309,8 @@ def test_backend_mps_n_mode_perm_decomp():
                                BasicState("|0,0,2>"): 0.5})
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS", "SLAP"])
+# For SLOS, the cached iterator is the largest layer of the compute path
+@pytest.mark.parametrize("backend_name", ["Naive", "MPS", "SLAP"])
 def test_probampli_iterator_cache(backend_name):
     b: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     b.set_circuit(Circuit(5).add(0, BS.H()))

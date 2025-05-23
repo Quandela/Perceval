@@ -401,11 +401,10 @@ class Experiment:
             pos = [x + min(mode_mapping) for x in pos]
             new_components.append((pos, c))
         if perm_component is not None and is_symmetrical:
-            if is_symmetrical:
-                perm_inv = perm_component.copy()
-                perm_inv.inverse(h=True)
-                get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
-                new_components.append((perm_modes, perm_inv))
+            perm_inv = perm_component.copy()
+            perm_inv.inverse(h=True)
+            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
+            new_components.append((perm_modes, perm_inv))
         elif not is_symmetrical:
             # We need to apply the permutation on the detectors and mode types
             self._out_mode_type = connector.compose_lists(mode_mapping, self._out_mode_type, experiment._out_mode_type)
@@ -450,6 +449,15 @@ class Experiment:
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
                     self.add_port(port_mode, port, PortLocation.INPUT)
+
+        # Detectors
+        if is_symmetrical:
+            for m in range(experiment.circuit_size):
+                # The heralded modes detectors have already been added at the bottom modes
+                d = experiment.detectors[m]
+                if m not in experiment.heralds and d is not None:
+                    new_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(m)]
+                    self._detectors[new_mode] = d
 
         if self._postselect is not None and perm_component is not None and not is_symmetrical:
             c_first = perm_modes[0]

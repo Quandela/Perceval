@@ -31,7 +31,7 @@ from abc import ABC, abstractmethod
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
+from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector, allstate_array
 
 
 class ABackend(ABC):
@@ -131,7 +131,7 @@ class AStrongSimulationBackend(ABackend):
         n_photons = input_state.n
 
         if n_photons not in self._cache_iterator.keys():
-            self._cache_iterator[n_photons] = tuple(allstate_iterator(input_state, self._mask))
+            self._cache_iterator[n_photons] = allstate_array(input_state, self._mask)
 
         return self._cache_iterator[n_photons]
 

@@ -160,7 +160,8 @@ class FFSimulator(ISimulator):
 
                 simulated_measures.add(measured_state)
 
-        res.normalize()
+        if len(res):
+            res.normalize()
         return res, global_perf
 
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int], set[int]]:
@@ -238,7 +239,7 @@ class FFSimulator(ISimulator):
         # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
         heralded_dist = proc.generate_noisy_heralds()
         if len(heralded_dist):
-            input_state *= heralded_dist
+            input_state = input_state * heralded_dist  # Must not change the original object
 
         sum_new_heralds = 0
         if new_heralds is not None:
