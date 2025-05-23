@@ -107,14 +107,19 @@ def test_processor_input_state_vector():
 def test_processor_probs():
     qpu = Processor("Naive", BS())
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
-    qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
+    for m in range(qpu.circuit_size):
+        qpu.add(m, Detector.threshold())  # With threshold detectors, the simulation will only detect |1,0> and |0,1>
     qpu.min_detected_photons_filter(2)
     probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0
     assert pytest.approx(probs['physical_perf']) == 0
 
-    qpu.thresholded_output(False)  # With perfect detection, we get our results back
+    detectors = qpu.detectors
+    for i in range(len(detectors)):
+        detectors[i] = None  # Ugly reset of detectors
+
+    # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[BasicState("|2,0>")]) == 0.5
@@ -361,3 +366,40 @@ def test_flatten_processor():
     assert len(level_3_components) == 68 # 8*5 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
     assert len(level_4_components) == 76 # 8*6 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
     assert len(all_components) == len(level_4_components)
+
+
+def test_asymmetric_processor():
+    # Herald at left
+    p = Processor("SLOS", 2)
+    p.add(0, BS())
+    p.add_herald(0, 1, location=PortLocation.INPUT)
+
+    assert p.m == 2
+    assert p.m_in == 1
+
+    assert p.heralds == {}
+    assert p.in_heralds == {0: 1}
+
+    p.with_input(BasicState([0]))
+    assert p.input_state == BasicState([1, 0])
+
+    res = p.probs()
+    assert res["results"][BasicState([1, 0])] == pytest.approx(0.5)
+    assert res["results"][BasicState([0, 1])] == pytest.approx(0.5)
+
+    # Herald at right
+    p = Processor("SLOS", 2)
+    p.add(0, BS())
+    p.add_herald(0, 1, location=PortLocation.OUTPUT)
+
+    assert p.m == 1
+    assert p.m_in == 2
+
+    assert p.heralds == {0: 1}
+    assert p.in_heralds == {}
+
+    p.with_input(BasicState([1, 0]))
+
+    res = p.probs()
+    assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["logical_perf"] == pytest.approx(.5)

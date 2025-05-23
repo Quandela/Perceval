@@ -65,10 +65,11 @@ def collect_herald_info(processor: Experiment, recursive: bool):
         component_list = processor.components
 
     herald_info = {}
-    for herald_mode in processor.heralds.keys():
-        # Do one forward pass to identify heralds on inputs, and one
-        # backward pass to identify heralds "plugged" on outputs
-        for forward_pass in [True, False]:
+    forward_pass = True
+    for heralds in (processor.in_heralds, processor.heralds):
+        for herald_mode in heralds.keys():
+            # Do one forward pass to identify heralds on inputs, and one
+            # backward pass to identify heralds "plugged" on outputs
             c_list = component_list if forward_pass else component_list[::-1]
             mode = herald_mode
             for mode_range, component in c_list:
@@ -88,4 +89,6 @@ def collect_herald_info(processor: Experiment, recursive: bool):
                         component, ComponentHeraldInfo())
                     h_info.register_herald(forward_pass, mode - m0, herald_mode)
                     break
+
+        forward_pass = False
     return herald_info

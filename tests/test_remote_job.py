@@ -33,6 +33,7 @@ from unittest.mock import patch
 from time import sleep
 
 import perceval as pcvl
+from perceval import Detector
 from perceval.algorithm import Sampler
 from perceval.runtime import RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
@@ -125,7 +126,8 @@ def test_remote_with_gates_probs(catalog_item):
     rp = pcvl.RemoteProcessor.from_local_processor(p, 'sim:altair', url='https://api.cloud.quandela.com')
 
     # platform parameters
-    p.thresholded_output(True)
+    for m in range(p.circuit_size):
+        p.add(m, Detector.threshold())
     max_shots_per_call = 1E7
 
     assert p.heralds == rp.heralds
@@ -168,7 +170,8 @@ def test_remote_with_gates_samples(catalog_item):
         p, "sim:altair", url='https://api.cloud.quandela.com')
 
     # platform parameters
-    p.thresholded_output(True)
+    for m in range(p.circuit_size):
+        p.add(m, Detector.threshold())
     max_shots_per_call = 1E7
     nsamples = 1000
 

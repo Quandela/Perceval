@@ -60,7 +60,7 @@ class JobGroup:
                  If the same name is used more than once, jobs can be appended to the same group.
     """
     _PERSISTENT_DATA = PersistentData()  # Persistent data object for the job group class
-    _DIR_PATH = os.path.join(_PERSISTENT_DATA.directory, JGRP_DIR_NAME)
+    _DIR_PATH = _PERSISTENT_DATA.create_sub_directory(JGRP_DIR_NAME)
 
     def __init__(self, name: str):
         self._name = name

@@ -44,6 +44,18 @@ Please note that due to this change:
 - Keys must now be copied before being modified when iterating on :code:`StateVector.keys()`.
 - :code:`StateVector.keys()` no longer has list methods such as :code:`len`, :code:`__getitem__`...
 
+Removal of deprecated methods and classes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following methods and classes have been removed or definitely modified as they were deprecated:
+
+- :code:`TokenProvider` (deprecated since 0.13, replaced by :code:`RemoteConfig`)
+- :code:`AProbAmpliBackend` (deprecated since 0.12, replaced by :code:`AStrongSimulationBackend`)
+- :code:`postselect_independent` (deprecated since 0.12, replaced by :code:`PostSelect` method :code:`is_independent_with`)
+- The :code:`n` parameter of SLOS backend (deprecated since 0.12, now automatically chosen when using :code:`set_input_state`)
+- :code:`thresholded_output` method of :code:`Processor` and :code:`RemoteProcessor`
+  (deprecated since 0.12, replaced by adding several :code:`Detector.threshold()`)
+
 
 Breaking changes in Perceval 0.13
 ---------------------------------

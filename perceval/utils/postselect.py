@@ -28,8 +28,6 @@
 # SOFTWARE.
 from __future__ import annotations
 
-from perceval.utils.logging import deprecated
-
 import exqalibur as xq
 
 from .statevector import BSDistribution, StateVector
@@ -39,16 +37,6 @@ except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
-
-@deprecated(version="0.12.0", reason="Use instead PostSelect class method `is_independent_with`")
-def postselect_independent(ps1: PostSelect, ps2: PostSelect) -> bool:
-    """ Check if two PostSelect instances are independent.
-
-    :param ps1: First post selection
-    :param ps2: Second post selection
-    :return: `True` if PostSelect instances are independent, `False` otherwise
-    """
-    return ps1.is_independent_with(ps2)
 
 
 def post_select_distribution(

@@ -30,6 +30,7 @@
 import math
 import pytest
 
+from perceval import PortLocation
 from perceval.components import (catalog, Circuit, BS, PS, PERM, Processor, Detector, UnavailableModeException,
                                  FFConfigurator, FFCircuitProvider, Unitary, Barrier)
 from perceval.utils import Matrix, P, LogicalState
@@ -196,3 +197,41 @@ def test_ff_controlled_circuit_size():
 
     with pytest.raises(RuntimeError):
         ffm.add_configuration((1,), Circuit(3))
+
+
+def test_asymmetrical_composition():
+    p = Processor("SLOS", 3)
+    p.add(0, BS())
+    p.add(1, BS())
+    p.add_herald(0, 0, location=PortLocation.OUTPUT)
+    p.add_herald(2, 1, location=PortLocation.INPUT)
+
+    p2 = Processor("SLOS", 3)
+    p2.add(0, BS())
+    p2.add(1, BS())
+    p2.add_herald(0, 2, location=PortLocation.INPUT)
+    p2.add_herald(2, 3, location=PortLocation.OUTPUT)
+
+    p.add(1, p2)
+
+    assert p.circuit_size == 4
+
+    assert p.in_heralds == {2: 1, 3: 2}
+    assert p.heralds == {0: 0, 3: 3}
+
+
+def test_detector_composition():
+    detector_2 = Detector.ppnr(2)
+    detector_3 = Detector.ppnr(3)
+    detector_4 = Detector.ppnr(4)
+
+    p = Processor("SLOS", 3)
+    p.add(1, detector_2)
+
+    p2 = Processor("SLOS", 2)
+    p2.add(0, detector_3)
+    p2.add(1, detector_4)
+
+    p.add({2: 0, 0: 1}, p2)
+
+    assert p.detectors == [detector_4, detector_2, detector_3]
