@@ -130,11 +130,15 @@ def test_processor_composition_ports():
     for mode in range(4):
         cnot_input_port = cnot.get_input_port(mode)
         rp_input_port = rp.get_input_port(mode)
-        assert cnot_input_port == rp_input_port
+        assert type(cnot_input_port) == type(rp_input_port)
+        assert cnot_input_port.m == rp_input_port.m
+        assert cnot_input_port.encoding == rp_input_port.encoding
 
         cnot_output_port = cnot.get_output_port(mode)
         rp_output_port = rp.get_output_port(mode)
-        assert cnot_output_port == rp_output_port
+        assert type(cnot_output_port) == type(rp_output_port)
+        assert cnot_output_port.m == rp_output_port.m
+        assert cnot_output_port.encoding == rp_output_port.encoding
 
 
 def test_processor_building_feed_forward():
