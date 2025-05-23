@@ -178,6 +178,12 @@ def test_svdistribution():
             +-------+-------------+
             | |0,1> |     1/2     |
             | |1,0> |     1/2     |
+            +-------+-------------+""") or strip_line_12(pdisplay_state_distrib(svd)) == strip_line_12("""
+            +-------+-------------+
+            | state | probability |
+            +-------+-------------+
+            | |1,0> |     1/2     |
+            | |0,1> |     1/2     |
             +-------+-------------+""")
     svd_squared = svd ** 2
     assert isinstance(svd_squared, SVDistribution)
@@ -462,12 +468,9 @@ def test_mult():
     state_basic = pcvl.BasicState([4, 1])
 
     svd = pcvl.SVDistribution({fs1: .6, fs2: .4})
-    toto = svd * state_basic
-    tata = {fs1 * state_basic: .6, fs2 * state_basic: .4}
     assert svd * state_basic == pcvl.SVDistribution({fs1 * state_basic: .6, fs2 * state_basic: .4})
     assert state_basic * svd == pcvl.SVDistribution({state_basic * fs1: .6, state_basic * fs2: .4})
 
     bsd = pcvl.BSDistribution({fs1: .6, fs2: .4})
-    print(bsd * state_basic)
     assert bsd * state_basic == pcvl.BSDistribution({fs1 * state_basic: .6, fs2 * state_basic: .4})
     assert state_basic * bsd == pcvl.BSDistribution({state_basic * fs1: .6, state_basic * fs2: .4})
