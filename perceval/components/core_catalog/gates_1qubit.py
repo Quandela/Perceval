@@ -31,7 +31,7 @@ import math
 from abc import ABC, abstractmethod
 from numbers import Number
 
-from perceval.components import Processor, Circuit, BS, PS, PERM, Port
+from perceval.components import Processor, Circuit, BS, PS, PERM, Port, Experiment
 from perceval.utils import Encoding, P
 from perceval.components.component_catalog import CatalogItem
 
@@ -73,9 +73,10 @@ class ASingleQubitGate(CatalogItem, ABC):
     def str_repr(self):
         return _get_component_str_repr(self.repr_name)
 
-    def build_processor(self, **kwargs) -> Processor:
-        p = self._init_processor(**kwargs)
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'data'))
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'data'))
+
 
 
 class AFixedItem(ASingleQubitGate, ABC):
@@ -158,7 +159,7 @@ class AParamItem(ASingleQubitGate, ABC):
     def get_circuit(self, param) -> Circuit:
         pass
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         param = kwargs.get(self.param_key, 0.0)
         param = self._handle_param(param)
         name = self.repr_name

@@ -29,7 +29,7 @@
 
 from .postprocessed_cz import PostProcessedCzItem
 
-from perceval.components import Circuit, BS, Port
+from perceval.components import Circuit, BS, Port, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect
 
@@ -49,17 +49,17 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def __init__(self):
         super().__init__("postprocessed cnot")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         postprocessed_cz = PostProcessedCzItem()
         return (Circuit(6, name="PostProcessed CNOT")
                 .add((2, 3), BS.H())
                 .add(0, postprocessed_cz.build_circuit(), merge=True)
                 .add((2, 3), BS.H()))
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
-        p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        e.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
             .add_herald(4, 0) \
             .add_herald(5, 0)
