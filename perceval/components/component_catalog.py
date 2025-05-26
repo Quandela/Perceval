@@ -80,10 +80,6 @@ class CatalogItem(ABC):
             return Parameter(value)
         return value
 
-    def _init_processor(self, **kwargs):
-        return Processor(kwargs.get("backend", self._default_backend), self.build_experiment(**kwargs),
-                         name=kwargs.get("name") or self._name.upper())
-
     @abstractmethod
     def build_circuit(self, **kwargs) -> Circuit:
         """Build the component as circuit
@@ -100,7 +96,6 @@ class CatalogItem(ABC):
         """
         pass
 
-    @abstractmethod
     def build_processor(self, **kwargs) -> Processor:
         """Build the component as processor
 
@@ -109,7 +104,8 @@ class CatalogItem(ABC):
 
         :return: A Perceval processor
         """
-        pass
+        return Processor(kwargs.get("backend", self._default_backend), self.build_experiment(**kwargs),
+                         name=kwargs.get("name") or self._name.upper())
 
 
 class Catalog:

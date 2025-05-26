@@ -206,9 +206,6 @@ class QLOQAnsatz(CatalogItem):
 
         return e
 
-    def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)
-
     @staticmethod
     def _generate_phases(parameter_nb: int) -> list[str]:
         return [f"phi{i}" for i in range(parameter_nb)]

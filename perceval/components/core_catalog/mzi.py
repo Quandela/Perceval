@@ -57,9 +57,6 @@ class AMZI(CatalogItem, ABC):
     def build_experiment(self, **kwargs) -> Experiment:
         return Experiment(self.build_circuit(**kwargs))
 
-    def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)
-
     def generate(self, i: int):
         return self.build_circuit(i=i)
 

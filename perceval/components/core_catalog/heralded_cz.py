@@ -77,6 +77,3 @@ data (dual rail) ─────┤     ├───── data (dual rail)
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
             .add_herald(4, 1) \
             .add_herald(5, 1)
-
-    def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)

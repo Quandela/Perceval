@@ -77,8 +77,6 @@ class ASingleQubitGate(CatalogItem, ABC):
         e = Experiment(self.build_circuit(**kwargs))
         return e.add_port(0, Port(Encoding.DUAL_RAIL, 'data'))
 
-    def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)
 
 
 class AFixedItem(ASingleQubitGate, ABC):

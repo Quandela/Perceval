@@ -85,6 +85,3 @@ data (dual rail) ─────┤     ├───── data (dual rail)
             .add_herald(5, 1) \
             .add_herald(6, 0) \
             .add_herald(7, 1)
-
-    def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)

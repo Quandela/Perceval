@@ -130,6 +130,3 @@ ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
             e.add_herald(i, 0)
 
         return e
-
-    def build_processor(self, **kwargs) -> Processor:
-        return self._init_processor(**kwargs)
