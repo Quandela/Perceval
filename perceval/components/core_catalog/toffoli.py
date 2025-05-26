@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from perceval.components import Circuit, Port, BS
+from perceval.components import Circuit, Port, BS, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog.postprocessed_ccz import PostProcessedCCZItem
 from perceval.utils import Encoding, PostSelect
@@ -47,17 +47,17 @@ data (dual rail)  ─────┤ H ├───┤          ├───┤ 
     def __init__(self):
         super().__init__("toffoli")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         c = Circuit(12, name="Toffoli")
         c.add(4, BS.H())
         c.add(0, PostProcessedCCZItem().build_circuit(), merge=True)
         c.add(4, BS.H())
         return c
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
-        p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl0')) \
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        e.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl0')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'ctrl1')) \
             .add_port(4, Port(Encoding.DUAL_RAIL, 'data')) \
             .add_herald(6, 0) \
@@ -66,3 +66,6 @@ data (dual rail)  ─────┤ H ├───┤          ├───┤ 
             .add_herald(9, 0) \
             .add_herald(10, 0) \
             .add_herald(11, 0)
+
+    def build_processor(self, **kwargs) -> Processor:
+        return self._init_processor(**kwargs)

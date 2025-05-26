@@ -30,7 +30,7 @@ import importlib
 from abc import ABC, abstractmethod
 
 from perceval.utils import Parameter
-from perceval.components import Processor, Circuit
+from perceval.components import Processor, Circuit, Experiment
 from perceval.utils.logging import get_logger, channel
 
 
@@ -81,7 +81,7 @@ class CatalogItem(ABC):
         return value
 
     def _init_processor(self, **kwargs):
-        return Processor(kwargs.get("backend", self._default_backend), self.build_circuit(**kwargs),
+        return Processor(kwargs.get("backend", self._default_backend), self.build_experiment(**kwargs),
                          name=kwargs.get("name") or self._name.upper())
 
     @abstractmethod
@@ -89,6 +89,14 @@ class CatalogItem(ABC):
         """Build the component as circuit
 
         :return: A Perceval circuit
+        """
+        pass
+
+    @abstractmethod
+    def build_experiment(self, **kwargs) -> Experiment:
+        """Build the component as experiment
+
+        :return: A Perceval experiment
         """
         pass
 

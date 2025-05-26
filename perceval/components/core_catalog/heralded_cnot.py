@@ -30,6 +30,8 @@
 from perceval.components import Circuit, BS, Port
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog.heralded_cz import HeraldedCzItem
+from perceval.components.experiment import Experiment
+from perceval.components.processor import Processor
 from perceval.utils import Encoding
 
 
@@ -48,7 +50,7 @@ data (dual rail) ─────┤ H ├───┤          ├───┤ H
     def __init__(self):
         super().__init__("heralded cnot")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         c = Circuit(6, name="Heralded CNOT")
         c.add(2, BS.H())
         heralded_cz = HeraldedCzItem()
@@ -56,9 +58,12 @@ data (dual rail) ─────┤ H ├───┤          ├───┤ H
         c.add(2, BS.H())
         return c
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl'))\
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl'))\
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data'))\
             .add_herald(4, 1)\
             .add_herald(5, 1)
+
+    def build_processor(self, **kwargs) -> Processor:
+        return self._init_processor(**kwargs)

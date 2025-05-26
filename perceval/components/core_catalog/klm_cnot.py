@@ -29,7 +29,7 @@
 
 from math import sqrt
 
-from perceval.components import Circuit, BS, PERM, Port
+from perceval.components import Circuit, BS, PERM, Port, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding
 
@@ -58,7 +58,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def __init__(self):
         super().__init__("klm cnot")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         return (Circuit(8, name=_GATE_NAME)
                 .add(1, PERM([2, 4, 3, 0, 1]))
                 .add(4, BS.H())
@@ -77,11 +77,14 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                 .add(4, BS.H())
                 .add(1, PERM([4, 3, 0, 2, 1])))
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
             .add_herald(4, 0) \
             .add_herald(5, 1) \
             .add_herald(6, 0) \
             .add_herald(7, 1)
+
+    def build_processor(self, **kwargs) -> Processor:
+        return self._init_processor(**kwargs)

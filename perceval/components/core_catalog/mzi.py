@@ -31,7 +31,7 @@ import math
 from abc import ABC
 
 
-from perceval.components import Processor, Circuit, BS, PS
+from perceval.components import Processor, Circuit, BS, PS, Experiment
 from perceval.components.component_catalog import CatalogItem
 
 
@@ -53,6 +53,9 @@ class AMZI(CatalogItem, ABC):
             CatalogItem._handle_param(kwargs.get("phi_b", "phi_b")), \
             CatalogItem._handle_param(kwargs.get("theta_a", math.pi/2)), \
             CatalogItem._handle_param(kwargs.get("theta_b", math.pi/2))
+
+    def build_experiment(self, **kwargs) -> Experiment:
+        return Experiment(self.build_circuit(**kwargs))
 
     def build_processor(self, **kwargs) -> Processor:
         return self._init_processor(**kwargs)

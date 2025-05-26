@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from perceval.components.component_catalog import CatalogItem
 from ._helpers import generate_chained_controlled_ops, generalized_cz, apply_rotations_to_qubits
-from perceval.components import Circuit, Processor, Port
+from perceval.components import Circuit, Processor, Port, Experiment
 from perceval.utils import Encoding, PostSelect
 
 
@@ -185,8 +185,8 @@ class QLOQAnsatz(CatalogItem):
         self._build_qubit_circuit(group_sizes, phases, layers, ctype)
         return self._circ.linear_circuit()
 
-    def build_processor(self, **kwargs) -> Processor:
-        p = self._init_processor(**kwargs)
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
 
         group_sizes = kwargs["group_sizes"]
         offset = 0
@@ -194,17 +194,20 @@ class QLOQAnsatz(CatalogItem):
 
         for i, size in enumerate(group_sizes):
             m = size.fock_length
-            p.add_port(offset, Port(size, f"Group {i}"))
+            e.add_port(offset, Port(size, f"Group {i}"))
             post_select_str += f" & {list(range(offset, offset + m))} == 1"
             offset += m
 
-        p.set_postselection(PostSelect(post_select_str[3:]))
+        e.set_postselection(PostSelect(post_select_str[3:]))
 
         nb_heralds = 2 * (len(group_sizes) - 1)
         for _ in range(nb_heralds):
-            p.add_herald(p.m - 1, 0)
+            e.add_herald(e.m - 1, 0)
 
-        return p
+        return e
+
+    def build_processor(self, **kwargs) -> Processor:
+        return self._init_processor(**kwargs)
 
     @staticmethod
     def _generate_phases(parameter_nb: int) -> list[str]:
