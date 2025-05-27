@@ -68,6 +68,8 @@ class Experiment:
     - A NoiseModel.
     """
 
+    _no_copiable_attributes = { '_circuit_changed_observers', '_noise_changed_observers', '_input_changed_observers' }
+
     def __init__(self, m_circuit: int | ACircuit = None, noise: NoiseModel = None, name: str = "Experiment"):
         self._input_state = None
         self.name: str = name
@@ -196,9 +198,21 @@ class Experiment:
             self._circuit_changed()
             self._postselect = None
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            if k in cls._no_copiable_attributes:
+                setattr(obj, k, [])
+            else:
+                setattr(obj, k, copy.deepcopy(v, memo))
+            pass
+        return obj
+
     def copy(self, subs: dict | list = None):
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
-        new_proc = copy.copy(self)
+        new_proc = copy.deepcopy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))

@@ -37,7 +37,9 @@ except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
-
+# Temporary implementation of __deepcopy__ until exqalibur release
+# PCVL-969
+PostSelect.__deepcopy__ = lambda self, memo : self.__copy__()
 
 def post_select_distribution(
         bsd: BSDistribution,
