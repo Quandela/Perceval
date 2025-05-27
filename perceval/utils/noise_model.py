@@ -69,6 +69,9 @@ class NoiseModel:
         self._add_param(ValidatedFloat("phase_imprecision", phase_imprecision, 0, default_value=0))
         self._add_param(ValidatedFloat("phase_error", phase_error, 0, pi, 0))
 
+    def __deepcopy__(self, memo):
+        return NoiseModel(**{param.name: param._value for param in self._params.values()})
+
     def _add_param(self, param: AValidatedParam):
         self._params[param.name] = param
         cls = type(self)
