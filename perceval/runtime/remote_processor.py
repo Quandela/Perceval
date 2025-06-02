@@ -31,7 +31,7 @@ from __future__ import annotations
 import uuid
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector
+from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
 from perceval.utils import BasicState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
@@ -41,8 +41,6 @@ from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
 
 __process_id__ = uuid.uuid4()
-
-from perceval.components import Detector
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
@@ -116,6 +114,7 @@ class RemoteProcessor(AProcessor):
 
         self._specs = {}
         self._perfs = {}
+        self._status = None
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
@@ -146,6 +145,7 @@ class RemoteProcessor(AProcessor):
 
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
+        self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
         if PERFS_KEY in platform_details:
@@ -166,6 +166,10 @@ class RemoteProcessor(AProcessor):
         if 'constraints' in self._specs:
             return self._specs['constraints']
         return {}
+
+    @property
+    def status(self):
+        return self._status
 
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
