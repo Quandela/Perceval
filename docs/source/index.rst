@@ -153,6 +153,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/logging
    reference/qiskit_converter
    reference/scaleway_session
+   reference/error_mitigation
 
 .. toctree::
    :caption: Community
