@@ -33,7 +33,7 @@ from perceval.utils import BSDistribution, BasicState
 import perceval as pcvl
 from copy import copy
 
-from tests._test_utils import LogChecker
+from _test_utils import LogChecker
 
 bs1 = BasicState([0, 1, 0])
 bs2 = BasicState([0, 0, 0])

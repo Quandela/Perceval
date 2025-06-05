@@ -35,7 +35,7 @@ from perceval.utils import BasicState, BSDistribution, PostSelect
 
 import pytest
 
-from tests._test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close
 
 
 def test_retrieve_mode_count():

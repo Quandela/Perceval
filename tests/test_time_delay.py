@@ -28,7 +28,7 @@
 # SOFTWARE.
 import pytest
 from perceval import Processor, BS, TD, BasicState, BSDistribution
-from tests._test_utils import assert_bsd_close
+from _test_utils import assert_bsd_close
 
 p = Processor("SLOS", 2)
 

@@ -29,7 +29,7 @@
 
 from math import pi
 
-from perceval.components import Circuit, Port, Unitary
+from perceval.components import Circuit, Port, Unitary, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.components.core_catalog import controlled_rotation_gates
 from perceval.utils import Encoding, PostSelect, Matrix
@@ -52,14 +52,14 @@ data (dual rail)  ─────┤     ├───── data (dual rail)
     def __init__(self):
         super().__init__("postprocessed ccz")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         m = Matrix(controlled_rotation_gates.build_control_gate_unitary(3, pi))
         return Circuit(12, name="PostProcessed CCZ").add(0, Unitary(m))
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
-        p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl0')) \
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        e.set_postselection(PostSelect("[0,1]==1 & [2,3]==1 & [4,5]==1"))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl0')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'ctrl1')) \
             .add_port(4, Port(Encoding.DUAL_RAIL, 'data')) \
             .add_herald(6, 0) \

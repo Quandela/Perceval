@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, PERM, BS, Port, Barrier
+from perceval.components import Circuit, PERM, BS, Port, Barrier, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect
 
@@ -47,7 +47,7 @@ data (dual rail) ─────┤     ├───── data (dual rail)
     def __init__(self):
         super().__init__("postprocessed cz")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         theta_13 = BS.r_to_theta(1 / 3)
         return (Circuit(6, name="PostProcessed CZ")
                 .add(1, PERM([2, 1, 3, 0]))  # So that both heralded modes are on the bottom of the gate
@@ -57,10 +57,10 @@ data (dual rail) ─────┤     ├───── data (dual rail)
                 .add((4, 5), BS.H(theta_13))
                 .add(1, PERM([3, 1, 0, 2])))  # So that both heralded modes are on the bottom of the gate
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
-        p.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
-        return p.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
+        e.set_postselection(PostSelect("[0,1]==1 & [2,3]==1"))
+        return e.add_port(0, Port(Encoding.DUAL_RAIL, 'ctrl')) \
             .add_port(2, Port(Encoding.DUAL_RAIL, 'data')) \
             .add_herald(4, 0) \
             .add_herald(5, 0)

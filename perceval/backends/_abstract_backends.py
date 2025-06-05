@@ -31,8 +31,7 @@ from abc import ABC, abstractmethod
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
-from perceval.utils.statevector import allstate_array
+from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector, allstate_array
 
 
 class ABackend(ABC):

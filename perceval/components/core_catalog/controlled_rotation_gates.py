@@ -34,7 +34,7 @@ import numpy as np
 import cmath as cm
 from scipy.linalg import block_diag
 
-from perceval.components import Circuit, Port, Unitary
+from perceval.components import Circuit, Port, Unitary, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 from perceval.utils import Encoding, PostSelect, Matrix
 
@@ -93,7 +93,7 @@ ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
     def __init__(self):
         super().__init__("postprocessed controlled gate")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         """
         kwargs:
             - n : int, number of qubit of the gate.
@@ -116,17 +116,17 @@ ctrlN (dual rail)  ─────┤     ├───── ctrlN (dual rail)
         m = build_control_gate_unitary(n, alpha)
         return Circuit(4*n, name="postprocessed controlled gate").add(0, Unitary(m))
 
-    def build_processor(self, **kwargs):
-        p = self._init_processor(**kwargs)
+    def build_experiment(self, **kwargs) -> Experiment:
+        e = Experiment(self.build_circuit(**kwargs))
         n = kwargs["n"]
 
-        p.set_postselection(PostSelect('&'.join([f"[{2*n},{2*n+1}]==1" for n in range(n)])))
+        e.set_postselection(PostSelect('&'.join([f"[{2*n},{2*n+1}]==1" for n in range(n)])))
 
         for i in range(n - 1):
-            p.add_port(2 * i, Port(Encoding.DUAL_RAIL, f"ctrl{i}"))
-        p.add_port(2 * (n - 1), Port(Encoding.DUAL_RAIL, "data"))
+            e.add_port(2 * i, Port(Encoding.DUAL_RAIL, f"ctrl{i}"))
+        e.add_port(2 * (n - 1), Port(Encoding.DUAL_RAIL, "data"))
 
         for i in range(2 * n, 4 * n):
-            p.add_herald(i, 0)
+            e.add_herald(i, 0)
 
-        return p
+        return e

@@ -199,7 +199,9 @@ class SLOSBackend(AStrongSimulationBackend):
         c = self._state_mapping[istate].coefs.reshape(self._fsas[istate.n].count())
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
-        bsd = BSDistribution(self._fsas[istate.n], c)
+        bsd = BSDistribution()
+        for output_state, probability in zip(self._fsas[istate.n], c):
+            bsd.add(output_state, probability)
         return bsd
 
     def all_prob(self, input_state: BasicState = None):

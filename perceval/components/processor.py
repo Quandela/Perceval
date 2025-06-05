@@ -130,7 +130,7 @@ class Processor(AProcessor):
 
     def generate_noisy_heralds(self) -> SVDistribution:
         if self.heralds:
-            heralds_perfect_state = BasicState([v for k, v in sorted(self.heralds.items())])
+            heralds_perfect_state = BasicState([v for k, v in sorted(self.experiment.in_heralds.items())])
             return self._source.generate_distribution(heralds_perfect_state)
         return SVDistribution()
 
