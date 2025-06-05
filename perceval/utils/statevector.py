@@ -42,10 +42,16 @@ import exqalibur as xq
 
 
 BasicState: TypeAlias = xq.FockState
+FockStateIndex: TypeAlias = xq.FockStateIndex
+FockStateCode: TypeAlias = xq.FockStateCode
+FockStateCodeInv: TypeAlias = xq.FockStateCodeInv
 BSCount: TypeAlias = xq.BSCount
 BSSamples: TypeAlias = xq.BSSamples
 StateVector: TypeAlias = xq.StateVector
 BSDistribution: TypeAlias = xq.BSDistribution
+FSIDistribution: TypeAlias = xq.FockStateIndexDistribution
+FSCDistribution: TypeAlias = xq.FockStateCodeDistribution
+FSCIDistribution: TypeAlias = xq.FockStateCodeInvDistribution
 SVDistribution: TypeAlias = xq.SVDistribution
 
 
@@ -96,7 +102,7 @@ def max_photon_state_iterator(m: int, n_max: int):
             yield output_state
 
 
-def tensorproduct(states: list[StateVector | BasicState]) -> StateVector | BasicState:
+def tensorproduct(states: list[StateVector | BasicState | FockStateIndex | FockStateCode | FockStateCodeInv]) -> StateVector | BasicState | FockStateIndex | FockStateCode | FockStateCodeInv:
     r""" Computes states[0] * states[1] * ...
     """
     if len(states) == 1:

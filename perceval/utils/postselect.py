@@ -31,18 +31,19 @@ from __future__ import annotations
 import exqalibur as xq
 
 from .statevector import BSDistribution, StateVector
+
 try:
-    from typing import TypeAlias
+    from typing import TypeAlias, Any
 except ImportError:
     from typing_extensions import TypeAlias  # Only used with python 3.9
 
 PostSelect: TypeAlias = xq.PostSelect
 
 def post_select_distribution(
-        bsd: BSDistribution,
+        bsd,
         postselect: PostSelect,
         heralds: dict = None,
-        keep_heralds: bool = True) -> tuple[BSDistribution, float]:
+        keep_heralds: bool = True) -> tuple[Any, float]:
     """Post select a BSDistribution
 
     :param bsd: BSDistribution to post select
@@ -60,7 +61,7 @@ def post_select_distribution(
     if heralds is None:
         heralds = {}
     logical_perf = 1
-    result = BSDistribution()
+    result = type(bsd)()
     for state, prob in bsd.items():
         heralds_ok = True
         for m, v in heralds.items():

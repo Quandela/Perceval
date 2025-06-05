@@ -38,7 +38,7 @@ from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AStrongSimulationBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
-from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
+from perceval.utils import BasicState, BSDistribution, FSIDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
 from perceval.utils.density_matrix_utils import extract_upper_triangle
 from perceval.utils.logging import get_logger
@@ -47,6 +47,7 @@ from perceval.runtime import cancel_requested
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
+from ..utils.statevector import FockStateIndex
 
 
 class Simulator(ISimulator):
@@ -57,6 +58,9 @@ class Simulator(ISimulator):
 
     :param backend: A probability amplitude capable backend object
     """
+    FS_TYPE = FockStateIndex
+    FSD_TYPE = FSIDistribution
+
     detector_cb_start = 0.9
 
     def __init__(self, backend: AStrongSimulationBackend):
@@ -343,7 +347,11 @@ class Simulator(ISimulator):
                 self.use_mask(n)
 
             self._backend.set_input_state(state)
-            cache[(state, n)] = self._backend.prob_distribution()
+            bsid = self.FSD_TYPE()
+            for bs, p in self._backend.prob_distribution().items():
+                bsi = self.FS_TYPE(bs)
+                bsid.add(bsi,p)
+            cache[(state, n)] = bsid
             if prog_cb and idx % 10 == 0:
                 progress = (idx + 1) / len_input_set
                 exec_request = prog_cb(progress, 'compute probability distributions')
@@ -351,11 +359,11 @@ class Simulator(ISimulator):
                     raise RuntimeError("Cancel requested")
 
         """Reconstruct output probability distribution"""
-        res = BSDistribution()
+        res = self.FSD_TYPE()
         prog_cb = partial_progress_callable(progress_callback, min_val=0.5)  # From 0.5 to 1
         for idx, (prob0, bs_data, n) in enumerate(decomposed_input):
             """First, recombine evolved state vectors given a single input"""
-            probs_in_s = BSDistribution.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
+            probs_in_s = self.FSD_TYPE.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
                                                             merge_modes=True,
                                                             prob_threshold=p_threshold / (10 * prob0))
             self.DEBUG_merge_count += len(bs_data) - 1
@@ -455,7 +463,7 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         if not check_heralds_detectors(self._heralds, detectors):
-            return {'results': BSDistribution(), 'physical_perf': 1, 'logical_perf': 0}
+            return {'results': self.FSD_TYPE(), 'physical_perf': 1, 'logical_perf': 0}
 
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
