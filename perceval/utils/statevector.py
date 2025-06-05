@@ -65,6 +65,8 @@ def allstate_array(input_state: BasicState, mask: xq.FSMask = None) -> xq.FSArra
 
     output_array.generate()
 
+    return output_array
+
 
 def allstate_iterator(input_state: BasicState | StateVector, mask: xq.FSMask = None) -> Generator[xq.FockState]:
     """Iterator on all possible output states compatible with mask generating StateVector
