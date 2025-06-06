@@ -109,14 +109,11 @@ class JobStatus:
         self._last_progress_time = now
 
     def update_times(self, creation_datetime: float, start_time: float, duration: int):
-        if creation_datetime:
-            self._init_time_start = creation_datetime
-        if start_time:
-            self._running_time_start = start_time
-        if duration:
-            self._duration = duration
-            if self.completed:
-                self._completed_time = self._running_time_start + self._duration
+        self._init_time_start = creation_datetime
+        self._running_time_start = start_time
+        self._duration = duration
+        if self.completed:
+            self._completed_time = self._running_time_start + self._duration
 
     @property
     def creation_timestamp(self):
