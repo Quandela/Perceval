@@ -103,7 +103,7 @@ class ACircuit(AParametrizedComponent, ABC):
         """
         return self.compute_unitary(use_symbolic=True).simp()
 
-    def definition(self):
+    def definition(self) -> Matrix:
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
