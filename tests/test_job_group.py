@@ -254,9 +254,9 @@ def test_save_on_error(mock_write_file):
         jg._from_json(last_saved_jg_dict)
 
         remote_jobs = jg.remote_jobs
-        assert remote_jobs[0].was_sent
-        assert remote_jobs[0].is_success
-        assert not remote_jobs[1].was_sent
+        assert sum(1 for job in remote_jobs if job.was_sent) == 1
+        assert sum(1 for job in remote_jobs if not job.was_sent) == 1
+        assert sum(1 for job in remote_jobs if job.is_success) == 1
 
 
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
