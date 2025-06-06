@@ -113,16 +113,19 @@ class AParametrizedComponent(AComponent):
         return self._params.keys()
 
     def param(self, param_name: str) -> Parameter:
-        """Returns a `Parameter` object from its name"""
+        """Extract a `Parameter` object from its name
+        :param param_name: The name of the parameter
+        :return: A `Parameter` object
+        """
         return self._params[param_name]
 
     def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
         """Return the parameters of the circuit
 
         :param all_params: if False, only returns the variable parameters
+        :param expressions: if True, returns Expressions and parameters embedded in circuit components.
+            If False, returns the raw parameters that make up the expressions only. Default False.
         :return: the list of parameters
-        :expressions: if True, returns Expressions and parameters embedded in circuit components.
-            If False, returns the raw parameters that make up the expressions only. Default `False`.
         """
         param_list = []
         for param in self._params.values():
