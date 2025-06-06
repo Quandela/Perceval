@@ -75,8 +75,8 @@ class ACircuit(AParametrizedComponent, ABC):
                         use_polarization: bool | None = None) -> Matrix:
         """Compute the unitary matrix corresponding to the current circuit
 
-        :param use_polarization:
-        :param assign: assign values to some parameters
+        :param use_polarization: ask for polarized circuit to double size unitary matrix
+        :param assign: optional mapping between parameter names and their corresponding values
         :param use_symbolic: if the matrix should use symbolic calculation
         :return: the unitary matrix, will be a :class:`~perceval.utils.matrix.MatrixS` if symbolic, or a ~`MatrixN`
                  if not.
@@ -95,6 +95,10 @@ class ACircuit(AParametrizedComponent, ABC):
 
     @property
     def requires_polarization(self):
+        """Does the circuit require polarization?
+
+        :return: is True if the circuit has a polarization component
+        """
         return self._supports_polarization
 
     @property
@@ -105,6 +109,10 @@ class ACircuit(AParametrizedComponent, ABC):
         return self.compute_unitary(use_symbolic=True).simp()
 
     def definition(self):
+        r"""Gives mathematical definition of the circuit
+
+        Only defined for elementary circuits
+        """
         params = {name: Parameter(name) for name in self._params.keys()}
         return type(self)(**params).U
 
@@ -144,6 +152,13 @@ class ACircuit(AParametrizedComponent, ABC):
         return c
 
     def __iter__(self):
+        """
+        Iterator on a circuit, recursively returns modes and components in the order they were added to the circuit.
+        Flattens the circuit if there are sub-circuits.
+
+        :return: generator of tuples (r, c) where r is the tuple containing the modes of the component in ascending order,
+         and c is the component itself.
+        """
         yield tuple(pos for pos in range(self._m)), self
 
     def identify(self, unitary_matrix, phases, precision=None, max_try=10, allow_error=False) -> None:
@@ -248,12 +263,17 @@ class ACircuit(AParametrizedComponent, ABC):
         return ACircuit._match_unitary(self, pattern, match, actual_pos=actual_pos,
                                        actual_pattern_pos=actual_pattern_pos)
 
-    def transfer_from(self, c: ACircuit, force: bool = False):
-        r"""transfer parameters from a Circuit to another - should be the same circuit"""
-        assert type(self) == type(c), "component has not the same shape"
-        for p in c.params:
+    def transfer_from(self, source: ACircuit, force: bool = False):
+        r"""Transfer parameters of a circuit to the current one
+
+        :param source: the circuit to transfer the parameters from. The shape of the circuit to transfer from
+                          should be a subset of the current circuit.
+        :param force: force changing fixed parameter if necessary
+        """
+        assert type(self) == type(source), "component does not have the same shape"
+        for p in source.params:
             assert p in self._params, "missing parameter %s when transferring component" % p
-            param = c.param(p)
+            param = source.param(p)
             if param.defined:
                 try:
                     self._params[p].set_value(float(param), force=force)
@@ -264,9 +284,15 @@ class ACircuit(AParametrizedComponent, ABC):
                     get_logger().error(f"Unexpected error in tranfer_from: {e}", channel.general)
 
     def depths(self):
+        """
+        :return: the depth of the circuit for each mode
+        """
         return [1]*self.m
 
     def ncomponents(self):
+        """
+        :return: number of actual components in the circuit
+        """
         return 1
 
     def inverse(self, v, h):
@@ -300,13 +326,6 @@ class Circuit(ACircuit):
         return True
 
     def __iter__(self) -> Generator[tuple[tuple[int, ...], ACircuit]]:
-        """
-        Iterator on a circuit, recursively returns modes and components in the order they were added to the circuit.
-        Flattens the circuit if there are sub-circuits.
-
-        :return: generator of tuples (r, c) where r is the tuple containing the modes of the component in ascending order,
-         and c is the component itself.
-        """
         for r, c in self._components:
             for range_comp, comp in c:
                 yield tuple(pos + r[0] for pos in range_comp), comp
@@ -361,17 +380,9 @@ class Circuit(ACircuit):
 
     @property
     def requires_polarization(self) -> bool:
-        """Does the circuit require polarization?
-
-        :return: is True if the circuit has a polarization component
-        """
         return any(c.requires_polarization for _, c in self._components)
 
     def definition(self) -> Matrix:
-        r"""Gives mathematical definition of the circuit
-
-        Only defined for elementary circuits
-        """
         raise RuntimeError("`definition` method is only available on elementary circuits")
 
     def barrier(self):
@@ -506,13 +517,6 @@ class Circuit(ACircuit):
                         use_symbolic: bool = False,
                         assign: dict = None,
                         use_polarization: bool = None) -> Matrix:
-        r"""Compute the unitary matrix corresponding to the circuit
-
-        :param use_symbolic: True to compute a symbolic matrix, False to compute a numerical matrix (default False)
-        :param assign: optional mapping between parameter names and their corresponding values
-        :param use_polarization: ask for polarized circuit to double size unitary matrix
-        :return: The circuit unitary matrix
-        """
         self.assign(assign)
         if use_polarization is None:
             use_polarization = self.requires_polarization
@@ -607,9 +611,6 @@ class Circuit(ACircuit):
         return None
 
     def depths(self):
-        """
-        :return: the depth of the circuit for each mode
-        """
         the_depths = [0] * self.m
         for r, c in self._components:
             c_depths = c.depths()
@@ -618,21 +619,12 @@ class Circuit(ACircuit):
         return the_depths
 
     def ncomponents(self):
-        """
-        :return: number of actual components in the circuit
-        """
         n = 0
         for _, c in self._components:
             n += c.ncomponents()
         return n
 
     def transfer_from(self, source: ACircuit, force: bool = False):
-        r"""Transfer parameters of a circuit to the current one
-
-        :param source: the circuit to transfer the parameters from. The shape of the circuit to transfer from
-                          should be a subset of the current circuit.
-        :param force: force changing fixed parameter if necessary
-        """
         assert source.m == self.m, "circuit shape does not match"
         checked_components = [False] * len(self._components)
         for r, c in source._components:
