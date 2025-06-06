@@ -78,7 +78,7 @@ class PersistentData:
         """Create the persistent data root directory if it doesn't exist
         """
         if not os.path.exists(self._directory):
-            os.makedirs(self._directory)
+            os.makedirs(self._directory) # by default, mode=0o777
 
     def get_folder_size(self) -> int:
         """Get the directory data size
