@@ -119,7 +119,7 @@ class RemoteJob(Job):
             body = None
         else:
             body = my_dict['body']
-        name = my_dict['name']
+        name = my_dict.get('name')
         rj = RemoteJob(body, rpc_handler, name)
         rj._id = my_dict['id']
         if my_dict['status'] is not None:
