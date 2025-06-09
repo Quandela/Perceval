@@ -370,8 +370,8 @@ class JobGroup:
             bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
             progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
-        maximal_concurent_jobs = nb_parallel if nb_parallel else len(jobs_to_run)
-        peek_delay = 1 if await_responses else 0
+        maximal_concurent_jobs = nb_parallel or len(jobs_to_run)
+        peek_delay = 1.0 if await_responses else 0.0
 
         while jobs_to_run or awaited_jobs:
             while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
