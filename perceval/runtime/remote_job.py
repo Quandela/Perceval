@@ -117,10 +117,9 @@ class RemoteJob(Job):
     def _from_dict(my_dict: dict, rpc_handler):
         if my_dict['status'] == 'SUCCESS':
             body = None
-            name = ""
         else:
             body = my_dict['body']
-            name = my_dict['body']['job_name']
+        name = my_dict['name']
         rj = RemoteJob(body, rpc_handler, name)
         rj._id = my_dict['id']
         if my_dict['status'] is not None:
@@ -130,6 +129,7 @@ class RemoteJob(Job):
     def _to_dict(self):
         job_info = dict()
         job_info['id'] = self.id
+        job_info['name'] = self.name
         job_info['status'] = str(self._job_status) if self.was_sent else None
 
         # save metadata to recreate remote jobs
@@ -211,7 +211,6 @@ class RemoteJob(Job):
 
         kwargs = self._delta_parameters['command']
         kwargs['job_context'] = self._job_context
-        self._request_data['job_name'] = self._name
         self._request_data['payload'].update(kwargs)
         self._check_max_shots_samples_validity()
         return self._request_data
