@@ -38,16 +38,21 @@ from perceval.serialization import deserialize, serialize
 from perceval.utils.logging import get_logger, channel
 
 
-def _extract_job_times(response: dict):
-    creation_datetime = response.get('creation_datetime')
-    start_datetime = response.get('start_time')
-    duration = response.get('duration')
-    if creation_datetime is not None:
-        creation_datetime = float(creation_datetime)
-    if start_datetime is not None:
-        start_datetime = float(start_datetime)
-    if duration is not None:
-        duration = int(duration)
+def _retrieve_from_response(response: dict, field: str, default_value: any = '', value_type: type = str) -> any:
+    if field not in response:
+        get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
+        return default_value
+    try:
+        result = value_type(response[field])
+    except (ValueError, TypeError):
+        get_logger().error(f"The field '{field}' from server response contains the wrong value '{response[field]}'. Using default value {default_value}.", channel.general)
+        result = default_value
+    return result
+
+def _extract_job_times(response: dict) -> (float, float, int):
+    creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
+    start_datetime = _retrieve_from_response(response, 'start_time', 0., float)
+    duration = _retrieve_from_response(response, 'duration', 0, int)
     return creation_datetime, duration, start_datetime
 
 
@@ -184,11 +189,12 @@ class RemoteJob(Job):
                 self._handle_status_error(error)
                 return self._job_status  # Return previous status
 
-            self._job_status.status = RunningStatus.from_server_response(response['status'])
+            self._job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
             if self._job_status.running:
-                self._job_status.update_progress(float(response['progress']), response['progress_message'])
+                self._job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
+                                                 _retrieve_from_response(response, 'progress_message'))
             elif self._job_status.failed:
-                self._job_status._stop_message = response['status_message']
+                self._job_status._stop_message = _retrieve_from_response(response, 'status_message')
 
             creation_datetime, duration, start_datetime = _extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)
