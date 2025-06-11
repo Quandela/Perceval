@@ -350,7 +350,7 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, rerun: bool, delay: float = None, replace_failed_jobs: bool = False) -> None:
+    def _launch_jobs(self, rerun: bool, delay: float, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
@@ -408,9 +408,11 @@ class JobGroup:
 
         :param delay: number of seconds to wait between launching jobs on cloud
         """
+        if delay is None:
+            delay = 0.
         self._launch_jobs(rerun=False, delay=delay)
 
-    def rerun_failed_sequential(self, delay: int, replace_failed_jobs=True) -> None:
+    def rerun_failed_sequential(self, delay: float, replace_failed_jobs=True) -> None:
         """
         Reruns Failed jobs in the group on the Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
@@ -419,6 +421,8 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
         """
+        if delay is None:
+            delay = 0.
         self._launch_jobs(rerun=True, delay=delay, replace_failed_jobs=replace_failed_jobs)
 
     def run_parallel(self) -> None:
@@ -429,7 +433,7 @@ class JobGroup:
         the maximum allowed limit, an exception is raised, terminating the launch process.
         Any remaining jobs in the group will not be sent.
         """
-        self._launch_jobs(rerun=False)
+        self._launch_jobs(rerun=False, delay=None)
 
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
@@ -441,7 +445,7 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
         """
-        self._launch_jobs(rerun=True, replace_failed_jobs=replace_failed_jobs)
+        self._launch_jobs(rerun=True, replace_failed_jobs=replace_failed_jobs, delay=None)
 
     def get_results(self) -> list[dict]:
         """
