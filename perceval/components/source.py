@@ -270,6 +270,26 @@ class Source:
 
         return self._sampler.generate_samples(max_samples)
 
+    def generate_separated_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> list[BSSamples]:
+        if self.is_perfect():
+            sample = BSSamples([expected_input])
+            return [sample] * max_samples
+
+        # if min_detected_photons == 0:
+        #     return self._generate_samples_no_filter(max_samples, expected_input)
+
+        transmission = self.emission_probability * (1 - self.losses)
+        if transmission == 0 and min_detected_photons >= 1:
+            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
+            return []
+
+        if self._sampler is None or expected_input.n != self._sampler.n or min_detected_photons != self._sampler.min_photons_filter:
+            self._sampler = self.create_sampler(expected_input.n, min_detected_photons)
+
+        self._sampler.expected_input = expected_input
+
+        return self._sampler.generate_separated_samples(max_samples)
+
     def is_perfect(self) -> bool:
         return self._source.is_perfect
 
