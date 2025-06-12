@@ -192,9 +192,11 @@ class ASimulatorDecorator(ISimulator, ABC):
                                           detectors=self._prepare_detectors(detectors),
                                           progress_callback=progress_callback)
         probs['results'], logical_perf_coeff, physical_perf_coeff = self._postprocess_bsd(probs['results'])
-        return self._simulator.format_results(probs['results'],
-                                              probs['physical_perf'] * physical_perf_coeff,
-                                              probs['logical_perf'] * logical_perf_coeff)
+        if self._simulator._compute_physical_logical_perf:
+            return self._simulator.format_results(probs['results'],
+                                                probs['physical_perf'] * physical_perf_coeff,
+                                                probs['logical_perf'] * logical_perf_coeff)
+        return {'results': probs['results'], 'global_perf': probs['global_perf'] * physical_perf_coeff * logical_perf_coeff}
 
     def evolve(self, input_state) -> StateVector:
         results = self._simulator.evolve(self._prepare_input(input_state))
