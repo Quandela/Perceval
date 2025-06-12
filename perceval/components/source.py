@@ -87,67 +87,6 @@ class Source:
                       indistinguishability=noise.indistinguishability,
                       losses=1 - noise.transmittance,
                       multiphoton_model=DISTINGUISHABLE_KEY if noise.g2_distinguishable else INDISTINGUISHABLE_KEY)
-    #
-    # def get_tag(self, tag, add=False):
-    #     if add:
-    #         self._context[tag] += 1
-    #     return self._context[tag]
-    #
-    # def _get_probs(self):
-    #     px = self._emission_probability
-    #     g2 = self._multiphoton_component
-    #     eta = 1 - self._losses
-    #
-    #     # Starting formulas
-    #     # g2 = 2p2/(p1+2p2)**2
-    #     # p1 + p2 + ... = px & pn<<p2 for n>2
-    #
-    #     p2 = (- px * g2 - math.sqrt(1 - 2 * px * g2) + 1) / g2 if g2 else 0
-    #     p1 = px - p2
-    #
-    #     p1to1 = eta * p1
-    #     p2to2 = eta ** 2 * p2
-    #     p2to1 = eta * (1 - eta) * p2
-    #     return p1to1, p2to1, p2to2
-    #
-    # @staticmethod
-    # def _add(plist: BSDistribution, annotations: int | list, probability: float):
-    #     # Add an annotation list (or a number of unannotated photons) and its probability to the in/out
-    #     # parameter `plist`
-    #     if probability > 0:
-    #         if isinstance(annotations, int):
-    #             plist[BasicState([annotations])] = probability
-    #             return
-    #         plist[BasicState([len(annotations)], {0: annotations})] = probability
-    #
-    # def _generate_one_photon_distribution(self) -> BSDistribution:
-    #     # Generates a distribution of annotations given the source parameters for one photon in one mode
-    #     distinguishability = 1 - math.sqrt(self._indistinguishability)
-    #
-    #     # Approximation distinguishable photons are pure
-    #     distinguishable_photon = self.get_tag("discernability_tag", add=True)
-    #     second_photon = self.get_tag("discernability_tag", add=True) \
-    #         if self._multiphoton_model == DISTINGUISHABLE_KEY else 0  # Noise photon or signal
-    #
-    #     (p1to1, p2to1, p2to2) = self._get_probs()
-    #     p0 = 1 - (p1to1 + 2 * p2to1 + p2to2)  # 2 * p2to1 because of symmetry
-    #
-    #     dist = BSDistribution()
-    #     self._add(dist, 0, p0)
-    #     if self.partially_distinguishable:
-    #         self._add(dist, ["_:0", "_:%s" % second_photon], (1 - distinguishability) * p2to2)
-    #         self._add(dist, ["_:%s" % distinguishable_photon, "_:%s" % second_photon], distinguishability * p2to2)
-    #         if self._multiphoton_model == DISTINGUISHABLE_KEY:
-    #             self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1) + p2to1)
-    #             self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1))
-    #         else:
-    #             self._add(dist, ["_:%s" % distinguishable_photon], distinguishability * (p1to1 + p2to1))
-    #             self._add(dist, ["_:0"], (1 - distinguishability) * (p1to1 + p2to1) + p2to1)
-    #     else:
-    #         # Just avoids annotations
-    #         self._add(dist, 2, p2to2)
-    #         self._add(dist, 1, p1to1 + 2 * p2to1)
-    #     return dist
 
     @property
     def partially_distinguishable(self):
@@ -213,55 +152,24 @@ class Source:
         return self._sampler.physical_perf, self._sampler.zpp
 
     def create_sampler(self, n: int, min_photons_filter: int = 0) -> xq.SourceSampler:
+        """
+        Creates a source sampler that will be able to generate states according to the source probability distribution
+        :param n: Number of photons in the expected input state.
+        :param min_photons_filter: Minimum number of photons in a sampled state
+        """
         return self._source.create_sampler(n, min_photons_filter)
 
-    # def _generate_samples_no_filter(self, max_samples: int, expected_input: BasicState) -> BSSamples:
-    #     """
-    #     Generate samples directly from the source, without generating the source probability distribution first.
-    #
-    #     :param max_samples: Number of samples to generate
-    #     :param expected_input: Expected input BasicState
-    #         The properties of the source will alter the input state. A perfect source always delivers the expected state
-    #         as an input. Imperfect ones won't.
-    #     """
-    #     samples = BSSamples()
-    #
-    #     if not self.partially_distinguishable:
-    #         bsd = self._generate_one_photon_distribution()
-    #
-    #     for photon_count in expected_input:
-    #         new_samples = BSSamples()
-    #         if photon_count == 0:
-    #             new_samples.extend([BasicState([photon_count])] * max_samples)
-    #         else:
-    #             for _ in range(photon_count):
-    #                 if self.partially_distinguishable:
-    #                     bsd = self._generate_one_photon_distribution()
-    #                 new_samples_one_mode = bsd.sample(max_samples, non_null=False)
-    #                 if len(new_samples) == 0:
-    #                     new_samples = new_samples_one_mode # first samples
-    #                     continue
-    #                 for i in range(len(new_samples_one_mode)):
-    #                     new_samples[i] = new_samples[i].merge(new_samples_one_mode[i])
-    #         if len(samples) == 0:
-    #             samples = new_samples # first samples
-    #             continue
-    #         for i in range(len(new_samples)):
-    #             samples[i] *= new_samples[i]
-    #
-    #     return samples
-
     def generate_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> BSSamples:
+        """
+        Samples states from the source probability distribution without representing the whole distribution in memory.
+        Creates a source sampler and store it in self for faster repeated sampling if necessary.
+
+        :param max_samples: Number of samples to generate.
+        :param expected_input: The nominal input state that the source should produce.
+        :param min_detected_photons: Minimum number of photons in a sampled state.
+        """
         if self.is_perfect():
             return BSSamples([expected_input] * max_samples)
-
-        # if min_detected_photons == 0:
-        #     return self._generate_samples_no_filter(max_samples, expected_input)
-
-        transmission = self.emission_probability * (1 - self.losses)
-        if transmission == 0 and min_detected_photons >= 1:
-            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
-            return BSSamples()
 
         if self._sampler is None or expected_input.n != self._sampler.n or min_detected_photons != self._sampler.min_photons_filter:
             self._sampler = self.create_sampler(expected_input.n, min_detected_photons)
@@ -271,17 +179,20 @@ class Source:
         return self._sampler.generate_samples(max_samples)
 
     def generate_separated_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> list[BSSamples]:
+        """
+        Samples separated states from the source probability distribution without representing the whole distribution in memory.
+        The sampled states are equivalent (up to permutation) to calling separate_state() on each state returned by generate_samples()
+        but this sampling process uses a simplified procedure to do it faster.
+
+        Creates a source sampler and store it in self for faster repeated sampling if necessary.
+
+        :param max_samples: Number of samples to generate.
+        :param expected_input: The nominal input state that the source should produce.
+        :param min_detected_photons: Minimum number of photons in a sampled state.
+        """
         if self.is_perfect():
             sample = BSSamples([expected_input])
             return [sample] * max_samples
-
-        # if min_detected_photons == 0:
-        #     return self._generate_samples_no_filter(max_samples, expected_input)
-
-        transmission = self.emission_probability * (1 - self.losses)
-        if transmission == 0 and min_detected_photons >= 1:
-            get_logger().warn(f"No useful state will be computed, aborting", channel.user)
-            return []
 
         if self._sampler is None or expected_input.n != self._sampler.n or min_detected_photons != self._sampler.min_photons_filter:
             self._sampler = self.create_sampler(expected_input.n, min_detected_photons)

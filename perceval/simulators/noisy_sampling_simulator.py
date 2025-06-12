@@ -94,8 +94,8 @@ class SamplesProvider:
                     else:
                         self._weights.add(bs, self._max_samples - self._weights[bs])
 
-    def estimate_weights_from_source(self, sample_generator: Callable[[int], BSSamples],
-                                     n_samples: int) -> list[BasicState] | BSSamples:
+    def estimate_weights_from_source(self, sample_generator: Callable[[int], list[BSSamples]],
+                                     n_samples: int) -> list[BSSamples]:
         """
         Decide how much of each input we will generate when the pool becomes empty based on
         a batch of samples generated from the source and the total number of samples.
@@ -104,7 +104,7 @@ class SamplesProvider:
         input_samples = sample_generator(n_samples)
 
         for sample in input_samples:
-            for state in sample.separate_state(keep_annotations=False):
+            for state in sample:
                 if self._weights[state] < self._max_samples:
                     self._weights.add(state, 1)
 
@@ -235,12 +235,12 @@ class NoisySamplingSimulator:
 
     def _noisy_sampling(
             self,
-            sample_generator: Callable[[int], BSSamples],
+            sample_generator: Callable[[int], list[BSSamples]],
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
             detection_type: DetectionType,
-            first_batch: list[BasicState] | BSSamples,
+            first_batch: list[BSSamples],
             progress_callback: callable = None) -> dict:
 
         output = BSSamples()
@@ -270,16 +270,15 @@ class NoisySamplingSimulator:
             idx += 1
 
             # Sampling
-            if selected_bs.has_annotations:  # In case of annotations, input must be separately sampled, then recombined
-                bs_list = selected_bs.separate_state(keep_annotations=False)
+            if len(selected_bs) > 1:  # In case of annotations, input must be separately sampled, then recombined
                 sampled_components = []
-                for bs in bs_list:
+                for bs in selected_bs:
                     sampled_components.append(provider.sample_from(bs))
                 sampled_state = sampled_components.pop()
                 for component in sampled_components:
                     sampled_state = sampled_state.merge(component)
             else:
-                sampled_state = provider.sample_from(selected_bs)
+                sampled_state = provider.sample_from(selected_bs[0])
 
             if self._detectors:
                 sampled_state = simulate_detectors_sample(sampled_state, self._detectors, detection_type)
@@ -379,7 +378,7 @@ class NoisySamplingSimulator:
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
                                                                              max_shots)
 
-                sample_generator = lambda i: source.generate_samples(i, bs_input, self._min_detected_photons_filter)
+                sample_generator = lambda i: source.generate_separated_samples(i, bs_input, self._min_detected_photons_filter)
 
                 first_batch = provider.estimate_weights_from_source(sample_generator, prepare_samples)
 
@@ -390,7 +389,7 @@ class NoisySamplingSimulator:
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
                                                                              max_shots)
 
-                sample_generator = lambda i: trimmed_bsd.sample(i, non_null=False)
+                sample_generator = lambda i: [state.separate_state(keep_annotations=False) for state in trimmed_bsd.sample(i, non_null=False)]
 
                 provider.estimate_weights_from_distribution(trimmed_bsd, prepare_samples)
 
