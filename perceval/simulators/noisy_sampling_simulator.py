@@ -146,6 +146,7 @@ class NoisySamplingSimulator:
         self._keep_heralds = True
         self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
         self._detectors = None
+        self._compute_physical_logical_perf = False
 
     def set_detectors(self, detector_list: list[IDetector]):
         """
@@ -160,6 +161,14 @@ class NoisySamplingSimulator:
         :param value: True to keep ancillaries/heralded modes, False to discard them (default is keep).
         """
         self._keep_heralds = value
+
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Tells the simulator to compute or not the physical and logical performances when possible
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self._compute_physical_logical_perf = value
 
     def set_selection(self,
                       min_detected_photons_filter: int = None,
@@ -227,11 +236,7 @@ class NoisySamplingSimulator:
                 if cancel_request is not None and cancel_request.get('cancel_requested', False):
                     break
 
-        return {
-            "results": results,
-            "physical_perf": 1,
-            "logical_perf": 1
-        }
+        return self.format_results(results, 1, 1)
 
     def _noisy_sampling(
             self,
@@ -303,7 +308,7 @@ class NoisySamplingSimulator:
         if selected > 0:
             physical_perf = (selected + not_selected) / (selected + not_selected + not_selected_physical)
             logical_perf = selected / (selected + not_selected)
-        return {'results': output, 'physical_perf': physical_perf, 'logical_perf': logical_perf}
+        return self.format_results(output, physical_perf, logical_perf)
 
     def _check_input_svd(self, svd: SVDistribution) -> tuple[float, float]:
         """
@@ -426,7 +431,7 @@ class NoisySamplingSimulator:
         * logical_perf is the performance computed from the post-selection
         """
         if not check_heralds_detectors(self._heralds, self._detectors):
-            return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
+            return self.format_results(BSSamples(), 1, 0)
 
         source_defined = isinstance(svd, tuple)
 
@@ -441,7 +446,7 @@ class NoisySamplingSimulator:
                 # Choose a consistent samples limit
                 prepare_samples = self.compute_samples(max_samples, max_shots)
                 if prepare_samples == 0:
-                    return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 1}
+                    return self.format_results(BSSamples(), 1, 1)
                 return self._perfect_sampling_no_selection(only_input, prepare_samples, progress_callback)
 
         provider = SamplesProvider(self._backend)
@@ -453,11 +458,12 @@ class NoisySamplingSimulator:
                                                                                                          progress_callback)
 
         if sample_generator is None:
-            return {"results": BSSamples(), "physical_perf": 0, "logical_perf": 1}
+            return self.format_results(BSSamples(), 0, 1)
 
         res = self._noisy_sampling(sample_generator, provider, max_samples, max_selected_shots, det_type, first_batch,
                                    progress_callback)
-        res['physical_perf'] *= pre_physical_perf
+        if self._compute_physical_logical_perf:
+            res['physical_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': n, 'max_samples': max_samples, 'max_shots': max_shots})
         return res
@@ -492,3 +498,18 @@ class NoisySamplingSimulator:
         if extra_parameters:
             my_dict.update(extra_parameters)
         get_logger().log_resources(my_dict)
+
+    def format_results(self, results, physical_perf, logical_perf):
+        """
+            Format the simulation results by computing the global performance, and returning the physical and
+            logical performances only if needed.
+
+            :param results: the simulation results
+            :param physical_perf: the physical performance
+            :param logical_perf: the logical performance
+        """
+        result = {'results': results, 'global_perf': physical_perf * logical_perf}
+        if self._compute_physical_logical_perf:
+            result['physical_perf'] = physical_perf
+            result['logical_perf'] = logical_perf
+        return result

@@ -43,6 +43,7 @@ class ISimulator(ABC):
         self._postselect: PostSelect = PostSelect()
         self._heralds: dict = {}
         self._min_detected_photons_filter: int = 0
+        self._compute_physical_logical_perf = False
 
     def set_silent(self, silent: bool):
         self._silent = silent
@@ -107,6 +108,29 @@ class ISimulator(ABC):
         """
         self._keep_heralds = value
 
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Tells the simulator to compute or not the physical and logical performances when possible
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self._compute_physical_logical_perf = value
+
+    def format_results(self, results: dict(), physical_perf: float, logical_perf: float):
+        """
+            Format the simulation results by computing the global performance, and returning the physical and
+            logical performances only if needed.
+
+            :param results: the simulation results
+            :param physical_perf: the physical performance
+            :param logical_perf: the logical performance
+        """
+        result = {'results': results, 'global_perf': physical_perf * logical_perf}
+        if self._compute_physical_logical_perf:
+            result['physical_perf'] = physical_perf
+            result['logical_perf'] = logical_perf
+        return result
+
 
 class ASimulatorDecorator(ISimulator, ABC):
     def __init__(self, simulator: ISimulator):
@@ -168,9 +192,9 @@ class ASimulatorDecorator(ISimulator, ABC):
                                           detectors=self._prepare_detectors(detectors),
                                           progress_callback=progress_callback)
         probs['results'], logical_perf_coeff, physical_perf_coeff = self._postprocess_bsd(probs['results'])
-        probs['physical_perf'] *= physical_perf_coeff
-        probs['logical_perf'] *= logical_perf_coeff
-        return probs
+        return self._simulator.format_results(probs['results'],
+                                              probs['physical_perf'] * physical_perf_coeff,
+                                              probs['logical_perf'] * logical_perf_coeff)
 
     def evolve(self, input_state) -> StateVector:
         results = self._simulator.evolve(self._prepare_input(input_state))
