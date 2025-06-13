@@ -211,6 +211,7 @@ class RemoteJob(Job):
 
         kwargs = self._delta_parameters['command']
         kwargs['job_context'] = self._job_context
+        self._request_data['job_name'] = self._name
         self._request_data['payload'].update(kwargs)
         self._check_max_shots_samples_validity()
         return self._request_data
