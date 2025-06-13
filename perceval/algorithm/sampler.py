@@ -274,8 +274,6 @@ class Sampler(AAlgorithm):
 
     def _set_min_detected_photons(self, count: int):
         self._processor.min_detected_photons_filter(count)
-        if count is None:
-            self._processor.parameters.pop("min_detected_photons")
 
     def _set_max_samples(self, val: int):
         self._max_samples = val
