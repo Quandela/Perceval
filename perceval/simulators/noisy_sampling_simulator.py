@@ -464,6 +464,7 @@ class NoisySamplingSimulator:
                                    progress_callback)
         if self._compute_physical_logical_perf:
             res['physical_perf'] *= pre_physical_perf
+        res['global_perf'] *= pre_physical_perf
         self.log_resources(sys._getframe().f_code.co_name, {
             'n': n, 'max_samples': max_samples, 'max_shots': max_shots})
         return res
