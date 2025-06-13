@@ -66,7 +66,9 @@ def test_load(mock_write_file: MagicMock):
         'id': None,
         'name': "my_job",
         'status': None,
-        'body': {'payload': {'job_context': None}},
+        'body': {
+            'payload': {'job_context': None},
+            'job_name': "my_job"},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -112,7 +114,9 @@ def test_add(mock_write_file):
         'id': None,
         'name': job_name,
         'status': None,
-        'body': {'payload': {'job_context': None}},
+        'body': {
+            'payload': {'job_context': None},
+            'job_name': job_name},
         'metadata': {
             'headers': RPC_HANDLER.headers,
             'platform': RPC_HANDLER.name,
@@ -121,6 +125,7 @@ def test_add(mock_write_file):
     }
 
     for i, job_info in enumerate(jg._to_json()['job_group_data']):
+        remote_job_dict['body']['job_name'] = job_name + str(i)
         remote_job_dict['name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
