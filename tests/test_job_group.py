@@ -64,6 +64,7 @@ def test_load(mock_write_file: MagicMock):
 
     remote_job_dict = {
         'id': None,
+        'name': "my_job",
         'status': None,
         'body': {
             'payload': {'job_context': None},
@@ -78,7 +79,8 @@ def test_load(mock_write_file: MagicMock):
     jg_dict = {
         'created_date': '20250219_103020',
         'modified_date': '20250219_103020',
-        'job_group_data': [remote_job_dict, remote_job_dict]}
+        'job_group_data': [remote_job_dict, remote_job_dict]
+    }
 
     jg._from_json(jg_dict)
     jg._write_to_file()
@@ -110,6 +112,7 @@ def test_add(mock_write_file):
 
     remote_job_dict = {
         'id': None,
+        'name': job_name,
         'status': None,
         'body': {
             'payload': {'job_context': None},
@@ -123,6 +126,7 @@ def test_add(mock_write_file):
 
     for i, job_info in enumerate(jg._to_json()['job_group_data']):
         remote_job_dict['body']['job_name'] = job_name + str(i)
+        remote_job_dict['name'] = job_name + str(i)
         assert job_info == remote_job_dict
 
     assert mock_write_file.call_count == expected_write_call_count
