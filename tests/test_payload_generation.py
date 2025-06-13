@@ -27,23 +27,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """module test payload generation"""
+import pytest
 
-from unittest.mock import patch
-
-import perceval as pcvl
-
-from perceval import RemoteProcessor, BasicState, PostSelect, catalog
-from perceval.serialization._constants import (
-    ZIP_PREFIX,
-    BS_TAG,
-    SEP,
-    PCVL_PREFIX,
-    POSTSELECT_TAG,
-)
-from perceval.serialization import deserialize
+from perceval import RemoteProcessor, BasicState, catalog
+from perceval.serialization._constants import ZIP_PREFIX
 
 from _mock_rpc_handler import get_rpc_handler_for_tests
-from _test_utils import LogChecker
 
 
 COMMAND_NAME = 'my_command'
@@ -81,3 +70,33 @@ def test_payload_parameters():
     for i in range(n_params):
         assert f'param{i}' in payload['parameters']
         assert payload['parameters'][f'param{i}'] == f'value{i}'
+
+def test_payload_cnot():
+    """test payload with cnot"""
+    rp = _get_remote_processor()
+    heralded_cnot = catalog['heralded cnot'].build_processor()
+    pp_cnot = catalog['postprocessed cnot'].build_processor()
+    rp.add(0, heralded_cnot)
+    rp.add(0, pp_cnot)
+    rp.add(4, pp_cnot)
+    assert rp.m == 8
+    assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
+
+    input_state = BasicState([1, 0] * 4)
+    rp.with_input(input_state)
+
+    with pytest.raises(ValueError):
+        rp.prepare_job_payload(COMMAND_NAME)  # Missing min_detected_photons
+
+    rp.min_detected_photons_filter(4)
+
+    data = rp.prepare_job_payload(COMMAND_NAME)
+    assert 'platform_name' in data and data['platform_name'] == rp._rpc_handler.name
+    assert 'pcvl_version' in data
+    assert 'process_id' in data
+    assert 'payload' in data
+
+    payload = data['payload']
+    assert 'command' in payload and payload['command'] == COMMAND_NAME
+    assert 'experiment' in payload and payload['experiment'].startswith(
+        ZIP_PREFIX)  # Circuits are compressed in payloads

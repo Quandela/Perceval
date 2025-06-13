@@ -230,7 +230,7 @@ class RemoteProcessor(AProcessor):
         }
 
         if not circuitless:
-            self.check_circuit_size(self.m)
+            self.check_circuit_size(self.circuit_size)
         if self.input_state and not inputless:
             self.check_input(self.remove_heralded_modes(self.input_state))
         if self._parameters:
