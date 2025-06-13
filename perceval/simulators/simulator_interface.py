@@ -179,6 +179,9 @@ class ASimulatorDecorator(ISimulator, ABC):
             sv, _ = post_select_statevector(sv, self._postselect, self._heralds, self._keep_heralds)
         return sv
 
+    def compute_physical_logical_perf(self, value: bool):
+        self._simulator.compute_physical_logical_perf(value)
+
     def set_circuit(self, circuit, m=None):
         self._simulator.set_circuit(self._prepare_circuit(circuit, m))
 
