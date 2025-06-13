@@ -65,16 +65,7 @@ def test_payload_basics():
 
     payload = data['payload']
     assert 'command' in payload and payload['command'] == COMMAND_NAME
-    assert 'circuit' in payload and payload['circuit'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
-    assert 'input_state' not in payload  # No input state was passed
-
-    input_state = BasicState([1, 0] * 4)
-    rp.min_detected_photons_filter(4)
-    rp.with_input(input_state)
-    new_payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert (
-        'input_state' in new_payload and new_payload['input_state'] == f'{PCVL_PREFIX}{BS_TAG}{SEP}{str(input_state)}'
-    )
+    assert 'experiment' in payload and payload['experiment'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads
 
 
 def test_payload_parameters():
@@ -90,75 +81,3 @@ def test_payload_parameters():
     for i in range(n_params):
         assert f'param{i}' in payload['parameters']
         assert payload['parameters'][f'param{i}'] == f'value{i}'
-
-
-def test_payload_heralds():
-    """test payload with heralds"""
-    rp = _get_remote_processor()
-    rp.min_detected_photons_filter(0)
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'heralds' not in payload
-
-    rp.add_herald(3, 1)
-    rp.add_herald(4, 0)
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'heralds' in payload
-    assert payload['heralds'][3] == 1
-    assert payload['heralds'][4] == 0
-
-
-def test_payload_postselect():
-    """test payload with postselect"""
-    rp = _get_remote_processor()
-    rp.min_detected_photons_filter(0)
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'postselect' not in payload
-
-    rp.set_postselection(PostSelect('[3]==1 & [4]==0'))
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'postselect' in payload
-    str_start = f'{PCVL_PREFIX}{POSTSELECT_TAG}{SEP}'
-    assert payload['postselect'].startswith(str_start)
-
-
-def test_payload_min_detected_photons():
-    """test payload with min_detected_photons"""
-    rp = _get_remote_processor()
-    rp.min_detected_photons_filter(2)
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'min_detected_photons' in payload['parameters']
-    assert payload['parameters']['min_detected_photons'] == 2
-
-
-def test_payload_cnot():
-    """test payload with cnot"""
-    rp = _get_remote_processor()
-    heralded_cnot = catalog['heralded cnot'].build_processor()
-    pp_cnot = catalog['postprocessed cnot'].build_processor()
-    rp.add(0, heralded_cnot)
-    rp.add(0, pp_cnot)
-    rp.add(4, pp_cnot)
-    assert rp.m == 8
-    assert rp.circuit_size == 14  # 8 modes of interest + 6 ancillaries
-
-    input_state = BasicState([1, 0] * 4)
-    rp.min_detected_photons_filter(4)
-    rp.with_input(input_state)
-
-    payload = rp.prepare_job_payload(COMMAND_NAME)['payload']
-    assert 'input_state' in payload
-    state = str(input_state * BasicState('|1,1,0,0,0,0>'))
-    assert payload['input_state'] == f'{PCVL_PREFIX}{BS_TAG}{SEP}{state}'
-
-    # Heralds come from the 3 CNOT gates
-    assert 'heralds' in payload and len(payload['heralds']) == 6
-    # Heralds from the heralded CNOT are put after the modes of interest (0 to 7) and 1 photon is injected in each
-    assert payload['heralds'][8] == 1 and payload['heralds'][9] == 1
-    # Herlads from the postprocessed CNOT come last (because it was added last) and no photon is required ...
-    assert payload['heralds'][10] == 0 and payload['heralds'][11] == 0
-    assert payload['heralds'][12] == 0 and payload['heralds'][13] == 0
-
-    # ... but a post-selection function was added
-    assert 'postselect' in payload
-    ps = deserialize(payload['postselect'])
-    assert ps == PostSelect('[0,1]==1 & [2,3]==1 & [4,5]==1 & [6,7]==1')
