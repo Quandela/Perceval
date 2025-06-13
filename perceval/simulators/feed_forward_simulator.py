@@ -32,7 +32,7 @@ import copy
 from typing import Any
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
-from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable
+from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable, get_logger
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend
 
@@ -49,6 +49,10 @@ class FFSimulator(ISimulator):
 
         self._noise_model = None
         self._source = None
+
+    def compute_physical_logical_perf(self, value: bool):
+        if value:
+            get_logger().warn("Only the global performance can be computed for a feed-forward simulator.")
 
     def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]], m=None):
         if isinstance(circuit, Processor):
@@ -97,12 +101,7 @@ class FFSimulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
         default_res = self._simulate(input_state, components, detectors, prog_cb, new_heralds=new_heralds)
-
-        if "global_perf" in default_res:
-            default_norm_factor = default_res["global_perf"]
-        else:
-            default_norm_factor = default_res["physical_perf"] * default_res["logical_perf"]
-
+        default_norm_factor = default_res["global_perf"]
         default_res = default_res["results"]
 
         # 3: deduce all measurable states and launch one simulation for each of them
@@ -146,10 +145,7 @@ class FFSimulator(ISimulator):
                 sub_res = self._simulate(input_state, components, detectors, new_prog_cb,
                                          filter_states=True, new_heralds=new_heralds)
 
-                if "global_perf" in sub_res:
-                    norm_factor = sub_res["global_perf"]
-                else:
-                    norm_factor = sub_res["physical_perf"] * sub_res["logical_perf"]
+                norm_factor = sub_res["global_perf"]
 
                 # The remaining states are only the ones with n >= filter and mask
                 global_perf += norm_factor

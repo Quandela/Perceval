@@ -68,7 +68,7 @@ A third script can then prepared to analyze results:
 >>> results = jg.get_results()
 >>> ralph_res = results[0]
 >>> knill_res = results[1]
->>> perf_ratio = (ralph_res['physical_perf'] * ralph_res['logical_perf']) / (knill_res['physical_perf'] * knill_res['logical_perf'])
+>>> perf_ratio = (ralph_res['global_perf']) / (knill_res['global_perf'])
 >>> print(f"Ralph CNOT is {perf_ratio} times better than Knill CNOT, but needs a measurement to work")
 Ralph CNOT is 490.01059 times better than Knill CNOT, but needs a measurement to work
 

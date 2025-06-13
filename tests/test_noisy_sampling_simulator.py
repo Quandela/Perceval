@@ -39,6 +39,7 @@ import pytest
 def test_perfect_sampling(max_samples, max_shots):
     sim = _build_noisy_simulator(8)
     input_state = SVDistribution(BasicState([1, 0]*4))
+    sim.compute_physical_logical_perf(True)
     sampling = sim.samples(input_state, max_samples, max_shots)
     assert sampling['physical_perf'] == 1
     assert sampling['logical_perf'] == 1
@@ -51,6 +52,7 @@ def test_perfect_sampling(max_samples, max_shots):
 def test_perfect_sampling_source(max_samples, max_shots):
     sim = _build_noisy_simulator(8)
     input_state = BasicState([1, 0]*4)
+    sim.compute_physical_logical_perf(True)
     sampling = sim.samples((Source(), input_state), max_samples, max_shots)
     assert sampling['physical_perf'] == 1
     assert sampling['logical_perf'] == 1
@@ -84,6 +86,7 @@ def test_sample_0_samples_source():
 
 def test_noisy_sampling():
     sim = _build_noisy_simulator(6)
+    sim.compute_physical_logical_perf(True)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
     sampling = sim.samples(input_state, 100)
@@ -106,6 +109,7 @@ def test_noisy_sampling():
 
 def test_noisy_sampling_source():
     sim = _build_noisy_simulator(6)
+    sim.compute_physical_logical_perf(True)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = BasicState([1, 0] * 3)
     sampling = sim.samples((source, input_state), 100)
@@ -128,6 +132,7 @@ def test_noisy_sampling_source():
 
 def test_noisy_sampling_with_heralds():
     sim = _build_noisy_simulator(6)
+    sim.compute_physical_logical_perf(True)
     source = Source(losses=0.8, indistinguishability=0.75, multiphoton_component=0.05)
     input_state = source.generate_distribution(BasicState([1, 0] * 3))
 
@@ -152,6 +157,7 @@ def test_noisy_sampling_with_detectors():
     simulator = NoisySamplingSimulator(Clifford2017Backend())
     simulator.set_circuit(BS())
     simulator.set_detectors([Detector.pnr(), Detector.pnr()])
+    simulator.compute_physical_logical_perf(True)
 
     # Perfect sampling with perfect detectors
     sampling = simulator.samples(SVDistribution(BasicState([1, 1])), 100, 100)
