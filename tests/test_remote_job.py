@@ -39,9 +39,10 @@ from perceval.runtime import RemoteJob, RunningStatus
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.utils.conversion import sample_count_to_probs
+from perceval.utils.logging import channel
 
 from _test_utils import LogChecker
-from _mock_rpc_handler import RPCHandlerResponsesBuilder, get_rpc_handler_for_tests
+from _mock_rpc_handler import RPCHandlerResponsesBuilder, get_rpc_handler_for_tests, _TIMESTAMP
 
 SIMPLE_PAYLOAD = {"command": "probs", "circuit": ":PCVL:zip:eJyzCnAO87FydM4sSi7NLLFydfTM9K9wdI7MSg52DsyO9AkNCtWu9DANqMj3cg50hAPP9GwvBM+xEKgWwXPxRFNrEegYlu/jDNTj7mzoGhZQnGEWYkF1ewCY7jxM",
                   "input_state": ":PCVL:BasicState:|1,1>", "parameters": {"min_detected_photons": 2}, "max_shots": 10000, "job_context": None}
@@ -90,6 +91,44 @@ def test_remote_job(mock_warn):
     new_rj = rj.rerun()
     assert new_rj.id != rj.id
 
+@patch.object(pcvl.utils.logging.ExqaliburLogger, "error")
+def test_get_status_response_resilience(mock_warn):
+    rpc_handler = RPCHandler("sim:test", "https://test", "test_token")
+    rpc_handler_responses_builder = RPCHandlerResponsesBuilder(rpc_handler)
+
+    # missing one field
+    response_body = {
+        # 'duration' is missing
+        'progress': 20,
+        'status': RunningStatus.to_server_response(RunningStatus.SUCCESS),
+        'creation_datetime': _TIMESTAMP,
+        'start_time': 1,
+        'status_message': ''
+    }
+    rpc_handler_responses_builder.set_job_status_custom_responses(response_body)
+    rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, 'my_job')
+
+    with LogChecker(mock_warn, channel.general, 1):
+        rj.execute_async()
+        assert rj.is_complete
+        rj.get_results()  # no throw
+
+    # wrong type for field
+    response_body = {
+        'duration': 10,
+        'progress': 20,
+        'status': RunningStatus.to_server_response(RunningStatus.SUCCESS),
+        'creation_datetime': _TIMESTAMP,
+        'start_time': None, # 'start_time' is not float
+        'status_message': ''
+    }
+    rpc_handler_responses_builder.set_job_status_custom_responses(response_body)
+    rj = RemoteJob({"payload": SIMPLE_PAYLOAD}, rpc_handler, 'my_job')
+
+    with LogChecker(mock_warn, channel.general, 1):
+        rj.execute_async()
+        assert rj.is_complete
+        rj.get_results()  # no throw
 
 @pytest.mark.parametrize('catalog_item', ["klm cnot", "heralded cnot", "postprocessed cnot", "heralded cz"])
 def test_mock_remote_with_gates(catalog_item):
