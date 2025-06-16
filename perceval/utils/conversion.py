@@ -77,6 +77,15 @@ def probs_to_sample_count(probs: BSDistribution, **kwargs) -> BSCount:
     This conversion artificially adds random sampling noise, following a normal law, to the result.
 
     :param probs: the distribution to convert
+
+    :keyword count:
+        (``int``) -- The final number of samples to generate. Can be None if either of the remaining kwargs is defined.
+    :keyword max_shots:
+        (``int``) -- If both ``max_shots`` and ``max_samples`` are given, then the minimum of the two will be used.
+        Else, the one defined will be used if ``count`` is not given.
+    :keyword max_samples:
+        (``int``) -- See ``max_shots``.
+
     :return: the state count
     """
     count = _deduce_count(**kwargs)
@@ -113,6 +122,15 @@ def probs_to_samples(probs: BSDistribution, **kwargs) -> BSSamples:
     Convert a measured state probability distribution to a chronological list of  samples
 
     :param probs: the distribution to convert
+
+    :keyword count:
+        (``int``) -- The final number of samples to generate. Can be None if either of the remaining kwargs is defined.
+    :keyword max_shots:
+        (``int``) -- If both ``max_shots`` and ``max_samples`` are given, then the minimum of the two will be used.
+        Else, the one defined will be used if ``count`` is not given.
+    :keyword max_samples:
+        (``int``) -- See ``max_shots``.
+
     :return: the sample list
     """
     count = _deduce_count(**kwargs)
@@ -138,6 +156,15 @@ def sample_count_to_samples(sample_count: BSCount, **kwargs) -> BSSamples:
     Convert a state count to a chronological list of samples, by randomly sampling on the count
 
     :param sample_count: the state count
+
+    :keyword count:
+        (``int``) -- The final number of samples to generate. Can be None to deduce it from the number of samples in the BSCount.
+    :keyword max_shots:
+        (``int``) -- If both ``max_shots`` and ``max_samples`` are given, then the minimum of the two will be used.
+        Else, the one defined will be used if ``count`` is not given.
+    :keyword max_samples:
+        (``int``) -- See ``max_shots``.
+
     :return: the sample list
     """
     try:
