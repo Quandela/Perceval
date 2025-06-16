@@ -49,3 +49,4 @@ from .noise_model import NoiseModel
 from .logging import get_logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
 from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
 from .progress_cb import partial_progress_callable
+from .dist_metrics import tvd_dist, kl_divergence

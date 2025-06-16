@@ -10,6 +10,7 @@ utils
    density_matrix
    logical_state
    noise_model
+   dist_metrics
    stategenerator
    polarization
    persistent_data
