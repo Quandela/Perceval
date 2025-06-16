@@ -355,8 +355,11 @@ class JobGroup:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
+        :await_responses: whether it should wait for job results (sync mode) or not (async mode)
+        :nb_parallel: maximum number of concurrent jobs
         :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of two consecutive jobs on cloud
+        :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
         jobs_to_run = self.list_unsuccessful_jobs() if rerun else self.list_unsent_jobs()
         if not await_responses:
