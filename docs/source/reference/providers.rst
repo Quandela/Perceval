@@ -1,5 +1,15 @@
-Providers
+providers
 =========
+
+Quandela
+--------
+
+Quandela is Perceval default Cloud provider. If no session is created, Quandela Cloud endpoints will be used.
+
+When using Quandela Cloud, you have the same capabilities with and without using a session. It's a matter of code style.
+
+.. autoclass:: perceval.providers.quandela.quandela_session.Session
+   :members:
 
 Scaleway
 --------
@@ -18,6 +28,12 @@ To use Scaleway QaaS as a provider you need a Scaleway account, a Scaleway Proje
 1. `Create a Scaleway account <https://www.scaleway.com/en/docs/console/account/how-to/create-an-account/>`_
 2. `Create a Scaleway Project <https://www.scaleway.com/en/docs/console/project/how-to/create-a-project/>`_
 3. `Create a Scaleway API key <https://www.scaleway.com/en/docs/identity-and-access-management/iam/how-to/create-api-keys/>`_
+
+ScalewaySession
+^^^^^^^^^^^^^^^
+
+.. autoclass:: perceval.providers.scaleway.Session
+   :members:
 
 Using a Scaleway session
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -50,13 +66,13 @@ You can now create a Scaleway session:
 You can also create a Scaleway session using a ``with`` block:
 
 >>> with scw.Session(platform=PLATFORM_NAME, project_id=PROJECT_ID, token=TOKEN) as session:
-...     /*
-...      * Session scope
-...      */
+...     #
+...     # Session scope
+...     #
 
 Note: using a ``with`` block you do not need to start and stop your session: it starts automatically at the beginning of the block and stops automatically at its end.
 
-Note: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
+.. note:: while using a Jupyter Notebook for convenience python objects are kept alive and we recommend using directly ``start`` and ``stop`` methods.
 
 Using an existing Scaleway QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
