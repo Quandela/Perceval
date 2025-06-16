@@ -38,17 +38,17 @@ from perceval.utils import format_parameters, ModeType
 class ASkin(ABC):
     """
     A skin is required in the use of pdisplay for the following formats:
-    * Format.HTML
-    * Format.MPLOT
-    * Format.LATEX
+        * Format.HTML
+        * Format.MPLOT
+        * Format.LATEX
 
     A skin has three major responsibilities:
-    * measuring the display size of a component / composite circuit
-    * providing shape functions to draw individual components
-    * exposing style data (stroke style, colors, etc.)
+        * measuring the display size of a component / composite circuit
+        * providing shape functions to draw individual components
+        * exposing style data (stroke style, colors, etc.)
 
-    :param photonic_style: photonic mode style, containing stroke specifications
-    :param style_subcircuit: subcircuit style specifications
+    :param photonic_style: photonic mode style, containing stroke specifications {"stroke": color_str, "stroke_width": int}
+    :param style_subcircuit: subcircuit style specifications {"width": int, "stroke_style": {"stroke": color_str, "stroke_width": int}, "fill": color_str}
     :param compact_display: whether to display some large components in a more compact way, to use less screen space
     """
 

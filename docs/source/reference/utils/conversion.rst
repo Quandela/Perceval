@@ -1,8 +1,8 @@
 conversion
 ^^^^^^^^^^
 
-Perceval provides helper methods to convert the three types of results of the :code:`Sampler`
-(namely the :code:`BSDistribution`, :code:`BSCount` and :code:`BSSamples`) into each other.
+Perceval provides helper methods to convert the three types of results of the :ref:`Sampler`
+(namely the :ref:`BSDistribution`, :ref:`BSCount` and :ref:`BSSamples`) into each other.
 
 >>> import perceval as pcvl
 >>> distribution = pcvl.BSDistribution({pcvl.BasicState([1, 0]): 0.4, pcvl.BasicState([0, 1]): 0.6})
@@ -17,6 +17,9 @@ This can either be:
 
 - :code:`count`, in which case this is the number of resulting samples.
 - :code:`max_shots` and/or :code:`max_samples`, in which case the one defined or the minimum of the two is the number of resulting samples.
+
+Conversion code reference
+=========================
 
 .. automodule:: perceval.utils.conversion
    :members:

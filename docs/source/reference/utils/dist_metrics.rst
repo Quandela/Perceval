@@ -9,7 +9,7 @@ metrics
 >>> print(pcvl.kl_divergence(dist_a, dist_b))
 0.022582421084357485
 
-Perceval provides ways to compare :code:`BSDistribution` with mathematical metrics.
+Perceval provides ways to compare :ref:`BSDistribution` with mathematical metrics.
 
 .. automodule:: perceval.utils.dist_metrics
    :members:
