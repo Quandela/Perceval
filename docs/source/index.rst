@@ -145,6 +145,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/components/index
    reference/rendering/index
    reference/runtime/index
+   reference/serialization
    reference/simulators/index
    reference/utils/index
    reference/utils_algorithms/index
