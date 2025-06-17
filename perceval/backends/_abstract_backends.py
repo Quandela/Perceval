@@ -149,12 +149,16 @@ class AStrongSimulationBackend(ABackend):
 
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:
+        """Computes the probability amplitude for a given output state. The input state and the circuit must already be set"""
         pass
 
     def probability(self, output_state: BasicState) -> float:
+        """Computes the probability for a given output state. The input state and the circuit must already be set"""
         return abs(self.prob_amplitude(output_state)) ** 2
 
     def all_prob(self, input_state: BasicState = None) -> list[float]:
+        """Computes the list of probabilities of all states (respecting the mask if any was set).
+        The order of the states can be retrieved using `allstate_iterator()`"""
         if input_state is not None:
             self.set_input_state(input_state)
         results = []
@@ -163,12 +167,17 @@ class AStrongSimulationBackend(ABackend):
         return results
 
     def prob_distribution(self) -> BSDistribution:
+        """
+        Computes the probability distribution of all states (respecting the mask if any was set)
+        under the form of a BSDistribution.
+        """
         bsd = BSDistribution()
         for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
     def evolve(self) -> StateVector:
+        """Evolves the input BasicState into a StateVector."""
         res = StateVector()
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)

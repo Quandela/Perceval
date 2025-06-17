@@ -142,6 +142,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    :hidden:
 
    reference/algorithm/index
+   reference/backends/index
    reference/components/index
    reference/rendering/index
    reference/runtime/index
