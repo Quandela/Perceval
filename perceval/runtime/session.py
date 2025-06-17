@@ -43,10 +43,10 @@ class ISession(ABC):
         """
 
     def start(self):
-        pass
+        """Start session"""
 
     def stop(self):
-        pass
+        """Stop session"""
 
     def __enter__(self):
         self.start()

@@ -67,7 +67,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    polarization
    backends
    tools
-   providers
    legacy
 
 .. toctree::
@@ -144,17 +143,17 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/algorithm/index
    reference/backends/index
    reference/components/index
+   reference/providers
    reference/rendering/index
    reference/runtime/index
    reference/serialization
    reference/simulators/index
    reference/utils/index
    reference/utils_algorithms/index
+   reference/logging
    reference/exqalibur/index
    reference/statevector
-   reference/logging
    reference/qiskit_converter
-   reference/scaleway_session
    reference/error_mitigation
 
 .. toctree::

@@ -40,20 +40,15 @@ _ENDPOINT_SESSION = "/sessions"
 
 class Session(ISession):
     """
+    Scaleway session used to keep a connexion opened with Scaleway Cloud for the duration of a Python scope.
+
     :param platform: platform on which circuits will be executed
-
     :param project_id: UUID of the Scaleway Project the session is attached to
-
     :param token: authentication token required to access the Scaleway API
-
     :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session among multiple users
-
     :param max_idle_duration_s: optional value, duration in seconds that can elapsed without activity before the session terminates
-
     :param max_duration_s: optional value, duration in seconds for a session before it automatically terminates
-
     :param url: optional value, endpoint URL of the API
-
     :param proxies: optional value, dictionary mapping protocol to the URL of the proxy
     """
 

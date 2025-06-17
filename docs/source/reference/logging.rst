@@ -1,5 +1,5 @@
-Logging
-=======
+utils.logging
+=============
 
 To log with Perceval you can either use a built-in Perceval logger or the python one. By default, our logger will be used.
 
