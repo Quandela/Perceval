@@ -187,21 +187,7 @@ Aside of usual probability() and prob_amplitude() methods, it offers a 99% confi
 99% sure error bound on the amplitude.
 A better accuracy can be obtained with a higher iteration count.
 
-With this approximated backend, you can achieve a few probability estimates for high photon counts. Example given:
-
->>> from perceval.utils import BasicState, Matrix
->>> from perceval.backends import NaiveApproxBackend
->>> from perceval.components import Unitary
->>>
->>> circuit_size = 60
->>> n_photons = 30
->>> backend = NaiveApproxBackend(100_000_000)
->>> backend.set_circuit(Unitary(Matrix.random_unitary(size)))
->>> input_state = BasicState([1]*n_photons + [0]*(size-n_photons))
->>> backend.set_input_state(input_state)
->>> interval = backend.probability_confidence_interval(BasicState([1]*n_photons + [0]*(size-n_photons)))
->>> print(f"Probability in {interval}")
-Probability in [6.051670221391749e-20, 1.5297683283662674e-19]
+With this approximated backend, you can achieve a few probability estimates for high photon counts.
 
 MPS
 ^^^

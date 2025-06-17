@@ -8,6 +8,9 @@ As such, it is very efficient to compute very precise output states, but not to 
 
 Thus, using it is not recommended in :ref:`Simulator` (except when using :meth:`probability()`) or :ref:`Processor`,
 but it is well suited for applications where only a few output probabilities matter.
+If the whole or most of the computational space is needed, other backends like :ref:`SLOSBackend` are more suited.
+
+This backend is available in :ref:`Processor` by using the name :code:`"Naive"`.
 
 >>> import perceval as pcvl
 >>> c = pcvl.Circuit(4) // pcvl.BS() // (2, pcvl.BS())

@@ -41,6 +41,10 @@ class ABackend(ABC):
         self._input_state = None
 
     def set_circuit(self, circuit: ACircuit):
+        """
+        Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
+        instead, if required).
+        """
         if circuit.requires_polarization:
             raise RuntimeError("Circuit must not contain polarized components")
         self._input_state = None
@@ -48,6 +52,9 @@ class ABackend(ABC):
         self._umat = circuit.compute_unitary()
 
     def set_input_state(self, input_state: BasicState):
+        """
+        Sets an input state for the simulation. This state has to be a Fock state without annotations.
+        """
         self._check_state(input_state)
         self._input_state = input_state
 
@@ -121,9 +128,6 @@ class AStrongSimulationBackend(ABackend):
         self.clear_iterator_cache()
 
     def set_input_state(self, input_state: BasicState):
-        """
-        Sets an input state for the simulation. This state has to be a Fock state without annotations.
-        """
         super().set_input_state(input_state)
         self._init_mask()
 
@@ -139,10 +143,6 @@ class AStrongSimulationBackend(ABackend):
         self._cache_iterator = dict()
 
     def set_circuit(self, circuit: ACircuit):
-        """
-        Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
-        instead, if required).
-        """
         if self._circuit and circuit.m != self._circuit.m:
             self.clear_iterator_cache()
         super().set_circuit(circuit)

@@ -46,6 +46,8 @@ class MPSBackend(AStrongSimulationBackend):
     Approximate the probability amplitudes with a cutoff -> bond Dimension in an MPS.
     - For now only supports components for up to 2 modes
     (Phase shifters and Beam Splitters already implemented)
+
+    :param cutoff: The bond dimension. Higher values mean better precision but slower computation. Default input_state.n + 1
     """
 
     def __init__(self, cutoff : int = None):
