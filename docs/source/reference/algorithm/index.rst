@@ -1,7 +1,7 @@
-quantum algorithms
-^^^^^^^^^^^^^^^^^^
+algorithm
+^^^^^^^^^
 
-The :code:`perceval.algorithm` package contains the code for several simple and generic quantum algorithms.
+The :code:`perceval.algorithm` package contains the code for several simple and generic **quantum algorithms**.
 It provides a :ref:`Processor`-centric syntax to run an algorithm locally or remotely, on a simulator or an actual QPU.
 
 All algorithms take either a local or a remote processor as parameter, in order to perform a task. :ref:`Processor`

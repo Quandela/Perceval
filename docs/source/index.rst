@@ -143,6 +143,7 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/algorithm/index
    reference/backends/index
    reference/components/index
+   reference/error_mitigation
    reference/providers
    reference/rendering/index
    reference/runtime/index
@@ -154,7 +155,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/exqalibur/index
    reference/statevector
    reference/qiskit_converter
-   reference/error_mitigation
 
 .. toctree::
    :caption: Community

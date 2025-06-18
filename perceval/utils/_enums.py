@@ -65,12 +65,12 @@ Encoding.DUAL_RAIL.__doc__ = "Dual rail encoding where a qubit is encoded as the
 Encoding.POLARIZATION.__doc__ = "Qubit is encoding on a single photon polarization (horizontal / vertical) in 1 mode."
 Encoding.RAW.__doc__ = "Raw encoding is the closest to photonics. It encodes a qubit as the presence of photons in 1 mode."
 Encoding.QUDIT2.__doc__ = ("Qudits are encoding multiple qubits in the location of a single photon in multiple modes. "
-                           "QUDIT2 encodes 2 qubit on 1 photon in 4 modes.")
-Encoding.QUDIT3.__doc__ = "Encodes 3 qubit on 1 photon in 8 modes."
-Encoding.QUDIT4.__doc__ = "Encodes 4 qubit on 1 photon in 16 modes."
-Encoding.QUDIT5.__doc__ = "Encodes 5 qubit on 1 photon in 32 modes."
-Encoding.QUDIT6.__doc__ = "Encodes 6 qubit on 1 photon in 64 modes."
-Encoding.QUDIT7.__doc__ = "Encodes 7 qubit on 1 photon in 128 modes."
+                           "QUDIT2 encodes 2 qubits on 1 photon in 4 modes.")
+Encoding.QUDIT3.__doc__ = "Encodes 3 qubits on 1 photon in 8 modes."
+Encoding.QUDIT4.__doc__ = "Encodes 4 qubits on 1 photon in 16 modes."
+Encoding.QUDIT5.__doc__ = "Encodes 5 qubits on 1 photon in 32 modes."
+Encoding.QUDIT6.__doc__ = "Encodes 6 qubits on 1 photon in 64 modes."
+Encoding.QUDIT7.__doc__ = "Encodes 7 qubits on 1 photon in 128 modes."
 
 
 class InterferometerShape(Enum):

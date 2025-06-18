@@ -1,4 +1,4 @@
-Error Mitigation
+error_mitigation
 ================
 
 The error_mitigation package provides tools and algorithms for mitigating errors in quantum systems.

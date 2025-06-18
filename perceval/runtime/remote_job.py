@@ -63,8 +63,7 @@ class RemoteJob(Job):
             'pcvl_version': 'M.m.p',
             'payload': {
                 'command': '...',
-                'circuit': <optional serialized circuit>,
-                'input_state': <optional serialized input state>,
+                'experiment': <serialized Experiment>,
                 ...
                 other parameters
             }
