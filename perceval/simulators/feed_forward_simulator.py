@@ -167,7 +167,7 @@ class FFSimulator(ISimulator):
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int], set[int]]:
         """
         :return: The list containing the tuples with the index in the component list
-        of the configuration independent FFConfigurators and their instances,
+         of the configuration independent FFConfigurators and their instances,
          the list of the associated measured modes,
          and the list of modes that are touched at anytime by feed-forward configurators (including after the layer)
         """

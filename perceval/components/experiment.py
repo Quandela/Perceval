@@ -59,13 +59,18 @@ class Experiment:
     This class represents an optical table containing:
 
     - A circuit and/or components that represent the operations that will operate on photons.
-        Can contain non-unitary components
+      Can contain non-unitary components
     - The input state for the experiment.
     - Detectors to detect photons.
     - Ports to define groups of modes
     - Heralds
     - A post-selection method
-    - A NoiseModel.
+    - A NoiseModel
+
+    :param m_circuit: Number of spatial modes (int), first part of the circuit (Circuit) or None.
+                      If a circuit is passed, its size is used as the experiment size.
+    :param noise: A `NoiseModel`
+    :param name: The experiment name
     """
 
     _no_copiable_attributes = { '_circuit_changed_observers', '_noise_changed_observers', '_input_changed_observers' }
@@ -105,14 +110,23 @@ class Experiment:
 
     @property
     def is_unitary(self) -> bool:
+        """
+        :return: True if the circuit is composed of only unitary components, False otherwise.
+        """
         return self._is_unitary
 
     @property
     def has_td(self) -> bool:
+        """
+        :return: True if the circuit contains at least one time delay, False otherwise.
+        """
         return self._has_td
 
     @property
     def has_feedforward(self) -> bool:
+        """
+        :return: True if the circuit contains at least one feed-forward layer, False otherwise.
+        """
         return self._has_feedforward
 
     def _init_circuit(self, m_circuit: ACircuit | int):
@@ -210,7 +224,10 @@ class Experiment:
             pass
         return obj
 
-    def copy(self, subs: dict | list = None):
+    def copy(self, subs: dict | list = None) -> Experiment:
+        """
+        Performs a deep copy of the current experiment.
+        """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
         new_proc = copy.deepcopy(self)
         new_proc._components = []
@@ -545,20 +562,20 @@ class Experiment:
     @property
     def m(self) -> int:
         """
-        :return: Number of modes of interest (MOI) defined in the experiment for the output
+        :return: Number of modes of interest (MOI) at the output of the experiment
         """
         return self._m - len(self.heralds)
 
     @property
     def m_in(self):
         """
-        :return: Number of modes of interest (MOI) defined in the experiment for the input
+        :return: Number of modes of interest (MOI) at the input the experiment
         """
         return self._m - len(self.in_heralds)
 
     @m.setter
     def m(self, value: int):
-        """This is actually a setter for the circuit size"""
+        """Setter for the circuit size"""
         if self._m != 0:
             raise RuntimeError(f"The number of modes of this experiment was already set (to {self._m})")
         if not isinstance(value, int) or value < 1:
@@ -571,13 +588,14 @@ class Experiment:
     @property
     def circuit_size(self) -> int:
         r"""
-        :return: Total size of the enclosed circuit (i.e. self.m + heralded mode count)
+        :return: Total size of the enclosed circuit (i.e. self.m + ancillary mode count)
         """
         return self._m
 
-    def unitary_circuit(self, flatten: bool = False, use_phase_noise=False) -> Circuit:
+    def unitary_circuit(self, flatten: bool = False, use_phase_noise: bool = False) -> Circuit:
         """
         Creates a unitary circuit from internal components, if all internal components are unitary.
+
         :param flatten: if True, the component recursive hierarchy is discarded, making the output circuit "flat".
         """
         if not self._is_unitary:
