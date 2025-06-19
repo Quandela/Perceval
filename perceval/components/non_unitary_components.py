@@ -26,18 +26,27 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
 import numpy as np
 import scipy as sp
 
-from perceval.utils import BasicState, StateVector
+from perceval.utils import BasicState, StateVector, Parameter
 from perceval.components.abstract_component import AParametrizedComponent
 
 
 class TD(AParametrizedComponent):
-    """Time delay"""
+    """
+    Time Delay is a special component corresponding to a roll of optical fiber making as an effect to delay a photon.
+
+    Parameter of the Time Delay is the number of period the delay should be.
+    For instance ``TD(2)`` will create a delay on the mode corresponding to two periods.
+    A time delay is not expressed as a unitary matrix and can only be used in processors.
+
+    :param dt: Number of periods
+    """
     DEFAULT_NAME = "TD"
 
-    def __init__(self, dt):
+    def __init__(self, dt: int | Parameter):
         super().__init__(1)
         self._dt = self._set_parameter("t", dt, 0, None, False)
 
@@ -55,10 +64,16 @@ class TD(AParametrizedComponent):
 
 
 class LC(AParametrizedComponent):
-    """Loss channel"""
+    """
+    Loss channels are non-unitary components applying a fixed loss on a given mode. A loss channel is equivalent to a
+    beam splitter with a reflectivity equal to the loss, being connected to a virtual mode containing lost photons.
+    A loss channel is not expressed as a unitary matrix and can only be used in processors.
+
+    :param loss: Loss rate expressed as a floating point number between 0 and 1.
+    """
     DEFAULT_NAME = "LC"
 
-    def __init__(self, loss):
+    def __init__(self, loss: float | Parameter):
         super().__init__(1)
         self._loss = self._set_parameter("loss", loss, 0, 1, False)
 

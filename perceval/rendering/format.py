@@ -31,7 +31,16 @@ from enum import Enum
 
 
 class Format(Enum):
+    """
+    Enum class used to specify the output format of pdisplay.
+    The possible formats depend on the object type to render.
+    """
     TEXT = 1
     MPLOT = 2
     HTML = 3
     LATEX = 4
+
+Format.TEXT.__doc__ = "Text output, suitable for display in a terminal."
+Format.MPLOT.__doc__ = "Use the Matplotlib engine, opens its own graphic window or shows in an IDE graph view."
+Format.HTML.__doc__ = "Outputs HTML compatible code: SVG for images, <table> for a table of data, etc."
+Format.LATEX.__doc__ = "Outputs LaTex code."

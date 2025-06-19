@@ -85,6 +85,14 @@ class ISimulator(ABC):
                       min_detected_photons_filter: int = None,
                       postselect: PostSelect = None,
                       heralds: dict[int, int] = None):
+        """
+        Set the min_detected_photons_filter, postselect, and heralds, if defined.
+
+        :param min_detected_photons_filter: The minimum photon count.
+        :param postselect: The postselect to apply at the end of the computation.
+        :param heralds: The heralds to apply at the end of the computation. Only the output heralds are considered here.
+         dictionary of the form {mode: expected}
+        """
         if min_detected_photons_filter is not None:
             self.set_min_detected_photons_filter(min_detected_photons_filter)
         if postselect is not None:
