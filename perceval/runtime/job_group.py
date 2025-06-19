@@ -383,27 +383,27 @@ class JobGroup:
                 job = jobs_to_run.pop()
                 if job.status.failed:
                     index = self._jobs.index(job)
-                job = job.rerun()
-                if replace_failed_jobs:
+                    job = job.rerun()
+                    if replace_failed_jobs:
                         self._jobs[index] = job
                     else:
                         self._jobs.append(job)
                 else:
-                job.execute_async()
+                    job.execute_async()
 
                 if await_responses:
                     awaited_jobs.add(job)
-            self._write_to_file()   # save data after each job (rerun/execution) at launch
+                self._write_to_file()   # save data after each job (rerun/execution) at launch
 
             time.sleep(peek_delay)
 
             just_finished_jobs = set()
             for job in awaited_jobs:
                 if job.status.completed:
-                if job.status.success:
-                    count_success += 1
-                else:
-                    count_fail += 1
+                    if job.status.success:
+                        count_success += 1
+                    else:
+                        count_fail += 1
                     just_finished_jobs.add(job)
 
                     self._write_to_file()  # save data after a status update for a job
