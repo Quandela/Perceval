@@ -215,3 +215,39 @@ def test_dicke_state(mock_warn, encoding):
 
     with LogChecker(mock_warn):
         assert pcvl.StateGenerator(encoding).dicke_state(4, 2) == pcvl.StateVector()
+
+
+def test_zero_padded_state():
+    n = 2
+    m = 5
+
+    state = pcvl.StateGenerator.zero_padded_state(n, m)
+
+    assert state.n == n
+    assert state.m == m
+    assert state[:n] == pcvl.BasicState(n * [1])
+
+    with pytest.raises(AssertionError):
+        pcvl.StateGenerator.zero_padded_state(3, 2)
+
+
+def test_periodic_state():
+    n = 2
+    m = 5
+    state = pcvl.StateGenerator.periodic_state(n, m)
+
+    assert state == pcvl.BasicState([1, 0, 1, 0, 0])
+
+    with pytest.raises(AssertionError):
+        pcvl.StateGenerator.periodic_state(2, 3)
+
+
+def test_evenly_spaced_state():
+
+    assert pcvl.StateGenerator.evenly_spaced_state(0, 2) == pcvl.BasicState([0, 0])
+    assert pcvl.StateGenerator.evenly_spaced_state(1, 5) == pcvl.BasicState([0, 0, 1, 0, 0])
+    assert pcvl.StateGenerator.evenly_spaced_state(2, 5) == pcvl.BasicState([1, 0, 0, 0, 1])
+    assert pcvl.StateGenerator.evenly_spaced_state(3, 5) == pcvl.BasicState([1, 0, 1, 0, 1])
+
+    # Test with more photons than modes
+    assert pcvl.StateGenerator.evenly_spaced_state(8, 5) == pcvl.BasicState([2, 1, 2, 1, 2])

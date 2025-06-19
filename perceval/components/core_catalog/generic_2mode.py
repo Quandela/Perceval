@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.components import Circuit, BS
+from perceval.components import Circuit, BS, Processor, Experiment
 from perceval.components.component_catalog import CatalogItem
 
 
@@ -49,12 +49,12 @@ class Generic2ModeItem(CatalogItem):
     def __init__(self):
         super().__init__("generic 2 mode circuit")
 
-    def build_circuit(self, **kwargs):
+    def build_circuit(self, **kwargs) -> Circuit:
         return Circuit(2, name=kwargs.get("name", "U2")) \
             // BS.H(theta=self._handle_param(kwargs.get("theta", "theta")),
                     phi_tl=self._handle_param(kwargs.get("phi_tl", "phi_tl")),
                     phi_bl=self._handle_param(kwargs.get("phi_bl", "phi_bl")),
                     phi_tr=self._handle_param(kwargs.get("phi_tr", "phi_tr")))
 
-    def build_processor(self, **kwargs):
-        return self._init_processor(**kwargs)
+    def build_experiment(self, **kwargs) -> Experiment:
+        return Experiment(self.build_circuit(**kwargs))

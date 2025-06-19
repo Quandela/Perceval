@@ -108,7 +108,7 @@ class ACircuit(AParametrizedComponent, ABC):
         """
         return self.compute_unitary(use_symbolic=True).simp()
 
-    def definition(self):
+    def definition(self) -> Matrix:
         r"""Gives mathematical definition of the circuit
 
         Only defined for elementary circuits

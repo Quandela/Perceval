@@ -289,6 +289,10 @@ class PS(ACircuit):
             else:
                 self._phi.set_value(-float(self._phi), force=True)
 
+    def definition(self) -> Matrix:
+        phase_param = Expression("Uniform(-1, 1) * max_error + phi", {Parameter('max_error'), Parameter("phi")})
+        return PS(phase_param).U
+
 
 class WP(ACircuit):
     """

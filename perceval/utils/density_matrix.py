@@ -182,9 +182,9 @@ class DensityMatrix:
         l = []
         for sv, p in svd.items():
             vector = np.zeros((size, 1), dtype=complex)
-            for bst in sv.keys():
+            for bst, pa in sv:
                 idx = index[bst]
-                vector[idx, 0] = sv[bst]
+                vector[idx, 0] = pa
             vector = csr_array(vector)
             l.append((vector, p))
         matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])  # This avoids the SparseEfficiencyWarning

@@ -82,7 +82,7 @@ class PersistentData:
         """Create the persistent data root directory if it doesn't exist
         """
         if not os.path.exists(self._directory):
-            os.makedirs(self._directory)
+            os.makedirs(self._directory) # by default, mode=0o777
 
     def get_folder_size(self) -> int:
         """Get the directory data size
@@ -140,6 +140,8 @@ class PersistentData:
                 elif file_format == FileFormat.TEXT:
                     with open(file_path, "wt", encoding="UTF-8") as file:
                         file.write(data)
+                else:
+                    warnings.warn(UserWarning(f"Can't save {filename}, unknown file format {file_format}."))
             except OSError:
                 warnings.warn(UserWarning(f"Can't save {filename}"))
         else:
@@ -210,9 +212,12 @@ class PersistentData:
         """
         return self._directory
 
-    def create_sub_directory(self, relative_path):
+    def create_sub_directory(self, relative_path: str) -> str:
         """
         Creates a sub folder in persistent data directory if non-existent
+
+        :param relative_path: the folders path to create relative to self.directory
+        :return: full absolute path
         """
         dir_path = os.path.join(self.directory, relative_path)
 
@@ -227,6 +232,8 @@ class PersistentData:
 
         if not PersistentData._is_subdir_readable(dir_path):
             raise PermissionError(f"Read permission denied for sub-directory {relative_path}")
+
+        return dir_path
 
     @staticmethod
     def _is_subdir_writable(path_sub_dir):

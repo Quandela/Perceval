@@ -39,16 +39,22 @@ from perceval.utils.logging import get_logger, channel
 from .rpc_handler import RPCHandler
 
 
-def _extract_job_times(response: dict) -> tuple[float, float, float]:
-    creation_datetime = response.get('creation_datetime')
-    start_datetime = response.get('start_time')
-    duration = response.get('duration')
-    if creation_datetime is not None:
-        creation_datetime = float(creation_datetime)
-    if start_datetime is not None:
-        start_datetime = float(start_datetime)
-    if duration is not None:
-        duration = float(duration)
+def _retrieve_from_response(response: dict, field: str, default_value: any = '', value_type: type = str) -> any:
+    if field not in response:
+        get_logger().error(f"Missing field '{field}' from server response. Using default value {default_value}.", channel.general)
+        return default_value
+    try:
+        result = value_type(response[field])
+    except (ValueError, TypeError):
+        get_logger().error(f"The field '{field}' from server response contains the wrong value '{response[field]}'. Using default value {default_value}.", channel.general)
+        result = default_value
+    return result
+
+
+def _extract_job_times(response: dict) -> tuple[float, float, int]:
+    creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
+    start_datetime = _retrieve_from_response(response, 'start_time', 0., float)
+    duration = _retrieve_from_response(response, 'duration', 0, int)
     return creation_datetime, duration, start_datetime
 
 
@@ -132,10 +138,9 @@ class RemoteJob(Job):
     def _from_dict(my_dict: dict, rpc_handler):
         if my_dict['status'] == 'SUCCESS':
             body = None
-            name = ""
         else:
             body = my_dict['body']
-            name = my_dict['body']['job_name']
+        name = my_dict.get('name')
         rj = RemoteJob(body, rpc_handler, name)
         rj._id = my_dict['id']
         if my_dict['status'] is not None:
@@ -145,6 +150,7 @@ class RemoteJob(Job):
     def _to_dict(self):
         job_info = dict()
         job_info['id'] = self.id
+        job_info['name'] = self.name
         job_info['status'] = str(self._job_status) if self.was_sent else None
 
         # save metadata to recreate remote jobs
@@ -199,11 +205,12 @@ class RemoteJob(Job):
                 self._handle_status_error(error)
                 return self._job_status  # Return previous status
 
-            self._job_status.status = RunningStatus.from_server_response(response['status'])
+            self._job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
             if self._job_status.running:
-                self._job_status.update_progress(float(response['progress']), response['progress_message'])
+                self._job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
+                                                 _retrieve_from_response(response, 'progress_message'))
             elif self._job_status.failed:
-                self._job_status._stop_message = response['status_message']
+                self._job_status._stop_message = _retrieve_from_response(response, 'status_message')
 
             creation_datetime, duration, start_datetime = _extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)

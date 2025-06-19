@@ -146,8 +146,13 @@ def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
     """
     bsd = BSDistribution()
     for state, count in sample_count.items():
-        bsd.add(state, count)
-    bsd.normalize()
+        if count == 0:
+            continue
+        if count < 0:
+            raise RuntimeError(f"A sample count must be positive (got {count})")
+        bsd[state] = count
+    if len(bsd):
+        bsd.normalize()
     return bsd
 
 

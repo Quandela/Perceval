@@ -129,8 +129,10 @@ class Processor(AProcessor):
         self._inputs_map = self._source.generate_distribution(self.input_state)
 
     def generate_noisy_heralds(self) -> SVDistribution:
-        heralds_perfect_state = BasicState([v for k, v in sorted(self.experiment.in_heralds.items())])
-        return self._source.generate_distribution(heralds_perfect_state)
+        if self.heralds:
+            heralds_perfect_state = BasicState([v for k, v in sorted(self.experiment.in_heralds.items())])
+            return self._source.generate_distribution(heralds_perfect_state)
+        return SVDistribution()
 
     def _input_changed_observer(self):
         if isinstance(self.input_state, BasicState):

@@ -73,6 +73,8 @@ class Experiment:
     :param name: The experiment name
     """
 
+    _no_copiable_attributes = { '_circuit_changed_observers', '_noise_changed_observers', '_input_changed_observers' }
+
     def __init__(self, m_circuit: int | ACircuit = None, noise: NoiseModel = None, name: str = "Experiment"):
         self._input_state = None
         self.name: str = name
@@ -210,12 +212,24 @@ class Experiment:
             self._circuit_changed()
             self._postselect = None
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            if k in cls._no_copiable_attributes:
+                setattr(obj, k, [])
+            else:
+                setattr(obj, k, copy.deepcopy(v, memo))
+            pass
+        return obj
+
     def copy(self, subs: dict | list = None) -> Experiment:
         """
         Performs a deep copy of the current experiment.
         """
         get_logger().debug(f"Copy experiment {self.name}", channel.general)
-        new_proc = copy.copy(self)
+        new_proc = copy.deepcopy(self)
         new_proc._components = []
         for r, c in self._components:
             new_proc._components.append((r, c.copy(subs=subs)))
@@ -418,11 +432,10 @@ class Experiment:
             pos = [x + min(mode_mapping) for x in pos]
             new_components.append((pos, c))
         if perm_component is not None and is_symmetrical:
-            if is_symmetrical:
-                perm_inv = perm_component.copy()
-                perm_inv.inverse(h=True)
-                get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
-                new_components.append((perm_modes, perm_inv))
+            perm_inv = perm_component.copy()
+            perm_inv.inverse(h=True)
+            get_logger().debug(f"  Add {perm_inv.perm_vector} permutation after experiment compose", channel.general)
+            new_components.append((perm_modes, perm_inv))
         elif not is_symmetrical:
             # We need to apply the permutation on the detectors and mode types
             self._out_mode_type = connector.compose_lists(mode_mapping, self._out_mode_type, experiment._out_mode_type)
@@ -467,6 +480,15 @@ class Experiment:
             else:
                 if self.are_modes_free(range(port_mode, port_mode + port.m), PortLocation.INPUT):
                     self.add_port(port_mode, port, PortLocation.INPUT)
+
+        # Detectors
+        if is_symmetrical:
+            for m in range(experiment.circuit_size):
+                # The heralded modes detectors have already been added at the bottom modes
+                d = experiment.detectors[m]
+                if m not in experiment.heralds and d is not None:
+                    new_mode = list(mode_mapping.keys())[list(mode_mapping.values()).index(m)]
+                    self._detectors[new_mode] = d
 
         if self._postselect is not None and perm_component is not None and not is_symmetrical:
             c_first = perm_modes[0]
