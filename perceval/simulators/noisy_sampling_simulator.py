@@ -235,7 +235,7 @@ class NoisySamplingSimulator:
 
     def _noisy_sampling(
             self,
-            sample_generator: Callable[[int], list[BSSamples]],
+            sample_generator: Callable[[int], list[list[BasicState]]],
             provider: SamplesProvider,
             max_samples: int,
             max_shots: int,
@@ -374,12 +374,13 @@ class NoisySamplingSimulator:
             if source_defined:
                 source, bs_input = svd
                 n = bs_input.n
-                pre_physical_perf, zpp = source.cache_prob_table(n, self._min_detected_photons_filter)
+                sampler = source.create_sampler(bs_input, self._min_detected_photons_filter)
+                pre_physical_perf = sampler.physical_perf
+                zpp = sampler.zpp
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
                                                                              max_shots)
 
-                sample_generator = lambda i: source.generate_separated_samples(i, bs_input, self._min_detected_photons_filter)
-
+                sample_generator = sampler.generate_separated_samples
                 first_batch = provider.estimate_weights_from_source(sample_generator, prepare_samples)
 
             else:

@@ -50,7 +50,6 @@ class Source:
     :param indistinguishability: 2-photon mean wavepacket overlap
     :param losses: optical losses
     :param multiphoton_model: `distinguishable` if additional photons are distinguishable, `indistinguishable` otherwise
-    :param context: gives a local context for source specific features, like `discernability_tag`
     """
 
     def __init__(self,
@@ -59,19 +58,13 @@ class Source:
                  indistinguishability: float = 1,
                  losses: float = 0,
                  multiphoton_model: str = DISTINGUISHABLE_KEY,  # Literal[DISTINGUISHABLE_KEY, INDISTINGUISHABLE_KEY]
-                 context: dict = None) -> None:
-
-        if context is None:
-            tag = 0
-        else:
-            tag = context.get("discernability_tag", 0)
+                 ) -> None:
 
         self._source = xq.Source(emission_probability,
                                  multiphoton_component,
                                  indistinguishability,
                                  losses,
-                                 multiphoton_model == DISTINGUISHABLE_KEY,
-                                 tag)
+                                 multiphoton_model == DISTINGUISHABLE_KEY)
 
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
                                              # time-consuming for larger distributions)
@@ -118,7 +111,7 @@ class Source:
         :param nphotons: Require `nphotons` in the mode (default 1).
         :param prob_threshold: Probability threshold under which the resulting state is filtered out.
         """
-        return self._source.probability_distribution(nphotons, prob_threshold)
+        return self.generate_distribution(BasicState([nphotons]), prob_threshold)
 
     def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
         """
@@ -140,24 +133,13 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
-    def cache_prob_table(self, n: int, min_photons_filter: int = 0) -> tuple[float, float]:
-        """
-        Computes the prob_table. Removes the events having less than min_photons_filter photons.
-        Cache the result.
-
-        :return: the physical performance and the zero-photon probability
-        """
-
-        self._sampler = self.create_sampler(n, min_photons_filter)
-        return self._sampler.physical_perf, self._sampler.zpp
-
-    def create_sampler(self, n: int, min_photons_filter: int = 0) -> xq.SourceSampler:
+    def create_sampler(self, expected_input: BasicState, min_photons_filter: int = 0) -> xq.SourceSampler:
         """
         Creates a source sampler that will be able to generate states according to the source probability distribution
-        :param n: Number of photons in the expected input state.
+        :param expected_input: The expected input BasicState to sample.
         :param min_photons_filter: Minimum number of photons in a sampled state
         """
-        return self._source.create_sampler(n, min_photons_filter)
+        return self._source.create_sampler(expected_input, min_photons_filter)
 
     def generate_samples(self, max_samples: int, expected_input: BasicState, min_detected_photons = 0) -> BSSamples:
         """
@@ -171,10 +153,8 @@ class Source:
         if self.is_perfect():
             return BSSamples([expected_input] * max_samples)
 
-        if self._sampler is None or expected_input.n != self._sampler.n or min_detected_photons != self._sampler.min_photons_filter:
-            self._sampler = self.create_sampler(expected_input.n, min_detected_photons)
-
-        self._sampler.expected_input = expected_input
+        if self._sampler is None or min_detected_photons != self._sampler.min_photons_filter or expected_input != self._sampler.expected_input:
+            self._sampler = self.create_sampler(expected_input, min_detected_photons)
 
         return self._sampler.generate_samples(max_samples)
 
@@ -194,10 +174,8 @@ class Source:
             sample = BSSamples([expected_input])
             return [sample] * max_samples
 
-        if self._sampler is None or expected_input.n != self._sampler.n or min_detected_photons != self._sampler.min_photons_filter:
-            self._sampler = self.create_sampler(expected_input.n, min_detected_photons)
-
-        self._sampler.expected_input = expected_input
+        if self._sampler is None or min_detected_photons != self._sampler.min_photons_filter or expected_input != self._sampler.expected_input:
+            self._sampler = self.create_sampler(expected_input, min_detected_photons)
 
         return self._sampler.generate_separated_samples(max_samples)
 
