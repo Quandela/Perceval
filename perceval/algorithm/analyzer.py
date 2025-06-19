@@ -138,7 +138,7 @@ class Analyzer(AAlgorithm):
             if 'logical_perf' in probs_output:
                 logical_perf.append(probs_output['logical_perf'])
             else:
-                logical_perf.append(1)
+                logical_perf.append(probs_output['global_perf'])
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self.input_states_list))
 

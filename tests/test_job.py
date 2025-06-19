@@ -137,5 +137,4 @@ def test_get_res_run_async():
     assert isinstance(res_2nd_call["results"], pcvl.BSCount)
 
     assert res_1st_call["results"] == res_2nd_call["results"]
-    assert res_1st_call["physical_perf"] == res_2nd_call["physical_perf"]
-    assert res_1st_call["logical_perf"] == res_2nd_call["logical_perf"]
+    assert res_1st_call["global_perf"] == res_2nd_call["global_perf"]

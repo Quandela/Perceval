@@ -136,6 +136,7 @@ def test_sampler_iterator(backend_name):
     p = pcvl.Processor(backend_name, c, noise=pcvl.NoiseModel(.5))
     p.min_detected_photons_filter(2)
     p.with_input(pcvl.BasicState([1, 1]))
+    p.compute_physical_logical_perf(True)
     sampler = Sampler(p)
     iteration_list = [
         {"circuit_params": {"phi1": 0.5}, "input_state": pcvl.BasicState([1, 1]), "min_detected_photons": 1},
