@@ -383,27 +383,27 @@ class JobGroup:
                 job = jobs_to_run.pop()
                 if job.status.failed:
                     index = self._jobs.index(job)
-                    job = job.rerun()
-                    if replace_failed_jobs:
+                job = job.rerun()
+                if replace_failed_jobs:
                         self._jobs[index] = job
                     else:
                         self._jobs.append(job)
                 else:
-                    job.execute_async()
+                job.execute_async()
 
                 if await_responses:
                     awaited_jobs.add(job)
-                self._write_to_file()   # save data after each job (rerun/execution) at launch
+            self._write_to_file()   # save data after each job (rerun/execution) at launch
 
             time.sleep(peek_delay)
 
             just_finished_jobs = set()
             for job in awaited_jobs:
                 if job.status.completed:
-                    if job.status.success:
-                        count_success += 1
-                    else:
-                        count_fail += 1
+                if job.status.success:
+                    count_success += 1
+                else:
+                    count_fail += 1
                     just_finished_jobs.add(job)
 
                     self._write_to_file()  # save data after a status update for a job
@@ -446,9 +446,11 @@ class JobGroup:
     def run_parallel(self) -> None:
         """
         Launches all the unsent jobs in the group on Cloud, running them in parallel.
+        The number of concurrent jobs is limited by RemoteConfig.get_cloud_maximal_job_count()
 
         If the user lacks authorization to send multiple jobs to the cloud or exceeds
         the maximum allowed limit, an exception is raised, terminating the launch process.
+        RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
         Any remaining jobs in the group will not be sent.
         """
         self._launch_jobs(await_responses = False,
@@ -458,9 +460,11 @@ class JobGroup:
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
         Restart all failed jobs in the group on the Cloud, running them in parallel.
+        The number of concurrent jobs is limited by RemoteConfig.get_cloud_maximal_job_count()
 
         If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
         is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
+        RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
 
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
