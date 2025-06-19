@@ -482,10 +482,12 @@ class Simulator(ISimulator):
 
         if detectors:
             prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
-            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter, p_threshold, prog_cb)
+            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter,
+                                                p_threshold, self._heralds,  # TODO: only if perf differentiation is not needed
+                                                prog_cb)
             physical_perf *= phys_perf
 
-        res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
+        res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)  # TODO: use heralds only when not already used
         self._logical_perf *= logical_perf_contrib
 
         self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})

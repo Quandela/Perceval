@@ -34,19 +34,16 @@ from perceval.utils import BSDistribution, BasicState
 
 
 def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]):
-    if heralds:
-        s = list(s)
-        for m, v in heralds.items():
-            if v and not s[m]:  # Note: this case should not happen if an "at least 1" condition was applied on previous step
-                return False
-            if v == 0 and s[m]:
-                return False
+    for m, v in heralds.items():
+        if v and not s[m]:  # Note: this case should not happen if an "at least 1" condition was applied on previous step
+            return False
+        if v == 0 and s[m]:
+            return False
     return True
 
 
-def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: dict[int, int]):
+def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: dict[int, int]) -> list[BSDistribution]:
     distributions = []
-    perf = 1
     for m, (photons_in_mode, detector) in enumerate(zip(s, detectors)):
         if detector is not None:
             d = detector.detect(photons_in_mode)
@@ -58,18 +55,20 @@ def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: di
                 state = BasicState([v])
                 p = d[state]
                 if not p:
-                    return [], 0
-                perf *= p
+                    return []
                 d = BSDistribution({state: p})
 
             distributions.append(d)
+        elif m not in heralds or heralds[m] == photons_in_mode:
+            distributions.append(BSDistribution(BasicState([photons_in_mode])))
+
         else:
-            distributions.append(BSDistribution(BasicState([photons_in_mode])))  # The herald has been applied before in principle
+            return []
 
-    return distributions, perf
+    return distributions
 
 
-def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None,
+def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = 0,
                        prob_threshold: float = 0, heralds: dict[int, int] = {},
                        progress_callback: Callable = None) -> tuple[BSDistribution, float]:
     """
@@ -88,7 +87,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     if not dist or detection == DetectionType.PNR:
         return dist, 1
 
-    phys_perf = 1
+    phys_perf = 0
     result = BSDistribution()
     lbsd = len(dist)
     if detection == DetectionType.Threshold:
@@ -96,9 +95,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             if not heralds_compatible_threshold(s, heralds):
                 continue
             s = s.threshold_detection()
-            if min_photons is not None and s.n < min_photons:
-                phys_perf -= p
-            else:
+            if s.n >= min_photons:
+                phys_perf += p
                 result[s] += p
             if progress_callback and idx % 250000 == 0:  # Every 250000 states
                 progress = (idx + 1) / lbsd
@@ -116,8 +114,7 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
             if cancel_requested(exec_request):
                 raise RuntimeError("Cancel requested")
 
-        distributions, perf = compute_distributions(s, detectors, heralds)
-        phys_perf -= (1 - perf) * p  # Note: this implies that we can't use heralds here if we care about splitting the perf
+        distributions = compute_distributions(s, detectors, heralds)
         if not distributions:
             continue
 
@@ -126,10 +123,10 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
         # "magic factor" 10 like in the simulator
 
         for s_out, p_out in state_dist.items():
-            if min_photons is not None and s_out.n < min_photons:
-                phys_perf -= p * p_out
-            else:
-                result.add(s_out, p * p_out)
+            if s_out.n >= min_photons:
+                prob = p * p_out
+                phys_perf += prob
+                result.add(s_out, prob)
 
     if len(result):
         result.normalize()
