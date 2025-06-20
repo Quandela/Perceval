@@ -27,6 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from ..drawing import Drawing
 from .canvas import Canvas
 import warnings
 with warnings.catch_warnings():
@@ -122,4 +123,4 @@ class SvgCanvas(Canvas):
                              origin=(self._minx-25, 0))
         for dr in self._draws:
             d.append(dr)
-        return d.set_pixel_scale(self._pixel_size)
+        return Drawing(d.set_pixel_scale(self._pixel_size))
