@@ -27,4 +27,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .canvas import Canvas
+
+from typing import Any
+
+class Drawing:
+    def __init(self, res: Any):
+        self.value = res

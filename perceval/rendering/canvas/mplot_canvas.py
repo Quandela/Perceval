@@ -30,7 +30,7 @@
 from __future__ import annotations
 from .canvas import Canvas
 
-from .._mplot_utils import autoselect_backend
+from ..mplotlib_renderers._mplot_utils import autoselect_backend
 autoselect_backend()
 
 import matplotlib.pyplot as plt
