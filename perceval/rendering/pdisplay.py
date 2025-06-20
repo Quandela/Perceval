@@ -323,7 +323,7 @@ def pdisplay_density_matrix(dm,
     """
 
     renderer = RendererFactory.get_density_matrix_renderer(output_format)
-    return renderer.render(g)
+    return renderer.render(dm, color, cmap, mplot_noshow, mplot_savefig)
 
 
 def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
