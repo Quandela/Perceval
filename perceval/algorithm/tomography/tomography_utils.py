@@ -50,6 +50,8 @@ def _compute_probs(tomography_experiment, prep_state_indices: list, meas_pauli_b
     input_state = BasicState([1, 0] * tomography_experiment._nqubit)
     p.with_input(input_state)
 
+    p.compute_physical_logical_perf(True)
+
     sampler = Sampler(p, max_shots_per_call=tomography_experiment._max_shots)
     sampler.default_job_name = 'Tomography_'\
                                +str().join([x.name for x in prep_state_indices])+'_'\
