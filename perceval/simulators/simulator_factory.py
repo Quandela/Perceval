@@ -57,6 +57,7 @@ class SimulatorFactory:
         :param backend: (Optional) Any probampli capable backend instance or name. If no backend is passed, then the
             processor backend name is used if the first parameter's type is Processor. Ultimately, the fallback is a
             SLOS backend instantiated without any configuration (i.e. no mask)
+        :param kwargs: If backend is a string, the kwargs are transmitted to the instantiation of the backend.
         :return: A simulator object with the input circuit set
         """
         sim_polarization = False

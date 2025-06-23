@@ -117,6 +117,7 @@ class RPCHandlerResponsesBuilder():
         self._job_status_index = 0
         self._job_status_sequence = []
         self._authorized_retry = authorized_retry
+        self._custom_status_response = None
         responses.reset()
         self._set_default_responses()
 
@@ -226,7 +227,7 @@ class RPCHandlerResponsesBuilder():
             'duration': None,
             'progress': None,
             'status': RunningStatus.to_server_response(status),
-            'creation_date': _TIMESTAMP,
+            'creation_datetime': _TIMESTAMP,
             'start_time': None,
             'status_message': None
         }
@@ -234,11 +235,11 @@ class RPCHandlerResponsesBuilder():
         if status == RunningStatus.RUNNING:
             response_body['progress'] = 0.5
             response_body['duration'] = 10
-            response_body['start_time'] = response_body['creation_date'] + 1.
+            response_body['start_time'] = response_body['creation_datetime'] + 1.
         elif status == RunningStatus.SUCCESS:
             response_body['progress'] = 1.0
             response_body['duration'] = 20
-            response_body['start_time'] = response_body['creation_date'] + 1.
+            response_body['start_time'] = response_body['creation_datetime'] + 1.
         elif status == RunningStatus.CANCELED:
             response_body['status_message'] = 'Cancel requested from web interface'
 
@@ -249,7 +250,13 @@ class RPCHandlerResponsesBuilder():
             method='GET',
             url=self._rpc_handler.url + _ENDPOINT_JOB_STATUS + job_id,
             status=200,
-            json=self.get_job_status_response_body_from_job_status(status)))
+            json=self._custom_status_response if self._custom_status_response else self.get_job_status_response_body_from_job_status(status)))
+
+    def set_job_status_custom_responses(self, response: json) -> None:
+        self._custom_status_response = response
+
+    def remove_job_status_custom_responses(self) -> None:
+        self._custom_status_response = None
 
     def get_job_result_response_body_from_job_status(self, status: RunningStatus) -> dict:
         response_body = {

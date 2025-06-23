@@ -147,6 +147,10 @@ class NoisySamplingSimulator:
         self.sleep_between_batches = 0.2  # sleep duration (in s) between two batches of samples
         self._detectors = None
 
+    @property
+    def min_detected_photons_filter(self):
+        return self._min_detected_photons_filter + sum(self._heralds.values())
+
     def set_detectors(self, detector_list: list[IDetector]):
         """
         :param detector_list: A list of detectors to simulate
@@ -285,7 +289,7 @@ class NoisySamplingSimulator:
 
             # Post-processing
             shots += 1
-            if sampled_state.n < self._min_detected_photons_filter:
+            if sampled_state.n < self.min_detected_photons_filter:
                 not_selected_physical += 1
                 continue
             if self._state_selected(sampled_state):
@@ -323,7 +327,7 @@ class NoisySamplingSimulator:
             n_photons = next(iter(sv.n))  # Number of photons in the (non superposed) state vector
             if n_photons == 0:
                 zpp += p
-            if n_photons >= self._min_detected_photons_filter:
+            if n_photons >= self.min_detected_photons_filter:
                 max_p = max(max_p, p)
         return zpp, max_p
 
@@ -337,7 +341,7 @@ class NoisySamplingSimulator:
         physical_perf = 1
         for sv, p in svd.items():
             n_photons = next(iter(sv.n))
-            if n_photons < self._min_detected_photons_filter:
+            if n_photons < self.min_detected_photons_filter:
                 physical_perf -= p
             elif p >= p_threshold:
                 new_input[sv[0]] = p
@@ -349,7 +353,7 @@ class NoisySamplingSimulator:
 
     def _compute_samples_with_perf(self, prepare_samples: int, physical_perf: float, zpp: float, max_shots: int) \
             -> tuple[int, int]:
-        if self._min_detected_photons_filter >= 2 and max_shots is not None:
+        if self.min_detected_photons_filter >= 2 and max_shots is not None:
             # This is cheating, but we need it if we want a good approximation of the number of shots to simulate
             max_shots *= physical_perf / (1 - zpp)  # = P(n >= filter | n > 0)
             max_shots = math.ceil(max_shots)
@@ -374,7 +378,7 @@ class NoisySamplingSimulator:
             if source_defined:
                 source, bs_input = svd
                 n = bs_input.n
-                sampler = source.create_sampler(bs_input, self._min_detected_photons_filter)
+                sampler = source.create_sampler(bs_input, self.min_detected_photons_filter)
                 pre_physical_perf = sampler.physical_perf
                 zpp = sampler.zpp
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
@@ -421,9 +425,10 @@ class NoisySamplingSimulator:
         :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
         :param progress_callback: A progress callback
         :return: A dictionary of the form { "results": BSSamples, "physical_perf": float, "logical_perf": float }
-        * results is the post-selected output state distribution
-        * physical_perf is the performance computed from the detected photon filter
-        * logical_perf is the performance computed from the post-selection
+
+        - results is the post-selected output state sample stream
+        - physical_perf is the performance computed from the detected photon filter
+        - logical_perf is the performance computed from the post-selection
         """
         if not check_heralds_detectors(self._heralds, self._detectors):
             return {"results": BSSamples(), "physical_perf": 1, "logical_perf": 0}
@@ -467,6 +472,20 @@ class NoisySamplingSimulator:
                      max_samples: int,
                      max_shots: int = None,
                      progress_callback: callable = None) -> dict:
+        """
+        Run a noisy sampling simulation and retrieve the results
+
+        :param svd: The noisy input, expressed as a mixed state,
+         or a tuple containing the source and the perfect input state
+        :param max_samples: Max expected samples of interest in the results
+        :param max_shots: Shots limit before the sampling ends (you might get fewer samples than expected)
+        :param progress_callback: A progress callback
+        :return: A dictionary of the form { "results": BSCount, "physical_perf": float, "logical_perf": float }
+
+        - results is the post-selected output state sample count
+        - physical_perf is the performance computed from the detected photon filter
+        - logical_perf is the performance computed from the post-selection
+        """
         sampling = self.samples(svd, max_samples, max_shots, progress_callback)
         sampling['results'] = samples_to_sample_count(sampling['results'])
         return sampling

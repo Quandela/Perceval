@@ -137,7 +137,7 @@ class JobGroup:
         return RemoteJob._from_dict(job_entry, rpc_handler)
 
     @staticmethod
-    def list_existing() -> list[str]:
+    def list_locally_saved() -> list[str]:
         """
         Returns a list of filenames of all JobGroups saved to disk
         """
@@ -283,7 +283,7 @@ class JobGroup:
         """
         Delete all existing groups on disk
         """
-        for each_file in JobGroup.list_existing():
+        for each_file in JobGroup.list_locally_saved():
             JobGroup.delete_job_group(each_file)
 
     @staticmethod
@@ -305,7 +305,7 @@ class JobGroup:
         """
         files_to_del = []  # list of files before date to delete
 
-        for jg_name in JobGroup.list_existing():
+        for jg_name in JobGroup.list_locally_saved():
             if JobGroup(jg_name).created_date < del_before_date:
                 files_to_del.append(jg_name)
 
