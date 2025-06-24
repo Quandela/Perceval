@@ -291,12 +291,12 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
         if isinstance(value, float):
             value = simple_float(value, nsimplify=nsimplify, precision=precision)[1]
         elif isinstance(value, complex):
-            real_part = imag_part = ""
+            values = []
             if value.real != 0:
-                real_part = simple_float(value.real, nsimplify=nsimplify, precision=precision)[1]
+                values.append(simple_float(value.real, nsimplify=nsimplify, precision=precision)[1])
             if value.imag != 0:
-                imag_part = "I*" + simple_float(value.imag, nsimplify=nsimplify, precision=precision)[1]
-            value = real_part + imag_part
+                values.append("I*" + simple_float(value.imag, nsimplify=nsimplify, precision=precision)[1])
+            value = " + ".join(values) if values else "0"
         else:
             value = str(value)
         d.append([str(k), value])
@@ -575,19 +575,22 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     opts:
         - skin (rendering.circuit.PhysSkin, SymbSkin or DebugSkin or any ASkin subclass instance):
-            Skin controls how a circuit/processor is displayed
+
+            Skin controls how a circuit/processor is displayed:
+
                 - PhysSkin(): physical skin (default),
                 - DebugSkin(): Similar to PhysSkin but modes are bigger, ancillary modes are displayed,
-                               components with variable parameters are red,
+                  components with variable parameters are red,
                 - SymbSkin(): symbolic skin (thin black and white lines).
+
         - precision (float): numerical precision
         - nsimplify (bool): if True, tries to simplify numerical values by searching known values (pi, sqrt, fractions)
         - recursive (bool): if True, all hierarchy levels in a circuit/processor are displayed. Otherwise, only the top
-                            level is drawn, others are "black boxes"
+          level is drawn, others are "black boxes"
         - max_v (int): Maximum number of displayed values in distributions
         - sort (bool): if True, sorts a distribution (descending order) before displaying
         - render_size: In SVG circuit/processor rendering, acts as a zoom factor (float)
-                       In Tomography display, is the size of the output plot in inches (tuple of two floats)
+          In Tomography display, is the size of the output plot in inches (tuple of two floats)
     """
     if output_format is None:
         output_format = _default_output_format(o)
@@ -608,6 +611,16 @@ def pdisplay(o, output_format: Format = None, **opts):
 
 
 def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
+    """
+    Directly saves the result of pdisplay into a file without actually displaying it.
+
+    :param o: Perceval object to render
+    :param path: Path to file to save
+    :param output_format: See :code:`pdisplay` for details.
+      Contrarily to :code:`pdisplay`, this method always uses Format.MPLOT by default so you might need to specify it
+      by hand for some kinds of objects.
+    :param opts: See :code:`pdisplay` for details.
+    """
     if output_format is None:
         output_format = Format.MPLOT
     if output_format == Format.MPLOT:

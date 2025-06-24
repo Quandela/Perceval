@@ -36,6 +36,7 @@ from .job import Job
 from .job_status import JobStatus, RunningStatus
 from perceval.serialization import deserialize, serialize
 from perceval.utils.logging import get_logger, channel
+from .rpc_handler import RPCHandler
 
 
 def _retrieve_from_response(response: dict, field: str, default_value: any = '', value_type: type = str) -> any:
@@ -49,7 +50,8 @@ def _retrieve_from_response(response: dict, field: str, default_value: any = '',
         result = default_value
     return result
 
-def _extract_job_times(response: dict) -> (float, float, int):
+
+def _extract_job_times(response: dict) -> tuple[float, float, int]:
     creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
     start_datetime = _retrieve_from_response(response, 'start_time', 0., float)
     duration = _retrieve_from_response(response, 'duration', 0, int)
@@ -57,34 +59,40 @@ def _extract_job_times(response: dict) -> (float, float, int):
 
 
 class RemoteJob(Job):
+    r"""
+    Handle a computation task remotely (i.e. through a Cloud provider) by sending a request body of the form:
+
+    .. code-block::
+
+        {
+            'platform_name': '...',
+            'pcvl_version': 'M.m.p',
+            'payload': {
+                'command': '...',
+                'experiment': <serialized Experiment>,
+                ...
+                other parameters
+            }
+        }
+
+    :param request_data: prepared data for the job. It is extended by an execute_async() call before being sent.
+                         It is expected to be prepared by a RemoteProcessor.
+    :param rpc_handler: a valid RPC handler to connect to a Cloud provider
+    :param job_name: the job name (visible cloud-side)
+    :param delta_parameters: parameters to add/remove dynamically
+    :param job_context: Data on the job execution context (conversion required on results, etc.)
+    :param command_param_names: List of parameter names for the command call (in order to resolve \*args in
+                                execute_async() call). This parameter is optional (default = empty list). However,
+                                without it, only \*\*kwargs are available in the execute_async() call
+    :param refresh_progress_delay: wait time when running in sync mode between each refresh (in seconds)
+    """
+
     STATUS_REFRESH_DELAY = 1  # minimum job status refresh period (in s)
     _MAX_ERROR = 5
 
-    def __init__(self, request_data, rpc_handler, job_name, delta_parameters=None, job_context=None,
-                 command_param_names=None, refresh_progress_delay: int = 3):
-        r"""
-        :param request_data: prepared data for the job. It is extended by an async_execute() call before being sent.
-            It is expected to be prepared by a RemoteProcessor. It must have the following structure:
-            {
-              'platform_name': '...',
-              'pcvl_version': 'M.m.p',
-              'payload': {
-                'command': '...',
-                'circuit': <optional serialized circuit>,
-                'input_state': <optional serialized input state>
-                ...
-                other parameters
-              }
-            }
-        :param rpc_handler: a valid RPC handler to connect to the cloud
-        :param job_name: the job name (visible cloud-side)
-        :param delta_parameters: parameters to add/remove dynamically
-        :param job_context: Data on the job execution context (conversion required on results, etc.)
-        :param command_param_names: List of parameter names for the command call (in order to resolve *args in
-            async_execute() call). This parameter is optional (default = empty list). However, without it, only **kwargs
-            are available in the async_execute() call
-        :param refresh_progress_delay: wait time when running in sync mode between each refresh
-        """
+    def __init__(self, request_data: dict, rpc_handler: RPCHandler, job_name: str,
+                 delta_parameters: dict = None, job_context: dict = None,
+                 command_param_names: list = None, refresh_progress_delay: int = 3):
         super().__init__(delta_parameters=delta_parameters, command_param_names=command_param_names)
         self._rpc_handler = rpc_handler
         self._job_status = JobStatus()
@@ -108,11 +116,19 @@ class RemoteJob(Job):
     def id(self) -> str | None:
         """
         Job unique identifier
+
+        :return: a UUID, or None if the job was never sent to a Cloud provider
         """
         return self._id
 
     @staticmethod
-    def from_id(job_id: str, rpc_handler):
+    def from_id(job_id: str, rpc_handler: RPCHandler) -> RemoteJob:
+        """
+        Recreate an existing RemoteJob from its unique identifier, and a RPCHandler.
+
+        :param job_id: existing unique identifier
+        :param rpc_handler: a RPCHandler with valid credentials to connect to the Cloud provider where the job was sent
+        """
         rj = RemoteJob(None, rpc_handler, "resumed")  # There is no access to the job name, let's call it "resumed"
         rj._id = job_id
         rj.status()
@@ -122,10 +138,9 @@ class RemoteJob(Job):
     def _from_dict(my_dict: dict, rpc_handler):
         if my_dict['status'] == 'SUCCESS':
             body = None
-            name = ""
         else:
             body = my_dict['body']
-            name = my_dict['body']['job_name']
+        name = my_dict.get('name')
         rj = RemoteJob(body, rpc_handler, name)
         rj._id = my_dict['id']
         if my_dict['status'] is not None:
@@ -135,6 +150,7 @@ class RemoteJob(Job):
     def _to_dict(self):
         job_info = dict()
         job_info['id'] = self.id
+        job_info['name'] = self.name
         job_info['status'] = str(self._job_status) if self.was_sent else None
 
         # save metadata to recreate remote jobs
@@ -201,7 +217,19 @@ class RemoteJob(Job):
 
         return self._job_status
 
-    def execute_sync(self, *args, **kwargs) -> any:
+    def execute_sync(self, *args, **kwargs) -> dict:
+        """
+        Execute the task synchronously. This call is blocking and immediately returns a results dictionary.
+
+        .. note:: This method has exactly the same effect as __call__.
+
+        .. warning:: A remote job natural way of running is asynchronous. This call will actually run the task
+                     asynchronously with a waiting loop to reproduce the behaviour of the synchronous call.
+
+        :param args: arguments to pass to the task function
+        :param kwargs: keyword arguments to pass to the task function
+        :return: the results
+        """
         job = self.execute_async(*args, **kwargs)
         while not job.is_complete:
             time.sleep(self._refresh_progress_delay)
@@ -222,7 +250,7 @@ class RemoteJob(Job):
         self._check_max_shots_samples_validity()
         return self._request_data
 
-    def execute_async(self, *args, **kwargs):
+    def execute_async(self, *args, **kwargs) -> RemoteJob:
         assert self._job_status.waiting, "job has already been executed"
         try:
             self._id = self._rpc_handler.create_job(serialize(self._create_payload_data(*args, **kwargs)))
@@ -253,7 +281,7 @@ class RemoteJob(Job):
 
     def rerun(self) -> RemoteJob:
         """Rerun a job. Same job will be executed again as a new one.
-        Job must have failed, meaning job status must be either CANCELED or ERROR.
+        Job must have failed, meaning job status is either CANCELED or ERROR.
 
         :raises RuntimeError: Job have not failed, therefore it cannot be rerun.
         :return: The new remote job.

@@ -49,12 +49,12 @@ class StateTomography(AAlgorithm):
     - Computes parameters required to do state tomography
 
     - Performs Tomography experiment - Computes and Returns density matrices for each input state
+
+    :param operator_processor: A perceval Processor with gate (or operation) on which state tomography
+        needs to be performed.
+
     """
     def __init__(self, operator_processor: AProcessor, **kwargs):
-        """
-        :param operator_processor: A perceval Processor with gate (or operation) on which state tomography
-        needs to be performed. By default, it will have a perfect source and use the SLOSBackend() for computations.
-        """
         super().__init__(processor=operator_processor, **kwargs)
         self._nqubit, odd_modes = divmod(operator_processor.m, 2)
         if odd_modes:
@@ -71,6 +71,7 @@ class StateTomography(AAlgorithm):
     def _stokes_parameter(self, prep_state_indices: list, meas_pauli_basis_indices: list) -> float:
         """
         Computes the Stokes parameter S_i for state prep_state_indices after operator_circuit
+
         :param prep_state_indices: list of length of number of qubits representing the preparation circuit
         :param meas_pauli_basis_indices: list of length of number of qubits representing the measurement circuit and
         the eigenvectors being measured
@@ -124,21 +125,18 @@ class StateTomography(AAlgorithm):
 class ProcessTomography(AProcessTomography):
     """
     Experiment to reconstruct the process map of the gate operation by tomography experiment.
-    - Computes the mathematical tensors/matrices defined by theory required to perform process tomography
 
-    - Computes Chi matrix form of the operation process map
+    - Computes the mathematical tensors/matrices defined by theory required to perform process tomography.
 
-    - Provides analysis methods to investigate the results of process tomography
+    - Computes Chi matrix form of the operation process map.
 
-        -- Fidelity of the operation, Error process map
+    - Provides analysis methods to investigate the results of process tomography such as the fidelity of the operation and error process maps.
+
+    :param operator_processor: A perceval Processor with gate (or operation) on which process tomography
+        needs to be performed
 
     """
     def __init__(self, operator_processor: AProcessor, **kwargs):
-        """
-
-        :param operator_processor: A perceval Processor with gate (or operation) on which process tomography
-        needs to be performed. By default, it will have a perfect source and use the SLOSBackend() for computations.
-        """
         super().__init__(processor=operator_processor, **kwargs)
         self._qst = StateTomography(operator_processor=self._processor, **kwargs)
 
@@ -174,9 +172,11 @@ class ProcessTomography(AProcessTomography):
 
     def chi_matrix(self) -> np.ndarray:
         """
-        Computes the chi matrix of the operator_circuit. Size d^4 x d^4 [=2**(2*nqubit)x2**(2*nqubit) array]
-        :return: Chi matrix normalized by gate efficiency (=its trace)
+        Computes the chi matrix of the operator_circuit.
+
+        :return: Chi matrix normalized by gate efficiency (=its trace).
         """
+        # Size of chi: d^4 x d^4 [=2**(2*nqubit)x2**(2*nqubit) array]
         if self.chi_normalized is None:
             beta_inv = np.linalg.pinv(self._beta_as_matrix())
             L = self._lambda_vector()
@@ -193,7 +193,7 @@ class ProcessTomography(AProcessTomography):
         simply that of the gate.
 
         :param operator: operator (gate) matrix whose fidelity is to be calculated
-        :return: float between 0 and 1
+        :return: the computed fidelity - between 0 and 1
         """
         Udag = np.transpose(np.conjugate(operator))
         avg_fidelity = 1 / (self._size_hilbert + 1)
@@ -220,13 +220,13 @@ class ProcessTomography(AProcessTomography):
 
     def error_process_matrix(self, computed_chi: np.ndarray, operator: np.ndarray) -> np.ndarray:
         """
-        Computes the error matrix for an operation from the computed chi
-        Size d^4 x d^4
+        Computes the error matrix for an operation from the computed chi matrix.
 
-        :param computed_chi: chi matrix computed from process tomography
-        :param operator: Gate (or operator) matrix
-        :return: error process matrix
+        :param computed_chi: chi matrix computed from process tomography.
+        :param operator: Gate (or operator) matrix.
+        :return: error process matrix.
         """
+        # Size of Error process map: d^4 x d^4
         V = np.zeros((self._size_hilbert ** 2, self._size_hilbert ** 2), dtype=np.cdouble)
         for m in range(self._size_hilbert ** 2):
             for n in range(self._size_hilbert ** 2):

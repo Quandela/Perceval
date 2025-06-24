@@ -65,7 +65,7 @@ def test_with_selection():
     res = p.probs()
 
     assert_bsd_close(p.probs()["results"], expected)
-    assert pytest.approx(res["physical_perf"]) == expected_p_perf, "Wrong physical performance with time delays"
+    assert pytest.approx(res["global_perf"]) == expected_p_perf, "Wrong physical performance with time delays"
 
 
 def test_with_heralds():
@@ -83,4 +83,4 @@ def test_with_heralds():
     res = p.probs()
 
     assert_bsd_close(p.probs()["results"], expected)
-    assert pytest.approx(res["logical_perf"]) == expected_l_perf, "Wrong logical performance with time delays"
+    assert pytest.approx(res["global_perf"]) == expected_l_perf, "Wrong logical performance with time delays"
