@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 from typing import Callable
 
 from perceval.runtime import cancel_requested
@@ -78,6 +80,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     :param detectors: A List of detectors
     :param min_photons: Minimum detected photons filter value (when None, does not apply this physical filter)
     :param prob_threshold: Filter states that have a probability below this threshold
+    :param heralds: A dictionary {mode: expected} that will be used for logical selection.
+     Beware the performance can only be considered global (and no longer physical) if not empty
     :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
     :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
@@ -133,8 +137,9 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     return result, phys_perf
 
 
-def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None
-                              ) -> BasicState:
+def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None,
+                              heralds: dict[int, int] = {},
+                              ) -> BasicState | None:
     """
     Simulate detectors effect on one output sample. If multiple possible outcome exist, one is randomly chosen
 
@@ -142,7 +147,10 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
     :param detectors: A list of detectors (with the same length as the sample)
     :param detection: An optional detection type. Can be recomputed from the detectors list, but it's faster to compute
                       it once and pass it for a list a samples to process
-    :return: The output sample where the detector imperfection were applied
+    :param heralds: A dictionary {mode: expected} that will be used for logical selection.
+     If the returned state doesn't fulfil this, this function will early return None.
+
+    :return: The output sample where the detector imperfection were applied, or None if the state is logically rejected for the heralds
     """
     if detection is None:
         detection = get_detection_type(detectors)
@@ -150,13 +158,18 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
         return sample
 
     if detection == DetectionType.Threshold:
+        for m, v in heralds.items():
+            if sample[m] < v:
+                return None
         return sample.threshold_detection()
 
     out_state = BasicState()
-    for photons_in_mode, detector in zip(sample, detectors):
-        state_distrib = detector.detect(photons_in_mode)
+    for m, (photons_in_mode, detector) in enumerate(zip(sample, detectors)):
+        state_distrib = detector.detect(photons_in_mode) if detector is not None else BasicState([photons_in_mode])
         if isinstance(state_distrib, BSDistribution):
             state_distrib = state_distrib.sample(1, non_null=False)[0]
+        if m in heralds and state_distrib[0] != heralds[m]:
+            return None
         out_state *= state_distrib
 
     return out_state

@@ -291,10 +291,14 @@ class NoisySamplingSimulator:
                 sampled_state = provider.sample_from(selected_bs)
 
             if self._detectors:
-                sampled_state = simulate_detectors_sample(sampled_state, self._detectors, detection_type)
+                sampled_state = simulate_detectors_sample(sampled_state, self._detectors, detection_type,
+                                                          self._heralds if not self._compute_physical_logical_perf else {})
 
             # Post-processing
             shots += 1
+            if sampled_state is None:
+                not_selected += 1
+                continue
             if sampled_state.n < self.min_detected_photons_filter:
                 not_selected_physical += 1
                 continue

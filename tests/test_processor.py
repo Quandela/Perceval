@@ -323,6 +323,14 @@ def test_mask_detectors():
     assert res["results"][BasicState([0])] == pytest.approx(1)
     assert res["global_perf"] == pytest.approx(.5)
 
+    p.compute_physical_logical_perf(True)
+
+    res = p.probs()
+
+    assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["physical_perf"] == pytest.approx(1)
+    assert res["logical_perf"] == pytest.approx(.5)
+
 
 def test_min_photons_reset():
     p = Processor("SLOS", 2, noise=NoiseModel(brightness=.5))
