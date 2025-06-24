@@ -333,6 +333,12 @@ class Expression(Parameter):
         r"""Return True if the parameter has a value (fixed or non fixed)
         """
         return all([p._value is not None for p in self._params])
+    
+    @property
+    def fixed(self) -> bool:
+        r"""Return True if the parameter is fixed
+        """
+        return all(p._symbol is None for p in self._params)
 
 
 P = Parameter

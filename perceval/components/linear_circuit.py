@@ -423,6 +423,7 @@ class Circuit(ACircuit):
             f"Port range exceeds circuit size (received {port_range} but maximum expected value is {self.m-1})"
         assert len(port_range) == component.m, \
             f"Port range ({len(port_range)}) is not matching component size ({component.m})"
+        
         # merge the parameters - we are only interested in non-assigned parameters if it is not a global operator
         for _, p in component._params.items():
             if not p.fixed:
@@ -430,6 +431,9 @@ class Circuit(ACircuit):
                     if internal_p.name in self._params and internal_p._pid != self._params[internal_p.name]._pid:
                         raise RuntimeError("two parameters with the same name in the circuit (%s)" % p.name)
                     self._params[internal_p.name] = internal_p
+            
+            self._raw_params[p.name] = p
+                    
         # register the component
         if merge and isinstance(component, Circuit) and component._components:
             for sprange, sc in component._components:
