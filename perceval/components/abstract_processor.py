@@ -49,9 +49,7 @@ class ProcessorType(Enum):
 class AProcessor(ABC):
     def __init__(self, experiment = None):
         self.experiment = experiment or Experiment()
-        # TODO: remove the next line when we send experiments on the cloud (PCVL-934)
         self._parameters: dict[str, any] = {}
-        self._set_min_photons_parameter()
 
     @property
     def experiment(self) -> Experiment:
@@ -130,10 +128,6 @@ class AProcessor(ABC):
         This post-selection has an impact on the output physical performance
         """
         self.experiment.min_detected_photons_filter(n)
-        self._set_min_photons_parameter()
-
-    def _set_min_photons_parameter(self):
-        self.set_parameter('min_detected_photons', self._min_detected_photons_filter)
 
     @property
     def input_state(self):
