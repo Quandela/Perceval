@@ -56,7 +56,6 @@ QISKIT_BRIDGE_PKGS = ["qiskit~=1.3.1", "seaborn~=0.13"]
 QUTIP_BRIDGE_PKGS = ["qutip~=5.0.4"]
 MYQLM_BRIDGE_PKGS = ["myqlm~=1.10.4"]
 CQASM_BRIDGE_PKGS = ["libqasm==0.6.7"]  # libqasm is not stable enough to put ~=
-GRAPHICAL_PKGS = ['matplotlib<4', 'drawsvg>=2.0', 'latexcodec<4']
 
 setuptools.setup(
     name="perceval-quandela",
@@ -81,18 +80,17 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     packages=package_list,
-    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'exqalibur~=0.8.0',
-                      'multipledispatch<2', 'protobuf>=3.20.3', 'requests<3',
-                      'networkx~=3.1', 'platformdirs<5', 'tqdm',
+    install_requires=['sympy~=1.12', 'numpy>=1.26,<3', 'scipy~=1.13', 'tabulate~=0.9', 'matplotlib<4', 'exqalibur~=0.8.0',
+                      'multipledispatch<2', 'protobuf>=3.20.3', 'drawsvg>=2.0', 'requests<3',
+                      'networkx~=3.1', 'latexcodec<4', 'platformdirs<5', 'tqdm',
                       "typing_extensions; python_version == '3.9'"  # TODO: remove when dropping 3.9
                       ],
     extras_require={
-        "rendering": GRAPHICAL_PKGS,
         "qiskit_bridge": QISKIT_BRIDGE_PKGS,
         "qutip_bridge": QUTIP_BRIDGE_PKGS,
         "myqlm_bridge": MYQLM_BRIDGE_PKGS,
         "cqasm_bridge": CQASM_BRIDGE_PKGS,
-        "all": GRAPHICAL_PKGS+QISKIT_BRIDGE_PKGS+QUTIP_BRIDGE_PKGS+MYQLM_BRIDGE_PKGS+CQASM_BRIDGE_PKGS
+        "all": QISKIT_BRIDGE_PKGS+QUTIP_BRIDGE_PKGS+MYQLM_BRIDGE_PKGS+CQASM_BRIDGE_PKGS
     },
     setup_requires=["scmver"],
     python_requires=">=3.9,<3.14",

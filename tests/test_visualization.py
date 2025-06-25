@@ -40,114 +40,92 @@ from perceval.rendering.circuit import SymbSkin
 from _test_utils import _save_or_check, save_figs
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_bs(tmp_path, save_figs):
     _save_or_check(BS.H(), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_ps(tmp_path, save_figs):
     _save_or_check(PS(sp.pi / 2), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_pbs(tmp_path, save_figs):
     _save_or_check(PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_dt(tmp_path, save_figs):
     _save_or_check(TD(0), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_wp(tmp_path, save_figs):
     _save_or_check(WP(sp.pi / 4, sp.pi / 4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_hwp(tmp_path, save_figs):
     _save_or_check(HWP(sp.pi / 2), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_qwp(tmp_path, save_figs):
     _save_or_check(QWP(sp.pi / 4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_pr(tmp_path, save_figs):
     _save_or_check(PR(sp.pi / 4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_perm4_0(tmp_path, save_figs):
     _save_or_check(Circuit(4) // PERM([0, 1, 2, 3]), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_perm4_inv(tmp_path, save_figs):
     _save_or_check(Circuit(4) // PERM([3, 2, 1, 0]), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_perm4_swap(tmp_path, save_figs):
     _save_or_check(Circuit(4) // PERM([3, 1, 2, 0]), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_no_circuit_4(tmp_path, save_figs):
     _save_or_check(Circuit(4), tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_bs_compact(tmp_path, save_figs):
     _save_or_check(BS(BS.r_to_theta(1/3)), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True,
                    skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_bs_compact_false(tmp_path, save_figs):
     _save_or_check(BS(BS.r_to_theta(1/3)), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False,
                    skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_ps(tmp_path, save_figs):
     _save_or_check(PS(sp.pi / 2), tmp_path, sys._getframe().f_code.co_name, save_figs, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_pbs_compact(tmp_path, save_figs):
     _save_or_check(PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_pbs_compact_false(tmp_path, save_figs):
     _save_or_check(PBS(), tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_pr(tmp_path, save_figs):
     _save_or_check(PR(sp.pi / 4), tmp_path, sys._getframe().f_code.co_name, save_figs, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_wp(tmp_path, save_figs):
     _save_or_check(WP(sp.pi / 4, sp.pi / 4), tmp_path, sys._getframe().f_code.co_name, save_figs, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_hwp(tmp_path, save_figs):
     _save_or_check(HWP(sp.pi / 2), tmp_path, sys._getframe().f_code.co_name, save_figs, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_symb_qwp(tmp_path, save_figs):
     _save_or_check(QWP(sp.pi / 4), tmp_path, sys._getframe().f_code.co_name, save_figs, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_multi_perm(tmp_path, save_figs):
     nc = (Circuit(4)
           .add((0, 1), PERM([1, 0]))
@@ -178,25 +156,21 @@ def _create_qrng():
             )
 
 
-@pytest.mark.rendering
 def test_svg_dump_qrng(tmp_path, save_figs):
     c = _create_qrng()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=False, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_qrng_compact(tmp_path, save_figs):
     c = _create_qrng()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, compact=True, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_phys_universal1(tmp_path, save_figs):
     ub1 = Circuit(2) // BS.H() // (0, PS(Parameter("θ"))) // BS.H() // (0, PS(Parameter("φ")))
     _save_or_check(ub1, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_unitary(tmp_path, save_figs):
     m = 6
     c_a = Unitary(name="W_1", U=Matrix.random_unitary(m))
@@ -209,7 +183,6 @@ def test_svg_dump_unitary(tmp_path, save_figs):
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs)
 
 
-@pytest.mark.rendering
 def test_svg_dump_grover(tmp_path, save_figs):
     def oracle(mark):
         """Values 0, 1, 2 and 3 for parameter 'mark' respectively mark the elements "00", "01", "10" and "11" of the list."""
@@ -254,7 +227,6 @@ def test_svg_dump_grover(tmp_path, save_figs):
     _save_or_check(grover_circuit, tmp_path, sys._getframe().f_code.co_name + "-norec", save_figs, recursive=False)
 
 
-@pytest.mark.rendering
 def test_svg_bs_based_generic_no_phase_rectangle(tmp_path, save_figs):
     c = GenericInterferometer(5,
                                    fun_gen=lambda idx: BS.H() // PS(Parameter("phi_%d" % idx)),
@@ -262,7 +234,6 @@ def test_svg_bs_based_generic_no_phase_rectangle(tmp_path, save_figs):
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
     c = GenericInterferometer(5,
                               fun_gen=lambda idx: BS.H() // PS(Parameter("phi_%d" % idx)),
@@ -272,7 +243,6 @@ def test_svg_bs_based_generic_with_phase_rectangle(tmp_path, save_figs):
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
     c = GenericInterferometer(5,
                               fun_gen=lambda idx: BS.H() // PS(Parameter("phi_%d" % idx)),
@@ -281,14 +251,12 @@ def test_svg_mzi_based_generic_triangle(tmp_path, save_figs):
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_decomposition_symb_compact(tmp_path, save_figs):
     c1 = Circuit.decomposition(PERM([3, 1, 0, 2]).compute_unitary(), BS(theta=Parameter("theta")))
     _save_or_check(c1, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, compact=True,
                    skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
     p = catalog['klm cnot'].build_processor()
     c = Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
@@ -298,7 +266,6 @@ def test_svg_processor_with_heralds_phys(tmp_path, save_figs):
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_phys_not_recursive(tmp_path, save_figs):
     p = catalog['klm cnot'].build_processor()
     c = Circuit(2, "Test circuit") // BS() // PS(0.3) // BS()
@@ -308,7 +275,6 @@ def test_svg_processor_with_heralds_phys_not_recursive(tmp_path, save_figs):
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_margin_overflow_left_phys(tmp_path, save_figs):
     c = Circuit(3) // BS() // (1, BS())
     pc = Processor('SLOS', c)
@@ -316,7 +282,6 @@ def test_svg_processor_with_heralds_margin_overflow_left_phys(tmp_path, save_fig
     _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_margin_overflow_right_phys(tmp_path, save_figs):
     c = Circuit(4) // (1, BS()) //  BS()
     pc = Processor('SLOS', c)
@@ -325,7 +290,6 @@ def test_svg_processor_with_heralds_margin_overflow_right_phys(tmp_path, save_fi
     _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_margin_overflow_left_right_phys(tmp_path, save_figs):
     c = Circuit(2) // BS()
     pc = Processor('SLOS', c)
@@ -333,7 +297,6 @@ def test_svg_processor_with_heralds_margin_overflow_left_right_phys(tmp_path, sa
     _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_perm_following_phys(tmp_path, save_figs):
     c = Circuit(4) // (1, PERM([1, 0])) // (1, BS()) // (0, PERM([1, 0])) // BS() // (1, PERM([1, 0]))
     pc = Processor('SLOS', c)
@@ -342,7 +305,6 @@ def test_svg_processor_with_heralds_perm_following_phys(tmp_path, save_figs):
     _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_processor_with_heralds_and_barriers_phys(tmp_path, save_figs):
     c = Circuit(4) // (1, PERM([1, 0])) @ (1, BS()) // (0, PERM([1, 0])) // BS() @ (1, PERM([1, 0]))
     pc = Processor('SLOS', c)
@@ -354,19 +316,16 @@ def test_svg_processor_with_heralds_and_barriers_phys(tmp_path, save_figs):
     _save_or_check(pc, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_dump_barrier_phys(tmp_path, save_figs):
     c = Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
 
-@pytest.mark.rendering
 def test_svg_dump_barrier_symb(tmp_path, save_figs):
     c = Circuit(4) // BS() @ (2, BS()) // (1, BS()) @ BS()
     _save_or_check(c, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 @pytest.mark.parametrize("merge_pre_MZI", [False, True])
 @pytest.mark.parametrize("merge_upper_MZI", [False, True])
 @pytest.mark.parametrize("merge_lower_MZI", [False, True])
@@ -426,18 +385,15 @@ def create_processor_with_feed_forward():
     return p
 
 
-@pytest.mark.rendering
 def test_svg_dump_feed_forward_symb(tmp_path, save_figs):
     p = create_processor_with_feed_forward()
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True, skin_type=SymbSkin)
 
 
-@pytest.mark.rendering
 def test_svg_dump_feed_forward_phys(tmp_path, save_figs):
     p = create_processor_with_feed_forward()
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=True)
 
-@pytest.mark.rendering
 def test_svg_dump_feed_forward_phys_norec(tmp_path, save_figs):
     p = create_processor_with_feed_forward()
     _save_or_check(p, tmp_path, sys._getframe().f_code.co_name, save_figs, recursive=False)

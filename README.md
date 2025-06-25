@@ -46,14 +46,15 @@ We recommend installing it with `pip`:
 
 ```bash
 pip install --upgrade pip
-pip install perceval-quandela[rendering]
+pip install perceval-quandela
 ```
+
 If you are looking to use our qiskit, qutip, cqasm or myqlm bridges you can specify it:
 ```bash
-pip install perceval-quandela[rendering,qiskit_bridge] #install qiskit and seaborn
-pip install perceval-quandela[rendering,qutip_bridge] #install qutip
-pip install perceval-quandela[rendering,myqlm_bridge] #install myqlm
-pip install perceval-quandela[rendering,cqasm_bridge] #install cqasm
+pip install perceval-quandela[qiskit_bridge] #install qiskit and seaborn
+pip install perceval-quandela[qutip_bridge] #install qutip
+pip install perceval-quandela[myqlm_bridge] #install myqlm
+pip install perceval-quandela[cqasm_bridge] #install cqasm
 pip install perceval-quandela[all] #install all above
 ```
 
@@ -63,7 +64,7 @@ git clone https://github.com/quandela/Perceval
 ```
 then to install Perceval:
 ```bash
-pip install .[rendering]
+pip install .
 ```
 Or for developers:
 ```bash
@@ -72,10 +73,6 @@ pip install -e .
 Or to use converters:
 ```bash
 pip install .[all]
-```
-For a lighter installation (without rendering dependencies), use:
-```bash
-pip install .
 ```
 
 # Running tests and benchmarks

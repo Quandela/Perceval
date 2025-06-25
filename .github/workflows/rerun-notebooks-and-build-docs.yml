@@ -44,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install .[rendering]
+        python -m pip install .
         python -m pip install -r tests/requirements.txt
 
     - name: Lint with flake8
