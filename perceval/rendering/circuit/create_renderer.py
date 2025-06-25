@@ -55,10 +55,10 @@ class RendererFactory:
     if drawsvg_spec:
         from ..canvas.svg_canvas import SvgCanvas
         _CANVAS[Format.HTML] = SvgCanvas
-    if drawsvg_spec:
+    if latexcodec_spec:
         from ..canvas.latex_canvas import LatexCanvas
         _CANVAS[Format.LATEX] = LatexCanvas
-    if drawsvg_spec:
+    if matplotlib_spec:
         from ..canvas.mplot_canvas import MplotCanvas
         from ..mplotlib_renderers.density_matrix_renderer import DensityMatrixRenderer
         from ..mplotlib_renderers.graph_renderer import GraphRenderer
@@ -68,6 +68,7 @@ class RendererFactory:
         _GRAPH = GraphRenderer
         _DENSITY_MATRIX = DensityMatrixRenderer
 
+    @staticmethod
     def get_circuit_renderer(
         m: int,  # number of modes
         output_format: Format = Format.TEXT,  # rendering method
@@ -88,13 +89,14 @@ class RendererFactory:
         assert skin is not None, "A skin must be selected for circuit rendering"
         canvaType = RendererFactory._CANVAS[output_format]
         if not canvaType:
-            get_logger().warn("""Missing dependencies to use {}, defaulting to {}
-                              Use `pip install perceval-quandela[rendering]` to install needed packages""".format(output_format, Format.TEXT))
+            get_logger().warn(f"""Missing dependencies to use {output_format}, defaulting to {Format.TEXT}
+                              Use `pip install perceval-quandela[rendering]` to install needed packages""")
             return TextRenderer(m), None
 
         canvas = canvaType(**opts)
         return CanvasRenderer(m, canvas, skin), PreRenderer(m, skin)
 
+    @staticmethod
     def get_tomography_renderer(
         output_format: Format = Format.MPLOT,  # rendering method
         **opts):
@@ -103,9 +105,10 @@ class RendererFactory:
         if RendererFactory._TOMOGRAPHY:
             return RendererFactory._TOMOGRAPHY(**opts)
 
-        raise Exception("""Missing dependencies to use {}, defaulting to {}
-                            Use `pip install perceval-quandela[rendering]` to install needed packages""".format(output_format, Format.TEXT))
+        raise Exception(f"""Missing dependencies to use {output_format}, defaulting to {Format.TEXT}
+                            Use `pip install perceval-quandela[rendering]` to install needed packages""")
 
+    @staticmethod
     def get_graph_renderer(
         output_format: Format = Format.MPLOT,  # rendering method
         **opts):
@@ -121,6 +124,7 @@ class RendererFactory:
                 return nx.to_latex(g)
         return GraphLatexRenderer
 
+    @staticmethod
     def get_density_matrix_renderer(
         output_format: Format = Format.MPLOT,  # rendering method
         **opts):

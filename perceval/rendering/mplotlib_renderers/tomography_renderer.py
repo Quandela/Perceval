@@ -49,7 +49,7 @@ def _generate_pauli_captions(nqubit: int):
     return basis
 
 class TomographyRenderer:
-    def render(qpt: AProcessTomography, precision: float = 1E-6,
+    def render(self, qpt: AProcessTomography, precision: float = 1E-6,
                                 render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
 
         chi_op = qpt.chi_matrix()

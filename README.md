@@ -73,7 +73,7 @@ Or to use converters:
 ```bash
 pip install .[all]
 ```
-For the workers, install Perceval without rendering dependencies:
+For a lighter installation (without rendering dependencies), use:
 ```bash
 pip install .
 ```

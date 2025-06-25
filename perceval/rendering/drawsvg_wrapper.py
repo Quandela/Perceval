@@ -30,6 +30,8 @@
 
 from typing import Any
 
-class Drawing:
-    def __init(self, res: Any):
+class DrawsvgWrapper:
+    """This class is designed to contain single a drawsvg object
+    It allows to check if a result will be a drawsvg object without knwowing its type"""
+    def __init__(self, res: Any):
         self.value = res

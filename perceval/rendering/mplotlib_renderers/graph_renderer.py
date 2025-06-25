@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 class GraphRenderer:
-    def render(g: nx.Graph):
+    def render(self, g: nx.Graph):
         pos = nx.spring_layout(g, seed=42)
         nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
         nx.draw_networkx_edges(g, pos)

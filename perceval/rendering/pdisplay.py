@@ -39,7 +39,7 @@ from tabulate import tabulate
 from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator, Experiment,
                                  non_unitary_components as nl)
-from .drawing import Drawing
+from .drawsvg_wrapper import DrawsvgWrapper
 from .circuit.create_renderer import RendererFactory
 from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
@@ -433,7 +433,7 @@ def _default_output_format(o):
     return Format.TEXT
 
 
-def pdisplay(o, output_format: Format = None, **opts):
+def pdisplay(o, output_format: Format = None, **opts): # BFA
     """ Pretty display
     Main rendering entry point. Several data types can be displayed using pdisplay.
 
@@ -468,8 +468,8 @@ def pdisplay(o, output_format: Format = None, **opts):
     if res is None:
         return
 
-    if isinstance(res, Drawing):
-        return res.res
+    if isinstance(res, DrawsvgWrapper):
+        return res.value
     elif in_notebook and output_format == Format.LATEX:
         display(Math(res))
     elif in_notebook and output_format == Format.HTML:
