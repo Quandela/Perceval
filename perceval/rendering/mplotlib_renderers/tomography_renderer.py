@@ -49,13 +49,17 @@ def _generate_pauli_captions(nqubit: int):
     return basis
 
 class TomographyRenderer:
-    def render(self, qpt: AProcessTomography, precision: float = 1E-6,
-                                render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
+    def __init__(self, render_size, mplot_noshow: bool, mplot_savefig: str):
+        self.render_size = render_size
+        self.mplot_noshow = mplot_noshow
+        self.mplot_savefig = mplot_savefig
+
+    def render(self, qpt: AProcessTomography, precision: float):
 
         chi_op = qpt.chi_matrix()
 
-        if render_size is not None and isinstance(render_size, tuple) and len(render_size) == 2:
-            fig = plt.figure(figsize=render_size)
+        if self.render_size is not None and isinstance(self.render_size, tuple) and len(self.render_size) == 2:
+            fig = plt.figure(figsize=self.render_size)
         else:
             fig = plt.figure()
         pauli_captions = _generate_pauli_captions(qpt._nqubit)
@@ -73,10 +77,10 @@ class TomographyRenderer:
         imag_chi = numpy.round(chi_op.imag, significant_digit)
         _get_sub_figure(ax, imag_chi, pauli_captions)
 
-        if not mplot_noshow:
+        if not self.mplot_noshow:
             plt.show()
-        if mplot_savefig:
-            fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
+        if self.mplot_savefig:
+            fig.savefig(self.mplot_savefig, bbox_inches="tight", format="svg")
             return ""
 
         return None

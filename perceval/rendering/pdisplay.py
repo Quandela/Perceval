@@ -304,8 +304,8 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
 
 def pdisplay_tomography_chi(qpt: AProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
                             render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
-    renderer = RendererFactory.get_tomography_renderer(output_format)
-    return renderer.render(qpt, precision, render_size, mplot_noshow, mplot_savefig)
+    renderer = RendererFactory.get_tomography_renderer(output_format, render_size=render_size, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
+    return renderer.render(qpt, precision=precision)
 
 
 def pdisplay_density_matrix(dm,
@@ -322,8 +322,8 @@ def pdisplay_density_matrix(dm,
     :param cmap: the cmap to use fpr the phase indication
     """
 
-    renderer = RendererFactory.get_density_matrix_renderer(output_format)
-    return renderer.render(dm, color, cmap, mplot_noshow, mplot_savefig)
+    renderer = RendererFactory.get_density_matrix_renderer(output_format, color=color, cmap=cmap, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
+    return renderer.render(dm)
 
 
 def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
@@ -433,7 +433,7 @@ def _default_output_format(o):
     return Format.TEXT
 
 
-def pdisplay(o, output_format: Format = None, **opts): # BFA
+def pdisplay(o, output_format: Format = None, **opts):
     """ Pretty display
     Main rendering entry point. Several data types can be displayed using pdisplay.
 

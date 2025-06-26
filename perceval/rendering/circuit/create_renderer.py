@@ -71,8 +71,8 @@ class RendererFactory:
     @staticmethod
     def get_circuit_renderer(
         m: int,  # number of modes
-        output_format: Format = Format.TEXT,  # rendering method
-        skin: ASkin = None,  # skin (unused in text rendering)
+        output_format: Format,  # rendering method
+        skin: ASkin,  # skin
         **opts
     ) -> tuple[ICircuitRenderer, ICircuitRenderer | None]:
         """
@@ -98,7 +98,7 @@ class RendererFactory:
 
     @staticmethod
     def get_tomography_renderer(
-        output_format: Format = Format.MPLOT,  # rendering method
+        output_format: Format,  # rendering method
         **opts):
         if output_format == Format.TEXT or output_format == Format.LATEX:
             raise TypeError(f"Tomography plot does not support {output_format}")
@@ -110,14 +110,14 @@ class RendererFactory:
 
     @staticmethod
     def get_graph_renderer(
-        output_format: Format = Format.MPLOT,  # rendering method
+        output_format: Format,  # rendering method
         **opts):
 
         if output_format not in {Format.MPLOT, Format.LATEX}:
             raise TypeError(f"Graph plot does not support {output_format}")
 
         if output_format == Format.MPLOT:
-            return RendererFactory._TOMOGRAPHY(**opts)
+            return RendererFactory._GRAPH(**opts)
 
         class GraphLatexRenderer:
             def render(g: nx.Graph):
@@ -126,7 +126,7 @@ class RendererFactory:
 
     @staticmethod
     def get_density_matrix_renderer(
-        output_format: Format = Format.MPLOT,  # rendering method
+        output_format: Format,  # rendering method
         **opts):
         if output_format == Format.TEXT or output_format == Format.LATEX:
             raise TypeError(f"DensityMatrix plot does not support {output_format}")
