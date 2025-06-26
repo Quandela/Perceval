@@ -112,6 +112,9 @@ class RemoteConfig:
 
     @staticmethod
     def get_cloud_maximal_job_count() -> int:
+        if not RemoteConfig._cloud_maximal_job_count:
+            get_logger().warn("""cloud_maximal_job_count is not set.
+            Please use RemoteConfig.set_cloud_maximal_job_count([see user pricing plan])""", channel.user)
         return RemoteConfig._cloud_maximal_job_count
 
     @staticmethod

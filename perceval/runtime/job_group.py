@@ -351,30 +351,25 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, await_responses: bool, nb_parallel: int | None, rerun: bool, delay: float = None, replace_failed_jobs: bool = False) -> None:
+    def _launch_jobs(self, concurrent_job_count: int | None, rerun: bool, delay: float = None, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
-        :await_responses: whether it should wait for job results (sync mode) or not (async mode)
-        :nb_parallel: maximum number of concurrent jobs
+        :concurrent_job_count: maximum number of concurrent jobs
         :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of two consecutive jobs on cloud
         :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
         jobs_to_run = self.list_unsuccessful_jobs() if rerun else self.list_unsent_jobs()
-        if not await_responses:
-            jobs_to_run = jobs_to_run[:nb_parallel]
         awaited_jobs = set()
         count_success = 0
         count_fail = 0
 
-        progress_bar = None
-        if await_responses:
-            bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
-            progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
+        bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
+        progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
-        maximal_concurent_jobs = nb_parallel or len(jobs_to_run)
-        peek_delay = 1.0 if await_responses else 0.0
+        maximal_concurent_jobs = concurrent_job_count or len(jobs_to_run)
+        peek_delay = 10.0
 
         while jobs_to_run or awaited_jobs:
             while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
@@ -391,8 +386,7 @@ class JobGroup:
                 else:
                     job.execute_async()
 
-                if await_responses:
-                    awaited_jobs.add(job)
+                awaited_jobs.add(job)
                 self._write_to_file()   # save data after each job (rerun/execution) at launch
 
             time.sleep(peek_delay)
@@ -408,13 +402,11 @@ class JobGroup:
 
                     self._write_to_file()  # save data after a status update for a job
 
-                    if progress_bar:
-                        progress_bar.update(1)
-                        progress_bar.set_description_str(f"Successful: {count_success}, Failed: {count_fail}")
+                    progress_bar.update(1)
+                    progress_bar.set_description_str(f"Successful: {count_success}, Failed: {count_fail}")
             awaited_jobs.difference_update(just_finished_jobs)
 
-        if progress_bar:
-            progress_bar.close()
+        progress_bar.close()
 
     def run_sequential(self, delay: float) -> None:
         """
@@ -423,9 +415,8 @@ class JobGroup:
 
         :param delay: number of seconds to wait between launching jobs on cloud
         """
-        self._launch_jobs(await_responses = True,
-                          rerun=False,
-                          nb_parallel = RemoteConfig.get_cloud_maximal_job_count() or 1,
+        self._launch_jobs(rerun=False,
+                          concurrent_job_count = 1,
                           delay=delay)
 
     def rerun_failed_sequential(self, delay: int, replace_failed_jobs=True) -> None:
@@ -437,9 +428,8 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
         """
-        self._launch_jobs(await_responses = True,
-                          rerun=True,
-                          nb_parallel = RemoteConfig.get_cloud_maximal_job_count() or 1,
+        self._launch_jobs(rerun=True,
+                          concurrent_job_count = 1,
                           delay=delay,
                           replace_failed_jobs=replace_failed_jobs)
 
@@ -453,8 +443,7 @@ class JobGroup:
         RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
         Any remaining jobs in the group will not be sent.
         """
-        self._launch_jobs(await_responses = False,
-                          nb_parallel = RemoteConfig.get_cloud_maximal_job_count(),
+        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
                           rerun=False)
 
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
@@ -469,8 +458,7 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
         """
-        self._launch_jobs(await_responses = False,
-                          nb_parallel = RemoteConfig.get_cloud_maximal_job_count(),
+        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
                           rerun=True,
                           replace_failed_jobs=replace_failed_jobs)
 
