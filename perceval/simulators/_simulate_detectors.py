@@ -158,10 +158,9 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
         return sample
 
     if detection == DetectionType.Threshold:
-        for m, v in heralds.items():
-            if sample[m] < v:
-                return None
-        return sample.threshold_detection()
+        if heralds_compatible_threshold(sample, heralds):
+            return sample.threshold_detection()
+        return None
 
     out_state = BasicState()
     for m, (photons_in_mode, detector) in enumerate(zip(sample, detectors)):
