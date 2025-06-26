@@ -1,7 +1,6 @@
 contourpy
 cycler
 drawsvg
-exqalibur
 fonttools
 kiwisolver
 latexcodec
