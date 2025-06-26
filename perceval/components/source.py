@@ -185,7 +185,7 @@ class Source:
     def __eq__(self, value: Source) -> bool:
         return self._source == value._source and self.simplify_distribution == value.simplify_distribution
 
-    def __dict__(self) -> dict:
+    def to_dict(self) -> dict:
         return {'g2': self.multiphoton_component,
                 'transmittance': 1 - self.losses,
                 'brightness': self.emission_probability,
