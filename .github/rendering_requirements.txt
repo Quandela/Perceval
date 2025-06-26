@@ -6,7 +6,6 @@ fonttools
 kiwisolver
 latexcodec
 matplotlib
-packaging
 pillow
 pyparsing
 python-dateutil
