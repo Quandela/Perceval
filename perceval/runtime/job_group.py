@@ -351,7 +351,7 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, concurrent_job_count: int | None, rerun: bool, delay: float = None, replace_failed_jobs: bool = False) -> None:
+    def _launch_jobs(self, concurrent_job_count: int | None, rerun: bool, delay: float | None = None, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
