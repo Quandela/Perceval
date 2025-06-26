@@ -174,14 +174,12 @@ def test_classic_run(mock_write_file):
 
     # Running jobs
     jg.run_parallel()
-    expected_write_call_count += rj_nmb
+    expected_write_call_count += 2 * rj_nmb
 
-    assert len(responses.calls) == rj_nmb
-    assert all([CloudEndpoint.from_response(call.response) == CloudEndpoint.CreateJob for call in responses.calls])
+    assert len(responses.calls) == 2 * rj_nmb
     assert mock_write_file.call_count == expected_write_call_count
 
     group_progress = jg.progress()
-    expected_write_call_count += rj_nmb
 
     assert len(responses.calls) == rj_nmb * 2
     assert all([CloudEndpoint.from_response(call.response) ==
@@ -263,7 +261,7 @@ def test_save_on_error(mock_write_file):
 def test_run_advance(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rpc_handler_responses_builder.set_job_status_sequence(
-        [RunningStatus.SUCCESS, RunningStatus.WAITING, RunningStatus.ERROR])
+        [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.ERROR])
 
     jg = JobGroup(TEST_JG_NAME)
 
@@ -278,21 +276,21 @@ def test_run_advance(mock_write_file):
     rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
 
     assert jg.progress() == {'Total': 4,
-                             'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
-                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+                             'Finished': [3, {'successful': 1, 'unsuccessful': 2}],
+                             'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
 
     jg.run_parallel()
 
     assert jg.progress() == {'Total': 4,
-                             'Finished': [3, {'successful': 2, 'unsuccessful': 1}],
-                             'Unfinished': [1, {'sent': 1, 'not sent': 0}]}
+                             'Finished': [4, {'successful': 2, 'unsuccessful': 2}],
+                             'Unfinished': [0, {'sent': 0, 'not sent': 0}]}
 
 
 @patch.object(JobGroup._PERSISTENT_DATA, 'write_file')
 def test_rerun(mock_write_file):
     rpc_handler_responses_builder = RPCHandlerResponsesBuilder(RPC_HANDLER)
     rpc_handler_responses_builder.set_job_status_sequence(
-        [RunningStatus.SUCCESS, RunningStatus.WAITING, RunningStatus.ERROR])
+        [RunningStatus.SUCCESS, RunningStatus.ERROR, RunningStatus.ERROR])
 
     jg = JobGroup(TEST_JG_NAME)
 
@@ -307,17 +305,17 @@ def test_rerun(mock_write_file):
     rpc_handler_responses_builder.set_default_job_status(RunningStatus.SUCCESS)
 
     assert jg.progress() == {'Total': 4,
-                             'Finished': [2, {'successful': 1, 'unsuccessful': 1}],
-                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+                             'Finished': [3, {'successful': 1, 'unsuccessful': 2}],
+                             'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
 
     jg.rerun_failed_parallel(replace_failed_jobs=False)
 
-    assert jg.progress() == {'Total': 5,
-                             'Finished': [3, {'successful': 2, 'unsuccessful': 1}],
-                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+    assert jg.progress() == {'Total': 6,
+                             'Finished': [5, {'successful': 3, 'unsuccessful': 2}],
+                             'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
 
     jg.rerun_failed_parallel(replace_failed_jobs=True)
 
-    assert jg.progress() == {'Total': 5,
-                             'Finished': [3, {'successful': 3, 'unsuccessful': 0}],
-                             'Unfinished': [2, {'sent': 1, 'not sent': 1}]}
+    assert jg.progress() == {'Total': 6,
+                             'Finished': [5, {'successful': 5, 'unsuccessful': 0}],
+                             'Unfinished': [1, {'sent': 0, 'not sent': 1}]}
