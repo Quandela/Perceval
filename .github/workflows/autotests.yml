@@ -73,6 +73,42 @@ jobs:
       run: |
         pytest
 
+  perceval-lite-autotests:
+    name: Run PyTest on ${{ matrix.os }}
+    if: always()
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    steps:
+    - if: runner.os == 'Linux'
+      name: Initialize PYTHON_V_CP linux
+      run: |
+        echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+    - if: runner.os != 'Linux'
+      name: Initialize PYTHON_V_CP notLinux
+      run: |
+        echo "PYTHON_V_CP=cp$( echo '${{env.PYTHON_V}}' | sed 's/\.\([0-9]\)/\1/' )" >> $GITHUB_ENV
+      shell: Bash
+
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ env.PYTHON_V }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_V }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .
+        python -m pip install -r tests/requirements.txt
+        python -m pip pip uninstall -y -r .github/rendering_requirements.txt
+
+    - name: Test with pytest
+      run: |
+        pytest -m "not rendering"
+
   perceval-docs-test:
     name: Build docs on ubuntu
     needs:
