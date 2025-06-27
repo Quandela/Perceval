@@ -491,7 +491,9 @@ class Simulator(ISimulator):
 
         if detectors:
             prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
-            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter, p_threshold, prog_cb)
+            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter,
+                                                p_threshold, self._heralds if not self._compute_physical_logical_perf else {},
+                                                prog_cb)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
@@ -635,7 +637,7 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
-            return SVDistribution(self.evolve(svd))
+            svd = SVDistribution(svd)
 
         self.init_use_mask(True)  # No detectors when using evolve
 
