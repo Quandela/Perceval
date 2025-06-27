@@ -351,13 +351,13 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, concurrent_job_count: int | None, rerun: bool, delay: float | None = None, replace_failed_jobs: bool = False) -> None:
+    def _launch_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
         :concurrent_job_count: maximum number of concurrent jobs
-        :param rerun: if True rerun failed jobs or run unsent jobs
         :param delay: number of seconds to wait between the launch of two consecutive jobs on cloud
+        :param rerun: if True rerun failed jobs or run unsent jobs
         :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
         jobs_to_run = self.list_unsuccessful_jobs() if rerun else self.list_unsent_jobs()
@@ -369,12 +369,10 @@ class JobGroup:
         progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
 
         maximal_concurent_jobs = concurrent_job_count or len(jobs_to_run)
-        peek_delay = 10.0
 
         while jobs_to_run or awaited_jobs:
             while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
-                if delay:
-                    time.sleep(delay)
+                time.sleep(delay)
                 job = jobs_to_run.pop()
                 if job.status.failed:
                     index = self._jobs.index(job)
@@ -389,7 +387,7 @@ class JobGroup:
                 awaited_jobs.add(job)
                 self._write_to_file()   # save data after each job (rerun/execution) at launch
 
-            time.sleep(peek_delay)
+            time.sleep(STATUS_REFRESH_DELAY)
 
             just_finished_jobs = set()
             for job in awaited_jobs:
@@ -419,7 +417,7 @@ class JobGroup:
                           concurrent_job_count = 1,
                           delay=delay)
 
-    def rerun_failed_sequential(self, delay: int, replace_failed_jobs=True) -> None:
+    def rerun_failed_sequential(self, delay: float, replace_failed_jobs=True) -> None:
         """
         Reruns Failed jobs in the group on the Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
@@ -444,6 +442,7 @@ class JobGroup:
         Any remaining jobs in the group will not be sent.
         """
         self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+                          delay=0,
                           rerun=False)
 
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
@@ -459,6 +458,7 @@ class JobGroup:
         replace the previously failed job (defaults to True).
         """
         self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+                          delay=0,
                           rerun=True,
                           replace_failed_jobs=replace_failed_jobs)
 
