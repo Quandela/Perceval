@@ -39,7 +39,6 @@ class DensityMatrixRenderer:
         mplot_savefig: str = None):
         """
         :meta private:
-        :param dm:
         :param output_format:
         :param color: whether to display the phase according to some circular cmap
         :param cmap: the cmap to use fpr the phase indication
@@ -52,10 +51,7 @@ class DensityMatrixRenderer:
     def render(self, dm):
         """
         :meta private:
-        :param dm:
-        :param output_format:
-        :param color: whether to display the phase according to some circular cmap
-        :param cmap: the cmap to use fpr the phase indication
+        :param dm: density matrix to be displayed
         """
 
         fig = plt.figure()
