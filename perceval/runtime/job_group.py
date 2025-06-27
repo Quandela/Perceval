@@ -34,6 +34,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from perceval.runtime import Job, RemoteJob, RunningStatus
+from perceval.runtime.remote_config import RemoteConfig
 from perceval.runtime.rpc_handler import RPCHandler
 from perceval.utils import PersistentData, FileFormat
 from perceval.utils.logging import get_logger, channel
@@ -350,56 +351,60 @@ class JobGroup:
         """
         return [job for job in self._jobs if not job.was_sent]
 
-    def _launch_jobs(self, rerun: bool, delay: float = None, replace_failed_jobs: bool = False) -> None:
+    def _launch_jobs(self, concurrent_job_count: int | None, delay: float, rerun: bool, replace_failed_jobs: bool = False) -> None:
         """
         Launches or reruns jobs in the group on Cloud in a parallel/sequential manner.
 
-        :param rerun: if True rerun failed jobs or run unsent jobs
+        :concurrent_job_count: maximum number of concurrent jobs
         :param delay: number of seconds to wait between the launch of two consecutive jobs on cloud
+        :param rerun: if True rerun failed jobs or run unsent jobs
+        :replace_failed_jobs: replace the rerun jobs in the jobgroup, else keep the failed in addition of the rerun ones
         """
-        job_nmb = len(self.list_unsuccessful_jobs()) if rerun else len(self.list_unsent_jobs())
-
-        if delay is not None:
-            # Use tqdm to track progress if sequential
-            bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
-            prog = tqdm(total=job_nmb, bar_format=bar_format, desc="Successful: 0, Failed: 0")
-
+        jobs_to_run = self.list_unsuccessful_jobs() if rerun else self.list_unsent_jobs()
+        awaited_jobs = set()
         count_success = 0
         count_fail = 0
-        for job_idx in range(len(self._jobs)):
-            job = self._jobs[job_idx]
 
-            if rerun and job.is_failed:
-                job = job.rerun()
-                if replace_failed_jobs:
-                    self._jobs[job_idx] = job
+        bar_format = '{percentage:3.0f}%|{bar}|{n_fmt}/{total_fmt}|{desc}'
+        progress_bar = tqdm(total=len(jobs_to_run), bar_format=bar_format, desc="Successful: 0, Failed: 0")
+
+        maximal_concurent_jobs = concurrent_job_count or len(jobs_to_run)
+
+        while jobs_to_run or awaited_jobs:
+            while jobs_to_run and len(awaited_jobs) < maximal_concurent_jobs:
+                time.sleep(delay)
+                job = jobs_to_run.pop()
+                if job.status.failed:
+                    index = self._jobs.index(job)
+                    job = job.rerun()
+                    if replace_failed_jobs:
+                        self._jobs[index] = job
+                    else:
+                        self._jobs.append(job)
                 else:
-                    self._jobs.append(job)
-            elif not rerun and not job.was_sent:
-                job.execute_async()
-            else:
-                continue
+                    job.execute_async()
 
-            self._write_to_file()   # save data after each job (rerun/execution) at launch
+                awaited_jobs.add(job)
+                self._write_to_file()   # save data after each job (rerun/execution) at launch
 
-            if delay is not None:
-                while not job.status.completed:
-                    time.sleep(1)
+            time.sleep(STATUS_REFRESH_DELAY)
 
-                self._write_to_file()  # save data after a status update for a job
+            just_finished_jobs = set()
+            for job in awaited_jobs:
+                if job.status.completed:
+                    if job.status.success:
+                        count_success += 1
+                    else:
+                        count_fail += 1
+                    just_finished_jobs.add(job)
 
-                if job.status.success:
-                    count_success += 1
-                else:
-                    count_fail += 1
+                    self._write_to_file()  # save data after a status update for a job
 
-                prog.update(1)
-                prog.set_description_str(f"Successful: {count_success}, Failed: {count_fail}")
+                    progress_bar.update(1)
+                    progress_bar.set_description_str(f"Successful: {count_success}, Failed: {count_fail}")
+            awaited_jobs.difference_update(just_finished_jobs)
 
-                time.sleep(delay)  # add delay before launching next job
-
-        if delay is not None:
-            prog.close()
+        progress_bar.close()
 
     def run_sequential(self, delay: float) -> None:
         """
@@ -408,9 +413,11 @@ class JobGroup:
 
         :param delay: number of seconds to wait between launching jobs on cloud
         """
-        self._launch_jobs(rerun=False, delay=delay)
+        self._launch_jobs(rerun=False,
+                          concurrent_job_count = 1,
+                          delay=delay)
 
-    def rerun_failed_sequential(self, delay: int, replace_failed_jobs=True) -> None:
+    def rerun_failed_sequential(self, delay: float, replace_failed_jobs=True) -> None:
         """
         Reruns Failed jobs in the group on the Cloud in a sequential manner with a
         user-specified delay between the completion of one job and the start of the next.
@@ -419,29 +426,41 @@ class JobGroup:
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
         """
-        self._launch_jobs(rerun=True, delay=delay, replace_failed_jobs=replace_failed_jobs)
+        self._launch_jobs(rerun=True,
+                          concurrent_job_count = 1,
+                          delay=delay,
+                          replace_failed_jobs=replace_failed_jobs)
 
     def run_parallel(self) -> None:
         """
         Launches all the unsent jobs in the group on Cloud, running them in parallel.
+        The number of concurrent jobs is limited by RemoteConfig.get_cloud_maximal_job_count()
 
         If the user lacks authorization to send multiple jobs to the cloud or exceeds
         the maximum allowed limit, an exception is raised, terminating the launch process.
+        RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
         Any remaining jobs in the group will not be sent.
         """
-        self._launch_jobs(rerun=False)
+        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+                          delay=0,
+                          rerun=False)
 
     def rerun_failed_parallel(self, replace_failed_jobs=True) -> None:
         """
         Restart all failed jobs in the group on the Cloud, running them in parallel.
+        The number of concurrent jobs is limited by RemoteConfig.get_cloud_maximal_job_count()
 
         If the user lacks authorization to send multiple jobs at once or exceeds the maximum allowed limit, an exception
         is raised, terminating the launch process. Any remaining jobs in the group will not be sent.
+        RemoteConfig.set_cloud_maximal_job_count() should be set in accordance with the user pricing plan.
 
         :param replace_failed_jobs: Indicates whether a new job created from a rerun should
         replace the previously failed job (defaults to True).
         """
-        self._launch_jobs(rerun=True, replace_failed_jobs=replace_failed_jobs)
+        self._launch_jobs(concurrent_job_count = RemoteConfig.get_cloud_maximal_job_count(),
+                          delay=0,
+                          rerun=True,
+                          replace_failed_jobs=replace_failed_jobs)
 
     def get_results(self) -> list[dict]:
         """

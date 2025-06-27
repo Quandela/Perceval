@@ -50,6 +50,7 @@ class RemoteConfig:
     _token_env_var = TOKEN_ENV_VAR
     _proxies = None
     _token = None
+    _cloud_maximal_job_count = None
 
     def __init__(self, persistent_data: PersistentData = PersistentData()):
         self._persistent_data = persistent_data
@@ -139,6 +140,17 @@ class RemoteConfig:
     def get_token_env_var() -> str:
         """Get the name of the environment variable storing a token."""
         return RemoteConfig._token_env_var
+
+    @staticmethod
+    def set_cloud_maximal_job_count(count: int) -> None:
+        RemoteConfig._cloud_maximal_job_count = count
+
+    @staticmethod
+    def get_cloud_maximal_job_count() -> int:
+        if not RemoteConfig._cloud_maximal_job_count:
+            get_logger().warn("""cloud_maximal_job_count is not set.
+            Please use RemoteConfig.set_cloud_maximal_job_count([see user pricing plan])""", channel.user)
+        return RemoteConfig._cloud_maximal_job_count
 
     @staticmethod
     def clear_cache():
