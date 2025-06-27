@@ -35,7 +35,12 @@ from perceval.components.detector import IDetector, DetectionType, get_detection
 from perceval.utils import BSDistribution, BasicState
 
 
-def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]):
+def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]) -> bool:
+    """
+    :param s: The state to check
+    :param heralds: The heralds {mode: count} to check compatibility with
+    :return: True if the state will match the heralds after being thresholded, False otherwise.
+    """
     for m, v in heralds.items():
         if v and not s[m]:  # Note: this case should not happen if an "at least 1" condition was applied on previous step
             return False
@@ -45,6 +50,15 @@ def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]):
 
 
 def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: dict[int, int]) -> list[BSDistribution]:
+    """
+    :param s: The state to compute distributions for given the detectors.
+    :param detectors: The detectors to apply to get the distributions
+    :param heralds: The heralds that the final state needs to satisfy
+    :return: The list of computed BSDistributions that need to be merged afterwards.
+     For modes where there are heralds, either:
+      - the distribution is a non-normalized, single-state distribution (only the useful state is kept)
+      - the returned list is empty (no useful state is reachable)
+    """
     distributions = []
     for m, (photons_in_mode, detector) in enumerate(zip(s, detectors)):
         if detector is not None:
@@ -57,7 +71,7 @@ def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: di
                 state = BasicState([v])
                 p = d[state]
                 if not p:
-                    return []
+                    return []  # Note: if heralds have been correctly applied before, this case can't appear
                 d = BSDistribution({state: p})
 
             distributions.append(d)
