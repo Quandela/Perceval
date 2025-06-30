@@ -133,6 +133,29 @@ class Source:
             dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
+    def create_iterator(self, expected_input: BasicState, min_photons_filter: int = 0) -> xq.SimpleSourceIterator:
+        """
+        Creates a source iterator that can generate all already separated noisy states according
+        to the probability distribution without representing them in memory.
+
+        This is far more efficient than computing the whole distribution.
+
+        Supports a min_photons_filter to avoid generating states having not enough photons.
+
+        :code:
+        ```
+        iterator = source.create_iterator(BasicState([1, 0, 1]), 2)
+        iterator.prob_threshold = iterator.max_p * 1e-5  # Generates only states having at most 1e-5 times the biggest probability.
+        for separated_state, prob in iterator:
+            print(separated_state, prob)
+        ```
+
+        :param expected_input: Expected input BasicState
+        :param min_photons_filter: The minimum number of photons required to generate a state.
+        """
+        # TODO: chose iterator depending on the input state
+        return self._source.create_simple_iterator(expected_input, min_photons_filter)
+
     def create_sampler(self, expected_input: BasicState, min_photons_filter: int = 0) -> xq.SourceSampler:
         """
         Creates a source sampler that will be able to generate states according to the source probability distribution
