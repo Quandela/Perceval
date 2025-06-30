@@ -27,4 +27,49 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .canvas import Canvas
+
+import matplotlib.pyplot as plt
+from .._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
+
+class DensityMatrixRenderer:
+    def __init__(self,
+        color: bool = True,
+        cmap='hsv',
+        mplot_noshow: bool = False,
+        mplot_savefig: str = None):
+        """
+        :meta private:
+        :param output_format:
+        :param color: whether to display the phase according to some circular cmap
+        :param cmap: the cmap to use fpr the phase indication
+        """
+        self.color = color
+        self.cmap = cmap
+        self.mplot_noshow = mplot_noshow
+        self.mplot_savefig = mplot_savefig
+
+    def render(self, dm):
+        """
+        :meta private:
+        :param dm: density matrix to be displayed
+        """
+
+        fig = plt.figure()
+
+        if self.color:
+            img = _csr_to_rgb(dm.mat, self.cmap)
+            plt.imshow(img)
+        else:
+            img = _csr_to_greyscale(dm.mat)
+            plt.imshow(img, cmap='gray')
+
+        l1, l2 = generate_ticks(dm)
+
+        plt.yticks(l1, l2)
+        plt.xticks([])
+
+        if not self.mplot_noshow:
+            plt.show()
+        if self.mplot_savefig:
+            fig.savefig(self.mplot_savefig, bbox_inches="tight", format="svg")
+            return ""

@@ -29,19 +29,8 @@
 from __future__ import annotations
 
 import copy
-import math
-import numpy
 import os
-import warnings
 
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        action='ignore',
-        category=RuntimeWarning)
-    import drawsvg
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.axes3d import Axes3D
 from multipledispatch import dispatch
 import networkx as nx
 import sympy as sp
@@ -50,8 +39,9 @@ from tabulate import tabulate
 from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator, Experiment,
                                  non_unitary_components as nl)
-from .circuit import DisplayConfig, create_renderer, ASkin
-from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
+from .drawsvg_wrapper import DrawsvgWrapper
+from .circuit.create_renderer import RendererFactory
+from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.statevector import StateVector, BSCount, BSDistribution, SVDistribution
@@ -82,6 +72,8 @@ except (ImportError, AttributeError):
     pass
 
 
+
+
 def pdisplay_circuit(
         circuit: ACircuit,
         output_format: Format = Format.TEXT,
@@ -96,7 +88,7 @@ def pdisplay_circuit(
     skin.precision = precision
     skin.nsimplify = nsimplify
     w, h = skin.get_size(circuit, recursive)
-    renderer, _ = create_renderer(
+    renderer, _ = RendererFactory.get_circuit_renderer(
         circuit.m,
         output_format=output_format,
         skin=skin,
@@ -136,7 +128,7 @@ def pdisplay_experiment(processor: Experiment,
     skin.precision = precision
     skin.nsimplify = nsimplify
     w, h = skin.get_size(processor, recursive)
-    renderer, pre_renderer = create_renderer(
+    renderer, pre_renderer = RendererFactory.get_circuit_renderer(
         n_modes,
         output_format=output_format,
         skin=skin,
@@ -309,102 +301,11 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
     s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
-    # labels on x- and y- axes
-
-
-def _generate_pauli_captions(nqubit: int):
-    from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
-    pauli_indices = _generate_pauli_index(nqubit)
-    pauli_names = []
-    for subset in pauli_indices:
-        pauli_names.append([member.name for member in subset])
-
-    basis = []
-    for val in pauli_names:
-        basis.append(''.join(val))
-    return basis
-
-
-def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
-    # Data
-    size = array.shape[0]
-    x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
-    y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
-    z = numpy.zeros(size * size)  # z coordinates of each bar
-    dxy = numpy.ones(size * size) * 0.5  # Width/Lenght of each bar
-    dz = array.ravel()  # length along z-axis of each bar (height)
-
-    # Colors
-    # get range of colorbars so we can normalize
-    max_height = numpy.max(dz)
-    min_height = numpy.min(dz)
-    color_map = plt.get_cmap('viridis_r')
-    if max_height != min_height:
-        has_only_one_value = False
-        # scale each z to [0,1], and get their rgb values
-        rgba = [color_map((k - min_height) / max_height) for k in dz]
-    else:
-        has_only_one_value = True
-        rgba = [color_map(0)]
-
-
-    # Caption
-    font_size = 6
-
-    # XY
-    ax.set_xticks(numpy.arange(size) + 1)
-    ax.set_yticks(numpy.arange(size) + 1)
-    ax.tick_params(axis='x', which='major', labelsize=font_size)
-    ax.set_xticklabels(basis_name)
-    ax.tick_params(axis='y', which='major', labelsize=font_size)
-    ax.set_yticklabels(basis_name)
-
-    # Z
-    if not has_only_one_value:
-        ax.set_zlim(zmin=dz.min(), zmax=dz.max())
-    ax.tick_params('z', which='both', labelsize=font_size)
-    ax.grid(True, axis='z', which='major', linewidth=2)
-    # interval = [v for v in ax.get_zticks() if v > 0][0]
-    # ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
-
-    # Plot
-    ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
-    ax.view_init(elev=30, azim=45)
-
 
 def pdisplay_tomography_chi(qpt: AProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
                             render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
-    if output_format == Format.TEXT or output_format == Format.LATEX:
-        raise TypeError(f"Tomography plot does not support {output_format}")
-
-    chi_op = qpt.chi_matrix()
-
-    if render_size is not None and isinstance(render_size, tuple) and len(render_size) == 2:
-        fig = plt.figure(figsize=render_size)
-    else:
-        fig = plt.figure()
-    pauli_captions = _generate_pauli_captions(qpt._nqubit)
-    significant_digit = int(math.log10(1 / precision))
-
-    # Real plot
-    ax = fig.add_subplot(121, projection='3d')
-    ax.set_title("Re[$\\chi$]")
-    real_chi = numpy.round(chi_op.real, significant_digit)
-    _get_sub_figure(ax, real_chi, pauli_captions)
-
-    # Imag plot
-    ax = fig.add_subplot(122, projection='3d')
-    ax.set_title("Im[$\\chi$]")
-    imag_chi = numpy.round(chi_op.imag, significant_digit)
-    _get_sub_figure(ax, imag_chi, pauli_captions)
-
-    if not mplot_noshow:
-        plt.show()
-    if mplot_savefig:
-        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
-        return ""
-
-    return None
+    renderer = RendererFactory.get_tomography_renderer(output_format, render_size=render_size, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
+    return renderer.render(qpt, precision=precision)
 
 
 def pdisplay_density_matrix(dm,
@@ -421,43 +322,13 @@ def pdisplay_density_matrix(dm,
     :param cmap: the cmap to use fpr the phase indication
     """
 
-    if output_format == Format.TEXT or output_format == Format.LATEX:
-        raise TypeError(f"DensityMatrix plot does not support {output_format}")
-    fig = plt.figure()
-
-    if color:
-        img = _csr_to_rgb(dm.mat, cmap)
-        plt.imshow(img)
-    else:
-        img = _csr_to_greyscale(dm.mat)
-        plt.imshow(img, cmap='gray')
-
-    l1, l2 = generate_ticks(dm)
-
-    plt.yticks(l1, l2)
-    plt.xticks([])
-
-    if not mplot_noshow:
-        plt.show()
-    if mplot_savefig:
-        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
-        return ""
+    renderer = RendererFactory.get_density_matrix_renderer(output_format, color=color, cmap=cmap, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
+    return renderer.render(dm)
 
 
 def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
-    if output_format not in {Format.MPLOT, Format.LATEX}:
-        raise TypeError(f"Graph plot does not support {output_format}")
-    if output_format == Format.LATEX:
-        return nx.to_latex(g)
-
-
-    pos = nx.spring_layout(g, seed=42)
-    nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
-    nx.draw_networkx_edges(g, pos)
-    nx.draw_networkx_labels(g, pos, font_size=10, font_color='white', font_family="sans-serif")
-    edge_labels = nx.get_edge_attributes(g, "weight")
-    nx.draw_networkx_edge_labels(g, pos, edge_labels)
-    plt.show()
+    renderer = RendererFactory.get_graph_renderer(output_format)
+    return renderer.render(g)
 
 
 def pdisplay_job_group(jg: JobGroup,  output_format: Format = Format.TEXT):
@@ -600,8 +471,8 @@ def pdisplay(o, output_format: Format = None, **opts):
     if res is None:
         return
 
-    if isinstance(res, drawsvg.Drawing):
-        return res
+    if isinstance(res, DrawsvgWrapper):
+        return res.value
     elif in_notebook and output_format == Format.LATEX:
         display(Math(res))
     elif in_notebook and output_format == Format.HTML:
