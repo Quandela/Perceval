@@ -265,12 +265,19 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
 
 
 def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | BSCount,
-                           output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
+                           output_format: Format = Format.TEXT,
+                           nsimplify: bool | None = None,
+                           precision: float = 1e-6,
+                           max_v: int | None = None,
+                           sort: bool = True):
     """
     :meta private:
     Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
     StateVector's case)
     """
+    if nsimplify is None:
+        # no numerical simplification by default if the number of displayed values is larger than 100
+        nsimplify = False if max_v is not None and max_v > 100 else True
     if sort:
         the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
