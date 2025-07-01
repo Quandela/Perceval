@@ -277,7 +277,7 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
     """
     if nsimplify is None:
         # no numerical simplification by default if the number of displayed values is larger than 100
-        nsimplify = False if max_v is not None and max_v > 100 else True
+        nsimplify = False if (min(max_v or len(sv), len(sv)) > 100) else True
     if sort:
         the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
