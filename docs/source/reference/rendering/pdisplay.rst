@@ -249,7 +249,7 @@ The possible kwargs when displaying a :code:`StateVector`, :code:`BSCount`, :cod
 
 - :code:`output_format`. The format to use for the output, from the :code:`Perceval.Format` enum.
   The available formats are TEXT (default), LATEX and HTML.
-- :code:`nsimplify`. If :code:`True` (default), some values will be displayed with known mathematical values (pi, sqrt, fractions) if close enough
+- :code:`nsimplify`. If :code:`True` (default), some values will be displayed with known mathematical values (pi, sqrt, fractions) if close enough. However, if the distribution to be displayed is too large and if this parameter is not manually set to :code:`True`, this numerical simplification will be unactivated.
 - :code:`precision`. The numerical precision to display numbers.
 - :code:`max_v`. The number of values to display.
 - :code:`sort`. If :code:`True` (default), values will be sorted before being displayed.
