@@ -522,6 +522,11 @@ class Experiment:
 
         sorted_modes = tuple(range(min(mode_mapping), min(mode_mapping) + component.m))
         self._components.append((sorted_modes, component))
+        if perm_component is not None:
+            perm_inv = perm_component.copy()
+            perm_inv.inverse(h=True)
+            self._components.append((perm_modes, perm_inv))
+
         self._is_unitary = self._is_unitary and isinstance(component, ACircuit)
         self._has_td = self._has_td or isinstance(component, TD)
 

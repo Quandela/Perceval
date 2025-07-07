@@ -10,6 +10,14 @@ This section lists the major breaking changes introduced.
 Breaking changes in Perceval 1.0
 ---------------------------------
 
+Processor add with Component or Circuit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When adding a Circuit or a Component to a Processor on non-consecutive modes,
+a permutation was added so that we could add the component to the Processor.
+The inverse permutation is now also added after the component so that the in-between modes are not impacted by the addition,
+similarly to what was already done when adding a Processor to a Processor.
+
 BSDistribution and SVDistribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
