@@ -254,6 +254,40 @@ The possible kwargs when displaying a :code:`StateVector`, :code:`BSCount`, :cod
 - :code:`max_v`. The number of values to display.
 - :code:`sort`. If :code:`True` (default), values will be sorted before being displayed.
 
+Displaying samples
+^^^^^^^^^^^^^^^^^^
+
+:code:`BSSamples` can be displayed in a table format using :code:`pdisplay`.
+
+>>> bs_samples = pcvl.BSSamples()
+>>> bs_samples.append(perceval.BasicState("|1,0>"))
+>>> bs_samples.append(perceval.BasicState("|1,1>"))
+>>> bs_samples.append(perceval.BasicState("|0,1>"))
+>>> pcvl.pdisplay(bs_samples)
++--------+
+| states |
++--------+
+| |1,0>  |
+| |1,1>  |
+| |0,1>  |
++--------+
+
+The number of displayed states can be limited with the parameter :code:`max_v`.
+
+>>> pcvl.pdisplay(bs_samples, max_v=2)  # keep only the 2 first values
++--------+
+| states |
++--------+
+| |1,0>  |
+| |1,1>  |
++--------+
+
+The possible kwargs when displaying a :code:`BSSamples` are
+
+- :code:`output_format`. The format to use for the output, from the :code:`Perceval.Format` enum.
+  The available formats are TEXT (default), LATEX and HTML.
+- :code:`max_v`. The number of values to display. :code:`max_v` is 10 by default.
+
 Displaying algorithms
 ^^^^^^^^^^^^^^^^^^^^^
 

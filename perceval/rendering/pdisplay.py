@@ -31,6 +31,7 @@ from __future__ import annotations
 import copy
 import os
 
+from exqalibur import BSSamples
 from multipledispatch import dispatch
 import networkx as nx
 import sympy as sp
@@ -302,6 +303,16 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
     return s_states
 
 
+def pdisplay_bs_samples(bs_samples: BSSamples, output_format: Format = Format.TEXT, max_v: int | None = 10):
+    if max_v is not None:
+        bs_samples = bs_samples[:max_v]
+    d = []
+    for sample in bs_samples:
+        d.append([str(sample)])
+    s_states = tabulate(d, headers=["states"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
+    return s_states
+
+
 def pdisplay_tomography_chi(qpt: AProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
                             render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
     renderer = RendererFactory.get_tomography_renderer(output_format, render_size=render_size, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
@@ -396,6 +407,11 @@ def _pdisplay(distrib, **kwargs):
 @dispatch(BSCount)
 def _pdisplay(bsc, **kwargs):
     return pdisplay_state_distrib(bsc, **kwargs)
+
+
+@dispatch(BSSamples)
+def _pdisplay(bssamples, **kwargs):
+    return pdisplay_bs_samples(bssamples, **kwargs)
 
 
 def _get_simple_number_kwargs(**kwargs):
