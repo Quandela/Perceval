@@ -113,6 +113,7 @@ def test_lc_perf():
 
     p.add_herald(1, 1)
     p.min_detected_photons_filter(1)
+    p.compute_physical_logical_perf(True)
 
     p.with_input(BasicState([1]))
 

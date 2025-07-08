@@ -27,4 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .canvas import Canvas
+
+import matplotlib.pyplot as plt
+import networkx as nx
+
+class GraphRenderer:
+    def __init__(self):
+        pass
+
+    def render(self, g: nx.Graph):
+        pos = nx.spring_layout(g, seed=42)
+        nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
+        nx.draw_networkx_edges(g, pos)
+        nx.draw_networkx_labels(g, pos, font_size=10, font_color='white', font_family="sans-serif")
+        edge_labels = nx.get_edge_attributes(g, "weight")
+        nx.draw_networkx_edge_labels(g, pos, edge_labels)
+        plt.show()

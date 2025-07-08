@@ -113,7 +113,7 @@ def test_processor_probs():
     probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0
-    assert pytest.approx(probs['physical_perf']) == 0
+    assert pytest.approx(probs['global_perf']) == 0
 
     detectors = qpu.detectors
     for i in range(len(detectors)):
@@ -124,7 +124,7 @@ def test_processor_probs():
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[BasicState("|2,0>")]) == 0.5
     assert pytest.approx(bsd_out[BasicState("|0,2>")]) == 0.5
-    assert pytest.approx(probs['physical_perf']) == 1
+    assert pytest.approx(probs['global_perf']) == 1
 
 
 def test_processor_samples():
@@ -321,6 +321,14 @@ def test_mask_detectors():
     res = p.probs()
 
     assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["global_perf"] == pytest.approx(.5)
+
+    p.compute_physical_logical_perf(True)
+
+    res = p.probs()
+
+    assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["physical_perf"] == pytest.approx(1)
     assert res["logical_perf"] == pytest.approx(.5)
 
 
@@ -333,12 +341,12 @@ def test_min_photons_reset():
 
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(1)
-    assert res["physical_perf"] == pytest.approx(.25)
+    assert res["global_perf"] == pytest.approx(.25)
 
     p.min_detected_photons_filter(0)
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(.25)
-    assert res["physical_perf"] == pytest.approx(1)
+    assert res["global_perf"] == pytest.approx(1)
 
 
 def test_flatten_processor():
@@ -402,4 +410,4 @@ def test_asymmetric_processor():
 
     res = p.probs()
     assert res["results"][BasicState([0])] == pytest.approx(1)
-    assert res["logical_perf"] == pytest.approx(.5)
+    assert res["global_perf"] == pytest.approx(.5)

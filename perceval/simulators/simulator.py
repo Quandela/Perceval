@@ -464,7 +464,7 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         if not check_heralds_detectors(self._heralds, detectors):
-            return {'results': BSDistribution(), 'physical_perf': 1, 'logical_perf': 0}
+            return self.format_results(BSDistribution(), 1, 0)
 
         svd, p_threshold, has_superposed_states, has_annotations, physical_perf = self._preprocess_svd(input_dist)
 
@@ -487,20 +487,20 @@ class Simulator(ISimulator):
             self._logical_perf /= physical_perf
 
         if not len(res):
-            return {'results': res, 'physical_perf': physical_perf, 'logical_perf': 0}
+            return self.format_results(res, physical_perf, 0)
 
         if detectors:
             prog_cb = partial_progress_callable(progress_callback, min_val=self.detector_cb_start)
-            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter, p_threshold, prog_cb)
+            res, phys_perf = simulate_detectors(res, detectors, self.min_detected_photons_filter,
+                                                p_threshold, self._heralds if not self._compute_physical_logical_perf else {},
+                                                prog_cb)
             physical_perf *= phys_perf
 
         res, logical_perf_contrib = post_select_distribution(res, self._postselect, self._heralds, self._keep_heralds)
         self._logical_perf *= logical_perf_contrib
 
         self.log_resources(sys._getframe().f_code.co_name, {'n': input_dist.n_max})
-        return {'results': res,
-                'physical_perf': physical_perf,
-                'logical_perf': self._logical_perf}
+        return self.format_results(res, physical_perf, self._logical_perf)
 
     def _setup_heralds(self, n=None):
         # Set up a mask corresponding to heralds:
@@ -567,9 +567,7 @@ class Simulator(ISimulator):
 
         res_bsd, logical_perf_coeff = post_select_distribution(
             res_bsd, self._postselect, self._heralds, self._keep_heralds)
-        return {'results': res_bsd,
-                'physical_perf': physical_perf,
-                'logical_perf': self._logical_perf * logical_perf_coeff}
+        return self.format_results(res_bsd, physical_perf, self._logical_perf * logical_perf_coeff)
 
     def _evolve_no_compute(self, decomposed_input, input_state):
         """Uses the cached results to compute the evolution of the state described in decomposed_input"""
@@ -639,7 +637,7 @@ class Simulator(ISimulator):
             * logical_perf is the performance computed from the post-selection
         """
         if not isinstance(svd, SVDistribution):
-            return SVDistribution(self.evolve(svd))
+            svd = SVDistribution(svd)
 
         self.init_use_mask(True)  # No detectors when using evolve
 
@@ -665,9 +663,7 @@ class Simulator(ISimulator):
         self._logical_perf = global_perf / physical_perf if physical_perf != 0 else 0
         if len(new_svd):
             new_svd.normalize()
-        return {'results': new_svd,
-                'physical_perf': physical_perf,
-                'logical_perf': self._logical_perf}
+        return self.format_results(new_svd, physical_perf, self._logical_perf)
 
     def evolve_density_matrix(self, dm: DensityMatrix) -> DensityMatrix:
         """

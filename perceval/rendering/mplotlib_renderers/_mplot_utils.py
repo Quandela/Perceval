@@ -30,6 +30,10 @@
 import matplotlib
 import os
 import platform
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.axes3d import Axes3D
+import numpy
+import networkx as nx
 
 
 def autoselect_backend():
@@ -64,3 +68,49 @@ def autoselect_backend():
         except Exception:  # We want to catch anything that can happen above
             # Last chance: use "agg" non-interactive backend (which should work "anywhere").
             matplotlib.use("agg")
+
+def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
+    # Data
+    size = array.shape[0]
+    x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
+    y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
+    z = numpy.zeros(size * size)  # z coordinates of each bar
+    dxy = numpy.ones(size * size) * 0.5  # Width/Lenght of each bar
+    dz = array.ravel()  # length along z-axis of each bar (height)
+
+    # Colors
+    # get range of colorbars so we can normalize
+    max_height = numpy.max(dz)
+    min_height = numpy.min(dz)
+    color_map = plt.get_cmap('viridis_r')
+    if max_height != min_height:
+        has_only_one_value = False
+        # scale each z to [0,1], and get their rgb values
+        rgba = [color_map((k - min_height) / max_height) for k in dz]
+    else:
+        has_only_one_value = True
+        rgba = [color_map(0)]
+
+
+    # Caption
+    font_size = 6
+
+    # XY
+    ax.set_xticks(numpy.arange(size) + 1)
+    ax.set_yticks(numpy.arange(size) + 1)
+    ax.tick_params(axis='x', which='major', labelsize=font_size)
+    ax.set_xticklabels(basis_name)
+    ax.tick_params(axis='y', which='major', labelsize=font_size)
+    ax.set_yticklabels(basis_name)
+
+    # Z
+    if not has_only_one_value:
+        ax.set_zlim(zmin=dz.min(), zmax=dz.max())
+    ax.tick_params('z', which='both', labelsize=font_size)
+    ax.grid(True, axis='z', which='major', linewidth=2)
+    # interval = [v for v in ax.get_zticks() if v > 0][0]
+    # ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
+
+    # Plot
+    ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
+    ax.view_init(elev=30, azim=45)
