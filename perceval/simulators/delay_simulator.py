@@ -82,6 +82,9 @@ class DelaySimulator(ASimulatorDecorator):
         self._depth: int = 0
 
     def _prepare_input(self, input_state):
+        if isinstance(input_state, tuple):
+            expanded_input = input_state[1] ** self._depth
+            return input_state[0], expanded_input * BasicState([0] * (self._expanded_m - self._depth * self._original_m))
         expanded_input = input_state ** self._depth
         return expanded_input * BasicState([0] * (self._expanded_m - self._depth * self._original_m))
 

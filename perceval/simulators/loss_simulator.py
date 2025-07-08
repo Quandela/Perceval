@@ -36,6 +36,8 @@ from perceval.utils import BasicState, BSDistribution, StateVector
 class LossSimulator(ASimulatorDecorator):
 
     def _prepare_input(self, input_state):
+        if isinstance(input_state, tuple):
+            return input_state[0], input_state[1] * BasicState([0] * (self._expanded_m - self._original_m))
         return input_state * BasicState([0] * (self._expanded_m - self._original_m))
 
     def _prepare_circuit(self, circuit, m = None):
