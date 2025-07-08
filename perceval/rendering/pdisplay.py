@@ -276,10 +276,8 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
         the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
         the_keys = list(sv.keys())
-    if max_v is not None:
-        the_keys = the_keys[:max_v]
     d = []
-    for k in the_keys:
+    for k in the_keys[:max_v]:
         value = sv[k]
         if isinstance(value, float):
             value = simple_float(value, nsimplify=nsimplify, precision=precision)[1]
@@ -304,12 +302,8 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
 
 
 def pdisplay_bs_samples(bs_samples: BSSamples, output_format: Format = Format.TEXT, max_v: int | None = 10):
-    if max_v is not None:
-        bs_samples = bs_samples[:max_v]
-    d = []
-    for sample in bs_samples:
-        d.append([str(sample)])
-    s_states = tabulate(d, headers=["states"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
+    s_states = tabulate([[str(sample)] for sample in bs_samples[:max_v]],
+                        headers=["states"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
 
