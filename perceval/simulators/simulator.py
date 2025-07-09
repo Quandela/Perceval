@@ -366,7 +366,8 @@ class Simulator(ISimulator):
             """First, recombine evolved state vectors given a single input"""
             probs_in_s = BSDistribution.list_tensor_product([cache[(state, self._best_n(n, state.n))] for state in bs_data],
                                                             merge_modes=True,
-                                                            prob_threshold=p_threshold / (10 * prob0))
+                                                            prob_threshold=p_threshold / (10 * prob0),
+                                                            mask=self._backend.mask)
             self.DEBUG_merge_count += len(bs_data) - 1
 
             """
