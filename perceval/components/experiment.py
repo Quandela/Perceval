@@ -140,9 +140,9 @@ class Experiment:
                 observer_fn(component)  # Used to notify the Processors containing this experiment of a new component
 
     def add_observers(self, circuit_observer: callable, noise_observer: callable, input_observer: callable):
-        self._circuit_changed_observers.append(weakref.ref(circuit_observer))
-        self._noise_changed_observers.append(weakref.ref(noise_observer))
-        self._input_changed_observers.append(weakref.ref(input_observer))
+        self._circuit_changed_observers.append(weakref.WeakMethod(circuit_observer))
+        self._noise_changed_observers.append(weakref.WeakMethod(noise_observer))
+        self._input_changed_observers.append(weakref.WeakMethod(input_observer))
 
     def min_detected_photons_filter(self, n: int):
         r"""
