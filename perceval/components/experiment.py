@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import copy
+import weakref
 from dataclasses import dataclass
 
 from multipledispatch import dispatch
@@ -134,12 +135,14 @@ class Experiment:
 
     def _circuit_changed(self, component=None):
         for observer in self._circuit_changed_observers:
-            observer(component)  # Used to notify the Processors containing this experiment of a new component
+            observer_fn = observer()
+            if observer_fn is not None:
+                observer_fn(component)  # Used to notify the Processors containing this experiment of a new component
 
     def add_observers(self, circuit_observer: callable, noise_observer: callable, input_observer: callable):
-        self._circuit_changed_observers.append(circuit_observer)
-        self._noise_changed_observers.append(noise_observer)
-        self._input_changed_observers.append(input_observer)
+        self._circuit_changed_observers.append(weakref.ref(circuit_observer))
+        self._noise_changed_observers.append(weakref.ref(noise_observer))
+        self._input_changed_observers.append(weakref.ref(input_observer))
 
     def min_detected_photons_filter(self, n: int):
         r"""
@@ -173,7 +176,9 @@ class Experiment:
         if nm is None or isinstance(nm, NoiseModel):
             self._noise = nm
             for observer in self._noise_changed_observers:
-                observer()
+                observer_fn = observer()
+                if observer_fn is not None:
+                    observer_fn()
         else:
             raise TypeError("noise type has to be 'NoiseModel'")
 
@@ -709,7 +714,9 @@ class Experiment:
 
     def _input_changed(self):
         for observer in self._input_changed_observers:
-            observer()
+            observer_fn = observer()
+            if observer_fn is not None:
+                observer_fn()
 
     @dispatch(LogicalState)
     def with_input(self, input_state: LogicalState):
