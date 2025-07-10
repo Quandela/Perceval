@@ -51,13 +51,6 @@ def _retrieve_from_response(response: dict, field: str, default_value: any = '',
     return result
 
 
-def _extract_job_times(response: dict) -> tuple[float, float, int]:
-    creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
-    start_datetime = _retrieve_from_response(response, 'start_time', 0., float)
-    duration = _retrieve_from_response(response, 'duration', 0, int)
-    return creation_datetime, duration, start_datetime
-
-
 class RemoteJob(Job):
     r"""
     Handle a computation task remotely (i.e. through a Cloud provider) by sending a request body of the form:
@@ -212,10 +205,22 @@ class RemoteJob(Job):
             elif self._job_status.failed:
                 self._job_status._stop_message = _retrieve_from_response(response, 'status_message')
 
-            creation_datetime, duration, start_datetime = _extract_job_times(response)
+            creation_datetime, duration, start_datetime = self._extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)
 
         return self._job_status
+
+    def _extract_job_times(self, response: dict) -> tuple[float, float, int]:
+        creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
+
+        start_datetime = 0.
+        if not self._job_status.waiting:
+            start_datetime = _retrieve_from_response(response, 'start_time', start_datetime, float)
+
+        duration = 0
+        if self._job_status.completed:
+            duration = _retrieve_from_response(response, 'duration', duration, int)
+        return creation_datetime, duration, start_datetime
 
     def execute_sync(self, *args, **kwargs) -> dict:
         """
