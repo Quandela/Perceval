@@ -71,7 +71,6 @@ class AParametrizedComponent(AComponent):
         super().__init__(m, name)
         self._params = {}
         self._vars = {}
-        self._raw_params = {}
 
     @property
     def vars(self) -> dict[str, Parameter]:
@@ -106,28 +105,28 @@ class AParametrizedComponent(AComponent):
         return self._params[param_name]
 
     def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
-        """Return the parameters of the circuit
+        """Return the parameters of the component
 
         :param all_params: if False, only returns the variable parameters
+        :expressions: If `True`, returns highest level Expressions and parameters only.
+            If `False`, returns the raw parameters that make up the expressions only. 
+            Default `False`.
+            
         :return: the list of parameters
-        :expressions: if True, returns Expressions and parameters embedded in circuit components.
-            If False, returns the raw parameters that make up the expressions only. Default `False`.
         """
         param_list = []
-        for param in self._raw_params.values():
+        for param in self._params.values():
             if all_params or not param.fixed:
                 if isinstance(param, Expression):
-                    if expressions:
-                        # Add raw expression
-                        if param not in param_list:
-                            param_list.append(param) 
-                    else:
-                        # Add subparameters within expression
-                        param_list = list(set(param_list) | param._params)
-                    
-                else:
-                    if param not in param_list:
+                    if expressions and param not in param_list:
                         param_list.append(param)
+                    else:
+                        for p in param.parameters:
+                            if p not in param_list:
+                                param_list.append(p)
+                
+                elif param not in param_list:
+                    param_list.append(param)
         return param_list
 
     def reset_parameters(self) -> None:
@@ -167,7 +166,6 @@ class AParametrizedComponent(AComponent):
         else:
             p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v, periodic=periodic)
         self._params[name] = p
-        self._raw_params[name] = p
         return p
 
     def _populate_parameters(self, out_parameters: dict, pname: str, default_value: float = None):
