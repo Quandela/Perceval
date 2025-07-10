@@ -85,7 +85,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/BS-based_implementation
    notebooks/LOv_rewriting_rules
    notebooks/Simulation_non-unitary_components
-   notebooks/Circuit_conversion_qiskit_myQLM
    notebooks/Remote_computing
    notebooks/Graph_States_generation_and_display
    notebooks/Tomography_walkthrough
