@@ -201,9 +201,9 @@ class RemoteJob(Job):
             self._job_status.status = RunningStatus.from_server_response(_retrieve_from_response(response, 'status'))
             if self._job_status.running:
                 self._job_status.update_progress(_retrieve_from_response(response, 'progress', 0., float),
-                                             _retrieve_from_response(response, 'progress_message'))
+                                                 _retrieve_from_response(response, 'progress_message'))
             elif self._job_status.failed:
-                    self._job_status._stop_message = _retrieve_from_response(response, 'status_message')
+                self._job_status._stop_message = _retrieve_from_response(response, 'status_message')
 
             creation_datetime, duration, start_datetime = self._extract_job_times(response)
             self._job_status.update_times(creation_datetime, start_datetime, duration)
@@ -212,14 +212,14 @@ class RemoteJob(Job):
 
     def _extract_job_times(self, response: dict) -> tuple[float, float, int]:
         creation_datetime = _retrieve_from_response(response, 'creation_datetime', 0., float)
+
+        start_datetime = 0.
         if not self._job_status.waiting:
             start_datetime = _retrieve_from_response(response, 'start_time', 0., float)
-        else:
-            start_datetime = 0.
+
+        duration = 0
         if self._job_status.completed:
             duration = _retrieve_from_response(response, 'duration', 0, int)
-        else:
-            duration = 0.
         return creation_datetime, duration, start_datetime
 
     def execute_sync(self, *args, **kwargs) -> dict:
