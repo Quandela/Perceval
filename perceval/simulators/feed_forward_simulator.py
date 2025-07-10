@@ -32,7 +32,7 @@ import copy
 from typing import Any
 
 from perceval.components import Processor, AComponent, Barrier, PERM, IDetector, Herald, PortLocation, Source
-from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable
+from perceval.utils import NoiseModel, BasicState, BSDistribution, SVDistribution, StateVector, partial_progress_callable, get_logger
 from perceval.components.feed_forward_configurator import AFFConfigurator
 from perceval.backends import AStrongSimulationBackend
 
@@ -49,6 +49,10 @@ class FFSimulator(ISimulator):
 
         self._noise_model = None
         self._source = None
+
+    def compute_physical_logical_perf(self, value: bool):
+        if value:
+            get_logger().warn("Only the global performance can be computed for a feed-forward simulator.")
 
     def set_circuit(self, circuit: Processor | list[tuple[tuple, AComponent]], m=None):
         if isinstance(circuit, Processor):
@@ -97,12 +101,7 @@ class FFSimulator(ISimulator):
         prog_cb = partial_progress_callable(progress_callback, max_val=intermediate_progress)
 
         default_res = self._simulate(input_state, components, detectors, prog_cb, new_heralds=new_heralds)
-
-        if "global_perf" in default_res:
-            default_norm_factor = default_res["global_perf"]
-        else:
-            default_norm_factor = default_res["physical_perf"] * default_res["logical_perf"]
-
+        default_norm_factor = default_res["global_perf"]
         default_res = default_res["results"]
 
         # 3: deduce all measurable states and launch one simulation for each of them
@@ -146,10 +145,7 @@ class FFSimulator(ISimulator):
                 sub_res = self._simulate(input_state, components, detectors, new_prog_cb,
                                          filter_states=True, new_heralds=new_heralds)
 
-                if "global_perf" in sub_res:
-                    norm_factor = sub_res["global_perf"]
-                else:
-                    norm_factor = sub_res["physical_perf"] * sub_res["logical_perf"]
+                norm_factor = sub_res["global_perf"]
 
                 # The remaining states are only the ones with n >= filter and mask
                 global_perf += norm_factor
@@ -160,13 +156,14 @@ class FFSimulator(ISimulator):
 
                 simulated_measures.add(measured_state)
 
-        res.normalize()
+        if len(res):
+            res.normalize()
         return res, global_perf
 
     def _find_next_simulation_layer(self) -> tuple[list[tuple[int, AFFConfigurator]], list[int], set[int]]:
         """
         :return: The list containing the tuples with the index in the component list
-        of the configuration independent FFConfigurators and their instances,
+         of the configuration independent FFConfigurators and their instances,
          the list of the associated measured modes,
          and the list of modes that are touched at anytime by feed-forward configurators (including after the layer)
         """
@@ -238,7 +235,7 @@ class FFSimulator(ISimulator):
         # Now the Processor has only the heralds that were possibly added by adding Processors as input, all at the end
         heralded_dist = proc.generate_noisy_heralds()
         if len(heralded_dist):
-            input_state *= heralded_dist
+            input_state = input_state * heralded_dist  # Must not change the original object
 
         sum_new_heralds = 0
         if new_heralds is not None:

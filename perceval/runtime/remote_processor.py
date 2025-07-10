@@ -31,7 +31,7 @@ from __future__ import annotations
 import uuid
 
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector
+from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
 from perceval.utils import BasicState, PMetadata, PostSelect, NoiseModel
 from perceval.utils.logging import get_logger, channel
 from perceval.serialization import deserialize, serialize
@@ -114,6 +114,7 @@ class RemoteProcessor(AProcessor):
 
         self._specs = {}
         self._perfs = {}
+        self._status = None
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
@@ -142,21 +143,9 @@ class RemoteProcessor(AProcessor):
     def is_remote(self) -> bool:
         return True
 
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1. Some QPU and simulators can only perform threshold detection.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        if value is False:
-            assert not ("detector" in self._specs and self._specs["detector"] == "threshold"), \
-                "given processor can only perform threshold detection"
-        self.set_parameter("thresholded", value)
-        super().thresholded_output(value)
-
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
+        self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
         if PERFS_KEY in platform_details:
@@ -177,6 +166,10 @@ class RemoteProcessor(AProcessor):
         if 'constraints' in self._specs:
             return self._specs['constraints']
         return {}
+
+    @property
+    def status(self):
+        return self._status
 
     def check_circuit(self, circuit: ACircuit):
         if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
@@ -208,6 +201,10 @@ class RemoteProcessor(AProcessor):
         if 'min_photon_count' in self.constraints and n_photons < self.constraints['min_photon_count']:
             raise RuntimeError(
                 f"Not enough photons in input state ({n_photons} < {self.constraints['min_photon_count']})")
+        if ('support_multi_photon' in self.constraints and not self.constraints['support_multi_photon']
+                and not all(mode_photon_cnt <= 1 for mode_photon_cnt in input_state)):
+            raise RuntimeError(f"Input state ({input_state}) is not permitted. QPU/QPU simulators accept more than "
+                               f"1 photon per mode:{self.constraints['support_multi_photon']})")
         if self.m is not None and input_state.m != self.m:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self.m})")
 
@@ -278,7 +275,9 @@ class RemoteProcessor(AProcessor):
                 c.param(n).set_value(v)
         lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call (PCVL-935)
+        if self._thresholded_output:
+            for m in range(lp.circuit_size):
+                lp.add(m, Detector.threshold())
         lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0

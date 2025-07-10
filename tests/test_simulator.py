@@ -29,16 +29,14 @@
 
 import math
 import pytest
-from unittest.mock import patch
 
-import perceval as pcvl
 from perceval import catalog
 from perceval.backends import AStrongSimulationBackend, SLOSBackend
 from perceval.simulators import Simulator
 from perceval.components import Circuit, BS, PS, Source, unitary_components
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, Matrix, DensityMatrix
 
-from _test_utils import assert_sv_close, assert_svd_close, LogChecker
+from _test_utils import assert_sv_close, assert_svd_close
 
 
 class MockBackend(AStrongSimulationBackend):
@@ -105,7 +103,7 @@ def test_simulator_probs_svd_indistinguishable():
     # remove the |0, 1> state from the second sv, and the first sv
     simulator.set_min_detected_photons_filter(2)
     res = simulator.probs_svd(svd)
-    assert res["physical_perf"] == pytest.approx(0.55)
+    assert res["global_perf"] == pytest.approx(0.55)
     assert len(res["results"]) == 3
 
 
@@ -156,16 +154,14 @@ def test_simulator_probs_distinguishable():
     assert res[BasicState("|0,3>")] == pytest.approx(0.288)
 
 
-@patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
-def test_simulator_probs_postselection(mock_warn):
+def test_simulator_probs_postselection():
     input_state = BasicState([1, 1, 1])
     ps = PostSelect("[2] < 2")  # At most 1 photon on mode #2
     simulator = Simulator(MockBackend())
     simulator.set_postselection(ps)
     simulator.set_circuit(Circuit(3))
 
-    with LogChecker(mock_warn):
-        output_dist = simulator.probs(input_state)
+    output_dist = simulator.probs(input_state)
 
     assert len(output_dist) == 0
     assert simulator.logical_perf == pytest.approx(0)
@@ -343,6 +339,7 @@ def test_probs_svd_with_heralds():
     sim.set_circuit(Circuit(4) // BS() // (2, BS()))
     heralds = {1: 0, 3: 0}
     sim.set_selection(heralds=heralds)
+    sim.compute_physical_logical_perf(True)
     results = sim.probs_svd(SVDistribution(BasicState([1]*4)))
     assert results["logical_perf"] == pytest.approx(0.5 ** 2)
     assert results["results"][BasicState([2, 0, 2, 0])] == 1
@@ -375,6 +372,7 @@ def test_probs_svd_with_heralds():
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)
     sim.set_selection(heralds={1: 0, 2: 0})
+    sim.compute_physical_logical_perf(True)
     res = sim.probs_svd(in_svd)
     assert len(res['results']) == 2
     assert res['results'][BasicState("|2,0,0,0>")] == pytest.approx(.5)
@@ -410,10 +408,10 @@ def test_evolve_with_heralds():
     discard_heralds_output = sim.evolve_svd(svd)
     assert discard_heralds_output['results'].m == 4
 
-    for kh_state, dh_state in zip(keep_heralds_output['results'].keys(), discard_heralds_output['results'].keys()):
-        assert_sv_close(kh_state, dh_state * StateVector([1, 1]))
+    assert_svd_close(keep_heralds_output['results'], discard_heralds_output['results'] * StateVector([1, 1]))
 
     sim.set_min_detected_photons_filter(2)
+    sim.compute_physical_logical_perf(True)
     result = sim.evolve_svd(svd)
     assert_svd_close(result["results"], SVDistribution(BasicState([0, 1, 1, 0])))
     assert result["physical_perf"] == pytest.approx(brightness ** 4)

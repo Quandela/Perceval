@@ -71,6 +71,7 @@ class Processor(AProcessor):
         self._noise_changed_observer()
         self._input_changed_observer()
         self._simulator = None
+        self._compute_physical_logical_perf = False
 
     @property
     def _has_custom_input(self):
@@ -129,8 +130,10 @@ class Processor(AProcessor):
         self._inputs_map = self._source.generate_distribution(self.input_state)
 
     def generate_noisy_heralds(self) -> SVDistribution:
-        heralds_perfect_state = BasicState([v for k, v in sorted(self.heralds.items())])
-        return self._source.generate_distribution(heralds_perfect_state)
+        if self.heralds:
+            heralds_perfect_state = BasicState([v for k, v in sorted(self.experiment.in_heralds.items())])
+            return self._source.generate_distribution(heralds_perfect_state)
+        return SVDistribution()
 
     def _input_changed_observer(self):
         if isinstance(self.input_state, BasicState):
@@ -171,6 +174,7 @@ class Processor(AProcessor):
             postselect=self.post_select_fn,
             heralds=self.heralds)
         sampling_simulator.keep_heralds(False)
+        sampling_simulator.compute_physical_logical_perf(self._compute_physical_logical_perf)
         sampling_simulator.set_detectors(self.detectors)
         self.log_resources(sys._getframe().f_code.co_name, {'max_samples': max_samples, 'max_shots': max_shots})
         get_logger().info(
@@ -196,6 +200,7 @@ class Processor(AProcessor):
         get_logger().info(f"Start a local {'perfect' if self._source.is_perfect() else 'noisy'} strong simulation",
                           channel.general)
         self._simulator.keep_heralds(False)
+        self._simulator.compute_physical_logical_perf(self._compute_physical_logical_perf)
         res = self._simulator.probs_svd(self.source_distribution, self.detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
 
@@ -238,3 +243,11 @@ class Processor(AProcessor):
         if self.noise != NoiseModel():
             my_dict['noise'] = self.noise.__dict__()
         get_logger().log_resources(my_dict)
+
+    def compute_physical_logical_perf(self, value: bool):
+        """
+        Tells the simulator to compute or not the physical and logical performances when possible
+
+        :param value: True to compute the physical and logical performances, False otherwise.
+        """
+        self._compute_physical_logical_perf = value

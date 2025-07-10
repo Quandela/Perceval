@@ -29,19 +29,9 @@
 from __future__ import annotations
 
 import copy
-import math
-import numpy
 import os
-import warnings
 
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        action='ignore',
-        category=RuntimeWarning)
-    import drawsvg
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.axes3d import Axes3D
+from exqalibur import BSSamples
 from multipledispatch import dispatch
 import networkx as nx
 import sympy as sp
@@ -50,11 +40,12 @@ from tabulate import tabulate
 from perceval.algorithm import Analyzer, AProcessTomography
 from perceval.components import (ACircuit, Circuit, AProcessor, Port, Herald, AFFConfigurator, Experiment,
                                  non_unitary_components as nl)
-from .circuit import DisplayConfig, create_renderer, ASkin
-from ._density_matrix_utils import _csr_to_rgb, _csr_to_greyscale, generate_ticks
+from .drawsvg_wrapper import DrawsvgWrapper
+from .circuit.create_renderer import RendererFactory
+from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.statevector import ProbabilityDistribution, StateVector, BSCount
+from perceval.utils.statevector import StateVector, BSCount, BSDistribution, SVDistribution
 from perceval.runtime import JobGroup
 
 from .format import Format
@@ -82,6 +73,8 @@ except (ImportError, AttributeError):
     pass
 
 
+
+
 def pdisplay_circuit(
         circuit: ACircuit,
         output_format: Format = Format.TEXT,
@@ -96,7 +89,7 @@ def pdisplay_circuit(
     skin.precision = precision
     skin.nsimplify = nsimplify
     w, h = skin.get_size(circuit, recursive)
-    renderer, _ = create_renderer(
+    renderer, _ = RendererFactory.get_circuit_renderer(
         circuit.m,
         output_format=output_format,
         skin=skin,
@@ -136,7 +129,7 @@ def pdisplay_experiment(processor: Experiment,
     skin.precision = precision
     skin.nsimplify = nsimplify
     w, h = skin.get_size(processor, recursive)
-    renderer, pre_renderer = create_renderer(
+    renderer, pre_renderer = RendererFactory.get_circuit_renderer(
         n_modes,
         output_format=output_format,
         skin=skin,
@@ -146,10 +139,15 @@ def pdisplay_experiment(processor: Experiment,
         **opts)
 
     herald_info = {}
-    if len(processor.heralds):
-        for k in processor.heralds.keys():
+    if len(processor.in_heralds):
+        for k in processor.in_heralds.keys():
             renderer.set_mode_style(k, ModeType.HERALD)
         herald_info = collect_herald_info(processor, recursive)
+
+    elif len(processor.heralds):
+        herald_info = collect_herald_info(processor, recursive)
+
+    original_mode_style = renderer._mode_style.copy()
 
     for rendering_pass in [pre_renderer, renderer]:
         if not rendering_pass:
@@ -185,7 +183,7 @@ def pdisplay_experiment(processor: Experiment,
         renderer.add_in_port(port_range[0], port)
 
     if isinstance(processor._input_state, BasicState):
-        renderer.display_input_photons(processor._input_state)
+        renderer.display_input_photons(processor._input_state, original_mode_style)
         # In this case add mono-mode ports on all modes containing none
         empty_raw_port = Port(Encoding.RAW, "")
         for i in range(processor.circuit_size):
@@ -206,7 +204,7 @@ def pdisplay_experiment(processor: Experiment,
                 i not in processor.detectors_injected and processor._detectors[i] is not None:
             renderer.add_out_port(i, Port(Encoding.RAW, ""))
 
-    renderer.add_mode_index()
+    renderer.add_mode_index(original_mode_style)
     return renderer.draw()
 
 
@@ -267,31 +265,36 @@ def pdisplay_analyzer(analyzer: Analyzer, output_format: Format = Format.TEXT, n
                     tablefmt=_TABULATE_FMT_MAPPING[output_format])
 
 
-def pdisplay_state_distrib(sv: StateVector | ProbabilityDistribution | BSCount,
-                           output_format: Format = Format.TEXT, nsimplify=True, precision=1e-6, max_v=None, sort=True):
+def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | BSCount,
+                           output_format: Format = Format.TEXT,
+                           nsimplify: bool | None = None,
+                           precision: float = 1e-6,
+                           max_v: int | None = None,
+                           sort: bool = True):
     """
     :meta private:
     Displays StateVector and ProbabilityDistribution as a table of state vs probability (probability amplitude in
     StateVector's case)
     """
+    if nsimplify is None:
+        # no numerical simplification by default if the number of displayed values is larger than 100
+        nsimplify = False if (min(max_v or len(sv), len(sv)) > 100) else True
     if sort:
         the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
         the_keys = list(sv.keys())
-    if max_v is not None:
-        the_keys = the_keys[:max_v]
     d = []
-    for k in the_keys:
+    for k in the_keys[:max_v]:
         value = sv[k]
         if isinstance(value, float):
             value = simple_float(value, nsimplify=nsimplify, precision=precision)[1]
         elif isinstance(value, complex):
-            real_part = imag_part = ""
+            values = []
             if value.real != 0:
-                real_part = simple_float(value.real, nsimplify=nsimplify, precision=precision)[1]
+                values.append(simple_float(value.real, nsimplify=nsimplify, precision=precision)[1])
             if value.imag != 0:
-                imag_part = "I*" + simple_float(value.imag, nsimplify=nsimplify, precision=precision)[1]
-            value = real_part + imag_part
+                values.append("I*" + simple_float(value.imag, nsimplify=nsimplify, precision=precision)[1])
+            value = " + ".join(values) if values else "0"
         else:
             value = str(value)
         d.append([str(k), value])
@@ -304,102 +307,17 @@ def pdisplay_state_distrib(sv: StateVector | ProbabilityDistribution | BSCount,
     s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
-    # labels on x- and y- axes
 
-
-def _generate_pauli_captions(nqubit: int):
-    from perceval.algorithm.tomography.tomography_utils import _generate_pauli_index
-    pauli_indices = _generate_pauli_index(nqubit)
-    pauli_names = []
-    for subset in pauli_indices:
-        pauli_names.append([member.name for member in subset])
-
-    basis = []
-    for val in pauli_names:
-        basis.append(''.join(val))
-    return basis
-
-
-def _get_sub_figure(ax: Axes3D, array: numpy.array, basis_name: list):
-    # Data
-    size = array.shape[0]
-    x = numpy.array([[i] * size for i in range(size)]).ravel()  # x coordinates of each bar
-    y = numpy.array([i for i in range(size)] * size)  # y coordinates of each bar
-    z = numpy.zeros(size * size)  # z coordinates of each bar
-    dxy = numpy.ones(size * size) * 0.5  # Width/Lenght of each bar
-    dz = array.ravel()  # length along z-axis of each bar (height)
-
-    # Colors
-    # get range of colorbars so we can normalize
-    max_height = numpy.max(dz)
-    min_height = numpy.min(dz)
-    color_map = plt.get_cmap('viridis_r')
-    if max_height != min_height:
-        has_only_one_value = False
-        # scale each z to [0,1], and get their rgb values
-        rgba = [color_map((k - min_height) / max_height) for k in dz]
-    else:
-        has_only_one_value = True
-        rgba = [color_map(0)]
-
-
-    # Caption
-    font_size = 6
-
-    # XY
-    ax.set_xticks(numpy.arange(size) + 1)
-    ax.set_yticks(numpy.arange(size) + 1)
-    ax.tick_params(axis='x', which='major', labelsize=font_size)
-    ax.set_xticklabels(basis_name)
-    ax.tick_params(axis='y', which='major', labelsize=font_size)
-    ax.set_yticklabels(basis_name)
-
-    # Z
-    if not has_only_one_value:
-        ax.set_zlim(zmin=dz.min(), zmax=dz.max())
-    ax.tick_params('z', which='both', labelsize=font_size)
-    ax.grid(True, axis='z', which='major', linewidth=2)
-    # interval = [v for v in ax.get_zticks() if v > 0][0]
-    # ax.zaxis.set_minor_locator(ticker.MultipleLocator(interval/5))
-
-    # Plot
-    ax.bar3d(x, y, z, dxy, dxy, dz, color=rgba, alpha=0.7)
-    ax.view_init(elev=30, azim=45)
+def pdisplay_bs_samples(bs_samples: BSSamples, output_format: Format = Format.TEXT, max_v: int | None = 10):
+    s_states = tabulate([[str(sample)] for sample in bs_samples[:max_v]],
+                        headers=["states"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
+    return s_states
 
 
 def pdisplay_tomography_chi(qpt: AProcessTomography, output_format: Format = Format.MPLOT, precision: float = 1E-6,
                             render_size=None, mplot_noshow: bool = False, mplot_savefig: str = None):
-    if output_format == Format.TEXT or output_format == Format.LATEX:
-        raise TypeError(f"Tomography plot does not support {output_format}")
-
-    chi_op = qpt.chi_matrix()
-
-    if render_size is not None and isinstance(render_size, tuple) and len(render_size) == 2:
-        fig = plt.figure(figsize=render_size)
-    else:
-        fig = plt.figure()
-    pauli_captions = _generate_pauli_captions(qpt._nqubit)
-    significant_digit = int(math.log10(1 / precision))
-
-    # Real plot
-    ax = fig.add_subplot(121, projection='3d')
-    ax.set_title("Re[$\\chi$]")
-    real_chi = numpy.round(chi_op.real, significant_digit)
-    _get_sub_figure(ax, real_chi, pauli_captions)
-
-    # Imag plot
-    ax = fig.add_subplot(122, projection='3d')
-    ax.set_title("Im[$\\chi$]")
-    imag_chi = numpy.round(chi_op.imag, significant_digit)
-    _get_sub_figure(ax, imag_chi, pauli_captions)
-
-    if not mplot_noshow:
-        plt.show()
-    if mplot_savefig:
-        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
-        return ""
-
-    return None
+    renderer = RendererFactory.get_tomography_renderer(output_format, render_size=render_size, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
+    return renderer.render(qpt, precision=precision)
 
 
 def pdisplay_density_matrix(dm,
@@ -416,43 +334,13 @@ def pdisplay_density_matrix(dm,
     :param cmap: the cmap to use fpr the phase indication
     """
 
-    if output_format == Format.TEXT or output_format == Format.LATEX:
-        raise TypeError(f"DensityMatrix plot does not support {output_format}")
-    fig = plt.figure()
-
-    if color:
-        img = _csr_to_rgb(dm.mat, cmap)
-        plt.imshow(img)
-    else:
-        img = _csr_to_greyscale(dm.mat)
-        plt.imshow(img, cmap='gray')
-
-    l1, l2 = generate_ticks(dm)
-
-    plt.yticks(l1, l2)
-    plt.xticks([])
-
-    if not mplot_noshow:
-        plt.show()
-    if mplot_savefig:
-        fig.savefig(mplot_savefig, bbox_inches="tight", format="svg")
-        return ""
+    renderer = RendererFactory.get_density_matrix_renderer(output_format, color=color, cmap=cmap, mplot_noshow=mplot_noshow, mplot_savefig=mplot_savefig)
+    return renderer.render(dm)
 
 
 def pdisplay_graph(g: nx.Graph, output_format: Format = Format.MPLOT):
-    if output_format not in {Format.MPLOT, Format.LATEX}:
-        raise TypeError(f"Graph plot does not support {output_format}")
-    if output_format == Format.LATEX:
-        return nx.to_latex(g)
-
-
-    pos = nx.spring_layout(g, seed=42)
-    nx.draw_networkx_nodes(g, pos, node_size=90, node_color='b')
-    nx.draw_networkx_edges(g, pos)
-    nx.draw_networkx_labels(g, pos, font_size=10, font_color='white', font_family="sans-serif")
-    edge_labels = nx.get_edge_attributes(g, "weight")
-    nx.draw_networkx_edge_labels(g, pos, edge_labels)
-    plt.show()
+    renderer = RendererFactory.get_graph_renderer(output_format)
+    return renderer.render(g)
 
 
 def pdisplay_job_group(jg: JobGroup,  output_format: Format = Format.TEXT):
@@ -509,7 +397,7 @@ def _pdisplay(analyzer, **kwargs):
     return pdisplay_analyzer(analyzer, **kwargs)
 
 
-@dispatch((StateVector, ProbabilityDistribution))
+@dispatch((StateVector, BSDistribution, SVDistribution))
 def _pdisplay(distrib, **kwargs):
     # Work on a copy, in order to not force normalization simply because of a display call
     normalized_dist = copy.copy(distrib)
@@ -520,6 +408,11 @@ def _pdisplay(distrib, **kwargs):
 @dispatch(BSCount)
 def _pdisplay(bsc, **kwargs):
     return pdisplay_state_distrib(bsc, **kwargs)
+
+
+@dispatch(BSSamples)
+def _pdisplay(bssamples, **kwargs):
+    return pdisplay_bs_samples(bssamples, **kwargs)
 
 
 def _get_simple_number_kwargs(**kwargs):
@@ -570,19 +463,22 @@ def pdisplay(o, output_format: Format = None, **opts):
 
     opts:
         - skin (rendering.circuit.PhysSkin, SymbSkin or DebugSkin or any ASkin subclass instance):
-            Skin controls how a circuit/processor is displayed
+
+            Skin controls how a circuit/processor is displayed:
+
                 - PhysSkin(): physical skin (default),
                 - DebugSkin(): Similar to PhysSkin but modes are bigger, ancillary modes are displayed,
-                               components with variable parameters are red,
+                  components with variable parameters are red,
                 - SymbSkin(): symbolic skin (thin black and white lines).
+
         - precision (float): numerical precision
         - nsimplify (bool): if True, tries to simplify numerical values by searching known values (pi, sqrt, fractions)
         - recursive (bool): if True, all hierarchy levels in a circuit/processor are displayed. Otherwise, only the top
-                            level is drawn, others are "black boxes"
+          level is drawn, others are "black boxes"
         - max_v (int): Maximum number of displayed values in distributions
         - sort (bool): if True, sorts a distribution (descending order) before displaying
         - render_size: In SVG circuit/processor rendering, acts as a zoom factor (float)
-                       In Tomography display, is the size of the output plot in inches (tuple of two floats)
+          In Tomography display, is the size of the output plot in inches (tuple of two floats)
     """
     if output_format is None:
         output_format = _default_output_format(o)
@@ -592,8 +488,8 @@ def pdisplay(o, output_format: Format = None, **opts):
     if res is None:
         return
 
-    if isinstance(res, drawsvg.Drawing):
-        return res
+    if isinstance(res, DrawsvgWrapper):
+        return res.value
     elif in_notebook and output_format == Format.LATEX:
         display(Math(res))
     elif in_notebook and output_format == Format.HTML:
@@ -603,6 +499,16 @@ def pdisplay(o, output_format: Format = None, **opts):
 
 
 def pdisplay_to_file(o, path: str, output_format: Format = None, **opts):
+    """
+    Directly saves the result of pdisplay into a file without actually displaying it.
+
+    :param o: Perceval object to render
+    :param path: Path to file to save
+    :param output_format: See :code:`pdisplay` for details.
+      Contrarily to :code:`pdisplay`, this method always uses Format.MPLOT by default so you might need to specify it
+      by hand for some kinds of objects.
+    :param opts: See :code:`pdisplay` for details.
+    """
     if output_format is None:
         output_format = Format.MPLOT
     if output_format == Format.MPLOT:

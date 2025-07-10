@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import time
 
 from ._abstract_backends import AStrongSimulationBackend
 from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
@@ -104,15 +105,12 @@ class _Path:
 
 
 class SLOSBackend(AStrongSimulationBackend):
-    def __init__(self, mask=None, n=None, use_symbolic=False):
+    def __init__(self, mask=None, use_symbolic=False):
         super().__init__()
         self._reset()
         self._symb = use_symbolic
         if mask is not None:
             self.set_mask(mask)
-        if n is not None:
-            get_logger().warn(
-                f"DeprecationWarning: 'n' parameter is now ignored and deprecated. version=0.12", channel.user)
 
     @property
     def name(self) -> str:
@@ -202,7 +200,7 @@ class SLOSBackend(AStrongSimulationBackend):
         c = abs(c) ** 2 / istate.prodnfact()
         xq.all_prob_normalize_output(c, self._fsas[istate.n])
         bsd = BSDistribution()
-        for output_state, probability in zip(self._get_iterator(self._input_state), c):
+        for output_state, probability in zip(self._fsas[istate.n], c):
             bsd.add(output_state, probability)
         return bsd
 
@@ -222,6 +220,6 @@ class SLOSBackend(AStrongSimulationBackend):
         c = self._state_mapping[istate].coefs.reshape(self._fsas[istate.n].count())
         res = StateVector()
         iprodnfact = istate.prodnfact()
-        for output_state, pa in zip(self._get_iterator(self._input_state), c):
+        for output_state, pa in zip(self._fsas[istate.n], c):
             res += output_state * (pa * math.sqrt(output_state.prodnfact() / iprodnfact))
         return res

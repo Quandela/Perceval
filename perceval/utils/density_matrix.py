@@ -182,9 +182,9 @@ class DensityMatrix:
         l = []
         for sv, p in svd.items():
             vector = np.zeros((size, 1), dtype=complex)
-            for bst in sv.keys():
+            for bst, pa in sv:
                 idx = index[bst]
-                vector[idx, 0] = sv[bst]
+                vector[idx, 0] = pa
             vector = csr_array(vector)
             l.append((vector, p))
         matrix = sum([p * (vector @ conj(vector.T)) for vector, p in l])  # This avoids the SparseEfficiencyWarning
@@ -281,13 +281,14 @@ class DensityMatrix:
 
     def to_svd(self, threshold: float | None = None, batch_size: int = 1):
         """
-            Gives back an SVDistribution from the density_matrix
+        Gives back an SVDistribution from the density_matrix
 
-            :param threshold: the threshold when the search for eigen values is stopped.
-            :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
-                Only used if matrix is large enough.
-            :return: The SVD object corresponding to the DensityMatrix.
-                The StateVector with probability < threshold are removed.
+        :param threshold: the threshold when the search for eigen values is stopped.
+        :param batch_size: the number of eigen values at each Arnoldi's algorithm iteration.
+            Only used if matrix is large enough.
+
+        :return: The SVD object corresponding to the DensityMatrix.
+            The StateVector with probability < threshold are removed.
         """
         if threshold is None:
             threshold = self.precision
@@ -403,6 +404,7 @@ class DensityMatrix:
     def measure(self, modes: list[int] | int):
         """
         Makes a measure on a list of modes.
+
         :param modes: a list of integer for the modes you want to measure
         """
         self.normalize()

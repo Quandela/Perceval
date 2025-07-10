@@ -26,6 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import copy
 from collections import defaultdict
 
 from perceval.utils import BasicState, BSDistribution, StateVector, Annotation, SVDistribution
@@ -44,8 +45,8 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     if len(annotation):
         res_sv = StateVector()
-        for s in sv.keys():
-            pa = sv[s]
+        for s, pa in sv.unnormalized_iterator():
+            s = copy.copy(s)
             s.inject_annotation(annotation)
             res_sv += pa * s
         return res_sv
