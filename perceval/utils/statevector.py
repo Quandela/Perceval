@@ -33,7 +33,7 @@ import random
 
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from copy import copy
+from copy import copy, deepcopy
 from multipledispatch import dispatch
 try:
     from typing import TypeAlias
@@ -121,6 +121,12 @@ class ProbabilityDistribution(defaultdict, ABC):
         distribution_copy = type(self)()
         for k, prob in self.items():
             distribution_copy[copy(k)] = prob
+        return distribution_copy
+
+    def __deepcopy__(self, memo) -> ProbabilityDistribution:
+        distribution_copy = type(self)()
+        for k, prob in self.items():
+            distribution_copy[deepcopy(k)] = prob
         return distribution_copy
 
     def __pow__(self, power) -> ProbabilityDistribution:
