@@ -147,9 +147,7 @@ class AProcessor(ABC):
         pass
 
     def remove_heralded_modes(self, s: BasicState) -> BasicState:
-        if self.heralds:
-            s = s.remove_modes(list(self.heralds.keys()))
-        return s
+        return self.experiment.remove_heralded_modes(s)
 
     @property
     def post_select_fn(self):

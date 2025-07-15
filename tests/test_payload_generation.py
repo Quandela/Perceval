@@ -29,7 +29,7 @@
 """module test payload generation"""
 import pytest
 
-from perceval import RemoteProcessor, BasicState, catalog
+from perceval import RemoteProcessor, BasicState, catalog, PayloadGenerator
 from perceval.serialization._constants import ZIP_PREFIX
 
 from _mock_rpc_handler import get_rpc_handler_for_tests
@@ -100,3 +100,14 @@ def test_payload_cnot():
     assert 'command' in payload and payload['command'] == COMMAND_NAME
     assert 'experiment' in payload and payload['experiment'].startswith(
         ZIP_PREFIX)  # Circuits are compressed in payloads
+
+def test_payload_generator():
+    data = PayloadGenerator.generate_payload(COMMAND_NAME)
+
+    assert 'pcvl_version' in data
+    assert 'process_id' in data
+    assert 'payload' in data
+
+    payload = data['payload']
+    assert 'command' in payload and payload['command'] == COMMAND_NAME
+    assert 'experiment' in payload and payload['experiment'].startswith(ZIP_PREFIX)  # Circuits are compressed in payloads

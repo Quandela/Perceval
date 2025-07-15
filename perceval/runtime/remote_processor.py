@@ -28,19 +28,17 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import uuid
-
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
-from perceval.utils import BasicState, PMetadata, NoiseModel
+from perceval.utils import BasicState, NoiseModel
 from perceval.utils.logging import get_logger, channel
-from perceval.serialization import deserialize, serialize
+from perceval.serialization import deserialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
+from .payload_generator import PayloadGenerator
 
-__process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
@@ -215,31 +213,14 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> list[str]:
         return self._specs.get("available_commands", [])
 
-    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
-                            ) -> dict[str, any]:
+    def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
         self.check_min_detected_photons_filter()
+        self.check_circuit_size(self.circuit_size)
 
-        j = {
-            'platform_name': self.name,
-            'pcvl_version': PMetadata.short_version(),
-            'process_id': str(__process_id__)
-        }
-        payload = {
-            'command': command,
-            **kwargs
-        }
+        payload = PayloadGenerator.generate_payload(command, self.experiment, self._parameters, self.name, **kwargs)
 
-        if not circuitless:
-            self.check_circuit_size(self.circuit_size)
-        if self.input_state and not inputless:
-            self.check_input(self.remove_heralded_modes(self.input_state))
-        if self._parameters:
-            payload['parameters'] = self._parameters
-        if not circuitless or not inputless:
-            payload["experiment"] = serialize(self.experiment)
-        j['payload'] = payload
         self.log_resources(command, self._parameters)
-        return j
+        return payload
 
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)

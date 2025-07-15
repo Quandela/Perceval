@@ -849,6 +849,11 @@ class Experiment:
         """
         return _flatten(self, max_depth=max_depth)
 
+    def remove_heralded_modes(self, s: BasicState):
+        if self.heralds:
+            s = s.remove_modes(list(self.heralds.keys()))
+        return s
+
 
 def _flatten(composite, starting_mode=0, max_depth=None) -> list[tuple]:
     component_list = []
