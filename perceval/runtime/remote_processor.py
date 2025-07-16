@@ -216,6 +216,8 @@ class RemoteProcessor(AProcessor):
     def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
         self.check_min_detected_photons_filter()
         self.check_circuit_size(self.circuit_size)
+        if self.input_state:
+            self.check_input(self.remove_heralded_modes(self.input_state))
 
         payload = PayloadGenerator.generate_payload(command, self.experiment, self._parameters, self.name, **kwargs)
 

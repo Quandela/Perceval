@@ -85,9 +85,6 @@ class PayloadGenerator:
             **kwargs
         }
 
-        if experiment.input_state:
-            experiment.check_input(experiment.remove_heralded_modes(experiment.input_state))
-
         if params:
             payload['parameters'] = params
 
