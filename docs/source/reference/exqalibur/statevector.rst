@@ -1,23 +1,33 @@
 StateVector
 ===========
 
-``StateVector`` instances are constructed through addition and linear combination operations.
+The ``StateVector`` class is the mean to create superposed pure states in the Fock space.
 
->>> st1 = pcvl.StateVector("|1,0>")   # write basic states or annotated basic states with the 'StateVector' command in order to enable creating a superposition using the '+' command
->>> st2 = pcvl.StateVector("|0,1>")
->>> st3 = st1 + st2
->> print(len(st3))
-2
->>> print(st3)
-1/sqrt(2)*|1,0>+1/sqrt(2)*|0,1>
->>> st3[0]    # outputs the first state in the superposition state st3
-|1,0>
->>> st3[1]     # outputs the second state in the superposition st3
-|0,1>
->>> st4 = alpha*st1 + beta*st2
+State vector arithmetics
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. WARNING::
-  ``StateVector`` will normalize themselves at usage so normalization terms will be added to any combination.
+A :code:`StateVector` can be built using arithmetic. While only applying arithmetic operations to a state vector, no
+automatic normalization is called, allowing the composition of state vectors through multiple Python statements.
+
+>>> from exqalibur import StateVector
+>>> sv = StateVector("|1>") + StateVector("|2>")
+>>> sv += StateVector("|3>")
+>>> print(sv)  # All components of sv have the same amplitude
+sqrt(3)/3*|1>+sqrt(3)/3*|2>+sqrt(3)/3*|3>
+
+:code:`StateVector` can be built with great freedom:
+
+>>> sv = 0.5j * BasicState([1, 1]) - math.sqrt(2) * StateVector("|2,0>") + StateVector([0, 2]) * 0.45
+>>> print(sv)
+0.319275*I*|1,1>-0.903047*|2,0>+0.287348*|0,2>
+
+* **Comparison operators**
+
+Comparing two :code:`StateVector` with operator :code:`==` or :code:`!=` normalize them then compare that each
+component and each probability amplitude are exactly the same.
+
+.. note::
+  ``StateVector`` will normalize themselves only at usage, and not during state arithmetics operations.
 
 ``StateVector`` can also be multiplied through a tensor product - and exponentiation is also built-in.
 
@@ -33,29 +43,14 @@ StateVector
 
 >>> new_state = sv0 ** 3 # equivalent to sv0 * sv0 * sv0
 
-Sampling
-^^^^^^^^
+StateVector code reference
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:meth:`perceval.utils.StateVector.sample` and :meth:`perceval.utils.StateVector.samples` methods are used to generate samples from state vectors:
+.. autoclass:: exqalibur.StateVector
+   :members:
 
->>> st = pcvl.StateVector([0,1]) + pcvl.StateVector([1,0])
->>> c = Counter()
->>> for s in st.samples(10):
->>>    c[s] += 1
->>> print("\n".join(["%s: %d" % (str(k), v) for k,v in c.items()]))
-|0,1>: 3
-|1,0>: 7
+SVDistribution
+==============
 
-.. note:: These methods do not modify the state vector
-
-Measurement
-^^^^^^^^^^^
-
-:meth:`perceval.utils.StateVector.measure` is used to perform a measure on one or multiple modes. It returns for each
-possible fock state value of the selected modes, its probability and the collapsed state vector on the remaining modes.
-
->>> sv = pcvl.StateVector("|0,1,1>")+pcvl.StateVector("|1,1,0>")
->>> map_measure_sv = sv.measure(1)
->>> for s, (p, sv) in map_measure_sv.items():
->>>    print(s, p, sv)
-|1> 0.9999999999999998 sqrt(2)/2*|0,1>+sqrt(2)/2*|1,0>
+.. autoclass:: exqalibur.SVDistribution
+   :members:
