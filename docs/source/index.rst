@@ -153,8 +153,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    reference/utils_algorithms/index
    reference/logging
    reference/exqalibur/index
-   reference/statevector
-   reference/qiskit_converter
 
 .. toctree::
    :caption: Community
