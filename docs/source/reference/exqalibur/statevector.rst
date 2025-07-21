@@ -13,35 +13,38 @@ automatic normalization is called, allowing the composition of state vectors thr
 >>> sv = StateVector("|1>") + StateVector("|2>")
 >>> sv += StateVector("|3>")
 >>> print(sv)  # All components of sv have the same amplitude
-sqrt(3)/3*|1>+sqrt(3)/3*|2>+sqrt(3)/3*|3>
+0.577*|1>+0.577*|2>+0.577*|3>
 
 :code:`StateVector` can be built with great freedom:
 
->>> sv = 0.5j * BasicState([1, 1]) - math.sqrt(2) * StateVector("|2,0>") + StateVector([0, 2]) * 0.45
+>>> import math
+>>> from exqalibur import FockState, StateVector
+>>> sv = 0.5j * FockState([1, 1]) - math.sqrt(2) * StateVector("|2,0>") + StateVector([0, 2]) * 0.45
 >>> print(sv)
-0.319275*I*|1,1>-0.903047*|2,0>+0.287348*|0,2>
+0.319I*|1,1>-0.903*|2,0>+0.287*|0,2>
 
 * **Comparison operators**
 
-Comparing two :code:`StateVector` with operator :code:`==` or :code:`!=` normalize them then compare that each
-component and each probability amplitude are exactly the same.
+Comparing two :code:`StateVector` with operator :code:`==` or :code:`!=` compare normalised copies of each. probability
+amplitudes are compared strictly (they have to be exactly the same to be considered equal).
 
 .. note::
-  ``StateVector`` will normalize themselves only at usage, and not during state arithmetics operations.
+  ``StateVector`` will normalize themselves only at usage (iteration, sampling, measurement), and not during state
+  arithmetics operations.
 
-``StateVector`` can also be multiplied through a tensor product - and exponentiation is also built-in.
+``StateVector`` can also be multiplied with a tensor product:
 
->>> import perceval as pcvl
+>>> import exqalibur as xq
+>>> sv0 = xq.StateVector([1,0]) + xq.StateVector([0,1])
+>>> sv1 = 1j*xq.StateVector([2]) - xq.StateVector([0])
+>>> bs = xq.FockState([0])
+>>> print(sv0 * sv1 * bs)
+0.5I*|0,1,2,0>-0.5*|0,1,0,0>+0.5I*|1,0,2,0>-0.5*|1,0,0,0>
 
->>> sv0 = pcvl.StateVector([1,0]) + pcvl.StateVector([0,1])
->>> sv1 = ...
->>> bs = pcvl.BasicState([0])
+Exponentiation is also built-in:
 
->>> new_state = pcvl.tensorproduct([sv0, sv1, bs])
->>> # or:
->>> # new_state = sv0 * sv1 * bs
-
->>> new_state = sv0 ** 3 # equivalent to sv0 * sv0 * sv0
+>>> print(sv1 ** 3) # equivalent to sv1 * sv1 * sv1
+-0.354I*|2,2,2>+0.354I*|2,0,0>+0.354*|2,2,0>+0.354*|2,0,2>+0.354I*|0,2,0>+0.354*|0,2,2>-0.354*|0,0,0>+0.354I*|0,0,2>
 
 StateVector code reference
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
