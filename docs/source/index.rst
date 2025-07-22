@@ -55,6 +55,14 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
     year = {2023}
    }
 
+Related Projects
+================
+
+Perceval is used in several higher-level projects:
+
+- **perceval-interop**: Interoperability tools for conversion between photonic and gate based Quantum computing. See the project here: `perceval-interop <https://perceval.quandela.net/interopdocs/>`_.
+- **Merlin**: A tool to bring quantum computing to AI practitioners, requiring no prior quantum expertise.. Learn more here: `merlin <https://merlinquantum.ai/>`_.
+
 
 .. toctree::
    :caption: Documentation
@@ -85,7 +93,6 @@ If you are using Perceval for academic work, please cite the `Perceval white pap
    notebooks/BS-based_implementation
    notebooks/LOv_rewriting_rules
    notebooks/Simulation_non-unitary_components
-   notebooks/Circuit_conversion_qiskit_myQLM
    notebooks/Remote_computing
    notebooks/Graph_States_generation_and_display
    notebooks/Tomography_walkthrough
