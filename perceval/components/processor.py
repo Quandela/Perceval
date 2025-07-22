@@ -201,7 +201,8 @@ class Processor(AProcessor):
                           channel.general)
         self._simulator.keep_heralds(False)
         self._simulator.compute_physical_logical_perf(self._compute_physical_logical_perf)
-        res = self._simulator.probs_svd(self.source_distribution, self.detectors, progress_callback)
+        svd = self.source_distribution if self._has_custom_input else (self._source, self.input_state)
+        res = self._simulator.probs_svd(svd, self.detectors, progress_callback)
         get_logger().info("Local strong simulation complete!", channel.general)
 
         self.log_resources(sys._getframe().f_code.co_name, {'precision': precision})
