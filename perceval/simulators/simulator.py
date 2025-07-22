@@ -35,11 +35,10 @@ from copy import copy
 from exqalibur import SimpleSourceIterator
 from multipledispatch import dispatch
 from numbers import Number
-from collections.abc import Callable
 from scipy.sparse import csc_array, csr_array
 
 from perceval.backends import AStrongSimulationBackend
-from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors
+from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
 from perceval.utils import BasicState, BSDistribution, StateVector, SVDistribution, PostSelect, global_params, \
     DensityMatrix, post_select_distribution, post_select_statevector, partial_progress_callable
 from perceval.utils.density_matrix_utils import extract_upper_triangle
@@ -49,7 +48,6 @@ from perceval.runtime import cancel_requested
 from ._simulator_utils import _to_bsd, _inject_annotation, _merge_sv, _annot_state_mapping, _split_by_photon_count
 from ._simulate_detectors import simulate_detectors
 from .simulator_interface import ISimulator
-from .. import Source
 
 
 class Simulator(ISimulator):
@@ -257,7 +255,7 @@ class Simulator(ISimulator):
             return self.probs(input_state[0])
         return _to_bsd(self.evolve(input_state))
 
-    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: Callable | None = None):
+    def _probs_svd_generic(self, input_dist, p_threshold, progress_callback: callable = None):
         """decomposed input:
         From a SVD = {
             pa_11*bs_11 + ... + pa_n1*bs_n1: p1,
@@ -322,7 +320,7 @@ class Simulator(ISimulator):
             res.normalize()
         return res
 
-    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: Callable = None):
+    def _probs_svd_fast(self, input_dist, p_threshold, progress_callback: callable = None):
         """decomposed input:
            From a SVD = {
                bs_1: p1,
@@ -463,7 +461,7 @@ class Simulator(ISimulator):
     def probs_svd(self,
                   input_dist: SVDistribution | tuple[Source, BasicState],
                   detectors: list[IDetector] = None,
-                  progress_callback: Callable = None) -> dict[str, any]:
+                  progress_callback: callable = None) -> dict[str, any]:
         """
         Compute the probability distribution from a SVDistribution input and as well as performance scores
 
@@ -646,7 +644,7 @@ class Simulator(ISimulator):
 
     def evolve_svd(self,
                    svd: SVDistribution | StateVector | BasicState,
-                   progress_callback: Callable = None) -> dict:
+                   progress_callback: callable = None) -> dict:
         """
         Compute the SVDistribution evolved through a Linear Optical circuit
 
