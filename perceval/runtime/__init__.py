@@ -36,3 +36,4 @@ from .session import ISession
 from .remote_config import RemoteConfig
 from .job_group import JobGroup
 from .check_cancel import cancel_requested
+from .payload_generator import PayloadGenerator

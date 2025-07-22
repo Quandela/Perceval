@@ -28,19 +28,17 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import uuid
-
 from perceval.components.abstract_processor import AProcessor, ProcessorType
 from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
-from perceval.utils import BasicState, PMetadata, PostSelect, NoiseModel
+from perceval.utils import BasicState, NoiseModel
 from perceval.utils.logging import get_logger, channel
-from perceval.serialization import deserialize, serialize
+from perceval.serialization import deserialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
+from .payload_generator import PayloadGenerator
 
-__process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
@@ -171,13 +169,16 @@ class RemoteProcessor(AProcessor):
     def status(self):
         return self._status
 
+    def check_circuit_size(self, m: int):
+        if 'max_mode_count' in self.constraints and m > self.constraints['max_mode_count']:
+            raise RuntimeError(f"Circuit too big ({m} modes > {self.constraints['max_mode_count']})")
+        if 'min_mode_count' in self.constraints and m < self.constraints['min_mode_count']:
+            raise RuntimeError(f"Circuit too small ({m} < {self.constraints['min_mode_count']})")
+        if self.input_state is not None and self.input_state.m != m:
+            raise RuntimeError(f"Circuit and input state size do not match ({m} != {self.input_state.m})")
+
     def check_circuit(self, circuit: ACircuit):
-        if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
-            raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
-        if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
-            raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
-        if self.input_state is not None and self.input_state.m != circuit.m:
-            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self.input_state.m})")
+        self.check_circuit_size(circuit.m)
 
     def set_circuit(self, circuit: ACircuit):
         self.check_circuit(circuit)
@@ -212,42 +213,16 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> list[str]:
         return self._specs.get("available_commands", [])
 
-    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
-                            ) -> dict[str, any]:
+    def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
         self.check_min_detected_photons_filter()
-        self._set_min_photons_parameter()
-
-        j = {
-            'platform_name': self.name,
-            'pcvl_version': PMetadata.short_version(),
-            'process_id': str(__process_id__)
-        }
-        payload = {
-            'command': command,
-            **kwargs
-        }
-        if not circuitless:
-            circuit = self.linear_circuit()  # Raises RuntimeError if there are non-unitary components
-            self.check_circuit(circuit)
-            payload['circuit'] = serialize(circuit)
-        if self.input_state and not inputless:
+        self.check_circuit_size(self.circuit_size)
+        if self.input_state:
             self.check_input(self.remove_heralded_modes(self.input_state))
-            payload['input_state'] = serialize(self.input_state)
-        if self._parameters:
-            payload['parameters'] = self._parameters
-        if self.post_select_fn is not None:
-            if isinstance(self.post_select_fn, PostSelect):
-                payload['postselect'] = serialize(self.post_select_fn)
-            else:
-                get_logger().warn(
-                    f"Ignored post-selection since it was a {type(self.post_select_fn)}, expected PostSelect", channel.user)
-        if self.heralds:
-            payload['heralds'] = self.heralds
-        if self.noise is not None:
-            payload['noise'] = serialize(self.noise)
-        j['payload'] = payload
+
+        payload = PayloadGenerator.generate_payload(command, self.experiment, self._parameters, self.name, **kwargs)
+
         self.log_resources(command, self._parameters)
-        return j
+        return payload
 
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
@@ -317,7 +292,7 @@ class RemoteProcessor(AProcessor):
     def log_resources(self, command: str, extra_parameters: dict):
         """Log resources of the remote processor
 
-        :param method: name of the method used
+        :param command: name of the method used
         :param extra_parameters: extra parameters to log
         """
         extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}

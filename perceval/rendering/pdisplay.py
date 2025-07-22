@@ -31,6 +31,7 @@ from __future__ import annotations
 import copy
 import os
 
+from exqalibur import BSSamples
 from multipledispatch import dispatch
 import networkx as nx
 import sympy as sp
@@ -177,9 +178,9 @@ def pdisplay_experiment(processor: Experiment,
             renderer.subblock_info.update(pre_renderer.subblock_info)
 
     in_ports_drawn_on_modes = []
-    for port, port_range in processor._in_ports.items():
+    for port_range in processor._in_ports.values():
+        # Avoids adding ports on heralded modes and modes with ports already defined
         in_ports_drawn_on_modes += port_range
-        renderer.add_in_port(port_range[0], port)
 
     if isinstance(processor._input_state, BasicState):
         renderer.display_input_photons(processor._input_state, original_mode_style)
@@ -188,6 +189,9 @@ def pdisplay_experiment(processor: Experiment,
         for i in range(processor.circuit_size):
             if i not in in_ports_drawn_on_modes:
                 renderer.add_in_port(i, empty_raw_port)
+
+    for port, port_range in processor._in_ports.items():
+        renderer.add_in_port(port_range[0], port)
 
     renderer.add_detectors(processor._detectors)
     ports_drawn_on_modes = []
@@ -282,10 +286,8 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
         the_keys = sorted(sv.keys(), key=lambda a: -abs(sv[a]))
     else:
         the_keys = list(sv.keys())
-    if max_v is not None:
-        the_keys = the_keys[:max_v]
     d = []
-    for k in the_keys:
+    for k in the_keys[:max_v]:
         value = sv[k]
         if isinstance(value, float):
             value = simple_float(value, nsimplify=nsimplify, precision=precision)[1]
@@ -306,6 +308,12 @@ def pdisplay_state_distrib(sv: StateVector | BSDistribution | SVDistribution | B
     elif isinstance(sv, BSCount):
         headers[1] = "count"
     s_states = tabulate(d, headers=headers, tablefmt=_TABULATE_FMT_MAPPING[output_format])
+    return s_states
+
+
+def pdisplay_bs_samples(bs_samples: BSSamples, output_format: Format = Format.TEXT, max_v: int | None = 10):
+    s_states = tabulate([[str(sample)] for sample in bs_samples[:max_v]],
+                        headers=["states"], tablefmt=_TABULATE_FMT_MAPPING[output_format])
     return s_states
 
 
@@ -403,6 +411,11 @@ def _pdisplay(distrib, **kwargs):
 @dispatch(BSCount)
 def _pdisplay(bsc, **kwargs):
     return pdisplay_state_distrib(bsc, **kwargs)
+
+
+@dispatch(BSSamples)
+def _pdisplay(bssamples, **kwargs):
+    return pdisplay_bs_samples(bssamples, **kwargs)
 
 
 def _get_simple_number_kwargs(**kwargs):

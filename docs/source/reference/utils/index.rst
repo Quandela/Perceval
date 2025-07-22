@@ -11,6 +11,7 @@ utils
    logical_state
    noise_model
    dist_metrics
+   distinct_permutations
    stategenerator
    polarization
    persistent_data
