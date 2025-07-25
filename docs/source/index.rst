@@ -61,7 +61,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    circuits
    polarization
    backends
-   tools
    legacy
 
 .. toctree::

@@ -198,9 +198,15 @@ Matrices, both numeric and symbolic, can be displayed using :code:`pdisplay`
 
 The possible kwargs when displaying a :code:`Matrix` are
 
-- :code:`output_format`. The format to use for the output, from the :code:`Perceval.Format` enum.
+- :code:`output_format`. The format to use for the output, from the :code:`perceval.Format` enum.
   The available formats are TEXT (default), and LATEX.
 - :code:`precision`. The numerical precision to display numbers.
+
+Using :code:`pdisplay` on a :code:`pcvl.Matrix` is a simple way to include a LaTex rendering in a document.
+
+.. figure:: ../../_static/img/mzi_matrix.png
+  :align: center
+  :width: 30%
 
 Displaying a DensityMatrix
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
