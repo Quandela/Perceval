@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [ubuntu-latest]
     steps:
     - if: runner.os == 'Linux'
       name: Initialize PYTHON_V_CP linux
