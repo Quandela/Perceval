@@ -112,24 +112,3 @@ Let's do a small example to understand:
 
 Since the seeds of the 2 cells are identical, the randomly generated numbers are also equal.
 It works the same way with notebook results.
-
-Converters
-----------
-
-The ``perceval.converters`` package contains useful tools to convert to and from Perceval objects. They act as bridges
-to other libraries.
-
- * :ref:`Qiskit converter`
-
-Serialization
--------------
-
-Perceval provides generic functions to serialize / deserialize data. A lot of Perceval data classes come with their
-optimized serializer (matrixes, circuits, basic states, state vectors and some other specific containers).
-
->>> import perceval as pcvl
->>> from perceval.serialization import serialize, deserialize
->>> c = pcvl.Circuit(4, "My circuit") // pcvl.Unitary(pcvl.Matrix.random_unitary(4))
-...     // PS(phi=pcvl.P("phi_0")) // pcvl.Unitary(pcvl.Matrix.random_unitary(4))
->>> text_repr = serialize(c)
->>> c2 = deserialize(text_repr)  # c and c2 are two instances of the same circuit

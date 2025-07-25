@@ -1,6 +1,8 @@
 exqalibur
 ^^^^^^^^^
 
+**exqalibur** is a C++ toolbox of highly optimised algorithms. **Perceval** relies heavily on it.
+
 .. toctree::
    permanent
    fockstate
