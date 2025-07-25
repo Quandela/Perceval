@@ -74,7 +74,7 @@ jobs:
         pytest
 
   perceval-lite-autotests:
-    name: Run PyTest on ${{ matrix.os }}
+    name: Run PyTest with light install on ${{ matrix.os }}
     if: always()
     runs-on: ${{ matrix.os }}
     strategy:
