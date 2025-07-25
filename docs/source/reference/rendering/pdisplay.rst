@@ -58,6 +58,9 @@ Then, add ``pcvl.pdisplay()`` of your circuit.
          - .. image:: ../../_static/img/jupyter-screenshot.jpg
          - .. image:: ../../_static/img/ide-screenshot.jpg
 
+Controlling the circuit rendering
+---------------------------------
+
 Also, you can change the display of the circuit using a different skin which can itself be configured.
 Indeed, a boolean can be set to obtain a more compact display (if the circuit is too wide for example).
 
@@ -86,9 +89,13 @@ Indeed, a boolean can be set to obtain a more compact display (if the circuit is
   :width: 50%
 
 By default the skin will be ``PhysSkin``, if you want to use another skin by default, you can save your configuration
-into your Perceval persistent configuration.
+into your Perceval persistent configuration. Currently, the other skin provided with `Perceval` is ``SymbSkin``:
 
-To save configuration for your choice of skin by default, you require the :ref:`DisplayConfig` object.
+.. figure:: ../../_static/img/comparing-symb-and-phys.png
+  :align: center
+  :width: 75%
+
+To save the skin in your configuration, you need to use the :ref:`DisplayConfig` object.
 
 The possible kwargs when displaying a :code:`Circuit` are
 

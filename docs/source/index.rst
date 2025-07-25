@@ -46,8 +46,10 @@ Related Projects
 
 Perceval is used in several higher-level projects (non-exhaustive list):
 
-* **perceval-interop**: Interoperability tools for conversion between photonic and gate based Quantum computing. See the project here: `perceval-interop <https://perceval.quandela.net/interopdocs/>`_.
-* **MerLin**: A tool to bring quantum computing to AI practitioners, requiring no prior quantum expertise.. Learn more here: `merlin <https://merlinquantum.ai/>`_.
+* **perceval-interop**: Interoperability tools for conversion between photonic and gate based Quantum computing. See
+  the project here: `perceval-interop <https://perceval.quandela.net/interopdocs/>`_.
+* **MerLin**: A tool to bring quantum computing to AI practitioners, requiring no prior quantum expertise.. Learn more
+  here: `merlin <https://merlinquantum.ai/>`_.
 
 
 .. toctree::
@@ -56,10 +58,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    :hidden:
 
    getting_started
-   basics
-   usage
-   circuits
-   polarization
    backends
    legacy
 
