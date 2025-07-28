@@ -58,19 +58,9 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    :hidden:
 
    getting_started
+   tutorial
    backends
    legacy
-
-.. toctree::
-   :caption: Beginner tutorials
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Walkthrough-cnot
-   notebooks/State_Tutorial
-   notebooks/Circuit_Tutorial
-   notebooks/Computation_Tutorial
-   notebooks/Encoding_Tutorial
 
 .. toctree::
    :caption: Advanced tutorials

@@ -13,7 +13,7 @@ If offers tools to:
   * Pure states (:ref:`FockState`, :ref:`StateVector`)
   * Mixed states (:ref:`SVDistribution`, :ref:`DensityMatrix`)
 
-* Build a linear optics :ref:`Experiment` containing
+* Build a linear optical :ref:`Experiment` containing
 
   * A unitary :ref:`Circuit` composed of :ref:`Unitary Components`
   * Some :ref:`Non-unitary Components`
