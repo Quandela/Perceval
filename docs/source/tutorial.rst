@@ -15,9 +15,10 @@ Advanced tutorials
 .. toctree::
    :maxdepth: 2
 
+   notebooks/Quantum_teleportation_feed_forward
    notebooks/Encoding_Tutorial
-   notebooks/Simulation_non-unitary_components
    notebooks/Graph_States_generation_and_display
+   notebooks/Simulation_non-unitary_components
    notebooks/Density_matrix_Fock_space
 
 Expert tutorials
@@ -27,3 +28,4 @@ Expert tutorials
    :maxdepth: 2
 
    notebooks/Tomography_walkthrough
+   notebooks/QLOQ_QUBO_tutorial

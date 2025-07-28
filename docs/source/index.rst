@@ -53,7 +53,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
 
 
 .. toctree::
-   :caption: Documentation
    :maxdepth: 2
    :hidden:
 
@@ -62,13 +61,23 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    legacy
 
 .. toctree::
-   :caption: Advanced tutorials
+   :caption: Code Reference
    :maxdepth: 2
    :hidden:
 
-   notebooks/BS-based_implementation
-   notebooks/LOv_rewriting_rules
-   notebooks/Quantum_teleportation_feed_forward
+   reference/algorithm/index
+   reference/backends/index
+   reference/components/index
+   reference/error_mitigation
+   reference/providers
+   reference/rendering/index
+   reference/runtime/index
+   reference/serialization
+   reference/simulators/index
+   reference/utils/index
+   reference/utils_algorithms/index
+   reference/logging
+   reference/exqalibur/index
 
 .. toctree::
    :caption: Boson sampling
@@ -95,7 +104,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    notebooks/Variational_Quantum_Eigensolver
    notebooks/Reinforcement_learning
    notebooks/QUBO
-   notebooks/QLOQ_QUBO_tutorial
 
 .. toctree::
    :caption: Quantum walk
@@ -109,28 +117,12 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    :maxdepth: 2
    :hidden:
 
+   notebooks/Walkthrough-cnot
    notebooks/Gedik_qudit
    notebooks/Boson_Bunching
    notebooks/quantum_kernel_methods
-
-.. toctree::
-   :caption: Code Reference
-   :maxdepth: 2
-   :hidden:
-
-   reference/algorithm/index
-   reference/backends/index
-   reference/components/index
-   reference/error_mitigation
-   reference/providers
-   reference/rendering/index
-   reference/runtime/index
-   reference/serialization
-   reference/simulators/index
-   reference/utils/index
-   reference/utils_algorithms/index
-   reference/logging
-   reference/exqalibur/index
+   notebooks/BS-based_implementation
+   notebooks/LOv_rewriting_rules
 
 .. toctree::
    :caption: Community
