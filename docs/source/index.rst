@@ -59,7 +59,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
 
    getting_started
    tutorial
-   backends
    legacy
 
 .. toctree::
@@ -69,11 +68,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
 
    notebooks/BS-based_implementation
    notebooks/LOv_rewriting_rules
-   notebooks/Simulation_non-unitary_components
-   notebooks/Remote_computing
-   notebooks/Graph_States_generation_and_display
-   notebooks/Tomography_walkthrough
-   notebooks/Density_matrix_Fock_space
    notebooks/Quantum_teleportation_feed_forward
 
 .. toctree::
