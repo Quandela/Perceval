@@ -67,7 +67,10 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    :hidden:
 
    notebooks/Walkthrough-cnot
-   notebooks/Tutorial
+   notebooks/State_Tutorial
+   notebooks/Circuit_Tutorial
+   notebooks/Computation_Tutorial
+   notebooks/Encoding_Tutorial
 
 .. toctree::
    :caption: Advanced tutorials
