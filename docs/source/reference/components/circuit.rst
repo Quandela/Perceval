@@ -1,10 +1,7 @@
 Circuit
 =======
 
-The basic usage and definition of Circuit can be found in the dedicated section :ref:`Circuits`.
-
-.. warning::
-  Move everything that is not essential from :ref:`Circuits` to here.
+The basic usage and definition of Circuit can be found in :ref:`the tutorial<Optical Circuits>`.
 
 Accessing the components
 ^^^^^^^^^^^^^^^^^^^^^^^^

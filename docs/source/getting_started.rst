@@ -24,7 +24,7 @@ If offers tools to:
 * Define real-world noise parameters applied in the input, the linear-optics circuit and the photon detectors (:ref:`Noise Model`)
 * Simulate these experiments through :ref:`Different layers of simulations`
 
-  * Perfect simulations with :ref:`Computing Backends`
+  * Perfect simulations with :ref:`Simulation Back-ends`
   * Noisy and non-unitary simulations with the :ref:`Simulator` layer
 
 * Control the flow of quantum computations and choose where they are run

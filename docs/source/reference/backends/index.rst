@@ -19,7 +19,7 @@ so the sum of the values is not always guaranteed to be 1 for approximating back
 
 On the other hand, the sampling backends are only able to sample randomly output states.
 
-A comparison of the backends is available at :ref:`Computing Backends`.
+A comparison of the backends is available at :ref:`Simulation Back-ends`.
 
 .. toctree::
    :maxdepth: 2
