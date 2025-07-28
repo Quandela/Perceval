@@ -19,7 +19,6 @@ Advanced tutorials
    notebooks/Encoding_Tutorial
    notebooks/Graph_States_generation_and_display
    notebooks/Simulation_non-unitary_components
-   notebooks/Density_matrix_Fock_space
 
 Expert tutorials
 ^^^^^^^^^^^^^^^^
@@ -29,3 +28,4 @@ Expert tutorials
 
    notebooks/Tomography_walkthrough
    notebooks/QLOQ_QUBO_tutorial
+   notebooks/Density_matrix_Fock_space

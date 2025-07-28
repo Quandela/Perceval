@@ -75,8 +75,6 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    reference/serialization
    reference/simulators/index
    reference/utils/index
-   reference/utils_algorithms/index
-   reference/logging
    reference/exqalibur/index
 
 .. toctree::
