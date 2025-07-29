@@ -19,6 +19,7 @@ Advanced tutorials
    notebooks/Encoding_Tutorial
    notebooks/Graph_States_generation_and_display
    notebooks/Simulation_non-unitary_components
+   notebooks/VQA_Tutorial
 
 Expert tutorials
 ^^^^^^^^^^^^^^^^
