@@ -45,7 +45,9 @@ class StateGenerator:
     :param polarization_base: (optional) you can provide your own polarization basis as a tuple of BasicStates.
         default=(BasicState("`|{P:H}>`"), BasicState("`|{P:V}>`")
     """
-    def __init__(self, encoding, polarization_base=(BasicState("|{P:H}>"), BasicState("|{P:V}>"))):
+    def __init__(self, encoding, polarization_base = None):
+
+        polarization_base = polarization_base or (BasicState("|{P:H}>"), BasicState("|{P:V}>"))
 
         assert isinstance(encoding, Encoding), "You need to provide an encoding"
         if encoding == Encoding.RAW:

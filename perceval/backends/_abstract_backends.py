@@ -31,7 +31,7 @@ from abc import ABC, abstractmethod
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector, allstate_array
+from perceval.utils import BasicState, BSDistribution, BSSamples, StateVector, allstate_array
 
 
 class ABackend(ABC):
@@ -128,6 +128,10 @@ class AStrongSimulationBackend(ABackend):
         self.clear_iterator_cache()
 
     def set_input_state(self, input_state: BasicState):
+        """
+
+        :rtype: None
+        """
         super().set_input_state(input_state)
         self._init_mask()
 
