@@ -332,13 +332,13 @@ class Expression(Parameter):
     def defined(self) -> bool:
         r"""Return True if the parameter has a value (fixed or non fixed)
         """
-        return all([p.fixed for p in self._params])
+        return all([p.defined for p in self._params])
     
     @property
     def fixed(self) -> bool:
         r"""Return True if the parameter is fixed
         """
-        return all(p._symbol is None for p in self._params)
+        return all(p.fixed for p in self._params)
 
 
 P = Parameter
