@@ -62,7 +62,9 @@ class Stepper(ISimulator):
         self._clear_cache()
 
     def apply(self, sv: StateVector, r: list[int], c: ACircuit) -> StateVector:
-        """Apply a circuit on a StateVector generating another StateVector
+        """
+        Apply a circuit on a StateVector generating another StateVector
+
         :param sv: input StateVector
         :param r: range of port for the circuit corresponding to StateVector position
         :param c: a circuit
@@ -97,10 +99,26 @@ class Stepper(ISimulator):
                 nsv += state*sv_pa
         return nsv
 
-    def probs(self, input_state) -> BSDistribution:
+    def probs(self, input_state: BasicState | StateVector) -> BSDistribution:
+        """
+        Compute the probability distribution from a state input
+        :param input_state: The input fock state or state vector
+        :return: The post-selected output state distribution (BSDistribution)
+        """
         return _to_bsd(self.evolve(input_state))
 
     def probs_svd(self, svd: SVDistribution, detectors=None, progress_callback: callable = None) -> dict:
+        """
+        Compute the probability distribution from a SVDistribution input
+
+        :param svd: A state vector distribution describing the input to simulate
+        :param detectors: An optional list of detectors
+        :param progress_callback: A function with the signature `func(progress: float, message: str)`. Not used.
+
+        :return: A dictionary of the form { "results": BSDistribution }
+
+            * results is the post-selected output state distribution
+        """
         res_bsd = BSDistribution()
         for sv, p_sv in svd.items():
             res = self.probs(sv)
@@ -112,12 +130,25 @@ class Stepper(ISimulator):
 
         return {"results": res_bsd}
 
-    def evolve(self, input_state) -> StateVector:
+    def evolve(self, input_state: BasicState | StateVector) -> StateVector:
+        """
+        Evolve a state through the circuit.
+
+        :param input_state: The input fock state or state vector
+        :return: The output state vector
+        """
         self.compile(input_state)
         assert self._out.m == input_state.m, "Loss channels cannot be used with state amplitude"
         return self._out
 
     def compile(self, input_states: BasicState | StateVector) -> bool:
+        """
+        Effectively computes the evolution of the input state, and stores the result in self._out.
+
+        :param input_states: The input fock state or state vector
+        :return: True if something has been computed, False otherwise
+         (i.e. the previous call to compile was already on this circuit and input state, so the result is already stored).
+        """
         if isinstance(input_states, BasicState):
             sv = StateVector(input_states)
         else:

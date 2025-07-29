@@ -37,7 +37,7 @@ from perceval.components import Circuit, Processor, BS, PS, catalog, Unavailable
 from perceval.utils import BasicState, StateVector, SVDistribution, Encoding, NoiseModel, P
 from perceval.backends import Clifford2017Backend
 
-from _test_utils import LogChecker
+from _test_utils import LogChecker, assert_svd_close, assert_bsd_close
 
 
 @patch.object(pcvl.utils.logging.ExqaliburLogger, "warn")
@@ -45,7 +45,7 @@ def test_processor_input_fock_state(mock_warn):
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     with LogChecker(mock_warn, expected_log_number=0):
         p.with_input(BasicState([0, 1, 1, 0]))
-    assert p.source_distribution == {StateVector([0, 1, 1, 0]): 1}
+    assert_svd_close(p.source_distribution, SVDistribution({StateVector([0, 1, 1, 0]): 1}))
 
 
 def test_processor_input_fock_state_with_loss():
@@ -57,7 +57,7 @@ def test_processor_input_fock_state_with_loss():
         StateVector([0, 0, 1, 0]): 0.16,
         StateVector([0, 0, 0, 0]): 0.64
     }
-    assert pytest.approx(p.source_distribution) == expected
+    assert_svd_close(p.source_distribution, expected)
 
 
 def test_processor_input_fock_state_with_all_noise_sources():
@@ -96,30 +96,35 @@ def test_processor_input_state_vector():
     p = Processor("Naive", Circuit(4))  # Init with perfect source
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
-    assert p.source_distribution == {sv: 1}
+    assert_svd_close(p.source_distribution, {sv: 1})
 
     p = Processor("Naive", Circuit(4), noise=NoiseModel(transmittance=.4, g2=.06))  # Init with noise
     sv = BasicState([0, 1, 1, 0]) + BasicState([1, 0, 0, 1])
     p.with_input(sv)
-    assert p.source_distribution == {sv: 1}  # The source does NOT affect SV inputs
+    assert_svd_close(p.source_distribution, {sv: 1})  # The source does NOT affect SV inputs
 
 
 def test_processor_probs():
     qpu = Processor("Naive", BS())
     qpu.with_input(BasicState([1, 1]))  # Are expected only states with 2 photons in the same mode.
-    qpu.thresholded_output(True)  # With thresholded detectors, the simulation will only detect |1,0> and |0,1>
+    for m in range(qpu.circuit_size):
+        qpu.add(m, Detector.threshold())  # With threshold detectors, the simulation will only detect |1,0> and |0,1>
     qpu.min_detected_photons_filter(2)
     probs = qpu.probs()
 
     # By default, all states are filtered and physical performance drops to 0
-    assert pytest.approx(probs['physical_perf']) == 0
+    assert pytest.approx(probs['global_perf']) == 0
 
-    qpu.thresholded_output(False)  # With perfect detection, we get our results back
+    detectors = qpu.detectors
+    for i in range(len(detectors)):
+        detectors[i] = None  # Ugly reset of detectors
+
+    # With perfect detection, we get our results back
     probs = qpu.probs()
     bsd_out = probs['results']
     assert pytest.approx(bsd_out[BasicState("|2,0>")]) == 0.5
     assert pytest.approx(bsd_out[BasicState("|0,2>")]) == 0.5
-    assert pytest.approx(probs['physical_perf']) == 1
+    assert pytest.approx(probs['global_perf']) == 1
 
 
 def test_processor_samples():
@@ -235,15 +240,16 @@ def test_phase_quantization():
     p0.with_input(BasicState([1, 1]))
     p1.with_input(BasicState([1, 1]))
     p2.with_input(BasicState([1, 1]))
-    assert p0.probs()["results"] != pytest.approx(p1.probs()["results"])
-    assert p1.probs()["results"] == pytest.approx(p2.probs()["results"])
+    with pytest.raises(AssertionError):
+        assert_bsd_close(p0.probs()["results"], p1.probs()["results"])
+    assert_bsd_close(p1.probs()["results"], p2.probs()["results"])
 
     p1.noise = NoiseModel()
-    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+    assert_bsd_close(p0.probs()["results"], p1.probs()["results"])
 
     p0.noise = nm
     p1.noise = nm
-    assert p0.probs()["results"] == pytest.approx(p1.probs()["results"])
+    assert_bsd_close(p0.probs()["results"], p1.probs()["results"])
 
 
 def test_phase_error():
@@ -315,6 +321,14 @@ def test_mask_detectors():
     res = p.probs()
 
     assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["global_perf"] == pytest.approx(.5)
+
+    p.compute_physical_logical_perf(True)
+
+    res = p.probs()
+
+    assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["physical_perf"] == pytest.approx(1)
     assert res["logical_perf"] == pytest.approx(.5)
 
 
@@ -327,12 +341,12 @@ def test_min_photons_reset():
 
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(1)
-    assert res["physical_perf"] == pytest.approx(.25)
+    assert res["global_perf"] == pytest.approx(.25)
 
     p.min_detected_photons_filter(0)
     res = p.probs()
     assert res["results"][input_state] == pytest.approx(.25)
-    assert res["physical_perf"] == pytest.approx(1)
+    assert res["global_perf"] == pytest.approx(1)
 
 
 def test_flatten_processor():
@@ -360,3 +374,40 @@ def test_flatten_processor():
     assert len(level_3_components) == 68 # 8*5 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
     assert len(level_4_components) == 76 # 8*6 in RYQUDIT2, 4*5 in CZ2, 1*6 in POSTPROCESSED CZ + 2 PERM
     assert len(all_components) == len(level_4_components)
+
+
+def test_asymmetric_processor():
+    # Herald at left
+    p = Processor("SLOS", 2)
+    p.add(0, BS())
+    p.add_herald(0, 1, location=PortLocation.INPUT)
+
+    assert p.m == 2
+    assert p.m_in == 1
+
+    assert p.heralds == {}
+    assert p.in_heralds == {0: 1}
+
+    p.with_input(BasicState([0]))
+    assert p.input_state == BasicState([1, 0])
+
+    res = p.probs()
+    assert res["results"][BasicState([1, 0])] == pytest.approx(0.5)
+    assert res["results"][BasicState([0, 1])] == pytest.approx(0.5)
+
+    # Herald at right
+    p = Processor("SLOS", 2)
+    p.add(0, BS())
+    p.add_herald(0, 1, location=PortLocation.OUTPUT)
+
+    assert p.m == 1
+    assert p.m_in == 2
+
+    assert p.heralds == {0: 1}
+    assert p.in_heralds == {}
+
+    p.with_input(BasicState([1, 0]))
+
+    res = p.probs()
+    assert res["results"][BasicState([0])] == pytest.approx(1)
+    assert res["global_perf"] == pytest.approx(.5)

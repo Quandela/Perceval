@@ -61,7 +61,7 @@ class AComponent(ABC):
 
     def is_composite(self) -> bool:
         """
-        Returns True if the component is itself composed of subcomponents
+        :return: True if the component is itself composed of subcomponents
         """
         return False
 
@@ -74,10 +74,20 @@ class AParametrizedComponent(AComponent):
 
     @property
     def vars(self) -> dict[str, Parameter]:
+        """
+        :return: A dictionary mapping parameter names to parameters for all variable parameters of the circuit
+        """
         return {p.name: p for p in self._params.values() if not p.fixed}
 
     def assign(self,
-               assign: dict = None):
+               assign: dict[str, float | int] = None):
+        """
+        Assign values to parameters referenced in assign
+
+        :param assign: A dictionary mapping parameter_name -> value.
+         Set the value to the parameter whose name is parameter_name for each key of the dictionary.
+        :raise KeyError: If parameter_name is not an existing variable parameter name of the circuit.
+        """
         if assign is None:
             return
         vs = self.vars
@@ -97,21 +107,25 @@ class AParametrizedComponent(AComponent):
 
     @property
     def params(self) -> Iterable[str]:
-        """Returns a list of all variable parameter names in the component"""
+        """
+        :return: a list of all variable parameter names in the component
+        """
         return self._params.keys()
 
     def param(self, param_name: str) -> Parameter:
-        """Returns a `Parameter` object from its name"""
+        """Extract a `Parameter` object from its name
+        :param param_name: The name of the parameter
+        :return: A `Parameter` object
+        """
         return self._params[param_name]
 
     def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
         """Return the parameters of the component
 
         :param all_params: if False, only returns the variable parameters
-        :expressions: If `True`, returns highest level Expressions and parameters only.
-            If `False`, returns the raw parameters that make up the expressions only. 
-            Default `False`.
-            
+        :param expressions: if True, returns Expressions and parameters embedded in circuit components.
+            If False, returns the raw parameters that make up the expressions only. Default False.
+
         :return: the list of parameters
         """
         param_list = []
@@ -136,8 +150,8 @@ class AParametrizedComponent(AComponent):
     def _set_parameter(self,
                        name: str,
                        p: Parameter | float,
-                       min_v: float,
-                       max_v: float,
+                       min_v: float | None,
+                       max_v: float | None,
                        periodic: bool = True) -> Parameter:
         """
         Define a parameter for the circuit, it can be an existing parameter that we recycle updating

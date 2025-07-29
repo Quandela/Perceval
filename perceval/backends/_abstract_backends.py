@@ -31,8 +31,7 @@ from abc import ABC, abstractmethod
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector
-from perceval.utils.logging import deprecated
+from perceval.utils import BasicState, BSDistribution, BSSamples, allstate_iterator, StateVector, allstate_array
 
 
 class ABackend(ABC):
@@ -42,6 +41,10 @@ class ABackend(ABC):
         self._input_state = None
 
     def set_circuit(self, circuit: ACircuit):
+        """
+        Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
+        instead, if required).
+        """
         if circuit.requires_polarization:
             raise RuntimeError("Circuit must not contain polarized components")
         self._input_state = None
@@ -49,6 +52,9 @@ class ABackend(ABC):
         self._umat = circuit.compute_unitary()
 
     def set_input_state(self, input_state: BasicState):
+        """
+        Sets an input state for the simulation. This state has to be a Fock state without annotations.
+        """
         self._check_state(input_state)
         self._input_state = input_state
 
@@ -122,9 +128,6 @@ class AStrongSimulationBackend(ABackend):
         self.clear_iterator_cache()
 
     def set_input_state(self, input_state: BasicState):
-        """
-        Sets an input state for the simulation. This state has to be a Fock state without annotations.
-        """
         super().set_input_state(input_state)
         self._init_mask()
 
@@ -132,7 +135,7 @@ class AStrongSimulationBackend(ABackend):
         n_photons = input_state.n
 
         if n_photons not in self._cache_iterator.keys():
-            self._cache_iterator[n_photons] = tuple(allstate_iterator(input_state, self._mask))
+            self._cache_iterator[n_photons] = allstate_array(input_state, self._mask)
 
         return self._cache_iterator[n_photons]
 
@@ -140,22 +143,22 @@ class AStrongSimulationBackend(ABackend):
         self._cache_iterator = dict()
 
     def set_circuit(self, circuit: ACircuit):
-        """
-        Sets the circuit to simulate. This circuit must not contain polarized components (use PolarizationSimulator
-        instead, if required).
-        """
-        if self._circuit and circuit.m != self._circuit:
+        if self._circuit and circuit.m != self._circuit.m:
             self.clear_iterator_cache()
         super().set_circuit(circuit)
 
     @abstractmethod
     def prob_amplitude(self, output_state: BasicState) -> complex:
+        """Computes the probability amplitude for a given output state. The input state and the circuit must already be set"""
         pass
 
     def probability(self, output_state: BasicState) -> float:
+        """Computes the probability for a given output state. The input state and the circuit must already be set"""
         return abs(self.prob_amplitude(output_state)) ** 2
 
     def all_prob(self, input_state: BasicState = None) -> list[float]:
+        """Computes the list of probabilities of all states (respecting the mask if any was set).
+        The order of the states can be retrieved using `allstate_iterator()`"""
         if input_state is not None:
             self.set_input_state(input_state)
         results = []
@@ -164,21 +167,18 @@ class AStrongSimulationBackend(ABackend):
         return results
 
     def prob_distribution(self) -> BSDistribution:
+        """
+        Computes the probability distribution of all states (respecting the mask if any was set)
+        under the form of a BSDistribution.
+        """
         bsd = BSDistribution()
         for output_state in self._get_iterator(self._input_state):
             bsd.add(output_state, self.probability(output_state))
         return bsd
 
     def evolve(self) -> StateVector:
+        """Evolves the input BasicState into a StateVector."""
         res = StateVector()
         for output_state in self._get_iterator(self._input_state):
             res += output_state * self.prob_amplitude(output_state)
         return res
-
-
-class AProbAmpliBackend(AStrongSimulationBackend, ABC):
-    """Deprecated: this class was renamed to AStrongSimulationBackend"""
-
-    @deprecated(version="0.12.0", reason="AProbAmpliBackend was renamed to AStrongSimulationBackend")
-    def __init__(self):
-        super().__init__()

@@ -26,6 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 from typing import Callable
 
 from perceval.runtime import cancel_requested
@@ -33,8 +35,57 @@ from perceval.components.detector import IDetector, DetectionType, get_detection
 from perceval.utils import BSDistribution, BasicState
 
 
-def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = None,
-                       prob_threshold: float = 0,
+def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]) -> bool:
+    """
+    :param s: The state to check
+    :param heralds: The heralds {mode: count} to check compatibility with
+    :return: True if the state will match the heralds after being thresholded, False otherwise.
+    """
+    for m, v in heralds.items():
+        if v and not s[m]:  # Note: this case should not happen if an "at least 1" condition was applied on previous step
+            return False
+        if v == 0 and s[m]:
+            return False
+    return True
+
+
+def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: dict[int, int]) -> list[BSDistribution]:
+    """
+    :param s: The state to compute distributions for given the detectors.
+    :param detectors: The detectors to apply to get the distributions
+    :param heralds: The heralds that the final state needs to satisfy
+    :return: The list of computed BSDistributions that need to be merged afterwards.
+     For modes where there are heralds, either:
+      - the distribution is a non-normalized, single-state distribution (only the useful state is kept)
+      - the returned list is empty (no useful state is reachable)
+    """
+    distributions = []
+    for m, (photons_in_mode, detector) in enumerate(zip(s, detectors)):
+        if detector is not None:
+            d = detector.detect(photons_in_mode)
+            if isinstance(d, BasicState):
+                d = BSDistribution(d)
+
+            if m in heralds:
+                v = heralds[m]
+                state = BasicState([v])
+                p = d[state]
+                if not p:
+                    return []  # Note: if heralds have been correctly applied before, this case can't appear
+                d = BSDistribution({state: p})
+
+            distributions.append(d)
+        elif m not in heralds or heralds[m] == photons_in_mode:
+            distributions.append(BSDistribution(BasicState([photons_in_mode])))
+
+        else:
+            return []
+
+    return distributions
+
+
+def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_photons: int = 0,
+                       prob_threshold: float = 0, heralds: dict[int, int] = {},
                        progress_callback: Callable = None) -> tuple[BSDistribution, float]:
     """
     Simulates the effect of imperfect detectors on a theoretical distribution.
@@ -43,6 +94,8 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     :param detectors: A List of detectors
     :param min_photons: Minimum detected photons filter value (when None, does not apply this physical filter)
     :param prob_threshold: Filter states that have a probability below this threshold
+    :param heralds: A dictionary {mode: expected} that will be used for logical selection.
+     Beware the performance can only be considered global (and no longer physical) if not empty
     :param progress_callback: A function with the signature `func(progress: float, message: str)`
 
     :return: A tuple containing the output distribution where detectors were simulated, and a physical performance score
@@ -52,56 +105,55 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     if not dist or detection == DetectionType.PNR:
         return dist, 1
 
-    phys_perf = 1
+    phys_perf = 0
     result = BSDistribution()
     lbsd = len(dist)
     if detection == DetectionType.Threshold:
         for idx, (s, p) in enumerate(dist.items()):
+            if not heralds_compatible_threshold(s, heralds):
+                continue
             s = s.threshold_detection()
-            if min_photons is not None and s.n < min_photons:
-                phys_perf -= p
-            else:
+            if s.n >= min_photons:
+                phys_perf += p
                 result[s] += p
             if progress_callback and idx % 250000 == 0:  # Every 250000 states
                 progress = (idx + 1) / lbsd
                 exec_request = progress_callback(progress, "simulate detectors")
                 if cancel_requested(exec_request):
                     raise RuntimeError("Cancel requested")
-        result.normalize()
+        if len(result):
+            result.normalize()
         return result, phys_perf
 
     for idx, (s, p) in enumerate(dist.items()):
-        distributions = []
-        for photons_in_mode, detector in zip(s, detectors):
-            if detector is not None:
-                d = detector.detect(photons_in_mode)
-                if isinstance(d, BasicState):
-                    d = BSDistribution(d)
-                distributions.append(d)
-            else:
-                distributions.append(BSDistribution(BasicState([photons_in_mode])))
+        if progress_callback and idx % 100000 == 0:  # Every 100000 states
+            progress = (idx + 1) / lbsd
+            exec_request = progress_callback(progress, "simulate detectors")
+            if cancel_requested(exec_request):
+                raise RuntimeError("Cancel requested")
+
+        distributions = compute_distributions(s, detectors, heralds)
+        if not distributions:
+            continue
 
         state_dist = BSDistribution.list_tensor_product(distributions,
                                 prob_threshold=max(prob_threshold, prob_threshold / (10 * p) if p > 0 else prob_threshold))
         # "magic factor" 10 like in the simulator
 
         for s_out, p_out in state_dist.items():
-            if min_photons is not None and s_out.n < min_photons:
-                phys_perf -= p * p_out
-            else:
-                result.add(s_out, p * p_out)
+            if s_out.n >= min_photons:
+                prob = p * p_out
+                phys_perf += prob
+                result.add(s_out, prob)
 
-        if progress_callback and idx % 100000 == 0:  # Every 100000 states
-            progress = (idx + 1) / lbsd
-            exec_request = progress_callback(progress, "simulate detectors")
-            if cancel_requested(exec_request):
-                raise RuntimeError("Cancel requested")
-    result.normalize()
+    if len(result):
+        result.normalize()
     return result, phys_perf
 
 
-def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None
-                              ) -> BasicState:
+def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None,
+                              heralds: dict[int, int] = {},
+                              ) -> BasicState | None:
     """
     Simulate detectors effect on one output sample. If multiple possible outcome exist, one is randomly chosen
 
@@ -109,7 +161,10 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
     :param detectors: A list of detectors (with the same length as the sample)
     :param detection: An optional detection type. Can be recomputed from the detectors list, but it's faster to compute
                       it once and pass it for a list a samples to process
-    :return: The output sample where the detector imperfection were applied
+    :param heralds: A dictionary {mode: expected} that will be used for logical selection.
+     If the returned state doesn't fulfil this, this function will early return None.
+
+    :return: The output sample where the detector imperfection were applied, or None if the state is logically rejected for the heralds
     """
     if detection is None:
         detection = get_detection_type(detectors)
@@ -117,10 +172,17 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
         return sample
 
     if detection == DetectionType.Threshold:
-        return sample.threshold_detection()
+        if heralds_compatible_threshold(sample, heralds):
+            return sample.threshold_detection()
+        return None
 
-    state_distrib = BSDistribution()
-    for photons_in_mode, detector in zip(sample, detectors):
-        state_distrib *= detector.detect(photons_in_mode)
-    out_state = state_distrib.sample(1, non_null=False)[0]
+    out_state = BasicState()
+    for m, (photons_in_mode, detector) in enumerate(zip(sample, detectors)):
+        state_distrib = detector.detect(photons_in_mode) if detector is not None else BasicState([photons_in_mode])
+        if isinstance(state_distrib, BSDistribution):
+            state_distrib = state_distrib.sample(1, non_null=False)[0]
+        if m in heralds and state_distrib[0] != heralds[m]:
+            return None
+        out_state *= state_distrib
+
     return out_state

@@ -50,6 +50,10 @@ class Clifford2017Backend(ASamplingBackend):
         return self._clifford.sample()
 
     def samples(self, count: int):
+        """
+        Request `count` samples from the circuit given an input state.
+        Uses parallel processing, so it is much more efficient than calling `self.sample()` several times.
+        """
         return self._clifford.samples(count)
 
     @property

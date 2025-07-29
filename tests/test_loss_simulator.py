@@ -33,7 +33,7 @@ from perceval.algorithm import Sampler
 from perceval.simulators.loss_simulator import LossSimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends._slos import SLOSBackend
-
+from _test_utils import assert_bsd_close
 
 U = Matrix.random_unitary(2)
 loss = .3
@@ -50,7 +50,7 @@ def test_lc_minimal():
     simu.set_circuit(components)
     simu.set_min_detected_photons_filter(0)
     res = simu.probs(BasicState([2]))
-    assert pytest.approx(res) == expected_svd
+    assert_bsd_close(res, expected_svd)
 
 
 def test_lc_detectors():
@@ -66,7 +66,7 @@ def test_lc_detectors():
     assert simu._prepare_detectors([detector]) == [detector, None]
 
     res = simu.probs_svd(SVDistribution(BasicState([2])), [detector])
-    assert pytest.approx(res["results"]) == expected_svd
+    assert_bsd_close(res["results"], expected_svd)
 
 
 def test_lc_commutative():
@@ -85,7 +85,7 @@ def test_lc_commutative():
     res_1 = simu.probs(input_state)
     simu.set_circuit(components_2)
     res_2 = simu.probs(input_state)
-    assert pytest.approx(res_1) == res_2
+    assert_bsd_close(res_1, res_2)
 
 
 def test_lc_source_losses_equivalence():
@@ -104,7 +104,7 @@ def test_lc_source_losses_equivalence():
 
     sampler = Sampler(p)
     real_out = sampler.probs()["results"]
-    assert pytest.approx(real_out) == res_1
+    assert_bsd_close(real_out, res_1)
 
 
 def test_lc_perf():
@@ -113,6 +113,7 @@ def test_lc_perf():
 
     p.add_herald(1, 1)
     p.min_detected_photons_filter(1)
+    p.compute_physical_logical_perf(True)
 
     p.with_input(BasicState([1]))
 

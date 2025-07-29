@@ -185,14 +185,16 @@ def test_backend_cnot(backend_name):
     assert pytest.approx(non_post_selected_probability) == 7/9
 
 
-def test_slos_cnot_with_mask():
-    slos_cnot = SLOSBackend(mask=["    00"])  # Masking ancillary modes
+@pytest.mark.parametrize("backend_name", ["SLOS", "SLAP"])
+def test_cnot_with_mask(backend_name):
+    backend = BackendFactory.get_backend(backend_name)
+    backend.set_mask(["    00"])
     cnot = catalog["postprocessed cnot"].build_circuit()
-    slos_cnot.set_circuit(cnot)
-    _assert_cnot(slos_cnot)
+    backend.set_circuit(cnot)
+    _assert_cnot(backend)
     non_post_selected_probability = 0
-    slos_cnot.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
-    for output_state, prob in slos_cnot.prob_distribution().items():
+    backend.set_input_state(BasicState([0, 1, 0, 1, 0, 0]))
+    for output_state, prob in backend.prob_distribution().items():
         if output_state[4] or output_state[5]:
             non_post_selected_probability += prob
     assert pytest.approx(non_post_selected_probability) == 0
@@ -307,7 +309,8 @@ def test_backend_mps_n_mode_perm_decomp():
                                BasicState("|0,0,2>"): 0.5})
 
 
-@pytest.mark.parametrize("backend_name", ["SLOS", "Naive", "MPS"])  # SLAP doesn't support mask for evolve
+# For SLOS, the cached iterator is the largest layer of the compute path
+@pytest.mark.parametrize("backend_name", ["Naive", "MPS", "SLAP"])
 def test_probampli_iterator_cache(backend_name):
     b: AStrongSimulationBackend = BackendFactory.get_backend(backend_name)
     b.set_circuit(Circuit(5).add(0, BS.H()))
