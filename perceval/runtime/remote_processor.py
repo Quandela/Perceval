@@ -121,15 +121,17 @@ class RemoteProcessor(AProcessor):
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
     def _circuit_change_observer(self, new_component: Experiment | AComponent = None):
-        if new_component is not None:
-            if isinstance(new_component, Experiment):
-                if not new_component.is_unitary:
-                    raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
-                if new_component.has_feedforward:
-                    raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
-
-            elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
-                raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
+        pass
+        # TODO: Check that the component matches what the platform can do
+        # if new_component is not None:
+        #     if isinstance(new_component, Experiment):
+        #         if not new_component.is_unitary:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        #         if new_component.has_feedforward:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
+        #
+        #     elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
+        #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
 
     def _noise_changed_observer(self):
         if self.noise and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
