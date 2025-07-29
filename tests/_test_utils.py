@@ -186,6 +186,9 @@ def assert_experiment_equals(experiment1: Experiment, experiment2: Experiment):
     assert experiment1.post_select_fn == experiment2.post_select_fn
     assert_detector_list_eq(experiment1.detectors, experiment2.detectors)
     assert experiment1.heralds == experiment2.heralds
+    assert experiment1.is_unitary == experiment2.is_unitary
+    assert experiment1.has_td == experiment2.has_td
+    assert experiment1.has_feedforward == experiment2.has_feedforward
 
 
 def dict2svd(d: dict):
