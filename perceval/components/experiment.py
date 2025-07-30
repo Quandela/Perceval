@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+from typing import Callable
 
 from multipledispatch import dispatch
 from numpy import inf
@@ -81,9 +82,9 @@ class Experiment:
 
         self._min_detected_photons_filter: int | None = None
 
-        self._circuit_changed_observers: list[callable] = []
-        self._noise_changed_observers: list[callable] = []
-        self._input_changed_observers: list[callable] = []
+        self._circuit_changed_observers: list[Callable[[Experiment | AComponent | None], None]] = []
+        self._noise_changed_observers: list[Callable[[], None]] = []
+        self._input_changed_observers: list[Callable[[], None]] = []
 
         self.noise: NoiseModel | None = noise
 
