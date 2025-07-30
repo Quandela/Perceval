@@ -128,10 +128,6 @@ class AStrongSimulationBackend(ABackend):
         self.clear_iterator_cache()
 
     def set_input_state(self, input_state: BasicState):
-        """
-
-        :rtype: None
-        """
         super().set_input_state(input_state)
         self._init_mask()
 
