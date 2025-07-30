@@ -149,8 +149,8 @@ class BasicState(metaclass=BasicStateMeta):
         :param other: a BasicState with the same number of modes than self.
         :return: A new state for which the photons in one mode are the photons in this mode in ``self`` and in ``other``.
          the type of the state is automatically inferred from ``self`` and ``other`` so that it can contain all the information.
-         Rules: A FockState photons are converted to {0} for a NoisyFockState.
-                A NoisyFockState photons are converted to {_:`noise_tag`} for a AnnotatedFockState.
+         Rules: FockState photons are converted to {0} for a NoisyFockState.
+                NoisyFockState photons are converted to {_:`noise_tag`} for a AnnotatedFockState.
         """
 
     def __add__(self, other) -> State | StateVector | BSDistribution:
@@ -175,12 +175,12 @@ class BasicState(metaclass=BasicStateMeta):
 
     def separate_state(self) -> list[FockState]:
         """
-        :return: A list of states where each state represent a collection of indistinguishable photons from the original state
+        :return: A list of states where each state represents a collection of indistinguishable photons from the original state
         """
 
     def split_state(self) -> dict[int, FockState]:
         """
-        :return: A dict of states where each state represent a collection of indistinguishable photons from the original state,
+        :return: A dict of states where each state represents a collection of indistinguishable photons from the original state,
          associated with the noise tag they were defined with.
         """
 
