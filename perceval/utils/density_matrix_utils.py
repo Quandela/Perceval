@@ -32,7 +32,7 @@ import numpy as np
 from scipy.sparse import csr_array
 from scipy.sparse import sparray
 
-from perceval.utils.statevector import StateVector
+from perceval.utils.states import StateVector
 
 
 def extract_upper_triangle(csr_matrix: csr_array) -> csr_array:

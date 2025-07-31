@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from perceval.utils.statevector import BasicState, StateVector, BSSamples
+from perceval.utils.states import BasicState, StateVector, BSSamples
 from perceval.utils import simple_float
 from ast import literal_eval
 import re

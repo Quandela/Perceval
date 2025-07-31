@@ -32,7 +32,7 @@ from collections import Counter
 import random
 import numpy as np
 
-from .statevector import BSDistribution, BSCount, BSSamples
+from .states import BSDistribution, BSCount, BSSamples
 
 
 def _deduce_count(**kwargs) -> int:

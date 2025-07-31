@@ -39,7 +39,7 @@ from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.sparse import dok_array, csr_array, kron
 
 import exqalibur as xq
-from .statevector import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
+from .states import StateVector, SVDistribution, BasicState, max_photon_state_iterator, BSSamples
 from .density_matrix_utils import array_to_statevector, is_hermitian, sparray
 
 # In all the DensityMatrix Class, there is a compromise between csr_array and dok_array.
