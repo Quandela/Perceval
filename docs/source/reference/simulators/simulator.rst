@@ -8,11 +8,11 @@ It adds logic that allows computing with objects that are more complex than non-
 contrarily to the backend it build upon to do its computations.
 
 Note that the :code:`Simulator` aims at computing exact probabilities,
-so it requires a backend able to compute probability amplitudes, such as :ref:`SLOS`, :ref:`SLAP`, :ref:`Naive`... (see :ref:`Computing Backends`)
+so it requires a backend able to compute probability amplitudes, such as :ref:`SLOS`, :ref:`SLAP`, :ref:`Naive`... (see :ref:`Simulation Back-ends`)
 
 If possible, it will also automatically use masks on the backend to reduce the computation time and memory.
 
-Also, contrarily to :code:`Experiment` or :code:`Processor`,
+Also, contrarily to :ref:`Experiment` or :ref:`Processor`,
 it relies on being given complete information from the start and cannot be used to do composition, remote computing...
 
 The basic :code:`Simulator` is only able to perform computation with non-polarized unitary circuits.
