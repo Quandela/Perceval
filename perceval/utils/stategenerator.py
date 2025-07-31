@@ -30,7 +30,7 @@
 import networkx as nx
 import numpy as np
 
-from .statevector import BasicState, StateVector
+from .states import BasicState, StateVector
 from .qmath import distinct_permutations
 from ._enums import Encoding
 from .logging import get_logger, channel

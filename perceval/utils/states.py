@@ -103,7 +103,7 @@ class BasicState(metaclass=BasicStateMeta):
             return NoisyFockState(parsed_state)
         elif parsed_state.is_annotated():
             return AnnotatedFockState(parsed_state)
-        return FockState(source)
+        return FockState(parsed_state)
 
     # All the following methods are here to make the linter happy
     @property
