@@ -2,7 +2,7 @@ Simulation Back-ends
 ====================
 
 To run a simulation, computing back-ends implemented from state of the art algorithms are available in Perceval.
-Each of these back-ends have different specificities and features that we describe in that section.
+Each of these back-ends has different capabilities that we describe in that section.
 
 All Perceval simulation back-ends act on perfect input Fock states on a fixed unitary circuit.
 Nonetheless, Perceval aims at supporting noisy and non-unitary simulations. These real life use cases are covered in the

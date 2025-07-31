@@ -4,7 +4,8 @@ Getting started
 What is Perceval?
 ^^^^^^^^^^^^^^^^^
 
-Perceval is a toolbox containing generic functions and classes, built around an optimised native core (:ref:`exqalibur`).
+Perceval is a toolbox containing generic functions and classes, built around an optimised native core (see
+:ref:`exqalibur` code reference).
 
 If offers tools to:
 
@@ -13,7 +14,7 @@ If offers tools to:
   * Pure states (:ref:`FockState`, :ref:`StateVector`)
   * Mixed states (:ref:`SVDistribution`, :ref:`DensityMatrix`)
 
-* Build a linear optical :ref:`Experiment` containing
+* Build a linear optics :ref:`Experiment` containing
 
   * A unitary :ref:`Circuit` composed of :ref:`Unitary Components`
   * Some :ref:`Non-unitary Components`
@@ -27,7 +28,7 @@ If offers tools to:
   * Perfect simulations with :ref:`Simulation Back-ends`
   * Noisy and non-unitary simulations with the :ref:`Simulator` layer
 
-* Control the flow of quantum computations and choose where they are run
+* Control the flow of quantum computations and choose where they are run:
 
   * Locally with the :ref:`Processor`, remotely with the :ref:`RemoteProcessor`
   * Manage your :ref:`jobs<Job>` with the :ref:`JobGroup`
@@ -58,7 +59,7 @@ strong simulation back-end.
 >>> import perceval as pcvl
 >>> from perceval.algorithm import Sampler
 >>>
->>> input_state = pcvl.BasicState("|1,1>")  # Input on photon on each input...
+>>> input_state = pcvl.BasicState("|1,1>")  # Inject one photon on each input mode...
 >>> circuit = pcvl.BS()                     # ... of a perfect beam splitter
 >>> noise_model = pcvl.NoiseModel(transmittance=0.05, indistinguishability=0.85)  # Define some noise level
 >>>

@@ -6,11 +6,11 @@ Circuit simplification
 
 Several strategies to simplify a circuit exist. Perceval circuit simplification takes a circuit and does the following:
 
-* For phase shifters, add their phase if they are not parameters and combine them into a single phase shifters (work
+* For phase shifters, add their phase if they are not parameters and combine them into a single phase shifter (work
   through permutations). If :code:`display == False`, removes them if their added phase is :math:`0` or :math:`2\pi`.
 * For Permutations, if two permutations are consecutive, they are combined into a single permutation. For single
   permutations, fixed modes at the extremities are removed. If they are not just consecutive, try to compute a "better"
-  permutation, then if it is better, moves the components accordingly to this new permutation. Display changes how a
+  permutation, then if it is better, move the components accordingly to this new permutation. Display changes how a
   permutation is evaluated.
 
 Example:

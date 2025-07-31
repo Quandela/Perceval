@@ -11,8 +11,8 @@
 Welcome to the Perceval documentation!
 ======================================
 
-Perceval is an open source linear optics quantum framework. It provides with a powerful language to describe linear
-optics setups through a simple object-oriented API, is able to simulate them and send computation requests to remote
+Perceval is an open source linear optics quantum framework. It provides a powerful language to describe linear optics
+setups through a simple object-oriented API, and is able to simulate them and send computation requests to remote
 Quantum Processing Units (QPU) and simulators.
 
 * To start using Perceval, see: :ref:`Getting started`
@@ -48,8 +48,8 @@ Perceval is used in several higher-level projects (non-exhaustive list):
 
 * **perceval-interop**: Interoperability tools for conversion between photonic and gate based Quantum computing. See
   the project here: `perceval-interop <https://perceval.quandela.net/interopdocs/>`_.
-* **MerLin**: A tool to bring quantum computing to AI practitioners, requiring no prior quantum expertise.. Learn more
-  here: `merlin <https://merlinquantum.ai/>`_.
+* **MerLin**: A framework to bring quantum computing to AI practitioners, requiring no prior quantum expertise.
+  Learn more here: `merlin <https://merlinquantum.ai/>`_.
 
 
 .. toctree::

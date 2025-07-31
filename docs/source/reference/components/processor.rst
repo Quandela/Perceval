@@ -2,7 +2,7 @@ Processor
 =========
 
 Processor is a mean to run a quantum algorithm locally (i.e. on the user's computer) using a simulation back-end.
-It contains a linear optical :ref:`Experiment` which can be defined in several ways:
+It contains a linear optics :ref:`Experiment` which can be defined in several ways:
 
 >>> import perceval as pcvl
 >>> p = pcvl.Processor("SLOS", 4, name="my proc")  # Creates a 4-modes Processor named "my proc" that will be simulated using SLOS
