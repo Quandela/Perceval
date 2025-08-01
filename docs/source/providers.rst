@@ -81,6 +81,7 @@ Then, we can attach a toy circuit and send it on our session
 
 >>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
 >>> processor.with_input(pcvl.BasicState("|0,1>"))
+>>> processor.min_detected_photons_filter(1)
 >>> sampler = pcvl.algorithm.Sampler(processor, max_shots_per_call=10_000)
 >>> job = sampler.samples(100)
 >>> print(job)

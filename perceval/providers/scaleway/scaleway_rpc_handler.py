@@ -35,34 +35,45 @@ import json
 
 from datetime import datetime, timedelta
 from requests import HTTPError
-from enum import Enum
 
-_PROVIDER_NAME = "quandela"
-_ENDPOINT_PLATFORM = "/platforms"
-_ENDPOINT_JOB = "/jobs"
+from perceval.utils.logging import get_logger, channel
 
+_ENDPOINT_PLATFORM = "/qaas/v1alpha1/platforms"
+_ENDPOINT_JOB = "/qaas/v1alpha1/jobs"
+_ENDPOINT_SESSION = "/qaas/v1alpha1/sessions"
 
-class JobStatus(Enum):
-    """JobStatus Enum"""
-
-    COMPLETED = "completed"
-    ERROR = "error"
+_DEFAULT_URL = "https://api.scaleway.com"
+_DEFAULT_PLATFORM_PROVIDER = "quandela"
 
 
 class RPCHandler:
-    """RPCHandler for Scaleway Cloud provider"""
+    """Stateful (1 session at a time) RPCHandler for Scaleway Cloud provider"""
 
-    def __init__(self, project_id, headers: dict, url: str, name: str, proxies: dict = None):
+    def __init__(
+        self,
+        project_id: str,
+        secret_key: str,
+        url: str,
+        proxies: dict,
+        platform_name: str,
+        provider_name: str,
+    ):
         self._project_id = project_id
-        self._headers = headers
-        self._url = url
+        self._url = url or _DEFAULT_URL
         self._proxies = proxies or dict()
-        self._name = name
         self._session_id = None
+        self._platform_name = platform_name
+        self._headers = {
+            "X-Auth-Token": secret_key,
+        }
+        self._provider_name = provider_name or _DEFAULT_PLATFORM_PROVIDER
+        self._platform_id = self.get_platform(
+            platform_name=self._platform_name, provider_name=self._provider_name
+        )["id"]
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._platform_name
 
     @property
     def url(self) -> str:
@@ -76,30 +87,106 @@ class RPCHandler:
     def proxies(self) -> dict:
         return self._proxies
 
-    def set_session_id(self, session_id) -> None:
-        self._session_id = session_id
-
     def fetch_platform_details(self) -> dict:
-        endpoint = f"{self.__build_endpoint(_ENDPOINT_PLATFORM)}?providerName={_PROVIDER_NAME}&name={urllib.parse.quote_plus(self.name)}"
+        return self.get_platform(self._platform_name, self._provider_name)
+
+    def get_platform(self, platform_name: str, provider_name: str) -> dict:
+        endpoint = f"{self.__build_endpoint(_ENDPOINT_PLATFORM)}?providerName={provider_name}&name={urllib.parse.quote_plus(platform_name)}"
         resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
 
         resp.raise_for_status()
-        resp_dict = resp.json()
+        platform_resp = resp.json()
 
-        if "platforms" not in resp_dict:
-            raise HTTPError(f"platforms '{self.name}' not found")
+        if "platforms" not in platform_resp:
+            raise HTTPError(
+                f"platforms '{platform_name}' not found for provider '{provider_name}'"
+            )
 
-        platforms = resp_dict["platforms"]
+        platforms = platform_resp["platforms"]
 
         if len(platforms) == 0:
-            raise HTTPError("Empty platform list from Scaleway service")
+            raise HTTPError(f"Empty platform list for provider '{provider_name}'")
 
-        platform_dict = platforms[0]
-        platform_dict["specs"] = json.loads(platform_dict.get("metadata", {}))
+        platform = platforms[0]
+        platform["specs"] = json.loads(platform.get("metadata", {}))
 
-        return platform_dict
+        return platform
 
-    def create_job(self, payload) -> str:
+    def create_session(
+        self,
+        deduplication_id: str,
+        max_duration_s: int,
+        max_idle_duration_s: int,
+    ) -> str:
+        """Start a session, when started job can be sent and executed on it
+
+        :param provider_name: the quantum provider to target, quandela by default
+        :param platform_name: the platform to built the session from
+        :param deduplcation_id: the session creation will return any running session with that id
+        :param max_duration_s: max duration (in second) before the session is terminated
+        :param max_idle_duration_s: max duration (in second) before the session is terminated
+        """
+
+        if self._session_id:
+            raise Exception("A session is already attached to this RPC handler")
+
+        payload = {
+            "project_id": self._project_id,
+            "platform_id": self._platform_id,
+            "deduplication_id": deduplication_id,
+            "max_duration": f"{max_duration_s}s",
+            "max_idle_duration": f"{max_idle_duration_s}s",
+            "name": f"pcvl-{datetime.now():%Y-%m-%d-%H-%M-%S}",
+        }
+
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}"
+        request = requests.post(
+            endpoint, headers=self._headers, json=payload, proxies=self._proxies
+        )
+
+        try:
+            request.raise_for_status()
+            session = request.json()
+
+            self._session_id = session["id"]
+            get_logger().info("Start Scaleway Session", channel.general)
+        except Exception:
+            raise HTTPError(request.json())
+
+        return self._session_id
+
+    def terminate_session(self) -> None:
+        """Stop the attached session, all jobs will be cancelled and still accessible"""
+
+        if not self._session_id:
+            raise Exception("Cannot terminate session because session_id is None")
+
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}/terminate"
+        request = requests.post(endpoint, headers=self._headers, proxies=self._proxies)
+
+        request.raise_for_status()
+
+    def delete_session(self) -> None:
+        """Stop and delete the attached session, all jobs will be deleted"""
+
+        if not self._session_id:
+            raise Exception("Cannot delete session because session_id is None")
+
+        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
+        request = requests.delete(
+            endpoint, headers=self._headers, proxies=self._proxies
+        )
+
+        request.raise_for_status()
+
+    def create_job(self, payload: dict) -> str:
+        """Create and start on new job on the attached session
+
+        :param payload: the perceval circuit and run parameters to be executed on the attached session
+        """
+        if not self._session_id:
+            raise Exception("Cannot create job because session_id is None")
+
         scw_payload = {
             "name": payload.get("job_name"),
             "circuit": {"percevalCircuit": json.dumps(payload.get("payload", {}))},
@@ -108,19 +195,25 @@ class RPCHandler:
         }
 
         endpoint = f"{self._url}{_ENDPOINT_JOB}"
-        request = requests.post(endpoint, headers=self._headers, json=scw_payload, proxies=self._proxies)
+        request = requests.post(
+            endpoint, headers=self._headers, json=scw_payload, proxies=self._proxies
+        )
 
         try:
             request.raise_for_status()
-            request_dict = request.json()
+            job = request.json()
 
-            self.instance_id = request_dict["id"]
+            self.instance_id = job["id"]
         except Exception:
             raise HTTPError(request.json())
 
-        return request_dict["id"]
+        return job["id"]
 
     def cancel_job(self, job_id: str) -> None:
+        """Cancel the running job
+
+        :param job_id: job id to cancel
+        """
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/cancel"
         request = requests.post(endpoint, headers=self._headers, proxies=self._proxies)
         request.raise_for_status()
@@ -131,21 +224,28 @@ class RPCHandler:
         :param job_id: job id to rerun
         :return: new job id
         """
-        raise NotImplementedError("rerun_job method is not implemented for Scaleway RPCHandler")
+        raise NotImplementedError(
+            "rerun_job method is not implemented for Scaleway RPCHandler"
+        )
 
     def get_job_status(self, job_id: str) -> dict:
+        """Fetch the current job status
+
+        :param job_id: job id to fetch for
+        :return: dictionary of the current job status
+        """
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}"
 
         # requests may throw an IO Exception, let the user deal with it
         resp = requests.get(endpoint, headers=self._headers, proxies=self._proxies)
         resp.raise_for_status()
 
-        resp_dict = resp.json()
+        job = resp.json()
 
-        created_at = self.__to_date(resp_dict.get("created_at"))
-        started_at = self.__to_date(resp_dict.get("started_at"))
+        created_at = self.__to_date(job.get("created_at"))
+        started_at = self.__to_date(job.get("started_at"))
         duration = self.__get_duration(started_at)
-        status = resp_dict.get("status")
+        status = job.get("status")
 
         if status == "cancelled":
             status = "canceled"
@@ -158,14 +258,19 @@ class RPCHandler:
             "failure_code": None,
             "last_intermediate_results": None,
             "msg": "ok",
-            "progress": self.__get_progress_by_status(status),
-            "progress_message": resp_dict.get("progress_message"),
+            "progress": 1 if status == "completed" else 0,
+            "progress_message": job.get("progress_message"),
             "start_time": started_at,
             "status": status,
-            "status_message": resp_dict.get("progress_message"),
+            "status_message": job.get("progress_message"),
         }
 
     def get_job_results(self, job_id: str) -> dict:
+        """Get result of the job execution
+
+        :param job_id: job id to fetch for
+        :return: dictionary of the results
+        """
         endpoint = f"{self.__build_endpoint(_ENDPOINT_JOB)}/{job_id}/results"
 
         # requests may throw an IO Exception, let the user deal with it
@@ -196,7 +301,7 @@ class RPCHandler:
 
                     result_payload = resp.text
                 else:
-                    raise Exception("Got result with empty data and url fields")
+                    raise Exception("Got result with empty 'result' and 'url' fields")
             else:
                 result_payload = result
 
@@ -225,8 +330,3 @@ class RPCHandler:
         return (
             timedelta(seconds=time.time() - start_time).seconds if start_time else None
         )
-
-    def __get_progress_by_status(self, status: str) -> float:
-        if status == JobStatus.COMPLETED.value:
-            return 1.0
-        return 0.0
