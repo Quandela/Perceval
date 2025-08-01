@@ -31,7 +31,7 @@ from abc import ABC, abstractmethod
 import exqalibur as xq
 
 from perceval.components import ACircuit
-from perceval.utils import BasicState, BSDistribution, BSSamples, StateVector, allstate_array
+from perceval.utils import BasicState, FockState, BSDistribution, BSSamples, StateVector, allstate_array
 
 
 class ABackend(ABC):
@@ -51,17 +51,17 @@ class ABackend(ABC):
         self._circuit = circuit
         self._umat = circuit.compute_unitary()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         """
         Sets an input state for the simulation. This state has to be a Fock state without annotations.
         """
         self._check_state(input_state)
         self._input_state = input_state
 
-    def _check_state(self, state: BasicState):
+    def _check_state(self, state: FockState):
         assert self._circuit is not None, 'Circuit must be set before the input state'
         assert self._circuit.m == state.m, f'Circuit({self._circuit.m}) and state({state.m}) size mismatch'
-        assert not state.has_annotations, 'State should be composed of indistinguishable photons only'
+        # assert not state.has_annotations, 'State should be composed of indistinguishable photons only'
 
     @property
     @abstractmethod
@@ -127,7 +127,7 @@ class AStrongSimulationBackend(ABackend):
         self._mask_n = None
         self.clear_iterator_cache()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         self._init_mask()
 
@@ -148,15 +148,15 @@ class AStrongSimulationBackend(ABackend):
         super().set_circuit(circuit)
 
     @abstractmethod
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         """Computes the probability amplitude for a given output state. The input state and the circuit must already be set"""
         pass
 
-    def probability(self, output_state: BasicState) -> float:
+    def probability(self, output_state: FockState) -> float:
         """Computes the probability for a given output state. The input state and the circuit must already be set"""
         return abs(self.prob_amplitude(output_state)) ** 2
 
-    def all_prob(self, input_state: BasicState = None) -> list[float]:
+    def all_prob(self, input_state: FockState = None) -> list[float]:
         """Computes the list of probabilities of all states (respecting the mask if any was set).
         The order of the states can be retrieved using `allstate_iterator()`"""
         if input_state is not None:

@@ -326,7 +326,7 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a") -> StateVector:
             if annot_map.get(str(annot)) is None:
                 annot_map[str(annot)] = f"{{{annot_tag}:{len(annot_map)}}}"
             s[mode] += annot_map[str(annot)]
-        result += StateVector("|" + ",".join([v and v or "0" for v in s]) + ">") * pa
+        result += StateVector(AnnotatedFockState("|" + ",".join([v and v or "0" for v in s]) + ">")) * pa
     result.normalize()
     return result
 

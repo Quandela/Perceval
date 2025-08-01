@@ -34,8 +34,8 @@ import pytest
 
 import perceval as pcvl
 import perceval.components.unitary_components as comp
-from perceval import NoiseModel
-from perceval.utils import BasicState, StateVector, SVDistribution, BSDistribution, allstate_iterator
+from perceval import NoiseModel, AnnotatedFockState, NoisyFockState
+from perceval.utils import BasicState, FockState, StateVector, SVDistribution, BSDistribution, allstate_iterator
 from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_sv_close, assert_svd_close
 
@@ -44,7 +44,7 @@ def test_basic_state():
     st = BasicState([1, 0])
     assert str(st) == "|1,0>"
     assert st.n == 1
-    assert st.has_annotations is False
+    assert isinstance(st, FockState)
 
     with pytest.raises(RuntimeError):
         bs = BasicState([0] * 300)  # 300 modes is too much (mode count is capped at 256)
@@ -95,7 +95,7 @@ def test_state_annots():
     st = BasicState('|0,1,{P:V}1>')
     assert st.n == 3
     assert st.m == 3
-    assert st.has_annotations
+    assert isinstance(st, AnnotatedFockState)
     assert str(st) == '|0,1,{P:V}1>'
     assert [str(a) for a in st.get_mode_annotations(1)] == [""]
     assert [str(a) for a in st.get_mode_annotations(2)] == ["P:V", ""]
@@ -244,28 +244,17 @@ def test_distribution_simplification():
     assert simp_g3[BasicState("|1,1>")] == pytest.approx(0.6)
 
 
-def test_separate_state_without_annots():
-    st1 = BasicState("|0,1>")
-    assert st1.separate_state() == [BasicState("|0,1>")]
-    st2 = BasicState("|2,1>")
-    assert st2.separate_state() == [BasicState("|2,1>")]
-
-
 def test_separate_state_with_annots():
-    st1 = BasicState("|0,{_:1}>")
-    assert st1.separate_state(keep_annotations=True) == [st1]
-    st2 = BasicState("|{_:1},{P:V}>")
-    assert st2.separate_state(keep_annotations=False) == [BasicState("|1,1>")]
-    st3 = BasicState("|{_:1},{_:2}>")
-    assert st3.separate_state(False) == [BasicState("|1,0>"), BasicState("|0,1>")]
-    assert st3.separate_state(keep_annotations=True) == [BasicState("|{_:1},0>"), BasicState("|0,{_:2}>")]
-    st4 = BasicState("|{_:1},{_:0}>")
-    assert st4.separate_state(keep_annotations=False) == [BasicState("|1,0>"), BasicState("|0,1>")]
-    assert st4.separate_state(True) == [BasicState("|{_:1},0>"), BasicState("|0,{_:0}>")]
-    st5 = BasicState("|{_:0},{_:0},{_:3}>")
-    # By default, keep_annotations is false
-    assert st5.separate_state() == [BasicState("|1,1,0>"), BasicState("|0,0,1>")]
-    assert st5.separate_state(keep_annotations=True) == [BasicState("|{_:0},{_:0},0>"), BasicState("|0,0,{_:3}>")]
+    st1 = BasicState("|0,{1}>")
+    assert st1.separate_state()[0] == BasicState("|0,1>")
+    # st2 = BasicState("|{1},{P:V}>") # does not mean anything now
+    # assert st2.separate_state() == [BasicState("|1,1>")]
+    st3 = BasicState("|{1},{2}>")
+    assert [bs for bs in st3.separate_state()] == [BasicState("|1,0>"), BasicState("|0,1>")]
+    st4 = BasicState("|{1},{0}>")
+    assert [bs for bs in st4.separate_state()] == [BasicState("|0,1>"), BasicState("|1,0>")]
+    st5 = BasicState("|{0},{0},{3}>")
+    assert [bs for bs in st5.separate_state()] == [BasicState("|1,1,0>"), BasicState("|0,0,1>")]
 
 
 def test_partition():
@@ -280,16 +269,17 @@ def test_partition():
 
 
 def test_parse_annot():
-    invalid_str = ["|{_:0}", "|0{_:0}>", "|1{_:2>", "{P:(0.3,0)>",
+    invalid_str = ["|{0}", "|1{2>", "{P:(0.3,0)>",
                    "|{;}>", "|{P:(1,2,3)}>", "|{P:(1,a)}>", "|{a:0,a:1}>"]
     for s in invalid_str:
+        print(s)
         with pytest.raises(ValueError):
             BasicState(s)
-    st1 = BasicState("|{_:0}{_:1}>")
-    st1.clear_annotations()
+    st1 = BasicState("|{0}{1}>")
+    st1 = st1.clear_annotations()
     assert st1 == BasicState("|2>")
-    st1 = BasicState("|{_:0}{_:1},0,1>")
-    st1.clear_annotations()
+    st1 = BasicState("|{0}{1},0,1>")
+    st1 = st1.clear_annotations()
     assert st1 == BasicState("|2,0,1>")
 
 
@@ -321,16 +311,16 @@ def test_svd_sample():
 
 def test_svd_anonymize_annots_simple():
     svd = SVDistribution({
-        BasicState("|{_:1},{_:2},{_:3}>"): 0.2,
-        BasicState("|{_:4},{_:5},{_:6}>"): 0.3,
-        BasicState("|{_:1},{_:3},{_:3}>"): 0.4,
-        BasicState("|{_:0},{_:8},{_:8}>"): 0.1,
+        StateVector(BasicState("|{1},{2},{3}>")): 0.2,
+        StateVector(BasicState("|{4},{5},{6}>")): 0.3,
+        StateVector(BasicState("|{1},{3},{3}>")): 0.4,
+        StateVector(BasicState("|{0},{8},{8}>")): 0.1,
     })
     svd2 = pcvl.anonymize_annotations(svd)
     assert_svd_close(svd2, SVDistribution(
         {
-            StateVector('|{a:0},{a:1},{a:2}>'): 0.5,
-            StateVector('|{a:0},{a:1},{a:1}>'): 0.5
+            StateVector(AnnotatedFockState('|{a:0},{a:1},{a:2}>')): 0.5,
+            StateVector(AnnotatedFockState('|{a:0},{a:1},{a:1}>')): 0.5
         }))
 
 
@@ -339,20 +329,20 @@ def test_svd_anonymize_annots_simple():
     reason="Superposed states aren't anonymized the same given C++ unordered containers OS-specific implementation")
 def test_svd_anonymize_annots_superposition():
     svd = SVDistribution({
-        StateVector("|{_:0},{_:0},{_:1}>") + StateVector("|{_:0},{_:2},{_:1}>"): 0.1,
-        StateVector("|{_:3},{_:4},{_:4}>"): 0.1,
-        StateVector("|{_:0},{_:0},{_:1}>") + StateVector("|{_:0},{_:4},{_:1}>"): 0.1,
-        StateVector("|{_:4},{_:4},{_:2}>"): 0.1,
-        StateVector("|{_:1},{_:3},{_:3}>"): 0.1,
-        StateVector("|{_:0},{_:2},{_:3}>"): 0.5,
+        StateVector(NoisyFockState("|{0},{0},{1}>")) + StateVector(NoisyFockState("|{0},{2},{1}>")): 0.1,
+        StateVector(NoisyFockState("|{3},{4},{4}>")): 0.1,
+        StateVector(NoisyFockState("|{0},{0},{1}>")) + StateVector(NoisyFockState("|{0},{4},{1}>")): 0.1,
+        StateVector(NoisyFockState("|{4},{4},{2}>")): 0.1,
+        StateVector(NoisyFockState("|{1},{3},{3}>")): 0.1,
+        StateVector(NoisyFockState("|{0},{2},{3}>")): 0.5,
     })
     svd2 = pcvl.anonymize_annotations(svd)
     assert_svd_close(svd2, SVDistribution(
         {
-            StateVector('|{a:0},{a:1},{a:2}>'): 0.5,
-            StateVector('|{a:0},{a:0},{a:1}>') + StateVector('|{a:0},{a:2},{a:1}>'): 0.2,
-            StateVector('|{a:0},{a:1},{a:1}>'): 0.2,
-            StateVector('|{a:0},{a:0},{a:1}>'): 0.1
+            StateVector(AnnotatedFockState('|{a:0},{a:1},{a:2}>')): 0.5,
+            StateVector(AnnotatedFockState('|{a:0},{a:0},{a:1}>')) + StateVector(AnnotatedFockState('|{a:0},{a:2},{a:1}>')): 0.2,
+            StateVector(AnnotatedFockState('|{a:0},{a:1},{a:1}>')): 0.2,
+            StateVector(AnnotatedFockState('|{a:0},{a:0},{a:1}>')): 0.1
         }))
 
 
@@ -409,8 +399,8 @@ def test_statevector_measure_3():
 
 def test_statevector_equality():
     gamma = math.pi / 2
-    st1 = StateVector("|{P:H},{P:H}>")
-    st2 = StateVector("|{P:H},{P:V}>")
+    st1 = StateVector(AnnotatedFockState("|{P:H},{P:H}>"))
+    st2 = StateVector(AnnotatedFockState("|{P:H},{P:V}>"))
     input_state = math.cos(gamma) * st1 + math.sin(gamma) * st2
     assert input_state == st2
 

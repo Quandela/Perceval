@@ -36,7 +36,7 @@ from typing import Callable
 
 from perceval.backends import ASamplingBackend
 from perceval.components import ACircuit, IDetector, get_detection_type, DetectionType, check_heralds_detectors, Source
-from perceval.utils import BasicState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
+from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, BSCount, BSSamples, SVDistribution, PostSelect, \
     samples_to_sample_count
 from perceval.utils.logging import get_logger, channel
 from perceval.runtime import cancel_requested
@@ -88,11 +88,10 @@ class SamplesProvider:
         if n_samples:
             for noisy_s, prob in noisy_input.items():
                 ns = min(math.ceil(prob * n_samples), self._max_samples)
-                for bs in noisy_s.separate_state(keep_annotations=False):
-                    if self._weights[bs] + ns < self._max_samples:
-                        self._weights.add(bs, ns)
-                    else:
-                        self._weights.add(bs, self._max_samples - self._weights[bs])
+                if self._weights[noisy_s] + ns < self._max_samples:
+                    self._weights.add(noisy_s, ns)
+                else:
+                    self._weights.add(noisy_s, self._max_samples - self._weights[noisy_s])
 
     def estimate_weights_from_source(self, sample_generator: Callable[[int], list[BSSamples]],
                                      n_samples: int) -> list[BSSamples]:
@@ -353,7 +352,12 @@ class NoisySamplingSimulator:
             if n_photons < self.min_detected_photons_filter:
                 physical_perf -= p
             elif p >= p_threshold:
-                new_input[sv[0]] = p
+                if isinstance(sv[0], NoisyFockState):
+                    bs_list = sv[0].separate_state()
+                else:
+                    bs_list = [sv[0]]
+                for bs in bs_list:
+                    new_input[bs] = p
         new_input.normalize()
         get_logger().debug(
             f"Reduced input SVD from {len(svd)} to {len(new_input)} elements using {p_threshold} threshold",
@@ -403,7 +407,7 @@ class NoisySamplingSimulator:
                 prepare_samples, max_shots = self._compute_samples_with_perf(prepare_samples, pre_physical_perf, zpp,
                                                                              max_shots)
 
-                sample_generator = lambda i: [state.separate_state(keep_annotations=False) for state in trimmed_bsd.sample(i, non_null=False)]
+                sample_generator = lambda i: [state.separate_state() if isinstance(state, NoisyFockState) else [state] for state in trimmed_bsd.sample(i, non_null=False)]
 
                 provider.estimate_weights_from_distribution(trimmed_bsd, prepare_samples)
 
@@ -449,7 +453,7 @@ class NoisySamplingSimulator:
         one_input = len(svd) == 1 or (source_defined and svd[0].is_perfect())
         if not self._heralds and not self._postselect.has_condition and one_input and det_type == DetectionType.PNR:
             only_input = svd[1] if source_defined else next(iter(svd))[0]
-            if not only_input.has_annotations:
+            if isinstance(only_input, FockState):
                 get_logger().debug("Perfect sampling: use the fast '_perfect_samples_no_selection' call",
                                    channel.general)
                 # Choose a consistent samples limit

@@ -31,7 +31,7 @@ from __future__ import annotations
 from exqalibur import BSSamples
 import exqalibur as xq
 
-from perceval.utils import SVDistribution, BasicState, anonymize_annotations, NoiseModel, global_params
+from perceval.utils import SVDistribution, BasicState, FockState, anonymize_annotations, NoiseModel, global_params
 from perceval.utils.logging import get_logger, channel
 
 DISTINGUISHABLE_KEY = 'distinguishable'
@@ -111,14 +111,14 @@ class Source:
         :param nphotons: Require `nphotons` in the mode (default 1).
         :param prob_threshold: Probability threshold under which the resulting state is filtered out.
         """
-        return self.generate_distribution(BasicState([nphotons]), prob_threshold)
+        return self.generate_distribution(FockState([nphotons]), prob_threshold)
 
-    def generate_distribution(self, expected_input: BasicState, prob_threshold: float = 0):
+    def generate_distribution(self, expected_input: FockState, prob_threshold: float = 0) -> SVDistribution:
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution
 
-        :param expected_input: Expected input BasicState
+        :param expected_input: Expected input FockState
             The properties of the source will alter the input state. A perfect source always delivers the expected state
             as an input. Imperfect ones won't.
         :param prob_threshold: Probability threshold under which the resulting state is filtered out. By default,
@@ -129,8 +129,8 @@ class Source:
 
         dist = self._source.generate_distribution(expected_input, prob_threshold)
 
-        if self.simplify_distribution and self.partially_distinguishable:
-            dist = anonymize_annotations(dist, annot_tag='_')
+        # if self.simplify_distribution and self.partially_distinguishable:
+        #     dist = anonymize_annotations(dist, annot_tag='_') # TODO : see if we still want an anonymize(NoisyFockState)
         return dist
 
     def create_iterator(self, expected_input: BasicState, min_photons_filter: int = 0) -> xq.SimpleSourceIterator:

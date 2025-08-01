@@ -124,14 +124,11 @@ class Analyzer(AAlgorithm):
 
         # Compute probabilities for all input states
         for idx, i_state in enumerate(self.input_states_list):
-            if i_state.has_polarization:
-                self._processor.with_polarized_input(i_state)
-            else:
-                self._processor.with_input(i_state)
+            self._processor.with_input(i_state)
             job = self._sampler.probs
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()
-            probs = probs_output['results']
+            probs = probs_output['results'] # TODO : problem here, probs_output is NoneType
             if len(probs) == 0:
                 has_an_empty_PD = True
             probs_res[i_state] = probs

@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from perceval import NoisyFockState
 from perceval.simulators.noisy_sampling_simulator import SamplesProvider
 from perceval.backends import Clifford2017Backend
 from perceval.components import Circuit, Source
@@ -36,7 +36,13 @@ from perceval.utils import BasicState, NoiseModel, BSDistribution
 def _svd_to_bsd(svd):
     res = BSDistribution()
     for state, prob in svd.items():
-        res.add(state[0], prob)
+        if isinstance(state[0], NoisyFockState):
+            bs_list = state[0].separate_state()
+        else:
+            bs_list = [state[0]]
+        for bs in bs_list:
+            res.add(bs, prob)
+    print(res)
     return res
 
 

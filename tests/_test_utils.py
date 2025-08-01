@@ -36,6 +36,7 @@ from functools import wraps
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from perceval import BasicState
 from perceval.components import ACircuit, PS, IDetector, AFFConfigurator, FFConfigurator, FFCircuitProvider, \
     BSLayeredPPNR, Detector, Experiment, Circuit, AProcessor, AComponent
 from perceval.utils import StateVector, SVDistribution
@@ -189,7 +190,7 @@ def assert_experiment_equals(experiment1: Experiment, experiment2: Experiment):
 
 
 def dict2svd(d: dict):
-    return SVDistribution({StateVector(k): v for k, v in d.items()})
+    return SVDistribution({StateVector(BasicState(k)): v for k, v in d.items()})
 
 
 @pytest.fixture(scope="session")

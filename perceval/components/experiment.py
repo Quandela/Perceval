@@ -31,10 +31,11 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 
+from exqalibur import AnnotatedFockState
 from multipledispatch import dispatch
 from numpy import inf
 
-from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
+from perceval.utils import FockState, NoisyFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
     SVDistribution
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify
@@ -768,17 +769,14 @@ class Experiment:
     def in_heralds(self) -> dict[int, int]:
         return {port_range[0]: port.expected for port, port_range in self._in_ports.items() if isinstance(port, Herald)}
 
-    def check_input(self, input_state: BasicState):
+    def check_input(self, input_state: FockState | NoisyFockState):
         r"""Check if a basic state input matches with the current experiment configuration"""
         assert self.m_in, "A circuit has to be set before the input state"
         expected_input_length = self.m_in
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
-        if input_state.has_polarization:
-            get_logger().warn("Given input state has polarization, that will be ignored in the computation"
-                              " (use with_polarized_input instead).")
-        elif input_state.has_annotations:
-            get_logger().warn("Given input state has annotations, that will be ignored in the computation."
+        if isinstance(input_state, NoisyFockState):
+            get_logger().warn("Given input state is noisy, that will be ignored in the computation."
                               " To use them, consider using a StateVector.")
 
     def _input_changed(self):
@@ -792,8 +790,8 @@ class Experiment:
             self._min_detected_photons_filter = input_state.n
         self.with_input(input_state)
 
-    @dispatch(BasicState)
-    def with_input(self, input_state: BasicState) -> None:
+    @dispatch(FockState)
+    def with_input(self, input_state: FockState) -> None:
         self.check_input(input_state)
         input_list = [0] * self.circuit_size
         input_idx = 0
@@ -805,8 +803,30 @@ class Experiment:
                 input_list[k] = input_state[input_idx]
                 input_idx += 1
 
-        self._input_state = BasicState(input_list)
+        self._input_state = FockState(input_list)
         self._input_changed()
+
+    @dispatch(NoisyFockState)
+    def with_input(self, input_state: NoisyFockState) -> None: # TODO : not sure if this should work
+        bs_list = input_state.separate_state()
+        for bs in bs_list:
+            self.check_input(bs)
+            input_list = [0] * self.circuit_size
+            input_idx = 0
+            # Build real input state (merging ancillas + expected input) and compute expected photon count
+            for k in range(self.circuit_size):
+                if k in self.in_heralds:
+                    input_list[k] = self.in_heralds[k]
+                else:
+                    input_list[k] = bs[input_idx]
+                    input_idx += 1
+
+        self._input_state = FockState(input_list)
+        self._input_changed()
+
+    @dispatch(AnnotatedFockState)
+    def with_input(self, input_state: AnnotatedFockState) -> None:
+        self.with_polarized_input(input_state)
 
     @dispatch(StateVector)
     def with_input(self, sv: StateVector):
@@ -836,8 +856,8 @@ class Experiment:
         self._input_state = svd
         self._input_changed()
 
-    def with_polarized_input(self, bs: BasicState):
-        assert bs.has_polarization, "BasicState is not polarized, please use with_input instead"
+    def with_polarized_input(self, bs: AnnotatedFockState): # TODO : to be renamed into with_input too with another dispatch ?
+        assert bs.has_polarization, "AnnotatedFockState is not polarized, please use with_input instead"
         self._input_state = bs
         self._input_changed()
 
