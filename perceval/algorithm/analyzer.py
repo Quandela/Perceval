@@ -26,7 +26,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from __future__ import annotations
 import numpy as np
 
 from .abstract_algorithm import AAlgorithm
@@ -36,16 +36,25 @@ from perceval.components import AProcessor
 
 
 class Analyzer(AAlgorithm):
-    def __init__(self, processor: AProcessor, input_states, output_states=None, mapping=None, **kwargs):
-        """
-            Initialization of a processor analyzer
-            `simulator` is a simulator instance initialized for the circuit
-            `input_states` is a list of BasicStates or a mapping BasicState => name
-            `output_states` is a list of BasicStates or a mapping BasicState => name, if missing input is taken,
-                            if "*" all possible target states are generated
-            `mapping` is a mapping of FockState => name for display
-            `post_select_fn` is a post selection function
-        """
+    """
+    Analyses a set of input states vs output states probabilities.
+
+    :param processor: the processor to analyse
+    :param input_states: list of BasicStates or a mapping {BasicState: name}
+    :param output_states: list of output states. Valid values are:
+                          * None (then, the input states are taken as output states)
+                          * a list of BasicState
+                          * a mapping {BasicState: name}
+                          * the string "*" meaning oll possible target states are generated
+    :param mapping: optional mapping {BasicState: name} used for display
+    :param kwargs: as the Analyzer internally uses a Sampler instance, it needs a "max_shots_per_call" value
+    """
+
+    def __init__(self, processor: AProcessor,
+                 input_states: list[BasicState] | dict[BasicState, str],
+                 output_states=None,
+                 mapping=None,
+                 **kwargs):
         if mapping is None:
             mapping = {}
         super().__init__(processor, **kwargs)
@@ -97,10 +106,14 @@ class Analyzer(AAlgorithm):
                 min_output_photon_count = min(ostate.n, min_output_photon_count)
         processor.min_detected_photons_filter(min_output_photon_count)
 
-    def compute(self, normalize=False, expected=None, progress_callback=None):
+    def compute(self, normalize: bool = False, expected: dict = None, progress_callback=None):
         """
-        Iterate through the input states, generate (post-selected) output states and calculate distance with expected (if
-        provided)
+        Iterate through the input states, generate (post-selected) output states and calculate distance with expected,
+        if provided.
+
+        :param normalize: whether to normalize the output states
+        :param expected: optional mapping between states in ideal case
+        :param progress_callback: optional callback to inform the user of the task progress
         """
         probs_res = {}
         logical_perf = []
@@ -125,7 +138,7 @@ class Analyzer(AAlgorithm):
             if 'logical_perf' in probs_output:
                 logical_perf.append(probs_output['logical_perf'])
             else:
-                logical_perf.append(1)
+                logical_perf.append(probs_output['global_perf'])
             if progress_callback is not None:
                 progress_callback((idx+1)/len(self.input_states_list))
 
@@ -170,12 +183,22 @@ class Analyzer(AAlgorithm):
         return output
 
     @property
-    def distribution(self):
+    def distribution(self) -> Matrix:
+        """Return the truth table of the analysis. Computes it if wasn't performed beforehand.
+
+        :return: a matrix containing the probabilities for each input vs output states
+        """
         if self._distribution is None:
             self.compute()
         return self._distribution
 
-    def col(self, output_state: BasicState) -> int:
+    def col(self, output_state: BasicState) -> int | None:
+        """
+        Return the column number for a given output state in the distribution matrix
+
+        :param output_state: any computed output state
+        :return: the column number, or None if the output state is unknown
+        """
         if output_state in self.output_states_list:
             return self.output_states_list.index(output_state)
         return None

@@ -7,11 +7,70 @@ consistent code base.
 
 This section lists the major breaking changes introduced.
 
+Breaking changes in Perceval 1.0
+---------------------------------
+
+Processor add with Component or Circuit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When adding a Circuit or a Component to a Processor on non-consecutive modes,
+a permutation was added so that we could add the component to the Processor.
+The inverse permutation is now also added after the component so that the in-between modes are not impacted by the addition,
+similarly to what was already done when adding a Processor to a Processor.
+
+BSDistribution and SVDistribution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These classes have been moved to Exqalibur with a C++ implementation.
+As such, they are no longer Python dictionaries and may not support some advanced dict features.
+This has several consequences:
+
+- You can no longer instantiate BSDistributions and SVDistributions using a dictionary with mixed type keys,
+  nor with non-BasicState or non-StateVector keys.
+- BSDistribution and SVDistribution can no longer be compared to regular dict (for example by using :code:`==`).
+- Modifying keys without copying them can lead to unexpected behaviour (Python has some protections for that).
+- The order of insertion is no longer preserved.
+- :code:`keys()` and :code:`values()` methods now return an iterator,
+  so methods like :code:`len` no longer work on their result.
+
+Also, note that:
+
+- StateVectors inserted in SVDistribution are no longer normalized at insertion.
+- Using the tensor product with an empty distribution now always returns an empty distribution.
+  To keep the same behaviour as before (the result was the non-empty distribution),
+  replace the empty distribution by a distribution containing a void state (:code:`BSDistribution(BasicState())`) for tensor product
+  or a 0-photon state (:code:`BSDistribution(BasicState(m))`) for a merge.
+
+StateVector
+^^^^^^^^^^^
+
+The method :code:`StateVector.keys()` now returns an iterator on the keys instead of a BSSamples.
+This avoids doing unnecessary copy.
+
+Please note that due to this change:
+
+- Keys must now be copied before being modified when iterating on :code:`StateVector.keys()`.
+- :code:`StateVector.keys()` no longer has list methods such as :code:`len`, :code:`__getitem__`...
+
+Removal of deprecated methods and classes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following methods and classes have been removed or definitely modified as they were deprecated:
+
+- :code:`TokenProvider` (deprecated since 0.13, replaced by :code:`RemoteConfig`)
+- :code:`AProbAmpliBackend` (deprecated since 0.12, replaced by :code:`AStrongSimulationBackend`)
+- :code:`postselect_independent` (deprecated since 0.12, replaced by :code:`PostSelect` method :code:`is_independent_with`)
+- The :code:`n` parameter of SLOS backend (deprecated since 0.12, now automatically chosen when using :code:`set_input_state`)
+- :code:`thresholded_output` method of :code:`Processor` and :code:`RemoteProcessor`
+  (deprecated since 0.12, replaced by adding several :code:`Detector.threshold()`)
+- :code:`JobGroup.list_existing()` has been renamed into :code:`JobGroup.list_locally_saved()`
+
+
 Breaking changes in Perceval 0.13
 ---------------------------------
 
 Processor and Simulator :code:`min_detected_photons_filter`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There has been two modifications on the :code:`min_detected_photons_filter` methods of the :ref:`Processor` and :ref:`Simulator` objects:
 

@@ -41,23 +41,6 @@ from perceval.rendering.pdisplay import pdisplay_state_distrib
 from _test_utils import strip_line_12, assert_svd_close, dict2svd
 
 
-def test_tag():
-    s = Source()
-    assert s.get_tag("discernability_tag", False) == 0
-    assert s.get_tag("discernability_tag", True) == 1
-    assert s.get_tag("discernability_tag", False) == 1
-
-
-def test_intermediate_probs():
-    assert pytest.approx((1, 0, 0)) == Source()._get_probs()
-    p1 = .8
-    p2 = .01
-    beta = p1 + p2
-    g2 = 2 * p2 / (p1 + 2 * p2) ** 2
-    s = Source(emission_probability=beta, multiphoton_component=g2, losses=.1)
-    assert pytest.approx((.72, .0009, .0081)) == s._get_probs()
-
-
 def test_source_pure():
     s = Source()
     svd = s.probability_distribution()
@@ -133,7 +116,8 @@ def test_source_sample_no_filter():
 
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs,0)
-    dist = BSDistribution({str(key):value for key,value in dist.items()}) # change SVD to BSD
+    dist = anonymize_annotations(dist, annot_tag="_")  # to be able to compare the distributions
+    dist = BSDistribution({key[0]:value for key,value in dist.items()}) # change SVD to BSD
 
     # just avoid the warning in tvd_dist
     for el in set(dist.keys()) - set(dist_samples.keys()):
@@ -158,63 +142,9 @@ def test_source_sample_no_filter():
     assert nb_1p > nb_3p
 
 
-def test_source_table():
-    brightness = .875
-    g2 = .25  # Values chosen so probabilities are "round" values
-    hom = 1
-    losses = 0.1
-
-    n = 4
-
-    s = Source(brightness, g2, hom, losses)
-
-    # Works because there is no HOM.
-    # Doesn't work with HOM as we sum up some g2 and HOM in the same annotations in source.generate_distribution
-    def bsd_to_prob_table(bsd) -> dict:
-        res = defaultdict(float)
-
-        for bs, p in bsd.items():
-            signal = 0
-            g2_alone = 0
-            g2_signal = 0
-
-            for m in range(bs.m):
-                trunc = bs[m:m + 1]  # keeps the annotations
-
-                if trunc.n == 1:
-                    val = int(trunc.get_photon_annotation(0).str_value("_")) if bs.has_annotations else 0
-                    if val == 0:
-                        signal += 1
-                    else:
-                        g2_alone += 1
-
-                elif trunc.n == 2:
-                    g2_signal += 1
-
-            res[(signal, g2_alone, g2_signal)] += p
-
-        return res
-
-    true_svd = s.generate_distribution(BasicState(n * [1]))
-    true_bsd = BSDistribution({sv[0]: p for sv, p in true_svd.items()})
-
-    prob_table, phys_perf, zpp = s._compute_prob_table(n)
-
-    assert prob_table == pytest.approx(bsd_to_prob_table(true_bsd))
-    assert phys_perf == pytest.approx(1)
-    assert zpp == pytest.approx(true_svd[StateVector(n * [0])])
-
-    truncated_svd, perf = filter_distribution_photon_count(true_bsd, 2)
-
-    phys_perf, zpp = s.cache_prob_table(n, 2)
-    prob_table = s._prob_table
-    assert prob_table == pytest.approx(bsd_to_prob_table(truncated_svd))
-    assert phys_perf == pytest.approx(perf)
-    assert zpp == pytest.approx(true_svd[StateVector(n * [0])])
-
 @pytest.mark.parametrize("brightness", [1, 0.7])
 @pytest.mark.parametrize("g2", [0, 0.3])
-@pytest.mark.parametrize("hom", [1, 0.6])
+@pytest.mark.parametrize("hom", [1, 0.6, 0])
 @pytest.mark.parametrize("losses", [0, 0.4])
 @pytest.mark.parametrize("multiphoton_model", ['distinguishable', 'indistinguishable'])
 def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_model):
@@ -238,7 +168,7 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs, 0)
     dist = anonymize_annotations(dist, annot_tag="_")
-    dist = BSDistribution({str(key): value for key, value in dist.items()})  # change SVD to BSD
+    dist = BSDistribution({key[0]: value for key, value in dist.items()})  # change SVD to BSD
     dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
 
     # just avoid the warning in tvd_dist

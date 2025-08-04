@@ -37,26 +37,21 @@ from .scaleway_rpc_handler import RPCHandler
 
 class Session(ISession):
     """
+    Scaleway session used to keep a connexion opened with Scaleway Cloud for the duration of a Python scope.
+
     :param platform_name: platform on which circuits will be executed
-
     :param project_id: UUID of the Scaleway Project the session is attached to
-
     :param token: authentication token required to access the Scaleway API
-
     :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session among multiple users
-
     :param max_idle_duration_s: optional value, duration in seconds that can elapsed without activity before the session terminates
-
     :param max_duration_s: optional value, duration in seconds for a session before it automatically terminates
-
     :param url: optional value, endpoint URL of the API
-
     :param proxies: optional value, dictionary mapping protocol to the URL of the proxy
     """
 
     def __init__(
         self,
-        platform: str,
+        platform_name: str,
         project_id: str,
         token: str,
         max_idle_duration_s: int = 1200,
@@ -67,7 +62,7 @@ class Session(ISession):
         provider_name: Optional[str] = None,
     ) -> None:
 
-        if not platform:
+        if not platform_name:
             raise Exception("platform_name cannot be None")
 
         if not project_id:
@@ -91,7 +86,7 @@ class Session(ISession):
             secret_key=token,
             url=url,
             proxies=proxies,
-            platform_name=platform,
+            platform_name=platform_name,
             provider_name=provider_name,
         )
 

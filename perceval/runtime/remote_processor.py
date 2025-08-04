@@ -28,19 +28,17 @@
 # SOFTWARE.
 from __future__ import annotations
 
-import uuid
-
 from perceval.components.abstract_processor import AProcessor, ProcessorType
-from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector
-from perceval.utils import BasicState, PMetadata, PostSelect, NoiseModel
+from perceval.components import ACircuit, Processor, AComponent,  Experiment, IDetector, Detector
+from perceval.utils import BasicState, NoiseModel
 from perceval.utils.logging import get_logger, channel
-from perceval.serialization import deserialize, serialize
+from perceval.serialization import deserialize
 
 from .remote_job import RemoteJob
 from .rpc_handler import RPCHandler
 from .remote_config import RemoteConfig
+from .payload_generator import PayloadGenerator
 
-__process_id__ = uuid.uuid4()
 
 QUANDELA_CLOUD_URL = 'https://api.cloud.quandela.com'
 PERFS_KEY = "perfs"
@@ -114,6 +112,7 @@ class RemoteProcessor(AProcessor):
 
         self._specs = {}
         self._perfs = {}
+        self._status = None
         self._type = ProcessorType.SIMULATOR
         self._available_circuit_parameters = {}
         self.fetch_data()
@@ -122,15 +121,17 @@ class RemoteProcessor(AProcessor):
         self._thresholded_output = "detector" in self._specs and self._specs["detector"] == "threshold"
 
     def _circuit_change_observer(self, new_component: Experiment | AComponent = None):
-        if new_component is not None:
-            if isinstance(new_component, Experiment):
-                if not new_component.is_unitary:
-                    raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
-                if new_component.has_feedforward:
-                    raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
-
-            elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
-                raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
+        pass
+        # TODO: Check that the component matches what the platform can do
+        # if new_component is not None:
+        #     if isinstance(new_component, Experiment):
+        #         if not new_component.is_unitary:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing non linear components')
+        #         if new_component.has_feedforward:
+        #             raise RuntimeError('Cannot compose a RemoteProcessor with a processor containing feed-forward')
+        #
+        #     elif not isinstance(new_component, IDetector) and not isinstance(new_component, ACircuit):
+        #         raise NotImplementedError("Non linear components not implemented for RemoteProcessors")
 
     def _noise_changed_observer(self):
         if self.noise and self._type == ProcessorType.PHYSICAL:  # Injecting a noise model to an actual QPU makes no sense
@@ -142,21 +143,9 @@ class RemoteProcessor(AProcessor):
     def is_remote(self) -> bool:
         return True
 
-    def thresholded_output(self, value: bool):
-        r"""
-        Simulate threshold detectors on output states. All detections of more than one photon on any given mode is
-        changed to 1. Some QPU and simulators can only perform threshold detection.
-
-        :param value: enables threshold detection when True, otherwise disables it.
-        """
-        if value is False:
-            assert not ("detector" in self._specs and self._specs["detector"] == "threshold"), \
-                "given processor can only perform threshold detection"
-        self.set_parameter("thresholded", value)
-        super().thresholded_output(value)
-
     def fetch_data(self):
         platform_details = self._rpc_handler.fetch_platform_details()
+        self._status = platform_details.get("status")
         platform_specs = deserialize(platform_details['specs'])
         self._specs.update(platform_specs)
         if PERFS_KEY in platform_details:
@@ -178,13 +167,20 @@ class RemoteProcessor(AProcessor):
             return self._specs['constraints']
         return {}
 
+    @property
+    def status(self):
+        return self._status
+
+    def check_circuit_size(self, m: int):
+        if 'max_mode_count' in self.constraints and m > self.constraints['max_mode_count']:
+            raise RuntimeError(f"Circuit too big ({m} modes > {self.constraints['max_mode_count']})")
+        if 'min_mode_count' in self.constraints and m < self.constraints['min_mode_count']:
+            raise RuntimeError(f"Circuit too small ({m} < {self.constraints['min_mode_count']})")
+        if self.input_state is not None and self.input_state.m != m:
+            raise RuntimeError(f"Circuit and input state size do not match ({m} != {self.input_state.m})")
+
     def check_circuit(self, circuit: ACircuit):
-        if 'max_mode_count' in self.constraints and circuit.m > self.constraints['max_mode_count']:
-            raise RuntimeError(f"Circuit too big ({circuit.m} modes > {self.constraints['max_mode_count']})")
-        if 'min_mode_count' in self.constraints and circuit.m < self.constraints['min_mode_count']:
-            raise RuntimeError(f"Circuit too small ({circuit.m} < {self.constraints['min_mode_count']})")
-        if self.input_state is not None and self.input_state.m != circuit.m:
-            raise RuntimeError(f"Circuit and input state size do not match ({circuit.m} != {self.input_state.m})")
+        self.check_circuit_size(circuit.m)
 
     def set_circuit(self, circuit: ACircuit):
         self.check_circuit(circuit)
@@ -208,6 +204,10 @@ class RemoteProcessor(AProcessor):
         if 'min_photon_count' in self.constraints and n_photons < self.constraints['min_photon_count']:
             raise RuntimeError(
                 f"Not enough photons in input state ({n_photons} < {self.constraints['min_photon_count']})")
+        if ('support_multi_photon' in self.constraints and not self.constraints['support_multi_photon']
+                and not all(mode_photon_cnt <= 1 for mode_photon_cnt in input_state)):
+            raise RuntimeError(f"Input state ({input_state}) is not permitted. QPU/QPU simulators accept more than "
+                               f"1 photon per mode:{self.constraints['support_multi_photon']})")
         if self.m is not None and input_state.m != self.m:
             raise RuntimeError(f"Input state and circuit size do not match ({input_state.m} != {self.m})")
 
@@ -215,42 +215,16 @@ class RemoteProcessor(AProcessor):
     def available_commands(self) -> list[str]:
         return self._specs.get("available_commands", [])
 
-    def prepare_job_payload(self, command: str, circuitless: bool = False, inputless: bool = False, **kwargs
-                            ) -> dict[str, any]:
+    def prepare_job_payload(self, command: str, **kwargs) -> dict[str, any]:
         self.check_min_detected_photons_filter()
-        self._set_min_photons_parameter()
-
-        j = {
-            'platform_name': self.name,
-            'pcvl_version': PMetadata.short_version(),
-            'process_id': str(__process_id__)
-        }
-        payload = {
-            'command': command,
-            **kwargs
-        }
-        if not circuitless:
-            circuit = self.linear_circuit()  # Raises RuntimeError if there are non-unitary components
-            self.check_circuit(circuit)
-            payload['circuit'] = serialize(circuit)
-        if self.input_state and not inputless:
+        self.check_circuit_size(self.circuit_size)
+        if self.input_state:
             self.check_input(self.remove_heralded_modes(self.input_state))
-            payload['input_state'] = serialize(self.input_state)
-        if self._parameters:
-            payload['parameters'] = self._parameters
-        if self.post_select_fn is not None:
-            if isinstance(self.post_select_fn, PostSelect):
-                payload['postselect'] = serialize(self.post_select_fn)
-            else:
-                get_logger().warn(
-                    f"Ignored post-selection since it was a {type(self.post_select_fn)}, expected PostSelect", channel.user)
-        if self.heralds:
-            payload['heralds'] = self.heralds
-        if self.noise is not None:
-            payload['noise'] = serialize(self.noise)
-        j['payload'] = payload
+
+        payload = PayloadGenerator.generate_payload(command, self.experiment, self._parameters, self.name, **kwargs)
+
         self.log_resources(command, self._parameters)
-        return j
+        return payload
 
     def resume_job(self, job_id: str) -> RemoteJob:
         return RemoteJob.from_id(job_id, self._rpc_handler)
@@ -278,7 +252,9 @@ class RemoteProcessor(AProcessor):
                 c.param(n).set_value(v)
         lp = Processor("SLOS", c, NoiseModel(transmittance=transmittance))
         lp.min_detected_photons_filter(1)
-        lp.thresholded_output(self._thresholded_output)  # TODO: remove this deprecated call (PCVL-935)
+        if self._thresholded_output:
+            for m in range(lp.circuit_size):
+                lp.add(m, Detector.threshold())
         lp.with_input(self.input_state)
         probs = lp.probs()
         p_above_filter_ns = 0
@@ -318,7 +294,7 @@ class RemoteProcessor(AProcessor):
     def log_resources(self, command: str, extra_parameters: dict):
         """Log resources of the remote processor
 
-        :param method: name of the method used
+        :param command: name of the method used
         :param extra_parameters: extra parameters to log
         """
         extra_parameters = {key: value for key, value in extra_parameters.items() if value is not None}

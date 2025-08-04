@@ -174,13 +174,20 @@ class Matrix(ABC):
 
     @staticmethod
     def get_unitary_extension(M: np.ndarray) -> MatrixN:
-        """Embed the input matrix M into an unitary matrix  U
+        r"""Embed the input matrix M into a unitary matrix  U
 
-                    U = | M/σ * |
-                        | *   * |
+        U = | M/σ * |
+            | *   * |
+
+        .. math::
+
+            U = \begin{matrix}
+                    M/σ & * \\
+                    * & *
+                \end{matrix}
 
         :param M: np.ndarray describing a row x col complex matrix
-        :return: np.ndarray describing a (row + col) x (row + col) complex unitary matrix
+        :return: numeric matrix describing a (row + col) x (row + col) complex unitary matrix
         """
 
         row, col = M.shape

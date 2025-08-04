@@ -66,7 +66,7 @@ def test_samples_provider_distribution():
 
 def test_samples_provider_source():
     provider = SamplesProvider(clifford)
-    sampler = lambda i: source.generate_samples(i, ideal_input, 0)
+    sampler = lambda i: source.generate_separated_samples(i, ideal_input, 0)
 
     provider.estimate_weights_from_source(sampler, 1000)
     provider.prepare()

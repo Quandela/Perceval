@@ -58,7 +58,7 @@ from .utils import *
 from .rendering import *
 from .runtime import *
 from .error_mitigation import photon_recycling
-from .simulators import Simulator, SimulatorFactory, DelaySimulator, LossSimulator, PolarizationSimulator
+from .simulators import Simulator, SimulatorFactory, FFSimulator, NoisySamplingSimulator, Stepper
 
 
 def register_plugin(name, silent=False):
@@ -70,5 +70,5 @@ def register_plugin(name, silent=False):
     return True
 
 
-get_logger().info(f"=== Starting Perceval session - process ID: {remote_processor.__process_id__} ===",
+get_logger().info(f"=== Starting Perceval session - process ID: {payload_generator.__process_id__} ===",
             logging.channel.general)

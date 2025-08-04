@@ -27,7 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
-from perceval import Processor, Source, BS, TD, BasicState, BSDistribution
+from perceval import Processor, BS, TD, BasicState, BSDistribution
+from _test_utils import assert_bsd_close
 
 p = Processor("SLOS", 2)
 
@@ -46,7 +47,7 @@ def test_without_herald():
     expected[BasicState([2, 0])] = 0.125
     expected[BasicState([0, 2])] = 0.125
 
-    assert pytest.approx(p.probs()["results"]) == expected, "Basic time delay test not successful"
+    assert_bsd_close(p.probs()["results"], expected)
 
 
 def test_with_selection():
@@ -63,8 +64,8 @@ def test_with_selection():
 
     res = p.probs()
 
-    assert pytest.approx(res["results"]) == expected, "Time delay with selection not successful"
-    assert pytest.approx(res["physical_perf"]) == expected_p_perf, "Wrong physical performance with time delays"
+    assert_bsd_close(p.probs()["results"], expected)
+    assert pytest.approx(res["global_perf"]) == expected_p_perf, "Wrong physical performance with time delays"
 
 
 def test_with_heralds():
@@ -81,5 +82,5 @@ def test_with_heralds():
 
     res = p.probs()
 
-    assert pytest.approx(res["results"]) == expected, "Time delay with heralds not successful"
-    assert pytest.approx(res["logical_perf"]) == expected_l_perf, "Wrong logical performance with time delays"
+    assert_bsd_close(p.probs()["results"], expected)
+    assert pytest.approx(res["global_perf"]) == expected_l_perf, "Wrong logical performance with time delays"

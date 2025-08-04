@@ -34,6 +34,13 @@ from perceval.utils.logging import get_logger, channel
 
 
 class Session(ISession):
+    """
+    Quandela Cloud session
+
+    :param platform_name: Name of an available platform on Quandela Cloud (e.g. "sim:slos")
+    :param token: A valid authentication token to use within the session
+    :param url: URL prefix for the endpoint to connect to. If omitted the Quandela Cloud endpoints will be used.
+    """
     def __init__(self, platform_name: str, token: str, url: str = None):
         self._platform_name = platform_name
         self._token = token
@@ -41,4 +48,5 @@ class Session(ISession):
         get_logger().info(f"Creating Quandela Session to {self._url}", channel.general)
 
     def build_remote_processor(self) -> RemoteProcessor:
+        """Build a remote processor from the session information"""
         return RemoteProcessor(rpc_handler=RPCHandler(self._platform_name, self._url, self._token))

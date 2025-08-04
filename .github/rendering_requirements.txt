@@ -1,0 +1,11 @@
+contourpy
+cycler
+drawsvg
+fonttools
+kiwisolver
+latexcodec
+matplotlib
+pillow
+pyparsing
+python-dateutil
+six

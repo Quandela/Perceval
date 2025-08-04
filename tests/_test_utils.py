@@ -75,21 +75,49 @@ def assert_sv_close(sv1: StateVector, sv2: StateVector):
         assert sv1[s] == pytest.approx(sv2[s]), f"{sv1} != {sv2} (amplitudes {sv1[s]} != {sv2[s]})"
 
 
+def compact_svd(svd: SVDistribution) -> SVDistribution:
+    res = SVDistribution()
+
+    for sv, prob in svd.items():
+        found = False
+        for res_sv in res:
+            if check_sv_close(sv.__copy__(), res_sv.__copy__()):
+                res[res_sv] += prob
+                found = True
+                break
+
+        if not found:
+            res[sv] = prob
+
+    return res
+
+
 def assert_svd_close(lhsvd, rhsvd):
+    lhsvd = compact_svd(lhsvd)
+    rhsvd = compact_svd(rhsvd)
+
     lhsvd.normalize()
     rhsvd.normalize()
     assert len(lhsvd) == len(rhsvd), f"len are different, {len(lhsvd)} vs {len(rhsvd)}"
 
-    for lh_sv in lhsvd.keys():
+    for lh_sv, lh_p in lhsvd.items():
         found_in_rh = False
-        for rh_sv in rhsvd.keys():
+        for rh_sv, rh_p in rhsvd.items():
             if not check_sv_close(lh_sv.__copy__(), rh_sv.__copy__()):
                 continue
             found_in_rh = True
-            assert pytest.approx(lhsvd[lh_sv]) == rhsvd[rh_sv], \
-                f"different probabilities for {lh_sv}, {lhsvd[lh_sv]} vs {rhsvd[rh_sv]}"
+            assert pytest.approx(lh_p) == rh_p, f"different probabilities for {lh_sv}, {lh_p} vs {rh_p}"
             break
         assert found_in_rh, f"sv not found {lh_sv}"
+
+
+def assert_bsd_close(lhbsd, rhbsd):
+    lhbsd.normalize()
+    rhbsd.normalize()
+    assert len(lhbsd) == len(rhbsd), f"len are different, {len(lhbsd)} vs {len(rhbsd)}"
+
+    for lh_bs, prob in lhbsd.items():
+        assert rhbsd.get(lh_bs, 0) == pytest.approx(prob), f"different probabilities for {lh_bs}, {prob} vs {rhbsd[lh_bs]}"
 
 
 def assert_circuits_eq(c_a: Circuit, c_b: Circuit):
@@ -158,6 +186,9 @@ def assert_experiment_equals(experiment1: Experiment, experiment2: Experiment):
     assert experiment1.post_select_fn == experiment2.post_select_fn
     assert_detector_list_eq(experiment1.detectors, experiment2.detectors)
     assert experiment1.heralds == experiment2.heralds
+    assert experiment1.is_unitary == experiment2.is_unitary
+    assert experiment1.has_td == experiment2.has_td
+    assert experiment1.has_feedforward == experiment2.has_feedforward
 
 
 def dict2svd(d: dict):
