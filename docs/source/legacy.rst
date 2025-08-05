@@ -1,10 +1,9 @@
 Legacy
 ======
 
-While Perceval tends to stabilise its public API, some changes introduce breaking changes which may break existing user
-code.
+While, with its latest versions, Perceval tends to stabilise its public API, some changes may break existing user code.
 
-This section lists the major breaking changes introduced.
+This section lists the major breaking changes.
 
 Breaking changes in Perceval 1.0
 --------------------------------
