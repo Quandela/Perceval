@@ -89,14 +89,14 @@ class AStrongSimulationBackend(ABackend):
         self._mask: xq.FSMask | None = None
 
     def set_mask(self, masks: str | list[str], n = None):
-        """
+        r"""
         Sets new masks, replacing the former ones if they exist. Clear possible cached data that depend on the mask.
         Masks are useful to limit strong simulation to only a part of the Fock space, ultimately saving memory and
         computation time.
 
         :param masks: Can be a mask or a list of masks. Each mask is expressed as a string where each character is a
-            condition on one mode. Digits are fixing the number of photons whereas spaces or "*" are accepting any
-            number of detections. e.g. using "****00" as a mask limits the simulation to output states ending in two
+            condition on one mode. Digits are fixing the number of photons whereas spaces or "\*" are accepting any
+            number of detections. e.g. using "\*\*\*\*00" as a mask limits the simulation to output states ending in two
             empty modes.
         :param n: The number of photons to instantiate the mask with.
             This corresponds to the total number of photons in your non-separated state.

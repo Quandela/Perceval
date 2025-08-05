@@ -385,6 +385,8 @@ class ExperimentBuilder:
                         experiment._components.append(((i,), detectors[i]))
                         injected_detectors[i] = True
                 experiment._components.append((tuple(i for i in range(serial_comp.starting_mode, serial_comp.starting_mode + component.m)), component))
+                experiment._is_unitary = False
+                experiment._has_feedforward = True
             else:
                 experiment.add(serial_comp.starting_mode, component)
 
