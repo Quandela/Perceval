@@ -61,7 +61,6 @@ class ABackend(ABC):
     def _check_state(self, state: FockState):
         assert self._circuit is not None, 'Circuit must be set before the input state'
         assert self._circuit.m == state.m, f'Circuit({self._circuit.m}) and state({state.m}) size mismatch'
-        # assert not state.has_annotations, 'State should be composed of indistinguishable photons only'
 
     @property
     @abstractmethod

@@ -31,13 +31,13 @@ from collections import defaultdict
 import pytest
 import math
 
-from perceval import BSDistribution, StateVector, filter_distribution_photon_count, SVDistribution, \
+from perceval import BSDistribution, filter_distribution_photon_count, SVDistribution, \
     anonymize_annotations, FockState, NoisyFockState
 from perceval.components import Source
 from perceval.utils.conversion import samples_to_probs
 from perceval.utils.dist_metrics import tvd_dist
 from perceval.rendering.pdisplay import pdisplay_state_distrib
-from _test_utils import strip_line_12, assert_svd_close, dict2svd, dict2svd
+from _test_utils import strip_line_12, assert_svd_close, dict2svd
 
 
 def test_source_pure():
@@ -81,7 +81,7 @@ def test_source_indistinguishability():
         state = k[0]
         assert state.n == 1
         assert isinstance(state, NoisyFockState)
-        if str(state) != "|{0}>" != 0:
+        if str(state) != "|{0}>":
             assert pytest.approx(1-math.sqrt(0.5)) == v
         else:
             assert pytest.approx(math.sqrt(0.5)) == v

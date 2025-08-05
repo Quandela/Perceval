@@ -681,13 +681,14 @@ class Simulator(ISimulator):
     def _evolve_no_compute(self, decomposed_input, input_state): # TODO : input_state is needed only for log, use input_state.n instead
         """Uses the cached results to compute the evolution of the state described in decomposed_input"""
         result_sv = StateVector()
-        for probampli, instate_list, n in decomposed_input:
+        for probampli, instate_map, n in decomposed_input:
             reslist = []
-            for in_s in instate_list: # in_s is a FockState
+            for annot in instate_map:
+                in_s = instate_map[annot]
                 if in_s.n == 0:
                     reslist.append(in_s)
                     continue
-                reslist.append(self._evolve[(in_s, self._best_n(n, in_s.n))])
+                reslist.append(self._evolve[(NoisyFockState(in_s,[annot]) if annot != "" else FockState(in_s), self._best_n(n, in_s.n))])
 
             # Recombine results for one basic state input
             evolved_in_s = reslist.pop(0)
@@ -705,9 +706,9 @@ class Simulator(ISimulator):
 
     def _prepare_decomposed_input(self, input_state: SVDistribution):
         """Decay input to a list of basic states without annotations and evolve each of them"""
-        decomposed_input = [(pa, st.separate_state() if isinstance(st, NoisyFockState) else [st], max(sv.n)) for sv in input_state
+        decomposed_input = [(pa, st.split_state() if isinstance(st, NoisyFockState) else {"": st}, max(sv.n)) for sv in input_state
                             for st, pa in sv]
-        input_list = [(copy(state), self._best_n(t[2], state.n)) for t in decomposed_input for state in t[1]]
+        input_list = [(FockState(t[1][annot]), self._best_n(t[2], t[1][annot].n)) for t in decomposed_input for annot in t[1]]
 
         self._evolve_cache_with_n(set(input_list))
 
@@ -754,7 +755,7 @@ class Simulator(ISimulator):
         for idx, (sv, p) in enumerate(svd.items()):
             # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self.min_detected_photons_filter:
-                decomposed_input = [(pa, st.separate_state() if isinstance(st, NoisyFockState) else [st], max(sv.n)) for st, pa in sv]
+                decomposed_input = [(pa, st.split_state() if isinstance(st, NoisyFockState) else {"": st}, max(sv.n)) for st, pa in sv]
                 new_sv = self._evolve_no_compute(decomposed_input, sv)
                 success_prob = p * self._logical_perf
                 global_perf += success_prob
