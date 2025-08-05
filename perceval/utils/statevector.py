@@ -30,7 +30,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-
 from multipledispatch import dispatch
 from typing import Generator
 try:
