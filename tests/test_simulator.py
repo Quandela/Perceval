@@ -222,9 +222,9 @@ def test_simulator_probability():
 
     input_state = StateVector(NoisyFockState("|{0},{1}>"))
     # assert simulator.probability(input_state, BasicState("|{0}{1},0>").clear_annotations()) == pytest.approx(0.25) # partition not implemented for NoisyFockState
-    assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25) # changed from 0.25 to 0.5 ?
-    assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25) # changed from 0.25 to 0.5 ?
-    assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5) # changed from 0.5 to 0 ?
+    assert simulator.probability(input_state, BasicState("|2,0>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|0,2>")) == pytest.approx(0.25)
+    assert simulator.probability(input_state, BasicState("|1,1>")) == pytest.approx(0.5)
 
 
 def test_simulator_probs_sv():

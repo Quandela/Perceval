@@ -688,8 +688,7 @@ class Simulator(ISimulator):
                 if in_s.n == 0:
                     reslist.append(in_s)
                     continue
-                reslist.append(self._evolve[(NoisyFockState(in_s,[annot]) if annot != "" else FockState(in_s), self._best_n(n, in_s.n))])
-
+                reslist.append(_inject_annotation(self._evolve[(in_s, self._best_n(n, in_s.n))], annot))
             # Recombine results for one basic state input
             evolved_in_s = reslist.pop(0)
             for sv in reslist:
