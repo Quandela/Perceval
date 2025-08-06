@@ -60,7 +60,7 @@ def test_samples_provider_distribution():
     noisy_input = source.generate_distribution(ideal_input)
 
     provider = SamplesProvider(clifford)
-    provider.estimate_weights_from_distribution(_svd_to_bsd(noisy_input), 1000)
+    provider.estimate_weights_from_distribution(noisy_input, 1000)
     provider.prepare()
 
     assert provider._pools and provider._weights
