@@ -705,7 +705,7 @@ class Simulator(ISimulator):
 
     def _prepare_decomposed_input(self, input_state: SVDistribution):
         """Decay input to a list of basic states without annotations and evolve each of them"""
-        decomposed_input = [(pa, st.split_state() if isinstance(st, NoisyFockState) else {"": st}, max(sv.n)) for sv in input_state
+        decomposed_input = [(pa, _annot_state_mapping(st), max(sv.n)) for sv in input_state
                             for st, pa in sv]
         input_list = [(FockState(t[1][annot]), self._best_n(t[2], t[1][annot].n)) for t in decomposed_input for annot in t[1]]
 
@@ -754,7 +754,7 @@ class Simulator(ISimulator):
         for idx, (sv, p) in enumerate(svd.items()):
             # It is intended to reject if any of the component doesn't have enough photons
             if min(sv.n) >= self.min_detected_photons_filter:
-                decomposed_input = [(pa, st.split_state() if isinstance(st, NoisyFockState) else {"": st}, max(sv.n)) for st, pa in sv]
+                decomposed_input = [(pa, _annot_state_mapping(st), max(sv.n)) for st, pa in sv]
                 new_sv = self._evolve_no_compute(decomposed_input, sv)
                 success_prob = p * self._logical_perf
                 global_perf += success_prob

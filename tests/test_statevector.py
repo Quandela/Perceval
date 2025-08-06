@@ -329,12 +329,12 @@ def test_svd_anonymize_annots_simple():
     reason="Superposed states aren't anonymized the same given C++ unordered containers OS-specific implementation")
 def test_svd_anonymize_annots_superposition():
     svd = SVDistribution({
-        StateVector(NoisyFockState("|{0},{0},{1}>")) + StateVector(NoisyFockState("|{0},{2},{1}>")): 0.1,
-        StateVector(NoisyFockState("|{3},{4},{4}>")): 0.1,
-        StateVector(NoisyFockState("|{0},{0},{1}>")) + StateVector(NoisyFockState("|{0},{4},{1}>")): 0.1,
-        StateVector(NoisyFockState("|{4},{4},{2}>")): 0.1,
-        StateVector(NoisyFockState("|{1},{3},{3}>")): 0.1,
-        StateVector(NoisyFockState("|{0},{2},{3}>")): 0.5,
+        StateVector(AnnotatedFockState("|{_:0},{_:0},{_:1}>")) + StateVector(AnnotatedFockState("|{_:0},{_:2},{_:1}>")): 0.1,
+        StateVector(AnnotatedFockState("|{_:3},{_:4},{_:4}>")): 0.1,
+        StateVector(AnnotatedFockState("|{_:0},{_:0},{_:1}>")) + StateVector(AnnotatedFockState("|{_:0},{_:4},{_:1}>")): 0.1,
+        StateVector(AnnotatedFockState("|{_:4},{_:4},{_:2}>")): 0.1,
+        StateVector(AnnotatedFockState("|{_:1},{_:3},{_:3}>")): 0.1,
+        StateVector(AnnotatedFockState("|{_:0},{_:2},{_:3}>")): 0.5,
     })
     svd2 = pcvl.anonymize_annotations(svd)
     assert_svd_close(svd2, SVDistribution(
