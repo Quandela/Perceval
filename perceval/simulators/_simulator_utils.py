@@ -77,17 +77,7 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
 def _annot_state_mapping(bs_with_annots: BasicState):
     if isinstance(bs_with_annots, FockState):
         return {Annotation(): bs_with_annots}
-    bs_list = bs_with_annots.separate_state()
-    mapping = {}
-    photon_no = 0
-    for bs in bs_list:
-        if bs.n == 0:
-            mapping[Annotation()] = bs
-            continue
-        annot = bs_with_annots.get_photon_annotation(photon_no)
-        mapping[annot] = bs
-        photon_no += 1
-    return mapping
+    return bs_with_annots.split_state()
 
 
 def _retrieve_mode_count(component_list: list) -> int:
