@@ -188,7 +188,7 @@ def test_simulator_probampli():
     assert simulator.prob_amplitude(input_state, BasicState("|{0}{1},0>")) == pytest.approx(0.5j)
     assert simulator.prob_amplitude(input_state, BasicState("|0,{0}{1}>")) == pytest.approx(0.5j)
     assert simulator.prob_amplitude(input_state, BasicState("|{0},{1}>")) == pytest.approx(0.5)
-    assert simulator.prob_amplitude(input_state, BasicState("|{1},{0}>")) == pytest.approx(-0.5) # TODO : see why it changed from -0.5 to 0.5
+    assert simulator.prob_amplitude(input_state, BasicState("|{1},{0}>")) == pytest.approx(-0.5)
     assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
     assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
     # prob_amplitude call is strict on annotations name
@@ -198,7 +198,7 @@ def test_simulator_probampli():
     assert simulator.prob_amplitude(input_state, BasicState("|{0}{1},0>")) == pytest.approx(0.5j)
     assert simulator.prob_amplitude(input_state, BasicState("|0,{0}{1}>")) == pytest.approx(0.5j)
     assert simulator.prob_amplitude(input_state, BasicState("|{0},{1}>")) == pytest.approx(0.5)
-    assert simulator.prob_amplitude(input_state, BasicState("|{1},{0}>")) == pytest.approx(-0.5) # TODO : see why it changed from -0.5 to 0.5
+    assert simulator.prob_amplitude(input_state, BasicState("|{1},{0}>")) == pytest.approx(-0.5)
     assert simulator.prob_amplitude(input_state, BasicState("|2,0>")) == pytest.approx(0)
     assert simulator.prob_amplitude(input_state, BasicState("|1,1>")) == pytest.approx(0)
     # prob_amplitude call is strict on annotations name
@@ -247,8 +247,8 @@ def test_simulator_probs_sv():
     assert result[BasicState("|1,1>")] == pytest.approx(1/4)
 
     simulator.set_circuit(BS())
-    s_boson = StateVector("|{Q:0},{Q:1}>") + StateVector("|{Q:1},{Q:0}>")
-    s_fermion = StateVector("|{Q:0},{Q:1}>") - StateVector("|{Q:1},{Q:0}>")
+    s_boson = StateVector(NoisyFockState("|{0},{1}>")) + StateVector(NoisyFockState("|{1},{0}>"))
+    s_fermion = StateVector(NoisyFockState("|{0},{1}>")) - StateVector(NoisyFockState("|{1},{0}>"))
     result_boson = simulator.probs(s_boson)
     assert len(result_boson) == 2
     assert result_boson[BasicState("|2,0>")] == pytest.approx(1/2)
@@ -277,12 +277,12 @@ def test_evolve_indistinguishable():
 def test_evolve_distinguishable():
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS.H())
-    sv2 = StateVector(AnnotatedFockState("|{a:0},{a:0}{a:1}>"))
+    sv2 = StateVector(NoisyFockState("|{0},{0}{1}>"))
     sv2_out = simulator.evolve(sv2)
-    assert pytest.approx(sv2_out[BasicState('|2{a:0}{a:1},0>')]) == 1/2
-    assert pytest.approx(sv2_out[BasicState('|2{a:0},{a:1}>')]) == -1/2
-    assert pytest.approx(sv2_out[BasicState('|{a:1},2{a:0}>')]) == -1/2
-    assert pytest.approx(sv2_out[BasicState('|0,2{a:0}{a:1}>')]) == 1/2
+    assert pytest.approx(sv2_out[BasicState('|2{0}{1},0>')]) == 1/2
+    assert pytest.approx(sv2_out[BasicState('|2{0},{1}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|{1},2{0}>')]) == -1/2
+    assert pytest.approx(sv2_out[BasicState('|0,2{0}{1}>')]) == 1/2
     sv2_out_out = simulator.evolve(sv2_out)
     assert_sv_close(sv2_out_out, sv2)
 
