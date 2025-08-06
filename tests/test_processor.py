@@ -127,19 +127,19 @@ def test_processor_probs():
     assert pytest.approx(probs['global_perf']) == 1
 
 
-# def test_processor_samples(): # TODO : runs forever now
-#     proc = Processor(Clifford2017Backend(), BS())
-#
-#     # Without annotations
-#     proc.with_input(FockState("|1,1>"))
-#     samples = proc.samples(500)
-#     assert samples["results"].count(FockState([1, 1])) == 0
-#     assert len(samples["results"]) == 500
-#
-#     # With annotations
-#     proc.with_input(StateVector(NoisyFockState("|{0},{1}>")))
-#     samples = proc.samples(500) # TODO : does not work
-#     assert samples["results"].count(FockState([1, 1])) > 50
+def test_processor_samples():
+    proc = Processor(Clifford2017Backend(), BS())
+
+    # Without annotations
+    proc.with_input(FockState("|1,1>"))
+    samples = proc.samples(500)
+    assert samples["results"].count(FockState([1, 1])) == 0
+    assert len(samples["results"]) == 500
+
+    # With annotations
+    proc.with_input(StateVector(NoisyFockState("|{0},{1}>")))
+    samples = proc.samples(500)
+    assert samples["results"].count(FockState([1, 1])) > 50
 
 
 def test_processor_samples_max_shots():
