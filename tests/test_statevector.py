@@ -272,7 +272,6 @@ def test_parse_annot():
     invalid_str = ["|{0}", "|1{2>", "{P:(0.3,0)>",
                    "|{;}>", "|{P:(1,2,3)}>", "|{P:(1,a)}>", "|{a:0,a:1}>"]
     for s in invalid_str:
-        print(s)
         with pytest.raises(ValueError):
             BasicState(s)
     st1 = BasicState("|{0}{1}>")

@@ -128,7 +128,7 @@ class Analyzer(AAlgorithm):
             job = self._sampler.probs
             job.name = f'{self.default_job_name} {idx+1}/{len(self.input_states_list)}'
             probs_output = job.execute_sync()
-            probs = probs_output['results'] # TODO : problem here, probs_output is NoneType
+            probs = probs_output['results']
             if len(probs) == 0:
                 has_an_empty_PD = True
             probs_res[i_state] = probs

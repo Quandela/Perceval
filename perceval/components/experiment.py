@@ -775,15 +775,12 @@ class Experiment:
     def in_heralds(self) -> dict[int, int]:
         return {port_range[0]: port.expected for port, port_range in self._in_ports.items() if isinstance(port, Herald)}
 
-    def check_input(self, input_state: FockState | NoisyFockState):
+    def check_input(self, input_state: FockState):
         r"""Check if a basic state input matches with the current experiment configuration"""
         assert self.m_in, "A circuit has to be set before the input state"
         expected_input_length = self.m_in
         assert len(input_state) == expected_input_length, \
             f"Input length not compatible with circuit (expects {expected_input_length}, got {len(input_state)})"
-        if isinstance(input_state, NoisyFockState):
-            get_logger().warn("Given input state is noisy, that will be ignored in the computation."
-                              " To use them, consider using a StateVector.")
 
     def _input_changed(self):
         for observer in self._input_changed_observers:
@@ -810,24 +807,6 @@ class Experiment:
             else:
                 input_list[k] = input_state[input_idx]
                 input_idx += 1
-
-        self._input_state = FockState(input_list)
-        self._input_changed()
-
-    @dispatch(NoisyFockState)
-    def with_input(self, input_state: NoisyFockState) -> None: # TODO : not sure if this should work
-        bs_list = input_state.separate_state()
-        for bs in bs_list:
-            self.check_input(bs)
-            input_list = [0] * self.circuit_size
-            input_idx = 0
-            # Build real input state (merging ancillas + expected input) and compute expected photon count
-            for k in range(self.circuit_size):
-                if k in self.in_heralds:
-                    input_list[k] = self.in_heralds[k]
-                else:
-                    input_list[k] = bs[input_idx]
-                    input_idx += 1
 
         self._input_state = FockState(input_list)
         self._input_changed()

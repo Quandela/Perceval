@@ -42,7 +42,6 @@ def _svd_to_bsd(svd):
             bs_list = [state[0]]
         for bs in bs_list:
             res.add(bs, prob)
-    print(res)
     return res
 
 

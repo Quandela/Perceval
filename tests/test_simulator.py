@@ -92,7 +92,6 @@ def test_simulator_probs_svd_indistinguishable():
     svd[StateVector('|2,0>') + StateVector([1,1])] = 0.4
     simulator = Simulator(SLOSBackend())
     simulator.set_circuit(BS())
-    print(svd)
     res = simulator.probs_svd(svd)['results']
     assert len(res) == 5
     assert res[BasicState("|1,0>")] == pytest.approx(0.225)
@@ -132,7 +131,6 @@ def test_simulator_probs_svd_superposed():
     sim = Simulator(SLOSBackend())
     sim.set_circuit(circuit)
     res = sim.probs_svd(in_svd)['results']
-    print(res)
     assert len(res) == 7
     assert res[BasicState("|2,0,0,0>")] == pytest.approx(2/9)
     assert res[BasicState("|0,0,0,2>")] == pytest.approx(2/9)
