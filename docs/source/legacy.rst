@@ -33,7 +33,7 @@ Some calls will use or return only the type that makes sense (e.g. :code:`Annota
 always returns a :code:`FockState` as a detected state naturally loses all kinds of photon annotation.
 
 .. note:: Note that the arithmetic is still implemented between states of different types. The result is the most
-  complex type of both operands (e.g. :code:`NoisyFockState`: ⊗ :code:`FockState` gives a :code:`NoisyFockState`).
+  complex type of both operands (e.g. :code:`NoisyFockState` ⊗ :code:`FockState` gives a :code:`NoisyFockState`).
 
 Usage in Perceval
 .................
