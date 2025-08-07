@@ -1,10 +1,7 @@
 Circuit
 =======
 
-The basic usage and definition of Circuit can be found in the dedicated section :ref:`Circuits`.
-
-.. warning::
-  Move everything that is not essential from :ref:`Circuits` to here.
+The basic usage and definition of Circuit can be found in :ref:`the tutorial<Optical Circuits>`.
 
 Accessing the components
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,9 +59,17 @@ Note that this includes the fixed parameters if there are any.
 
 To get the :code:`Parameter` itself, there are three ways:
 
-- use the :meth:`param()` method that allows using one parameter name to get it.
+- use the :meth:`param("param name")` method to retrieve a single parameter from its name.
 - use the :meth:`get_parameters()` method that gives all the parameters defined by the arguments
   (variable or all, with or without expressions). This is the preferred method for getting all parameters.
+
+    >>> c = BS(theta=pcvl.P("alpha1")) // PS(pcvl.P("phi")) // BS(theta=pcvl.P("alpha2"))
+    >>> for params in c.get_parameters():
+    >>>     print(param)
+    Parameter(name='alpha1', value=None, min_v=0.0, max_v=12.566370614359172)
+    Parameter(name='phi', value=None, min_v=0.0, max_v=6.283185307179586)
+    Parameter(name='alpha2', value=None, min_v=0.0, max_v=12.566370614359172)
+
 - use the :meth:`vars` property to get a dictionary mapping the name of the variable parameters and their instances.
 
 .. autoclass:: perceval.components.linear_circuit.Circuit

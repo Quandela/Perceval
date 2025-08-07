@@ -2,7 +2,7 @@ backends
 ^^^^^^^^
 
 Backends are the lowest level of computation of perceval.
-They all aim at providing ways of simulating a :ref:`Circuit` or unitary for a non-annotated :ref:`BasicState`.
+They all aim at providing ways of simulating a :ref:`Circuit` or unitary for a non-annotated :ref:`FockState`.
 As such, they are only suited to non-noisy, linear, non-polarized, non-superposed input and output states and circuits
 (unless the user wants to deal with such by hand).
 
@@ -19,7 +19,7 @@ so the sum of the values is not always guaranteed to be 1 for approximating back
 
 On the other hand, the sampling backends are only able to sample randomly output states.
 
-A comparison of the backends is available at :ref:`Computing Backends`.
+A comparison of the backends is available at :ref:`Simulation Back-ends`.
 
 .. toctree::
    :maxdepth: 2
