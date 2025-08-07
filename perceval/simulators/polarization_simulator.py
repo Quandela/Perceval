@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from .simulator_interface import ASimulatorDecorator
-from perceval.utils import convert_polarized_state, Annotation, BasicState, StateVector, SVDistribution, BSDistribution
+from perceval.utils import convert_polarized_state, Annotation, AnnotatedFockState, StateVector, SVDistribution, BSDistribution
 from perceval.utils.logging import channel, get_logger
 from perceval.components import Unitary, IDetector, DetectionType, get_detection_type
 
@@ -45,8 +45,8 @@ class PolarizationSimulator(ASimulatorDecorator):
             if len(temp_sv) == 1:
                 input_state = temp_sv[0]
 
-        if not isinstance(input_state, BasicState):
-            raise NotImplementedError("Polarization simulator can only process BasicState inputs")
+        if not isinstance(input_state, AnnotatedFockState):
+            raise NotImplementedError("Polarization simulator can only process AnnotatedFockState inputs")
         spatial_input, preprocess_matrix = convert_polarized_state(input_state)
         circuit = Unitary(self._upol @ preprocess_matrix)
         self._simulator.set_circuit(circuit)

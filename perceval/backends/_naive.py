@@ -32,7 +32,7 @@ import numpy as np
 
 import exqalibur as xq
 from ._abstract_backends import AStrongSimulationBackend
-from perceval.utils import BasicState
+from perceval.utils import FockState
 
 
 class NaiveBackend(AStrongSimulationBackend):
@@ -43,12 +43,12 @@ class NaiveBackend(AStrongSimulationBackend):
     def name(self) -> str:
         return "Naive"
 
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         p = output_state.prodnfact() * self._input_state.prodnfact()
         M = self._compute_submatrix(output_state)
         return self._compute_permanent(M) / math.sqrt(p) if M.size > 1 else M[0, 0]
 
-    def _compute_submatrix(self, output_state: BasicState) -> np.ndarray:
+    def _compute_submatrix(self, output_state: FockState) -> np.ndarray:
         n = self._input_state.n
         m = self._input_state.m
         if n != output_state.n:

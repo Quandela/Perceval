@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import pytest
-from perceval import Processor, BS, TD, BasicState, BSDistribution
+from perceval import Processor, BS, TD, FockState, BSDistribution
 from _test_utils import assert_bsd_close
 
 p = Processor("SLOS", 2)
@@ -37,28 +37,28 @@ p.add(0, TD(1))
 p.add(0, BS())
 
 def test_without_herald():
-    p.with_input(BasicState([1, 0]))
+    p.with_input(FockState([1, 0]))
     p.min_detected_photons_filter(0)
 
     expected = BSDistribution()
-    expected[BasicState([0, 0])] = 0.25
-    expected[BasicState([1, 0])] = 0.25
-    expected[BasicState([0, 1])] = 0.25
-    expected[BasicState([2, 0])] = 0.125
-    expected[BasicState([0, 2])] = 0.125
+    expected[FockState([0, 0])] = 0.25
+    expected[FockState([1, 0])] = 0.25
+    expected[FockState([0, 1])] = 0.25
+    expected[FockState([2, 0])] = 0.125
+    expected[FockState([0, 2])] = 0.125
 
     assert_bsd_close(p.probs()["results"], expected)
 
 
 def test_with_selection():
-    p.with_input(BasicState([1, 0]))
+    p.with_input(FockState([1, 0]))
     p.min_detected_photons_filter(1)
 
     expected = BSDistribution()
-    expected[BasicState([1, 0])] = 1/3
-    expected[BasicState([0, 1])] = 1/3
-    expected[BasicState([2, 0])] = 1/6
-    expected[BasicState([0, 2])] = 1/6
+    expected[FockState([1, 0])] = 1/3
+    expected[FockState([0, 1])] = 1/3
+    expected[FockState([2, 0])] = 1/6
+    expected[FockState([0, 2])] = 1/6
 
     expected_p_perf = 3/4
 
@@ -70,13 +70,13 @@ def test_with_selection():
 
 def test_with_heralds():
     p.add_herald(1, 0)
-    p.with_input(BasicState([1]))
+    p.with_input(FockState([1]))
     p.min_detected_photons_filter(0)
 
     expected = BSDistribution()
-    expected[BasicState([0])] = 0.4
-    expected[BasicState([1])] = 0.4
-    expected[BasicState([2])] = 0.2
+    expected[FockState([0])] = 0.4
+    expected[FockState([1])] = 0.4
+    expected[FockState([2])] = 0.2
 
     expected_l_perf = 5/8
 
