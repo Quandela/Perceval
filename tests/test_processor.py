@@ -88,7 +88,7 @@ def test_processor_input_fock_state_with_all_noise_sources():
                 '|0,{0}{1},{0}{2},0>': 1.097023089996e-08,
                 '|0,{0}{1},{2},0>': 1.0640004445062523e-06}
     result = {str(k): v for k, v in p.source_distribution.items()}
-    assert pytest.approx(expected) == result # TODO : fail here
+    assert pytest.approx(expected) == result
     assert pytest.approx(sum([v for v in p.source_distribution.values()])) == 1
 
 

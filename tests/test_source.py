@@ -114,6 +114,7 @@ def test_source_sample_no_filter():
 
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs,0)
+    dist = anonymize_annotations(dist, annot_tag="_")  # to be able to compare the distributions
 
     # just avoid the warning in tvd_dist
     for el in set(dist.keys()) - set(dist_samples.keys()):
@@ -158,9 +159,11 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
 
     dist_samples = samples_to_probs(samples_from_source)
     dist_samples = SVDistribution(dist_samples)
+    dist_samples = anonymize_annotations(dist_samples, annot_tag="_")  # to be able to compare the distributions
 
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs, 0)
+    dist = anonymize_annotations(dist, annot_tag="_")
     dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
 
     # just avoid the warning in tvd_dist

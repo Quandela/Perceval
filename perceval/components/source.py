@@ -129,14 +129,8 @@ class Source:
 
         dist = self._source.generate_distribution(expected_input, prob_threshold)
 
-        # if self.simplify_distribution and self.partially_distinguishable:
-        #     sv_dist = defaultdict(lambda: 0)
-        #     for k, p in dist.items():
-        #         sv_dist[k] += p
-        #     return SVDistribution({k: v for k, v in sorted(sv_dist.items(), key=lambda x: -x[1])})
-
-        # if self.simplify_distribution and self.partially_distinguishable:
-        #     dist = anonymize_annotations(dist, annot_tag='_') # TODO : see if we still want an anonymize(NoisyFockState)
+        if self.simplify_distribution and self.partially_distinguishable:
+            dist = anonymize_annotations(dist, annot_tag='_')
         return dist
 
     def create_iterator(self, expected_input: FockState, min_photons_filter: int = 0) -> xq.SimpleSourceIterator:
