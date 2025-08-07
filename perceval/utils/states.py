@@ -340,6 +340,7 @@ def anonymize_annotations(svd: SVDistribution, annot_tag: str = "a") -> SVDistri
     return SVDistribution({k: v for k, v in sorted(sv_dist.items(), key=lambda x: -x[1])})
 
 
+@dispatch(BSDistribution, int)
 def filter_distribution_photon_count(bsd: BSDistribution, min_photons_filter: int) -> tuple[BSDistribution, float]:
     """
     Filter the states of a BSDistribution to keep only those having state.n >= min_photons_filter
@@ -352,6 +353,26 @@ def filter_distribution_photon_count(bsd: BSDistribution, min_photons_filter: in
         return bsd, 1
 
     res = BSDistribution({state: prob for state, prob in bsd.items() if state.n >= min_photons_filter})
+    perf = sum(res.values())
+
+    if len(res):
+        res.normalize()
+    return res, perf
+
+
+@dispatch(SVDistribution, int)
+def filter_distribution_photon_count(svd: SVDistribution, min_photons_filter: int) -> tuple[BSDistribution, float]:
+    """
+    Filter the states of a BSDistribution to keep only those having state.n >= min_photons_filter
+
+    :param svd: the SVDistribution to filter out
+    :param min_photons_filter: the minimum number of photons required to keep a state
+    :return: a tuple containing the normalized filtered BSDistribution and the probability that the state is kept
+    """
+    if min_photons_filter == 0:
+        return svd, 1
+
+    res = SVDistribution({state_v: prob for state_v, prob in svd.items() for state in state_v.keys() if state.n >= min_photons_filter})
     perf = sum(res.values())
 
     if len(res):

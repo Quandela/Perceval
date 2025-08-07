@@ -110,12 +110,10 @@ def test_source_sample_no_filter():
     samples_from_source = source_1.generate_samples(nb_samples, bs)
     assert len(samples_from_source) == nb_samples
 
-    dist_samples = samples_to_probs(samples_from_source) # TODO : should BSCount accept NoisyFockState
+    dist_samples = samples_to_probs(samples_from_source)
 
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs,0)
-    dist = anonymize_annotations(dist, annot_tag="_")  # to be able to compare the distributions
-    dist = BSDistribution({key[0]:value for key,value in dist.items()}) # change SVD to BSD
 
     # just avoid the warning in tvd_dist
     for el in set(dist.keys()) - set(dist_samples.keys()):
@@ -160,13 +158,9 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
 
     dist_samples = samples_to_probs(samples_from_source)
     dist_samples = SVDistribution(dist_samples)
-    # dist_samples = anonymize_annotations(dist_samples, annot_tag="_")  # to be able to compare the distributions
-    dist_samples = BSDistribution({sv[0]: value for sv, value in dist_samples.items()})  # change SVD to BSD
 
     # compare these samples with complete distribution
     dist = source_2.generate_distribution(bs, 0)
-    # dist = anonymize_annotations(dist, annot_tag="_")
-    dist = BSDistribution({key[0]: value for key, value in dist.items()})  # change SVD to BSD
     dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
 
     # just avoid the warning in tvd_dist

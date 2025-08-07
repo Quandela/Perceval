@@ -33,11 +33,10 @@ import weakref
 from dataclasses import dataclass
 from typing import Callable
 
-from exqalibur import AnnotatedFockState
 from multipledispatch import dispatch
 from numpy import inf
 
-from perceval.utils import FockState, NoisyFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
+from perceval.utils import FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, ModeType, StateVector, \
     SVDistribution
 from perceval.utils.logging import get_logger, channel
 from perceval.utils.algorithms.simplification import perm_compose, simplify

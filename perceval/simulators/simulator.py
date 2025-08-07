@@ -494,7 +494,7 @@ class Simulator(ISimulator):
     def _get_prob_threshold(self, max_p: float) -> float:
         return max(global_params['min_p'], max_p * self._rel_precision)
 
-    def _preprocess_iterator(self, svd: tuple[Source, BasicState]) -> tuple[SimpleSourceIterator, float, float]:
+    def _preprocess_iterator(self, svd: tuple[Source, FockState]) -> tuple[SimpleSourceIterator, float, float]:
         iterator = svd[0].create_iterator(svd[1], self.min_detected_photons_filter)
         iterator.prob_threshold = self._get_prob_threshold(iterator.max_p)
 
@@ -548,7 +548,7 @@ class Simulator(ISimulator):
         return trimmed_svd, p_threshold, has_superposed_states, phys_perf
 
     def probs_svd(self,
-                  input_dist: SVDistribution | tuple[Source, BasicState],
+                  input_dist: SVDistribution | tuple[Source, FockState],
                   detectors: list[IDetector] = None,
                   progress_callback: callable = None) -> dict[str, any]:
         """

@@ -29,8 +29,7 @@
 import copy
 from collections import defaultdict
 
-from perceval import FockState
-from perceval.utils import BasicState, NoisyFockState, BSDistribution, StateVector, Annotation, SVDistribution, AnnotatedFockState
+from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
 from math import sqrt
 

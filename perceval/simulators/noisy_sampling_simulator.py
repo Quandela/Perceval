@@ -373,7 +373,7 @@ class NoisySamplingSimulator:
         return prepare_samples, max_shots
 
     def _prepare_provider(self, provider: SamplesProvider,
-                          svd: SVDistribution | tuple[Source, BasicState],
+                          svd: SVDistribution | tuple[Source, FockState],
                           max_samples: int,
                           max_shots: int,
                           progress_callback: callable):
@@ -423,7 +423,7 @@ class NoisySamplingSimulator:
         return prepare_samples
 
     def samples(self,
-                svd: SVDistribution | tuple[Source, BasicState],
+                svd: SVDistribution | tuple[Source, FockState],
                 max_samples: int,
                 max_shots: int = None,
                 progress_callback: callable = None) -> dict:
