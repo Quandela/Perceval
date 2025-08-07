@@ -78,49 +78,11 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    reference/exqalibur/index
 
 .. toctree::
-   :caption: Boson sampling
+   :caption: Examples
    :maxdepth: 2
    :hidden:
 
-   notebooks/Boson_sampling
-   notebooks/MPS_techniques_for_boson_sampling
-
-.. toctree::
-   :caption: Standard quantum algorithms
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Shor_Implementation
-   notebooks/2-mode_Grover_algorithm
-
-.. toctree::
-   :caption: Variational quantum algorithms
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Differential_equation_resolution
-   notebooks/Variational_Quantum_Eigensolver
-   notebooks/Reinforcement_learning
-   notebooks/QUBO
-
-.. toctree::
-   :caption: Quantum walk
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Two-particle_bosonic-fermionic_quantum_walk
-
-.. toctree::
-   :caption: Others
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Walkthrough-cnot
-   notebooks/Gedik_qudit
-   notebooks/Boson_Bunching
-   notebooks/quantum_kernel_methods
-   notebooks/BS-based_implementation
-   notebooks/LOv_rewriting_rules
+   examples
 
 .. toctree::
    :caption: Community
