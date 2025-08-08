@@ -92,6 +92,7 @@ extensions = [
 suppress_warnings = ['autosectionlabel.*']
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
+# TODO: this sets the output style of references. I wanted to check if any other rendered better than the current.
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
