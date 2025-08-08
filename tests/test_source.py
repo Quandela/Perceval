@@ -31,7 +31,7 @@ from collections import defaultdict
 import pytest
 import math
 
-from perceval import BSDistribution, filter_distribution_photon_count, SVDistribution, \
+from perceval import filter_distribution_photon_count, SVDistribution, \
     anonymize_annotations, FockState, NoisyFockState
 from perceval.components import Source
 from perceval.utils.conversion import samples_to_probs
