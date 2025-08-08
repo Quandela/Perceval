@@ -26,9 +26,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from ._abstract_backends import AStrongSimulationBackend
-from perceval.utils import Matrix, BasicState, BSDistribution, StateVector
+from perceval.utils import Matrix, FockState, BSDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 
 import exqalibur as xq
@@ -120,7 +119,7 @@ class SLOSBackend(AStrongSimulationBackend):
         self._fsas: dict[int, xq.FSArray] = {}
         self._mk_l: list[int] = [1]
         self._path_roots: list[_Path] = []
-        self._state_mapping: dict[BasicState, _Path] = {}
+        self._state_mapping: dict[FockState, _Path] = {}
         self._mask: xq.FSMask = None
         self.clear_iterator_cache()
 
@@ -141,7 +140,7 @@ class SLOSBackend(AStrongSimulationBackend):
         else:
             self._reset()
 
-    def set_input_state(self, input_state: BasicState):
+    def set_input_state(self, input_state: FockState):
         super().set_input_state(input_state)
         self.preprocess([input_state])
 
@@ -149,7 +148,7 @@ class SLOSBackend(AStrongSimulationBackend):
         super().clear_mask()
         self._reset()
 
-    def _deploy(self, input_list: list[BasicState]):
+    def _deploy(self, input_list: list[FockState]):
         # allocate the fsas and fsms for covering all the input_states respecting possible mask
         # after calculation, we only need to keep fsa for input_state n
         # during calculation we need to keep current fsa and previous fsa
@@ -168,7 +167,7 @@ class SLOSBackend(AStrongSimulationBackend):
             if n not in self._fsas:
                 self._fsas[n] = current_fsa
 
-    def preprocess(self, input_list: list[BasicState]) -> bool:
+    def preprocess(self, input_list: list[FockState]) -> bool:
         # now check if we have a path for the input states
         found_new = False
         for input_state in input_list:
@@ -185,7 +184,7 @@ class SLOSBackend(AStrongSimulationBackend):
         self._path_roots.append(new_path)
         return True
 
-    def prob_amplitude(self, output_state: BasicState) -> complex:
+    def prob_amplitude(self, output_state: FockState) -> complex:
         if self._input_state.n != output_state.n:
             return complex(0)
         output_idx = self._fsas[output_state.n].find(output_state)
@@ -203,7 +202,7 @@ class SLOSBackend(AStrongSimulationBackend):
             bsd.add(output_state, probability)
         return bsd
 
-    def all_prob(self, input_state: BasicState = None):
+    def all_prob(self, input_state: FockState = None):
         """SLOS specific signature, to enhance optimization in some computations"""
         if input_state is not None:
             self.set_input_state(input_state)

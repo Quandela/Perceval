@@ -26,23 +26,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from typing import Optional
+
 from perceval.runtime import ISession
 from perceval.runtime.remote_processor import RemoteProcessor
 from perceval.utils.logging import get_logger, channel
+
 from .scaleway_rpc_handler import RPCHandler
-
-import requests
-from requests import HTTPError
-
-_ENDPOINT_URL = "https://api.scaleway.com/qaas/v1alpha1"
-_ENDPOINT_SESSION = "/sessions"
 
 
 class Session(ISession):
     """
     Scaleway session used to keep a connexion opened with Scaleway Cloud for the duration of a Python scope.
 
-    :param platform: platform on which circuits will be executed
+    :param platform_name: platform on which circuits will be executed
     :param project_id: UUID of the Scaleway Project the session is attached to
     :param token: authentication token required to access the Scaleway API
     :param deduplication_id: optional value, name mapping to a unique running session, allowing to share an alive session among multiple users
@@ -54,89 +51,63 @@ class Session(ISession):
 
     def __init__(
         self,
-        platform: str,
+        platform_name: str,
         project_id: str,
         token: str,
-        deduplication_id: str = "",
         max_idle_duration_s: int = 1200,
         max_duration_s: int = 3600,
-        url: str = _ENDPOINT_URL,
-        proxies: dict[str,str] = None
+        deduplication_id: Optional[str] = None,
+        url: Optional[str] = None,
+        proxies: Optional[dict[str, str]] = None,
+        provider_name: Optional[str] = None,
     ) -> None:
 
-        self._token = token
-        self._project_id = project_id
-        self._url = url
-        self._proxies = proxies
-        self._platform = platform
+        if not platform_name:
+            raise Exception("platform_name cannot be None")
+
+        if not project_id:
+            raise Exception("project_id cannot be None")
+
+        if not token:
+            raise Exception("token cannot be None")
+
+        if not isinstance(max_duration_s, int):
+            raise TypeError("max_duration_s cannot be an int (ie: seconds)")
+
+        if not isinstance(max_idle_duration_s, int):
+            raise TypeError("max_idle_duration_s cannot be an int (ie: seconds)")
+
         self._deduplication_id = deduplication_id
-        self._max_idle_duration_s = self.__int_duration(
-            max_idle_duration_s, "max_idle_duration_s"
+        self._max_idle_duration_s = max_idle_duration_s
+        self._max_duration_s = max_duration_s
+
+        self._rpc_handler = RPCHandler(
+            project_id=project_id,
+            secret_key=token,
+            url=url,
+            proxies=proxies,
+            platform_name=platform_name,
+            provider_name=provider_name,
         )
-        self._max_duration_s = self.__int_duration(max_duration_s, "max_duration_s")
 
-        self._session_id = None
-
-        self._headers = {
-            "X-Auth-Token": token,
-        }
-
-        self._rpc_handler = self.__build_rpc_handler()
-        get_logger().info(f"Create Scaleway Session to {self._url}", channel.general)
+        get_logger().info(f"Create Scaleway Session", channel.general)
 
     def build_remote_processor(self) -> RemoteProcessor:
         return RemoteProcessor(rpc_handler=self._rpc_handler)
 
     def start(self) -> None:
-        platform = self.__fetch_platform_details()
-
-        payload = {
-            "project_id": self._project_id,
-            "platform_id": platform.get("id"),
-            "deduplication_id": self._deduplication_id,
-            "max_duration": self.__to_string_duration(self._max_duration_s),
-            "max_idle_duration": self.__to_string_duration(self._max_idle_duration_s),
-        }
-
-        endpoint = f"{self._url}{_ENDPOINT_SESSION}"
-        request = requests.post(endpoint, headers=self._headers, json=payload, proxies=self._proxies)
-
-        try:
-            request.raise_for_status()
-            request_dict = request.json()
-
-            self._session_id = request_dict["id"]
-            self._rpc_handler.set_session_id(self._session_id)
-            get_logger().info("Start Scaleway Session", channel.general)
-        except Exception:
-            raise HTTPError(request.json())
+        self._rpc_handler.create_session(
+            max_duration_s=self._max_idle_duration_s,
+            max_idle_duration_s=self._max_idle_duration_s,
+            deduplication_id=self._deduplication_id,
+        )
 
     def stop(self) -> None:
-        self.delete()
+        self._rpc_handler.terminate_session()
         get_logger().info("Stop Scaleway Session", channel.general)
 
     def delete(self) -> None:
-        endpoint = f"{self._url}{_ENDPOINT_SESSION}/{self._session_id}"
-        request = requests.delete(endpoint, headers=self._headers, proxies=self._proxies)
-
-        request.raise_for_status()
-
-    def __fetch_platform_details(self) -> dict:
-        return self._rpc_handler.fetch_platform_details()
-
-    def __to_string_duration(self, duration: int) -> str:
-        return f"{duration}s"
-
-    def __int_duration(self, duration, name: str) -> int:
-        if isinstance(duration, int):
-            return duration
-        raise TypeError(f"{name} must be an int")
-
-    def __build_rpc_handler(self) -> RPCHandler:
-        return RPCHandler(
-            project_id=self._project_id,
-            headers=self._headers,
-            name=self._platform,
-            url=self._url,
-            proxies=self._proxies
+        self._rpc_handler.delete_session()
+        get_logger().info(
+            "Stop (if not already) and revoke Scaleway Session", channel.general
         )

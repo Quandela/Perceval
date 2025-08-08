@@ -1,8 +1,8 @@
 serialization
 ^^^^^^^^^^^^^
 
-Perceval provides ways to serialize most objects into strings that can be deserialized later on
-to get a copy of the original object.
+Perceval provides a generic way to serialize most objects into strings that can be deserialized later on
+to get back the original object.
 
 >>> import perceval as pcvl
 >>> from perceval.serialization import serialize, deserialize  # Note: this is not directly at perceval's root

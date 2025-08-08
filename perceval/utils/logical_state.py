@@ -55,8 +55,8 @@ class LogicalState(list):
 
     def __str__(self):
         if not self:
-            return ""
-        return ''.join([str(x) for x in self])
+            return "|>"
+        return '|' + ''.join([str(x) for x in self]) + '>'
 
 
 def generate_all_logical_states(n : int) -> list[LogicalState]:

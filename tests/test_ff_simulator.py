@@ -316,7 +316,7 @@ def test_with_annotated_state_vector():
     proc.add(1, detector)
     proc.add(0, tri_not)
 
-    input_state = (BasicState("|{_:0}, {_:1}>") + BasicState("|{_:0}, {_:0}>")) * BasicState("|{_:0}, 0, 0>")
+    input_state = (BasicState("|{0}, {1}>") + BasicState("|{0}, {0}>")) * BasicState("|{0}, 0, 0>")
 
     proc.min_detected_photons_filter(2)
     proc.with_input(input_state)

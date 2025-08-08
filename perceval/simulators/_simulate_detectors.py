@@ -32,10 +32,10 @@ from typing import Callable
 
 from perceval.runtime import cancel_requested
 from perceval.components.detector import IDetector, DetectionType, get_detection_type
-from perceval.utils import BSDistribution, BasicState
+from perceval.utils import BSDistribution, FockState
 
 
-def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]) -> bool:
+def heralds_compatible_threshold(s: FockState, heralds: dict[int, int]) -> bool:
     """
     :param s: The state to check
     :param heralds: The heralds {mode: count} to check compatibility with
@@ -49,12 +49,12 @@ def heralds_compatible_threshold(s: BasicState, heralds: dict[int, int]) -> bool
     return True
 
 
-def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: dict[int, int]) -> list[BSDistribution]:
+def compute_distributions(s: FockState, detectors: list[IDetector], heralds: dict[int, int]) -> list[BSDistribution]:
     """
     :param s: The state to compute distributions for given the detectors.
     :param detectors: The detectors to apply to get the distributions
     :param heralds: The heralds that the final state needs to satisfy
-    :return: The list of computed BSDistributions that need to be merged afterwards.
+    :return: The list of computed BSDistributions that need to be merged afterward.
      For modes where there are heralds, either:
       - the distribution is a non-normalized, single-state distribution (only the useful state is kept)
       - the returned list is empty (no useful state is reachable)
@@ -63,12 +63,12 @@ def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: di
     for m, (photons_in_mode, detector) in enumerate(zip(s, detectors)):
         if detector is not None:
             d = detector.detect(photons_in_mode)
-            if isinstance(d, BasicState):
+            if isinstance(d, FockState):
                 d = BSDistribution(d)
 
             if m in heralds:
                 v = heralds[m]
-                state = BasicState([v])
+                state = FockState([v])
                 p = d[state]
                 if not p:
                     return []  # Note: if heralds have been correctly applied before, this case can't appear
@@ -76,7 +76,7 @@ def compute_distributions(s: BasicState, detectors: list[IDetector], heralds: di
 
             distributions.append(d)
         elif m not in heralds or heralds[m] == photons_in_mode:
-            distributions.append(BSDistribution(BasicState([photons_in_mode])))
+            distributions.append(BSDistribution(FockState([photons_in_mode])))
 
         else:
             return []
@@ -151,9 +151,9 @@ def simulate_detectors(dist: BSDistribution, detectors: list[IDetector], min_pho
     return result, phys_perf
 
 
-def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], detection: DetectionType = None,
+def simulate_detectors_sample(sample: FockState, detectors: list[IDetector], detection: DetectionType = None,
                               heralds: dict[int, int] = {},
-                              ) -> BasicState | None:
+                              ) -> FockState | None:
     """
     Simulate detectors effect on one output sample. If multiple possible outcome exist, one is randomly chosen
 
@@ -176,9 +176,9 @@ def simulate_detectors_sample(sample: BasicState, detectors: list[IDetector], de
             return sample.threshold_detection()
         return None
 
-    out_state = BasicState()
+    out_state = FockState()
     for m, (photons_in_mode, detector) in enumerate(zip(sample, detectors)):
-        state_distrib = detector.detect(photons_in_mode) if detector is not None else BasicState([photons_in_mode])
+        state_distrib = detector.detect(photons_in_mode) if detector is not None else FockState([photons_in_mode])
         if isinstance(state_distrib, BSDistribution):
             state_distrib = state_distrib.sample(1, non_null=False)[0]
         if m in heralds and state_distrib[0] != heralds[m]:

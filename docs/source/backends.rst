@@ -1,14 +1,18 @@
-Computing Backends
-==================
+Simulation Back-ends
+====================
 
-To run a simulation, Perceval is integrating different computing backends implemented from state of the art algorithms.
-Each of these backends have different specificities and features that we describe in that section.
+To run a simulation, computing back-ends implemented from state of the art algorithms are available in Perceval.
+Each of these back-ends has different capabilities that we describe in that section.
 
-Features
---------
+All Perceval simulation back-ends act on perfect input Fock states on a fixed unitary circuit.
+Nonetheless, Perceval aims at supporting noisy and non-unitary simulations. These real life use cases are covered in the
+next part of the tutorial.
 
-Sampling or Weak Simulation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+I. Back-end features
+--------------------
+
+Sampling a.k.a Weak Simulation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sampling is the simulation task closest to the actual running of a physical circuit. Given known input states,  the
 sampling will produce output states one at a time as it would be observed by ideal detectors. Sampling is considered
@@ -38,14 +42,8 @@ Finally, a fine-grained simulation would need not only to give output state prob
 Indeed, probability amplitude is required for further evolution of the output states, but also analysis of polarization
 for circuit with polarization support, etc.
 
-Strongest Simulation
-^^^^^^^^^^^^^^^^^^^^
-
-Beyond simulation of perfect circuit describes by unitary matrix, goal of Perceval is also to model non unitary phenomenon
-like loss of photons, noise, time delays, and more. Ideal simulators should take these phenomenon into accounts.
-
-The Backends
-------------
+II. Back-end comparison
+-----------------------
 
 Perceval has 6 different built-in back-ends with the support of optimized C++ library.
 
@@ -57,7 +55,6 @@ Comparison Table
    :stub-columns: 1
    :width: 100%
    :align: center
-
 
    * - Features \ Name
      - :ref:`CliffordClifford2017`
@@ -135,6 +132,8 @@ For example, if we were to work with dual rail path encoding (ignoring for now t
 we would typically work with :math:`\theta=2`, and the average performance is then
 :math:`\mathrm{n(\frac{5^5}{8^23^3})^n} \approx \mathrm{n1.8^n}`.
 
+See also, its code reference: :ref:`Clifford2017Backend`
+
 SLOS
 ^^^^
 
@@ -148,6 +147,8 @@ discussed in :cite:p:`heurtel2022`, Boson Sampling with ``SLOS`` is possible wit
 The tradeoff in this approach is a huge memory usage in :math:`\mathrm{nC^{n+m-1}_n}` that limits usage on personal
 computers to circuits with :math:`\approx 20` photons and to :math:`\approx 24` photons on super-computers.
 
+See also, its code reference: :ref:`SLOSBackend`
+
 SLAP
 ^^^^
 
@@ -157,6 +158,8 @@ It is designed to require less memory than ``SLOS`` (:math:`2^n` complex values)
 This feature is still under development, however, in the future, we expect this backend:
   * to reach a sampling efficiency of :math:`\mathrm{O}(n2^n+poly(m,n))`
   * to be faster than SLOS in the regime :math:`m >> n`
+
+See also, its code reference: :ref:`SLAPBackend`
 
 Naive
 ^^^^^
@@ -179,6 +182,8 @@ algorithms and comparison with the implementation present in the
     What is interesting to note is that all implementations have convergence to the theoretical performance but the
     factor between optimised and less optimised implementation still makes a perceptible time difference for the end-user.
 
+See also, its code reference: :ref:`NaiveBackend`
+
 NaiveApprox
 ^^^^^^^^^^^
 
@@ -189,6 +194,8 @@ A better accuracy can be obtained with a higher iteration count.
 
 With this approximated backend, you can achieve a few probability estimates for high photon counts.
 
+See also, its code reference: :ref:`NaiveApproxBackend`
+
 MPS
 ^^^
 
@@ -197,6 +204,8 @@ states :cite:p:`schollwock2011density`, :cite:p:`oh2021classical`.
 As the Stepper, MPS backend does the computation on each component of the circuits one-by-one, and not on the whole unitary, but has the unique feature of performing approximate state evolution.
 The states are represented by tensors, which are then updated at each component.
 These tensors can be seen as a big set of matrices, and the approximation is done by choosing the dimension of these matrices, called the *bond* dimension.
+
+See also, its code reference: :ref:`MPSBackend`
 
 .. rubric:: Footnotes
 
