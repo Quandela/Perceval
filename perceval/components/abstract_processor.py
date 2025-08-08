@@ -32,7 +32,7 @@ import copy
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from perceval.utils import BasicState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
+from perceval.utils import BasicState, FockState, AnnotatedFockState, Parameter, PostSelect, LogicalState, NoiseModel, SVDistribution, StateVector
 from perceval.utils.logging import get_logger, channel
 from .abstract_component import AComponent
 from .detector import DetectionType
@@ -146,7 +146,7 @@ class AProcessor(ABC):
     def available_commands(self) -> list[str]:
         pass
 
-    def remove_heralded_modes(self, s: BasicState) -> BasicState:
+    def remove_heralded_modes(self, s: FockState) -> FockState:
         if self.heralds:
             s = s.remove_modes(list(self.heralds.keys()))
         return s
@@ -332,8 +332,8 @@ class AProcessor(ABC):
         """
         return self.experiment.in_heralds
 
-    def check_input(self, input_state: BasicState):
-        r"""Check if a basic state input matches with the current processor configuration"""
+    def check_input(self, input_state: FockState):
+        r"""Check if a Fock state input matches with the current processor configuration"""
         self.experiment.check_input(input_state)
 
     def check_min_detected_photons_filter(self):
@@ -346,7 +346,7 @@ class AProcessor(ABC):
                 raise ValueError("The value of min_detected_photons is not set."
                                  " Use the method processor.min_detected_photons_filter(value).")
 
-    def with_input(self, input_state: BasicState | LogicalState | StateVector | SVDistribution) -> None:
+    def with_input(self, input_state: FockState | AnnotatedFockState | LogicalState | StateVector | SVDistribution) -> None:
         """
         Simulates plugging the photonic source on certain modes and turning it on.
         Computes the input probability distribution

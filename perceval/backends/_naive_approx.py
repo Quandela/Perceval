@@ -31,7 +31,7 @@ import math
 
 import exqalibur as xq
 from ._naive import NaiveBackend
-from perceval.utils import BasicState
+from perceval.utils import FockState
 
 
 class NaiveApproxBackend(NaiveBackend):
@@ -53,7 +53,7 @@ class NaiveApproxBackend(NaiveBackend):
         permanent_with_error = xq.estimate_permanent_cx(m, self._gurvits_iterations)
         return permanent_with_error[0]
 
-    def prob_amplitude_with_error(self, output_state: BasicState) -> tuple[complex, float]:
+    def prob_amplitude_with_error(self, output_state: FockState) -> tuple[complex, float]:
         """Computes the estimation of the probability amplitude along with an estimation of the 99% sure error bound."""
         m = self._compute_submatrix(output_state)
         permanent_with_error = xq.estimate_permanent_cx(m, self._gurvits_iterations)
@@ -61,7 +61,7 @@ class NaiveApproxBackend(NaiveBackend):
         return (permanent_with_error[0]/normalization_coeff, permanent_with_error[1]/normalization_coeff) \
             if m.size > 1 else (m[0, 0], 0)
 
-    def probability_confidence_interval(self, output_state: BasicState) -> list[float]:
+    def probability_confidence_interval(self, output_state: FockState) -> list[float]:
         """Computes the 99% confidence interval for the true value of the probability."""
         mean, err = self.prob_amplitude_with_error(output_state)
         min_prob = max((abs(mean) - err) ** 2, 0)

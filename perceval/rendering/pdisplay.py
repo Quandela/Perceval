@@ -45,7 +45,7 @@ from .circuit.create_renderer import RendererFactory
 from .circuit import DisplayConfig, ASkin
 from perceval.utils import BasicState, Matrix, simple_float, simple_complex, DensityMatrix, mlstr, ModeType, Encoding
 from perceval.utils.logging import get_logger, channel
-from perceval.utils.statevector import StateVector, BSCount, BSDistribution, SVDistribution
+from perceval.utils.states import StateVector, BSCount, BSDistribution, SVDistribution
 from perceval.runtime import JobGroup
 
 from .format import Format

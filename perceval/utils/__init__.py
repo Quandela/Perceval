@@ -31,9 +31,9 @@ from .matrix import Matrix, MatrixN, MatrixS, matrix_double
 from .format import simple_float, simple_complex, format_parameters
 from .parameter import Parameter, P, Expression, E
 from .mlstr import mlstr
-from .statevector import BasicState, StateVector, SVDistribution, BSDistribution, BSCount, BSSamples, \
-    tensorproduct, allstate_array, allstate_iterator, anonymize_annotations, max_photon_state_iterator, \
-    filter_distribution_photon_count
+from .states import BasicState, FockState, NoisyFockState, AnnotatedFockState, Annotation, StateVector, \
+    SVDistribution, BSDistribution, BSCount, BSSamples, tensorproduct, allstate_array, allstate_iterator, \
+    anonymize_annotations, max_photon_state_iterator, filter_distribution_photon_count
 from .logical_state import LogicalState, generate_all_logical_states
 from .polarization import Polarization, convert_polarized_state, build_spatial_output_states
 from .postselect import PostSelect, post_select_distribution, post_select_statevector
@@ -48,6 +48,5 @@ from .metadata import PMetadata
 from .density_matrix import DensityMatrix
 from .noise_model import NoiseModel
 from .logging import get_logger, use_perceval_logger, use_python_logger, LoggerConfig, deprecated
-from exqalibur import Annotation  # Used to provide the Annotation class to the perceval root namespace
 from .progress_cb import partial_progress_callable
 from .dist_metrics import tvd_dist, kl_divergence
