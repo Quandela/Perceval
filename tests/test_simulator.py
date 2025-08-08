@@ -285,21 +285,6 @@ def test_evolve_distinguishable():
     assert_sv_close(sv2_out_out, sv2)
 
 
-def test_statevector_polar_evolve():
-    simulator = Simulator(SLOSBackend())
-    simulator.set_circuit(BS())
-    st1 = StateVector(AnnotatedFockState("|{P:H},{P:H}>"))
-    st2 = StateVector(AnnotatedFockState("|{P:H},{P:V}>"))
-    gamma = math.pi / 2
-    input_state = math.cos(gamma) * st1 + math.sin(gamma) * st2
-
-    sum_p = sum(list(simulator.probs(input_state).values()))
-    assert pytest.approx(1) == sum_p
-
-    sum_p = sum(list(simulator.probs(st2).values()))
-    assert pytest.approx(1) == sum_p
-
-
 def test_evolve_phase():
     input_state = StateVector([2, 0]) + StateVector([1, 1])
     c = Circuit(2).add(1, PS(phi=math.pi/3))

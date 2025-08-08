@@ -32,7 +32,7 @@ import pytest
 import math
 
 from perceval import filter_distribution_photon_count, SVDistribution, \
-    anonymize_annotations, FockState, NoisyFockState
+    anonymize_annotations, FockState, NoisyFockState, StateVector
 from perceval.components import Source
 from perceval.utils.conversion import samples_to_probs
 from perceval.utils.dist_metrics import tvd_dist
@@ -105,6 +105,7 @@ def test_source_sample_no_filter():
     bs = FockState("|1,1>")
     source_1 = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
     source_2 = Source(emission_probability=0.9, multiphoton_component=0.1, losses=0.1, indistinguishability=0.9)
+    source_2.simplify_distribution = True
 
     # generate samples directly from the source
     samples_from_source = source_1.generate_samples(nb_samples, bs)
@@ -113,10 +114,14 @@ def test_source_sample_no_filter():
     dist_samples = samples_to_probs(samples_from_source)
 
     # compare these samples with complete distribution
-    dist = source_2.generate_distribution(bs,0)
-    dist = anonymize_annotations(dist, annot_tag="_")  # to be able to compare the distributions
+    dist_raw = source_2.generate_distribution(bs,0)
+    dist = SVDistribution()
+    for k, v in dist_raw.items():
+        dist.add(StateVector(NoisyFockState(k[0])), v)
 
     # just avoid the warning in tvd_dist
+    for el in set(dist_samples.keys()) - set(dist.keys()):
+        dist[el] = 0
     for el in set(dist.keys()) - set(dist_samples.keys()):
         dist_samples[el] = 0
 
@@ -149,6 +154,7 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     min_detected_photons = 2
 
     bs = FockState("|1,1>")
+
     source_1 = Source(brightness, g2, hom, losses)
     source_2 = Source(brightness, g2, hom, losses)
 
@@ -162,11 +168,16 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     dist_samples = anonymize_annotations(dist_samples, annot_tag="_")  # to be able to compare the distributions
 
     # compare these samples with complete distribution
+    source_2.simplify_distribution = True
     dist = source_2.generate_distribution(bs, 0)
-    dist = anonymize_annotations(dist, annot_tag="_")
-    dist = filter_distribution_photon_count(dist, min_detected_photons)[0]
+    dist_raw = filter_distribution_photon_count(dist, min_detected_photons)[0]
+    dist = SVDistribution()
+    for k, v in dist_raw.items():
+        dist.add(StateVector(NoisyFockState(k[0])), v)
 
     # just avoid the warning in tvd_dist
+    for el in set(dist_samples.keys()) - set(dist.keys()):
+        dist[el] = 0
     for el in set(dist.keys()) - set(dist_samples.keys()):
         dist_samples[el] = 0
 

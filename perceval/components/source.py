@@ -164,7 +164,7 @@ class Source:
         """
         return self._source.create_sampler(expected_input, min_photons_filter)
 
-    def generate_samples(self, max_samples: int, expected_input: FockState, min_detected_photons = 0) -> list[NoisyFockState] | list[FockState]:
+    def generate_samples(self, max_samples: int, expected_input: FockState, min_detected_photons = 0) -> list[NoisyFockState]:
         """
         Samples states from the source probability distribution without representing the whole distribution in memory.
         Creates a source sampler and store it in self for faster repeated sampling if necessary.
@@ -174,7 +174,7 @@ class Source:
         :param min_detected_photons: Minimum number of photons in a sampled state.
         """
         if self.is_perfect():
-            return [expected_input] * max_samples
+            return [NoisyFockState(expected_input)] * max_samples
 
         if self._sampler is None or min_detected_photons != self._sampler.min_photons_filter or expected_input != self._sampler.expected_input:
             self._sampler = self.create_sampler(expected_input, min_detected_photons)
