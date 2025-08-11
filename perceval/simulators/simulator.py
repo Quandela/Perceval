@@ -646,7 +646,7 @@ class Simulator(ISimulator):
                    svd: SVDistribution | StateVector | BasicState,
                    progress_callback: callable = None) -> dict:
         """
-        Compute the SVDistribution evolved through a Linear Optical circuit
+        Compute the SVDistribution evolved through a linear optics circuit
 
         :param svd: The input StateVector distribution
         :param progress_callback: A function with the signature `func(progress: float, message: str)`
@@ -687,7 +687,7 @@ class Simulator(ISimulator):
 
     def evolve_density_matrix(self, dm: DensityMatrix) -> DensityMatrix:
         """
-        Compute the DensityMatrix evolved from "dm" through a Linear optical circuit
+        Compute the DensityMatrix evolved from "dm" through a linear optics circuit
 
         :param dm: The density Matrix to evolve
         :return: The evolved DensityMatrix

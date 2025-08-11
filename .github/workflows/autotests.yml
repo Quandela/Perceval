@@ -74,13 +74,13 @@ jobs:
         pytest
 
   perceval-lite-autotests:
-    name: Run PyTest on ${{ matrix.os }}
+    name: Run PyTest with light install on ${{ matrix.os }}
     if: always()
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [ubuntu-latest]
     steps:
     - if: runner.os == 'Linux'
       name: Initialize PYTHON_V_CP linux

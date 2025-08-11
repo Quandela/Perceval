@@ -60,7 +60,7 @@ def photon_recycling(noisy_input: BSCount | BSDistribution, ideal_photon_count: 
 
     :param noisy_input: Noisy output (Basic State Samples or a distribution)
     :param ideal_photon_count: expected photon count for a loss-less system
-    :return photon loss mitigated distribution
+    :return: photon loss mitigated distribution
     """
     get_logger().info(f"Running Photon Recycling on a {len(noisy_input)} states distribution targetting {ideal_photon_count} ideal photons",
                 channel.general)

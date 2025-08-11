@@ -38,7 +38,7 @@ ScalewaySession
 Using a Scaleway session
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's see step by step how to instantiate and use a :ref:`Scaleway Session`.
+Let's see step by step how to instantiate and use a `Scaleway` session.
 
 Import the library and Scaleway from the providers library:
 
@@ -89,7 +89,7 @@ It is highly convenient if you wish to keep a specific amount of session alive a
 Send a circuit to a Scaleway QPU session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now you are handling a session, you can instantiate a ``RemoteProcessor`` linked to the session:
+Now you are handling a session, you can instantiate a :code:`RemoteProcessor` linked to the session:
 
 >>> processor = session.build_remote_processor()
 
@@ -97,8 +97,9 @@ Then, we can attach a toy circuit and send it on our session
 
 >>> processor.set_circuit(pcvl.Circuit(m=2, name="a-toy-circuit") // pcvl.BS.H())
 >>> processor.with_input(pcvl.BasicState("|0,1>"))
+>>> processor.min_detected_photons_filter(1)
 >>> sampler = pcvl.algorithm.Sampler(processor, max_shots_per_call=10_000)
 >>> job = sampler.samples(100)
 >>> print(job)
 
-Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation through :ref:`Work with algorithms`.
+Congratulation you can now design and send jobs to Scaleway QaaS through your processor. You can continue with the documentation of :ref:`algorithm`.

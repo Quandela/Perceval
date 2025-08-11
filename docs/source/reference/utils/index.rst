@@ -15,3 +15,6 @@ utils
    stategenerator
    polarization
    persistent_data
+   random_seed
+   ../utils_algorithms/index
+   logging
