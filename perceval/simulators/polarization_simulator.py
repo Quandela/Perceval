@@ -75,8 +75,8 @@ class PolarizationSimulator(ASimulatorDecorator):
         for out_state, out_amplitude in results:
             s_odd, s_even = self._split_odd_even(out_state)
             # Keep annotations
-            s_even.inject_annotation(Annotation("P:H"))
-            s_odd.inject_annotation(Annotation("P:V"))
+            s_even = s_even.inject_annotation(Annotation("P:H"))
+            s_odd = s_odd.inject_annotation(Annotation("P:V"))
             reduced_out_state = s_odd.merge(s_even)
             output += out_amplitude * reduced_out_state
         return output
