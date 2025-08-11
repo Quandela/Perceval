@@ -27,12 +27,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import annotations
+from multipledispatch import dispatch
+
 from collections import Counter
 
 import random
 import numpy as np
 
-from .states import BSDistribution, BSCount, BSSamples
+from .states import BSDistribution, BSCount, BSSamples, FockState
 
 
 def _deduce_count(**kwargs) -> int:
@@ -50,7 +53,7 @@ def _deduce_count(**kwargs) -> int:
 
 
 # Conversion functions (samples <=> probs <=> sample_count)
-def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
+def samples_to_sample_count(sample_list: list[FockState]) -> BSCount:
     """
     Convert a chronological measured sample list to a state count
 
@@ -60,7 +63,7 @@ def samples_to_sample_count(sample_list: BSSamples) -> BSCount:
     return BSCount(Counter(sample_list))
 
 
-def samples_to_probs(sample_list: BSSamples) -> BSDistribution:
+def samples_to_probs(sample_list: list[FockState]) -> BSDistribution:
     """
     Convert a chronological measured sample list to a state distribution
 
@@ -137,6 +140,7 @@ def probs_to_samples(probs: BSDistribution, **kwargs) -> BSSamples:
     return probs.sample(count)
 
 
+@dispatch(BSCount)
 def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
     """
     Convert a state count to a state probability distribution

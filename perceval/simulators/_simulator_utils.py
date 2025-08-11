@@ -29,7 +29,10 @@
 import copy
 from collections import defaultdict
 
-from perceval.utils import BasicState, BSDistribution, StateVector, Annotation, SVDistribution
+from multipledispatch import dispatch
+
+from perceval import AnnotatedFockState
+from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
 from math import sqrt
 
@@ -37,11 +40,13 @@ from math import sqrt
 def _to_bsd(sv: StateVector) -> BSDistribution:
     res = BSDistribution()
     for state, pa in sv.unnormalized_iterator():
-        state.clear_annotations()
+        if not isinstance(state, FockState):
+            state = state.clear_annotations()
         res.add(state, abs(pa) ** 2)
     return res
 
 
+@dispatch(StateVector, Annotation)
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     if len(annotation):
         res_sv = StateVector()
@@ -51,6 +56,15 @@ def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
             res_sv += pa * s
         return res_sv
     return sv
+
+
+@dispatch(StateVector, int)
+def _inject_annotation(sv: StateVector, annotation: int) -> StateVector:
+    res_sv = StateVector()
+    for s, pa in sv.unnormalized_iterator():
+        s = NoisyFockState(s, [annotation]*s.n)
+        res_sv += pa * s
+    return res_sv
 
 
 def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> StateVector:
@@ -66,17 +80,17 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
     return res
 
 
-def _annot_state_mapping(bs_with_annots: BasicState):
-    bs_list = bs_with_annots.separate_state(keep_annotations=True)
-    mapping = {}
-    for bs in bs_list:
-        if bs.n == 0:
-            mapping[Annotation()] = bs
-            continue
-        annot = bs.get_photon_annotation(0)
-        bs.clear_annotations()
-        mapping[annot] = bs
-    return mapping
+@dispatch(FockState)
+def _annot_state_mapping(bs_with_annots: FockState):
+    return {Annotation(): bs_with_annots}
+
+@dispatch(NoisyFockState)
+def _annot_state_mapping(bs_with_annots: NoisyFockState):
+    return bs_with_annots.split_state()
+
+@dispatch(AnnotatedFockState)
+def _annot_state_mapping(bs_with_annots: AnnotatedFockState): # TODO if needed + separate_state() does not exist for AnnotatedFockState anymore
+    return {bs_with_annots.get_photon_annotation(0): bs_with_annots.clear_annotations()}
 
 
 def _retrieve_mode_count(component_list: list) -> int:
