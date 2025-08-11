@@ -35,8 +35,7 @@ from collections import Counter
 import random
 import numpy as np
 
-from .states import BSDistribution, BSCount, BSSamples, SVDistribution, BasicState, StateVector, NoisyFockState, \
-    FockState
+from .states import BSDistribution, BSCount, BSSamples, FockState
 
 
 def _deduce_count(**kwargs) -> int:
@@ -54,17 +53,17 @@ def _deduce_count(**kwargs) -> int:
 
 
 # Conversion functions (samples <=> probs <=> sample_count)
-def samples_to_sample_count(sample_list: list[NoisyFockState] | list[FockState]) -> Counter[NoisyFockState] | Counter[FockState]:
+def samples_to_sample_count(sample_list: list[FockState]) -> BSCount:
     """
     Convert a chronological measured sample list to a state count
 
     :param sample_list: the list to convert
     :return: the state count
     """
-    return Counter(sample_list)
+    return BSCount(Counter(sample_list))
 
 
-def samples_to_probs(sample_list: list[NoisyFockState] | list[FockState]) -> SVDistribution:
+def samples_to_probs(sample_list: list[FockState]) -> BSDistribution:
     """
     Convert a chronological measured sample list to a state distribution
 
@@ -159,26 +158,6 @@ def sample_count_to_probs(sample_count: BSCount) -> BSDistribution:
     if len(bsd):
         bsd.normalize()
     return bsd
-
-
-@dispatch(Counter)
-def sample_count_to_probs(sample_count: Counter[NoisyFockState] | Counter[FockState]) -> SVDistribution:
-    """
-    Convert a state count to a state probability distribution
-
-    :param sample_count: the state count
-    :return: the state probability distribution
-    """
-    svd = SVDistribution()
-    for state, count in sample_count.items():
-        if count == 0:
-            continue
-        if count < 0:
-            raise RuntimeError(f"A sample count must be positive (got {count})")
-        svd[StateVector(BasicState(state))] = count
-    if len(svd):
-        svd.normalize()
-    return svd
 
 
 def sample_count_to_samples(sample_count: BSCount, **kwargs) -> BSSamples:

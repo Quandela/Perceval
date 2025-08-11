@@ -30,6 +30,7 @@ from collections import defaultdict
 
 import pytest
 import math
+from collections import Counter
 
 from perceval import filter_distribution_photon_count, SVDistribution, \
     anonymize_annotations, FockState, NoisyFockState, StateVector
@@ -111,7 +112,11 @@ def test_source_sample_no_filter():
     samples_from_source = source_1.generate_samples(nb_samples, bs)
     assert len(samples_from_source) == nb_samples
 
-    dist_samples = samples_to_probs(samples_from_source)
+    counter_samples = Counter(samples_from_source)
+    total = counter_samples.total()
+    dist_samples = SVDistribution()
+    for k, v in counter_samples.items():
+        dist_samples.add(StateVector(k), v / total)
 
     # compare these samples with complete distribution
     dist_raw = source_2.generate_distribution(bs,0)
@@ -163,8 +168,11 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     assert len(samples_from_source) == nb_samples
     assert all(bs.n >= min_detected_photons for bs in samples_from_source)
 
-    dist_samples = samples_to_probs(samples_from_source)
-    dist_samples = SVDistribution(dist_samples)
+    counter_samples = Counter(samples_from_source)
+    total = counter_samples.total()
+    dist_samples = SVDistribution()
+    for k, v in counter_samples.items():
+        dist_samples.add(StateVector(k), v / total)
     dist_samples = anonymize_annotations(dist_samples, annot_tag="_")  # to be able to compare the distributions
 
     # compare these samples with complete distribution
