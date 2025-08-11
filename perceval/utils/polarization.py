@@ -33,7 +33,7 @@ import numpy as np
 import re
 import sympy as sp
 
-from .statevector import BasicState
+from .states import BasicState
 from .matrix import Matrix
 
 
