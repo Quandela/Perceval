@@ -53,7 +53,7 @@ BSDistribution: TypeAlias = xq.BSDistribution
 SVDistribution: TypeAlias = xq.SVDistribution
 
 class BasicStateMeta(type):
-    state_classes = {FockState, NoisyFockState, AnnotatedFockState}
+    _state_classes = {FockState, NoisyFockState, AnnotatedFockState}
 
     def __instancecheck__(cls, inst):
         """Implement isinstance(inst, cls)."""
@@ -61,7 +61,7 @@ class BasicStateMeta(type):
 
     def __subclasscheck__(cls, sub):
         """Implement issubclass(sub, cls)."""
-        return any(c in cls.state_classes for c in sub.mro()) or sub is cls
+        return any(c in cls._state_classes for c in sub.mro()) or sub is cls
 
 State: TypeAlias = Union[FockState, NoisyFockState, AnnotatedFockState]
 

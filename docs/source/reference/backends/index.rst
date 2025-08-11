@@ -2,7 +2,7 @@ backends
 ^^^^^^^^
 
 Backends are the lowest level of computation of perceval.
-They all aim at providing ways of simulating a :ref:`Circuit` or unitary for a non-annotated :ref:`BasicState`.
+They all aim at providing ways of simulating a :ref:`Circuit` or unitary for a non-annotated :ref:`FockState`.
 As such, they are only suited to non-noisy, linear, non-polarized, non-superposed input and output states and circuits
 (unless the user wants to deal with such by hand).
 
