@@ -28,10 +28,11 @@
 # SOFTWARE.
 import copy
 from collections import defaultdict
-
-from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, Annotation, SVDistribution
-from perceval.components import Circuit
 from math import sqrt
+from multipledispatch import dispatch
+
+from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution
+from perceval.components import Circuit
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
@@ -43,6 +44,7 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
     return res
 
 
+@dispatch(StateVector, Annotation)
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     if isinstance(annotation, int):
         res_sv = StateVector()
@@ -60,6 +62,15 @@ def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
     return sv
 
 
+@dispatch(StateVector, int)
+def _inject_annotation(sv: StateVector, annotation: int) -> StateVector:
+    res_sv = StateVector()
+    for s, pa in sv.unnormalized_iterator():
+        s = NoisyFockState(s, [annotation]*s.n)
+        res_sv += pa * s
+    return res_sv
+
+
 def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> StateVector:
     if not sv1:
         return sv2
@@ -73,10 +84,19 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
     return res
 
 
-def _annot_state_mapping(bs_with_annots: BasicState):
-    if isinstance(bs_with_annots, FockState):
-        return {Annotation(): bs_with_annots}
+@dispatch(FockState)
+def _annot_state_mapping(bs_with_annots: FockState):
+    return {Annotation(): bs_with_annots}
+
+
+@dispatch(NoisyFockState)
+def _annot_state_mapping(bs_with_annots: NoisyFockState):
     return bs_with_annots.split_state()
+
+
+@dispatch(AnnotatedFockState)
+def _annot_state_mapping(bs_with_annots: AnnotatedFockState): # TODO if needed + separate_state() does not exist for AnnotatedFockState anymore
+    return {bs_with_annots.get_photon_annotation(0): bs_with_annots.clear_annotations()}
 
 
 def _retrieve_mode_count(component_list: list) -> int:

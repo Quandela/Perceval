@@ -53,7 +53,7 @@ BSDistribution: TypeAlias = xq.BSDistribution
 SVDistribution: TypeAlias = xq.SVDistribution
 
 class BasicStateMeta(type):
-    state_classes = {FockState, NoisyFockState, AnnotatedFockState}
+    _state_classes = {FockState, NoisyFockState, AnnotatedFockState}
 
     def __instancecheck__(cls, inst):
         """Implement isinstance(inst, cls)."""
@@ -61,7 +61,7 @@ class BasicStateMeta(type):
 
     def __subclasscheck__(cls, sub):
         """Implement issubclass(sub, cls)."""
-        return any(c in cls.state_classes for c in sub.mro()) or sub is cls
+        return any(c in cls._state_classes for c in sub.mro()) or sub is cls
 
 State: TypeAlias = Union[FockState, NoisyFockState, AnnotatedFockState]
 
@@ -319,14 +319,23 @@ def anonymize_annotations(sv: StateVector, annot_tag: str = "a") -> StateVector:
     annot_map = {}
     result = StateVector()
     for bs, pa in sv:
-        s = [""] * m
-        for i in range(bs.n):
-            mode = bs.photon2mode(i)
-            annot = bs.get_photon_annotation(i)
-            if annot_map.get(str(annot)) is None:
-                annot_map[str(annot)] = f"{{{annot_tag}:{len(annot_map)}}}"
-            s[mode] += annot_map[str(annot)]
-        result += StateVector(AnnotatedFockState("|" + ",".join([v and v or "0" for v in s]) + ">")) * pa
+        if isinstance(bs, FockState):
+            result += StateVector(bs) * pa
+        else:
+            s = [""] * m
+            for i in range(bs.n):
+                mode = bs.photon2mode(i)
+                annot = bs.get_photon_annotation(i)
+                if annot_map.get(str(annot)) is None:
+                    if isinstance(bs, NoisyFockState):
+                        annot_map[str(annot)] = f"{{{len(annot_map)}}}"
+                    else:
+                        annot_map[str(annot)] = f"{{{annot_tag}:{len(annot_map)}}}"
+                s[mode] += annot_map[str(annot)]
+            if isinstance(bs, NoisyFockState):
+                result += StateVector(NoisyFockState("|" + ",".join([v and v or "0" for v in s]) + ">")) * pa
+            else:
+                result += StateVector(AnnotatedFockState("|" + ",".join([v and v or "0" for v in s]) + ">")) * pa
     result.normalize()
     return result
 

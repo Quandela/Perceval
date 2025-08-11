@@ -318,8 +318,8 @@ def test_svd_anonymize_annots_simple():
     svd2 = pcvl.anonymize_annotations(svd)
     assert_svd_close(svd2, SVDistribution(
         {
-            StateVector(AnnotatedFockState('|{a:0},{a:1},{a:2}>')): 0.5,
-            StateVector(AnnotatedFockState('|{a:0},{a:1},{a:1}>')): 0.5
+            StateVector(NoisyFockState('|{0},{1},{2}>')): 0.5,
+            StateVector(NoisyFockState('|{0},{1},{1}>')): 0.5
         }))
 
 

@@ -33,7 +33,7 @@ from perceval.simulators.polarization_simulator import PolarizationSimulator
 from perceval.simulators.simulator import Simulator
 from perceval.backends import NaiveBackend, BackendFactory
 from perceval.components import Circuit, BS, PBS, PERM, PS, PR, HWP
-from perceval.utils import BasicState, StateVector
+from perceval.utils import BasicState, StateVector, AnnotatedFockState
 from _test_utils import assert_sv_close, LogChecker
 import pytest
 import math
@@ -111,7 +111,7 @@ def test_polarization_evolve():
     circuit = PR(delta=math.pi/4)
     psimu.set_circuit(circuit)
     sv_out = psimu.evolve(input_state)
-    expected = StateVector("|{P:H}>") - StateVector("|{P:V}>")
+    expected = StateVector(AnnotatedFockState("|{P:H}>")) - StateVector(AnnotatedFockState("|{P:V}>"))
     assert_sv_close(sv_out, expected)
 
 
@@ -123,9 +123,9 @@ def test_polarization_circuit_0(backend_name):
     res = psimu.probs(BasicState("|{P:H}>"))
     assert len(res) == 1
     assert res[BasicState("|1>")] == pytest.approx(1)
-    assert_sv_close(psimu.evolve(BasicState("|{P:H}>")), complex(0,1)*StateVector('|{P:V}>'))
-    assert_sv_close(psimu.evolve(BasicState("|{P:V}>")), complex(0,1)*StateVector('|{P:H}>'))
-    assert_sv_close(psimu.evolve(BasicState("|{P:D}>")), complex(0,1)*(StateVector('|{P:H}>') + StateVector('|{P:V}>')))
+    assert_sv_close(psimu.evolve(BasicState("|{P:H}>")), complex(0,1)*StateVector(AnnotatedFockState('|{P:V}>')))
+    assert_sv_close(psimu.evolve(BasicState("|{P:V}>")), complex(0,1)*StateVector(AnnotatedFockState('|{P:H}>')))
+    assert_sv_close(psimu.evolve(BasicState("|{P:D}>")), complex(0,1)*(StateVector(AnnotatedFockState('|{P:H}>')) + StateVector(AnnotatedFockState('|{P:V}>'))))
     # assert str(psimu.evolve(BasicState("|{P:A}>"))) == '|{P:A}>'  # P:A isn't properly dealt with anymore
 
 
