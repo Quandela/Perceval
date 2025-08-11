@@ -200,12 +200,13 @@ class StateGenerator:
 
     @staticmethod
     def zero_padded_state(n: int, m: int = None) -> BasicState:
-        """
-        Generate a |111...10...0> BasicState with n photons and m modes. The result is independent of the encoding.
+        r"""
+        Generate a :math:`|111...10...0>` BasicState with n photons and m modes. The result is independent of the
+        encoding.
 
         :param n: Number of photons
         :param m: Number of modes. Default :math:`n`
-        :return: BasicState of the shape |111...10...0>
+        :return: BasicState of the shape :math:`|111...10...0>`
         """
         if m is None:
             return BasicState(n * [1])
@@ -214,13 +215,13 @@ class StateGenerator:
 
     @staticmethod
     def periodic_state(n: int, m: int = None) -> BasicState:
-        """
-        Generate a BasicState consisting of repeating |10> n times. Pads the end of the state with zero photon modes.
-        The result is independent of the encoding.
+        r"""
+        Generate a BasicState consisting of repeating :math:`|10>` n times. Pads the end of the state with zero photon
+        modes. The result is independent of the encoding.
 
         :param n: Number of photons
         :param m: Number of modes. Default :math:`2n` (no padding at the end)
-        :return: BasicState of the shape |1010...000>
+        :return: BasicState of the shape :math:`|1010...000>`
         """
         state = BasicState([1, 0] * n)
         if m is not None:

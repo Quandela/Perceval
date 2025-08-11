@@ -37,7 +37,7 @@ def tvd_dist(dist_lh: BSDistribution, dist_rh: BSDistribution) -> float:
 
     :param dist_lh: First BSDistribution
     :param dist_rh: Second BSDistribution
-    :return : total variation distance between the two BSDistributions (value between 0 and 1)
+    :return: total variation distance between the two BSDistributions (value between 0 and 1)
     """
     only_dist_lh_states = set(dist_lh.keys()) - set(dist_rh.keys())
     only_dist_rh_states = set(dist_rh.keys()) - set(dist_lh.keys())

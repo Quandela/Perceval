@@ -86,7 +86,7 @@ class IDetector(AComponent, ABC):
 
 
 class BSLayeredPPNR(IDetector):
-    """
+    r"""
     BSLayeredPPNR implements Pseudo Photon Number Resolving detection using layers of beam splitter plugged on
     :math:`2^{(number\ of\ layers)}` threshold detectors.
 

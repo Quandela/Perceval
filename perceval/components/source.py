@@ -67,7 +67,7 @@ class Source:
                                  multiphoton_model == DISTINGUISHABLE_KEY)
 
         self.simplify_distribution = False  # Simplify the distribution by anonymizing photon annotations (can be
-                                             # time-consuming for larger distributions)
+                                            # time-consuming for larger distributions)
 
         self._sampler : xq.SourceSampler | None = None
 
@@ -142,13 +142,13 @@ class Source:
 
         Supports a min_photons_filter to avoid generating states having not enough photons.
 
-        :code:
-        ```
-        iterator = source.create_iterator(BasicState([1, 0, 1]), 2)
-        iterator.prob_threshold = iterator.max_p * 1e-5  # Generates only states having at most 1e-5 times the biggest probability.
-        for separated_state, prob in iterator:
-            print(separated_state, prob)
-        ```
+        >>> from perceval import BasicState, Source
+        >>>
+        >>> source = Source(indistinguishability=0.85, losses=0.56)
+        >>> iterator = source.create_iterator(BasicState([1, 0, 1]), 2)
+        >>> iterator.prob_threshold = iterator.max_p * 1e-5  # Generates only states having at most 1e-5 times the biggest probability.
+        >>> for separated_state, prob in iterator:
+        >>>     print(separated_state, prob)
 
         :param expected_input: Expected input BasicState
         :param min_photons_filter: The minimum number of photons required to generate a state.

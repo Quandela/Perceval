@@ -49,7 +49,7 @@ Perceval is used in several higher-level projects (non-exhaustive list):
 * **perceval-interop**: Interoperability tools for conversion between photonic and gate based Quantum computing. See
   the project here: `perceval-interop <https://perceval.quandela.net/interopdocs/>`_.
 * **MerLin**: A framework to bring quantum computing to AI practitioners, requiring no prior quantum expertise.
-  Learn more here: `merlin <https://merlinquantum.ai/>`_.
+  Learn more here: `merlinquantum <https://merlinquantum.ai/>`_.
 
 
 .. toctree::
@@ -57,7 +57,9 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    :hidden:
 
    getting_started
-   tutorial
+   tutorial_beginner
+   tutorial_advanced
+   tutorial_expert
    legacy
 
 .. toctree::
@@ -78,49 +80,15 @@ Perceval is used in several higher-level projects (non-exhaustive list):
    reference/exqalibur/index
 
 .. toctree::
-   :caption: Boson sampling
+   :caption: Examples
    :maxdepth: 2
    :hidden:
 
-   notebooks/Boson_sampling
-   notebooks/MPS_techniques_for_boson_sampling
-
-.. toctree::
-   :caption: Standard quantum algorithms
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Shor_Implementation
-   notebooks/2-mode_Grover_algorithm
-
-.. toctree::
-   :caption: Variational quantum algorithms
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Differential_equation_resolution
-   notebooks/Variational_Quantum_Eigensolver
-   notebooks/Reinforcement_learning
-   notebooks/QUBO
-
-.. toctree::
-   :caption: Quantum walk
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Two-particle_bosonic-fermionic_quantum_walk
-
-.. toctree::
-   :caption: Others
-   :maxdepth: 2
-   :hidden:
-
-   notebooks/Walkthrough-cnot
-   notebooks/Gedik_qudit
-   notebooks/Boson_Bunching
-   notebooks/quantum_kernel_methods
-   notebooks/BS-based_implementation
-   notebooks/LOv_rewriting_rules
+   examples_boson_sampling
+   examples_standard_algo
+   examples_vqa
+   examples_quantum_walk
+   examples_others
 
 .. toctree::
    :caption: Community

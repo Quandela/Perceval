@@ -159,7 +159,6 @@ def test_source_samples_with_filter(brightness, g2, hom, losses, multiphoton_mod
     min_detected_photons = 2
 
     bs = FockState("|1,1>")
-
     source_1 = Source(brightness, g2, hom, losses)
     source_2 = Source(brightness, g2, hom, losses)
 

@@ -28,13 +28,11 @@
 # SOFTWARE.
 import copy
 from collections import defaultdict
-
+from math import sqrt
 from multipledispatch import dispatch
 
-from perceval import AnnotatedFockState
-from perceval.utils import BasicState, FockState, NoisyFockState, BSDistribution, StateVector, Annotation, SVDistribution
+from perceval.utils import FockState, NoisyFockState, AnnotatedFockState, BSDistribution, StateVector, Annotation, SVDistribution
 from perceval.components import Circuit
-from math import sqrt
 
 
 def _to_bsd(sv: StateVector) -> BSDistribution:
@@ -48,6 +46,12 @@ def _to_bsd(sv: StateVector) -> BSDistribution:
 
 @dispatch(StateVector, Annotation)
 def _inject_annotation(sv: StateVector, annotation: Annotation) -> StateVector:
+    if isinstance(annotation, int):
+        res_sv = StateVector()
+        for s, pa in sv.unnormalized_iterator():
+            s = NoisyFockState(s, [annotation]*s.n)
+            res_sv += pa * s
+        return res_sv
     if len(annotation):
         res_sv = StateVector()
         for s, pa in sv.unnormalized_iterator():
@@ -84,9 +88,11 @@ def _merge_sv(sv1: StateVector, sv2: StateVector, prob_threshold: float = 0) -> 
 def _annot_state_mapping(bs_with_annots: FockState):
     return {Annotation(): bs_with_annots}
 
+
 @dispatch(NoisyFockState)
 def _annot_state_mapping(bs_with_annots: NoisyFockState):
     return bs_with_annots.split_state()
+
 
 @dispatch(AnnotatedFockState)
 def _annot_state_mapping(bs_with_annots: AnnotatedFockState): # TODO if needed + separate_state() does not exist for AnnotatedFockState anymore
