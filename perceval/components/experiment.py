@@ -812,7 +812,11 @@ class Experiment:
 
     @dispatch(AnnotatedFockState)
     def with_input(self, input_state: AnnotatedFockState) -> None:
-        self.with_polarized_input(input_state)
+        if input_state.has_polarization:
+            self._input_state = input_state
+            self._input_changed()
+        else:
+            raise TypeError("Local simulations only support AnnotatedFockState in case of a polarized input state")
 
     @dispatch(StateVector)
     def with_input(self, sv: StateVector):
@@ -840,11 +844,6 @@ class Experiment:
                     raise ValueError(
                         f'Input distribution contains states with a bad size ({state.m}), expected {self.circuit_size}')
         self._input_state = svd
-        self._input_changed()
-
-    def with_polarized_input(self, bs: AnnotatedFockState): # TODO : to be renamed into with_input too with another dispatch ?
-        assert bs.has_polarization, "AnnotatedFockState is not polarized, please use with_input instead"
-        self._input_state = bs
         self._input_changed()
 
     def flatten(self, max_depth=None) -> list[tuple]:
