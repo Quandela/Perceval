@@ -115,6 +115,8 @@ def test_circuit_serialization_backward_compat():
         #0.10 : Did not change circuit serialization
         #0.11 : Updated parameter serialization
         "0.11": ":PCVL:zip:eJxVjs0KgkAURh/IlYhgAy5uV9GZrGYqB2cZEs1PYaWhvn2ukvl2Bw6Hj3CUFQE0n/ZrBpLDaI4ToLLtGYVTVX2qg7mM+dQxFPAfvTu2ErwXd6WM+q52AmQnUe/Zq4QNDjc7ZonBIoybaNup5vCgthfwpFG+dAsMc8l7HVySq9dFv7vzP8yeC2n6A8+rQV4=",
+        #0.12 : Did not change circuit serialization
+        #0.13 : Did not change circuit serialization
     }
     for perceval_version, serial_c in serial_circuits.items():
         try:
@@ -147,7 +149,8 @@ def test_basicstate_serialization():
     states = [
         BasicState("|0,1>"),
         BasicState([0, 1, 0, 0, 1, 0]),
-        BasicState("|{P:H}{P:V},0>")
+        BasicState("|{P:H}{P:V},0>"),
+        BasicState("|{0},{1},{2}{0}>"),
     ]
     for s in states:
         serialized = serialize(s)
