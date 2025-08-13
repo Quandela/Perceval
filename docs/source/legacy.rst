@@ -18,16 +18,16 @@ plain perfect state.
 Definition of the new classes
 .............................
 
-* :code:`FockState`: A light-weight object only containing photon positions in mode (e.g. "|1,0,1>"). Can be used to
+* :code:`FockState`: A light-weight object only containing photon positions in mode (e.g. :code:`|1,0,1>`). Can be used to
   represent detections.
 * :code:`NoisyFockState`: A collection of indistinguishable photon groups, that are totally distinguishable. The
-  distinguishability index is an integer and is referred to as the `noise tag` (e.g. "|{0},{1},{0}{2}>" contains three
-  groups of indistinguishable photons tagged 0, 1 and 2).
+  distinguishability index is an integer and is referred to as the `noise tag` (e.g. :code:`|{0},{1},{0}{2}>` contains
+  three groups of indistinguishable photons tagged 0, 1 and 2).
 * :code:`AnnotatedBasicState`: Replace the previous :code:`FockState` by allowing rich annotations, having one or more
   string types, each having a complex number for value. This enables to accurately encode physical parameters and
-  play with partial distinguishability (e.g. "|{P:H,lambda:0.625},{P:V,lambda:0.618}>"). Please note that apart from
-  polarisation, `Perceval` does not provide a generic algorithm to separate rich annotated states, and the user would
-  have to write one.
+  play with partial distinguishability (e.g. :code:`|{P:H,lambda:0.625},{P:V,lambda:0.618}>`). Please note that apart
+  from polarisation, `Perceval` does not provide a generic algorithm to separate rich annotated states, and the user
+  would have to write one.
 
 Some calls will use or return only the type that makes sense (e.g. :code:`AnnotatedFockState::threshold_detection()`
 always returns a :code:`FockState` as a detected state naturally loses all kinds of photon annotation.
