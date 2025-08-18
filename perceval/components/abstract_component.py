@@ -132,13 +132,14 @@ class AParametrizedComponent(AComponent):
         for param in self._params.values():
             if all_params or not param.fixed:
                 if isinstance(param, Expression):
-                    if expressions and param not in param_list:
-                        param_list.append(param)
+                    if expressions:
+                        if param not in param_list:
+                            param_list.append(param)
                     else:
                         for p in param.parameters:
                             if p not in param_list:
                                 param_list.append(p)
-                
+
                 elif param not in param_list:
                     param_list.append(param)
         return param_list
