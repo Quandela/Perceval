@@ -12,4 +12,3 @@ This class provides a way to generate usual StateVectors with a given encoding.
 
 .. autoclass:: perceval.utils.stategenerator.StateGenerator
    :members:
-   :inherited-members:
